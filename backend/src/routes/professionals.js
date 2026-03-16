@@ -294,20 +294,89 @@ router.post('/admin/subscription/:id', authenticate, requireAdmin, async (req, r
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     }
 
-    const { status, validUntil } = req.body;
+    const { status, validUntil, renew } = req.body;
     const allowed = ['never_paid', 'active', 'overdue', 'blocked'];
     if (!allowed.includes(status)) {
       return res.status(400).json({ success: false, message: 'Statut d\'abonnement invalide' });
     }
 
+    // Calcul de la date de validité
+    let newValidUntil = account.subscriptionValidUntil;
+    if (validUntil) {
+      newValidUntil = new Date(validUntil);
+    } else if (status === 'active') {
+      if (renew && account.subscriptionValidUntil && new Date(account.subscriptionValidUntil) > new Date()) {
+        // Renouvellement : prolonger depuis la date d'expiration actuelle
+        newValidUntil = new Date(account.subscriptionValidUntil);
+        newValidUntil.setDate(newValidUntil.getDate() + 30);
+      } else {
+        // Nouvelle activation : 30 jours depuis aujourd'hui
+        newValidUntil = new Date();
+        newValidUntil.setDate(newValidUntil.getDate() + 30);
+      }
+    } else if (status === 'blocked' || status === 'overdue') {
+      // Pas de changement sur la date (garder l'historique)
+    } else if (status === 'never_paid') {
+      newValidUntil = null;
+    }
+
     await account.update({
       subscriptionStatus: status,
-      subscriptionValidUntil: validUntil ? new Date(validUntil) : account.subscriptionValidUntil
+      subscriptionValidUntil: newValidUntil
     });
+
+    // Envoyer une notification si activation ou suspension
+    if (status === 'active') {
+      const expiryDate = newValidUntil ? new Date(newValidUntil).toLocaleDateString('fr-FR') : '?';
+      await Notification.createNotification({
+        recipientNumeroH: account.ownerNumeroH,
+        type: 'subscription_activated',
+        title: 'Abonnement activé !',
+        message: `Votre abonnement pour "${account.name}" est actif jusqu'au ${expiryDate}. Vous pouvez accéder à votre dashboard.`,
+        relatedId: account.id
+      });
+    } else if (status === 'blocked') {
+      await Notification.createNotification({
+        recipientNumeroH: account.ownerNumeroH,
+        type: 'subscription_blocked',
+        title: 'Abonnement suspendu',
+        message: `L'accès à votre compte "${account.name}" a été suspendu pour impayé. Contactez l'administrateur pour régulariser.`,
+        relatedId: account.id
+      });
+    }
 
     return res.json({ success: true, account: sanitizeAccountForPublic(account) });
   } catch (error) {
     console.error('Erreur abonnement pro:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/professionals/admin/check-expired - Passer les abonnements expirés en "overdue"
+router.post('/admin/check-expired', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const now = new Date();
+    const expired = await ProfessionalAccount.findAll({
+      where: {
+        subscriptionStatus: 'active',
+        subscriptionValidUntil: { [Op.lt]: now }
+      }
+    });
+
+    for (const account of expired) {
+      await account.update({ subscriptionStatus: 'overdue' });
+      await Notification.createNotification({
+        recipientNumeroH: account.ownerNumeroH,
+        type: 'subscription_expired',
+        title: 'Abonnement expiré',
+        message: `Votre abonnement pour "${account.name}" a expiré. Veuillez contacter l'administrateur pour renouveler et conserver l'accès à votre dashboard.`,
+        relatedId: account.id
+      });
+    }
+
+    return res.json({ success: true, updated: expired.length, message: `${expired.length} abonnement(s) passé(s) en retard.` });
+  } catch (error) {
+    console.error('Erreur check-expired:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

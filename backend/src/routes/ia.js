@@ -37,21 +37,31 @@ function isGreetingOrPoliteness(message) {
 
 /** Reponse d'accueil quand l'utilisateur dit bonjour / salut */
 const GREETING_RESPONSE = [
-  'Bonjour ! Je suis votre Professeur IA, specialise en **Francais** et en **Mathematiques** (CP a la Terminale).',
+  'Bonjour ! Je suis votre **Professeur IA**, spécialisé en **Français** et en **Mathématiques** (du CP à la Terminale). 📚',
   '',
-  'Voici comment je peux vous aider :',
+  '━━━━━━━━━━━━━━━━━━━━━━━',
+  '📖 **FRANÇAIS**',
+  '━━━━━━━━━━━━━━━━━━━━━━━',
+  'Grammaire · Conjugaison · Orthographe · Homophones',
+  'Vocabulaire (synonymes, antonymes) · Figures de style',
+  'Commentaire · Dissertation · Analyse de texte',
   '',
-  '**FRANCAIS :** grammaire, conjugaison, orthographe, figures de style, commentaire, dissertation...',
-  '**MATHEMATIQUES :** calculs, equations, geometrie, fractions, probabilites, fonctions, suites...',
-  '**GEOMETRIE :** triangles, cercles, volumes, Pythagore, Thales, vecteurs...',
+  '━━━━━━━━━━━━━━━━━━━━━━━',
+  '🔢 **MATHÉMATIQUES**',
+  '━━━━━━━━━━━━━━━━━━━━━━━',
+  'Calculs · Fractions · Décimaux · Équations · PGCD',
+  'Puissances · Suites arithmétiques · Probabilités · Moyennes',
+  'Géométrie : aires, volumes, Pythagore, Trigonométrie',
   '',
-  '**Exemples de questions :**',
-  '- Explique-moi le passe compose',
-  '- Comment resoudre 3x + 5 = 20 ?',
-  '- Quelle est l\'aire d\'un cercle de rayon 7 ?',
-  '- Fais-moi un exercice sur les fractions',
+  '**Exemples de questions à poser :**',
+  '— Explique-moi le passé composé',
+  '— Résous : 2x² - 5x + 2 = 0',
+  '— Aire d\'un cercle de rayon 5 cm',
+  '— Valeur de sin(45°)',
+  '— Exercice de conjugaison',
+  '— Exercice de probabilités',
   '',
-  'Posez votre question, je suis la ! 💪',
+  'Posez votre question, je suis là ! 💪',
 ].join('\n');
 
 // =========================================================
@@ -196,6 +206,12 @@ function generateExercice(type) {
       { verbe: 'manger', sujet: 'nous', temps: 'imparfait', forme: 'mangions', explication: 'MANGER à l\'imparfait : nous MANGIONS (garde le -e- pour la prononciation)' },
       { verbe: 'faire', sujet: 'tu', temps: 'présent', forme: 'fais', explication: 'Verbe irrégulier FAIRE au présent : tu FAIS' },
       { verbe: 'prendre', sujet: 'elle', temps: 'passé composé', forme: 'a pris', explication: 'PRENDRE au passé composé avec AVOIR : elle A PRIS (participe passé : pris)' },
+      { verbe: 'venir', sujet: 'il', temps: 'passé composé', forme: 'est venu', explication: 'VENIR se conjugue avec ÊTRE au passé composé : il EST VENU (participe : venu)' },
+      { verbe: 'écrire', sujet: 'tu', temps: 'présent', forme: 'écris', explication: 'Verbe ÉCRIRE au présent : j\'écris, tu ÉCRIS, il écrit' },
+      { verbe: 'pouvoir', sujet: 'nous', temps: 'présent', forme: 'pouvons', explication: 'Verbe POUVOIR au présent : nous POUVONS' },
+      { verbe: 'savoir', sujet: 'je', temps: 'présent', forme: 'sais', explication: 'Verbe SAVOIR au présent : je SAIS, tu sais, il sait' },
+      { verbe: 'voir', sujet: 'ils', temps: 'imparfait', forme: 'voyaient', explication: 'VOIR à l\'imparfait : ils VOYAIENT (radical : voy-)' },
+      { verbe: 'partir', sujet: 'elle', temps: 'futur', forme: 'partira', explication: 'PARTIR au futur : elle PARTIRA (radical : partir-)' },
     ];
     var v = verbes[Math.floor(Math.random() * verbes.length)];
     return {
@@ -205,12 +221,130 @@ function generateExercice(type) {
     };
   }
 
+  // ── Nouveaux exercices ────────────────────────────────────────
+  function exVocabulaire() {
+    var series = [
+      { question: 'Quel est le synonyme de "rapide" ?', reponse: 'vite', explication: 'Synonymes de "rapide" : vite, prompt, agile, alerte, express. Un synonyme = un mot de même sens.' },
+      { question: 'Quel est l\'antonyme (contraire) de "grand" ?', reponse: 'petit', explication: '"Grand" et "petit" sont des antonymes (contraires). Autres contraires : minuscule, nain, microscopique.' },
+      { question: 'Quel est le synonyme de "beau" ?', reponse: 'joli', explication: 'Synonymes de "beau" : joli, magnifique, splendide, superbe, ravissant.' },
+      { question: 'Quel est l\'antonyme de "chaud" ?', reponse: 'froid', explication: '"Chaud" et "froid" sont antonymes. Autres contraires : glacial, frais, frigide.' },
+      { question: 'Quel est le synonyme de "triste" ?', reponse: 'malheureux', explication: 'Synonymes de "triste" : malheureux, mélancolique, morose, abattu, affligé.' },
+      { question: 'Quel est l\'antonyme de "difficile" ?', reponse: 'facile', explication: '"Difficile" et "facile" sont antonymes. Autres : simple, aisé, accessible.' },
+      { question: 'Quel est le synonyme de "commencer" ?', reponse: 'débuter', explication: 'Synonymes de "commencer" : débuter, entamer, initier, démarrer, inaugurer.' },
+      { question: 'Quel est l\'antonyme de "silencieux" ?', reponse: 'bruyant', explication: '"Silencieux" et "bruyant" sont antonymes. Autres : tapageur, sonore, tonitruant.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+
+  function exNatureMotsGram() {
+    var series = [
+      { question: 'Quelle est la nature du mot "courir" dans : "Il aime courir" ?', reponse: 'verbe', explication: '"Courir" est un VERBE à l\'infinitif (groupe 3). Un verbe exprime une action ou un état.' },
+      { question: 'Quelle est la nature du mot "beau" dans : "Un beau paysage" ?', reponse: 'adjectif', explication: '"Beau" est un ADJECTIF qualificatif. Il qualifie (décrit) le nom "paysage".' },
+      { question: 'Quelle est la nature du mot "rapidement" ?', reponse: 'adverbe', explication: '"Rapidement" est un ADVERBE. Il modifie un verbe, un adjectif ou un autre adverbe. Souvent formé avec le suffixe -ment.' },
+      { question: 'Quelle est la nature du mot "maison" dans : "La maison est grande" ?', reponse: 'nom', explication: '"Maison" est un NOM commun. Il désigne une chose. On peut le faire précéder d\'un article (la, une...).' },
+      { question: 'Quelle est la nature du mot "il" dans : "Il mange" ?', reponse: 'pronom', explication: '"Il" est un PRONOM personnel sujet (3ème personne du singulier). Il remplace un nom.' },
+      { question: 'Quelle est la nature du mot "et" dans : "Pain et beurre" ?', reponse: 'conjonction', explication: '"Et" est une CONJONCTION de coordination. Moyen mnémotechnique : mais, ou, et, donc, or, ni, car.' },
+      { question: 'Quelle est la nature du mot "avec" dans : "Il marche avec son ami" ?', reponse: 'préposition', explication: '"Avec" est une PRÉPOSITION. Elle relie des groupes de mots. Autres prépositions : de, à, par, pour, en, dans...' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+
+  function exDecimaux() {
+    var a = Math.round((Math.floor(Math.random() * 90 + 10) / 10) * 10) / 10;
+    var b = Math.round((Math.floor(Math.random() * 50 + 5) / 10) * 10) / 10;
+    var types = ['add', 'sub', 'mul'];
+    var type = types[Math.floor(Math.random() * types.length)];
+    if (type === 'add') {
+      var res = Math.round((a + b) * 100) / 100;
+      return { question: 'Calculez : ' + a + ' + ' + b, reponse: res, explication: a + ' + ' + b + ' = ' + res + ' (alignez les virgules pour additionner !)' };
+    } else if (type === 'sub') {
+      var bigger = Math.max(a, b), smaller = Math.min(a, b);
+      var res2 = Math.round((bigger - smaller) * 100) / 100;
+      return { question: 'Calculez : ' + bigger + ' - ' + smaller, reponse: res2, explication: bigger + ' - ' + smaller + ' = ' + res2 + ' (alignez les virgules pour soustraire !)' };
+    } else {
+      var n = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+      var res3 = Math.round(a * n * 100) / 100;
+      return { question: 'Calculez : ' + a + ' × ' + n, reponse: res3, explication: a + ' × ' + n + ' = ' + res3 + ' (déplacez la virgule selon la puissance de 10)' };
+    }
+  }
+
+  function exProbabilite() {
+    var scenarios = [
+      { question: 'On lance un dé à 6 faces. Quelle est la probabilité d\'obtenir un 6 ? (répondre sous forme de fraction)', reponse: '1/6', explication: 'P(6) = 1 issue favorable / 6 issues possibles = 1/6 ≈ 0,167 soit environ 16,7%' },
+      { question: 'Un sac contient 3 billes rouges et 7 billes bleues. Probabilité de tirer une bille rouge ?', reponse: '3/10', explication: 'P(rouge) = 3 billes rouges / 10 billes au total = 3/10 = 0,3 soit 30%' },
+      { question: 'On lance une pièce de monnaie. Probabilité d\'obtenir pile ?', reponse: '1/2', explication: 'P(pile) = 1 issue favorable / 2 issues possibles = 1/2 = 0,5 soit 50%' },
+      { question: 'Dans une urne : 2 rouges, 3 bleues, 5 vertes. Probabilité de tirer une verte ?', reponse: '1/2', explication: 'P(verte) = 5 vertes / 10 boules totales = 5/10 = 1/2 = 0,5 soit 50%' },
+      { question: 'On tire une carte au hasard dans un jeu de 52 cartes. Probabilité de tirer un as ?', reponse: '1/13', explication: 'P(as) = 4 as / 52 cartes = 4/52 = 1/13 ≈ 7,7% (4 as dans un jeu : ♠ ♥ ♦ ♣)' },
+    ];
+    return scenarios[Math.floor(Math.random() * scenarios.length)];
+  }
+
+  function exMoyenne() {
+    var n = Math.floor(Math.random() * 3) + 3;
+    var vals = [];
+    for (var ki = 0; ki < n; ki++) vals.push(Math.floor(Math.random() * 14) + 5);
+    var sum = vals.reduce(function(a, b) { return a + b; }, 0);
+    var moy = Math.round((sum / n) * 100) / 100;
+    return {
+      question: 'Calculez la moyenne de : ' + vals.join(', ') + ' (notes sur 20)',
+      reponse: moy,
+      explication: 'Moyenne = (somme des valeurs) / (nombre de valeurs) = (' + vals.join(' + ') + ') / ' + n + ' = ' + sum + ' / ' + n + ' = ' + moy,
+    };
+  }
+
+  function exSuiteArith() {
+    var a0 = Math.floor(Math.random() * 10) + 1;
+    var r = Math.floor(Math.random() * 7) + 2;
+    var suite = [a0, a0+r, a0+2*r, a0+3*r];
+    var next = a0 + 4*r;
+    return {
+      question: 'Trouvez le terme suivant de la suite : ' + suite.join(', ') + ', ____ ?',
+      reponse: next,
+      explication: 'C\'est une suite arithmétique de raison r = ' + r + '. Chaque terme = terme précédent + ' + r + '. Donc : ' + suite[suite.length-1] + ' + ' + r + ' = ' + next,
+    };
+  }
+
+  function exFractionMul() {
+    var a1 = Math.floor(Math.random() * 4) + 1;
+    var b1 = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+    var a2 = Math.floor(Math.random() * 4) + 1;
+    var b2 = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+    var numRes = a1 * a2, denRes = b1 * b2;
+    var div = pgcd(numRes, denRes);
+    var numSimp = numRes / div, denSimp = denRes / div;
+    var repStr = denSimp === 1 ? String(numSimp) : numSimp + '/' + denSimp;
+    return {
+      question: 'Calculez : (' + a1 + '/' + b1 + ') × (' + a2 + '/' + b2 + ')',
+      reponse: repStr,
+      explication: 'Multiplier les numérateurs et les dénominateurs : (' + a1 + '×' + a2 + ')/(' + b1 + '×' + b2 + ') = ' + numRes + '/' + denRes + (div > 1 ? ' = ' + repStr + ' (simplifié par ' + div + ')' : ''),
+    };
+  }
+
+  function exFractionDiv() {
+    var a1 = Math.floor(Math.random() * 4) + 1;
+    var b1 = [2, 3, 4, 5][Math.floor(Math.random() * 4)];
+    var a2 = Math.floor(Math.random() * 3) + 1;
+    var b2 = [2, 3, 4][Math.floor(Math.random() * 3)];
+    // a1/b1 ÷ a2/b2 = a1*b2 / b1*a2
+    var numRes = a1 * b2, denRes = b1 * a2;
+    var div = pgcd(numRes, denRes);
+    var numSimp = numRes / div, denSimp = denRes / div;
+    var repStr = denSimp === 1 ? String(numSimp) : numSimp + '/' + denSimp;
+    return {
+      question: 'Calculez : (' + a1 + '/' + b1 + ') ÷ (' + a2 + '/' + b2 + ')',
+      reponse: repStr,
+      explication: 'Diviser = multiplier par l\'inverse : ' + a1 + '/' + b1 + ' × ' + b2 + '/' + a2 + ' = ' + numRes + '/' + denRes + (div > 1 ? ' = ' + repStr : ''),
+    };
+  }
+
   var map = {
     addition: exAddition,
     soustraction: exSoustraction,
     multiplication: exMultiplication,
     division: exDivision,
     fraction: exFraction,
+    fraction_mul: exFractionMul,
+    fraction_div: exFractionDiv,
     perimetre: exPerimetre,
     pourcentage: exPourcentage,
     pythagore: exPythagore,
@@ -220,6 +354,12 @@ function generateExercice(type) {
     aire_triangle: exAireTriangle,
     homophone: exHomophone,
     conjugaison: exConjugaison,
+    vocabulaire: exVocabulaire,
+    grammaire: exNatureMotsGram,
+    decimaux: exDecimaux,
+    probabilite: exProbabilite,
+    moyenne: exMoyenne,
+    suite: exSuiteArith,
   };
 
   var types = Object.keys(map);
@@ -242,18 +382,26 @@ function detectExerciceRequest(message) {
   var typeMap = {
     addition:      ['addition', 'additionner', 'ajouter', 'somme'],
     soustraction:  ['soustraction', 'soustraire', 'difference', 'retirer'],
-    multiplication:['multiplication', 'multiplier', 'produit', 'fois'],
+    multiplication:['multiplication', 'multiplier', 'produit', 'fois', 'table de'],
     division:      ['division', 'diviser', 'quotient', 'partager'],
-    fraction:      ['fraction', 'numerateur', 'denominateur'],
-    perimetre:     ['perimetre', 'contour'],
-    pourcentage:   ['pourcentage', 'pourcent', 'taux', 'reduction'],
-    pythagore:     ['pythagore', 'hypotenuse'],
-    puissance:     ['puissance', 'exposant', 'carre', 'cube'],
+    fraction:      ['fraction', 'numerateur', 'denominateur', 'fractions additions'],
+    fraction_mul:  ['fraction multiplier', 'multiplier fractions', 'produit de fractions'],
+    fraction_div:  ['fraction diviser', 'diviser fractions', 'division de fractions'],
+    perimetre:     ['perimetre', 'contour', 'tour de'],
+    pourcentage:   ['pourcentage', 'pourcent', 'taux', 'reduction', 'remise'],
+    pythagore:     ['pythagore', 'hypotenuse', 'triangle rectangle cotes'],
+    puissance:     ['puissance', 'exposant', 'carre', 'cube', 'puissances'],
     pgcd:          ['pgcd', 'plus grand commun diviseur', 'diviseur commun'],
-    equation:      ['equation', 'inconnue', 'resoudre', 'trouver x'],
+    equation:      ['equation', 'inconnue', 'resoudre', 'trouver x', 'valeur de x'],
     aire_triangle: ['aire triangle', 'aire du triangle', 'surface triangle'],
-    homophone:     ['homophone', 'homophones', 'a ou a', 'on ou ont', 'son ou sont', 'orthographe', 'dictee'],
-    conjugaison:   ['conjugaison', 'conjuguer', 'conjugue', 'verbe', 'conjugaison francais'],
+    homophone:     ['homophone', 'homophones', 'a ou a', 'on ou ont', 'son ou sont', 'orthographe', 'dictee', 'fautes'],
+    conjugaison:   ['conjugaison', 'conjuguer', 'conjugue', 'verbe', 'temps verbal', 'passe compose', 'imparfait', 'futur'],
+    vocabulaire:   ['vocabulaire', 'synonyme', 'antonyme', 'contraire', 'sens des mots', 'definition'],
+    grammaire:     ['grammaire', 'nature', 'classe grammaticale', 'nom verbe adjectif', 'adverbe', 'pronom', 'analyse grammaticale'],
+    decimaux:      ['decimal', 'decimaux', 'virgule', 'nombres decimaux'],
+    probabilite:   ['probabilite', 'probabilites', 'chance', 'hasard', 'de a faces', 'tirage'],
+    moyenne:       ['moyenne', 'statistiques', 'notes', 'calcul de la moyenne'],
+    suite:         ['suite', 'progression', 'suite arithmetique', 'terme suivant', 'prochain terme'],
   };
 
   var found = null;
@@ -265,37 +413,75 @@ function detectExerciceRequest(message) {
   return found || 'random';
 }
 
+/** Labels d'affichage par type d'exercice */
+var EXERCICE_LABELS = {
+  addition: '➕ Addition', soustraction: '➖ Soustraction',
+  multiplication: '✖️ Multiplication', division: '➗ Division',
+  fraction: '🔢 Fractions (addition)', fraction_mul: '🔢 Fractions (multiplication)',
+  fraction_div: '🔢 Fractions (division)', perimetre: '📐 Périmètre',
+  pourcentage: '📊 Pourcentage', pythagore: '📐 Théorème de Pythagore',
+  puissance: '🔢 Puissances', pgcd: '🔢 PGCD',
+  equation: '📝 Équation du 1er degré', aire_triangle: '📐 Aire (triangle)',
+  homophone: '📖 Homophones', conjugaison: '📖 Conjugaison',
+  vocabulaire: '📖 Vocabulaire', grammaire: '📖 Grammaire',
+  decimaux: '🔢 Nombres décimaux', probabilite: '🎲 Probabilités',
+  moyenne: '📊 Statistiques — Moyenne', suite: '🔢 Suites arithmétiques',
+};
+
 /** Formate un exercice pour l'affichage */
 function formatExercice(ex) {
+  var label = EXERCICE_LABELS[ex.type] || '📚 Exercice';
   return [
-    'EXERCICE',
+    '━━━━━━━━━━━━━━━━━━━━━━━',
+    label,
+    '━━━━━━━━━━━━━━━━━━━━━━━',
     '',
     '**' + ex.question + '**',
     '',
-    'Prenez le temps de reflechir et calculez votre reponse.',
-    'Tapez votre reponse et je la corrigerai !',
-    '',
-    '(Tapez "reponse: [votre reponse]" pour que je corrige)',
+    '⏳ Réfléchissez bien et tapez votre réponse.',
+    '_Exemples : tapez_ **42** _ou_ **3/4** _ou_ **verbe**',
   ].join('\n');
 }
 
 /** Verifie si l'utilisateur tente de repondre a un exercice */
 function detectReponseExercice(message) {
+  var msg = message.trim();
+  var msgN = normalize(msg);
+
+  // Patterns avec préfixe explicite
   var patterns = [
-    /^reponse\s*[:=]\s*(.+)/i,
-    /^ma reponse\s*[:=]?\s*(.+)/i,
-    /^la reponse est\s+(.+)/i,
-    /^le resultat est\s+(.+)/i,
-    /^c est\s+(\d[\d.,/]*)\s*$/i,
+    /^r[eé]ponse\s*[:=]\s*(.+)/i,
+    /^ma\s+r[eé]ponse\s*[:=]?\s*(.+)/i,
+    /^la\s+r[eé]ponse\s+est\s+(.+)/i,
+    /^le\s+r[eé]sultat\s+est\s+(.+)/i,
+    /^le\s+r[eé]sultat\s*[:=]\s*(.+)/i,
+    /^c['']est\s+(.+)/i,
+    /^c est\s+(.+)/i,
+    /^je\s+(pense|trouve|crois|dis)\s+(que\s+)?(c['']?est\s+)?(.+)/i,
+    /^je\s+r[eé]ponds\s*[:=]?\s*(.+)/i,
+    /^=\s*(.+)/i,
+    /^mon\s+r[eé]sultat\s*[:=]?\s*(.+)/i,
+    /^la\s+solution\s+(est\s+)?(.+)/i,
   ];
+
   var i, match;
   for (i = 0; i < patterns.length; i++) {
-    match = normalize(message).match(patterns[i]) || message.match(patterns[i]);
-    if (match) return match[1].trim();
+    match = msgN.match(patterns[i]) || msg.match(patterns[i]);
+    if (match) {
+      // Prendre la dernière capture group non vide
+      var captured = match[match.length - 1];
+      if (captured) return captured.trim();
+    }
   }
-  if (/^-?\d+([.,]\d+)?\s*(cm|m|kg|g|%|cm2|m2|km)?\s*$/.test(message.trim())) {
-    return message.trim();
-  }
+
+  // Nombre pur (entier, décimal, fraction simple)
+  if (/^-?\d+([.,]\d+)?\s*(cm²?|m²?|km|kg|g|%|unités²?|°)?\s*$/.test(msg)) return msg.replace(/\s*(cm²?|m²?|km|kg|g|%|unités²?|°)\s*$/, '').trim();
+  if (/^-?\d+\/\d+$/.test(msg)) return msg;
+
+  // Mots de réponse courants (verbe/adjectif/nom seul)
+  if (/^(verbe|nom|adjectif|adverbe|pronom|conjonction|pr[eé]position|d[eé]terminant)$/i.test(msgN)) return msgN;
+  if (/^(vrai|faux|oui|non)$/i.test(msgN)) return msgN;
+
   return null;
 }
 
@@ -787,40 +973,71 @@ router.post('/chat', async function(req, res) {
     if (lastExercice) {
       var reponseEleve = detectReponseExercice(message);
       if (reponseEleve !== null) {
-        var rep = String(lastExercice.reponse).replace(',', '.').trim();
-        var eleveNorm = String(reponseEleve).replace(',', '.').trim();
-        var correct = eleveNorm === rep || parseFloat(eleveNorm) === parseFloat(rep);
+        var rep = String(lastExercice.reponse).replace(',', '.').trim().toLowerCase();
+        var eleveNorm = String(reponseEleve).replace(',', '.').trim().toLowerCase();
+        // Comparison : exacte ou numerique
+        var correct = eleveNorm === rep
+          || (parseFloat(eleveNorm) === parseFloat(rep) && !isNaN(parseFloat(rep)))
+          || normalize(eleveNorm) === normalize(rep);
+
+        // Messages de félicitations variés
+        var felicitations = [
+          'BRAVO ! Excellente réponse ! 🎉',
+          'PARFAIT ! C\'est exactement ça ! 🌟',
+          'TRÈS BIEN ! Tu as trouvé ! 🏆',
+          'CORRECT ! Super travail ! 💪',
+        ];
+        var encouragements = [
+          'Pas encore... mais tu vas y arriver !',
+          'Presque ! Regardons ensemble.',
+          'Ce n\'est pas ça, mais on apprend de ses erreurs !',
+          'Encore un effort ! Voici la correction :',
+        ];
+        var rndIdx = Math.floor(Math.random() * 4);
+
         if (correct) {
+          // Générer un nouvel exercice automatiquement
+          var nextEx = generateExercice(lastExercice.type || null);
+          var nextLabel = EXERCICE_LABELS[nextEx.type] || '📚 Exercice';
           answer = [
-            'BRAVO ! Bonne reponse ! 🎉',
+            felicitations[rndIdx],
             '',
-            lastExercice.question,
-            'Reponse correcte : **' + lastExercice.reponse + '**',
+            '**Question :** ' + lastExercice.question,
+            '**Réponse :** ✅ ' + lastExercice.reponse,
             '',
-            'Explication : ' + lastExercice.explication,
+            '📌 **Explication :** ' + lastExercice.explication,
             '',
-            'Excellent travail ! Voulez-vous un autre exercice ?',
-            'Tapez "exercice" pour continuer !',
+            '━━━━━━━━━━━━━━━━━━━━━━━',
+            '🔁 Prochain exercice — ' + nextLabel,
+            '━━━━━━━━━━━━━━━━━━━━━━━',
+            '',
+            '**' + nextEx.question + '**',
+            '',
+            '⏳ Réfléchissez et tapez votre réponse !',
           ].join('\n');
+          try {
+            await IaConversation.create({ sessionId: null, userMessage: message, botResponse: answer, source: 'professeur_ia_correction' });
+          } catch (e) { /* silencieux */ }
+          return res.json({ success: true, response: answer, exercice: nextEx });
         } else {
           answer = [
-            'Pas tout a fait... Essayons ensemble !',
+            encouragements[rndIdx],
             '',
-            lastExercice.question,
-            'Votre reponse : ' + reponseEleve,
-            'Bonne reponse : **' + lastExercice.reponse + '**',
+            '**Question :** ' + lastExercice.question,
+            '**Votre réponse :** ❌ ' + reponseEleve,
+            '**Bonne réponse :** ✅ **' + lastExercice.reponse + '**',
             '',
-            'Explication detaillee :',
+            '📌 **Explication détaillée :**',
             lastExercice.explication,
             '',
-            'Ne vous decouragez pas ! La pratique reguliere est la cle du succes.',
-            'Tapez "exercice" pour continuer !',
+            'La pratique régulière est la clé du succès ! 💡',
+            'Tapez **"exercice"** pour un nouvel entraînement.',
           ].join('\n');
+          try {
+            await IaConversation.create({ sessionId: null, userMessage: message, botResponse: answer, source: 'professeur_ia_correction' });
+          } catch (e) { /* silencieux */ }
+          return res.json({ success: true, response: answer, lastExercice: null });
         }
-        try {
-          await IaConversation.create({ sessionId: null, userMessage: message, botResponse: answer, source: 'professeur_ia_correction' });
-        } catch (e) { /* silencieux */ }
-        return res.json({ success: true, response: answer, lastExercice: null });
       }
     }
 

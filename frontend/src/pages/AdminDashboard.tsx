@@ -274,27 +274,45 @@ export default function AdminDashboard() {
     }
   };
 
-  const updateSubscriptionStatus = async (id: string, status: "never_paid" | "active" | "overdue" | "blocked") => {
+  const updateSubscriptionStatus = async (
+    id: string,
+    status: "never_paid" | "active" | "overdue" | "blocked",
+    renew = false
+  ) => {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_BASE}/api/professionals/admin/subscription/${id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, renew })
       });
       const data = await res.json();
       if (!data.success) {
         alert(data.message || "Erreur lors de la mise à jour de l'abonnement");
         return;
       }
-      // Recharger la liste après changement
-      if (proFilter === "pending") {
-        loadPendingPros();
-      }
+      if (proFilter === "pending") loadPendingPros();
       loadAllPros(proFilter);
     } catch (error) {
       console.error("Erreur abonnement pro:", error);
       alert("Impossible de mettre à jour l'abonnement. Vérifiez votre connexion.");
+    }
+  };
+
+  const checkExpiredSubscriptions = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/professionals/admin/check-expired`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ ${data.message}`);
+        loadAllPros(proFilter);
+      }
+    } catch (error) {
+      console.error("Erreur check-expired:", error);
     }
   };
 
@@ -851,7 +869,14 @@ export default function AdminDashboard() {
                     <span className="ml-2 inline-flex items-center justify-center w-7 h-7 text-sm font-bold text-white bg-red-500 rounded-full">{pendingPros.length}</span>
                   )}
                 </h2>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={checkExpiredSubscriptions}
+                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-lg"
+                    title="Marquer comme 'en retard' les abonnements dont la date est dépassée"
+                  >
+                    🔍 Vérifier expirations
+                  </button>
                   {["pending", "approved", "rejected", "all"].map((f) => (
                     <button
                       key={f}
@@ -890,25 +915,35 @@ export default function AdminDashboard() {
                         <div className="text-xs text-gray-400 mt-1">
                           Propriétaire: {pro.ownerNumeroH} • {new Date(pro.created_at).toLocaleDateString("fr-FR")}
                         </div>
-                        {pro.status === "approved" && (
-                          <div className="mt-1 text-xs text-gray-600">
-                            Abonnement:{" "}
-                            <strong>
-                              {pro.subscriptionStatus === "active"
-                                ? "✅ Actif"
-                                : pro.subscriptionStatus === "blocked"
-                                ? "⛔ Bloqué (impayé)"
-                                : pro.subscriptionStatus === "overdue"
-                                ? "⚠️ En retard"
-                                : "🧾 Jamais payé"}
-                            </strong>
-                            {pro.subscriptionValidUntil && (
-                              <span className="ml-1 text-gray-500">
-                                (jusqu'au {new Date(pro.subscriptionValidUntil).toLocaleDateString("fr-FR")})
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        {pro.status === "approved" && (() => {
+                          const now = new Date();
+                          const expiry = pro.subscriptionValidUntil ? new Date(pro.subscriptionValidUntil) : null;
+                          const daysLeft = expiry ? Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                          const expiringSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
+                          const isExpired = expiry ? expiry < now : false;
+                          return (
+                            <div className="mt-1 text-xs text-gray-600">
+                              Abonnement:{" "}
+                              <strong className={
+                                pro.subscriptionStatus === "active" ? (expiringSoon ? "text-orange-600" : "text-green-700")
+                                : pro.subscriptionStatus === "blocked" ? "text-red-700"
+                                : pro.subscriptionStatus === "overdue" ? "text-orange-700"
+                                : "text-gray-600"
+                              }>
+                                {pro.subscriptionStatus === "active"
+                                  ? expiringSoon ? `⚠️ Actif – expire dans ${daysLeft}j` : "✅ Actif"
+                                  : pro.subscriptionStatus === "blocked" ? "⛔ Suspendu (impayé)"
+                                  : pro.subscriptionStatus === "overdue" ? "⚠️ En retard de paiement"
+                                  : "🧾 Jamais payé"}
+                              </strong>
+                              {expiry && (
+                                <span className={`ml-1 ${isExpired ? "text-red-500 font-semibold" : "text-gray-500"}`}>
+                                  ({isExpired ? "expiré le" : "jusqu'au"} {expiry.toLocaleDateString("fr-FR")})
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                         {pro.description && <div className="text-xs text-gray-500 mt-1 line-clamp-2">{pro.description}</div>}
                       </div>
                       <div className="flex flex-wrap gap-2 self-end sm:self-center">
@@ -927,33 +962,45 @@ export default function AdminDashboard() {
                             <button onClick={() => handleReject(pro.id)} className="min-h-[40px] px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">Rejeter</button>
                           </>
                         )}
-                        {pro.status === "approved" && (
-                          <>
-                            <span className="px-3 py-1.5 bg-green-100 text-green-700 text-sm font-medium rounded-full">
-                              Approuvé
-                            </span>
-                            <div className="flex flex-wrap gap-1.5">
-                              <button
-                                onClick={() => updateSubscriptionStatus(pro.id, "active")}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg"
-                              >
-                                ✅ Marquer payé (actif)
-                              </button>
-                              <button
-                                onClick={() => updateSubscriptionStatus(pro.id, "blocked")}
-                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg"
-                              >
-                                ⛔ Bloquer (impayé)
-                              </button>
-                              <button
-                                onClick={() => updateSubscriptionStatus(pro.id, "never_paid")}
-                                className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded-lg"
-                              >
-                                🧾 Jamais payé
-                              </button>
-                            </div>
-                          </>
-                        )}
+                        {pro.status === "approved" && (() => {
+                          const now = new Date();
+                          const expiry = pro.subscriptionValidUntil ? new Date(pro.subscriptionValidUntil) : null;
+                          const isCurrentlyActive = pro.subscriptionStatus === "active" && expiry && expiry > now;
+                          return (
+                            <>
+                              <span className="px-3 py-1.5 bg-green-100 text-green-700 text-sm font-medium rounded-full">
+                                ✓ Approuvé
+                              </span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {isCurrentlyActive ? (
+                                  <button
+                                    onClick={() => updateSubscriptionStatus(pro.id, "active", true)}
+                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg"
+                                  >
+                                    🔄 Renouveler (+1 mois)
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => updateSubscriptionStatus(pro.id, "active", false)}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg"
+                                  >
+                                    ✅ Activer 1 mois (payé)
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm(`Suspendre le compte "${pro.name}" pour impayé ?`)) {
+                                      updateSubscriptionStatus(pro.id, "blocked");
+                                    }
+                                  }}
+                                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg"
+                                >
+                                  ⛔ Suspendre
+                                </button>
+                              </div>
+                            </>
+                          );
+                        })()}
                         {pro.status === "rejected" && <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-full">Rejeté</span>}
                       </div>
                     </div>

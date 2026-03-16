@@ -355,11 +355,10 @@ export default function ZakaEtDons() {
     if (!zakatForm.totalWealth) return;
 
     const totalWealth = parseFloat(zakatForm.totalWealth);
-    const zakatAmount = totalWealth * 0.025; // 2.5% pour la zakat
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/calculate', {
+      const response = await fetch('/api/zakat/calculations', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -369,12 +368,13 @@ export default function ZakaEtDons() {
           user: userData?.numeroH,
           userName: `${userData?.prenom} ${userData?.nomFamille}`,
           totalWealth,
-          zakatAmount,
           currency: zakatForm.currency
         })
       });
       
       if (response.ok) {
+        const data = await response.json();
+        const zakatAmount = data.zakatAmount ?? totalWealth * 0.025;
         alert(`Votre zakat s'élève à ${zakatAmount.toLocaleString()} ${zakatForm.currency}`);
         setShowZakatForm(false);
         loadZakatCalculations();

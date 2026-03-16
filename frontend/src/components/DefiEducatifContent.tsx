@@ -796,10 +796,10 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold text-yellow-400 mb-2">
-                <i className="fas fa-coins mr-2"></i> Jeu de Partage
+                <i className="fas fa-coins mr-2"></i> Défi Éducatif
               </h1>
               <p className="text-white/80 text-lg">
-                Partagez les 50 000 points selon vos performances
+                Partagez les 50 000 points selon vos performances éducatives
               </p>
             </div>
 
@@ -813,7 +813,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
                   disabled={loading}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg text-lg font-semibold transition-all transform hover:scale-105"
                 >
-                  {loading ? '⏳ Création en cours...' : '🎮 Créer un jeu maintenant'}
+                  {loading ? '⏳ Création en cours...' : '📚 Lancer un défi maintenant'}
                 </button>
                 <button
                   onClick={() => {
@@ -823,7 +823,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
                   disabled={loading}
                   className="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg transition-colors"
                 >
-                  Rejoindre un jeu
+                  Rejoindre un défi
                 </button>
               </div>
             </div>
@@ -846,10 +846,10 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
           {/* Header */}
           <header className="text-center bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
             <h1 className="text-3xl font-bold text-yellow-400 mb-2">
-              <i className="fas fa-coins mr-2"></i> Jeu de Partage
+              <i className="fas fa-coins mr-2"></i> Défi Éducatif
             </h1>
             <p className="text-white/80">
-              {allPlayers.map(p => p.numeroH).join(', ')} - Partagez les 50 000 points selon vos performances
+              {allPlayers.map(p => p.numeroH).join(', ')} - Partagez les 50 000 points selon vos performances éducatives
             </p>
           </header>
 

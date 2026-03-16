@@ -79,7 +79,7 @@ export default function Arbre() {
   const [sharedLoading, setSharedLoading] = useState(false)
   const [activeAlbum, setActiveAlbum] = useState('rencontre')
   const [uploading, setUploading] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deletingIdx, setDeletingIdx] = useState<number | null>(null)
   const [viewerMedia, setViewerMedia] = useState<GalleryItem | null>(null)
   const [galleryView, setGalleryView] = useState<'list' | 'detail'>('list')
 
@@ -379,8 +379,8 @@ const enhancedUser: UserData = useMemo(() => {
 
   const isVideo = (url: string) => /\.(mp4|webm|ogg|mov|avi)(\?|$)/i.test(url)
 
-  // Gérer à la fois les URLs relatives (/uploads/...) et absolues (http...)
-  const buildMediaUrl = (url: string) => (url.startsWith('http') ? url : `${API_BASE}${url}`)
+  // Gérer les URLs base64 (data:...), absolues (http...) et relatives (/uploads/...)
+  const buildMediaUrl = (url: string) => (url.startsWith('http') || url.startsWith('data:') ? url : `${API_BASE}${url}`)
 
   // Rencontre en PREMIER comme demandé
   const ALBUM_CONFIG = [
@@ -661,7 +661,17 @@ const enhancedUser: UserData = useMemo(() => {
                 </span>
               </button>
             ) : (
-              <h3 className="text-base font-bold">Galerie familiale</h3>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowGallery(false)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-sm text-gray-800"
+                >
+                  <span className="text-lg leading-none">←</span>
+                  <span>Retour à l'arbre</span>
+                </button>
+                <h3 className="text-base font-bold">Galerie familiale</h3>
+              </div>
             )}
 
             <div className="flex items-center gap-2">

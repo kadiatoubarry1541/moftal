@@ -499,15 +499,14 @@ export default function Zaka() {
   const handleJoinCommunity = async (communityId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/faith/join-community', {
+      const response = await fetch(`/api/faith/communities/${communityId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          communityId,
-          userId: userData?.numeroH
+          numeroH: userData?.numeroH
         })
       });
       
@@ -801,11 +800,10 @@ export default function Zaka() {
     if (!zakatForm.totalWealth) return;
 
     const totalWealth = parseFloat(zakatForm.totalWealth);
-    const zakatAmount = totalWealth * 0.025; // 2.5% pour la zakat
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/calculate', {
+      const response = await fetch('/api/zakat/calculations', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -815,12 +813,13 @@ export default function Zaka() {
           user: userData?.numeroH,
           userName: `${userData?.prenom} ${userData?.nomFamille}`,
           totalWealth,
-          zakatAmount,
           currency: zakatForm.currency
         })
       });
       
       if (response.ok) {
+        const data = await response.json();
+        const zakatAmount = data.zakatAmount ?? totalWealth * 0.025;
         alert(`Votre zakat s'élève à ${zakatAmount.toLocaleString()} ${zakatForm.currency}`);
         setShowZakatForm(false);
         loadZakatCalculations();

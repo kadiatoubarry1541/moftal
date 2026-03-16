@@ -467,23 +467,20 @@ export default function EchangePrimaire() {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* ── Champs texte : écrit seulement ── */}
+            {publishMode === 'ecrit' && (
+              <>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Titre du produit</label>
-                  <input
-                    type="text"
-                    value={newProduct.title}
-                    onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                    placeholder="Ex: Riz Local Premium"
-                  />
+                  <input type="text" value={newProduct.title} onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Ex: Riz Local Premium" />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Catégorie</label>
-                  <select
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                  >
+                  <select value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500">
                     <option value="">Sélectionner une catégorie</option>
                     <option value="Alimentation">Alimentation</option>
                     <option value="Aliments">Aliments</option>
@@ -497,18 +494,10 @@ export default function EchangePrimaire() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Prix</label>
                   <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={newProduct.price}
-                      onChange={(e) => setNewProduct({...newProduct, price: Number(e.target.value)})}
-                      className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                      placeholder="15000"
-                    />
-                    <select
-                      value={newProduct.currency}
-                      onChange={(e) => setNewProduct({...newProduct, currency: e.target.value})}
-                      className="px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                    >
+                    <input type="number" value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: Number(e.target.value)})}
+                      className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500" placeholder="15000" />
+                    <select value={newProduct.currency} onChange={(e) => setNewProduct({...newProduct, currency: e.target.value})}
+                      className="px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500">
                       <option value="FG">FG</option>
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
@@ -517,11 +506,8 @@ export default function EchangePrimaire() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">État</label>
-                  <select
-                    value={newProduct.condition}
-                    onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as any})}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                  >
+                  <select value={newProduct.condition} onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as any})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500">
                     <option value="neuf">Neuf</option>
                     <option value="bon">Bon état</option>
                     <option value="moyen">État moyen</option>
@@ -530,14 +516,12 @@ export default function EchangePrimaire() {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Localisation</label>
-                  <input
-                    type="text"
-                    value={newProduct.location}
-                    onChange={(e) => setNewProduct({...newProduct, location: e.target.value})}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                    placeholder="Ex: Ville Principale"
-                  />
+                  <input type="text" value={newProduct.location} onChange={(e) => setNewProduct({...newProduct, location: e.target.value})}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Ex: Ville Principale" />
                 </div>
+              </>
+            )}
 
             {publishMode === 'photo_audio' && (
             <div className="lg:col-span-2">
@@ -843,6 +827,46 @@ export default function EchangePrimaire() {
           )}
         </div>
       </div>
+
+      {/* Fournisseurs visibles pour tous (liste publique) */}
+      {suppliers.filter(s => s.isApproved).length > 0 && (
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="text-3xl">📦</div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">Fournisseurs recommandés</h3>
+              <p className="text-sm text-gray-600">
+                Liste des fournisseurs approuvés pour vous approvisionner en produits primaires.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {suppliers.filter(s => s.isApproved).map((supplier) => (
+              <div key={supplier.id} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h4 className="font-bold text-gray-900">{supplier.businessName}</h4>
+                    <p className="text-sm text-gray-600">{supplier.businessType}</p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    ✅ Fournisseur approuvé
+                  </span>
+                </div>
+                {supplier.description && (
+                  <p className="text-sm text-gray-700 mb-3 line-clamp-3">
+                    {supplier.description}
+                  </p>
+                )}
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p>📞 {supplier.contactInfo?.phone || "Téléphone non renseigné"}</p>
+                  <p>📧 {supplier.contactInfo?.email || "Email non renseigné"}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Gestion des fournisseurs (Admin) */}
       {isAdmin && (

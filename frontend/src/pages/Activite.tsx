@@ -409,6 +409,7 @@ export default function Activite() {
 
   useEffect(() => {
     if (selectedGroup) {
+      setActivityMessages([]);
       loadActivityMessages();
       const interval = setInterval(() => {
         if (document.visibilityState === 'visible' && !document.hidden) {
@@ -417,9 +418,11 @@ export default function Activite() {
       }, 10000);
       return () => clearInterval(interval);
     }
-  }, [selectedGroup, activeTab]);
+  }, [selectedGroup?.id]);
 
   useEffect(() => {
+    setFeedFilter('all');
+    setSelectedGroup(null);
     loadActivityGroups();
   }, [activeTab]);
 
@@ -694,15 +697,60 @@ export default function Activite() {
                       );
                     }
 
-                    // Cas normal : Messages / Opportunités
+                    // Cas "Opportunités" : bannière dédiée + messages
+                    if (feedFilter === 'opportunite') {
+                      return (
+                        <>
+                          <div className="mb-4 flex justify-center">
+                            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-xl p-4 max-w-xl w-full">
+                              <div className="flex items-start gap-3">
+                                <span className="text-3xl">🌟</span>
+                                <div>
+                                  <h3 className="font-bold text-amber-800 text-base mb-1">Opportunités professionnelles</h3>
+                                  <p className="text-sm text-amber-700">
+                                    Partagez des offres d'emploi, collaborations, projets ou appels d'offres avec votre réseau.
+                                  </p>
+                                  <p className="text-xs text-amber-600 mt-1">Publiez en sélectionnant la catégorie <strong>🌟 Opportunité</strong> ci-dessous.</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          {filtered.length === 0 ? (
+                            <div className="text-center text-gray-500 py-6">
+                              <p className="text-lg mb-1">Aucune opportunité partagée pour le moment.</p>
+                              <p className="text-sm">Soyez le premier à partager une opportunité dans ce groupe !</p>
+                            </div>
+                          ) : (
+                            filtered.map((msg: any) => {
+                              const isMyMessage = msg.numeroH === userData?.numeroH;
+                              return (
+                                <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
+                                    {!isMyMessage && <p className="text-xs font-semibold mb-1 opacity-75">{msg.authorName || msg.numeroH}</p>}
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-sm">🌟</span>
+                                      <span className={`text-xs font-medium ${isMyMessage ? 'text-green-100' : 'text-gray-600'}`}>Opportunité</span>
+                                    </div>
+                                    {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
+                                    {msg.messageType === 'image' && msg.mediaUrl && <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />}
+                                    {msg.messageType === 'video' && msg.mediaUrl && <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />}
+                                    {msg.messageType === 'audio' && msg.mediaUrl && <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />}
+                                    <p className={`text-xs mt-1 ${isMyMessage ? 'text-green-100' : 'text-gray-500'}`}>{new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </>
+                      );
+                    }
+
+                    // Cas normal : Messages (all)
                     if (filtered.length === 0) {
                       return (
                         <div className="text-center text-gray-500 py-8">
-                          <p>
-                            {feedFilter === 'all'
-                              ? 'Aucun message pour le moment.'
-                              : 'Aucune opportunité partagée. Soyez le premier !'}
-                          </p>
+                          <p>Aucun message pour le moment.</p>
+                          <p className="text-sm mt-1">Soyez le premier à écrire dans ce groupe !</p>
                         </div>
                       );
                     }

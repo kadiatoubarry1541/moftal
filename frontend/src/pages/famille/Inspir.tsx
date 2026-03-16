@@ -240,15 +240,25 @@ export default function Inspir() {
       <div className="bg-white shadow-sm border-b rounded-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {'\uD83E\uDD1D'} Inspir
-              </h1>
-              <p className="mt-2 text-gray-600">
-                {currentOrgSubTab === 'hommes' ? 'Hommes' :
-                  currentOrgSubTab === 'femmes' ? 'Femmes' :
-                  'Enfants (Moins de 18 ans)'}
-              </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-sm text-gray-800"
+              >
+                <span className="text-lg leading-none mr-1">←</span>
+                Retour
+              </button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {'\uD83E\uDD1D'} Inspir
+                </h1>
+                <p className="mt-1 text-gray-600">
+                  {currentOrgSubTab === 'hommes' ? 'Hommes' :
+                    currentOrgSubTab === 'femmes' ? 'Femmes' :
+                    'Enfants (Moins de 18 ans)'}
+                </p>
+              </div>
             </div>
           </div>
         </div>

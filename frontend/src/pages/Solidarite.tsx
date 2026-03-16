@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isAdmin } from '../utils/auth';
 import ProSection from '../components/ProSection';
 
 interface UserData {
@@ -80,6 +81,15 @@ export default function Solidarite() {
   const [selectedUrgency, setSelectedUrgency] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const navigate = useNavigate();
+
+  // S'assurer que l'onglet actif est toujours valide pour l'utilisateur
+  useEffect(() => {
+    if (!userData) return;
+    const canSeeZaka = userData.religion === 'Islam' || isAdmin(userData);
+    if (!canSeeZaka && activeTab === 'zaka') {
+      setActiveTab('dons');
+    }
+  }, [userData, activeTab]);
 
   // Etats pour la section Réalité
   const [realityPosts, setRealityPosts] = useState<any[]>([]);
@@ -522,7 +532,10 @@ export default function Solidarite() {
           <nav className="flex space-x-8">
             {[
               { id: 'dons', label: 'Dons', icon: '🤝' },
-              { id: 'zaka', label: 'Zaka (Musulmans)', icon: '🤲' },
+              // Onglet Zaka uniquement pour les musulmans (ou admin)
+              ...(userData && (userData.religion === 'Islam' || isAdmin(userData))
+                ? [{ id: 'zaka', label: 'Zaka (Musulmans)', icon: '🤲' as const }]
+                : []),
               { id: 'livres', label: 'Les Livres de Dieu Unique', icon: '📖' },
               { id: 'realite', label: 'Réalité', icon: '📷' },
               { id: 'ong', label: 'ONG', icon: '🌍' }

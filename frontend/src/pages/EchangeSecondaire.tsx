@@ -562,6 +562,7 @@ export default function EchangeSecondaire() {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {publishMode === 'ecrit' && (<>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">Titre du produit</label>
               <input
@@ -653,6 +654,7 @@ export default function EchangeSecondaire() {
                 placeholder="Ex: Ville Principale"
               />
             </div>
+            </>)}
             {publishMode === 'photo_audio' && (
             <div className="lg:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Photo + message vocal (max 1 min)</label>
@@ -945,6 +947,46 @@ export default function EchangeSecondaire() {
           )}
         </div>
       </div>
+
+      {/* Fournisseurs visibles pour tous (liste publique) */}
+      {suppliers.filter(s => s.isApproved).length > 0 && (
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="text-3xl">📦</div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">Fournisseurs recommandés</h3>
+              <p className="text-sm text-gray-600">
+                Liste des fournisseurs approuvés pour les produits secondaires (électronique, machines, etc.).
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {suppliers.filter(s => s.isApproved).map((supplier) => (
+              <div key={supplier.id} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h4 className="font-bold text-gray-900">{supplier.businessName}</h4>
+                    <p className="text-sm text-gray-600">{supplier.businessType}</p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                    ✅ Fournisseur approuvé
+                  </span>
+                </div>
+                {supplier.description && (
+                  <p className="text-sm text-gray-700 mb-3 line-clamp-3">
+                    {supplier.description}
+                  </p>
+                )}
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p>📞 {supplier.contactInfo?.phone || "Téléphone non renseigné"}</p>
+                  <p>📧 {supplier.contactInfo?.email || "Email non renseigné"}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Gestion des fournisseurs (Admin) */}
       {isAdmin && (

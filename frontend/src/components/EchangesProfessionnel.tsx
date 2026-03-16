@@ -255,14 +255,6 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
           </div>
         </div>
       </div>
-
-      {/* Section Fournisseurs Professionnels (approuvés par l'admin) */}
-      <ProSection
-        type="supplier"
-        title="Fournisseurs"
-        icon="📦"
-        description=""
-      />
     </div>
   );
 }

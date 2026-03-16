@@ -191,6 +191,73 @@ async function initAllTables() {
       alters: [`ALTER TABLE "couple_activities" ALTER COLUMN "media_url" TYPE TEXT;`]
     },
     {
+      name: 'science_posts',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "science_posts" (
+          "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "title"       VARCHAR(255) NOT NULL DEFAULT 'Sans titre',
+          "content"     TEXT         NOT NULL DEFAULT '',
+          "type"        VARCHAR(50)  NOT NULL DEFAULT 'text',
+          "media_url"   TEXT,
+          "category"    VARCHAR(50)  NOT NULL DEFAULT 'recentes',
+          "author"      VARCHAR(255) NOT NULL,
+          "author_name" VARCHAR(255) NOT NULL DEFAULT '',
+          "likes"       JSONB        DEFAULT '[]',
+          "comments"    JSONB        DEFAULT '[]',
+          "is_active"   BOOLEAN      DEFAULT true,
+          "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_sp_category   ON "science_posts" ("category");`,
+        `CREATE INDEX IF NOT EXISTS idx_sp_author     ON "science_posts" ("author");`,
+        `CREATE INDEX IF NOT EXISTS idx_sp_created_at ON "science_posts" ("created_at");`
+      ],
+      alters: []
+    },
+    {
+      name: 'science_permissions',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "science_permissions" (
+          "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "numero_h"    VARCHAR(255) NOT NULL UNIQUE,
+          "is_active"   BOOLEAN      DEFAULT true,
+          "granted_by"  VARCHAR(255) NOT NULL DEFAULT '',
+          "granted_at"  TIMESTAMPTZ  DEFAULT NOW(),
+          "expires_at"  TIMESTAMPTZ,
+          "notes"       TEXT,
+          "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_scperm_numero_h ON "science_permissions" ("numero_h");`
+      ],
+      alters: []
+    },
+    {
+      name: 'reality_posts',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "reality_posts" (
+          "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "title"       VARCHAR(255) NOT NULL DEFAULT 'Sans titre',
+          "content"     TEXT         NOT NULL DEFAULT '',
+          "type"        VARCHAR(50)  NOT NULL DEFAULT 'text',
+          "category"    VARCHAR(50)  NOT NULL DEFAULT 'message',
+          "media_url"   TEXT,
+          "author"      VARCHAR(255) NOT NULL,
+          "author_name" VARCHAR(255) NOT NULL DEFAULT '',
+          "is_active"   BOOLEAN      DEFAULT true,
+          "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_rp_category   ON "reality_posts" ("category");`,
+        `CREATE INDEX IF NOT EXISTS idx_rp_author     ON "reality_posts" ("author");`,
+        `CREATE INDEX IF NOT EXISTS idx_rp_created_at ON "reality_posts" ("created_at");`
+      ],
+      alters: []
+    },
+    {
       name: 'parent_child_activities',
       sql: `
         CREATE TABLE IF NOT EXISTS "parent_child_activities" (

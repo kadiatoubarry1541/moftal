@@ -160,7 +160,12 @@ export default function MesComptesPro() {
               const badgeClass = TYPE_TO_BADGE[acc.type]    || "bg-gray-100 text-gray-700";
               const svcLabel   = TYPE_TO_SERVICE_LABEL[acc.type] || "";
               const subStatus  = acc.subscriptionStatus || "never_paid";
-              const canOpenDashboard = acc.status === "approved" && subStatus === "active";
+              const now = new Date();
+              const expiry = acc.subscriptionValidUntil ? new Date(acc.subscriptionValidUntil) : null;
+              const daysLeft = expiry ? Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+              const expiringSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
+              const isExpired = expiry ? expiry < now : false;
+              const canOpenDashboard = acc.status === "approved" && subStatus === "active" && !isExpired;
 
               return (
                 <div
@@ -197,9 +202,24 @@ export default function MesComptesPro() {
                       {statusInfo.label}
                     </span>
                     {acc.status === "approved" && (
-                      <span className="px-3 py-1 text-[11px] font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-                        {SUBSCRIPTION_LABELS[subStatus] || "Abonnement"}
-                      </span>
+                      <>
+                        <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
+                          expiringSoon ? "bg-orange-100 text-orange-700" :
+                          isExpired ? "bg-red-100 text-red-700" :
+                          "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                        }`}>
+                          {expiringSoon
+                            ? `⚠️ Expire dans ${daysLeft}j`
+                            : isExpired
+                            ? "⛔ Abonnement expiré"
+                            : SUBSCRIPTION_LABELS[subStatus] || "Abonnement"}
+                        </span>
+                        {expiry && (
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                            {isExpired ? "Expiré le" : "Valide jusqu'au"} {expiry.toLocaleDateString("fr-FR")}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -214,23 +234,32 @@ export default function MesComptesPro() {
                   )}
 
                   {acc.status === "approved" && !canOpenDashboard && (
-                    <div className="flex flex-col gap-2 flex-shrink-0 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-200 px-3 py-2 rounded-xl max-w-[260px] text-xs">
+                    <div className={`flex flex-col gap-2 flex-shrink-0 px-3 py-2 rounded-xl max-w-[260px] text-xs ${
+                      expiringSoon
+                        ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-200"
+                        : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-200"
+                    }`}>
                       <p className="font-semibold">
-                        🔒 Dashboard bloqué. Merci de régler votre abonnement auprès de l'administrateur.
+                        {expiringSoon
+                          ? `⚠️ Abonnement bientôt expiré (${daysLeft}j). Renouvelez pour conserver l'accès.`
+                          : isExpired
+                          ? "⛔ Abonnement expiré. Renouvelez votre paiement pour retrouver l'accès."
+                          : "🔒 Dashboard bloqué. Merci de régler votre abonnement auprès de l'administrateur."}
                       </p>
-                      <div className="text-[11px] text-red-900/80 dark:text-red-100">
-                        <p className="font-semibold mb-1">1. Payer votre abonnement</p>
+                      <div className="text-[11px] opacity-80">
+                        <p className="font-semibold mb-1">{isExpired || expiringSoon ? "Renouveler le paiement :" : "1. Payer votre abonnement :"}</p>
                         <p>{ADMIN_PAYMENT_INFO.orangeMoney}</p>
                         <p>{ADMIN_PAYMENT_INFO.bank}</p>
                       </div>
-                      <div className="text-[11px] text-red-900/80 dark:text-red-100">
-                        <p className="font-semibold mb-1">2. Enregistrer vos coordonnées de paiement</p>
-                        <p>
-                          Dans la page <span className="font-semibold">Inscription Pro</span> (édition du compte),
-                          indiquez votre numéro Orange Money ou compte bancaire. L'administrateur pourra alors
-                          vous facturer automatiquement et activer votre abonnement.
-                        </p>
-                      </div>
+                      {!isExpired && !expiringSoon && (
+                        <div className="text-[11px] opacity-80">
+                          <p className="font-semibold mb-1">2. Indiquer vos coordonnées de paiement</p>
+                          <p>
+                            Dans la page <span className="font-semibold">Inscription Pro</span>,
+                            ajoutez votre Orange Money ou compte bancaire.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 

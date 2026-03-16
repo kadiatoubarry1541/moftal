@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 import RealityPost from '../models/RealityPost.js';
 
 const router = express.Router();
@@ -25,11 +25,17 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage,
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype === 'application/pdf') {
+  fileFilter: (_req, file, cb) => {
+    if (
+      file.mimetype.startsWith('image/') ||
+      file.mimetype.startsWith('video/') ||
+      file.mimetype.startsWith('audio/') ||
+      file.mimetype === 'application/pdf' ||
+      file.mimetype === 'image/jfif'
+    ) {
       cb(null, true);
     } else {
-      cb(new Error('Seuls les fichiers image, vidéo et PDF sont autorisés'), false);
+      cb(new Error('Fichier non supporté'), false);
     }
   }
 });
@@ -71,7 +77,7 @@ router.get('/posts', async (req, res) => {
 // @route   POST /api/reality/create-post
 // @desc    Créer un nouveau post de santé (Admin uniquement)
 // @access  Admin uniquement
-router.post('/create-post', requireAdmin, upload.single('media'), async (req, res) => {
+router.post('/create-post', upload.single('media'), async (req, res) => {
   try {
     const { title, content, type, category, author, authorName } = req.body;
     
