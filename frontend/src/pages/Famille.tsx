@@ -63,6 +63,7 @@ interface FamilyMessage {
   content: string;
   type: 'text' | 'image' | 'video' | 'audio';
   mediaUrl?: string;
+  category?: 'information' | 'mariage' | 'bapteme' | 'deces' | 'reunion' | 'rencontre';
   createdAt: string;
 }
 
@@ -147,7 +148,9 @@ export default function Famille() {
 
   const [newMessage, setNewMessage] = useState({
     content: '',
-    type: 'text' as 'text' | 'image' | 'video' | 'audio'
+    type: 'text' as 'text' | 'image' | 'video' | 'audio',
+    category: 'information' as 'information' | 'mariage' | 'bapteme' | 'deces' | 'reunion' | 'rencontre',
+    mediaFile: null as File | null
   });
 
   useEffect(() => {
@@ -653,26 +656,27 @@ export default function Famille() {
   };
 
   const submitFamilyMessage = async () => {
-    if (!newMessage.content) return;
+    if (newMessage.type === 'text' && !newMessage.content.trim()) return;
+    if (newMessage.type !== 'text' && !newMessage.mediaFile) return;
 
     try {
       const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append('content', newMessage.content);
+      formData.append('type', newMessage.type);
+      formData.append('category', newMessage.category);
+      formData.append('author', userData?.numeroH || '');
+      formData.append('authorName', `${userData?.prenom} ${userData?.nomFamille}`);
+      if (newMessage.mediaFile) formData.append('media', newMessage.mediaFile);
+
       const response = await fetch('/api/family/send-message', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          content: newMessage.content,
-          type: newMessage.type,
-          author: userData?.numeroH,
-          authorName: `${userData?.prenom} ${userData?.nomFamille}`
-        })
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
       });
-      
+
       if (response.ok) {
-        setNewMessage({ content: '', type: 'text' });
+        setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
         loadFamilyMessages();
       } else {
         alert('Erreur lors de l\'envoi du message');
@@ -680,6 +684,17 @@ export default function Famille() {
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
       alert('Erreur lors de l\'envoi du message');
+    }
+  };
+
+  const getFamilyCategoryConfig = (cat?: string) => {
+    switch (cat) {
+      case 'mariage':    return { icon: '💍', label: 'Mariage',   color: 'bg-pink-100 text-pink-800' };
+      case 'bapteme':    return { icon: '👶', label: 'Baptême',   color: 'bg-sky-100 text-sky-800' };
+      case 'deces':      return { icon: '🕊️', label: 'Deuil',    color: 'bg-slate-200 text-slate-700' };
+      case 'reunion':    return { icon: '👥', label: 'Réunion',   color: 'bg-indigo-100 text-indigo-800' };
+      case 'rencontre':  return { icon: '🤝', label: 'Rencontre', color: 'bg-teal-100 text-teal-800' };
+      default:           return { icon: 'ℹ️', label: 'Info',      color: 'bg-gray-100 text-gray-700' };
     }
   };
 
@@ -1426,56 +1441,152 @@ export default function Famille() {
             </div>
       )}
 
-      {/* Modal de chat familial */}
+      {/* Modal de chat familial — Messagerie Professionnelle */}
       {showTreeChat && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl h-[600px] flex flex-col">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">💬 Chat Familial</h3>
-            
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto mb-4 space-y-4">
-              {familyMessages.map((message) => (
-                <div key={message.id} className={`flex ${message.author === userData?.numeroH ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs px-4 py-2 rounded-lg ${
-                    message.author === userData?.numeroH 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-200 text-gray-900'
-                  }`}>
-                    <p className="text-sm font-medium">{message.authorName}</p>
-                    <p className="text-sm">{message.content}</p>
-                    <p className="text-xs opacity-75 mt-1">
-                      {new Date(message.createdAt).toLocaleString()}
-                    </p>
-                  </div>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl flex flex-col shadow-2xl" style={{ height: '85vh', maxHeight: '680px' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 bg-green-600 rounded-t-2xl">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👨‍👩‍👧‍👦</span>
+                <div>
+                  <h3 className="font-bold text-white text-base">Messagerie Familiale</h3>
+                  <p className="text-green-100 text-xs">Espace privé entre membres de la famille</p>
                 </div>
+              </div>
+              <button onClick={() => setShowTreeChat(false)} className="text-white hover:text-green-200 text-2xl font-light">✕</button>
+            </div>
+
+            {/* Légende catégories */}
+            <div className="px-4 py-2 bg-gray-50 border-b flex gap-2 flex-wrap items-center">
+              <span className="text-xs text-gray-500 font-medium">Catégories :</span>
+              {[
+                { icon: 'ℹ️', label: 'Info' },
+                { icon: '💍', label: 'Mariage' },
+                { icon: '👶', label: 'Baptême' },
+                { icon: '🕊️', label: 'Deuil' },
+                { icon: '👥', label: 'Réunion' },
+                { icon: '🤝', label: 'Rencontre' },
+              ].map(c => (
+                <span key={c.label} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-white border border-gray-200 rounded-full text-gray-600">
+                  {c.icon} {c.label}
+                </span>
               ))}
             </div>
 
-            {/* Input */}
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={newMessage.content}
-                onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Tapez votre message..."
-                onKeyPress={(e) => e.key === 'Enter' && submitFamilyMessage()}
-              />
-              <button
-                onClick={submitFamilyMessage}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Envoyer
-              </button>
+            {/* Zone messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-gray-100">
+              {familyMessages.length === 0 && (
+                <div className="text-center text-gray-500 py-12">
+                  <div className="text-5xl mb-3">💬</div>
+                  <p className="font-medium">Aucun message pour le moment.</p>
+                  <p className="text-sm mt-1">Soyez le premier à écrire à votre famille !</p>
+                </div>
+              )}
+              {familyMessages.map((message) => {
+                const isMe = message.author === userData?.numeroH;
+                const catCfg = getFamilyCategoryConfig(message.category);
+                return (
+                  <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2.5 shadow-sm ${isMe ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
+                      {!isMe && <p className="text-xs font-semibold mb-0.5 opacity-80">{message.authorName}</p>}
+                      {/* Badge catégorie */}
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium mb-1.5 ${isMe ? 'bg-green-400 text-white' : catCfg.color}`}>
+                        {catCfg.icon} {catCfg.label}
+                      </span>
+                      {message.content && <p className="text-sm">{message.content}</p>}
+                      {message.type === 'image' && message.mediaUrl && (
+                        <img src={message.mediaUrl} alt="Photo" className="max-w-full rounded-lg mt-1" />
+                      )}
+                      {message.type === 'video' && message.mediaUrl && (
+                        <video src={message.mediaUrl} controls className="max-w-full rounded-lg mt-1" />
+                      )}
+                      {message.type === 'audio' && message.mediaUrl && (
+                        <audio src={message.mediaUrl} controls className="w-full mt-1" />
+                      )}
+                      <p className={`text-xs mt-1 ${isMe ? 'text-green-100' : 'text-gray-400'}`}>
+                        {new Date(message.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-              
-            <div className="flex space-x-3 mt-4">
-              <button
-                onClick={() => setShowTreeChat(false)}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
-              >
-                Fermer
-              </button>
+
+            {/* Zone saisie professionnelle */}
+            <div className="px-4 py-3 bg-white border-t space-y-2 rounded-b-2xl">
+              {/* Ligne catégorie + type média */}
+              <div className="flex gap-2 flex-wrap">
+                <select
+                  value={newMessage.category}
+                  onChange={e => setNewMessage({...newMessage, category: e.target.value as any})}
+                  className="flex-1 min-w-[140px] border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="information">ℹ️ Information</option>
+                  <option value="mariage">💍 Mariage</option>
+                  <option value="bapteme">👶 Baptême</option>
+                  <option value="deces">🕊️ Deuil / Décès</option>
+                  <option value="reunion">👥 Réunion</option>
+                  <option value="rencontre">🤝 Rencontre</option>
+                </select>
+                <select
+                  value={newMessage.type}
+                  onChange={e => setNewMessage({...newMessage, type: e.target.value as any, mediaFile: null})}
+                  className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-gray-50 focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="text">📝 Texte</option>
+                  <option value="image">🖼️ Photo</option>
+                  <option value="video">🎥 Vidéo</option>
+                  <option value="audio">🎙️ Audio</option>
+                </select>
+              </div>
+              {/* Zone saisie selon le type */}
+              <div className="flex gap-2 items-end">
+                {newMessage.type === 'text' ? (
+                  <input
+                    type="text"
+                    value={newMessage.content}
+                    onChange={e => setNewMessage({...newMessage, content: e.target.value})}
+                    onKeyPress={e => e.key === 'Enter' && submitFamilyMessage()}
+                    placeholder="Écrivez un message familial..."
+                    className="flex-1 border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                ) : newMessage.type === 'audio' ? (
+                  <div className="flex-1 flex items-center gap-2">
+                    {newMessage.mediaFile ? (
+                      <div className="flex items-center gap-2 flex-1 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
+                        <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
+                        <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 text-xs">✕</button>
+                      </div>
+                    ) : (
+                      <label className="flex-1 cursor-pointer">
+                        <input type="file" accept="audio/*" className="hidden"
+                          onChange={e => setNewMessage({...newMessage, mediaFile: e.target.files?.[0] || null})} />
+                        <span className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-600 border border-gray-200">
+                          🎙️ Choisir un fichier audio
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                ) : (
+                  <label className="flex-1 cursor-pointer">
+                    <input type="file"
+                      accept={newMessage.type === 'image' ? 'image/*' : 'video/*'}
+                      className="hidden"
+                      onChange={e => setNewMessage({...newMessage, mediaFile: e.target.files?.[0] || null})} />
+                    <span className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-600 border border-gray-200">
+                      {newMessage.type === 'image' ? '🖼️' : '🎥'} {newMessage.mediaFile ? newMessage.mediaFile.name : 'Choisir un fichier'}
+                    </span>
+                  </label>
+                )}
+                <button
+                  onClick={submitFamilyMessage}
+                  disabled={newMessage.type === 'text' ? !newMessage.content.trim() : !newMessage.mediaFile}
+                  className="w-10 h-10 flex items-center justify-center bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-full text-lg transition-colors flex-shrink-0"
+                >
+                  ➤
+                </button>
+              </div>
             </div>
           </div>
         </div>

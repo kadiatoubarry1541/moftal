@@ -98,11 +98,31 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
           <h4>Notifications récentes</h4>
           <div className="notifications-list">
             {notifications.slice(0, 5).map(notification => (
-              <div 
-                key={notification.id} 
+              <div
+                key={notification.id}
                 className={`notification-item ${notification.read ? 'read' : 'unread'}`}
                 onClick={() => markNotificationAsRead(notification.id)}
               >
+                {/* Photo de la personne qui invite */}
+                <div className="notification-avatar">
+                  {notification.fromPhoto ? (
+                    <img
+                      src={notification.fromPhoto}
+                      alt={notification.fromName}
+                      className="notification-avatar-img"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex');
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className="notification-avatar-fallback"
+                    style={{ display: notification.fromPhoto ? 'none' : 'flex' }}
+                  >
+                    {notification.fromName?.[0]?.toUpperCase() || '?'}
+                  </div>
+                </div>
                 <div className="notification-content">
                   <div className="notification-message">{notification.message}</div>
                   <div className="notification-date">{formatDate(notification.date)}</div>
@@ -152,8 +172,25 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
                 {pendingInvitations.map(invitation => (
                   <div key={invitation.id} className="invitation-card pending">
                     <div className="invitation-header">
-                      <div className="invitation-icon">
-                        {getRelationIcon(invitation.relation)}
+                      <div className="invitation-avatar-wrap">
+                        {invitation.fromPhoto ? (
+                          <img
+                            src={invitation.fromPhoto}
+                            alt={invitation.fromName}
+                            className="invitation-avatar-img"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex');
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="invitation-avatar-fallback"
+                          style={{ display: invitation.fromPhoto ? 'none' : 'flex' }}
+                        >
+                          {invitation.fromName?.[0]?.toUpperCase() || '?'}
+                        </div>
+                        <span className="invitation-relation-badge">{getRelationIcon(invitation.relation)}</span>
                       </div>
                       <div className="invitation-info">
                         <h4>{invitation.fromName}</h4>
@@ -204,8 +241,25 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
                 {acceptedInvitations.map(invitation => (
                   <div key={invitation.id} className="invitation-card accepted">
                     <div className="invitation-header">
-                      <div className="invitation-icon">
-                        {getRelationIcon(invitation.relation)}
+                      <div className="invitation-avatar-wrap">
+                        {invitation.fromPhoto ? (
+                          <img
+                            src={invitation.fromPhoto}
+                            alt={invitation.fromName}
+                            className="invitation-avatar-img"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex');
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="invitation-avatar-fallback"
+                          style={{ display: invitation.fromPhoto ? 'none' : 'flex' }}
+                        >
+                          {invitation.fromName?.[0]?.toUpperCase() || '?'}
+                        </div>
+                        <span className="invitation-relation-badge">{getRelationIcon(invitation.relation)}</span>
                       </div>
                       <div className="invitation-info">
                         <h4>{invitation.fromName}</h4>
@@ -241,8 +295,25 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
                 {declinedInvitations.map(invitation => (
                   <div key={invitation.id} className="invitation-card declined">
                     <div className="invitation-header">
-                      <div className="invitation-icon">
-                        {getRelationIcon(invitation.relation)}
+                      <div className="invitation-avatar-wrap">
+                        {invitation.fromPhoto ? (
+                          <img
+                            src={invitation.fromPhoto}
+                            alt={invitation.fromName}
+                            className="invitation-avatar-img"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.setAttribute('style', 'display:flex');
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className="invitation-avatar-fallback"
+                          style={{ display: invitation.fromPhoto ? 'none' : 'flex' }}
+                        >
+                          {invitation.fromName?.[0]?.toUpperCase() || '?'}
+                        </div>
+                        <span className="invitation-relation-badge">{getRelationIcon(invitation.relation)}</span>
                       </div>
                       <div className="invitation-info">
                         <h4>{invitation.fromName}</h4>

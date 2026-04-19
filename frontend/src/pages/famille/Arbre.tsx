@@ -61,7 +61,7 @@ export default function Arbre() {
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'arbre' | 'echanges'>('echanges')
+  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges'>('echanges')
   const { t } = useI18n()
 
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -79,7 +79,7 @@ export default function Arbre() {
   const [sharedLoading, setSharedLoading] = useState(false)
   const [activeAlbum, setActiveAlbum] = useState('rencontre')
   const [uploading, setUploading] = useState(false)
-  const [deletingIdx, setDeletingIdx] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewerMedia, setViewerMedia] = useState<GalleryItem | null>(null)
   const [galleryView, setGalleryView] = useState<'list' | 'detail'>('list')
 
@@ -249,7 +249,7 @@ const enhancedUser: UserData = useMemo(() => {
     try {
       setLoadingMessages(true)
       const token = localStorage.getItem('token')
-      const response = await fetch('http://localhost:5002/api/family-tree/messages', {
+      const response = await fetch(`${API_BASE}/api/family-tree/messages`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
@@ -279,7 +279,7 @@ const enhancedUser: UserData = useMemo(() => {
     try {
       setIsSending(true)
       const token = localStorage.getItem('token')
-      const response = await fetch('http://localhost:5002/api/family-tree/messages', {
+      const response = await fetch(`${API_BASE}/api/family-tree/messages`, {
         method: 'POST',
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
@@ -355,6 +355,10 @@ const enhancedUser: UserData = useMemo(() => {
     }
   }
 
+  const handleDeleteMedia = async (item: GalleryItem) => {
+    await deleteFromSharedGallery(item.id)
+  }
+
   const deleteFromSharedGallery = async (id: string) => {
     if (!confirm('Supprimer ce média ? Cette action est irréversible.')) return
     try {
@@ -406,40 +410,126 @@ const enhancedUser: UserData = useMemo(() => {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-6" />
       <div className="card">
-        <div className="flex flex-wrap gap-2 mb-6">
-          {/* 1. Échanges familiaux = page par défaut */}
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          Choisissez une zone : trois grands boutons, touchez celui que vous voulez.
+        </p>
+        <div
+          className={`grid gap-3 mb-6 ${partner ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}
+          role="tablist"
+          aria-label="Arbre, messages ou galerie"
+        >
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'echanges'}
             onClick={() => setActiveTab('echanges')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+            className={`min-h-[120px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
               activeTab === 'echanges'
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg scale-[1.02]'
+                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100'
             }`}
           >
-            💬 Échanges familiaux
+            <span className="text-5xl leading-none" aria-hidden>
+              💬
+            </span>
+            <span className="text-base font-bold leading-tight">Messages famille</span>
+            <span
+              className={`text-xs font-medium ${activeTab === 'echanges' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}
+            >
+              Parler à la famille
+            </span>
           </button>
 
-          {/* 2. Galerie famille (ouvre juste la modale) */}
           <button
             type="button"
             onClick={openGallery}
-            className="px-4 py-2 rounded-lg font-medium transition-colors duration-200 bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-2"
+            className={`min-h-[120px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100`}
           >
-            📷 Galerie famille
+            <span className="text-5xl leading-none" aria-hidden>
+              📷
+            </span>
+            <span className="text-base font-bold leading-tight">Galerie famille</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Photos et vidéos</span>
           </button>
 
-          {/* 3. Mon arbre (en dernier) */}
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'arbre'}
             onClick={() => setActiveTab('arbre')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
+            className={`min-h-[120px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
               activeTab === 'arbre'
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg scale-[1.02]'
+                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100'
             }`}
           >
-            🌳 Mon arbre
+            <span className="text-5xl leading-none" aria-hidden>🌳</span>
+            <span className="text-base font-bold leading-tight">Mon arbre</span>
+            <span className={`text-xs font-medium ${activeTab === 'arbre' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}>
+              Voir mes liens
+            </span>
           </button>
+
+          {/* Bouton arbre du conjoint — visible seulement si conjoint lié */}
+          {partner && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'arbre-conjoint'}
+              onClick={() => setActiveTab('arbre-conjoint')}
+              className={`min-h-[120px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-pink-400 ${
+                activeTab === 'arbre-conjoint'
+                  ? 'border-pink-500 bg-pink-500 text-white shadow-lg scale-[1.02]'
+                  : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-pink-400 text-gray-800 dark:text-gray-100'
+              }`}
+            >
+              {partner.photo ? (
+                <img
+                  src={partner.photo}
+                  alt={partner.prenom}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow"
+                />
+              ) : (
+                <span className="text-5xl leading-none" aria-hidden>💑</span>
+              )}
+              <span className="text-base font-bold leading-tight">
+                Arbre de {partner.prenom}
+              </span>
+              <span className={`text-xs font-medium ${activeTab === 'arbre-conjoint' ? 'text-pink-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                Voir ses liens
+              </span>
+            </button>
+          )}
         </div>
+
+        {activeTab === 'arbre-conjoint' && partner && (
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              {partner.photo && (
+                <img src={partner.photo} alt={partner.prenom} className="w-10 h-10 rounded-full object-cover border-2 border-pink-400" />
+              )}
+              <h2 className="text-2xl font-bold">💑 Arbre de {partner.prenom} {partner.nomFamille}</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Vous consultez l'arbre généalogique de votre conjoint(e). Votre lien apparaît dans cet arbre.
+            </p>
+            <ArbreGenealogique
+              userData={{
+                ...partner,
+                genre: partner.genre || 'AUTRE',
+                conjointPrenom: user?.prenom,
+                conjointNumeroH: user?.numeroH,
+                conjointNomFamille: user?.nomFamille,
+                conjointGenre: user?.genre,
+                conjointPhoto: (user as any)?.photo
+              }}
+              cercleCounts={cercleCounts}
+              onOpenGallery={openGallery}
+              treeHidden={[]}
+              onTreeHiddenChange={() => {}}
+            />
+          </>
+        )}
 
         {activeTab === 'arbre' && (
           <>
@@ -478,21 +568,21 @@ const enhancedUser: UserData = useMemo(() => {
         {activeTab === 'echanges' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
             <div className="lg:col-span-1 space-y-4">
-              <h2 className="text-2xl font-bold">💬 Échanges familiaux</h2>
-              <p className="text-gray-600">
-                Communiquez avec tous les membres de la famille{' '}
-                <span className="font-semibold">
-                  {effectiveUser.nomFamille ? `« ${effectiveUser.nomFamille} »` : ''}
-                </span>{' '}
-                comme dans une discussion WhatsApp de groupe.
+              <h2 className="text-xl font-bold text-gray-800">Messagerie familiale</h2>
+              <p className="text-sm text-gray-500">
+                Espace privé réservé aux membres de la famille{' '}
+                <span className="font-semibold text-gray-700">
+                  {effectiveUser.nomFamille ? `${effectiveUser.nomFamille}` : ''}
+                </span>
               </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-900 space-y-2">
-                <p className="font-semibold">Conseils d&apos;utilisation</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Les messages sont visibles par tous les membres de la même famille.</li>
-                  <li>Utilisez ce canal pour les annonces importantes, les nouvelles et les prières.</li>
-                  <li>Restez respectueux et bienveillant dans vos échanges.</li>
-                </ul>
+              <div className="flex items-center gap-3 mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-lg flex-shrink-0">
+                  👨‍👩‍👧‍👦
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Famille {effectiveUser.nomFamille || 'ADAM'}</p>
+                  <p className="text-xs text-gray-400">Discussion de groupe</p>
+                </div>
               </div>
             </div>
 
@@ -826,12 +916,12 @@ const enhancedUser: UserData = useMemo(() => {
                           <button
                             onClick={e => {
                               e.stopPropagation()
-                              handleDeleteMedia(idx)
+                              handleDeleteMedia(item)
                             }}
-                            disabled={deletingIdx === idx}
+                            disabled={deletingId === item.id}
                             className="w-7 h-7 rounded-full bg-red-600/90 flex items-center justify-center text-white text-xs active:scale-90"
                           >
-                            {deletingIdx === idx ? '…' : '🗑️'}
+                            {deletingId === item.id ? '…' : '🗑️'}
                           </button>
                         </div>
                       </div>

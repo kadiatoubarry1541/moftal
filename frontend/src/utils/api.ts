@@ -212,16 +212,30 @@ export const api = {
     }
   },
 
-  // Mot de passe oublié : vérifier identité (NumeroH + NumeroH parent + date de naissance)
-  async forgotPasswordVerify(numeroH: string, parentNumeroH: string, dateNaissance: string) {
+  // Mot de passe oublié : vérifier identité (NumeroH + NumeroH parent + code arbre familial)
+  async forgotPasswordVerify(numeroH: string, parentNumeroH: string, familyCode: string) {
     const response = await fetch(`${API_BASE_URL}/auth/forgot-password/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ numeroH, parentNumeroH, dateNaissance })
+      body: JSON.stringify({ numeroH, parentNumeroH, familyCode })
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok) {
       return { success: false, message: data.message || 'Vérification impossible.' }
+    }
+    return { success: true, otpToken: data.otpToken, emailSent: data.emailSent, maskedEmail: data.maskedEmail }
+  },
+
+  // Mot de passe oublié : vérifier le code OTP reçu par email
+  async forgotPasswordVerifyCode(otpToken: string, code: string) {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password/verify-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ otpToken, code })
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Code incorrect.' }
     }
     return { success: true, token: data.token }
   },

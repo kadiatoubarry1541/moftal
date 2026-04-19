@@ -101,13 +101,55 @@ const sections: StorySection[] = [
   }
 ];
 
+// Age minimum requis par section
+const SECTION_AGE_REQUIREMENTS: Record<string, number> = {
+  naissance: 25,
+  jeunesse: 25,
+  mariage: 25,
+  revelation: 40,
+  persecution: 40,
+  unification: 60,
+  heritage: 60
+};
+
+interface PublishedSectionInfo {
+  sectionId: string;
+  publishedAt: string;
+  authorName?: string;
+}
+
 export default function ARetenir() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [storySections, setStorySections] = useState<StorySection[]>(sections);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<{ [key: string]: boolean }>({});
+  const [publishedSections, setPublishedSections] = useState<PublishedSectionInfo[]>([]);
   const navigate = useNavigate();
+
+  // Calculer l'âge de l'utilisateur
+  const getUserAge = (): number => {
+    if (!userData) return 0;
+    if (userData.age && typeof userData.age === 'number') return userData.age;
+    if (userData.dateNaissance) {
+      const birth = new Date(userData.dateNaissance);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+      return age;
+    }
+    return 0;
+  };
+
+  const canPublishSection = (sectionId: string): boolean => {
+    const required = SECTION_AGE_REQUIREMENTS[sectionId] || 25;
+    return getUserAge() >= required;
+  };
+
+  const isSectionPublished = (sectionId: string): boolean => {
+    return publishedSections.some(p => p.sectionId === sectionId);
+  };
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -126,6 +168,7 @@ export default function ARetenir() {
       
       setUserData(user);
       loadUserStories(user.numeroH);
+      loadPublishedSections(user.numeroH);
     } catch {
       navigate("/login");
     }
@@ -133,19 +176,18 @@ export default function ARetenir() {
 
   const loadUserStories = async (numeroH: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/${numeroH}`);
+      const session = localStorage.getItem("session_user");
+      const token = session ? JSON.parse(session).token : null;
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/${numeroH}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.stories) {
-          const updatedSections = storySections.map(section => {
+          const updatedSections = sections.map(section => {
             const storyData = data.stories[section.id];
             if (typeof storyData === 'string') {
-              return {
-                ...section,
-                content: storyData,
-                photos: [],
-                videos: []
-              };
+              return { ...section, content: storyData, photos: [], videos: [] };
             } else if (storyData && typeof storyData === 'object') {
               return {
                 ...section,
@@ -154,12 +196,7 @@ export default function ARetenir() {
                 videos: storyData.videos || []
               };
             }
-            return {
-              ...section,
-              content: '',
-              photos: [],
-              videos: []
-            };
+            return { ...section, content: '', photos: [], videos: [] };
           });
           setStorySections(updatedSections);
         }
@@ -167,6 +204,20 @@ export default function ARetenir() {
     } catch (error) {
       console.error('Erreur lors du chargement des histoires:', error);
     }
+  };
+
+  const loadPublishedSections = async (numeroH: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/published?numeroH=${encodeURIComponent(numeroH)}&limit=100`);
+      if (response.ok) {
+        const data = await response.json();
+        setPublishedSections((data.stories || []).map((s: any) => ({
+          sectionId: s.sectionId,
+          publishedAt: s.publishedAt,
+          authorName: s.authorName
+        })));
+      }
+    } catch {}
   };
 
   const handleContentChange = (sectionId: string, content: string) => {
@@ -191,10 +242,13 @@ export default function ARetenir() {
         videos: section.videos || []
       };
 
+      const session2 = localStorage.getItem("session_user");
+      const authToken = session2 ? JSON.parse(session2).token : null;
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
         },
         body: JSON.stringify({
           numeroH: userData.numeroH,
@@ -205,35 +259,42 @@ export default function ARetenir() {
 
       if (response.ok) {
         toast.success('Histoire sauvegardée avec succès');
+      } else if (response.status === 401) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        setTimeout(() => navigate('/login'), 1500);
+        throw new Error('session_expired');
       } else {
         throw new Error('Erreur lors de la sauvegarde');
       }
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      toast.error('Erreur lors de la sauvegarde');
+    } catch (error: any) {
+      if (error.message !== 'session_expired') {
+        console.error('Erreur lors de la sauvegarde:', error);
+        toast.error('Erreur lors de la sauvegarde. Vérifiez que le serveur est démarré.');
+      }
+      throw error; // rethrow pour bloquer la publication si la sauvegarde échoue
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePublish = async (sectionId: string) => {
+  const handlePublishClick = async (sectionId: string) => {
     if (!userData) return;
-
     const section = storySections.find(s => s.id === sectionId);
     if (!section || !section.content || section.content.trim().length < 50) {
       toast.error('Veuillez remplir au moins 50 caractères avant de publier');
       return;
     }
+    if (!canPublishSection(sectionId)) {
+      const required = SECTION_AGE_REQUIREMENTS[sectionId] || 25;
+      toast.error(`Vous devez avoir au moins ${required} ans pour publier cette section`);
+      return;
+    }
 
     setSaving(true);
     try {
-      // D'abord sauvegarder
       await handleSave(sectionId);
-
-      // Ensuite publier
       const session = localStorage.getItem("session_user");
       const token = session ? JSON.parse(session).token : null;
-
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/publish`, {
         method: 'POST',
         headers: {
@@ -242,21 +303,54 @@ export default function ARetenir() {
         },
         body: JSON.stringify({
           numeroH: userData.numeroH,
-          sectionId
+          sectionId,
+          witnesses: []
         })
       });
-
       if (response.ok) {
         toast.success('✨ Votre histoire a été publiée dans l\'Histoire de l\'Humanité !');
+        loadPublishedSections(userData.numeroH);
+      } else if (response.status === 401) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        setTimeout(() => navigate('/login'), 1500);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erreur lors de la publication');
       }
     } catch (error: any) {
-      console.error('Erreur lors de la publication:', error);
-      toast.error(error.message || 'Erreur lors de la publication');
+      if (error.message?.includes('fetch') || error.name === 'TypeError') {
+        toast.error('Impossible de contacter le serveur. Vérifiez que le backend est démarré.');
+      } else {
+        toast.error(error.message || 'Erreur lors de la publication');
+      }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeletePublication = async (sectionId: string) => {
+    if (!userData) return;
+    if (!window.confirm('Voulez-vous vraiment supprimer cette publication ? Elle sera retirée de l\'Histoire de l\'Humanité.')) return;
+    try {
+      const session = localStorage.getItem("session_user");
+      const token = session ? JSON.parse(session).token : null;
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/publish/${sectionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ numeroH: userData.numeroH })
+      });
+      if (response.ok) {
+        toast.success('Publication supprimée');
+        setPublishedSections(prev => prev.filter(p => p.sectionId !== sectionId));
+      } else {
+        const d = await response.json();
+        toast.error(d.message || 'Erreur lors de la suppression');
+      }
+    } catch {
+      toast.error('Erreur de connexion');
     }
   };
 
@@ -342,10 +436,13 @@ export default function ARetenir() {
         };
       });
 
+      const sessionAll = localStorage.getItem("session_user");
+      const authTokenAll = sessionAll ? JSON.parse(sessionAll).token : null;
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/all`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authTokenAll ? { 'Authorization': `Bearer ${authTokenAll}` } : {})
         },
         body: JSON.stringify({
           numeroH: userData.numeroH,
@@ -432,11 +529,19 @@ export default function ARetenir() {
                   <div className="flex items-center space-x-4">
                     <div className="text-4xl">{section.icon}</div>
                     <div>
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center flex-wrap gap-2">
                         <span className="text-white text-sm font-semibold bg-white bg-opacity-20 px-3 py-1 rounded-full">
                           Étape {index + 1}
                         </span>
                         <h3 className="text-2xl font-bold text-white">{section.title}</h3>
+                        {/* Badge âge requis */}
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${canPublishSection(section.id) ? 'bg-green-400 text-green-900' : 'bg-yellow-300 text-yellow-900'}`}>
+                          {canPublishSection(section.id) ? '✓ Publication débloquée' : `🔒 ${SECTION_AGE_REQUIREMENTS[section.id]} ans requis`}
+                        </span>
+                        {/* Badge publié */}
+                        {isSectionPublished(section.id) && (
+                          <span className="text-xs font-bold px-2 py-1 rounded-full bg-emerald-400 text-emerald-900">✅ Publié</span>
+                        )}
                       </div>
                       <p className="text-blue-100 mt-1">{section.subtitle}</p>
                     </div>
@@ -473,25 +578,49 @@ export default function ARetenir() {
                       placeholder={`Racontez votre histoire pour cette section...\n\nExemple : ${section.description}`}
                       className="w-full min-h-[300px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y font-serif text-gray-700 leading-relaxed"
                     />
-                    <div className="mt-2 flex justify-between items-center">
+                    <div className="mt-2 flex flex-col gap-2">
                       <p className="text-sm text-gray-500">
                         {section.content.length} caractères {section.content.length < 50 && '(minimum 50 pour publier)'}
                       </p>
-                      <div className="flex gap-3">
+                      {!canPublishSection(section.id) && (
+                        <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
+                          🔒 Vous pouvez sauvegarder votre brouillon maintenant et publier lorsque vous aurez {SECTION_AGE_REQUIREMENTS[section.id]} ans.
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-3">
                         <button
                           onClick={() => handleSave(section.id)}
                           disabled={saving}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                         >
-                          {saving ? '⏳ Sauvegarde...' : '💾 Sauvegarder'}
+                          {saving ? '⏳ Sauvegarde...' : '💾 Sauvegarder brouillon'}
                         </button>
-                        <button
-                          onClick={() => handlePublish(section.id)}
-                          disabled={saving || !section.content || section.content.length < 50}
-                          className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg"
-                        >
-                          {saving ? '⏳ Publication...' : '✨ Publier dans l\'Histoire de l\'Humanité'}
-                        </button>
+                        {canPublishSection(section.id) && !isSectionPublished(section.id) && (
+                          <button
+                            onClick={() => handlePublishClick(section.id)}
+                            disabled={saving || !section.content || section.content.length < 50}
+                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg"
+                          >
+                            ✨ Publier dans l'Histoire de l'Humanité
+                          </button>
+                        )}
+                        {isSectionPublished(section.id) && (
+                          <>
+                            <button
+                              onClick={() => handlePublishClick(section.id)}
+                              disabled={saving || !section.content || section.content.length < 50}
+                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors disabled:opacity-50 font-semibold shadow-lg"
+                            >
+                              🔄 Republier (mettre à jour)
+                            </button>
+                            <button
+                              onClick={() => handleDeletePublication(section.id)}
+                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                            >
+                              🗑️ Supprimer la publication
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -546,7 +675,7 @@ export default function ARetenir() {
                   {/* Upload Videos */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      🎥 Vidéos (maximum 5 minutes)
+                      🎥 Vidéos (maximum 1 minute)
                     </label>
                     <div className="flex items-center gap-4 mb-4">
                       <label className="cursor-pointer px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold">
@@ -557,20 +686,25 @@ export default function ARetenir() {
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) {
-                              // Vérifier la taille (approximatif pour 5 minutes)
-                              if (file.size > 100 * 1024 * 1024) {
-                                toast.error('La vidéo est trop volumineuse. Maximum 100MB (environ 5 minutes)');
+                            if (!file) return;
+                            const vid = document.createElement('video');
+                            vid.preload = 'metadata';
+                            vid.onloadedmetadata = () => {
+                              URL.revokeObjectURL(vid.src);
+                              if (vid.duration > 60) {
+                                toast.error('La vidéo ne doit pas dépasser 1 minute.');
+                                e.target.value = '';
                                 return;
                               }
                               handleFileUpload(section.id, file, 'video');
-                              e.target.value = ''; // Reset input
-                            }
+                              e.target.value = '';
+                            };
+                            vid.src = URL.createObjectURL(file);
                           }}
                           disabled={uploading[`${section.id}-video`]}
                         />
                       </label>
-                      <span className="text-sm text-gray-500">Max 100MB (~5 minutes)</span>
+                      <span className="text-sm text-gray-500">Max 1 minute</span>
                     </div>
                     {section.videos && section.videos.length > 0 && (
                       <div className="space-y-4 mb-4">
@@ -632,6 +766,7 @@ export default function ARetenir() {
           </ul>
         </div>
       </div>
+
     </div>
   );
 }

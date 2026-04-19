@@ -408,27 +408,25 @@ export default function GalerieFamily() {
                 return (
                   <div
                     key={item.id}
-                    className="group relative bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer border border-gray-100 hover:border-gray-300"
+                    className="group relative rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer border border-gray-200 hover:border-gray-400 aspect-square bg-gray-900"
                     onClick={() => setLightboxIdx(idx)}
                   >
                     {isVideo(item) ? (
-                      <div className="relative aspect-square bg-gray-900">
-                        <video src={item.url} className="w-full h-full object-cover opacity-70" muted playsInline />
+                      <>
+                        <video src={item.url} className="absolute inset-0 w-full h-full object-cover opacity-70" muted playsInline />
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
                             <span className="text-xl ml-0.5">▶</span>
                           </div>
                         </div>
-                      </div>
+                      </>
                     ) : (
-                      <div className="aspect-square bg-gray-100">
-                        <img
-                          src={item.url}
-                          alt={`Photo ${albumCfg.label}`}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      </div>
+                      <img
+                        src={item.url}
+                        alt={`Photo ${albumCfg.label}`}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
                     )}
 
                     {/* Badge album */}
@@ -443,7 +441,7 @@ export default function GalerieFamily() {
                       </div>
                     )}
 
-                    {/* Overlay info — PAS de bouton supprimer ici */}
+                    {/* Overlay info — aucun bouton supprimer ici */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
                       <p className="text-white text-xs font-semibold truncate">{item.uploaderName}</p>
                       <p className="text-white/60 text-xs">{formatDate(item.created_at)}</p>
@@ -502,7 +500,7 @@ export default function GalerieFamily() {
             )}
 
             {/* Barre d'info */}
-            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <p className="text-white font-semibold text-sm">{lightboxItem.uploaderName}</p>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -513,41 +511,43 @@ export default function GalerieFamily() {
                   <span className="text-white/50 text-xs">{formatDate(lightboxItem.created_at)}</span>
                 </div>
               </div>
+              <span className="text-white/40 text-xs font-medium self-start sm:self-center">{lightboxIdx! + 1} / {filtered.length}</span>
+            </div>
 
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-white/40 text-xs font-medium">{lightboxIdx! + 1} / {filtered.length}</span>
-
-                {/* ── BOUTON SUPPRIMER SÉCURISÉ (double confirmation) ── */}
-                {lightboxItem.uploaderNumeroH === myNumeroH && (
-                  deleteConfirmId === lightboxItem.id ? (
-                    /* Étape 2 : confirmation explicite */
-                    <div className="flex items-center gap-2 bg-red-950/80 border border-red-700 rounded-xl px-3 py-2">
-                      <span className="text-red-300 text-xs font-semibold">Supprimer définitivement ?</span>
-                      <button
-                        onClick={() => handleDelete(lightboxItem.id)}
-                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors"
-                      >
-                        Oui, supprimer
-                      </button>
+            {/* ══ ZONE SUPPRESSION — entièrement séparée ══ */}
+            {lightboxItem.uploaderNumeroH === myNumeroH && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                {deleteConfirmId === lightboxItem.id ? (
+                  /* Étape 2 : confirmation explicite */
+                  <div className="bg-red-950/90 border border-red-600 rounded-2xl p-4 flex flex-col items-center gap-3">
+                    <p className="text-red-200 text-sm font-bold text-center">⚠️ Supprimer définitivement cette photo ?</p>
+                    <p className="text-red-300/60 text-xs text-center">Cette action est irréversible. La photo sera perdue pour toute la famille.</p>
+                    <div className="flex gap-3 mt-1">
                       <button
                         onClick={() => setDeleteConfirmId(null)}
-                        className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors"
+                        className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-xl transition-colors"
                       >
                         Annuler
                       </button>
+                      <button
+                        onClick={() => handleDelete(lightboxItem.id)}
+                        className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg"
+                      >
+                        Oui, supprimer
+                      </button>
                     </div>
-                  ) : (
-                    /* Étape 1 : bouton discret */
-                    <button
-                      onClick={() => setDeleteConfirmId(lightboxItem.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/8 hover:bg-red-600/70 text-white/60 hover:text-white text-xs font-medium rounded-lg transition-all border border-white/10 hover:border-red-500"
-                    >
-                      🗑️ Supprimer
-                    </button>
-                  )
+                  </div>
+                ) : (
+                  /* Étape 1 : bouton discret tout en bas */
+                  <button
+                    onClick={() => setDeleteConfirmId(lightboxItem.id)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 text-white/30 hover:text-red-400 text-xs font-medium rounded-xl border border-white/8 hover:border-red-500/40 hover:bg-red-600/10 transition-all"
+                  >
+                    🗑️ Supprimer cette photo
+                  </button>
                 )}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Navigation droite */}

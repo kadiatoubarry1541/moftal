@@ -53,32 +53,29 @@ function sanitizeAccountForPublic(account) {
 // POST /api/professionals/register - Inscription d'un compte professionnel
 router.post('/register', authenticate, async (req, res) => {
   try {
-    const { type, name, description, address, city, country, phone, email, services, specialties, photo, justificatifDocument } = req.body;
+    const { type, subSector, name, description, address, city, country, phone, email, services, specialties, photo, justificatifDocument } = req.body;
 
     if (!type || !name) {
       return res.status(400).json({ success: false, message: 'Type et nom requis' });
     }
 
     const validTypes = [
-      'clinic',
-      'security_agency',
-      'journalist',
-      'enterprise',
-      'school',
-      'supplier',
-      'scientist',
-      'ngo',
-      // Secteur Échanges
-      'vendor',
-      'producer',
-      'broker'
+      'clinic', 'security_agency', 'journalist', 'enterprise', 'school',
+      'supplier', 'scientist', 'ngo', 'vendor', 'producer', 'broker', 'restaurant'
     ];
     if (!validTypes.includes(type)) {
       return res.status(400).json({ success: false, message: 'Type invalide' });
     }
 
+    // Validation subSector pour les types Échanges
+    const echangesTypes = ['vendor', 'supplier', 'producer'];
+    if (echangesTypes.includes(type) && !['primaire', 'secondaire', 'tertiaire'].includes(subSector)) {
+      return res.status(400).json({ success: false, message: 'Veuillez choisir le niveau d\'échanges (primaire, secondaire ou tertiaire).' });
+    }
+
     const account = await ProfessionalAccount.create({
       type,
+      subSector: echangesTypes.includes(type) ? subSector : (type === 'broker' ? 'tertiaire' : null),
       name,
       description: description || '',
       address: address || '',
@@ -242,7 +239,7 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
     if (!account) {
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     }
-    const canApprove = await canUserApproveProfessional(PageAdmin, req.user, account.type);
+    const canApprove = await canUserApproveProfessional(PageAdmin, req.user, account.type, account.subSector);
     if (!canApprove) {
       return res.status(403).json({
         success: false,
@@ -388,7 +385,7 @@ router.post('/admin/reject/:id', authenticate, async (req, res) => {
     if (!account) {
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     }
-    const canReject = await canUserApproveProfessional(PageAdmin, req.user, account.type);
+    const canReject = await canUserApproveProfessional(PageAdmin, req.user, account.type, account.subSector);
     if (!canReject) {
       return res.status(403).json({
         success: false,

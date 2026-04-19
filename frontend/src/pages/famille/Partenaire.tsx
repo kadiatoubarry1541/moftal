@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { CommunicationHub } from '../../components/CommunicationHub'
+import { AddPersonModal } from '../../components/AddPersonModal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -69,6 +70,15 @@ export default function Partenaire() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [showLinkForm, setShowLinkForm] = useState(false)
+  const [showPersonModal, setShowPersonModal] = useState(false)
+  // Polygamie (homme) — liste des épouses actives
+  const [wives, setWives] = useState<Array<{ link: { id: string; status: string; numeroMariageMairie?: string; confirmedAt?: string }; wife: PartnerInfo | null }>>([])
+  const [selectedWifeIndex, setSelectedWifeIndex] = useState(0)
+  // Liens rompus (récupérables — se remettre ensemble possible)
+  const [brokenLinks, setBrokenLinks] = useState<Array<{ link: any; partner: PartnerInfo | null }>>([])
+  const [showBroken, setShowBroken] = useState(false)
+  // Historique archivé (séparation définitive — contenu supprimé côté demandeur)
+  const [archivedLinks, setArchivedLinks] = useState<Array<{ link: any; partner: PartnerInfo | null }>>([])
   const [linkForm, setLinkForm] = useState({
     partnerNumeroH: '',
     numeroMariageMairie: ''
@@ -86,6 +96,8 @@ export default function Partenaire() {
   })
   const [uploaderSession, setUploaderSession] = useState<SessionId | null>(null)
   const [partnerRatings, setPartnerRatings] = useState<Array<{ id: string; annee: number; note: number }>>([])
+  const [selectedHusbandIndex, setSelectedHusbandIndex] = useState(0)
+  const [showVerifSection, setShowVerifSection] = useState(false)
 
   void activities; void newActivityContent; void setNewActivityContent
 
@@ -115,6 +127,61 @@ export default function Partenaire() {
     } catch (e) {
       console.error('Erreur chargement partenaire:', e)
     }
+  }
+
+  // Charge toutes les épouses actives (pour un homme)
+  const loadMyWives = async () => {
+    const token = getToken()
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE}/api/couple/my-wives`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setWives(data.wives || [])
+        // Synchro : afficher la 1ère épouse dans l'espace partenaire existant
+        if ((data.wives || []).length > 0) {
+          const first = data.wives[selectedWifeIndex] || data.wives[0]
+          setPartner(first.wife)
+          setLinkInfo(first.link)
+        } else {
+          setPartner(null)
+          setLinkInfo(null)
+        }
+      }
+    } catch (e) {
+      console.error('Erreur chargement épouses:', e)
+    }
+  }
+
+  // Charge les liens rompus (récupérables)
+  const loadBrokenLinks = async () => {
+    const token = getToken()
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE}/api/couple/broken`, { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) { const data = await res.json(); setBrokenLinks(data.broken || []) }
+    } catch (e) { console.error('Erreur chargement liens rompus:', e) }
+  }
+
+  // Charge les liens archivés (séparation définitive)
+  const loadArchivedLinks = async () => {
+    const token = getToken()
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE}/api/couple/archived`, { headers: { Authorization: `Bearer ${token}` } })
+      if (res.ok) { const data = await res.json(); setArchivedLinks(data.archived || []) }
+    } catch (e) { console.error('Erreur chargement historique:', e) }
+  }
+
+  const reloadAll = () => {
+    const isH = user?.genre === 'HOMME'
+    if (isH) loadMyWives(); else { loadMyPartner(); loadArchivedLinks() }
+    loadBrokenLinks()
+    loadActivities()
+    loadPendingInvitations()
+    loadPendingSent()
   }
 
   const loadActivities = async () => {
@@ -264,28 +331,56 @@ export default function Partenaire() {
     }
   }
 
-  const handleLeaveLink = async () => {
-    if (!confirm('Quitter cette liaison avec votre partenaire ? Vous pourrez vous relier plus tard.')) return
+  // Rompre le lien (définitif — conservé en historique jusqu'à suppression)
+  const handleBreakLink = async (linkId?: string) => {
+    const id = linkId || linkInfo?.id
+    if (!id) return
+    if (!confirm(
+      'Rompre le lien ?\n\n' +
+      '• Cette rupture est définitive\n' +
+      '• Le lien passera en historique (lecture seule)\n' +
+      '• Vous pourrez supprimer cet historique quand vous le souhaitez\n\n' +
+      'Continuer ?'
+    )) return
     setSubmitting(true)
     try {
       const token = getToken()
-      const res = await fetch(`${API_BASE}/api/couple/leave`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ linkId: linkInfo?.id })
+      const res = await fetch(`${API_BASE}/api/couple/break/${id}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
       if (data.success) {
-        setPartner(null)
-        setLinkInfo(null)
-        loadMyPartner()
-        loadActivities()
+        setPartner(null); setLinkInfo(null)
+        reloadAll()
       } else alert(data.message || 'Erreur')
-    } catch (e) {
-      alert('Erreur réseau')
-    } finally {
-      setSubmitting(false)
-    }
+    } catch (e) { alert('Erreur réseau') }
+    finally { setSubmitting(false) }
+  }
+
+  // Alias pour rétrocompatibilité
+  const handleArchiveLink = () => handleBreakLink()
+  const handleLeaveLink = (linkId?: string) => handleBreakLink(linkId)
+
+  // ÉTAPE 2B : Séparation définitive (supprime côté demandeur uniquement)
+  const handleSeparate = async (linkId: string) => {
+    if (!confirm(
+      'Séparation définitive ?\n\n' +
+      '• Vos souvenirs communs seront supprimés DE VOTRE CÔTÉ uniquement\n' +
+      "• L'autre personne garde ses souvenirs dans son historique\n" +
+      '• Cette action est IRRÉVERSIBLE\n\n' +
+      'Confirmer la séparation définitive ?'
+    )) return
+    setSubmitting(true)
+    try {
+      const token = getToken()
+      const res = await fetch(`${API_BASE}/api/couple/separate/${linkId}`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.success) { reloadAll(); alert(data.message) }
+      else alert(data.message || 'Erreur')
+    } catch (e) { alert('Erreur réseau') }
+    finally { setSubmitting(false) }
   }
 
   useEffect(() => {
@@ -306,7 +401,13 @@ export default function Partenaire() {
       }
 
       setLoading(false)
-      loadMyPartner()
+      if (u.genre === 'HOMME') {
+        loadMyWives()
+      } else {
+        loadMyPartner()
+        loadArchivedLinks()
+      }
+      loadBrokenLinks()   // liens rompus pour tout le monde
       loadActivities()
       loadPartnerRatings(u.genre)
       loadPendingInvitations()
@@ -315,6 +416,13 @@ export default function Partenaire() {
       setLoading(false)
     }
   }, [navigate, location.pathname])
+
+  // Auto-ouvrir la section liens rompus si l'autre personne est à l'origine
+  useEffect(() => {
+    if (brokenLinks.some(({ link }) => link.brokenByNumeroH && link.brokenByNumeroH !== user?.numeroH)) {
+      setShowBroken(true)
+    }
+  }, [brokenLinks, user?.numeroH])
 
   const handleCreateLink = async () => {
     if (!linkForm.partnerNumeroH.trim()) {
@@ -472,41 +580,243 @@ export default function Partenaire() {
   const partnerLabel = isHomme ? 'votre femme' : 'votre homme'
   const userIsAdmin = isAdmin(user)
 
+  // Pour les femmes : un seul mari possible — on dérive husbands depuis partner + linkInfo
+  const husbands: Array<{ link: any; husband: PartnerInfo | null }> =
+    !isHomme && partner && linkInfo
+      ? [{ link: linkInfo, husband: partner }]
+      : []
+
+  // Liens rompus PAR L'AUTRE (l'utilisateur est la victime)
+  const brokenByOther = brokenLinks.filter(({ link }) => link.brokenByNumeroH && link.brokenByNumeroH !== user?.numeroH)
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <Link
         to="/famille"
         state={{ returnToHub: true }}
-        className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+        className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
       >
         ← Retour à Famille
       </Link>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <h2 className="text-3xl font-bold text-slate-800">
-              {titleIcon} {title}
-            </h2>
-            <Link to="/famille/inspir" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300">
-              🤝 Inspir
-            </Link>
+      {/* ── BANNIÈRE : L'AUTRE PERSONNE A ROMPU ─────────────────────── */}
+      {brokenByOther.length > 0 && (
+        <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl leading-none">💔</span>
+            <div className="flex-1">
+              <p className="font-semibold text-rose-800 text-sm">
+                {brokenByOther.length === 1
+                  ? `${brokenByOther[0].partner ? `${brokenByOther[0].partner.prenom} ${brokenByOther[0].partner.nomFamille}` : 'Votre partenaire'} a rompu le lien.`
+                  : `${brokenByOther.length} de vos partenaires ont rompu le lien.`}
+              </p>
+              <p className="text-xs text-rose-600 mt-1">Ce lien est définitivement rompu. Vous pouvez supprimer cet historique de votre côté.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {brokenByOther.map(({ link, partner: p }) => (
+                  <div key={link.id} className="flex gap-2">
+                    <button
+                      onClick={() => handleSeparate(link.id)}
+                      disabled={submitting}
+                      className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded-lg border border-red-200 transition-colors"
+                    >
+                      🗑 Supprimer mon historique
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-        <p className="mt-3 text-slate-600 text-sm">
-          Partagez vos moments et recevez les notes de {partnerLabel}.
-        </p>
-        <div className="mt-4 flex justify-end">
-          {!partner && (
-            <button
-              onClick={() => setShowLinkForm(!showLinkForm)}
-              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
-            >
-              {showLinkForm ? '✕ Annuler' : '💍 Lier mon partenaire'}
-            </button>
-          )}
+      )}
+
+      {/* ── BANNIÈRE COMPACTE avec bouton Vérifier ─────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold text-slate-800">{titleIcon} {title}</h2>
+          <Link to="/famille/inspir" className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-medium rounded-lg transition-colors border border-yellow-300">
+            🤝 Inspir
+          </Link>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowVerifSection(!showVerifSection)}
+          className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg border border-slate-200 transition-colors"
+        >
+          {showVerifSection ? '✕ Fermer' : '🔍 Vérifier'}
+        </button>
       </div>
+
+      {/* ── SECTION VÉRIFIER (collapsible) ──────────────────────────── */}
+      {showVerifSection && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+          <p className="text-slate-600 text-sm mb-4">
+            Partagez vos moments et recevez les notes de {partnerLabel}.
+          </p>
+          <div className="flex flex-wrap justify-end gap-3">
+            {/* HOMME : peut ajouter jusqu'à 4 épouses */}
+            {isHomme && wives.length < 4 && (
+              <button
+                onClick={() => setShowLinkForm(!showLinkForm)}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors text-sm"
+              >
+                {showLinkForm ? '✕ Annuler' : `💍 Ajouter une épouse (${wives.length}/4)`}
+              </button>
+            )}
+            {isHomme && wives.length >= 4 && (
+              <span className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm">
+                ✅ 4/4 épouses — maximum atteint
+              </span>
+            )}
+            {/* FEMME : 1 seul époux autorisé */}
+            {!isHomme && husbands.length < 1 && (
+              <button
+                onClick={() => setShowLinkForm(!showLinkForm)}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors text-sm"
+              >
+                {showLinkForm ? '✕ Annuler' : `💍 Ajouter un époux (${husbands.length}/1)`}
+              </button>
+            )}
+            {!isHomme && husbands.length >= 1 && (
+              <span className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm">
+                ✅ Époux lié — une femme ne peut avoir qu'un seul homme actif
+              </span>
+            )}
+            {/* Historique (liens rompus + archivés) */}
+            {(brokenLinks.length > 0 || archivedLinks.length > 0) && (
+              <button
+                onClick={() => setShowBroken(!showBroken)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium rounded-lg transition-colors text-sm border border-gray-200"
+              >
+                📖 Historique ({brokenLinks.length + archivedLinks.length})
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── ONGLETS MARIS (FEMME seulement) ─────────────────────── */}
+      {!isHomme && husbands.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {husbands.map((h, i) => (
+            <div key={h.link.id} className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  setSelectedHusbandIndex(i)
+                  setPartner(h.husband)
+                  setLinkInfo(h.link as LinkInfo)
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
+                  selectedHusbandIndex === i
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+                }`}
+              >
+                <span>🤵</span>
+                <span>{h.husband ? `${h.husband.prenom} ${h.husband.nomFamille}` : `Époux ${i + 1}`}</span>
+                {h.link.status === 'pending' && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">En attente</span>
+                )}
+              </button>
+              {h.link.status === 'active' && (
+                <button
+                  onClick={() => handleBreakLink(h.link.id)}
+                  disabled={submitting}
+                  title={`Rompre avec ${h.husband?.prenom || 'cet époux'}`}
+                  className="px-2 py-2 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-semibold rounded-xl border border-red-200 transition-colors"
+                >
+                  💔
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── ONGLETS ÉPOUSES (HOMME seulement) ─────────────────────── */}
+      {isHomme && wives.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {wives.map((w, i) => (
+            <div key={w.link.id} className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  setSelectedWifeIndex(i)
+                  setPartner(w.wife)
+                  setLinkInfo(w.link as LinkInfo)
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
+                  selectedWifeIndex === i
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+                }`}
+              >
+                <span>👰</span>
+                <span>{w.wife ? `${w.wife.prenom} ${w.wife.nomFamille}` : `Épouse ${i + 1}`}</span>
+                {w.link.status === 'pending' && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">En attente</span>
+                )}
+              </button>
+              {w.link.status === 'active' && (
+                <button
+                  onClick={() => handleBreakLink(w.link.id)}
+                  disabled={submitting}
+                  title={`Rompre avec ${w.wife?.prenom || 'cette épouse'}`}
+                  className="px-2 py-2 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-semibold rounded-xl border border-red-200 transition-colors"
+                >
+                  💔
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── HISTORIQUE PASSÉ (liens rompus + archivés) ───────────────── */}
+      {showBroken && (brokenLinks.length > 0 || archivedLinks.length > 0) && (
+        <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <h3 className="mb-3 text-base font-semibold text-gray-700">📖 Historique passé</h3>
+          <p className="mb-3 text-xs text-gray-500">Ces liens sont définitivement rompus. Lecture seule — vous pouvez supprimer votre historique.</p>
+          <div className="space-y-3">
+            {[...brokenLinks, ...archivedLinks].map(({ link, partner: p }) => (
+              <div key={link.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-4 py-3 border border-gray-200">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    {isHomme ? '👰' : '🤵'} {p ? `${p.prenom} ${p.nomFamille}` : 'Partenaire inconnu'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {link.brokenAt
+                      ? `Rompu le ${new Date(link.brokenAt).toLocaleDateString('fr-FR')}`
+                      : link.archivedAt
+                      ? `Archivé le ${new Date(link.archivedAt).toLocaleDateString('fr-FR')}`
+                      : '—'}
+                    {link.brokenByNumeroH && link.brokenByNumeroH !== user?.numeroH && " — par l'autre"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleSeparate(link.id)}
+                  disabled={submitting}
+                  className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium rounded-lg transition-colors border border-red-200"
+                >
+                  🗑 Supprimer mon historique
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showPersonModal && (
+        <AddPersonModal
+          title={`Trouver ${partnerLabel}`}
+          myNumeroH={user?.numeroH}
+          myPrenom={user?.prenom}
+          myNom={user?.nomFamille}
+          onSelect={(numeroH) => {
+            setLinkForm(prev => ({ ...prev, partnerNumeroH: numeroH }))
+            setShowPersonModal(false)
+          }}
+          onClose={() => setShowPersonModal(false)}
+        />
+      )}
 
       {showLinkForm && (
         <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 mb-6">
@@ -518,13 +828,22 @@ export default function Partenaire() {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 NumeroH de {partnerLabel} <span className="text-slate-500">*</span>
               </label>
-              <input
-                type="text"
-                value={linkForm.partnerNumeroH}
-                onChange={(e) => setLinkForm({ ...linkForm, partnerNumeroH: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                placeholder="Ex: G0C0P0R0E0F0 1"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={linkForm.partnerNumeroH}
+                  onChange={(e) => setLinkForm({ ...linkForm, partnerNumeroH: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Ex: G0C0P0R0E0F0 1"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPersonModal(true)}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap"
+                >
+                  ➕ Chercher
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -624,11 +943,11 @@ export default function Partenaire() {
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <h3 className="text-xl font-bold text-slate-800 mb-4">💑 Mon partenaire</h3>
                 <button
-                  onClick={handleLeaveLink}
+                  onClick={() => isHomme ? handleLeaveLink(linkInfo?.id) : handleArchiveLink()}
                   disabled={submitting}
-                  className="text-sm text-slate-600 hover:text-slate-700 disabled:opacity-50"
+                  className="text-sm text-rose-600 hover:text-rose-700 disabled:opacity-50"
                 >
-                  Quitter la liaison
+                  💔 Rompre le lien
                 </button>
               </div>
               <div className="flex items-center gap-4">

@@ -24,6 +24,11 @@ const TYPES = [
   { id: "enterprise", label: "Entreprises", icon: "🏢" },
   { id: "school", label: "Écoles", icon: "🎓" },
   { id: "supplier", label: "Fournisseurs", icon: "📦" },
+  { id: "vendor", label: "Vendeurs", icon: "🛒" },
+  { id: "producer", label: "Producteurs", icon: "🏭" },
+  { id: "broker", label: "Démarcheurs", icon: "🏘️" },
+  { id: "scientist", label: "Scientifiques", icon: "🔬" },
+  { id: "ngo", label: "ONG / Associations", icon: "🤝" },
 ];
 
 function getTypeIcon(type: string) {

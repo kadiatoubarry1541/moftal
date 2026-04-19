@@ -31,7 +31,6 @@ export { default as ActivityGroup } from './ActivityGroup.js';
 export { default as ActivityMessage } from './ActivityMessage.js';
 export { default as Friend } from './Friend.js';
 export { default as FriendRequest } from './FriendRequest.js';
-export { default as Friendship } from './Friendship.js';
 export { default as FamilyTreeMessage } from './FamilyTreeMessage.js';
 export { default as FamilyTreeConfirmation } from './FamilyTreeConfirmation.js';
 export { default as ParentChildLink } from './ParentChildLink.js';
@@ -64,8 +63,12 @@ export { default as Appointment } from './Appointment.js';
 export { default as Notification } from './Notification.js';
 export { default as IaKnowledge } from './IaKnowledge.js';
 export { default as IaConversation } from './IaConversation.js';
+export { default as Payment } from './Payment.js';
 
-// Export des modèles supplémentaires
+// Export des modèles supplémentaires (DB principale)
 export * from './additional.js';
+
+// HistorySection est exporté par additional.js (base principale enfants_adam_eve)
+// HistorySection.js pointe sur database_temps.js → maintenant aussi enfants_adam_eve
 
 

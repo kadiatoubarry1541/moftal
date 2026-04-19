@@ -1,6 +1,23 @@
 import express from 'express';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { HistorySection, FamilyMember, FamilyTree, Document, EmergencyCall, LocationCheck, Donation, ZakatCalculation, SecurityAgent, Hospital, Doctor, HealthProduct, Supplier, ExchangeProduct } from '../models/index.js';
+import { authenticateToken, requireAdmin, requireMuslimOrAdmin } from '../middleware/auth.js';
+import {
+  HistorySection,
+  FamilyMember,
+  FamilyTree,
+  Document,
+  EmergencyCall,
+  LocationCheck,
+  Donation,
+  ZakatCalculation,
+  SecurityAgent,
+  Hospital,
+  Doctor,
+  HealthProduct,
+  Supplier,
+  ExchangeProduct,
+  PoorPerson,
+  DocumentPermission
+} from '../models/index.js';
 
 const router = express.Router();
 
@@ -372,6 +389,21 @@ router.post('/zakat/donations', authenticateToken, async (req, res) => {
 router.post('/zakat/make-donation', authenticateToken, async (req, res) => {
   try {
     const { donor, donorName, recipient, recipientName, amount, currency, type, description, donationType } = req.body;
+    const dt = donationType || 'sadaqah';
+    if (dt === 'zakat') {
+      const role = (req.user.role || '').toLowerCase();
+      const isAdminUser =
+        role === 'admin' ||
+        role === 'super-admin' ||
+        req.user.isAdmin === true ||
+        ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'].includes(req.user.numeroH);
+      if (!isAdminUser && req.user.religion !== 'Islam') {
+        return res.status(403).json({
+          success: false,
+          message: 'La zakat est réservée aux comptes enregistrés comme musulmans'
+        });
+      }
+    }
     if (!amount || amount <= 0) {
       return res.status(400).json({ success: false, message: 'Montant invalide' });
     }
@@ -395,7 +427,7 @@ router.post('/zakat/make-donation', authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/zakat/calculations', authenticateToken, async (req, res) => {
+router.get('/zakat/calculations', authenticateToken, requireMuslimOrAdmin, async (req, res) => {
   try {
     const calculations = await ZakatCalculation.findAll({
       where: { user: req.user.numeroH },
@@ -408,7 +440,7 @@ router.get('/zakat/calculations', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/zakat/calculations', authenticateToken, async (req, res) => {
+router.post('/zakat/calculations', authenticateToken, requireMuslimOrAdmin, async (req, res) => {
   try {
     const { totalWealth, currency } = req.body;
     const zakatAmount = totalWealth * 0.025; // 2.5%

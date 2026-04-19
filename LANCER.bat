@@ -39,7 +39,7 @@ echo.
 echo Lancement des 3 serveurs...
 echo.
 
-start "Backend" cmd /k "cd /d ""%~dp0backend"" && npm start"
+start "Backend" cmd /k "cd /d ""%~dp0backend"" && npm run dev"
 timeout /t 4 /nobreak >nul
 
 start "Frontend" cmd /k "cd /d ""%~dp0frontend"" && npm run dev"
@@ -54,14 +54,14 @@ echo ║                    TOUT EST DEMARRE !                        ║
 echo ╚══════════════════════════════════════════════════════════════╝
 echo.
 echo   Backend:  http://localhost:5002
-echo   Frontend: http://localhost:5173
+echo   Frontend: http://localhost:3000
 echo   IA:       http://localhost:5000
 echo.
 echo   Ne fermez pas les 3 fenetres ouvertes.
 echo.
 echo   Ouverture du navigateur dans 15 secondes...
 timeout /t 15 /nobreak >nul
-start http://localhost:5173
+start http://localhost:3000
 echo.
 echo   Le projet est ouvert a 100%% dans le navigateur.
 pause

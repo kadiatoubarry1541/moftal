@@ -115,12 +115,15 @@ export function WrittenRegistration() {
 
   const paysComplete = !!(data.paysCode && data.region?.trim() && data.prefecture?.trim() && data.sousPrefecture?.trim() && data.quartier?.trim())
   const paysSummary = paysComplete
-    ? [countries.find((c) => c.code === data.paysCode)?.name || data.pays, data.region?.trim(), data.prefecture?.trim(), data.sousPrefecture?.trim(), data.quartier?.trim()].filter(Boolean).join(' › ')
+    ? [countries.find((c) => c.code === data.paysCode && c.continentCode === data.continentCode)?.name || data.pays, data.region?.trim(), data.prefecture?.trim(), data.sousPrefecture?.trim(), data.quartier?.trim()].filter(Boolean).join(' › ')
     : ''
 
-  useEffect(() => {
+  // La section Pays se referme uniquement quand l'utilisateur quitte le bloc (onBlur)
+  const handlePaysSectionBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    // Si le focus reste dans le bloc, ne pas fermer
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return
     if (paysComplete) setPaysSectionExpanded(false)
-  }, [paysComplete])
+  }
 
   const calculateGeneration = (dateNaissance: string): string => {
     if (!dateNaissance) return ''
@@ -294,7 +297,7 @@ export function WrittenRegistration() {
     const continentName = WORLD_GEOGRAPHY.find((c) => c.code === (normalizedForm.continentCode || infContinentCode))?.name || ''
     const inferred = {
       paysCode: normalizedForm.paysCode,
-      pays: countries.find((c) => c.code === normalizedForm.paysCode)?.name || normalizedForm.pays,
+      pays: countries.find((c) => c.code === normalizedForm.paysCode && c.continentCode === normalizedForm.continentCode)?.name || normalizedForm.pays,
       continent: continentName,
       continentCode: normalizedForm.continentCode || infContinentCode,
       regionCode: normalizedForm.regionCode || (normalizedForm.paysCode ? getContinentAndRegionByCountry(normalizedForm.paysCode).regionCode : 'R1'),
@@ -510,7 +513,7 @@ export function WrittenRegistration() {
 
         {/* ══ SECTION 2 – Champ Pays (unifié) : contient Pays + Région + Préfecture + Sous-préfecture + Quartier ══ */}
         {data.dateNaissance && (
-          <div className="field" style={{ animation: 'fadeInDown 0.3s ease' }}>
+          <div className="field" style={{ animation: 'fadeInDown 0.3s ease' }} onBlur={handlePaysSectionBlur}>
             <label>Pays *</label>
             {paysComplete && !paysSectionExpanded ? (
               <div
@@ -528,18 +531,19 @@ export function WrittenRegistration() {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Pays</label>
                   <select
-                    value={data.paysCode}
+                    value={data.continentCode && data.paysCode ? `${data.continentCode}_${data.paysCode}` : ''}
                     onChange={(e) => {
-                      const selectedCountry = countries.find((c) => c.code === e.target.value)
-                      const inferred = e.target.value ? getContinentAndRegionByCountry(e.target.value) : { continentCode: '', regionCode: '' }
+                      const [selectedContinentCode, selectedPaysCode] = e.target.value ? e.target.value.split('_') : ['', '']
+                      const selectedCountry = countries.find((c) => c.code === selectedPaysCode && c.continentCode === selectedContinentCode)
+                      const firstRegion = selectedCountry?.children?.[0]
                       setData((prev) => ({
                         ...prev,
                         pays: selectedCountry?.name || '',
-                        paysCode: e.target.value,
-                        continentCode: inferred.continentCode || prev.continentCode,
+                        paysCode: selectedPaysCode,
+                        continentCode: selectedContinentCode,
                         continent: selectedCountry ? '' : prev.continent,
                         region: '',
-                        regionCode: inferred.regionCode || '',
+                        regionCode: firstRegion?.code || '',
                         prefecture: '',
                         prefectureCode: '',
                         sousPrefecture: '',
@@ -552,7 +556,7 @@ export function WrittenRegistration() {
                   >
                     <option value="">— Choisir un pays —</option>
                     {countries.map((c) => (
-                      <option key={c.code} value={c.code}>{c.name}</option>
+                      <option key={`${c.continentCode}_${c.code}`} value={`${c.continentCode}_${c.code}`}>{c.name}</option>
                     ))}
                   </select>
                 </div>

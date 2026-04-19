@@ -5,7 +5,7 @@ interface QuickMediaCaptureProps {
   onClose?: () => void;
   allowedTypes?: ('photo' | 'video' | 'audio')[];
   autoPublish?: boolean;
-  /** Durée max pour vidéo/audio en secondes (défaut 60s, toujours ≤ 3 min) */
+  /** Durée max pour vidéo/audio en secondes (défaut 60s, toujours ≤ 60s) */
   maxDurationSeconds?: number;
 }
 
@@ -21,6 +21,8 @@ export function QuickMediaCapture({
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedMedia, setCapturedMedia] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const countdownRef = useRef<number | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -101,44 +103,66 @@ export function QuickMediaCapture({
   // Démarrer l'enregistrement vidéo/audio
   const startRecording = () => {
     if (!streamRef.current) return;
-    
-    const mimeType = mediaType === 'audio' 
-      ? 'audio/webm' 
-      : 'video/webm';
-    
-    const recorder = new MediaRecorder(streamRef.current, { mimeType });
+
+    // Sélectionner le premier codec supporté par le navigateur
+    let mimeType = '';
+    if (mediaType === 'audio') {
+      const audioCodecs = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4'];
+      mimeType = audioCodecs.find(c => MediaRecorder.isTypeSupported(c)) || '';
+    } else {
+      const videoCodecs = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+      mimeType = videoCodecs.find(c => MediaRecorder.isTypeSupported(c)) || '';
+    }
+
+    let recorder: MediaRecorder;
+    try {
+      recorder = mimeType
+        ? new MediaRecorder(streamRef.current, { mimeType })
+        : new MediaRecorder(streamRef.current);
+    } catch {
+      recorder = new MediaRecorder(streamRef.current);
+      mimeType = '';
+    }
+
     mediaRecorderRef.current = recorder;
     chunksRef.current = [];
-    
+
     recorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         chunksRef.current.push(event.data);
       }
     };
-    
+
     recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: mimeType });
-      const extension = mediaType === 'audio' ? 'webm' : 'webm';
-      const file = new File([blob], `${mediaType}-${Date.now()}.${extension}`, { type: mimeType });
-      
+      const finalMime = mimeType || (mediaType === 'audio' ? 'audio/webm' : 'video/webm');
+      const blob = new Blob(chunksRef.current, { type: finalMime });
+      const ext = mediaType === 'audio' ? 'webm' : 'webm';
+      const file = new File([blob], `${mediaType}-${Date.now()}.${ext}`, { type: finalMime });
+
       setCapturedMedia(file);
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);
       stopCapture();
-      
+      if (countdownRef.current) { window.clearInterval(countdownRef.current); countdownRef.current = null; }
+      setRecordingSeconds(0);
+
       if (autoPublish) {
         onCapture(file, mediaType);
       }
     };
-    
-    recorder.start();
-    setIsRecording(true);
 
-    // Couper automatiquement à la durée max configurée (sécurité 3 min max)
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current);
-    }
-    const safeMaxMs = Math.min(maxDurationSeconds, 180) * 1000;
+    recorder.start(1000);
+    setIsRecording(true);
+    setRecordingSeconds(0);
+
+    // Timer visible (chaque seconde)
+    countdownRef.current = window.setInterval(() => {
+      setRecordingSeconds(s => s + 1);
+    }, 1000);
+
+    // Arrêt automatique à la durée max (max 60s)
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    const safeMaxMs = Math.min(maxDurationSeconds, 60) * 1000;
     timerRef.current = window.setTimeout(() => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();

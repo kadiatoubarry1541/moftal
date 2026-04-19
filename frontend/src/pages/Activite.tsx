@@ -62,7 +62,6 @@ export default function Activite() {
   const [activeTab, setActiveTab] = useState<'Activité1' | 'Activité2' | 'Activité3'>('Activité1');
   
   const [groups, setGroups] = useState<ActivityGroup[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<ActivityGroup | null>(null);
   const [activityMessages, setActivityMessages] = useState<any[]>([]);
   const messagesEndRefActivity = useRef<HTMLDivElement>(null);
@@ -77,6 +76,9 @@ export default function Activite() {
 
   // Filtre du fil : tout, opportunités ou outils de travail
   const [feedFilter, setFeedFilter] = useState<'all' | 'opportunite' | 'outil'>('all');
+
+  // Formulaire dédié aux outils
+  const [toolForm, setToolForm] = useState({ nom: '', description: '' });
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -112,14 +114,19 @@ export default function Activite() {
     }
   }, [navigate]);
 
-  const loadData = async () => {
+  const getToken = () => {
     try {
-      setLoading(true);
+      const s = localStorage.getItem("session_user");
+      return s ? JSON.parse(s).token : null;
+    } catch { return null; }
+  };
+
+  const loadData = async () => {
+    // Charger les groupes en arrière-plan sans bloquer l'affichage
+    try {
       await loadActivityGroups();
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -161,7 +168,7 @@ export default function Activite() {
 
   const loadActivityGroups = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await fetch(`${API_BASE_URL}/activities/groups?activity=${activeTab}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -171,33 +178,33 @@ export default function Activite() {
       
       if (response.ok) {
         const data = await response.json();
-        const groups = data.groups || [];
+        let groups = data.groups || [];
+
+        // Si aucun groupe n'existe pour cette activité, en créer un automatiquement
+        if (groups.length === 0) {
+          try {
+            const createRes = await fetch(`${API_BASE_URL}/activities/groups`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: `Groupe ${activeTab}`,
+                description: `Groupe principal pour les membres partageant ${activeTab}`,
+                activity: activeTab,
+                createdBy: userData?.numeroH || ''
+              })
+            });
+            if (createRes.ok) {
+              const createData = await createRes.json();
+              if (createData.group) groups = [createData.group];
+            }
+          } catch { /* ignore, on utilise les groupes par défaut */ }
+        }
+
         setGroups(groups);
-        
+
         // Auto-sélectionner le premier groupe pour permettre la publication directe
         if (groups.length > 0 && (!selectedGroup || selectedGroup.activity !== activeTab)) {
-          const firstGroup = groups[0];
-          if (!firstGroup.members.includes(userData?.numeroH || '')) {
-            await joinActivityGroup(firstGroup.id);
-            // Recharger les groupes après avoir rejoint
-            const updatedResponse = await fetch(`${API_BASE_URL}/activities/groups?activity=${activeTab}`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            if (updatedResponse.ok) {
-              const updatedData = await updatedResponse.json();
-              const updatedGroups = updatedData.groups || groups;
-              setGroups(updatedGroups);
-              const updatedGroup = updatedGroups.find((g: ActivityGroup) => g.id === firstGroup.id) || firstGroup;
-              setSelectedGroup(updatedGroup);
-      } else {
-              setSelectedGroup(firstGroup);
-            }
-          } else {
-            setSelectedGroup(firstGroup);
-          }
+          setSelectedGroup(groups[0]);
         } else if (groups.length > 0 && selectedGroup && selectedGroup.activity === activeTab) {
           // Mettre à jour le groupe sélectionné si les données ont changé
           const updatedGroup = groups.find((g: ActivityGroup) => g.id === selectedGroup.id);
@@ -299,7 +306,7 @@ export default function Activite() {
 
   const joinActivityGroup = async (groupId: string) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await fetch(`${API_BASE_URL}/activities/join-group`, {
         method: 'POST',
         headers: {
@@ -322,9 +329,9 @@ export default function Activite() {
 
   const loadActivityMessages = async () => {
     if (!selectedGroup) return;
-    
+
     try {
-      const token = localStorage.getItem("token");
+      const token = getToken();
       const response = await fetch(`${API_BASE_URL}/activities/groups/${selectedGroup.id}/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -371,8 +378,8 @@ export default function Activite() {
         formData.append('media', newActivityPost.mediaFile);
       }
       
-      const token = localStorage.getItem("token");
-      
+      const token = getToken();
+
       const response = await fetch(`${API_BASE_URL}/activities/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
         headers: {
@@ -406,6 +413,56 @@ export default function Activite() {
     }
   };
 
+  const sendTool = async () => {
+    if (!selectedGroup) { alert('Veuillez sélectionner un groupe'); return; }
+    if (!toolForm.nom.trim()) { alert('Veuillez entrer le nom ou le lien de l\'outil'); return; }
+
+    try {
+      const formData = new FormData();
+      const content = toolForm.description.trim()
+        ? `${toolForm.nom.trim()} — ${toolForm.description.trim()}`
+        : toolForm.nom.trim();
+      formData.append('content', content);
+      formData.append('messageType', 'text');
+      formData.append('category', 'outil');
+
+      const token = getToken();
+      const response = await fetch(`${API_BASE_URL}/activities/groups/${selectedGroup.id}/messages`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Affichage immédiat (optimiste) du message publié
+          const newMsg = {
+            id: data.message?.id || `local-${Date.now()}`,
+            content,
+            category: 'outil',
+            messageType: 'text',
+            numeroH: userData?.numeroH || '',
+            authorName: `${userData?.prenom || ''} ${userData?.nomFamille || ''}`.trim(),
+            createdAt: new Date().toISOString()
+          };
+          setActivityMessages(prev => [...prev, newMsg]);
+          setToolForm({ nom: '', description: '' });
+          setTimeout(() => messagesEndRefActivity.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+          // Synchronisation serveur en arrière-plan
+          loadActivityMessages().catch(() => {});
+        } else {
+          alert('Erreur lors de la publication');
+        }
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        alert(errData.message || 'Erreur lors de la publication');
+      }
+    } catch {
+      alert('Erreur de connexion au serveur');
+    }
+  };
+
 
   useEffect(() => {
     if (selectedGroup) {
@@ -427,18 +484,6 @@ export default function Activite() {
   }, [activeTab]);
 
   const filteredGroups = groups.filter(group => group.activity === activeTab);
-
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des activités...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -536,7 +581,7 @@ export default function Activite() {
             {/* Interface de publication - Affichée directement sans header */}
             {selectedGroup && (
               <div className="mt-4 space-y-4">
-                {/* Filtre du fil */}
+                {/* Filtre du fil — Messagerie : Information, Réunion, Rencontre */}
                 <div className="flex gap-2 flex-wrap">
                   <button
                     type="button"
@@ -572,10 +617,10 @@ export default function Activite() {
                 <div className="flex-1 overflow-y-auto bg-gray-100 p-4" style={{ minHeight: '300px', maxHeight: 'calc(70vh - 200px)' }}>
                   {(() => {
                     const filtered = feedFilter === 'all'
-                      ? activityMessages
+                      ? activityMessages.filter((m: any) => !['opportunite', 'outil'].includes(m.category || 'information'))
                       : activityMessages.filter((m: any) => (m.category || 'information') === feedFilter);
 
-                    // Cas spécial : onglet Outils de travail → afficher les outils spéciaux en haut
+                    // Cas spécial : onglet Outils de travail → afficher Info-Wallou + Assistant IA en haut
                     if (feedFilter === 'outil') {
                       return (
                         <>
@@ -594,9 +639,7 @@ export default function Activite() {
                                   Mariage · Baptême · Réunion · Santé · Décès
                                 </p>
                               </div>
-                              <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
-                                →
-                              </span>
+                              <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
                             </Link>
                           </div>
 
@@ -609,12 +652,10 @@ export default function Activite() {
                               <div className="flex-1">
                                 <h3 className="font-bold text-white text-base">Assistant IA Français & Mathématiques</h3>
                                 <p className="text-sm text-cyan-100">
-                                  Posez vos questions en français et en math, l’IA vous aide pas à pas.
+                                  Posez vos questions en français et en math, l'IA vous aide pas à pas.
                                 </p>
                               </div>
-                              <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
-                                →
-                              </span>
+                              <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
                             </Link>
                           </div>
 
@@ -626,68 +667,23 @@ export default function Activite() {
                             filtered.map((msg: any) => {
                               const isMyMessage = msg.numeroH === userData?.numeroH;
                               return (
-                                <div
-                                  key={msg.id}
-                                  className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
-                                >
-                                  <div
-                                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                      isMyMessage
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-white text-gray-900'
-                                    }`}
-                                  >
-                                    {!isMyMessage && (
-                                      <p className="text-xs font-semibold mb-1 opacity-75">
-                                        {msg.authorName || msg.numeroH}
-                                      </p>
-                                    )}
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-sm">
-                                        {getCategoryLogo(msg.category || 'information')}
-                                      </span>
-                                      <span
-                                        className={`text-xs font-medium ${
-                                          isMyMessage ? 'text-green-100' : 'text-gray-600'
-                                        }`}
-                                      >
-                                        {getCategoryName(msg.category || 'information')}
-                                      </span>
+                                <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                                  {!isMyMessage && (
+                                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1">
+                                      {(msg.authorName || msg.numeroH || '?').substring(0, 2).toUpperCase()}
                                     </div>
-                                    {msg.messageType === 'text' && msg.content && (
-                                      <p className="text-sm">{msg.content}</p>
+                                  )}
+                                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
+                                    {!isMyMessage && (
+                                      <div className="mb-1">
+                                        <p className="text-xs font-semibold">{msg.authorName}</p>
+                                        <p className="text-xs opacity-60">{msg.numeroH}</p>
+                                      </div>
                                     )}
-                                    {msg.messageType === 'image' && msg.mediaUrl && (
-                                      <img
-                                        src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`}
-                                        alt="Image"
-                                        className="max-w-full h-auto rounded-lg mb-1"
-                                      />
-                                    )}
-                                    {msg.messageType === 'video' && msg.mediaUrl && (
-                                      <video
-                                        src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`}
-                                        controls
-                                        className="max-w-full h-auto rounded-lg mb-1"
-                                      />
-                                    )}
-                                    {msg.messageType === 'audio' && msg.mediaUrl && (
-                                      <audio
-                                        src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`}
-                                        controls
-                                        className="w-full mb-1"
-                                      />
-                                    )}
-                                    <p
-                                      className={`text-xs mt-1 ${
-                                        isMyMessage ? 'text-green-100' : 'text-gray-500'
-                                      }`}
-                                    >
-                                      {new Date(msg.createdAt).toLocaleTimeString('fr-FR', {
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                      })}
-                                    </p>
+                                    {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
+                                    {msg.messageType === 'image' && msg.mediaUrl && <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />}
+                                    {msg.messageType === 'video' && msg.mediaUrl && <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />}
+                                    {msg.messageType === 'audio' && msg.mediaUrl && <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />}
                                   </div>
                                 </div>
                               );
@@ -725,17 +721,22 @@ export default function Activite() {
                               const isMyMessage = msg.numeroH === userData?.numeroH;
                               return (
                                 <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
-                                    {!isMyMessage && <p className="text-xs font-semibold mb-1 opacity-75">{msg.authorName || msg.numeroH}</p>}
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="text-sm">🌟</span>
-                                      <span className={`text-xs font-medium ${isMyMessage ? 'text-green-100' : 'text-gray-600'}`}>Opportunité</span>
+                                  {!isMyMessage && (
+                                    <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1">
+                                      {(msg.authorName || msg.numeroH || '?').substring(0, 2).toUpperCase()}
                                     </div>
+                                  )}
+                                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
+                                    {!isMyMessage && (
+                                      <div className="mb-1">
+                                        <p className="text-xs font-semibold">{msg.authorName}</p>
+                                        <p className="text-xs opacity-60">{msg.numeroH}</p>
+                                      </div>
+                                    )}
                                     {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
                                     {msg.messageType === 'image' && msg.mediaUrl && <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />}
                                     {msg.messageType === 'video' && msg.mediaUrl && <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />}
                                     {msg.messageType === 'audio' && msg.mediaUrl && <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />}
-                                    <p className={`text-xs mt-1 ${isMyMessage ? 'text-green-100' : 'text-gray-500'}`}>{new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
                                   </div>
                                 </div>
                               );
@@ -758,68 +759,29 @@ export default function Activite() {
                     return filtered.map((msg: any) => {
                       const isMyMessage = msg.numeroH === userData?.numeroH;
                       return (
-                        <div
-                          key={msg.id}
-                          className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                              isMyMessage
-                                ? 'bg-green-500 text-white'
-                                : 'bg-white text-gray-900'
-                            }`}
-                          >
-                            {!isMyMessage && (
-                              <p className="text-xs font-semibold mb-1 opacity-75">
-                                {msg.authorName || msg.numeroH}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm">
-                                {getCategoryLogo(msg.category || 'information')}
-                              </span>
-                              <span
-                                className={`text-xs font-medium ${
-                                  isMyMessage ? 'text-green-100' : 'text-gray-600'
-                                }`}
-                              >
-                                {getCategoryName(msg.category || 'information')}
-                              </span>
+                        <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                          {!isMyMessage && (
+                            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1">
+                              {(msg.authorName || msg.numeroH || '?').substring(0, 2).toUpperCase()}
                             </div>
-                            {msg.messageType === 'text' && msg.content && (
-                              <p className="text-sm">{msg.content}</p>
+                          )}
+                          <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
+                            {!isMyMessage && (
+                              <div className="mb-1">
+                                <p className="text-xs font-semibold">{msg.authorName}</p>
+                                <p className="text-xs opacity-60">{msg.numeroH}</p>
+                              </div>
                             )}
+                            {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
                             {msg.messageType === 'image' && msg.mediaUrl && (
-                              <img
-                                src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`}
-                                alt="Image"
-                                className="max-w-full h-auto rounded-lg mb-1"
-                              />
+                              <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />
                             )}
                             {msg.messageType === 'video' && msg.mediaUrl && (
-                              <video
-                                src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`}
-                                controls
-                                className="max-w-full h-auto rounded-lg mb-1"
-                              />
+                              <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />
                             )}
                             {msg.messageType === 'audio' && msg.mediaUrl && (
-                              <audio
-                                src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`}
-                                controls
-                                className="w-full mb-1"
-                              />
+                              <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />
                             )}
-                            <p
-                              className={`text-xs mt-1 ${
-                                isMyMessage ? 'text-green-100' : 'text-gray-500'
-                              }`}
-                            >
-                              {new Date(msg.createdAt).toLocaleTimeString('fr-FR', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
                           </div>
                         </div>
                       );
@@ -830,8 +792,36 @@ export default function Activite() {
 
                 {/* Zone de saisie */}
                 <div className="bg-gray-200 px-4 py-2 border-t">
-                        <div className="space-y-2">
-                    {/* Sélecteur de catégorie */}
+                  {/* Formulaire dédié pour publier un outil (visible seulement dans l'onglet Outils) */}
+                  {feedFilter === 'outil' && (
+                    <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
+                      <p className="text-xs font-bold text-blue-800">🛠️ Proposer un outil de travail</p>
+                      <input
+                        type="text"
+                        value={toolForm.nom}
+                        onChange={(e) => setToolForm({ ...toolForm, nom: e.target.value })}
+                        placeholder="Nom ou lien de l'outil (ex: Google Docs, ChatGPT...)"
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                      <input
+                        type="text"
+                        value={toolForm.description}
+                        onChange={(e) => setToolForm({ ...toolForm, description: e.target.value })}
+                        placeholder="Description (facultatif)"
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+                      <button
+                        onClick={sendTool}
+                        disabled={!toolForm.nom.trim()}
+                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        ✅ Publier cet outil
+                      </button>
+                    </div>
+                  )}
+                  {/* Formulaire message normal — masqué dans l'onglet Outils */}
+                  {feedFilter !== 'outil' && (
+                  <div className="space-y-2">
                     <div className="flex gap-2">
                       <select
                         value={newActivityPost.category}
@@ -839,12 +829,11 @@ export default function Activite() {
                         className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
                       >
                         <option value="information">ℹ️ Information</option>
+                        <option value="reunion">👥 Réunion</option>
                         <option value="rencontre">🤝 Rencontre</option>
                         <option value="opportunite">🌟 Opportunité</option>
-                        <option value="outil">🛠️ Outil de travail</option>
-                        <option value="reunion">👥 Réunion</option>
                       </select>
-                              </div>
+                    </div>
                     {/* Zone de saisie */}
                     <div className="flex gap-2">
                       <div className="flex gap-2 flex-1">
@@ -920,12 +909,12 @@ export default function Activite() {
                         ▶
                       </button>
                       </div>
-                      </div>
-                    </div>
+                  </div>
+                  )}
                 </div>
               </div>
+            </div>
             )}
-                      </div>
 
         {/* Section Entreprises Professionnelles (approuvées par l'admin) */}
         <ProSection
@@ -937,5 +926,6 @@ export default function Activite() {
 
       </div>
     </div>
+  </div>
   );
 }

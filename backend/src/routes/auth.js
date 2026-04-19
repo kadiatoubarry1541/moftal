@@ -12,6 +12,7 @@ import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
 import { authenticate } from '../middleware/auth.js';
+import { sendPasswordResetEmail, sendPasswordOtpEmail, maskEmail } from '../services/emailService.js';
 
 const router = Router();
 
@@ -23,7 +24,6 @@ const loadTestUsers = async () => {
     // Vérifier s'il y a déjà un utilisateur de test
     const existingTestUser = await User.findByNumeroH('G96C1P2R3E2F1 4');
     if (existingTestUser) {
-      console.log(`📦 Utilisateur de test déjà existant: ${existingTestUser.numeroH}`);
       return;
     }
     
@@ -42,7 +42,6 @@ const loadTestUsers = async () => {
       role: 'user'
     });
     
-    console.log(`📦 Utilisateur de test créé: ${testUser.numeroH}`);
   } catch (error) {
     console.error('Erreur chargement utilisateurs de test:', error);
   }
@@ -448,54 +447,38 @@ router.post('/login', [
 
     const { numeroH, password } = req.body;
     
-    console.log('🔍 Tentative de connexion pour:', numeroH);
-
     try {
-      // Normaliser : espaces + remplacer lettre O par chiffre 0 (format NumeroH = G0C0P0R0E0F0 0)
+      // Normaliser : espaces + remplacer lettre O par chiffre 0
       const normalizedNumeroH = numeroH
         .trim()
         .replace(/\s+/g, ' ')
         .replace(/O/g, '0')
         .replace(/o/g, '0');
-      console.log('🔍 NumeroH normalisé pour recherche:', normalizedNumeroH);
-      
+
       let user = await User.findByNumeroH(normalizedNumeroH);
-      
-      // Si pas trouvé avec le normalisé (O→0), essayer avec l'original
+
       if (!user && normalizedNumeroH !== numeroH.trim()) {
         const originalTrimmed = numeroH.trim().replace(/\s+/g, ' ');
-        console.log('🔍 Essai avec NumeroH original (sans O→0):', originalTrimmed);
         user = await User.findByNumeroH(originalTrimmed);
       }
-      
+
       if (!user) {
-        console.log('❌ NumeroH non trouvé dans la base de données:', numeroH);
         return res.status(401).json({
           success: false,
           message: 'NumeroH ou mot de passe incorrect',
         });
       }
 
-      // Empêcher les décédés de se connecter
       if (user.type === 'defunt' || user.isDeceased) {
-        console.log('❌ Tentative de connexion d\'un défunt:', numeroH);
         return res.status(403).json({
           success: false,
           message: 'Les décédés n\'ont pas de compte. Leurs informations sont dans l\'arbre généalogique.',
           numeroHExists: false
         });
       }
-      
-      console.log('✅ ✅ ✅ UTILISATEUR TROUVÉ DANS LA BASE DE DONNÉES ✅ ✅ ✅');
-      console.log('✅ NumeroH:', user.numeroH);
-      console.log('✅ Prénom:', user.prenom);
-      console.log('✅ Nom:', user.nomFamille);
-      console.log('✅ Le NumeroH permet bien l\'accès au compte utilisateur');
 
-      // Vérifier le mot de passe
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        console.log('❌ Mot de passe incorrect pour:', numeroH);
         return res.status(401).json({
           success: false,
           message: 'Mot de passe incorrect',
@@ -503,36 +486,24 @@ router.post('/login', [
         });
       }
 
-      // Vérifier si l'utilisateur est actif
       if (!user.isActive) {
-        console.log('❌ Compte désactivé:', numeroH);
         return res.status(401).json({
           success: false,
           message: 'Compte désactivé'
         });
       }
 
-      // Mettre à jour la dernière connexion
       user.lastLogin = new Date();
       await user.save();
 
-      // Générer le token JWT
       const token = jwt.sign(
         { userId: user.numeroH, numeroH: user.numeroH },
         config.JWT_SECRET,
         { expiresIn: config.JWT_EXPIRE }
       );
 
-      // Retourner la réponse (sans le mot de passe)
       const userWithoutPassword = { ...user.dataValues };
       delete userWithoutPassword.password;
-      
-      console.log('✅ ✅ ✅ CONNEXION RÉUSSIE ✅ ✅ ✅');
-      console.log('✅ NumeroH utilisé:', numeroH);
-      console.log('✅ Utilisateur trouvé dans la base de données PostgreSQL');
-      console.log('✅ Prénom:', user.prenom);
-      console.log('✅ Nom:', user.nomFamille);
-      console.log('✅ Le NumeroH permet bien l\'accès au compte utilisateur');
 
       res.json({
         success: true,
@@ -569,26 +540,26 @@ function normalizeNumeroHForAuth(numeroH) {
 }
 
 // @route   POST /api/auth/forgot-password/verify
-// @desc    Vérifier l'identité pour réinitialisation : NumeroH + NumeroH d'un parent + date de naissance
+// @desc    Vérifier l'identité pour réinitialisation : NumeroH + NumeroH d'un parent + code de l'arbre familial
 // @access  Public
 router.post('/forgot-password/verify', [
   body('numeroH').trim().notEmpty().withMessage('Le NumeroH est requis'),
   body('parentNumeroH').trim().notEmpty().withMessage('Le NumeroH du parent est requis'),
-  body('dateNaissance').trim().notEmpty().withMessage('La date de naissance est requise')
+  body('familyCode').trim().notEmpty().withMessage('Le numéro de l\'arbre familial est requis')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ success: false, message: 'Données invalides', errors: errors.array() });
     }
-    const { numeroH, parentNumeroH, dateNaissance } = req.body;
+    const { numeroH, parentNumeroH, familyCode } = req.body;
     const normalizedNumeroH = normalizeNumeroHForAuth(numeroH);
     const normalizedParent = normalizeNumeroHForAuth(parentNumeroH);
-    const dateStr = String(dateNaissance).trim();
+    const codeStr = String(familyCode).trim().toUpperCase();
 
     const user = await User.findByNumeroH(normalizedNumeroH);
     if (!user) {
-      return res.status(400).json({ success: false, message: 'Informations incorrectes. Vérifiez votre NumeroH, le NumeroH du parent et votre date de naissance.' });
+      return res.status(400).json({ success: false, message: 'Informations incorrectes. Vérifiez votre NumeroH, le NumeroH du parent et le code de l\'arbre familial.' });
     }
     if (user.type === 'defunt' || user.isDeceased) {
       return res.status(403).json({ success: false, message: 'Ce compte ne peut pas réinitialiser un mot de passe.' });
@@ -598,22 +569,92 @@ router.post('/forgot-password/verify', [
     const mereNorm = user.numeroHMere ? normalizeNumeroHForAuth(user.numeroHMere) : '';
     const parentMatch = (pereNorm && pereNorm === normalizedParent) || (mereNorm && mereNorm === normalizedParent);
     if (!parentMatch) {
-      return res.status(400).json({ success: false, message: 'Informations incorrectes. Vérifiez votre NumeroH, le NumeroH du parent et votre date de naissance.' });
+      return res.status(400).json({ success: false, message: 'Informations incorrectes. Vérifiez votre NumeroH, le NumeroH du parent et le code de l\'arbre familial.' });
     }
 
-    const userDate = user.dateNaissance ? (user.dateNaissance instanceof Date ? user.dateNaissance.toISOString().slice(0, 10) : String(user.dateNaissance).slice(0, 10)) : null;
-    if (!userDate || userDate !== dateStr.slice(0, 10)) {
-      return res.status(400).json({ success: false, message: 'Informations incorrectes. Vérifiez votre NumeroH, le NumeroH du parent et votre date de naissance.' });
+    // Vérifier que l'utilisateur appartient à un arbre familial avec ce code
+    const { Op } = await import('sequelize');
+    const familyTree = await FamilyTree.findOne({
+      where: {
+        familyCode: { [Op.iLike]: codeStr }
+      }
+    });
+    if (!familyTree) {
+      return res.status(400).json({ success: false, message: 'Code de l\'arbre familial introuvable.' });
+    }
+    const treeMembers = familyTree.members || [];
+    const userInTree = treeMembers.includes(normalizedNumeroH) ||
+                       treeMembers.includes(user.numeroH) ||
+                       familyTree.rootMember === user.numeroH;
+    if (!userInTree) {
+      return res.status(400).json({ success: false, message: 'Informations incorrectes. Vérifiez votre NumeroH, le NumeroH du parent et le code de l\'arbre familial.' });
     }
 
-    const token = jwt.sign(
-      { numeroH: user.numeroH, purpose: 'forgot_password' },
+    // Générer un code OTP à 6 chiffres
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Signer un token OTP (contient le code, valide 10 min)
+    const otpToken = jwt.sign(
+      { numeroH: user.numeroH, code: otpCode, purpose: 'forgot_password_otp' },
+      config.JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+
+    // Envoi du code par email si l'utilisateur a une adresse email
+    let emailSent = false;
+    let maskedEmail = null;
+    if (user.email) {
+      maskedEmail = maskEmail(user.email);
+      const fullName = `${user.prenom || ''} ${user.nomFamille || ''}`.trim() || user.numeroH;
+      sendPasswordOtpEmail({
+        to: user.email,
+        toName: fullName,
+        code: otpCode,
+      }).then(() => {}).catch(err => console.error('sendPasswordOtpEmail:', err.message));
+      emailSent = true;
+    }
+
+    res.json({ success: true, otpToken, emailSent, maskedEmail });
+  } catch (err) {
+    console.error('forgot-password/verify:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// @route   POST /api/auth/forgot-password/verify-code
+// @desc    Vérifier le code OTP envoyé par email → retourne le token de réinitialisation
+// @access  Public
+router.post('/forgot-password/verify-code', [
+  body('otpToken').notEmpty().withMessage('Token OTP requis'),
+  body('code').trim().isLength({ min: 6, max: 6 }).withMessage('Code à 6 chiffres requis')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Données invalides', errors: errors.array() });
+    }
+    const { otpToken, code } = req.body;
+    let payload;
+    try {
+      payload = jwt.verify(otpToken, config.JWT_SECRET);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: 'Code expiré. Recommencez la procédure.' });
+    }
+    if (payload.purpose !== 'forgot_password_otp' || !payload.numeroH) {
+      return res.status(400).json({ success: false, message: 'Token invalide.' });
+    }
+    if (payload.code !== code.trim()) {
+      return res.status(400).json({ success: false, message: 'Code incorrect. Vérifiez le code reçu par email.' });
+    }
+    // Code correct → générer le token de réinitialisation
+    const resetToken = jwt.sign(
+      { numeroH: payload.numeroH, purpose: 'forgot_password' },
       config.JWT_SECRET,
       { expiresIn: '15m' }
     );
-    res.json({ success: true, token });
+    res.json({ success: true, token: resetToken });
   } catch (err) {
-    console.error('forgot-password/verify:', err);
+    console.error('forgot-password/verify-code:', err);
     res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 });
@@ -828,12 +869,9 @@ router.post('/profile/photo', (req, res) => {
         });
       }
 
-      console.log('📸 Upload photo pour:', numeroH, '- Fichier:', req.file.filename);
-
       const user = await User.findByNumeroH(numeroH);
 
       if (!user) {
-        console.log('❌ Utilisateur non trouvé pour photo:', numeroH);
         return res.status(404).json({
           success: false,
           message: 'Utilisateur non trouvé'
@@ -846,8 +884,6 @@ router.post('/profile/photo', (req, res) => {
 
       const userWithoutPassword = { ...user.dataValues };
       delete userWithoutPassword.password;
-
-      console.log('✅ Photo mise à jour:', photoUrl);
 
       res.json({
         success: true,

@@ -1,5 +1,5 @@
 import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../../config/database.js';
+import { sequelize } from '../../config/database_ia.js';
 
 class IaConversation extends Model {}
 
@@ -20,7 +20,7 @@ IaConversation.init(
       type: DataTypes.TEXT,
       allowNull: false,
       field: 'user_message',
-      comment: 'Question posée par l’élève au Professeur IA',
+      comment: "Question posée par l'élève au Professeur IA",
     },
     botResponse: {
       type: DataTypes.TEXT,
@@ -34,6 +34,12 @@ IaConversation.init(
       defaultValue: 'professeur_ia',
       comment: 'Source de la conversation (ex: professeur_ia, autre_ia...)',
     },
+    numeroH: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'numero_h',
+      comment: 'NumeroH de l\'utilisateur connecté (lié à User)',
+    },
   },
   {
     sequelize,
@@ -46,6 +52,7 @@ IaConversation.init(
       { fields: ['session_id'] },
       { fields: ['source'] },
       { fields: ['created_at'] },
+      { fields: ['numero_h'] },
     ],
   }
 );

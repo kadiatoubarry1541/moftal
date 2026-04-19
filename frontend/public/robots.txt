@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://les-enfants-d-adam.com/sitemap.xml

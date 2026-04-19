@@ -76,7 +76,7 @@ ProfessorRequest.init({
 }, {
   sequelize,
   modelName: 'ProfessorRequest',
-  tableName: 'professor_requests',
+  tableName: 'diangou_professor_requests',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

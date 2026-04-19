@@ -69,7 +69,7 @@ export default function EchangeSecondaire() {
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [activeStyleTab, setActiveStyleTab] = useState<'mode' | 'numerique' | 'vehicules'>('mode');
+  const [activeStyleTab, setActiveStyleTab] = useState<'mode' | 'numerique' | 'vehicules' | 'textile'>('mode');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
   const navigate = useNavigate();
 
@@ -106,26 +106,17 @@ export default function EchangeSecondaire() {
   });
 
   useEffect(() => {
+    // Charger les produits même sans connexion (vitrine publique)
     const session = localStorage.getItem("session_user");
-    if (!session) {
-      navigate("/login");
-      return;
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        const user = parsed.userData || parsed;
+        if (user?.numeroH) setUserData(user);
+      } catch { /* pas connecté */ }
     }
-
-    try {
-      const parsed = JSON.parse(session);
-      const user = parsed.userData || parsed;
-      if (!user || !user.numeroH) {
-        navigate("/login");
-        return;
-      }
-      
-      setUserData(user);
-      loadData();
-    } catch {
-      navigate("/login");
-    }
-  }, [navigate]);
+    loadData();
+  }, []);
 
   const loadData = async () => {
     try {
@@ -429,12 +420,24 @@ export default function EchangeSecondaire() {
       return [];
     }
     
-    if (activeStyleTab === 'mode') {
+    if (activeStyleTab === 'textile') {
       return products.filter(p => {
         if (!p) return false;
         const cat = ((p.subcategory || p.category) || '').toLowerCase();
         const title = (p.title || '').toLowerCase();
-        return cat.includes('vêtement') || cat.includes('vetement') || cat.includes('textile') || cat.includes('habillement') ||
+        return cat.includes('textile') || cat.includes('tissu') || cat.includes('coton') || cat.includes('fibre') ||
+               cat.includes('couture') || cat.includes('filature') || cat.includes('broderie') ||
+               title.includes('textile') || title.includes('tissu') || title.includes('coton') ||
+               title.includes('soie') || title.includes('lin') || title.includes('laine') ||
+               title.includes('broderie') || title.includes('couture') || title.includes('filature') ||
+               title.includes('fil ') || title.includes('tisser') || title.includes('toile');
+      });
+    } else if (activeStyleTab === 'mode') {
+      return products.filter(p => {
+        if (!p) return false;
+        const cat = ((p.subcategory || p.category) || '').toLowerCase();
+        const title = (p.title || '').toLowerCase();
+        return cat.includes('vêtement') || cat.includes('vetement') || cat.includes('habillement') ||
                cat.includes('chaussure') || cat.includes('sac') || cat.includes('accessoire') || cat.includes('mode') ||
                title.includes('vêtement') || title.includes('chemise') || title.includes('pantalon') || title.includes('robe') ||
                title.includes('t-shirt') || title.includes('pull') || title.includes('jupe') ||
@@ -494,24 +497,63 @@ export default function EchangeSecondaire() {
         ← Retour
       </button>
 
+      {/* Bannière en-tête Secondaire */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 mb-6 text-white shadow-lg">
+        <div className="flex flex-col items-center text-center gap-2">
+          <span className="text-5xl">🛍️</span>
+          <h1 className="text-2xl font-bold">Secteur Secondaire</h1>
+          <p className="text-blue-100 text-sm">Électronique, mode, textile, véhicules, machinerie</p>
+        </div>
+        {products.length > 0 && (
+          <div className="mt-5">
+            <p className="text-xs font-semibold text-blue-200 uppercase tracking-wide mb-3 text-center">Aperçu des produits</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {products.slice(0, 3).map((p) => (
+                <div key={p.id} className="flex gap-2 rounded-lg overflow-hidden bg-white/20 border border-white/30 backdrop-blur-sm">
+                  <div className="w-16 h-16 flex-shrink-0 bg-white/20 flex items-center justify-center text-2xl rounded-l-lg overflow-hidden">
+                    {(p.images as any)?.[0] ? (
+                      <img src={buildImageUrl((p.images as any)[0])} alt={p.title} className="w-full h-full object-cover" />
+                    ) : '🛍️'}
+                  </div>
+                  <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
+                    <p className="text-sm font-medium text-white truncate">{p.title}</p>
+                    <p className="text-xs font-semibold text-blue-100">{Number(p.price).toLocaleString()} {p.currency}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Navigation Style */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
           <button
             onClick={() => setActiveStyleTab('mode')}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               activeStyleTab === 'mode'
-                ? 'bg-orange-500 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             👗 Mode
           </button>
           <button
+            onClick={() => setActiveStyleTab('textile')}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              activeStyleTab === 'textile'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            🧵 Textile
+          </button>
+          <button
             onClick={() => setActiveStyleTab('vehicules')}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               activeStyleTab === 'vehicules'
-                ? 'bg-orange-500 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -521,7 +563,7 @@ export default function EchangeSecondaire() {
             onClick={() => setActiveStyleTab('numerique')}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               activeStyleTab === 'numerique'
-                ? 'bg-orange-500 text-white'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -586,6 +628,13 @@ export default function EchangeSecondaire() {
                   <option value="Chaussure">Chaussure</option>
                   <option value="Sac">Sac</option>
                   <option value="Accessoire">Accessoire</option>
+                </optgroup>
+                <optgroup label="🧵 Textile">
+                  <option value="Textile">Textile</option>
+                  <option value="Tissu">Tissu</option>
+                  <option value="Coton">Coton</option>
+                  <option value="Broderie">Broderie</option>
+                  <option value="Filature">Filature</option>
                 </optgroup>
                 <optgroup label="🚗 Véhicules">
                   <option value="Voiture">Voiture</option>

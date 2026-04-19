@@ -9,6 +9,7 @@ import CoupleLink from '../models/CoupleLink.js';
 import CoupleActivity from '../models/CoupleActivity.js';
 import PartnerRating from '../models/PartnerRating.js';
 import { sequelize } from '../config/database.js';
+import Notification from '../models/Notification.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,8 +70,11 @@ const isAdmin = (user) =>
 
 /**
  * POST /api/couple/link
- * Lier les deux partenaires par leurs NumeroH et le numéro unique du mariage à la mairie.
- * Le numéro mariage mairie doit être unique (jamais de répétition).
+ *
+ * Règles islamiques :
+ *  - Un HOMME peut avoir jusqu'à 4 femmes actives simultanément
+ *  - Une FEMME ne peut avoir qu'UN seul mari à la fois
+ *  - On vérifie le genre de chaque partie pour appliquer la bonne règle
  */
 router.post('/link', async (req, res) => {
   try {
@@ -78,89 +82,111 @@ router.post('/link', async (req, res) => {
     const { partnerNumeroH, numeroMariageMairie } = req.body;
 
     if (!partnerNumeroH || !String(partnerNumeroH).trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Le NumeroH du partenaire est obligatoire'
-      });
+      return res.status(400).json({ success: false, message: 'Le NumeroH du partenaire est obligatoire' });
     }
 
     const numeroMariage = numeroMariageMairie ? String(numeroMariageMairie).trim() : null;
 
-    const partner = await User.findByNumeroH(partnerNumeroH);
+    // Charger les deux profils complets (pour connaître les genres)
+    const [fullUser, partner] = await Promise.all([
+      User.findOne({ where: { numeroH: user.numeroH } }),
+      User.findByNumeroH(partnerNumeroH)
+    ]);
+
     if (!partner) {
-      return res.status(404).json({
-        success: false,
-        message: 'Aucun utilisateur trouvé avec ce NumeroH pour le partenaire'
-      });
+      return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce NumeroH pour le partenaire' });
     }
 
+    const userGenre   = (fullUser?.genre || user.genre || '').toUpperCase();
+    const partnerGenre = (partner.genre || '').toUpperCase();
+
+    // Déterminer qui est le mari et qui est la femme
+    let husbandNumeroH, wifeNumeroH;
+    if (userGenre === 'HOMME' && partnerGenre === 'FEMME') {
+      husbandNumeroH = user.numeroH;
+      wifeNumeroH    = partnerNumeroH;
+    } else if (userGenre === 'FEMME' && partnerGenre === 'HOMME') {
+      husbandNumeroH = partnerNumeroH;
+      wifeNumeroH    = user.numeroH;
+    } else {
+      // Fallback : utiliser l'ancienne logique si genre non défini
+      husbandNumeroH = user.numeroH;
+      wifeNumeroH    = partnerNumeroH;
+    }
+
+    // Vérification numéro mairie (toujours unique)
     if (numeroMariage) {
       const existingByNumero = await CoupleLink.findByNumeroMariage(numeroMariage);
       if (existingByNumero) {
-        return res.status(400).json({
-          success: false,
-          message: 'Ce numéro de mariage (mairie) est déjà utilisé. Chaque numéro doit être unique et sans répétition.'
-        });
+        return res.status(400).json({ success: false, message: 'Ce numéro de mariage (mairie) est déjà utilisé.' });
       }
     }
 
-    const alreadyLinked = await CoupleLink.getMyPartner(user.numeroH);
-    if (alreadyLinked) {
+    // Règle pour le MARI : maximum 4 épouses actives
+    const wivesCount = await CoupleLink.countWives(husbandNumeroH);
+    if (wivesCount >= 4) {
       return res.status(400).json({
         success: false,
-        message: 'Vous êtes déjà lié(e) à un partenaire'
+        message: 'Cet homme a déjà 4 épouses actives. Selon l\'Islam, le maximum autorisé est 4.'
       });
     }
 
-    const partnerAlreadyLinked = await CoupleLink.getMyPartner(partnerNumeroH);
-    if (partnerAlreadyLinked) {
+    // Règle pour la FEMME : elle ne peut avoir qu'un seul mari à la fois
+    const wifeExistingHusband = await CoupleLink.getMyHusband(wifeNumeroH);
+    if (wifeExistingHusband) {
       return res.status(400).json({
         success: false,
-        message: 'Ce partenaire est déjà lié(e) à quelqu\'un d\'autre'
+        message: 'Vous êtes déjà liée à un époux. Rompez le lien actuel avant d\'en créer un nouveau.'
       });
     }
 
-    const [n1, n2] = [user.numeroH, partnerNumeroH].sort();
+    // Vérifier qu'un lien entre ces deux personnes n'existe pas déjà (actif ou en attente)
+    const { Op } = await import('sequelize');
     const existingPair = await CoupleLink.findOne({
-      where: { numeroH1: n1, numeroH2: n2, isActive: true }
+      where: {
+        husbandNumeroH,
+        wifeNumeroH,
+        isActive: true,
+        isArchived: false
+      }
     });
     if (existingPair) {
-      return res.status(400).json({
-        success: false,
-        message: 'Un lien (en attente ou actif) existe déjà entre vous deux'
-      });
+      return res.status(400).json({ success: false, message: 'Un lien existe déjà entre vous deux.' });
     }
+
     const link = await CoupleLink.create({
-      numeroH1: n1,
-      numeroH2: n2,
+      numeroH1: husbandNumeroH,
+      numeroH2: wifeNumeroH,
+      husbandNumeroH,
+      wifeNumeroH,
       numeroMariageMairie: numeroMariage || null,
       status: 'pending',
+      isArchived: false,
       initiatedByNumeroH: user.numeroH
     });
+
+    // Notifier le partenaire destinataire
+    try {
+      const senderName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
+      const recipientNumeroH = user.numeroH === husbandNumeroH ? wifeNumeroH : husbandNumeroH;
+      await Notification.createNotification({
+        recipientNumeroH,
+        type: 'couple_request',
+        title: 'Demande de lien de couple',
+        message: `${senderName} vous a envoyé une demande de lien de couple.`,
+        relatedId: link.id
+      });
+    } catch (e) { console.error('Notif couple_request:', e.message); }
 
     res.json({
       success: true,
       message: 'Demande envoyée. C\'est au destinataire (votre partenaire) de confirmer le lien.',
-      link: {
-        id: link.id,
-        numeroH1: link.numeroH1,
-        numeroH2: link.numeroH2,
-        numeroMariageMairie: link.numeroMariageMairie
-      },
-      partner: {
-        numeroH: partner.numeroH,
-        prenom: partner.prenom,
-        nomFamille: partner.nomFamille,
-        photo: partner.photo,
-        genre: partner.genre
-      }
+      link: { id: link.id, husbandNumeroH, wifeNumeroH, numeroMariageMairie: link.numeroMariageMairie },
+      partner: { numeroH: partner.numeroH, prenom: partner.prenom, nomFamille: partner.nomFamille, photo: partner.photo, genre: partner.genre }
     });
   } catch (error) {
     console.error('Erreur création lien couple:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la création du lien'
-    });
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la création du lien' });
   }
 });
 
@@ -311,43 +337,217 @@ router.delete('/leave', async (req, res) => {
 
 /**
  * GET /api/couple/my-partner
- * Récupérer mon partenaire lié (pour Mon Homme / Ma Femme).
+ * Femme → son mari unique | Homme → rétrocompat (retourne sa 1ère épouse)
  */
 router.get('/my-partner', async (req, res) => {
   try {
     const user = req.user;
-    const link = await CoupleLink.getMyPartner(user.numeroH);
+    const fullUser = await User.findOne({ where: { numeroH: user.numeroH } });
+    const genre = (fullUser?.genre || user.genre || '').toUpperCase();
 
-    if (!link) {
-      return res.json({
-        success: true,
-        partner: null,
-        link: null
+    if (genre === 'HOMME') {
+      // Retourner la 1ère épouse pour rétrocompatibilité
+      const wives = await CoupleLink.getMyWives(user.numeroH);
+      if (!wives.length) return res.json({ success: true, partner: null, link: null });
+      const link = wives[0];
+      const partner = await User.findOne({
+        where: { numeroH: link.wifeNumeroH || link.numeroH2 },
+        attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'genre']
       });
+      return res.json({ success: true, partner: partner?.toJSON() || null, link: { id: link.id, numeroMariageMairie: link.numeroMariageMairie } });
     }
 
-    const partnerNumeroH = link.numeroH1 === user.numeroH ? link.numeroH2 : link.numeroH1;
+    // FEMME → son mari
+    const link = await CoupleLink.getMyHusband(user.numeroH);
+    if (!link) return res.json({ success: true, partner: null, link: null });
+
+    const partnerNumeroH = link.husbandNumeroH || (link.numeroH1 === user.numeroH ? link.numeroH2 : link.numeroH1);
     const partner = await User.findOne({
       where: { numeroH: partnerNumeroH },
       attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'genre']
     });
-
-    res.json({
-      success: true,
-      partner: partner ? partner.toJSON() : null,
-      link: {
-        id: link.id,
-        numeroMariageMairie: link.numeroMariageMairie
-      }
-    });
+    res.json({ success: true, partner: partner?.toJSON() || null, link: { id: link.id, numeroMariageMairie: link.numeroMariageMairie } });
   } catch (error) {
     console.error('Erreur récupération partenaire:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
+
+/**
+ * GET /api/couple/my-wives
+ * Homme → liste de toutes ses épouses actives avec leur lien
+ */
+router.get('/my-wives', async (req, res) => {
+  try {
+    const user = req.user;
+    const wives = await CoupleLink.getMyWives(user.numeroH);
+    const result = await Promise.all(wives.map(async (link) => {
+      const wife = await User.findOne({
+        where: { numeroH: link.wifeNumeroH || link.numeroH2 },
+        attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'genre']
+      });
+      return {
+        link: { id: link.id, status: link.status, numeroMariageMairie: link.numeroMariageMairie, confirmedAt: link.confirmedAt },
+        wife: wife?.toJSON() || null
+      };
+    }));
+    res.json({ success: true, wives: result, count: result.length, remaining: 4 - result.length });
+  } catch (error) {
+    console.error('Erreur récupération épouses:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * GET /api/couple/archived
+ * Liens archivés (passé d'une femme ou d'un homme)
+ */
+router.get('/archived', async (req, res) => {
+  try {
+    const user = req.user;
+    const links = await CoupleLink.getArchivedLinks(user.numeroH);
+    const result = await Promise.all(links.map(async (link) => {
+      const partnerNumeroH = link.husbandNumeroH === user.numeroH ? link.wifeNumeroH : link.husbandNumeroH;
+      const partner = partnerNumeroH ? await User.findOne({
+        where: { numeroH: partnerNumeroH },
+        attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+      }) : null;
+      return { link: link.toJSON(), partner: partner?.toJSON() || null };
+    }));
+    res.json({ success: true, archived: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/couple/break/:linkId
+ * RUPTURE TEMPORAIRE — lien passe en "broken" (récupérable).
+ * L'autre personne voit que le lien est rompu.
+ * Les deux peuvent se remettre ensemble via /reconcile.
+ */
+router.post('/break/:linkId', async (req, res) => {
+  try {
+    const user = req.user;
+    const link = await CoupleLink.findByPk(req.params.linkId);
+    if (!link) return res.status(404).json({ success: false, message: 'Lien non trouvé' });
+    const belongs = link.wifeNumeroH === user.numeroH || link.husbandNumeroH === user.numeroH
+                 || link.numeroH1 === user.numeroH || link.numeroH2 === user.numeroH;
+    if (!belongs && !isAdmin(user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+
+    link.status = 'broken';
+    link.isActive = false;
+    link.brokenAt = new Date();
+    link.brokenByNumeroH = user.numeroH;
+    await link.save();
+    res.json({ success: true, message: 'Lien rompu. Vous pouvez vous remettre ensemble à tout moment.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/couple/reconcile/:linkId
+ * SE REMETTRE ENSEMBLE — remet un lien "broken" en "active".
+ * Les deux retrouvent leur espace commun intact.
+ */
+router.post('/reconcile/:linkId', async (req, res) => {
+  try {
+    const user = req.user;
+    const link = await CoupleLink.findByPk(req.params.linkId);
+    if (!link || link.status !== 'broken') {
+      return res.status(404).json({ success: false, message: 'Lien rompu non trouvé' });
+    }
+    const belongs = link.wifeNumeroH === user.numeroH || link.husbandNumeroH === user.numeroH
+                 || link.numeroH1 === user.numeroH || link.numeroH2 === user.numeroH;
+    if (!belongs && !isAdmin(user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+
+    link.status = 'active';
+    link.isActive = true;
+    link.brokenAt = null;
+    link.brokenByNumeroH = null;
+    await link.save();
+    res.json({ success: true, message: 'Vous êtes remis ensemble. Votre espace commun est restauré.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * GET /api/couple/broken
+ * Liens rompus (status = broken) pour l'utilisateur courant
+ */
+router.get('/broken', async (req, res) => {
+  try {
+    const user = req.user;
+    const links = await CoupleLink.getBrokenLinks(user.numeroH);
+    const result = await Promise.all(links.map(async (link) => {
+      const partnerNumeroH = link.husbandNumeroH === user.numeroH ? link.wifeNumeroH
+        : link.wifeNumeroH === user.numeroH ? link.husbandNumeroH
+        : link.numeroH1 === user.numeroH ? link.numeroH2 : link.numeroH1;
+      const partner = partnerNumeroH ? await User.findOne({
+        where: { numeroH: partnerNumeroH },
+        attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+      }) : null;
+      return { link: link.toJSON(), partner: partner?.toJSON() || null };
+    }));
+    res.json({ success: true, broken: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/couple/separate/:linkId
+ * SÉPARATION DÉFINITIVE — marque le lien comme supprimé côté demandeur uniquement.
+ * L'autre personne garde ses souvenirs dans son historique.
+ * Si les deux ont supprimé → suppression physique totale.
+ */
+router.post('/separate/:linkId', async (req, res) => {
+  try {
+    const user = req.user;
+    const link = await CoupleLink.findByPk(req.params.linkId);
+    if (!link) return res.status(404).json({ success: false, message: 'Lien non trouvé' });
+    const belongs = link.wifeNumeroH === user.numeroH || link.husbandNumeroH === user.numeroH
+                 || link.numeroH1 === user.numeroH || link.numeroH2 === user.numeroH;
+    if (!belongs && !isAdmin(user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+
+    // Marquer le lien comme rompu définitivement d'abord
+    if (link.status !== 'broken') {
+      link.status = 'broken';
+      link.isActive = false;
+      link.brokenAt = new Date();
+      link.brokenByNumeroH = user.numeroH;
+    }
+
+    // Enregistrer qui a supprimé son côté
+    if (!link.deletedByNumeroH1) {
+      link.deletedByNumeroH1 = user.numeroH;
+    } else if (link.deletedByNumeroH1 !== user.numeroH) {
+      link.deletedByNumeroH2 = user.numeroH;
+    }
+
+    // Si les deux ont supprimé → suppression physique totale
+    if (link.deletedByNumeroH1 && link.deletedByNumeroH2) {
+      await link.destroy();
+      return res.json({ success: true, message: 'Séparation définitive complète. Tout a été supprimé.' });
+    }
+
+    // Sinon : archiver côté demandeur uniquement
+    link.isArchived = true;
+    link.archivedAt = new Date();
+    link.archivedByNumeroH = user.numeroH;
+    await link.save();
+    res.json({ success: true, message: 'Séparation définitive de votre côté. Vos souvenirs communs sont supprimés.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * GET /api/couple/archived
+ * Liens archivés (historique) — seulement ceux non supprimés côté demandeur
+ */
 
 /**
  * GET /api/couple/ratings/received

@@ -189,23 +189,35 @@ export function DeceasedWizard() {
     // ✅ IMPORTANT : Les défunts n'ont PAS de compte, ils existent uniquement dans l'arbre généalogique
     // Toujours sauvegarder en localStorage comme backup
     localStorage.setItem('dernier_defunt', JSON.stringify(complet))
+
+    // Sauvegarder dans la liste des défunts pour l'arbre généalogique
+    const sessionRaw = localStorage.getItem('session_user')
+    if (sessionRaw) {
+      try {
+        const session = JSON.parse(sessionRaw)
+        const ownerNumeroH = (session.userData || session).numeroH
+        if (ownerNumeroH) {
+          const key = `deceased_members_${ownerNumeroH}`
+          const existing = JSON.parse(localStorage.getItem(key) || '[]')
+          existing.push({
+            ...complet,
+            relation: (localStorage.getItem('defunt_relation') || 'autre'),
+            ownerNumeroH
+          })
+          localStorage.setItem(key, JSON.stringify(existing))
+        }
+      } catch { /* ignore */ }
+    }
     
     // ❌ NE PAS créer de session - les défunts ne peuvent pas se connecter
     // Les défunts existent uniquement dans l'arbre généalogique pour consultation
     
     // Afficher le numeroHD généré
-    alert(`✅ Défunt enregistré avec succès dans l'arbre généalogique !
-
-NumeroHD généré automatiquement : ${numero}
-
-⚠️ IMPORTANT : Les défunts n'ont pas de compte de connexion.
-Ils existent uniquement dans l'arbre généalogique familial pour consultation.
-
-Les membres de la famille peuvent maintenant voir ce défunt dans leur arbre généalogique.`)
+    alert(`✅ Défunt enregistré avec succès !\n\nNumeroHD : ${numero}\n\nIl apparaîtra dans votre arbre généalogique. Vous allez être redirigé vers votre arbre.`)
     
-    // Rediriger vers la page d'accueil
+    // Rediriger vers l'arbre généalogique
     setTimeout(() => {
-    navigate('/')
+    navigate('/famille/moi/arbre')
     }, 2000)
   }
 

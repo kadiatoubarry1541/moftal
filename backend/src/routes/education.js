@@ -367,15 +367,14 @@ router.get('/professors', async (req, res) => {
   try {
     const { specialty, search } = req.query;
     
-    const where = { isActive: true, isAvailable: true };
+    const where = { isActive: true };
     if (specialty) {
-      where.specialties = { [Op.contains]: [specialty] };
+      where.specialty = { [Op.iLike]: `%${specialty}%` };
     }
     if (search) {
       where[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
-        { specialties: { [Op.contains]: [search] } },
-        { city: { [Op.iLike]: `%${search}%` } }
+        { specialty: { [Op.iLike]: `%${search}%` } }
       ];
     }
     
@@ -642,6 +641,13 @@ router.post('/courses/publish', upload.single('media'), canCreateCourse, async (
       });
     }
     
+    // Si le professeur assigne le cours à des apprenants spécifiques
+    const assignedStudents = req.body.assignedStudents
+      ? (typeof req.body.assignedStudents === 'string'
+          ? req.body.assignedStudents.split(',').map(s => s.trim()).filter(Boolean)
+          : req.body.assignedStudents)
+      : [];
+
     const courseData = {
       title,
       description: description || '',
@@ -650,7 +656,8 @@ router.post('/courses/publish', upload.single('media'), canCreateCourse, async (
       level: level || 'débutant',
       category: category || 'Général',
       prerequisites: [],
-      createdBy: req.user.numeroH
+      createdBy: req.user.numeroH,
+      students: assignedStudents
     };
     
     if (req.file) {
@@ -687,7 +694,7 @@ router.post('/courses/publish', upload.single('media'), canCreateCourse, async (
 router.get('/my-courses', async (req, res) => {
   try {
     const courses = await Course.getUserCourses(req.user.numeroH);
-    
+
     res.json({
       success: true,
       courses
@@ -698,6 +705,80 @@ router.get('/my-courses', async (req, res) => {
       success: false,
       message: 'Erreur serveur lors de la récupération des cours'
     });
+  }
+});
+
+// @route   GET /api/education/my-linked-courses
+// @desc    Cours publiés par le(s) professeur(s) lié(s) à cet apprenant
+// @access  Authentifié
+router.get('/my-linked-courses', async (req, res) => {
+  try {
+    const studentNumeroH = req.user.numeroH;
+
+    // 1. Trouver les demandes approuvées de professeurs liés à cet apprenant
+    const approvedRequests = await ProfessorRequest.findAll({
+      where: { numeroH: studentNumeroH, status: 'approved' }
+    });
+
+    // 2. Récupérer les NumeroH des professeurs liés
+    const professorIds = approvedRequests.map(r => r.professorId);
+    if (professorIds.length === 0) {
+      return res.json({ success: true, courses: [] });
+    }
+
+    const professors = await Professor.findAll({ where: { id: professorIds } });
+    const professorNumeroHs = professors.map(p => p.numeroH).filter(Boolean);
+
+    // 3. Récupérer les cours créés par ces professeurs qui incluent cet apprenant
+    //    OU tous les cours du professeur (s'il n'y a pas de filtre par étudiant)
+    const allProfCourses = await Course.findAll({
+      where: {
+        createdBy: { [Op.in]: professorNumeroHs },
+        isActive: true
+      },
+      order: [['created_at', 'DESC']]
+    });
+
+    // Filtrer : cours assignés à cet étudiant, ou cours sans restriction d'étudiants (students=[])
+    const courses = allProfCourses.filter(c => {
+      const students = Array.isArray(c.students) ? c.students : [];
+      return students.length === 0 || students.includes(studentNumeroH);
+    });
+
+    res.json({ success: true, courses });
+  } catch (error) {
+    console.error('Erreur my-linked-courses:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   GET /api/education/my-linked-students
+// @desc    Liste des apprenants liés à ce professeur (demandes approuvées)
+// @access  Authentifié (professeur)
+router.get('/my-linked-students', async (req, res) => {
+  try {
+    const professor = await Professor.findOne({ where: { numeroH: req.user.numeroH } });
+    if (!professor) {
+      return res.json({ success: true, students: [] });
+    }
+
+    const approvedRequests = await ProfessorRequest.findAll({
+      where: { professorId: professor.id, status: 'approved' }
+    });
+
+    const students = [];
+    for (const req2 of approvedRequests) {
+      const u = await User.findByNumeroH(req2.numeroH);
+      students.push({
+        numeroH: req2.numeroH,
+        name: u ? `${u.prenom} ${u.nomFamille}` : req2.numeroH
+      });
+    }
+
+    res.json({ success: true, students });
+  } catch (error) {
+    console.error('Erreur my-linked-students:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
@@ -839,6 +920,145 @@ router.get('/stats', requireAdmin, async (req, res) => {
   }
 });
 
-export default router;
+// ========== STAGES ==========
 
+// @route   GET /api/education/stages
+// @desc    Récupérer les stages disponibles (formations de type stage)
+// @access  Authentifié
+router.get('/stages', async (req, res) => {
+  try {
+    const { category } = req.query;
+    const where = { isActive: true };
+    if (category) where.category = category;
+
+    const formations = await Formation.findAll({
+      where,
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({ success: true, stages: formations });
+  } catch (error) {
+    console.error('Erreur /education/stages:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   POST /api/education/stages/:id/request
+// @desc    Postuler à un stage
+// @access  Authentifié
+router.post('/stages/:id/request', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { motivation } = req.body;
+    const numeroH = req.user.numeroH;
+
+    const formation = await Formation.findByPk(id);
+    if (!formation) {
+      return res.status(404).json({ success: false, message: 'Stage non trouvé' });
+    }
+
+    const existing = await FormationRegistration.findOne({
+      where: { numeroH: numeroH, formationId: id }
+    });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Vous avez déjà postulé à ce stage' });
+    }
+
+    const registration = await FormationRegistration.create({
+      numeroH,
+      formationId: id,
+      status: 'pending',
+      notes: motivation ? `Motivation: ${motivation}` : null
+    });
+
+    res.status(201).json({ success: true, message: 'Candidature envoyée avec succès', registration });
+  } catch (error) {
+    console.error('Erreur /education/stages/:id/request:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   GET /api/education/my-stage-requests
+// @desc    Récupérer les candidatures aux stages de l'utilisateur
+// @access  Authentifié
+router.get('/my-stage-requests', async (req, res) => {
+  try {
+    const requests = await FormationRegistration.findAll({
+      where: { numeroH: req.user.numeroH },
+      order: [['created_at', 'DESC']]
+    });
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('Erreur /education/my-stage-requests:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   GET /api/education/my-registrations
+// @desc    Récupérer les inscriptions de l'utilisateur aux formations
+// @access  Authentifié
+router.get('/my-registrations', async (req, res) => {
+  try {
+    const registrations = await FormationRegistration.findAll({
+      where: { numeroH: req.user.numeroH },
+      order: [['created_at', 'DESC']]
+    });
+    res.json({ success: true, registrations });
+  } catch (error) {
+    console.error('Erreur /education/my-registrations:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   GET /api/education/my-progress
+// @desc    Récupérer la progression de l'utilisateur dans les cours
+// @access  Authentifié
+router.get('/my-progress', async (req, res) => {
+  try {
+    const registrations = await FormationRegistration.findAll({
+      where: { numeroH: req.user.numeroH, status: 'approved' },
+      order: [['created_at', 'DESC']]
+    });
+
+    const progress = registrations.map(r => ({
+      formationId: r.formationId,
+      status: r.status,
+      progress: r.progress ?? 0,
+      registeredAt: r.registeredAt || r.createdAt
+    }));
+
+    res.json({ success: true, progress });
+  } catch (error) {
+    console.error('Erreur /education/my-progress:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   GET /api/education/my-certificates
+// @desc    Récupérer les certificats obtenus par l'utilisateur
+// @access  Authentifié
+router.get('/my-certificates', async (req, res) => {
+  try {
+    const completed = await FormationRegistration.findAll({
+      where: { numeroH: req.user.numeroH, status: 'approved' },
+      order: [['created_at', 'DESC']]
+    });
+
+    const certificates = completed
+      .filter(r => (r.progress ?? 0) >= 100)
+      .map(r => ({
+        id: r.id,
+        formationId: r.formationId,
+        completedAt: r.completedAt || r.approvedAt || r.updatedAt,
+        progress: r.progress
+      }));
+
+    res.json({ success: true, certificates });
+  } catch (error) {
+    console.error('Erreur /education/my-certificates:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+export default router;
 

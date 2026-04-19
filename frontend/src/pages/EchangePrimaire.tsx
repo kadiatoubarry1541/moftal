@@ -66,10 +66,14 @@ export default function EchangePrimaire() {
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [activeMainTab, setActiveMainTab] = useState<'nourriture'>('nourriture');
-  const [activeNourritureTab] = useState<'aliments-base'>('aliments-base');
+  const [selectedSupplier] = useState<Supplier | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState<'aliments'>('aliments');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
+
+  // Restaurants
+  const [restaurants, setRestaurants] = useState<any[]>([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<any | null>(null);
+  const [restaurantMenuTab, setRestaurantMenuTab] = useState<string>('Tous');
   const navigate = useNavigate();
 
   const [newProduct, setNewProduct] = useState({
@@ -105,26 +109,17 @@ export default function EchangePrimaire() {
   });
 
   useEffect(() => {
+    // Charger les produits même sans connexion (vitrine publique)
     const session = localStorage.getItem("session_user");
-    if (!session) {
-      navigate("/login");
-      return;
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        const user = parsed.userData || parsed;
+        if (user?.numeroH) setUserData(user);
+      } catch { /* pas connecté */ }
     }
-
-    try {
-      const parsed = JSON.parse(session);
-      const user = parsed.userData || parsed;
-      if (!user || !user.numeroH) {
-        navigate("/login");
-        return;
-      }
-      
-      setUserData(user);
-      loadData();
-    } catch {
-      navigate("/login");
-    }
-  }, [navigate]);
+    loadData();
+  }, []);
 
   const loadData = async () => {
     try {
@@ -162,6 +157,19 @@ export default function EchangePrimaire() {
         setSuppliers(suppliersData.suppliers || []);
       } else {
         setSuppliers([]);
+      }
+
+      // Charger les restaurants approuvés
+      try {
+        const restoRes = await fetch(`${config.API_BASE_URL}/professionals/approved?type=restaurant`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (restoRes.ok) {
+          const restoData = await restoRes.json();
+          setRestaurants(restoData.accounts || []);
+        }
+      } catch {
+        setRestaurants([]);
       }
 
     } catch (error) {
@@ -397,7 +405,7 @@ export default function EchangePrimaire() {
       return [];
     }
     
-    if (activeMainTab === 'nourriture') {
+    if (activeSubTab === 'aliments') {
       return products.filter(p => {
         if (!p) return false;
         const cat = (p.category || '').toLowerCase();
@@ -432,22 +440,72 @@ export default function EchangePrimaire() {
         ← Retour
       </button>
 
-      {/* Actions rapides */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex-1">
-            <PublierAnnonceButtons
-              onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
-              title="Publier un produit primaire"
-            />
+      {/* Bannière en-tête Primaire */}
+      <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-6 mb-6 text-white shadow-lg">
+        <div className="flex flex-col items-center text-center gap-2">
+          <span className="text-5xl">🌾</span>
+          <h1 className="text-2xl font-bold">Secteur Primaire</h1>
+          <p className="text-green-100 text-sm">Aliments et restauration</p>
+        </div>
+        {products.length > 0 && (
+          <div className="mt-5">
+            <p className="text-xs font-semibold text-green-200 uppercase tracking-wide mb-3 text-center">Aperçu des produits</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {products.slice(0, 3).map((p) => (
+                <div key={p.id} className="flex gap-2 rounded-lg overflow-hidden bg-white/20 border border-white/30 backdrop-blur-sm">
+                  <div className="w-16 h-16 flex-shrink-0 bg-white/20 flex items-center justify-center text-2xl rounded-l-lg overflow-hidden">
+                    {p.images?.[0] ? (
+                      <img src={buildImageUrl(p.images[0])} alt={p.title} className="w-full h-full object-cover" />
+                    ) : '🛒'}
+                  </div>
+                  <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
+                    <p className="text-sm font-medium text-white truncate">{p.title}</p>
+                    <p className="text-xs font-semibold text-green-100">{Number(p.price).toLocaleString()} {p.currency}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* Navigation sous-sections : Aliments + Restauration */}
+      <div className="bg-white rounded-xl shadow border border-gray-200 p-4 mb-6">
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <button
+            onClick={() => setActiveSubTab('aliments')}
+            className="px-3 py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 bg-green-600 text-white shadow-lg"
+          >
+            <span className="text-xl">🍚</span>
+            <span>Aliments</span>
+          </button>
+          <button
+            onClick={() => navigate('/echange/nourriture')}
+            className="px-3 py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 bg-orange-500 text-white hover:bg-orange-600"
+          >
+            <span className="text-xl">🍽️</span>
+            <span>Restauration</span>
+            <span className="text-xs opacity-80">→ Voir les restaurants</span>
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-gray-500">
+            Riz, huiles, maïs, manioc et produits alimentaires
+          </p>
+        </div>
+      </div>
+
+      {/* Barre compacte */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">🍚 Aliments</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <PublierAnnonceButtons onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }} />
           {isAdmin && (
-            <button
-              onClick={() => setSelectedSupplier({} as Supplier)}
-              className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl shrink-0"
-            >
-              <span className="text-xl">⚙️</span>
-              <span className="font-semibold">Gérer Fournisseurs</span>
+            <button onClick={() => setSelectedSupplier({} as Supplier)}
+              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-semibold">
+              ⚙️
             </button>
           )}
         </div>
@@ -747,11 +805,7 @@ export default function EchangePrimaire() {
       )}
 
       {/* Liste des produits filtrés - Section distincte */}
-      <div className={`mb-8 rounded-2xl shadow-lg border-2 p-6 ${
-        activeMainTab === 'nourriture' 
-          ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
-          : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200'
-      }`}>
+      <div className="mb-8 rounded-2xl shadow-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 p-6">
         <div className="mb-6">
           <h2 className="text-3xl font-bold mb-2 text-green-800">
             🍚 Aliments
@@ -780,7 +834,7 @@ export default function EchangePrimaire() {
                 className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
             ) : product.videos && product.videos.length > 0 ? (
               <video src={buildImageUrl(product.videos[0])} className="w-full h-48 object-cover" controls />
-            ) : product.audio && product.audio.length > 0 ? (
+            ) : (product as any).audio && (product as any).audio.length > 0 ? (
               <div className="w-full h-48 bg-amber-50 flex flex-col items-center justify-center gap-2">
                 <span className="text-4xl">🎙️</span>
                 <audio src={buildImageUrl((product as any).audio[0])} controls className="w-full px-4" />
@@ -973,6 +1027,154 @@ export default function EchangePrimaire() {
           </button>
         </div>
       )}
+
+      {/* ══ SECTION RESTAURATION ══ */}
+      <div className="mt-10 mb-8 rounded-2xl shadow-lg border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <h2 className="text-3xl font-bold text-orange-800 flex items-center gap-2">
+              🍽️ Restaurants
+            </h2>
+            <p className="text-sm text-orange-600 mt-1">
+              Commandez par téléphone · Choisissez votre jour et heure de passage
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/inscription-pro?type=restaurant')}
+            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-sm transition-colors shadow"
+          >
+            🍽️ Inscrire mon restaurant
+          </button>
+        </div>
+
+        {restaurants.length === 0 ? (
+          <div className="text-center py-12 bg-white/60 rounded-xl border border-orange-100">
+            <div className="text-5xl mb-3">🍽️</div>
+            <p className="text-orange-700 font-semibold mb-1">Aucun restaurant inscrit pour le moment</p>
+            <p className="text-sm text-gray-500 mb-4">Soyez le premier à proposer vos plats à la communauté</p>
+            <button
+              onClick={() => navigate('/inscription-pro?type=restaurant')}
+              className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-sm transition-colors"
+            >
+              Inscrire mon restaurant
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {restaurants.map((resto) => {
+              const menuItems: any[] = Array.isArray(resto.services) ? resto.services.filter((s: any) => typeof s === 'object') : [];
+              const specialties: string[] = Array.isArray(resto.specialties) ? resto.specialties : [];
+              const cuisine = specialties.find(s => s.startsWith('Cuisine:'))?.replace('Cuisine: ', '') || '';
+              const horaires = specialties.find(s => s.startsWith('Horaires:'))?.replace('Horaires: ', '') || '';
+              return (
+                <div key={resto.id}
+                  className="bg-white rounded-2xl shadow hover:shadow-xl transition-all duration-300 border border-orange-100 hover:border-orange-300 overflow-hidden cursor-pointer"
+                  onClick={() => { setSelectedRestaurant(resto); setRestaurantMenuTab('Tous'); }}
+                >
+                  {resto.photo ? (
+                    <img src={resto.photo} alt={resto.name} className="w-full h-40 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+                  ) : (
+                    <div className="w-full h-40 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+                      <span className="text-6xl">🍽️</span>
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-bold text-gray-900 text-lg mb-1">{resto.name}</h3>
+                    {cuisine && <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold mb-2">{cuisine}</span>}
+                    {resto.city && <p className="text-xs text-gray-500 mb-1">📍 {resto.city}{resto.address ? ` · ${resto.address}` : ''}</p>}
+                    {horaires && <p className="text-xs text-gray-500 mb-2">🕐 {horaires}</p>}
+                    {menuItems.length > 0 && (
+                      <p className="text-xs text-orange-600 font-medium mb-3">{menuItems.length} plat{menuItems.length > 1 ? 's' : ''} au menu</p>
+                    )}
+                    <a
+                      href={`tel:${resto.phone}`}
+                      onClick={e => e.stopPropagation()}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl text-sm transition-colors"
+                    >
+                      📞 Appeler — {resto.phone}
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Modal détail restaurant */}
+      {selectedRestaurant && (() => {
+        const menuItems: any[] = Array.isArray(selectedRestaurant.services) ? selectedRestaurant.services.filter((s: any) => typeof s === 'object') : [];
+        const specialties: string[] = Array.isArray(selectedRestaurant.specialties) ? selectedRestaurant.specialties : [];
+        const cuisine = specialties.find(s => s.startsWith('Cuisine:'))?.replace('Cuisine: ', '') || '';
+        const horaires = specialties.find(s => s.startsWith('Horaires:'))?.replace('Horaires: ', '') || '';
+        const categories = ['Tous', ...Array.from(new Set(menuItems.map(m => m.category || 'Plat')))];
+        const filtered = restaurantMenuTab === 'Tous' ? menuItems : menuItems.filter(m => (m.category || 'Plat') === restaurantMenuTab);
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setSelectedRestaurant(null)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="relative">
+                {selectedRestaurant.photo ? (
+                  <img src={selectedRestaurant.photo} alt={selectedRestaurant.name} className="w-full h-48 object-cover rounded-t-2xl" />
+                ) : (
+                  <div className="w-full h-32 bg-gradient-to-br from-orange-200 to-amber-200 rounded-t-2xl flex items-center justify-center">
+                    <span className="text-7xl">🍽️</span>
+                  </div>
+                )}
+                <button onClick={() => setSelectedRestaurant(null)} className="absolute top-3 right-3 bg-white/90 rounded-full w-9 h-9 flex items-center justify-center font-bold text-gray-600 hover:bg-white shadow">✕</button>
+              </div>
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedRestaurant.name}</h2>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {cuisine && <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">{cuisine}</span>}
+                  {selectedRestaurant.city && <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">📍 {selectedRestaurant.city}</span>}
+                  {horaires && <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">🕐 {horaires}</span>}
+                </div>
+                {selectedRestaurant.description && <p className="text-sm text-gray-600 mb-4">{selectedRestaurant.description}</p>}
+
+                {/* Bouton appel */}
+                <a href={`tel:${selectedRestaurant.phone}`}
+                  className="flex items-center justify-center gap-2 w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-base transition-colors mb-6 shadow">
+                  📞 Appeler pour commander — {selectedRestaurant.phone}
+                </a>
+
+                {/* Menu */}
+                {menuItems.length > 0 && (
+                  <>
+                    <h3 className="text-lg font-bold text-gray-800 mb-3">🍽️ Menu</h3>
+                    {/* Onglets catégories */}
+                    {categories.length > 2 && (
+                      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+                        {categories.map(cat => (
+                          <button key={cat} onClick={() => setRestaurantMenuTab(cat)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${restaurantMenuTab === cat ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-orange-100'}`}>
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {filtered.map((item: any, idx: number) => (
+                        <div key={idx} className="flex items-start justify-between p-3 bg-orange-50 rounded-xl border border-orange-100">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
+                            {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-orange-100 text-orange-600 rounded text-xs">{item.category}</span>
+                          </div>
+                          <span className="ml-3 font-bold text-orange-600 text-sm whitespace-nowrap">{item.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-xs text-gray-400 italic text-center">
+                      Appelez le restaurant pour passer votre commande et préciser le jour et l'heure de récupération.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -1,16 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { isMasterAdmin, getPhotoUrl, getNumeroHForDisplay } from "../utils/auth";
-import Activite from "./Activite";
-import Education from "./Education";
-import TerreAdam from "./TerreAdam";
-import Histoire from "./Histoire";
-import Science from "./Science";
-import { EchangesProfessionnel } from "../components/EchangesProfessionnel";
 import { ActivityPageIcon } from "../components/icons/ActivityPageIcon";
 import { SalesIcon } from "../components/icons/SalesIcon";
 import NotificationBell from "../components/NotificationBell";
 import DefaultAvatar from "../assets/default-avatar.svg";
+
+// Onglets du dashboard — chargés uniquement quand l'onglet est actif
+const Activite = lazy(() => import("./Activite"));
+const Education = lazy(() => import("./Education"));
+const TerreAdam = lazy(() => import("./TerreAdam"));
+const Histoire = lazy(() => import("./Histoire"));
+const Science = lazy(() => import("./Science"));
+const EchangesProfessionnel = lazy(() => import("../components/EchangesProfessionnel").then(m => ({ default: m.EchangesProfessionnel })));
+
+const TabLoader = () => (
+  <div className="flex items-center justify-center py-16">
+    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 interface UserData {
   numeroH: string;
@@ -96,13 +104,14 @@ const TAB_IDS = ["terre-adam", "activite", "echanges", "histoire", "science", "e
 function getInitialTab() {
   try {
     const s = localStorage.getItem("session_user");
-    if (!s) return "terre-adam";
+    if (!s) return "histoire";
     const u = (JSON.parse(s).userData || JSON.parse(s)) as { numeroH?: string };
-    if (!u?.numeroH) return "terre-adam";
+    if (!u?.numeroH) return "histoire";
     const fav = getFavoritePage(u.numeroH);
-    return fav && TAB_IDS.includes(fav) ? fav : "terre-adam";
+    // Si l'utilisateur a une page favorite, on l'utilise ; sinon "histoire" (léger, sans carte)
+    return fav && TAB_IDS.includes(fav) ? fav : "histoire";
   } catch {
-    return "terre-adam";
+    return "histoire";
   }
 }
 
@@ -184,10 +193,10 @@ export function UserDashboard() {
     { id: "terre-adam", label: "Terre ADAM", icon: "🌍", type: "tab" },
     { id: "solidarite", label: "Solidarité", icon: "🤝", type: "link", path: "/solidarite" },
     { id: "activite", label: "Activité", icon: "📊", type: "tab", useSvg: true, SvgIcon: ActivityPageIcon },
-    { id: "echanges", label: "Échanges", icon: "⚖️", type: "tab", useSvg: true, SvgIcon: SalesIcon },
-    { id: "histoire", label: "Temps", icon: "🧭", type: "tab" },
     { id: "sante", label: "Santé", icon: "🏥", type: "link", path: "/sante" },
     { id: "securite", label: "Sécurité", icon: "🛡️", type: "link", path: "/securite" },
+    { id: "echanges", label: "Échanges", icon: "⚖️", type: "tab", useSvg: true, SvgIcon: SalesIcon },
+    { id: "histoire", label: "Temps", icon: "🧭", type: "tab" },
     { id: "science", label: "Science", icon: "⚛️", type: "tab" },
     { id: "education", label: "Éducation", icon: "🎓", type: "tab" },
   ];
@@ -232,8 +241,11 @@ export function UserDashboard() {
               onChange={(e) => {
                 const id = e.target.value;
                 setFavoritePage(userData.numeroH, id);
-                if (navItems.find((i) => i.id === id)?.type === "tab") {
+                const item = navItems.find((i) => i.id === id);
+                if (item?.type === "tab") {
                   setActiveTab(id);
+                } else if (item?.type === "link" && item.path) {
+                  navigate(item.path);
                 }
               }}
               className="min-h-[36px] pl-2 pr-6 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -273,6 +285,10 @@ export function UserDashboard() {
                   <img
                     src={photoUrl || DefaultAvatar}
                     alt="Photo de profil"
+                    width="64"
+                    height="64"
+                    loading="eager"
+                    fetchPriority="high"
                     className="profile-photo profile-photo--compact"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -418,9 +434,11 @@ export function UserDashboard() {
         </div>
       </div>
 
-      {/* Contenu des onglets */}
+      {/* Contenu des onglets — lazy chargés à la demande */}
       <div className="dashboard-content px-3 xs:px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
-        {renderTabContent(activeTab, userData)}
+        <Suspense fallback={<TabLoader />}>
+          {renderTabContent(activeTab, userData)}
+        </Suspense>
       </div>
     </div>
   );
@@ -445,7 +463,7 @@ function renderTabContent(tab: string, userData: UserData) {
     case "activite":
       return <Activite />;
     case "echanges":
-      return <EchangesProfessionnel userData={userData} />;
+      return <EchangesProfessionnel userData={userData as any} />;
     case "histoire":
       return <Histoire />;
     case "science":

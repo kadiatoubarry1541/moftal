@@ -1412,11 +1412,11 @@ export function getCountriesByContinent(continentCode: string): GeographicLocati
 }
 
 /** Liste de tous les pays (tous continents). Pour formulaire simplifié Pays → Sous-préfecture → Quartier. */
-export function getAllCountries(): GeographicLocation[] {
-  const list: GeographicLocation[] = [];
+export function getAllCountries(): (GeographicLocation & { continentCode: string })[] {
+  const list: (GeographicLocation & { continentCode: string })[] = [];
   for (const continent of WORLD_GEOGRAPHY) {
     for (const country of continent.children || []) {
-      list.push(country);
+      list.push({ ...country, continentCode: continent.code });
     }
   }
   return list;

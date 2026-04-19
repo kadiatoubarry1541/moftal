@@ -46,15 +46,9 @@ Notification.init({
     field: 'recipient_numero_h'
   },
   type: {
-    type: DataTypes.ENUM(
-      'appointment_accepted',
-      'appointment_rejected',
-      'account_approved',
-      'account_rejected',
-      'new_appointment',
-      'general'
-    ),
-    defaultValue: 'general'
+    type: DataTypes.STRING,
+    defaultValue: 'general',
+    comment: 'Types: appointment_accepted|appointment_rejected|account_approved|account_rejected|new_appointment|friend_request|couple_request|child_request|parent_request|tree_request|general'
   },
   title: {
     type: DataTypes.STRING,

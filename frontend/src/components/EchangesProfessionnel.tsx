@@ -60,7 +60,13 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
   const [loadingPreview, setLoadingPreview] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const getToken = () => {
+      try {
+        const s = localStorage.getItem('session_user');
+        return s ? JSON.parse(s).token : null;
+      } catch { return null; }
+    };
+    const token = getToken();
     const loadPreviews = async () => {
       try {
         const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -128,7 +134,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Échanges</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Choisissez une catégorie et voyez un aperçu des produits avant d’entrer
+          Choisissez une catégorie et voyez un aperçu des produits avant d'entrer
         </p>
       </div>
 
@@ -143,7 +149,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 01.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
             </svg>
             <span className="font-semibold">Primaire</span>
-            <span className="text-xs opacity-90">Aliments, matières premières, textile</span>
+            <span className="text-xs opacity-90">Aliments et restauration</span>
           </button>
           <div className="p-4">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des produits</p>

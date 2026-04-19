@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -9,6 +10,10 @@ import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 
 import connectDB, { sequelize } from '../config/database.js';
+import { connectDB_Pro } from '../config/database_pro.js';
+import { connectDB_IA } from '../config/database_ia.js';
+import { connectDB_Temps } from '../config/database_temps.js';
+import { connectDB_Diangou } from '../config/database_diangou.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import badgeRoutes from './routes/badges.js';
@@ -38,10 +43,14 @@ import professionalRoutes from './routes/professionals.js';
 import appointmentRoutes from './routes/appointments.js';
 import notificationRoutes from './routes/notifications.js';
 import iaRoutes from './routes/ia.js';
+import moderationRoutes from './routes/moderation.js';
+import paymentRoutes from './routes/payment.js';
+import Payment from './models/Payment.js';
 import { handleUploadError } from './middleware/upload.js';
 import { config } from '../config.js';
 import User from './models/User.js';
 import bcrypt from 'bcryptjs';
+import { startSubscriptionChecker } from './services/subscriptionChecker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -323,20 +332,42 @@ async function initAllTables() {
     await sequelize.query(sql).catch(() => {});
   }
   console.log('✅ Colonnes users vérifiées');
+
+  // Nouvelles colonnes family_trees (code unique F+S) + ia_conversations (numero_h)
+  const treeAlters = [
+    `ALTER TABLE "family_trees" ADD COLUMN IF NOT EXISTS "family_code"  VARCHAR(255) UNIQUE;`,
+    `ALTER TABLE "family_trees" ADD COLUMN IF NOT EXISTS "blood_number" INTEGER;`,
+    `ALTER TABLE "family_trees" ADD COLUMN IF NOT EXISTS "family_name"  VARCHAR(255);`
+  ];
+  for (const sql of treeAlters) await sequelize.query(sql).catch(() => {});
+
+  // ia_conversations (numero_h) : géré par connectDB_IA() via sync({ alter: true })
+  console.log('✅ Colonnes family_trees vérifiées');
 }
 
-// Connexion à la base puis démarrage du serveur (le serveur ne démarre que si la base est OK)
+// Démarrage : tout pointe sur enfants_adam_eve — une seule base, 5 instances Sequelize
+// (main, pro, IA, temps, diangou) → toutes synchronisées sur la même DB.
 connectDB()
   .then(() => initAllTables())
   .then(() => ensureAdmin())
   .then(() => {
-    // Middleware de sécurité (déjà déclarés plus bas) — on démarre l'écoute ici
+    return Promise.all([
+      connectDB_Pro().catch(e => console.error('⚠️  Modèles [pro] non disponibles:', e.message)),
+      connectDB_IA().catch(e => console.error('⚠️  Modèles [IA] non disponibles:', e.message)),
+      connectDB_Temps().catch(e => console.error('⚠️  Modèles [temps] non disponibles:', e.message)),
+      connectDB_Diangou().catch(e => console.error('⚠️  Modèles [diangou] non disponibles:', e.message))
+    ]);
+  })
+  .then(() => {
+    console.log('✅ Tous les modèles synchronisés sur enfants_adam_eve');
     app.listen(PORT, () => {
       console.log(`🚀 Serveur démarré sur le port ${PORT}`);
       console.log(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 URL: http://localhost:${PORT}`);
       console.log(`📁 Dossier uploads: ${path.join(__dirname, '../uploads')}`);
       startIaServer();
+      startSubscriptionChecker();
+      startSubscriptionChecker();
     });
   })
   .catch((error) => {
@@ -345,8 +376,13 @@ connectDB()
     process.exit(1);
   });
 
+// Compression GZIP — réduit la taille des réponses de 70-90%
+app.use(compression({ level: 6 }));
+
 // Middleware de sécurité
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // désactivé car React gère ses propres scripts
+}));
 
 // Configuration CORS (autorise plusieurs origines localhost + production)
 const allowedOrigins = [
@@ -415,8 +451,10 @@ app.use('/api', limiter);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Servir les fichiers statiques
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Servir les fichiers uploads (photos, vidéos)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+  maxAge: '7d', // cache navigateur 7 jours pour les images
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -447,6 +485,8 @@ app.use('/api/professionals', professionalRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ia', iaRoutes);
+app.use('/api/admin/moderation', moderationRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test
@@ -488,10 +528,57 @@ app.use((err, req, res, next) => {
   });
 });
 
-// En production : servir le frontend React (build Vite)
-if (process.env.NODE_ENV === 'production') {
-  const frontendDist = path.join(__dirname, '../../frontend/dist');
-  app.use(express.static(frontendDist));
+// Middleware qui sert les fichiers pré-compressés (.br / .gz) générés par Vite
+// Bien plus rapide que la compression dynamique (le travail est déjà fait au build)
+function servePrecompressed(assetsDir) {
+  const typeMap = {
+    '.js':   'application/javascript; charset=utf-8',
+    '.css':  'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.svg':  'image/svg+xml; charset=utf-8',
+  };
+  return (req, res, next) => {
+    const ext = path.extname(req.path).toLowerCase();
+    const contentType = typeMap[ext];
+    if (!contentType) return next();
+
+    const acceptEncoding = req.headers['accept-encoding'] || '';
+    const candidates = [];
+    if (acceptEncoding.includes('br'))   candidates.push({ enc: 'br',   suffix: '.br'  });
+    if (acceptEncoding.includes('gzip')) candidates.push({ enc: 'gzip', suffix: '.gz'  });
+
+    for (const { enc, suffix } of candidates) {
+      const compressed = path.join(assetsDir, req.path.replace(/^\//, '') + suffix);
+      if (fs.existsSync(compressed)) {
+        res.setHeader('Content-Encoding', enc);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('Vary', 'Accept-Encoding');
+        return res.sendFile(compressed);
+      }
+    }
+    next();
+  };
+}
+
+// Servir le frontend React (build Vite) — en production ET en mode preview local
+const frontendDist = path.join(__dirname, '../../frontend/dist');
+if (process.env.NODE_ENV === 'production' || fs.existsSync(frontendDist)) {
+  const assetsDir = path.join(frontendDist, 'assets');
+
+  // 1. Servir d'abord les fichiers pré-compressés (brotli > gzip > non-compressé)
+  app.use('/assets', servePrecompressed(assetsDir));
+
+  // 2. Fallback : servir le fichier non-compressé avec cache long
+  app.use('/assets', express.static(assetsDir, {
+    maxAge: '1y',
+    immutable: true,
+  }));
+
+  // 3. Fichiers racine (logo, robots.txt…) : cache court
+  app.use(express.static(frontendDist, { maxAge: '1h' }));
+
+  // 4. SPA : toutes les routes renvoient index.html
   app.get('*', (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
@@ -499,6 +586,47 @@ if (process.env.NODE_ENV === 'production') {
   app.use('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Route non trouvée' });
   });
+}
+
+// ─── Vérification automatique des abonnements expirés ────────────────────────
+// Passe les comptes pros dont l'abonnement est expiré de "active" → "overdue",
+// puis notifie le propriétaire. Tourne toutes les 24h.
+async function checkExpiredSubscriptions() {
+  try {
+    const { default: ProfessionalAccount } = await import('./models/ProfessionalAccount.js');
+    const { default: Notification }        = await import('./models/Notification.js');
+    const { Op }                           = await import('sequelize');
+
+    const now     = new Date();
+    const expired = await ProfessionalAccount.findAll({
+      where: { subscriptionStatus: 'active', subscriptionValidUntil: { [Op.lt]: now } }
+    });
+
+    for (const account of expired) {
+      await account.update({ subscriptionStatus: 'overdue' });
+      await Notification.createNotification({
+        recipientNumeroH: account.ownerNumeroH,
+        type:    'subscription_expired',
+        title:   'Abonnement expiré',
+        message: `Votre abonnement pour "${account.name}" a expiré. Renouvelez votre paiement pour conserver l'accès à votre dashboard.`,
+        relatedId: account.id
+      }).catch(() => {});
+    }
+
+    if (expired.length > 0) {
+      console.log(`⏰ Abonnements expirés : ${expired.length} compte(s) passé(s) en "overdue"`);
+    }
+  } catch (err) {
+    console.error('⚠️  Erreur vérification abonnements:', err.message);
+  }
+}
+
+function startSubscriptionChecker() {
+  // Premier passage immédiat au démarrage
+  checkExpiredSubscriptions();
+  // Puis toutes les 24 heures
+  setInterval(checkExpiredSubscriptions, 24 * 60 * 60 * 1000);
+  console.log('⏰ Vérification automatique des abonnements activée (24h)');
 }
 
 // Démarrage du serveur : fait dans connectDB().then() plus haut (serveur ne démarre que si la base est connectée)

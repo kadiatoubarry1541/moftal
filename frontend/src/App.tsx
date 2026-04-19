@@ -5,16 +5,19 @@ import { Banner } from "./components/Banner";
 import { ThemeToggleCompact } from "./components/ThemeToggle";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
-import { FloatingMessenger } from "./components/FloatingMessenger";
-import { getSessionUser } from "./utils/auth";
+const FloatingMessenger = lazy(() => import("./components/FloatingMessenger").then(m => ({ default: m.FloatingMessenger })));
+import { getSessionUser, isAdmin } from "./utils/auth";
 
-// Pages critiques — chargées immédiatement (pas de lazy) pour une navigation instantanée
+// Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
-import { Login } from "./pages/Login";
-import { LoginMembre } from "./pages/LoginMembre";
-import { ForgotPassword } from "./pages/ForgotPassword";
-import { Account } from "./pages/Account";
-import { RegistrationChoice } from "./pages/RegistrationChoice";
+
+// Toutes les autres pages — lazy (chargées à la demande)
+const Login = lazy(() => import("./pages/Login").then(m => ({ default: m.Login })));
+const LoginMembre = lazy(() => import("./pages/LoginMembre").then(m => ({ default: m.LoginMembre })));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword").then(m => ({ default: m.ForgotPassword })));
+const Account = lazy(() => import("./pages/Account").then(m => ({ default: m.Account })));
+const RegistrationChoice = lazy(() => import("./pages/RegistrationChoice").then(m => ({ default: m.RegistrationChoice })));
+const FloatingGuideIA = lazy(() => import("./components/FloatingGuideIA").then(m => ({ default: m.FloatingGuideIA })));
 
 // Pages secondaires — lazy loaded (chargées à la demande)
 const LivingWizard = lazy(() => import("./pages/living/LivingWizard").then(m => ({ default: m.LivingWizard })));
@@ -37,8 +40,10 @@ const Solidarite = lazy(() => import("./pages/Solidarite"));
 const Identite = lazy(() => import("./pages/Identite"));
 const Activite = lazy(() => import("./pages/Activite"));
 const Education = lazy(() => import("./pages/Education"));
+const Ecoles = lazy(() => import("./pages/Ecoles"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminBadges = lazy(() => import("./pages/AdminBadges"));
+const AdminModeration = lazy(() => import("./pages/AdminModeration"));
 const TerreAdam = lazy(() => import("./pages/TerreAdam"));
 const Histoire = lazy(() => import("./pages/Histoire"));
 const ARetenir = lazy(() => import("./pages/ARetenir"));
@@ -51,6 +56,7 @@ const EchangeSecondaire = lazy(() => import("./pages/EchangeSecondaire"));
 const EchangeTertiaire = lazy(() => import("./pages/EchangeTertiaire"));
 const EchangePublier = lazy(() => import("./pages/EchangePublier"));
 const Science = lazy(() => import("./pages/Science"));
+const Zaka = lazy(() => import("./pages/Zaka"));
 const ProfesseurIA = lazy(() => import("./pages/ProfesseurIA"));
 const InscriptionPro = lazy(() => import("./pages/InscriptionPro"));
 const ListeProfessionnels = lazy(() => import("./pages/ListeProfessionnels"));
@@ -59,6 +65,8 @@ const EspacePro = lazy(() => import("./pages/EspacePro"));
 const PrendreRendezVous = lazy(() => import("./pages/PrendreRendezVous"))
 const GalerieFamily = lazy(() => import("./pages/GalerieFamily"));
 const InfoWallou = lazy(() => import("./pages/InfoWallou"));
+const ConditionsUtilisation = lazy(() => import("./pages/ConditionsUtilisation"));
+const PaiementResultat = lazy(() => import("./pages/PaiementResultat"));
 
 // Barre de progression fine en haut (plus rapide visuellement qu'un spinner plein écran)
 const LoadingBar = () => (
@@ -69,14 +77,28 @@ const LoadingBar = () => (
   </div>
 );
 
+/** Page Zaka : réservée aux profils Islam (ou administrateurs), comme l'onglet Solidarité. */
+function ZakaMuslimOnly() {
+  const user = getSessionUser();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin(user) && user.religion !== "Islam") {
+    return <Navigate to="/solidarite" replace />;
+  }
+  return <Zaka />;
+}
+
 function App() {
-  const { t, lang, setLang } = useI18n();
+  const { lang, setLang } = useI18n();
   const { pathname } = useLocation();
 
-  // Réveille le backend dès que l'app se charge (Render free tier dort si inactif)
+  // Réveille le backend après le premier rendu (Render free tier dort si inactif)
+  // Différé de 3s pour ne pas concurrencer le LCP / FCP initial
   useEffect(() => {
-    const API = import.meta.env.MODE === 'production' ? '' : 'http://localhost:5002';
-    fetch(`${API}/api/health`).catch(() => {});
+    const timer = setTimeout(() => {
+      const API = import.meta.env.MODE === 'production' ? '' : 'http://localhost:5002';
+      fetch(`${API}/api/health`).catch(() => {});
+    }, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   // Optimisation : mémoriser la vérification de session pour éviter les recalculs
@@ -97,19 +119,20 @@ function App() {
           <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
             {/* Logo */}
             <Link to="/" className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0" aria-label="Accueil">
-              <img 
-                src="/logo.png" 
-                alt="Logo" 
-                className="h-9 w-9 xs:h-10 xs:w-10 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  if (target.src.includes('/logo.png')) {
-                    target.src = '/1.png';
-                  } else {
-                    target.style.display = 'none';
-                  }
-                }}
-              />
+              <picture>
+                <source srcSet="/logo.webp" type="image/webp" />
+                <img
+                  src="/logo.png"
+                  alt="Logo"
+                  width="48"
+                  height="48"
+                  fetchPriority="high"
+                  className="h-9 w-9 xs:h-10 xs:w-10 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </picture>
             </Link>
             
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end min-h-[44px]">
@@ -160,15 +183,17 @@ function App() {
           <Route path="/identite" element={<Identite />} />
           <Route path="/activite" element={<Activite />} />
           <Route path="/education" element={<Education />} />
+          <Route path="/ecoles" element={<Ecoles />} />
           <Route path="/dokal" element={<Navigate to="/" replace />} />
           <Route path="/foi" element={<Navigate to="/" replace />} />
           <Route path="/solidarite" element={<Solidarite />} />
           <Route path="/dons" element={<Navigate to="/" replace />} />
           <Route path="/donations" element={<Navigate to="/" replace />} />
-          <Route path="/zaka" element={<Navigate to="/" replace />} />
-          <Route path="/zaka-et-dons" element={<Navigate to="/" replace />} />
+          <Route path="/zaka" element={<ZakaMuslimOnly />} />
+          <Route path="/zaka-et-dons" element={<Navigate to="/zaka" replace />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/badges" element={<AdminBadges />} />
+          <Route path="/admin/moderation" element={<AdminModeration />} />
           <Route path="/admin/logos" element={<Navigate to="/admin/badges?tab=logos" replace />} />
           <Route path="/admin/governments" element={<Navigate to="/admin" replace />} />
           <Route path="/famille" element={<Famille />} />
@@ -210,6 +235,8 @@ function App() {
           <Route path="/rendez-vous/:id" element={<PrendreRendezVous />} />
           <Route path="/galerie-famille" element={<GalerieFamily />} />
           <Route path="/info-wallou" element={<InfoWallou />} />
+          <Route path="/conditions-utilisation" element={<ConditionsUtilisation />} />
+          <Route path="/paiement/resultat" element={<PaiementResultat />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
@@ -221,12 +248,25 @@ function App() {
           <p className="text-gray-300 dark:text-gray-400 text-xs xs:text-sm sm:text-base">
             2025 Les Enfants d'Adam et Eve - Système d'enregistrement généalogique
           </p>
+          <Link
+            to="/conditions-utilisation"
+            className="text-gray-400 hover:text-gray-200 text-xs mt-1 inline-block underline transition-colors"
+          >
+            Conditions Générales d'Utilisation
+          </Link>
         </div>
       </footer>
 
-      {/* Messenger uniquement sur la page Mes Amours */}
-      {pathname === "/famille/mes-amours" && <FloatingMessenger />}
-      
+      {/* Messenger uniquement sur la page Mes Amours — chargé en lazy */}
+      {pathname === "/famille/mes-amours" && (
+        <Suspense fallback={null}><FloatingMessenger /></Suspense>
+      )}
+
+      {/* Assistant IA Guide — visible sur toutes les pages, chargé en lazy */}
+      <Suspense fallback={null}>
+        <FloatingGuideIA />
+      </Suspense>
+
       {/* Toast Notifications */}
       <Toaster
         position="top-right"

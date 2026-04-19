@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { CommunicationHub } from '../../components/CommunicationHub'
+import { AddPersonModal } from '../../components/AddPersonModal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -63,6 +64,7 @@ export default function Enfants() {
   const [children, setChildren] = useState<ChildLink[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showPersonModal, setShowPersonModal] = useState(false)
   const [newLink, setNewLink] = useState({
     codeLiaison: '',
     childNumeroH: '',
@@ -420,7 +422,7 @@ export default function Enfants() {
       <Link
         to="/famille"
         state={{ returnToHub: true }}
-        className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+        className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
       >
         ← Retour à Famille
       </Link>
@@ -445,6 +447,20 @@ export default function Enfants() {
         </p>
       </div>
 
+      {showPersonModal && (
+        <AddPersonModal
+          title="Trouver l'enfant"
+          myNumeroH={user?.numeroH}
+          myPrenom={user?.prenom}
+          myNom={user?.nomFamille}
+          onSelect={(numeroH) => {
+            setNewLink(prev => ({ ...prev, childNumeroH: numeroH }))
+            setShowPersonModal(false)
+          }}
+          onClose={() => setShowPersonModal(false)}
+        />
+      )}
+
       {showAddForm && (
         <div className="bg-green-50 rounded-xl border border-green-200 p-6 mb-6">
           <h3 className="text-lg font-semibold text-slate-800 mb-4">Lier un enfant (seul le NumeroH est obligatoire)</h3>
@@ -453,13 +469,22 @@ export default function Enfants() {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 NumeroH de l'enfant <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                value={newLink.childNumeroH}
-                onChange={(e) => setNewLink({ ...newLink, childNumeroH: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                placeholder="Ex: G0C0P0R0E0F0 1"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newLink.childNumeroH}
+                  onChange={(e) => setNewLink({ ...newLink, childNumeroH: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  placeholder="Ex: G0C0P0R0E0F0 1"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPersonModal(true)}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold whitespace-nowrap"
+                >
+                  ➕ Chercher
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">

@@ -56,6 +56,7 @@ export default function WorldMap({
   showMyPositionButton = true,
   initialPosition = null,
 }: WorldMapProps) {
+  const [mapOpen, setMapOpen] = useState(false);
   const [userPosition, setUserPosition] = useState<MapPosition | null>(initialPosition ?? null);
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -299,113 +300,128 @@ export default function WorldMap({
     return () => { cancelled = true; };
   }, []);
 
-  if (!MapComponent) {
-    return (
-      <div className="securite-worldmap-wrapper bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden flex items-center justify-center min-h-[400px]">
-        <p className="text-gray-500 dark:text-gray-400">Chargement de la carte…</p>
-      </div>
-    );
-  }
-
   return (
     <div className="securite-worldmap-block">
-      {/* Barre de recherche */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
-        <div className="flex-1 min-w-[200px] flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="Ville, quartier, rue, adresse..."
-            className="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            aria-label="Rechercher un lieu"
-          />
-          <button
-            type="button"
-            onClick={handleSearch}
-            disabled={searchLoading}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
-          >
-            {searchLoading ? (
-              <><span className="animate-spin">⏳</span> Recherche…</>
-            ) : (
-              <><span>🔍</span> Rechercher</>
-            )}
-          </button>
+      {/* Bouton pour ouvrir/fermer la carte */}
+      <button
+        type="button"
+        onClick={() => setMapOpen((v) => !v)}
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+      >
+        🗺️ {mapOpen ? 'Fermer la carte' : 'Vérifier sur la carte'}
+        <span className="text-xs">{mapOpen ? '▲' : '▼'}</span>
+      </button>
+
+      {/* Tout le contenu de la carte — visible seulement si mapOpen */}
+      {mapOpen && (
+        <div className="mt-3">
+          {!MapComponent ? (
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center min-h-[300px]">
+              <p className="text-gray-500 dark:text-gray-400">Chargement de la carte…</p>
+            </div>
+          ) : (
+            <>
+              {/* Barre de recherche */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                <div className="flex-1 min-w-[200px] flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    placeholder="Ville, quartier, rue, adresse..."
+                    className="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    aria-label="Rechercher un lieu"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSearch}
+                    disabled={searchLoading}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                  >
+                    {searchLoading ? (
+                      <><span className="animate-spin">⏳</span> Recherche…</>
+                    ) : (
+                      <><span>🔍</span> Rechercher</>
+                    )}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={goToWorldView}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                  title="Revenir à la vue monde"
+                >
+                  🌍 Vue monde
+                </button>
+                {showMyPositionButton && (
+                  <button
+                    type="button"
+                    onClick={askForMyPosition}
+                    disabled={geoLoading}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {geoLoading ? (
+                      <><span className="animate-spin">⏳</span> Localisation…</>
+                    ) : (
+                      <><span>📍</span> Ma position</>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Infos position GPS */}
+              {userPosition && (
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  <span className="font-medium">GPS :</span>{' '}
+                  {userAddress ?? `${userPosition.lat.toFixed(5)}, ${userPosition.lng.toFixed(5)}`}
+                </div>
+              )}
+
+              {/* Résultat recherche */}
+              {searchResult && (
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  <span className="font-medium">Trouvé :</span>{' '}
+                  {searchResult.neighbourhood
+                    ? <><strong>{searchResult.neighbourhood}</strong> — {searchResult.displayName}</>
+                    : searchResult.displayName}
+                </div>
+              )}
+
+              {/* Lieu cliqué */}
+              {clickedPoint && (
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                  <span className="font-medium">Sélectionné :</span> {clickedPoint.address}
+                </div>
+              )}
+
+              {/* Erreurs */}
+              {searchError && (
+                <p className="text-sm text-red-600 dark:text-red-400 mb-2" role="alert">{searchError}</p>
+              )}
+              {geoError && (
+                <p className="text-sm text-red-600 dark:text-red-400 mb-2" role="alert">{geoError}</p>
+              )}
+
+              {/* Astuce zoom */}
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                Zoomez pour voir les quartiers et les rues en détail.
+              </p>
+
+              <div className="securite-worldmap-wrapper rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg min-h-[400px]">
+                <MapComponent
+                  className="securite-worldmap"
+                  userPosition={userPosition}
+                  searchResult={searchResult}
+                  clickedPoint={clickedPoint}
+                  resetWorldView={resetWorldView}
+                  onMapClick={handleMapClick}
+                />
+              </div>
+            </>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={goToWorldView}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
-          title="Revenir à la vue monde"
-        >
-          🌍 Vue monde
-        </button>
-        {showMyPositionButton && (
-          <button
-            type="button"
-            onClick={askForMyPosition}
-            disabled={geoLoading}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-          >
-            {geoLoading ? (
-              <><span className="animate-spin">⏳</span> Localisation…</>
-            ) : (
-              <><span>📍</span> Ma position</>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Infos position GPS */}
-      {userPosition && (
-        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-          <span className="font-medium">GPS :</span>{' '}
-          {userAddress ?? `${userPosition.lat.toFixed(5)}, ${userPosition.lng.toFixed(5)}`}
-        </div>
       )}
-
-      {/* Résultat recherche */}
-      {searchResult && (
-        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-          <span className="font-medium">Trouvé :</span>{' '}
-          {searchResult.neighbourhood
-            ? <><strong>{searchResult.neighbourhood}</strong> — {searchResult.displayName}</>
-            : searchResult.displayName}
-        </div>
-      )}
-
-      {/* Lieu cliqué */}
-      {clickedPoint && (
-        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-          <span className="font-medium">Sélectionné :</span> {clickedPoint.address}
-        </div>
-      )}
-
-      {/* Erreurs */}
-      {searchError && (
-        <p className="text-sm text-red-600 dark:text-red-400 mb-2" role="alert">{searchError}</p>
-      )}
-      {geoError && (
-        <p className="text-sm text-red-600 dark:text-red-400 mb-2" role="alert">{geoError}</p>
-      )}
-
-      {/* Astuce zoom */}
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
-        Zoomez pour voir les quartiers et les rues en détail.
-      </p>
-
-      <div className="securite-worldmap-wrapper rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-lg min-h-[400px]">
-        <MapComponent
-          className="securite-worldmap"
-          userPosition={userPosition}
-          searchResult={searchResult}
-          clickedPoint={clickedPoint}
-          resetWorldView={resetWorldView}
-          onMapClick={handleMapClick}
-        />
-      </div>
     </div>
   );
 }

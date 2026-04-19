@@ -5,6 +5,7 @@ interface UserData {
   numeroH: string
   prenom: string
   nomFamille: string
+  photo?: string
 }
 
 interface FamilyMember {
@@ -43,6 +44,7 @@ export function InviterMembres({ userData }: { userData: UserData }) {
       const invitation = InvitationManager.sendInvitation({
         fromNumeroH: userData.numeroH,
         fromName: `${userData.prenom} ${userData.nomFamille}`,
+        fromPhoto: userData.photo || undefined,
         toNumeroH: inviteData.numeroH.trim(),
         toName: inviteData.nomComplet.trim(),
         relation: inviteData.relation,

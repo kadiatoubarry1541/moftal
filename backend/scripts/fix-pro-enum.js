@@ -85,6 +85,10 @@ async function fixProEnum() {
       'supplier',
       'scientist',
       'ngo',
+      'vendor',
+      'producer',
+      'broker',
+      'restaurant',
     ];
 
     /* ── 5. Ajouter les valeurs manquantes ── */

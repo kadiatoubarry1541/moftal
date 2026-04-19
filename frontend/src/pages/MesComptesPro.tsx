@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API = "http://localhost:5002";
+
 interface ProAccount {
   id: string;
   type: string;
@@ -22,7 +24,10 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   journalist:      { label: "Journaliste / Média",        icon: "📰" },
   enterprise:      { label: "Entreprise",                 icon: "🏢" },
   school:          { label: "École / Professeur",         icon: "🎓" },
-  supplier:        { label: "Fournisseur",                icon: "📦" },
+  supplier:        { label: "Fournisseur / Grossiste",    icon: "📦" },
+  vendor:          { label: "Vendeur",                    icon: "🛒" },
+  producer:        { label: "Entreprise de production",   icon: "🏭" },
+  broker:          { label: "Démarcheur / Location",      icon: "🏘️" },
   ngo:             { label: "ONG / Association",          icon: "🤝" },
   scientist:       { label: "Chercheur / Scientifique",  icon: "🔬" },
 };
@@ -35,6 +40,9 @@ const TYPE_TO_BTN: Record<string, string> = {
   enterprise:      "bg-amber-500   hover:bg-amber-600",
   school:          "bg-amber-500   hover:bg-amber-600",
   supplier:        "bg-cyan-600    hover:bg-cyan-700",
+  vendor:          "bg-cyan-600    hover:bg-cyan-700",
+  producer:        "bg-cyan-600    hover:bg-cyan-700",
+  broker:          "bg-cyan-600    hover:bg-cyan-700",
   ngo:             "bg-rose-600    hover:bg-rose-700",
   scientist:       "bg-indigo-600  hover:bg-indigo-700",
 };
@@ -47,6 +55,9 @@ const TYPE_TO_BADGE: Record<string, string> = {
   enterprise:      "bg-amber-100   text-amber-700   dark:bg-amber-900/40 dark:text-amber-300",
   school:          "bg-amber-100   text-amber-700   dark:bg-amber-900/40 dark:text-amber-300",
   supplier:        "bg-cyan-100    text-cyan-700    dark:bg-cyan-900/40 dark:text-cyan-300",
+  vendor:          "bg-cyan-100    text-cyan-700    dark:bg-cyan-900/40 dark:text-cyan-300",
+  producer:        "bg-cyan-100    text-cyan-700    dark:bg-cyan-900/40 dark:text-cyan-300",
+  broker:          "bg-cyan-100    text-cyan-700    dark:bg-cyan-900/40 dark:text-cyan-300",
   ngo:             "bg-rose-100    text-rose-700    dark:bg-rose-900/40 dark:text-rose-300",
   scientist:       "bg-indigo-100  text-indigo-700  dark:bg-indigo-900/40 dark:text-indigo-300",
 };
@@ -59,6 +70,9 @@ const TYPE_TO_SERVICE_LABEL: Record<string, string> = {
   enterprise:      "Activité",
   school:          "Activité",
   supplier:        "Échanges",
+  vendor:          "Échanges",
+  producer:        "Échanges",
+  broker:          "Échanges",
   ngo:             "Solidarité",
   scientist:       "Science",
 };
@@ -76,23 +90,19 @@ const SUBSCRIPTION_LABELS: Record<string, string> = {
   blocked:    "⛔ Compte bloqué (impayé)",
 };
 
-// Coordonnées de paiement de l'administrateur (à adapter avec tes vrais numéros)
-const ADMIN_PAYMENT_INFO = {
-  orangeMoney: "Orange Money: 000000000",
-  bank:        "Compte bancaire: IBAN / RIB ici",
-};
-
 export default function MesComptesPro() {
   const navigate = useNavigate();
-  const [accounts, setAccounts] = useState<ProAccount[]>([]);
-  const [loading, setLoading]   = useState(true);
+  const [accounts, setAccounts]   = useState<ProAccount[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [paying, setPaying]       = useState<string | null>(null); // id du compte en cours de paiement
+  const [payError, setPayError]   = useState<string | null>(null);
 
   useEffect(() => { loadAccounts(); }, []);
 
   const loadAccounts = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res   = await fetch("http://localhost:5002/api/professionals/my-accounts", {
+      const res   = await fetch(`${API}/api/professionals/my-accounts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -101,6 +111,35 @@ export default function MesComptesPro() {
       console.error("Erreur:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePay = async (acc: ProAccount) => {
+    setPayError(null);
+    setPaying(acc.id);
+    try {
+      const token = localStorage.getItem("token");
+      const res   = await fetch(`${API}/api/payment/initiate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount:      50000,
+          currency:    "GNF",
+          purpose:     "subscription_pro",
+          relatedId:   acc.id,
+          description: `Abonnement mensuel – ${acc.name}`,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.paymentLink) {
+        window.location.href = data.paymentLink;
+      } else {
+        setPayError(data.message || "Impossible d'initier le paiement. Réessayez.");
+      }
+    } catch {
+      setPayError("Erreur de connexion. Vérifiez votre connexion internet.");
+    } finally {
+      setPaying(null);
     }
   };
 
@@ -234,32 +273,31 @@ export default function MesComptesPro() {
                   )}
 
                   {acc.status === "approved" && !canOpenDashboard && (
-                    <div className={`flex flex-col gap-2 flex-shrink-0 px-3 py-2 rounded-xl max-w-[260px] text-xs ${
-                      expiringSoon
-                        ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-200"
-                        : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-200"
-                    }`}>
-                      <p className="font-semibold">
-                        {expiringSoon
-                          ? `⚠️ Abonnement bientôt expiré (${daysLeft}j). Renouvelez pour conserver l'accès.`
+                    <div className="flex flex-col gap-2 flex-shrink-0 items-end">
+                      <p className={`text-xs font-semibold px-3 py-1.5 rounded-xl ${
+                        expiringSoon
+                          ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300"
                           : isExpired
-                          ? "⛔ Abonnement expiré. Renouvelez votre paiement pour retrouver l'accès."
-                          : "🔒 Dashboard bloqué. Merci de régler votre abonnement auprès de l'administrateur."}
+                          ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"
+                          : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300"
+                      }`}>
+                        {expiringSoon
+                          ? `⚠️ Expire dans ${daysLeft}j`
+                          : isExpired
+                          ? "⛔ Abonnement expiré"
+                          : "🔒 Abonnement requis"}
                       </p>
-                      <div className="text-[11px] opacity-80">
-                        <p className="font-semibold mb-1">{isExpired || expiringSoon ? "Renouveler le paiement :" : "1. Payer votre abonnement :"}</p>
-                        <p>{ADMIN_PAYMENT_INFO.orangeMoney}</p>
-                        <p>{ADMIN_PAYMENT_INFO.bank}</p>
-                      </div>
-                      {!isExpired && !expiringSoon && (
-                        <div className="text-[11px] opacity-80">
-                          <p className="font-semibold mb-1">2. Indiquer vos coordonnées de paiement</p>
-                          <p>
-                            Dans la page <span className="font-semibold">Inscription Pro</span>,
-                            ajoutez votre Orange Money ou compte bancaire.
-                          </p>
-                        </div>
-                      )}
+                      <button
+                        onClick={() => handlePay(acc)}
+                        disabled={paying === acc.id}
+                        className="min-h-[42px] px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
+                      >
+                        {paying === acc.id ? (
+                          <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Chargement...</>
+                        ) : (
+                          <>{isExpired || expiringSoon ? "🔄 Renouveler (50 000 GNF)" : "💳 Payer l'abonnement (50 000 GNF)"}</>
+                        )}
+                      </button>
                     </div>
                   )}
 
@@ -271,6 +309,15 @@ export default function MesComptesPro() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Erreur paiement */}
+        {payError && (
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
+            <span>❌</span>
+            <span>{payError}</span>
+            <button onClick={() => setPayError(null)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
           </div>
         )}
 

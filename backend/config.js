@@ -8,7 +8,25 @@ const config = {
   JWT_SECRET: process.env.JWT_SECRET || 'your-secret-key',
   JWT_EXPIRE: process.env.JWT_EXPIRE || '7d',
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS) || 10,
-  NODE_ENV: process.env.NODE_ENV || 'development'
+  NODE_ENV: process.env.NODE_ENV || 'development',
+
+  // ── Emails ────────────────────────────────────────────────────────────────
+  // Expéditeur commun à tous les fournisseurs
+  FROM_EMAIL:  process.env.FROM_EMAIL  || 'noreply@enfants-adam.app',
+  FROM_NAME:   process.env.FROM_NAME   || "Les Enfants d'Adam",
+
+  // Brevo — comptes professionnels (reçu paiement, expiration, renouvellement)
+  BREVO_API_KEY: process.env.BREVO_API_KEY || '',
+
+  // MailerSend — reset mdp (illimité)
+  MAILERSEND_API_KEY: process.env.MAILERSEND_API_KEY || '',
+
+  // Mailjet — reset mdp (200 emails/jour)
+  MAILJET_API_KEY:    process.env.MAILJET_API_KEY    || '',
+  MAILJET_SECRET_KEY: process.env.MAILJET_SECRET_KEY || '',
+
+  // Resend — secours final (3 000 emails/mois)
+  RESEND_API_KEY: process.env.RESEND_API_KEY || '',
 };
 
 export { config };

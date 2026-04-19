@@ -4,6 +4,7 @@ import Friend from '../models/Friend.js';
 import FriendRequest from '../models/FriendRequest.js';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
+import Notification from '../models/Notification.js';
 
 const router = express.Router();
 
@@ -129,6 +130,17 @@ router.post('/send-request', async (req, res) => {
       status: 'pending'
     });
 
+    // Notifier le destinataire
+    try {
+      await Notification.createNotification({
+        recipientNumeroH: toUserTrimmed,
+        type: 'friend_request',
+        title: 'Nouvelle demande d\'amitié',
+        message: `${fromUserName} vous a envoyé une demande d'amitié.`,
+        relatedId: request.id
+      });
+    } catch (e) { console.error('Notif friend_request:', e.message); }
+
     res.status(201).json({ success: true, request, message: 'Demande d\'amitié envoyée' });
   } catch (error) {
     console.error('Erreur /friends/send-request:', error);
@@ -189,6 +201,37 @@ router.post('/respond-request', async (req, res) => {
 });
 
 // ─── GET /api/friends/:numeroH → amis d'un utilisateur spécifique ────────────
+// search-by-phone
+router.get('/search-by-phone', async (req, res) => {
+  try {
+    const { tel } = req.query;
+    if (!tel || tel.trim().length < 6) {
+      return res.status(400).json({ success: false, message: 'Numéro requis (min. 6 chiffres)' });
+    }
+    const telClean = tel.trim().replace(/s+/g, '');
+    const user = await User.findOne({
+      where: {
+        [Op.or]: [
+          { tel1: { [Op.like]: '%' + telClean + '%' } },
+          { tel2: { [Op.like]: '%' + telClean + '%' } }
+        ],
+        isActive: true
+      },
+      attributes: ['numeroH', 'prenom', 'nomFamille']
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce numéro' });
+    }
+    if (user.numeroH === req.user.numeroH) {
+      return res.status(400).json({ success: false, message: "C'est votre propre numéro" });
+    }
+    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille } });
+  } catch (error) {
+    console.error('Erreur /friends/search-by-phone:', error);
+    res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
+  }
+});
+
 router.get('/:numeroH', async (req, res) => {
   try {
     const friends = await Friend.findAll({

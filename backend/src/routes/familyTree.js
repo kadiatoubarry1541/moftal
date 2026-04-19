@@ -7,6 +7,8 @@ import FamilyTreeMessage from '../models/FamilyTreeMessage.js';
 import ParentChildLink from '../models/ParentChildLink.js';
 import { FamilyTree } from '../models/additional.js';
 import { Op } from 'sequelize';
+import Notification from '../models/Notification.js';
+import CoupleLink from '../models/CoupleLink.js';
 
 const router = express.Router();
 
@@ -52,7 +54,12 @@ router.get('/tree', async (req, res) => {
         chefFamille1: tree.chefFamille1,
         chefFamille2: tree.chefFamille2,
         members,
-        deceasedMembers
+        deceasedMembers,
+        memberCount: members.length,
+        familyCode: members.length >= 10 ? (tree.familyCode || null) : null,
+        bloodNumber: members.length >= 10 ? (tree.bloodNumber || null) : null,
+        familyName: tree.familyName || null,
+        codeUnlocked: members.length >= 10
       }
     });
   } catch (error) {
@@ -165,6 +172,17 @@ router.post('/request-access', async (req, res) => {
           status: 'pending'
         });
         confirmations.push(confirmation);
+        // Notifier le père
+        try {
+          const childName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
+          await Notification.createNotification({
+            recipientNumeroH: numeroHPere,
+            type: 'tree_request',
+            title: 'Demande d\'accès à l\'arbre familial',
+            message: `${childName} demande à rejoindre votre arbre généalogique (en tant qu'enfant).`,
+            relatedId: confirmation.id
+          });
+        } catch (e) { console.error('Notif tree_request (père):', e.message); }
       } else {
         // Père décédé : accès direct (pas de confirmation nécessaire)
         // L'utilisateur sera ajouté directement à l'arbre
@@ -174,7 +192,7 @@ router.post('/request-access', async (req, res) => {
     // Si la mère est fournie, vérifier si elle est vivante ou décédée
     if (numeroHMere) {
       const mere = await User.findOne({ where: { numeroH: numeroHMere, type: 'vivant' } });
-      
+
       if (mere && mere.isActive) {
         // Mère vivante : créer une confirmation
         const confirmation = await FamilyTreeConfirmation.create({
@@ -184,6 +202,17 @@ router.post('/request-access', async (req, res) => {
           status: 'pending'
         });
         confirmations.push(confirmation);
+        // Notifier la mère
+        try {
+          const childName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
+          await Notification.createNotification({
+            recipientNumeroH: numeroHMere,
+            type: 'tree_request',
+            title: 'Demande d\'accès à l\'arbre familial',
+            message: `${childName} demande à rejoindre votre arbre généalogique (en tant qu'enfant).`,
+            relatedId: confirmation.id
+          });
+        } catch (e) { console.error('Notif tree_request (mère):', e.message); }
       } else {
         // Mère décédée : accès direct (pas de confirmation nécessaire)
       }
@@ -636,20 +665,51 @@ async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
     if (!members.includes(numeroH)) {
       members.push(numeroH);
       await tree.update({ members });
+      // Attribuer le code F+S dès 10 membres
+      await assignFamilyCodeIfNeeded(tree, members);
     }
   } else {
     // Créer un nouvel arbre
     const user = await User.findOne({ where: { numeroH } });
+    const nomFamille = user?.nomFamille || null;
     tree = await FamilyTree.create({
       rootMember: numeroH,
       numeroHPere: numeroHPere || user?.numeroHPere || null,
       numeroHMere: numeroHMere || user?.numeroHMere || null,
       members: [numeroH],
-      deceasedMembers: []
+      deceasedMembers: [],
+      familyName: nomFamille
     });
   }
 
   return tree;
+}
+
+/**
+ * Attribue automatiquement le code F<nomFamille>S<n> quand l'arbre atteint 10 membres.
+ * Le bloodNumber (S) est le prochain entier disponible pour ce nom de famille.
+ */
+async function assignFamilyCodeIfNeeded(tree, members) {
+  if (tree.familyCode) return; // déjà attribué
+  if (members.length < 10) return;
+
+  // Récupérer le nom de famille depuis le membre racine si pas encore défini
+  let familyName = tree.familyName;
+  if (!familyName) {
+    const root = await User.findOne({ where: { numeroH: tree.rootMember } });
+    familyName = root?.nomFamille || 'Inconnu';
+  }
+
+  // Trouver le prochain bloodNumber disponible pour cette famille
+  const existing = await FamilyTree.findAll({
+    where: { familyName, bloodNumber: { [Op.not]: null } },
+    order: [['bloodNumber', 'DESC']],
+    limit: 1
+  });
+  const nextBlood = existing.length > 0 ? (existing[0].bloodNumber + 1) : 1;
+  const code = `F${familyName}S${nextBlood}`;
+
+  await tree.update({ familyCode: code, bloodNumber: nextBlood, familyName });
 }
 
 // Fonction pour ajouter un décédé à l'arbre familial
@@ -686,6 +746,190 @@ async function addDeceasedToFamilyTree(numeroHD, numeroHPere, numeroHMere) {
 
   return tree;
 }
+
+// ========== RETRAIT DE MEMBRES ==========
+
+// @route   DELETE /api/family-tree/remove-member/:memberNumeroH
+// @desc    Retirer un membre de l'arbre
+//          - Un parent peut retirer son enfant (lien ParentChildLink vérifié)
+//          - Un utilisateur peut se retirer lui-même
+// @access  Authentifié
+router.delete('/remove-member/:memberNumeroH', async (req, res) => {
+  try {
+    const user = req.user;
+    const { memberNumeroH } = req.params;
+    const isSelf = user.numeroH === memberNumeroH;
+
+    // Vérifier autorisation : soit soi-même, soit parent confirmé
+    if (!isSelf) {
+      const isParent = await ParentChildLink.findOne({
+        where: {
+          parentNumeroH: user.numeroH,
+          childNumeroH: memberNumeroH,
+          status: 'active',
+          isActive: true
+        }
+      });
+      if (!isParent) {
+        return res.status(403).json({
+          success: false,
+          message: 'Vous n\'êtes pas autorisé à retirer ce membre. Seul le membre lui-même ou un parent confirmé peut le faire.'
+        });
+      }
+    }
+
+    // Trouver l'arbre contenant ce membre
+    const tree = await FamilyTree.findOne({
+      where: {
+        members: { [Op.contains]: [memberNumeroH] },
+        isActive: true
+      }
+    });
+
+    if (!tree) {
+      return res.status(404).json({ success: false, message: 'Membre non trouvé dans un arbre actif.' });
+    }
+
+    const updatedMembers = (tree.members || []).filter(m => m !== memberNumeroH);
+    await tree.update({ members: updatedMembers });
+
+    res.json({ success: true, message: 'Membre retiré de l\'arbre généalogique.' });
+  } catch (error) {
+    console.error('Erreur remove-member:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// ========== ACCÈS ARBRE DU CONJOINT ==========
+
+// @route   GET /api/family-tree/spouse-tree/:spouseNumeroH
+// @desc    Accéder à l'arbre du conjoint
+//          - Visible uniquement si un lien couple actif existe
+//          - Accès limité (juste liste membres) si union < 1 an
+//          - Accès complet si union >= 1 an
+// @access  Authentifié
+router.get('/spouse-tree/:spouseNumeroH', async (req, res) => {
+  try {
+    const user = req.user;
+    const { spouseNumeroH } = req.params;
+
+    // Vérifier qu'un lien de couple actif existe entre les deux
+    const coupleLink = await CoupleLink.findOne({
+      where: {
+        [Op.or]: [
+          { husbandNumeroH: user.numeroH, wifeNumeroH: spouseNumeroH },
+          { husbandNumeroH: spouseNumeroH, wifeNumeroH: user.numeroH }
+        ],
+        status: 'active',
+        isActive: true,
+        isArchived: false
+      }
+    });
+
+    if (!coupleLink) {
+      return res.status(403).json({
+        success: false,
+        message: 'Aucun lien de couple actif trouvé avec cet utilisateur.'
+      });
+    }
+
+    // Calculer la durée du lien (en jours)
+    const confirmedDate = coupleLink.confirmedAt || coupleLink.createdAt;
+    const unionDays = confirmedDate
+      ? Math.floor((Date.now() - new Date(confirmedDate).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+    const fullAccess = unionDays >= 365; // 1 an = 365 jours
+
+    // Trouver l'arbre du conjoint
+    const spouseTree = await FamilyTree.findOne({
+      where: {
+        [Op.or]: [
+          { rootMember: spouseNumeroH },
+          { members: { [Op.contains]: [spouseNumeroH] } }
+        ],
+        isActive: true
+      }
+    });
+
+    if (!spouseTree) {
+      return res.status(404).json({ success: false, message: 'Arbre du conjoint non trouvé.' });
+    }
+
+    const members = await getTreeMembers(spouseTree);
+
+    if (!fullAccess) {
+      // Accès limité : juste la liste des membres (prénom + nom de famille)
+      return res.json({
+        success: true,
+        accessLevel: 'limited',
+        unionDays,
+        daysUntilFullAccess: 365 - unionDays,
+        message: `Accès limité. Accès complet dans ${365 - unionDays} jour(s).`,
+        tree: {
+          id: spouseTree.id,
+          memberCount: members.length,
+          members: members.map(m => ({
+            numeroH: m.numeroH,
+            prenom: m.prenom,
+            nomFamille: m.nomFamille,
+            genre: m.genre
+          }))
+        }
+      });
+    }
+
+    // Accès complet (union >= 1 an)
+    const deceasedMembers = await getTreeDeceasedMembers(spouseTree);
+    res.json({
+      success: true,
+      accessLevel: 'full',
+      unionDays,
+      tree: {
+        id: spouseTree.id,
+        rootMember: spouseTree.rootMember,
+        chefFamille1: spouseTree.chefFamille1,
+        chefFamille2: spouseTree.chefFamille2,
+        members,
+        deceasedMembers,
+        memberCount: members.length,
+        familyCode: members.length >= 10 ? (spouseTree.familyCode || null) : null,
+        familyName: spouseTree.familyName || null,
+        codeUnlocked: members.length >= 10
+      }
+    });
+  } catch (error) {
+    console.error('Erreur spouse-tree:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// @route   DELETE /api/family-tree/leave
+// @desc    Se retirer soi-même de son arbre généalogique
+// @access  Authentifié
+router.delete('/leave', async (req, res) => {
+  try {
+    const user = req.user;
+
+    const tree = await FamilyTree.findOne({
+      where: {
+        members: { [Op.contains]: [user.numeroH] },
+        isActive: true
+      }
+    });
+
+    if (!tree) {
+      return res.status(404).json({ success: false, message: 'Vous n\'êtes dans aucun arbre actif.' });
+    }
+
+    const updatedMembers = (tree.members || []).filter(m => m !== user.numeroH);
+    await tree.update({ members: updatedMembers });
+
+    res.json({ success: true, message: 'Vous avez quitté l\'arbre généalogique.' });
+  } catch (error) {
+    console.error('Erreur leave tree:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
 
 export default router;
 

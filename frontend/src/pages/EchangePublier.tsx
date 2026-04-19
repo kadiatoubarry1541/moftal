@@ -457,7 +457,22 @@ export default function EchangePublier() {
                       </div>
                       <div>
                         <input type="file" id="vid-device" accept="video/*" className="hidden"
-                          onChange={e => { const f = e.target.files?.[0]; if (f) setProduct(p => ({ ...p, videos: [f, ...p.videos] })); }} />
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            const vid = document.createElement('video');
+                            vid.preload = 'metadata';
+                            vid.onloadedmetadata = () => {
+                              URL.revokeObjectURL(vid.src);
+                              if (vid.duration > 60) {
+                                alert('La vidéo ne doit pas dépasser 1 minute.');
+                                e.target.value = '';
+                                return;
+                              }
+                              setProduct(p => ({ ...p, videos: [f, ...p.videos] }));
+                            };
+                            vid.src = URL.createObjectURL(f);
+                          }} />
                         <label htmlFor="vid-device"
                           className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl cursor-pointer transition-colors">
                           🎞️ Importer depuis l'appareil

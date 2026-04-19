@@ -414,7 +414,7 @@ export default function TerreAdam() {
                   Terre ADAM {effectiveContinent?.name ? `- ${effectiveContinent.name}` : ''}
                 </h1>
                 <p className="mt-0.5 sm:mt-1 md:mt-2 text-[10px] sm:text-xs md:text-sm text-gray-600 break-words">
-                  Page d’information : les gens du même quartier se retrouvent ici pour échanger sur le développement local (projets, actions, vie du quartier).
+                  Page d'information : les gens du même quartier se retrouvent ici pour échanger sur le développement local (projets, actions, vie du quartier).
                 </p>
               </div>
             </div>
@@ -973,7 +973,7 @@ export default function TerreAdam() {
                   {/* Page Sous-préfecture */}
                   {activeLieuTab === 'sous-prefecture' && (
                     <div className="text-[11px] sm:text-xs md:text-sm text-gray-600">
-                      {/* Ici, seul le nom dans l’onglet et le haut de page sert d’information. */}
+                      {/* Ici, seul le nom dans l'onglet et le haut de page sert d'information. */}
                       {userSousPrefecture?.name || userData.sousPrefecture || 'Sous-préfecture non définie'}
                     </div>
                   )}

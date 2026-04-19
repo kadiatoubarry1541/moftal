@@ -1,5 +1,5 @@
 import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../config/database.js';
+import { sequelize } from '../config/database_ia.js';
 
 class SciencePost extends Model {
   // Méthodes statiques
@@ -55,6 +55,7 @@ SciencePost.init({
   },
   mediaUrl: {
     type: DataTypes.STRING,
+    field: 'media_url',
     comment: 'URL du fichier média (image, vidéo, audio)'
   },
   category: {
@@ -70,6 +71,7 @@ SciencePost.init({
   authorName: {
     type: DataTypes.STRING,
     allowNull: false,
+    field: 'author_name',
     comment: 'Nom complet de l\'auteur'
   },
   likes: {
@@ -84,6 +86,7 @@ SciencePost.init({
   },
   isActive: {
     type: DataTypes.BOOLEAN,
+    field: 'is_active',
     defaultValue: true
   }
 }, {
@@ -104,7 +107,7 @@ SciencePost.init({
       fields: ['type']
     },
     {
-      fields: ['is_active']
+      fields: ['isActive']
     },
     {
       fields: ['created_at']

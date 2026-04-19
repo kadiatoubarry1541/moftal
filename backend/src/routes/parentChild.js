@@ -9,6 +9,7 @@ import ParentChildLink from '../models/ParentChildLink.js';
 import ParentChildActivity from '../models/ParentChildActivity.js';
 import ParentChildRating from '../models/ParentChildRating.js';
 import { sequelize } from '../config/database.js';
+import Notification from '../models/Notification.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -116,6 +117,18 @@ router.post('/link', async (req, res) => {
       parentType: typeParent,
       status: 'pending'
     });
+
+    // Notifier l'enfant destinataire
+    try {
+      const senderName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
+      await Notification.createNotification({
+        recipientNumeroH: String(childNumeroH).trim(),
+        type: 'parent_request',
+        title: 'Demande de lien parent-enfant',
+        message: `${senderName} vous a envoyé une demande de lien parent (${typeParent}).`,
+        relatedId: link.id
+      });
+    } catch (e) { console.error('Notif parent_request:', e.message); }
 
     res.json({
       success: true,

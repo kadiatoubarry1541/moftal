@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { config } from '../config/api';
 
+const API_BASE_URL = config.API_BASE_URL;
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -38,6 +40,7 @@ interface GamePlayer {
 
 interface GameDeposit {
   id: number;
+  gameId?: number;
   initialAmount: number;
   currentAmount: number;
   totalGainsPaid: number;
@@ -231,7 +234,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
             setGame(gameData);
             setCurrentView('player');
             setLoading(false);
-            addLog('system', `Bienvenue au jeu de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
+            addLog('system', `Bienvenue au défi de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
             return;
           }
         }
@@ -271,7 +274,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
 
       setGame(simulatedGame);
       setCurrentView('player');
-      addLog('system', `Bienvenue au jeu de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
+      addLog('system', `Bienvenue au défi de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
       
     } catch (error: any) {
       // En cas d'erreur totale, créer quand même un jeu en simulation
@@ -304,7 +307,7 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
       };
       setGame(simulatedGame);
       setCurrentView('player');
-      addLog('system', `Bienvenue au jeu de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
+      addLog('system', `Bienvenue au défi de partage ! Total initial de 50 000 points. ${userNumeroH} doit poser une question.`);
     } finally {
       setLoading(false);
     }
@@ -815,16 +818,24 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
                 >
                   {loading ? '⏳ Création en cours...' : '📚 Lancer un défi maintenant'}
                 </button>
-                <button
-                  onClick={() => {
-                    const id = prompt('Entrez l\'ID du jeu à rejoindre:');
-                    if (id) joinGame(parseInt(id));
-                  }}
-                  disabled={loading}
-                  className="w-full mt-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg transition-colors"
-                >
-                  Rejoindre un défi
-                </button>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="ID du défi à rejoindre"
+                    value={gameIdInput}
+                    onChange={(e) => setGameIdInput(e.target.value)}
+                    className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white placeholder-white/50"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && gameIdInput) joinGame(parseInt(gameIdInput)); }}
+                  />
+                  <button
+                    onClick={() => { if (gameIdInput) joinGame(parseInt(gameIdInput)); }}
+                    disabled={loading || !gameIdInput}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Rejoindre
+                  </button>
+                </div>
+                <p className="text-white/50 text-xs mt-1 text-center">Demandez l'ID du défi au créateur pour le rejoindre</p>
               </div>
             </div>
           </div>
@@ -848,9 +859,21 @@ export default function DefiEducatifContent({ userData }: DefiEducatifContentPro
             <h1 className="text-3xl font-bold text-yellow-400 mb-2">
               <i className="fas fa-coins mr-2"></i> Défi Éducatif
             </h1>
-            <p className="text-white/80">
+            <p className="text-white/80 mb-2">
               {allPlayers.map(p => p.numeroH).join(', ')} - Partagez les 50 000 points selon vos performances éducatives
             </p>
+            <div className="inline-flex items-center gap-2 bg-white/20 border border-yellow-400/50 rounded-lg px-4 py-2">
+              <span className="text-white/70 text-sm">ID du défi :</span>
+              <span className="text-yellow-400 font-bold text-lg">{game.id}</span>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(String(game.id)); }}
+                className="text-white/60 hover:text-white text-xs underline ml-1"
+                title="Copier l'ID"
+              >
+                Copier
+              </button>
+              <span className="text-white/50 text-xs">— Partagez cet ID pour que les autres puissent vous rejoindre</span>
+            </div>
           </header>
 
           {/* Comptes des joueurs */}

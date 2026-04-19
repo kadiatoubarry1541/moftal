@@ -62,7 +62,7 @@ User.init({
 }, {
   sequelize,
   modelName: 'User',
-  tableName: 'users',
+  tableName: 'diangou_users',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at'

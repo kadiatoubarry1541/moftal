@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { isAdmin } from '../utils/auth';
 import ProSection from '../components/ProSection';
 
@@ -77,6 +77,10 @@ export default function Solidarite() {
   const [selectedPoorPerson, setSelectedPoorPerson] = useState<PoorPerson | null>(null);
   const [showReflexionsModal, setShowReflexionsModal] = useState(false);
   const [selectedBookForReflexions, setSelectedBookForReflexions] = useState<HolyBook | null>(null);
+  const [showAddBookForm, setShowAddBookForm] = useState(false);
+  const [newBook, setNewBook] = useState({ title: '', description: '', author: '', language: 'Français', category: 'Islam' });
+  const [bookPdfFile, setBookPdfFile] = useState<File | null>(null);
+  const [uploadingBook, setUploadingBook] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUrgency, setSelectedUrgency] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
@@ -381,6 +385,41 @@ export default function Solidarite() {
     }
   };
 
+  const submitNewBook = async () => {
+    if (!newBook.title.trim()) { alert('Le titre est obligatoire'); return; }
+    setUploadingBook(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append('title', newBook.title.trim());
+      formData.append('description', newBook.description.trim());
+      formData.append('author', newBook.author.trim());
+      formData.append('language', newBook.language);
+      formData.append('category', newBook.category);
+      if (bookPdfFile) formData.append('pdf', bookPdfFile);
+
+      const response = await fetch(`${API_URL}/api/faith/books`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (response.ok) {
+        alert('Livre publié avec succès !');
+        setNewBook({ title: '', description: '', author: '', language: 'Français', category: 'Islam' });
+        setBookPdfFile(null);
+        setShowAddBookForm(false);
+        loadHolyBooks();
+      } else {
+        const err = await response.json().catch(() => ({}));
+        alert(err.message || 'Erreur lors de la publication');
+      }
+    } catch (e) {
+      alert('Erreur de connexion');
+    } finally {
+      setUploadingBook(false);
+    }
+  };
+
   // --- Fonctions Réalité ---
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -536,9 +575,9 @@ export default function Solidarite() {
               ...(userData && (userData.religion === 'Islam' || isAdmin(userData))
                 ? [{ id: 'zaka', label: 'Zaka (Musulmans)', icon: '🤲' as const }]
                 : []),
-              { id: 'livres', label: 'Les Livres de Dieu Unique', icon: '📖' },
               { id: 'realite', label: 'Réalité', icon: '📷' },
-              { id: 'ong', label: 'ONG', icon: '🌍' }
+              { id: 'ong', label: 'ONG', icon: '🌍' },
+              { id: 'livres', label: 'Les Livres de Dieu Unique', icon: '📖' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -630,9 +669,14 @@ export default function Solidarite() {
                 {/* Liste des pauvres */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">👥 Liste des Pauvres</h2>
-                  <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                  <div className="mb-4 p-4 bg-blue-50 rounded-lg space-y-2">
                     <p className="text-sm text-gray-700">
                       <strong>Note importante :</strong> Cette page est destinée aux <strong>dons généraux (Sadaqah)</strong> qui peuvent être donnés à tous les pauvres, quelle que soit leur religion. Pour les dons spécifiques aux musulmans (Zakat), veuillez utiliser la page <strong>Zaka (Musulman)</strong>.
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      <strong>Comment cette liste est alimentée :</strong> Lorsqu'une famille rencontre un problème qu'elle ne peut pas gérer seule, elle le signale ici. Deux types de problèmes sont reconnus :<br/>
+                      <span className="inline-flex items-center gap-1 mt-1">🏥 <strong>Problème de santé</strong> — maladie, blessure, handicap, frais médicaux</span><br/>
+                      <span className="inline-flex items-center gap-1">🍽️ <strong>Problème de nourriture</strong> — manque de repas, famille sans ressources alimentaires</span>
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
@@ -754,7 +798,13 @@ export default function Solidarite() {
             <div className="bg-white rounded-lg shadow-sm p-8 text-center">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">🤲 Zaka (Musulmans)</h2>
               <p className="text-gray-600 mb-6">Aumône obligatoire pour les musulmans uniquement</p>
-              <p className="text-gray-600">Page indisponible pour le moment.</p>
+              <p className="text-gray-600 mb-6">Cette section a été déplacée vers une page dédiée.</p>
+              <Link
+                to="/zaka"
+                className="inline-block bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg transition-colors"
+              >
+                Ouvrir la page Zaka
+              </Link>
             </div>
           </div>
         )}
@@ -762,9 +812,77 @@ export default function Solidarite() {
         {activeTab === 'livres' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
                 <h2 className="text-2xl font-bold text-gray-900">📖 Les Livres de Dieu Unique</h2>
+                <button
+                  onClick={() => setShowAddBookForm(!showAddBookForm)}
+                  className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-medium rounded-lg text-sm transition-colors"
+                >
+                  {showAddBookForm ? '✕ Annuler' : '➕ Publier un livre / PDF'}
+                </button>
               </div>
+
+              {/* Formulaire ajout livre / PDF */}
+              {showAddBookForm && (
+                <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-5 space-y-3">
+                  <h3 className="font-semibold text-yellow-900 text-base">Publier un livre ou un PDF</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+                      <input type="text" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-500" placeholder="Ex: Le Saint Coran" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Auteur</label>
+                      <input type="text" value={newBook.author} onChange={e => setNewBook({...newBook, author: e.target.value})}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-500" placeholder="Ex: Révélation Divine" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                      <select value={newBook.category} onChange={e => setNewBook({...newBook, category: e.target.value})}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-500">
+                        <option value="Islam">Islam</option>
+                        <option value="Christianisme">Christianisme</option>
+                        <option value="Judaïsme">Judaïsme</option>
+                        <option value="Bouddhisme">Bouddhisme</option>
+                        <option value="Hindouisme">Hindouisme</option>
+                        <option value="Traditions Africaines">Traditions Africaines</option>
+                        <option value="Autre">Autre</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Langue</label>
+                      <select value={newBook.language} onChange={e => setNewBook({...newBook, language: e.target.value})}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-500">
+                        <option value="Français">Français</option>
+                        <option value="Arabe">Arabe</option>
+                        <option value="Anglais">Anglais</option>
+                        <option value="Peul">Peul</option>
+                        <option value="Soussou">Soussou</option>
+                        <option value="Malinké">Malinké</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea value={newBook.description} onChange={e => setNewBook({...newBook, description: e.target.value})}
+                      rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-500" placeholder="Décrivez ce livre..." />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fichier PDF (optionnel)</label>
+                    <input type="file" accept=".pdf,application/pdf" onChange={e => setBookPdfFile(e.target.files?.[0] || null)}
+                      className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-yellow-100 file:text-yellow-800 hover:file:bg-yellow-200" />
+                    {bookPdfFile && <p className="text-xs text-green-700 mt-1">📄 {bookPdfFile.name}</p>}
+                  </div>
+                  <button
+                    onClick={submitNewBook}
+                    disabled={uploadingBook || !newBook.title.trim()}
+                    className="px-6 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
+                  >
+                    {uploadingBook ? 'Publication...' : '✓ Publier le livre'}
+                  </button>
+                </div>
+              )}
 
               <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                 <p className="text-sm text-blue-800">
@@ -795,25 +913,34 @@ export default function Solidarite() {
 
                     <div className="flex flex-col space-y-2">
                       <div className="flex space-x-2">
-                        <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
+                        <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-sm">
                           📖 Lire
                         </button>
-                        <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors">
-                          📥 Télécharger
-                        </button>
+                        {(book as any).pdfUrl && (
+                          <a href={(book as any).pdfUrl} target="_blank" rel="noopener noreferrer"
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors text-sm text-center">
+                            📥 PDF
+                          </a>
+                        )}
                       </div>
                       <button
                         onClick={() => {
                           setSelectedBookForReflexions(book);
                           setShowReflexionsModal(true);
                         }}
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
                       >
                         🤔 Réflexions
                       </button>
                     </div>
                   </div>
                 ))}
+                {holyBooks.length === 0 && (
+                  <div className="col-span-full text-center py-10 text-gray-500">
+                    <div className="text-5xl mb-3">📖</div>
+                    <p>Aucun livre disponible. Soyez le premier à publier un livre sacré.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

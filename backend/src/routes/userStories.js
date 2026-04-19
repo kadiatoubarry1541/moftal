@@ -35,7 +35,7 @@ const router = Router();
 // @access  Public
 router.get('/published', async (req, res) => {
   try {
-    const { sectionId, generation, region, country, search, limit = 50, offset = 0 } = req.query;
+    const { sectionId, generation, region, country, search, numeroH, limit = 50, offset = 0 } = req.query;
 
     const where = {
       isPublished: true
@@ -52,6 +52,9 @@ router.get('/published', async (req, res) => {
     }
     if (country) {
       where.country = country;
+    }
+    if (numeroH) {
+      where.numeroH = numeroH;
     }
 
     const stories = await PublishedStory.findAll({
@@ -393,30 +396,41 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// Âge minimum requis par section
+const SECTION_AGE_REQUIREMENTS = {
+  naissance: 25, jeunesse: 25, mariage: 25,
+  revelation: 40, persecution: 40,
+  unification: 60, heritage: 60
+};
+
 // @route   POST /api/user-stories/publish
-// @desc    Publier une section d'histoire
+// @desc    Publier une section d'histoire (avec validation âge + 4 témoins)
 // @access  Private
 router.post('/publish', async (req, res) => {
   try {
-    const { numeroH, sectionId } = req.body;
+    const { numeroH, sectionId, witnesses } = req.body;
 
     if (!numeroH || !sectionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'NumeroH et sectionId sont requis'
-      });
+      return res.status(400).json({ success: false, message: 'NumeroH et sectionId sont requis' });
     }
 
     const user = await User.findByNumeroH(numeroH);
-    
-    if (!user) {
-      return res.status(404).json({
+    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+
+    // --- Vérification de l'âge de l'auteur ---
+    const authorAge = user.getAge();
+    const requiredAge = SECTION_AGE_REQUIREMENTS[sectionId] || 25;
+    if (authorAge !== null && authorAge < requiredAge) {
+      return res.status(403).json({
         success: false,
-        message: 'Utilisateur non trouvé'
+        message: `Vous devez avoir au moins ${requiredAge} ans pour publier cette section. Vous pouvez sauvegarder votre brouillon et publier plus tard.`
       });
     }
 
-    // Récupérer les histoires de l'utilisateur
+    // Les témoins sont optionnels à la publication — ils peuvent témoigner eux-mêmes plus tard
+    const witnessDetails = [];
+
+    // --- Récupérer le contenu sauvegardé ---
     let stories = {};
     try {
       if (user.userStories && typeof user.userStories === 'string') {
@@ -424,46 +438,30 @@ router.post('/publish', async (req, res) => {
       } else if (user.userStories && typeof user.userStories === 'object') {
         stories = user.userStories;
       }
-    } catch (error) {
-      console.error('Erreur lors de la lecture des histoires:', error);
-      return res.status(400).json({
-        success: false,
-        message: 'Aucune histoire trouvée pour cette section'
-      });
+    } catch {
+      return res.status(400).json({ success: false, message: 'Aucune histoire trouvée pour cette section' });
     }
 
     const sectionData = stories[sectionId];
     if (!sectionData || !sectionData.content) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cette section ne contient pas de contenu à publier'
-      });
+      return res.status(400).json({ success: false, message: 'Cette section ne contient pas de contenu à publier' });
     }
 
-    // Trouver le titre de la section
     const sectionTitles = {
-      'naissance': 'Naissance et Enfance',
-      'jeunesse': 'Jeunesse et Apprentissage',
-      'mariage': 'Union et Engagement',
-      'revelation': 'Réalisation et Mission',
-      'persecution': 'Épreuves et Résilience',
-      'unification': 'Réalisation et Unification',
-      'heritage': 'Héritage et Transmission'
+      naissance: 'Naissance et Enfance', jeunesse: 'Jeunesse et Apprentissage',
+      mariage: 'Union et Engagement', revelation: 'Réalisation et Mission',
+      persecution: 'Épreuves et Résilience', unification: 'Réalisation et Unification',
+      heritage: 'Héritage et Transmission'
     };
 
-    // Vérifier si l'histoire est déjà publiée
     const existingStory = await PublishedStory.findOne({
-      where: {
-        numeroH: user.numeroH,
-        sectionId: sectionId,
-        isPublished: true
-      }
+      where: { numeroH: user.numeroH, sectionId, isPublished: true }
     });
 
     const storyData = {
       numeroH: user.numeroH,
       authorName: `${user.prenom} ${user.nomFamille}`,
-      sectionId: sectionId,
+      sectionId,
       sectionTitle: sectionTitles[sectionId] || sectionId,
       content: sectionData.content,
       photos: sectionData.photos || [],
@@ -472,14 +470,13 @@ router.post('/publish', async (req, res) => {
       region: user.regionOrigine || null,
       country: user.pays || null,
       isPublished: true,
-      publishedAt: new Date()
+      publishedAt: new Date(),
+      witnesses: witnessDetails
     };
 
     if (existingStory) {
-      // Mettre à jour l'histoire existante
       await existingStory.update(storyData);
     } else {
-      // Créer une nouvelle publication
       await PublishedStory.create(storyData);
     }
 
@@ -490,10 +487,87 @@ router.post('/publish', async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur lors de la publication:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la publication'
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la publication' });
+  }
+});
+
+// @route   DELETE /api/user-stories/publish/:sectionId
+// @desc    Supprimer une publication de l'Histoire de l'Humanité
+// @access  Private
+router.delete('/publish/:sectionId', async (req, res) => {
+  try {
+    const { sectionId } = req.params;
+    const { numeroH } = req.body;
+    const requestingUser = req.user;
+
+    const targetNumeroH = numeroH || requestingUser.numeroH;
+    // Seul l'auteur ou un admin peut supprimer
+    if (requestingUser.numeroH !== targetNumeroH && requestingUser.role !== 'admin' && requestingUser.role !== 'super-admin') {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
+
+    const story = await PublishedStory.findOne({
+      where: { numeroH: targetNumeroH, sectionId, isPublished: true }
     });
+    if (!story) {
+      return res.status(404).json({ success: false, message: 'Publication non trouvée' });
+    }
+
+    await story.update({ isPublished: false });
+
+    res.json({ success: true, message: 'Publication supprimée avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   POST /api/user-stories/testify/:storyId
+// @desc    Un utilisateur témoigne pour une histoire publiée (max 4 témoins)
+// @access  Private
+router.post('/testify/:storyId', async (req, res) => {
+  try {
+    const { storyId } = req.params;
+    const witness = req.user;
+
+    const story = await PublishedStory.findOne({
+      where: { id: storyId, isPublished: true }
+    });
+    if (!story) {
+      return res.status(404).json({ success: false, message: 'Publication introuvable' });
+    }
+    if (story.numeroH === witness.numeroH) {
+      return res.status(400).json({ success: false, message: 'Vous ne pouvez pas témoigner pour votre propre histoire' });
+    }
+
+    const currentWitnesses = story.witnesses || [];
+    const alreadyWitness = currentWitnesses.some(w => w.numeroH === witness.numeroH);
+    if (alreadyWitness) {
+      return res.status(400).json({ success: false, message: 'Vous avez déjà témoigné pour cette histoire' });
+    }
+    if (currentWitnesses.length >= 4) {
+      return res.status(400).json({ success: false, message: 'Cette histoire a déjà 4 témoins' });
+    }
+
+    const witnessAge = witness.getAge ? witness.getAge() : null;
+    const newWitness = {
+      numeroH: witness.numeroH,
+      name: `${witness.prenom} ${witness.nomFamille}`,
+      age: witnessAge,
+      testimoniedAt: new Date().toISOString()
+    };
+
+    const updatedWitnesses = [...currentWitnesses, newWitness];
+    await story.update({ witnesses: updatedWitnesses });
+
+    res.json({
+      success: true,
+      message: 'Votre témoignage a été enregistré',
+      witnesses: updatedWitnesses
+    });
+  } catch (error) {
+    console.error('Erreur témoignage:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

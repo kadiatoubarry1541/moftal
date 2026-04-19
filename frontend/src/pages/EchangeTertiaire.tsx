@@ -66,24 +66,17 @@ export default function EchangeTertiaire() {
   });
 
   useEffect(() => {
+    // Charger les produits même sans connexion (vitrine publique)
     const session = localStorage.getItem('session_user');
-    if (!session) {
-      navigate('/login');
-      return;
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        const user = parsed.userData || parsed;
+        if (user?.numeroH) setUserData(user);
+      } catch { /* pas connecté */ }
     }
-    try {
-      const parsed = JSON.parse(session);
-      const user = parsed.userData || parsed;
-      if (!user?.numeroH) {
-        navigate('/login');
-        return;
-      }
-      setUserData(user);
-      loadData();
-    } catch {
-      navigate('/login');
-    }
-  }, [navigate]);
+    loadData();
+  }, []);
 
   const loadData = async () => {
     try {
@@ -477,7 +470,7 @@ export default function EchangeTertiaire() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">📍 {selectedProduct.location}</p>
             )}
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Pour contacter le vendeur, utilisez la messagerie ou les coordonnées affichées sur l’annonce.
+              Pour contacter le vendeur, utilisez la messagerie ou les coordonnées affichées sur l'annonce.
             </p>
             <button
               onClick={() => setSelectedProduct(null)}

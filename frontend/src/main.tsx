@@ -7,19 +7,25 @@ import App from "./App.tsx";
 import { I18nProvider } from "./i18n/I18nProvider";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import {
-  initTestAccount,
-  ensureTestAccountsExist,
-} from "./utils/initTestAccount";
+import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
 
-// 🔧 INITIALISATION AUTOMATIQUE DES COMPTES DE TEST
-// Ceci garantit qu'il y a toujours au moins un compte disponible pour se connecter
-console.log("🚀 Initialisation de l'application VivasAr...");
-initTestAccount();
-ensureTestAccountsExist();
-console.log("✅ Comptes de test initialisés");
+// Supprimer les anciennes données de test qui stockaient des mots de passe en clair
+const keysToClean = [
+  'dernier_vivant', 'vivant_written', 'vivant_video',
+  'compte_test_G0C0P0R0E0F0_0', 'compte_test_G96C1P2R3E2F1_4',
+  'compte_test_G96C1P2R3E2F1_5', 'compte_test_G96C1P2R3E2F1_6',
+];
+keysToClean.forEach(key => {
+  const val = localStorage.getItem(key);
+  if (val) {
+    try {
+      const data = JSON.parse(val);
+      // Supprimer uniquement si c'était un compte de test avec mot de passe en clair
+      if (data.password) localStorage.removeItem(key);
+    } catch { localStorage.removeItem(key); }
+  }
+});
 
-// Configuration du basename - vide pour Render
 const basename = '';
 
 createRoot(document.getElementById("root")!).render(
@@ -29,6 +35,7 @@ createRoot(document.getElementById("root")!).render(
         <ThemeProvider>
           <I18nProvider>
             <App />
+            <PWAUpdatePrompt />
           </I18nProvider>
         </ThemeProvider>
       </BrowserRouter>

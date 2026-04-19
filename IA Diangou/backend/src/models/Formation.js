@@ -94,7 +94,7 @@ Formation.init({
 }, {
   sequelize,
   modelName: 'Formation',
-  tableName: 'formations',
+  tableName: 'diangou_formations',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

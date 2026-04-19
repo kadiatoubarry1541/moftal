@@ -251,11 +251,9 @@ export default function Zaka() {
         return;
       }
       
-      // Vérifier que l'utilisateur est musulman OU admin
       const userIsAdmin = isAdmin(user);
       if (user.religion !== 'Islam' && !userIsAdmin) {
-        alert('Cette page est réservée aux musulmans uniquement.');
-        navigate("/");
+        navigate('/solidarite', { replace: true });
         return;
       }
       

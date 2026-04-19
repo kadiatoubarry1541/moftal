@@ -81,7 +81,7 @@ def ensure_ia_tables():
         
         # Créer les tables si elles n'existent pas
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS sessions (
+            CREATE TABLE IF NOT EXISTS ia_edu_sessions (
                 id SERIAL PRIMARY KEY,
                 session_id VARCHAR(255) UNIQUE NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -90,9 +90,9 @@ def ensure_ia_tables():
         """)
         
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
+            CREATE TABLE IF NOT EXISTS ia_edu_messages (
                 id SERIAL PRIMARY KEY,
-                session_id VARCHAR(255) REFERENCES sessions(session_id) ON DELETE CASCADE,
+                session_id VARCHAR(255) REFERENCES ia_edu_sessions(session_id) ON DELETE CASCADE,
                 user_message TEXT NOT NULL,
                 bot_response TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -100,7 +100,7 @@ def ensure_ia_tables():
         """)
         
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS conversations (
+            CREATE TABLE IF NOT EXISTS ia_edu_conversations (
                 id SERIAL PRIMARY KEY,
                 user_message TEXT NOT NULL,
                 bot_response TEXT NOT NULL,
@@ -109,8 +109,8 @@ def ensure_ia_tables():
         """)
         
         # Créer les index
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_id ON messages(session_id);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON messages(created_at);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_session_id ON ia_edu_messages(session_id);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON ia_edu_messages(created_at);")
         
         cursor.close()
         conn.close()
@@ -4940,7 +4940,7 @@ def chat():
                 
                 # Créer ou mettre à jour la session
                 cur.execute("""
-                    INSERT INTO sessions (session_id, last_activity)
+                    INSERT INTO ia_edu_sessions (session_id, last_activity)
                     VALUES (%s, CURRENT_TIMESTAMP)
                     ON CONFLICT (session_id) 
                     DO UPDATE SET last_activity = CURRENT_TIMESTAMP
@@ -4948,13 +4948,13 @@ def chat():
                 
                 # Sauvegarder le message et la réponse
                 cur.execute("""
-                    INSERT INTO messages (session_id, user_message, bot_response)
+                    INSERT INTO ia_edu_messages (session_id, user_message, bot_response)
                     VALUES (%s, %s, %s)
                 """, (session_id, message, response))
                 
                 # Sauvegarder aussi dans la table conversations (pour historique simple)
                 cur.execute("""
-                    INSERT INTO conversations (user_message, bot_response)
+                    INSERT INTO ia_edu_conversations (user_message, bot_response)
                     VALUES (%s, %s)
                 """, (message, response))
                 
@@ -4988,7 +4988,7 @@ def get_history(session_id):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
             SELECT user_message, bot_response, created_at
-            FROM messages
+            FROM ia_edu_messages
             WHERE session_id = %s
             ORDER BY created_at ASC
         """, (session_id,))

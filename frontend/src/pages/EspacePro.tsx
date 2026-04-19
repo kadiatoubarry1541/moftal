@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import PaymentModal from "../components/PaymentModal";
 
 interface ProAccount {
   id: string;
@@ -184,6 +185,103 @@ import { config } from "../config/api";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || (import.meta.env.VITE_API_URL || "");
 
+/* ============================================================
+   MURO DE PAGO POR SUSCRIPCIÓN
+   ============================================================ */
+function SubscriptionPaymentWall({
+  account,
+  userData,
+  onSuccess,
+}: {
+  account: ProAccount;
+  userData: any;
+  onSuccess: () => void;
+}) {
+  const navigate = useNavigate();
+  const [showPayment, setShowPayment] = useState(false);
+
+  // Prix d'abonnement mensuel selon le type de compte (en GNF)
+  const SUBSCRIPTION_PRICES: Record<string, number> = {
+    clinic: 500000,
+    enterprise: 300000,
+    school: 200000,
+    scientist: 150000,
+    ngo: 100000,
+    security_agency: 400000,
+    supplier: 250000,
+    journalist: 150000,
+  };
+
+  const price = SUBSCRIPTION_PRICES[account.type] || 200000;
+  const isOverdue = account.subscriptionStatus === "overdue";
+  const isNeverPaid = account.subscriptionStatus === "never_paid";
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-orange-200 dark:border-orange-800 p-6 text-center">
+        <div className="text-5xl mb-3">{isOverdue ? "⏰" : "🔒"}</div>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          {isOverdue ? "Abonnement expiré" : "Activez votre abonnement"}
+        </h1>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+          {isNeverPaid
+            ? "Votre compte est approuvé ! Payez votre premier abonnement mensuel pour accéder à votre dashboard."
+            : "Votre abonnement mensuel a expiré. Renouvelez-le pour continuer à utiliser votre dashboard."}
+        </p>
+
+        {/* Prix */}
+        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mb-5">
+          <p className="text-xs text-gray-500 mb-1">Abonnement mensuel</p>
+          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+            {price.toLocaleString('fr-FR')} GNF
+          </p>
+          <p className="text-xs text-gray-400 mt-1">Valable 30 jours — Renouvelable</p>
+        </div>
+
+        {/* Avantages */}
+        <div className="text-left mb-5 space-y-2">
+          {["Tableau de bord complet", "Gestion des rendez-vous", "Profil visible dans les recherches", "Notifications en temps réel"].map(f => (
+            <div key={f} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <span className="text-green-500">✓</span> {f}
+            </div>
+          ))}
+        </div>
+
+        {/* Bouton payer */}
+        <button
+          onClick={() => setShowPayment(true)}
+          className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-colors mb-3 flex items-center justify-center gap-2"
+        >
+          💳 Payer {price.toLocaleString('fr-FR')} GNF
+        </button>
+
+        <p className="text-xs text-gray-400 mb-3">Orange Money • Wave • Visa • Mastercard</p>
+
+        <button
+          onClick={() => navigate("/mes-comptes-pro")}
+          className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          ← Retour à mes comptes
+        </button>
+      </div>
+
+      {showPayment && (
+        <PaymentModal
+          isOpen={showPayment}
+          onClose={() => setShowPayment(false)}
+          onSuccess={() => { setShowPayment(false); onSuccess(); }}
+          amount={price}
+          currency="GNF"
+          purpose="subscription_pro"
+          relatedId={account.id}
+          description={`Abonnement mensuel — ${account.name}`}
+          userData={userData}
+        />
+      )}
+    </div>
+  );
+}
+
 /* ============================================================ */
 export default function EspacePro() {
   const { id } = useParams<{ id: string }>();
@@ -211,6 +309,11 @@ export default function EspacePro() {
   const currentAptIdRef  = useRef<string | null>(null);
 
   const token = localStorage.getItem("token");
+
+  // Lire les données utilisateur pour le paiement
+  const userData = (() => {
+    try { const s = localStorage.getItem('session_user'); return s ? JSON.parse(s).userData : null; } catch { return null; }
+  })();
 
   /* ---- Déduction du service ---- */
   const serviceKey = account ? (TYPE_TO_SERVICE[account.type] || "activite") : "activite";
@@ -388,30 +491,10 @@ export default function EspacePro() {
     </div>
   );
 
-  // Si l'abonnement n'est pas actif, on bloque tout le dashboard pro
+  // Si l'abonnement n'est pas actif, on bloque tout le dashboard pro avec bouton de paiement
   if (account.status === "approved" && account.subscriptionStatus && account.subscriptionStatus !== "active") {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-red-200 dark:border-red-800 p-6 text-center">
-          <div className="text-5xl mb-3">🔒</div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Accès à votre dashboard bloqué
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-            Votre compte professionnel est approuvé mais votre <strong>abonnement n'est pas réglé</strong> ou a expiré.
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Merci de contacter l'administrateur pour régulariser votre situation. Tant que le paiement n'est pas validé, 
-            votre profil ne sera pas visible dans les recherches et vous ne pourrez pas utiliser ce tableau de bord.
-          </p>
-          <button
-            onClick={() => navigate("/mes-comptes-pro")}
-            className="min-h-[40px] px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl"
-          >
-            ← Retour à mes comptes
-          </button>
-        </div>
-      </div>
+      <SubscriptionPaymentWall account={account} userData={userData} onSuccess={() => window.location.reload()} />
     );
   }
 

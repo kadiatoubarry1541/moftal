@@ -80,7 +80,7 @@ Course.init({
 }, {
   sequelize,
   modelName: 'Course',
-  tableName: 'courses',
+  tableName: 'diangou_courses',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

@@ -224,7 +224,26 @@ export default function Probleme() {
                   accept="video/*,image/*"
                   className="hidden"
                   disabled={uploading}
-                  onChange={(e) => handleUpload(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.type.startsWith('video/')) {
+                      const vid = document.createElement('video');
+                      vid.preload = 'metadata';
+                      vid.onloadedmetadata = () => {
+                        URL.revokeObjectURL(vid.src);
+                        if (vid.duration > 60) {
+                          setUploadError('La vidéo ne doit pas dépasser 1 minute.');
+                          e.target.value = '';
+                          return;
+                        }
+                        handleUpload(file);
+                      };
+                      vid.src = URL.createObjectURL(file);
+                    } else {
+                      handleUpload(file);
+                    }
+                  }}
                 />
               </label>
             </div>

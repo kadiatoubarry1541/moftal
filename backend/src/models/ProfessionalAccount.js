@@ -1,5 +1,5 @@
 import { DataTypes, Model, Op } from 'sequelize';
-import { sequelize } from '../../config/database.js';
+import { sequelize } from '../../config/database_pro.js';
 
 class ProfessionalAccount extends Model {
   static async getPendingAccounts() {
@@ -58,7 +58,8 @@ ProfessionalAccount.init({
       // Types spécifiques au secteur Échanges
       'vendor',      // vendeurs / détaillants
       'producer',    // entreprises de production
-      'broker'       // démarcheurs / agents pour location de maisons
+      'broker',      // démarcheurs / agents pour location de maisons
+      'restaurant'   // restauration : menu, commandes, appel direct
     ),
     allowNull: false
   },
@@ -146,6 +147,16 @@ ProfessionalAccount.init({
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  // Sous-secteur Échanges : primaire / secondaire / tertiaire
+  // Obligatoire pour vendor, supplier, producer, broker
+  // null pour tous les autres types
+  subSector: {
+    type: DataTypes.ENUM('primaire', 'secondaire', 'tertiaire'),
+    allowNull: true,
+    defaultValue: null,
+    field: 'sub_sector',
+    comment: 'Niveau Échanges : primaire | secondaire | tertiaire (nul pour les autres types)'
   },
   // Statut d'abonnement / de paiement du compte pro
   subscriptionStatus: {

@@ -291,6 +291,54 @@ export function buildFamilyTree(userData: UserData): FamilyMember[] {
     });
   }
 
+  // 8. DÉFUNTS enregistrés manuellement par cet utilisateur
+  try {
+    const key = `deceased_members_${userData.numeroH}`
+    const deceasedList: any[] = JSON.parse(localStorage.getItem(key) || '[]')
+    const relationMap: Record<string, FamilyMember['relation']> = {
+      'pere': 'pere',
+      'mere': 'mere',
+      'fils': 'enfant',
+      'fille': 'enfant',
+      'grand-pere': 'grand-pere',
+      'grand-mere': 'grand-mere',
+      'arriere-grand-pere': 'grand-pere',
+      'arriere-grand-mere': 'grand-mere',
+      'frere': 'frere',
+      'soeur': 'soeur',
+      'oncle': 'oncle',
+      'tante': 'tante',
+      'cousin': 'cousin',
+      'cousine': 'cousine',
+      'autre': 'pere'
+    }
+    deceasedList.forEach((d: any, i: number) => {
+      const rel = relationMap[d.relation] || 'pere'
+      const genMap: Record<string, string> = {
+        'pere': 'G0', 'mere': 'G0',
+        'grand-pere': 'G-1', 'grand-mere': 'G-1',
+        'enfant': 'G2',
+        'frere': 'G1', 'soeur': 'G1',
+        'oncle': 'G0', 'tante': 'G0',
+        'cousin': 'G1', 'cousine': 'G1'
+      }
+      const deceasedMember: FamilyMember = {
+        id: `deceased-${d.numeroHD || d.numeroH || i}`,
+        numeroH: d.numeroHD || d.numeroH || `D${i}`,
+        prenom: d.prenom || d.nom || 'Défunt',
+        nomFamille: d.nomFamille || d.famille || userData.nomFamille,
+        genre: d.genre?.toUpperCase() === 'FEMME' ? 'FEMME' : 'HOMME',
+        dateNaissance: d.dateNaissance,
+        dateDeces: d.dateDeces || (d.anneeDeces ? `${d.anneeDeces}-01-01` : undefined),
+        relation: rel,
+        generation: genMap[rel] || 'G0',
+        isDeceased: true,
+        isVisible: true
+      }
+      tree.push(deceasedMember)
+    })
+  } catch { /* ignore */ }
+
   return tree;
 }
 

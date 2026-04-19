@@ -16,7 +16,9 @@ export const SECTOR_PAGE_PATHS = {
   // Sous-secteur tertiaire dédié aux démarcheurs de maisons
   echange_tertiaire_demarcheurs: '/echange/tertiaire/demarcheurs',
   securite: '/securite',
-  journalisme: '/journalisme'
+  journalisme: '/journalisme',
+  science: '/science',
+  solidarite: '/solidarite'
 };
 
 export const SECTOR_NAMES = {
@@ -28,7 +30,9 @@ export const SECTOR_NAMES = {
   echange_tertiaire: 'Échanges - Tertiaire',
   echange_tertiaire_demarcheurs: 'Échanges - Tertiaire (Démarcheurs)',
   securite: 'Sécurité',
-  journalisme: 'Journalisme'
+  journalisme: 'Journalisme',
+  science: 'Science',
+  solidarite: 'Solidarité'
 };
 
 /** Types de comptes pro qui appartiennent à chaque secteur (pour filtre et permission). */
@@ -49,29 +53,38 @@ export const SECTOR_PRO_TYPES = {
   // Sous-secteur tertiaire pour les démarcheurs de maisons uniquement
   echange_tertiaire_demarcheurs: ['broker'],
   securite: ['security_agency'],
-  journalisme: ['journalist']
+  journalisme: ['journalist'],
+  science: ['scientist'],
+  solidarite: ['ngo']
 };
 
 /**
  * Retourne le secteur (clé) pour un type de compte professionnel, ou null.
- * @param {string} professionalType - type du ProfessionalAccount (clinic, school, supplier, etc.)
- * @returns {string|null} 'sante' | 'education' | 'echange' | 'securite' | 'journalisme' | null
+ * @param {string} professionalType - type du ProfessionalAccount
+ * @param {string|null} subSector - 'primaire' | 'secondaire' | 'tertiaire' | null
+ * @returns {string|null}
  */
-export function getSectorForProType(professionalType) {
+export function getSectorForProType(professionalType, subSector = null) {
   if (!professionalType) return null;
   const t = String(professionalType).toLowerCase();
   if (SECTOR_PRO_TYPES.sante.includes(t)) return 'sante';
   if (SECTOR_PRO_TYPES.education.includes(t)) return 'education';
-  if (SECTOR_PRO_TYPES.echange.includes(t)) return 'echange';
-  // Démarcheurs de maisons (location) : secteur tertiaire dédié
-  if (
-    SECTOR_PRO_TYPES.echange_tertiaire_demarcheurs &&
-    SECTOR_PRO_TYPES.echange_tertiaire_demarcheurs.includes(t)
-  ) {
-    return 'echange_tertiaire_demarcheurs';
-  }
   if (SECTOR_PRO_TYPES.securite.includes(t)) return 'securite';
   if (SECTOR_PRO_TYPES.journalisme.includes(t)) return 'journalisme';
+  if (SECTOR_PRO_TYPES.science.includes(t)) return 'science';
+  if (SECTOR_PRO_TYPES.solidarite.includes(t)) return 'solidarite';
+
+  // Secteur Échanges : on utilise subSector pour trouver le bon admin
+  if (SECTOR_PRO_TYPES.echange.includes(t)) {
+    // broker va toujours en tertiaire
+    if (t === 'broker') return 'echange_tertiaire_demarcheurs';
+    // Pour vendor, supplier, producer : on suit le subSector déclaré à l'inscription
+    if (subSector === 'primaire')   return 'echange_primaire';
+    if (subSector === 'secondaire') return 'echange_secondaire';
+    if (subSector === 'tertiaire')  return 'echange_tertiaire';
+    // Fallback si pas de subSector : secteur général Échanges
+    return 'echange';
+  }
   return null;
 }
 
@@ -119,10 +132,10 @@ export async function getManagedSectorsForUser(PageAdminModel, numeroH) {
  * @param {object} user - req.user
  * @param {string} professionalType - type du compte (clinic, school, supplier, etc.)
  */
-export async function canUserApproveProfessional(PageAdminModel, user, professionalType) {
+export async function canUserApproveProfessional(PageAdminModel, user, professionalType, subSector = null) {
   if (!user) return false;
   if (isGlobalAdmin(user)) return true;
-  const sector = getSectorForProType(professionalType);
+  const sector = getSectorForProType(professionalType, subSector);
   if (!sector) return false;
   const managed = await getManagedSectorsForUser(PageAdminModel, user.numeroH);
   return managed.includes(sector);

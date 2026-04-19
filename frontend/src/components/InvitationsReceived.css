@@ -58,6 +58,82 @@
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Avatar dans les notifications */
+.notification-avatar {
+  flex-shrink: 0;
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.notification-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #667eea;
+}
+
+.notification-avatar-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #667eea;
+}
+
+/* Avatar dans les cartes d'invitation */
+.invitation-avatar-wrap {
+  flex-shrink: 0;
+  position: relative;
+  width: 56px;
+  height: 56px;
+}
+
+.invitation-avatar-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #667eea;
+}
+
+.invitation-avatar-fallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-size: 22px;
+  font-weight: bold;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #667eea;
+}
+
+.invitation-relation-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 18px;
+  background: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
 
 .notification-item.unread {
@@ -197,6 +273,7 @@
 .invitation-icon {
   font-size: 32px;
   flex-shrink: 0;
+  display: none;
 }
 
 .invitation-info {

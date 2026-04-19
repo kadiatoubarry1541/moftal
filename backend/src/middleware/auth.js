@@ -198,6 +198,39 @@ export const authenticate = async (req, res, next) => {
   }
 };
 
+/** Zakat / page Zaka : uniquement profil religion Islam ou administrateur */
+export const requireMuslimOrAdmin = (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentification requise'
+      });
+    }
+    const role = (req.user.role || '').toLowerCase();
+    const isAdminUser =
+      role === 'admin' ||
+      role === 'super-admin' ||
+      req.user.isAdmin === true ||
+      MASTER_ADMIN_NUMEROS.includes(req.user.numeroH);
+    if (isAdminUser) {
+      next();
+      return;
+    }
+    if (req.user.religion === 'Islam') {
+      next();
+      return;
+    }
+    return res.status(403).json({
+      success: false,
+      message: 'Accès réservé aux comptes enregistrés comme musulmans'
+    });
+  } catch (e) {
+    console.error('requireMuslimOrAdmin:', e);
+    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
 // Middleware pour vérifier que l'utilisateur est admin
 export const requireAdmin = async (req, res, next) => {
   try {

@@ -54,7 +54,23 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
   const [recommendations, setRecommendations] = useState<string[]>([])
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0)
+  const [spouseTreeModal, setSpouseTreeModal] = useState<{ open: boolean; data: any | null; loading: boolean }>({ open: false, data: null, loading: false })
   const navigate = useNavigate()
+
+  const handleViewSpouseTree = async (spouseNumeroH: string) => {
+    if (!spouseNumeroH) return
+    setSpouseTreeModal({ open: true, data: null, loading: true })
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`/api/family-tree/spouse-tree/${spouseNumeroH}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      setSpouseTreeModal({ open: true, data: res.ok ? data : null, loading: false })
+    } catch {
+      setSpouseTreeModal({ open: true, data: null, loading: false })
+    }
+  }
 
   useEffect(() => {
     // Construire automatiquement l'arbre généalogique selon les conditions remplies
@@ -108,6 +124,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       InvitationManager.sendInvitation({
         fromNumeroH: userData.numeroH,
         fromName,
+        fromPhoto: userData.photo || undefined,
         toNumeroH: newMember.numeroH.trim(),
         toName,
         relation: newMember.relation,
@@ -253,8 +270,102 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const filteredMembers = getGenerationMembers(generationFilter).filter(m => (m as any).isVisible !== false && !isHidden(m.numeroH))
   const generations = [...new Set(visibleMembers.map(m => m.generation))].sort()
 
+  // Invitations en attente (chargées en direct)
+  const pendingInvitations = InvitationManager.getReceivedInvitations(userData.numeroH).filter(inv => inv.status === 'pending')
+
   return (
     <div className="arbre-genealogique">
+
+      {/* ══ BANNIÈRE INVITATIONS EN ATTENTE ══ */}
+      {pendingInvitations.length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%)',
+          border: '2px solid #f59e0b',
+          borderRadius: '12px',
+          padding: '16px',
+          marginBottom: '16px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 22 }}>🔔</span>
+            <strong style={{ color: '#92400e', fontSize: 16 }}>
+              {pendingInvitations.length} invitation{pendingInvitations.length > 1 ? 's' : ''} en attente
+            </strong>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {pendingInvitations.map(inv => (
+              <div key={inv.id} style={{
+                background: 'white',
+                borderRadius: '10px',
+                border: '1px solid #fcd34d',
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                flexWrap: 'wrap'
+              }}>
+                {/* Avatar de l'invitant */}
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'white', fontWeight: 'bold', fontSize: 18, flexShrink: 0
+                }}>
+                  {(inv.fromName || '?')[0].toUpperCase()}
+                </div>
+                {/* Infos */}
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ fontWeight: 700, color: '#1f2937', fontSize: 15 }}>
+                    {inv.fromName}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>
+                    NuméroH : <span style={{ fontWeight: 600, color: '#059669' }}>{inv.fromNumeroH}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#374151', marginTop: 2 }}>
+                    Vous invite en tant que <span style={{ fontWeight: 700, color: '#d97706' }}>{inv.relation}</span>
+                  </div>
+                  {inv.message && (
+                    <div style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic', marginTop: 2 }}>
+                      « {inv.message} »
+                    </div>
+                  )}
+                </div>
+                {/* Boutons */}
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                  <button
+                    onClick={() => {
+                      InvitationManager.acceptInvitation(inv.id, userData.numeroH)
+                      setPendingInvitationCount(c => Math.max(0, c - 1))
+                      window.location.reload()
+                    }}
+                    style={{
+                      background: '#10b981', color: 'white', border: 'none',
+                      borderRadius: 8, padding: '7px 14px', fontWeight: 700,
+                      cursor: 'pointer', fontSize: 13
+                    }}
+                  >
+                    ✅ Accepter
+                  </button>
+                  <button
+                    onClick={() => {
+                      InvitationManager.declineInvitation(inv.id, userData.numeroH)
+                      setPendingInvitationCount(c => Math.max(0, c - 1))
+                      window.location.reload()
+                    }}
+                    style={{
+                      background: '#ef4444', color: 'white', border: 'none',
+                      borderRadius: 8, padding: '7px 14px', fontWeight: 700,
+                      cursor: 'pointer', fontSize: 13
+                    }}
+                  >
+                    ❌ Refuser
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="arbre-header">
         <h3>🌳 Arbre Généalogique de {userData.prenom} {userData.nomFamille}</h3>
 
@@ -377,6 +488,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     <option value="mere">Mère</option>
                     <option value="grand-pere">Grand-père</option>
                     <option value="grand-mere">Grand-mère</option>
+                    <option value="arriere-grand-pere">Arrière grand-père</option>
+                    <option value="arriere-grand-mere">Arrière grand-mère</option>
                     <option value="frere">Frère</option>
                     <option value="soeur">Sœur</option>
                     <option value="enfant">Enfant</option>
@@ -633,6 +746,11 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 </text>
                 <text x="966" y="391" fontSize="11" fill="#555">{userData.conjointPrenom}</text>
                 <text x="966" y="405" fontSize="10" fill="#667eea" fontWeight="bold">{userData.conjointNumeroH}</text>
+                {/* Bouton "Voir plus" pour accéder à l'arbre du conjoint */}
+                <g style={{ cursor: 'pointer' }} onClick={() => handleViewSpouseTree(userData.conjointNumeroH)}>
+                  <rect x="912" y="413" width="72" height="16" rx="6" fill="#667eea" opacity="0.85"/>
+                  <text x="948" y="424" fontSize="9" textAnchor="middle" fill="white" fontWeight="bold">Voir arbre</text>
+                </g>
 
                 {/* Vertical du milieu du connecteur (x=890, dans le gap 870..910) vers barre G2
                     y=385→420 : x=890 dans le gap — aucune boîte traversée
@@ -1084,11 +1202,53 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           </div>
         </div>
       )}
+
+      {/* ══ MODAL ARBRE DU CONJOINT ══ */}
+      {spouseTreeModal.open && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 520, width: '95%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: '#2c5530', fontSize: 18 }}>Arbre familial de {userData.conjointPrenom}</h3>
+              <button onClick={() => setSpouseTreeModal({ open: false, data: null, loading: false })}
+                style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#666' }}>✕</button>
+            </div>
+
+            {spouseTreeModal.loading && <p style={{ textAlign: 'center', color: '#888' }}>Chargement...</p>}
+
+            {!spouseTreeModal.loading && spouseTreeModal.data && (
+              <>
+                {spouseTreeModal.data.accessLevel === 'limited' && (
+                  <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 8, padding: 12, marginBottom: 14, fontSize: 13, color: '#92400e' }}>
+                    Accès limité — union de {spouseTreeModal.data.unionDays} jour(s). Accès complet dans <strong>{spouseTreeModal.data.daysUntilFullAccess}</strong> jour(s) (après 1 an).
+                  </div>
+                )}
+                {spouseTreeModal.data.accessLevel === 'full' && (
+                  <div style={{ background: '#d1fae5', border: '1px solid #10b981', borderRadius: 8, padding: 10, marginBottom: 14, fontSize: 13, color: '#065f46' }}>
+                    Accès complet — union de {spouseTreeModal.data.unionDays} jour(s).
+                    {spouseTreeModal.data.tree?.familyCode && <> Code : <strong>{spouseTreeModal.data.tree.familyCode}</strong></>}
+                  </div>
+                )}
+                <div>
+                  <strong style={{ fontSize: 14, color: '#444' }}>Membres ({spouseTreeModal.data.tree?.memberCount || spouseTreeModal.data.tree?.members?.length || 0})</strong>
+                  <ul style={{ marginTop: 8, paddingLeft: 18, fontSize: 13 }}>
+                    {(spouseTreeModal.data.tree?.members || []).map((m: any) => (
+                      <li key={m.numeroH} style={{ marginBottom: 4 }}>
+                        {m.prenom} {m.nomFamille}
+                        {spouseTreeModal.data.accessLevel === 'full' && <span style={{ color: '#888', marginLeft: 8, fontSize: 11 }}>({m.genre?.toLowerCase()})</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
+
+            {!spouseTreeModal.loading && !spouseTreeModal.data && (
+              <p style={{ color: '#e53e3e', textAlign: 'center' }}>Impossible de charger l'arbre. Vérifiez votre lien de couple.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
-
-
-
 

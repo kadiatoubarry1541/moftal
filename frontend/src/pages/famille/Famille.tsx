@@ -15,6 +15,25 @@ interface UserData {
   isAdmin?: boolean
 }
 
+interface NavCard {
+  to: string
+  emoji: string
+  label: string
+}
+
+// Carte compacte cliquable
+function Card({ to, emoji, label }: NavCard) {
+  return (
+    <Link
+      to={to}
+      className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-3 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md active:scale-95 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/30"
+    >
+      <span className="text-2xl leading-none">{emoji}</span>
+      <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">{label}</span>
+    </Link>
+  )
+}
+
 
 export default function Famille() {
   const [user, setUser] = useState<UserData | null>(null)
@@ -27,11 +46,11 @@ export default function Famille() {
     if (u?.numeroH) setUser(u)
   }, [])
 
-  // Redirection : parent → Mes Enfants, enfant → Mes Parents (sauf Retour à Famille ou admin)
+  // Redirection : parent → Mes Enfants, enfant → Mes Parents
   useEffect(() => {
     if (location.pathname !== '/famille' || !user?.numeroH) return
     if ((location.state as { returnToHub?: boolean })?.returnToHub) return
-    if (isAdmin(user)) return // Admin : pas de redirection, tout reste visible depuis le hub
+    if (isAdmin(user)) return
     const token = localStorage.getItem('token')
     if (!token) return
     let cancelled = false
@@ -44,48 +63,29 @@ export default function Famille() {
         if (cancelled) return
         const dataChildren = resChildren.ok ? await resChildren.json() : { children: [] }
         const dataParents = resParents.ok ? await resParents.json() : { parents: [] }
-        const children = dataChildren.children || []
-        const parents = dataParents.parents || []
-        if (children.length > 0) {
-          navigate('/famille/enfants', { replace: true })
-          return
-        }
-        if (parents.length > 0) {
-          navigate('/famille/parents', { replace: true })
-        }
-      } catch {
-        // pas de redirection en cas d'erreur
-      }
+        if ((dataChildren.children || []).length > 0) { navigate('/famille/enfants', { replace: true }); return }
+        if ((dataParents.parents || []).length > 0) { navigate('/famille/parents', { replace: true }) }
+      } catch { /* pas de redirection en cas d'erreur */ }
     }
     run()
     return () => { cancelled = true }
   }, [location.pathname, user?.numeroH, navigate])
 
-  const effectiveUser: UserData = user || {
-    numeroH: '',
-    prenom: 'Invité',
-    nomFamille: '',
-    genre: 'HOMME'
-  }
-
-  // Vérifier si l'utilisateur est admin (aucune condition, tout voir)
+  const effectiveUser: UserData = user || { numeroH: '', prenom: 'Invité', nomFamille: '', genre: 'HOMME' }
   const userIsAdmin = isAdmin(effectiveUser)
-
-  const genre = effectiveUser.genre
-
-  // Si on est sur une sous-page, afficher l'Outlet
   const isOnSubPage = location.pathname !== '/famille'
 
+  // --- Sous-page : afficher le contenu avec bouton retour ---
   if (isOnSubPage) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6">
           <Link
             to="/famille"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors duration-200 shadow-sm border border-gray-200 dark:border-gray-600"
+            state={{ returnToHub: true }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors text-sm border border-gray-200 dark:border-gray-600"
           >
-            <span aria-hidden>←</span>
-            Retour à Famille
+            ← Famille
           </Link>
         </div>
         <Outlet />
@@ -93,96 +93,46 @@ export default function Famille() {
     )
   }
 
-  // Page d'accueil Famille avec liste des sections
+  // --- Hub principal ---
   return (
-    <div className="max-w-7xl mx-auto px-4 py-4">
-      {/* Bouton Retour */}
-      <div className="mb-3">
-        <button
-          type="button"
-          onClick={() => navigate('/compte')}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors font-medium text-sm shadow-sm border border-gray-200 dark:border-gray-600"
-        >
-          <span aria-hidden>←</span>
-          Retour
-        </button>
-      </div>
+    <div className="max-w-md mx-auto px-4 py-4">
 
-      {/* En-tête */}
-      <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg shadow p-4 sm:p-5 mb-4 text-white">
-        <h1 className="text-xl sm:text-2xl font-bold">👨‍👩‍👧‍👦 Ma Famille</h1>
-      </div>
+      {/* Bouton retour */}
+      <button
+        type="button"
+        onClick={() => navigate('/compte')}
+        className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg transition-colors text-sm border border-gray-200 dark:border-gray-600"
+      >
+        ← Retour
+      </button>
 
-      {/* Badge Admin + lien Vue Admin */}
-      {userIsAdmin && (
-        <div className="mb-4 space-y-2">
-          <div className="px-3 py-2 bg-amber-50 border border-amber-300 rounded-lg">
-            <p className="text-amber-900 text-sm font-semibold flex items-center gap-2">
-              <span className="text-lg">👑</span>
-              Mode Administrateur
-            </p>
-          </div>
+      {/* Header compact */}
+      <div className="mb-5 flex items-center gap-3 rounded-2xl bg-emerald-600 px-4 py-3 text-white shadow-md">
+        <span className="text-3xl leading-none">👨‍👩‍👧</span>
+        <div>
+          <h1 className="text-base font-bold leading-tight">Ma Famille</h1>
+          <p className="text-xs text-emerald-100 mt-0.5">Votre espace famille complet</p>
+        </div>
+        {userIsAdmin && (
           <Link
             to="/famille/admin"
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg shadow transition-colors"
+            className="ml-auto flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition"
           >
-            <span>👑</span>
-            Vue Admin – Toutes les liaisons
-          </Link>
-        </div>
-      )}
-
-      {/* Liste des sections */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2">
-        <Link to="parents" className="group bg-white rounded-md shadow-sm hover:shadow border border-gray-200 hover:border-emerald-500 py-2 px-2 transition-all duration-200 hover:-translate-y-0.5">
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl mb-0.5">👨‍👩‍👦</div>
-            <h3 className="text-xs sm:text-sm font-bold text-gray-800 group-hover:text-emerald-600 leading-tight">Mes Parents</h3>
-          </div>
-        </Link>
-
-        {/* Mon Homme — visible pour les femmes et autres */}
-        {(userIsAdmin || genre !== 'HOMME') && (
-          <Link to="mari" className="group bg-white rounded-md shadow-sm hover:shadow border border-gray-200 hover:border-blue-500 py-2 px-2 transition-all duration-200 hover:-translate-y-0.5">
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl mb-0.5">🤵</div>
-              <h3 className="text-xs sm:text-sm font-bold text-gray-800 group-hover:text-blue-600 leading-tight">Mon Homme</h3>
-            </div>
+            👑 Admin
           </Link>
         )}
-
-        {/* Ma Femme — visible pour les hommes et autres */}
-        {(userIsAdmin || genre !== 'FEMME') && (
-          <Link to="femmes" className="group bg-white rounded-md shadow-sm hover:shadow border border-gray-200 hover:border-pink-500 py-2 px-2 transition-all duration-200 hover:-translate-y-0.5">
-            <div className="text-center">
-              <div className="text-2xl sm:text-3xl mb-0.5">👰</div>
-              <h3 className="text-xs sm:text-sm font-bold text-gray-800 group-hover:text-pink-600 leading-tight">Ma Femme</h3>
-            </div>
-          </Link>
-        )}
-
-
-        <Link to="enfants" className="group bg-white rounded-md shadow-sm hover:shadow border border-gray-200 hover:border-purple-500 py-2 px-2 transition-all duration-200 hover:-translate-y-0.5">
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl mb-0.5">👶</div>
-            <h3 className="text-xs sm:text-sm font-bold text-gray-800 group-hover:text-purple-600 leading-tight">Mes Enfants</h3>
-          </div>
-        </Link>
-
-        <Link to="moi" className="group bg-white rounded-md shadow-sm hover:shadow border border-gray-200 hover:border-green-500 py-2 px-2 transition-all duration-200 hover:-translate-y-0.5">
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl mb-0.5">🌟</div>
-            <h3 className="text-xs sm:text-sm font-bold text-gray-800 group-hover:text-green-600 leading-tight">Moi</h3>
-          </div>
-        </Link>
-
-        <Link to="mes-amours" className="group bg-white rounded-md shadow-sm hover:shadow border border-gray-200 hover:border-pink-500 py-2 px-2 transition-all duration-200 hover:-translate-y-0.5">
-          <div className="text-center">
-            <div className="text-2xl sm:text-3xl mb-0.5">💕</div>
-            <h3 className="text-xs sm:text-sm font-bold text-gray-800 group-hover:text-pink-600 leading-tight">Mes Amours</h3>
-          </div>
-        </Link>
       </div>
+
+      {/* ── Toutes les pages famille — même taille ── */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card to="/famille/parents"    emoji="👨‍👩‍👦" label="Parents"    />
+        <Card to="/famille/enfants"    emoji="👶"    label="Enfants"    />
+        <Card to="/famille/femmes"     emoji="👰"    label="Ma femme"   />
+        <Card to="/famille/mari"       emoji="🤵"    label="Mon homme"  />
+        <Card to="/famille/mes-amours" emoji="💕"    label="Amitié"     />
+        <Card to="/famille/moi/arbre"  emoji="🌳"    label="Mon arbre"  />
+      </div>
+
     </div>
   )
 }

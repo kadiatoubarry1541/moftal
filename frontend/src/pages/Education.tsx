@@ -162,6 +162,9 @@ export default function Education() {
   const [professors, setProfessors] = useState<Professor[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [linkedCourses, setLinkedCourses] = useState<Course[]>([]);
+  const [linkedStudents, setLinkedStudents] = useState<Array<{ numeroH: string; name: string }>>([]);
+  const [publishAssignedStudents, setPublishAssignedStudents] = useState<string[]>([]);
   const [myRegistrations, setMyRegistrations] = useState<FormationRegistration[]>([]);
   const [myRequests, setMyRequests] = useState<ProfessorRequest[]>([]);
   const [myStageRequests, setMyStageRequests] = useState<StageRequest[]>([]);
@@ -247,27 +250,24 @@ export default function Education() {
   }, [navigate]);
 
   const loadData = async () => {
-    try {
-      setLoading(true);
-      await Promise.all([
-        loadFormations(),
-        loadProfessors(),
-        loadStages(),
-        loadCourses(),
-        loadMyRegistrations(),
-        loadMyRequests(),
-        loadMyStageRequests(),
-        loadMyProgress(),
-        loadMyCertificates(),
-        loadMyProfessorProfile(),
-        loadChildrenProgress(),
-        loadSchools()
-      ]);
-    } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    // 1. Charger les cours en priorité (onglet par défaut) → affiche la page rapidement
+    await loadCourses();
+    setLoading(false);
+    // 2. Charger le reste en arrière-plan sans bloquer l'affichage
+    Promise.allSettled([
+      loadFormations(),
+      loadProfessors(),
+      loadStages(),
+      loadMyRegistrations(),
+      loadMyRequests(),
+      loadMyStageRequests(),
+      loadMyProgress(),
+      loadMyCertificates(),
+      loadMyProfessorProfile(),
+      loadChildrenProgress(),
+      loadSchools()
+    ]).catch(() => {});
   };
 
   const loadMyProfessorProfile = async () => {
@@ -299,6 +299,40 @@ export default function Education() {
       }
     } catch {
       setChildrenProgress([]);
+    }
+  };
+
+  const loadLinkedCourses = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${config.API_BASE_URL}/education/my-linked-courses`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLinkedCourses(data.courses || []);
+      } else {
+        setLinkedCourses([]);
+      }
+    } catch {
+      setLinkedCourses([]);
+    }
+  };
+
+  const loadLinkedStudents = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${config.API_BASE_URL}/education/my-linked-students`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLinkedStudents(data.students || []);
+      } else {
+        setLinkedStudents([]);
+      }
+    } catch {
+      setLinkedStudents([]);
     }
   };
 
@@ -429,70 +463,60 @@ export default function Education() {
     }
   };
 
+  const fetchWithTimeout = (url: string, options: RequestInit, ms = 6000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), ms);
+    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
+  };
+
   const loadFormations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/formations', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await fetchWithTimeout(`${config.API_BASE_URL}/education/formations`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      
       if (response.ok) {
         const data = await response.json();
         setFormations(data.formations || []);
       } else {
-        // Fallback avec des formations par défaut
-        setFormations(getDefaultFormations());
+        setFormations([]);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des formations:', error);
-      setFormations(getDefaultFormations());
+    } catch {
+      setFormations([]);
     }
   };
 
   const loadProfessors = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/professors', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await fetchWithTimeout(`${config.API_BASE_URL}/education/professors`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      
       if (response.ok) {
         const data = await response.json();
         setProfessors(data.professors || []);
       } else {
-        setProfessors(getDefaultProfessors());
+        setProfessors([]);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des professeurs:', error);
-      setProfessors(getDefaultProfessors());
+    } catch {
+      setProfessors([]);
     }
   };
 
   const loadCourses = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/education/courses`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await fetchWithTimeout(`${config.API_BASE_URL}/education/courses`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      
       if (response.ok) {
         const data = await response.json();
         setCourses(data.courses || []);
       } else {
-        setCourses(getDefaultCourses());
+        setCourses([]);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des cours:', error);
-      setCourses(getDefaultCourses());
+    } catch {
+      setCourses([]);
     }
   };
 
@@ -515,6 +539,10 @@ export default function Education() {
       }
       if (publishForm.mediaFile) {
         formData.append('media', publishForm.mediaFile);
+      }
+      // Apprenants assignés par le professeur
+      if (publishAssignedStudents.length > 0) {
+        formData.append('assignedStudents', publishAssignedStudents.join(','));
       }
       const response = await fetch(`${config.API_BASE_URL}/education/courses/publish`, {
         method: 'POST',
@@ -551,7 +579,7 @@ export default function Education() {
   const loadMyRegistrations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/my-registrations', {
+      const response = await fetch(`${config.API_BASE_URL}/education/my-registrations`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -570,7 +598,7 @@ export default function Education() {
   const loadMyRequests = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/my-requests', {
+      const response = await fetch(`${config.API_BASE_URL}/education/my-requests`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -589,7 +617,7 @@ export default function Education() {
   const loadStages = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/stages', {
+      const response = await fetch(`${config.API_BASE_URL}/education/stages`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -611,7 +639,7 @@ export default function Education() {
   const loadMyStageRequests = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/my-stage-requests', {
+      const response = await fetch(`${config.API_BASE_URL}/education/my-stage-requests`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -630,7 +658,7 @@ export default function Education() {
   const loadMyProgress = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/my-progress', {
+      const response = await fetch(`${config.API_BASE_URL}/education/my-progress`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -649,7 +677,7 @@ export default function Education() {
   const loadMyCertificates = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/my-certificates', {
+      const response = await fetch(`${config.API_BASE_URL}/education/my-certificates`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -680,7 +708,7 @@ export default function Education() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/register-formation', {
+      const response = await fetch(`${config.API_BASE_URL}/education/register-formation`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -722,7 +750,7 @@ export default function Education() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/request-professor', {
+      const response = await fetch(`${config.API_BASE_URL}/education/request-professor`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -765,7 +793,7 @@ export default function Education() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/request-stage', {
+      const response = await fetch(`${config.API_BASE_URL}/education/request-stage`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -965,6 +993,12 @@ export default function Education() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
+                onClick={() => navigate('/famille/inspir')}
+                className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-2"
+              >
+                <span>💡</span> Inspire
+              </button>
+              <button
                 onClick={() => navigate('/moi')}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
@@ -1011,202 +1045,101 @@ export default function Education() {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'inscription-suivi' && (
-          <div className="space-y-8">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">👥 Inscription & suivi (style IA Diangou)</h2>
-              <p className="text-gray-600 mb-6">Enregistrez-vous comme professeur ou apprenant, et suivez l&apos;évolution de vos enfants (formations et cours).</p>
-
-              {inscriptionStep === 'button' && (
-                <div className="text-center py-8">
-                  <button
-                    type="button"
-                    onClick={() => setInscriptionStep('choice')}
-                    className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-xl shadow-md transition-colors"
-                  >
-                    S&apos;inscrire
-                  </button>
-                </div>
-              )}
-
-              {inscriptionStep === 'choice' && (
-                <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Quel type de compte souhaitez-vous ?</h3>
-                  <div className="flex flex-wrap gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setInscriptionStep('professeur')}
-                      className="flex-1 min-w-[200px] p-6 bg-gradient-to-br from-indigo-50 to-blue-50 border-2 border-indigo-200 rounded-xl hover:border-indigo-400 hover:shadow-md transition-all text-left"
-                    >
-                      <span className="text-3xl block mb-2">🎓</span>
-                      <span className="font-bold text-gray-900">Professeur</span>
-                      <p className="text-sm text-gray-600 mt-1">Demander à devenir professeur ou guide</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setInscriptionStep('apprenant')}
-                      className="flex-1 min-w-[200px] p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl hover:border-emerald-400 hover:shadow-md transition-all text-left"
-                    >
-                      <span className="text-3xl block mb-2">📖</span>
-                      <span className="font-bold text-gray-900">Apprenant</span>
-                      <p className="text-sm text-gray-600 mt-1">Voir les formations et suivre des cours</p>
-                    </button>
-                  </div>
-                  <button type="button" onClick={() => setInscriptionStep('button')} className="mt-4 text-gray-500 hover:text-gray-700 text-sm">← Retour</button>
-                </div>
-              )}
-
-              {inscriptionStep === 'professeur' && (
-              <div className="mb-8 p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xl font-bold text-gray-900">🎓 Devenir professeur</h3>
-                  <button type="button" onClick={() => setInscriptionStep('choice')} className="text-sm text-indigo-600 hover:text-indigo-800">Changer de type</button>
-                </div>
-                {myProfessorProfile ? (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 font-medium">Vous êtes déjà inscrit comme professeur.</p>
-                    <p className="text-gray-700 text-sm mt-1">Matière : {myProfessorProfile.specialty} • Capacités : {myProfessorProfile.bio || '—'}</p>
-                    {!myProfessorProfile.isActive && <p className="text-amber-700 text-sm mt-1">⏳ En attente de confirmation par l’administrateur.</p>}
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-gray-600 text-sm mb-3">Votre identité (NumeroH et nom) est prise depuis votre compte. Indiquez uniquement la matière et vos capacités.</p>
-                    <form onSubmit={handleRegisterProfessor} className="space-y-4 max-w-xl">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Matière</label>
-                        <select value={registerProfessorForm.specialty} onChange={(e) => setRegisterProfessorForm({ ...registerProfessorForm, specialty: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                          <option value="Français">Français</option>
-                          <option value="Mathématiques">Mathématiques</option>
-                          <option value="Sciences">Sciences</option>
-                          <option value="Langues">Langues</option>
-                          <option value="Général">Général</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Capacités (court résumé)</label>
-                        <textarea value={registerProfessorForm.bio} onChange={(e) => setRegisterProfessorForm({ ...registerProfessorForm, bio: e.target.value })} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Ex : cours niveau collège, préparation examens..." />
-                      </div>
-                      {registerProfessorSuccess && <p className={registerProfessorSuccess.includes('Demande') ? 'text-green-600' : 'text-red-600'}>{registerProfessorSuccess}</p>}
-                      <button type="submit" disabled={registerProfessorLoading} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium disabled:opacity-50">{registerProfessorLoading ? 'Enregistrement...' : 'Demander à devenir professeur / guide'}</button>
-                    </form>
-                  </>
-                )}
+          <div className="space-y-6">
+            {/* Bannière : inscriptions dans Mon Profil */}
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="text-4xl">🚀</div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Vous souhaitez vous inscrire ?</h2>
+                <p className="text-gray-600 text-sm">Les inscriptions (professeur, apprenant, école) se font depuis votre profil. Cliquez sur <strong>Mon Profil &gt; Actions</strong>.</p>
               </div>
-              )}
+              <button
+                onClick={() => navigate('/moi')}
+                className="flex-shrink-0 px-5 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-colors shadow-md"
+              >
+                Aller dans Mon Profil
+              </button>
+            </div>
 
-              {inscriptionStep === 'apprenant' && (
-              <div className="mb-8 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xl font-bold text-gray-900">📖 Je suis apprenant</h3>
-                  <button type="button" onClick={() => setInscriptionStep('choice')} className="text-sm text-emerald-600 hover:text-emerald-800">Changer de type</button>
+            {/* Statut professeur si déjà inscrit */}
+            {myProfessorProfile && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">🎓 Mon statut professeur</h3>
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-green-800 font-medium">Inscrit comme professeur / guide</p>
+                  <p className="text-gray-700 text-sm mt-1">Matière : <strong>{myProfessorProfile.specialty}</strong>{myProfessorProfile.bio ? ` • ${myProfessorProfile.bio}` : ''}</p>
+                  {!myProfessorProfile.isActive && (
+                    <p className="text-amber-700 text-sm mt-2">⏳ En attente de validation par l&apos;administrateur.</p>
+                  )}
+                  {myProfessorProfile.isActive && (
+                    <p className="text-green-700 text-sm mt-2">✅ Compte validé — vous êtes visible dans la liste des professeurs.</p>
+                  )}
                 </div>
-                <p className="text-gray-700 mb-4">Inscrivez-vous aux formations et suivez vos cours dans l&apos;onglet <strong>Formation scientifique</strong>. Vous y trouverez les formations, les cours (audio, vidéo, écrit) et l&apos;Assistant IA.</p>
-                <div className="mb-6">
-                  <p className="text-gray-700 mb-3 font-medium">Indiquez les NumeroH de vos parents pour qu&apos;ils puissent suivre votre progression.</p>
-                  <form onSubmit={handleRegisterParents} className="space-y-3 max-w-xl">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">NumeroH du parent 1 *</label>
-                      <input type="text" value={apprenantParent1} onChange={(e) => setApprenantParent1(e.target.value)} placeholder="Ex : G0C0P0R0E0F0 0" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+              </div>
+            )}
+
+            {/* Suivi des apprenants */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">👨‍👩‍👧 Suivi des apprenants</h3>
+              <p className="text-gray-700 mb-4">En tant que parent, liez les apprenants à votre compte pour suivre leur progression (formations, cours).</p>
+              {userData?.numeroH && (
+                <p className="text-sm text-gray-600 mb-3">Votre NumeroH : <strong className="text-blue-600">{userData.numeroH}</strong></p>
+              )}
+              <form onSubmit={handleLinkChildByNumeroH} className="flex flex-wrap items-end gap-3 mb-4 max-w-xl">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">NumeroH de l&apos;apprenant</label>
+                  <input type="text" value={linkChildNumeroH} onChange={(e) => setLinkChildNumeroH(e.target.value)} placeholder="Ex : G0C0P0R0E0F0 0" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                </div>
+                <button type="submit" disabled={linkChildLoading} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50">
+                  {linkChildLoading ? 'Envoi...' : 'Lier cet apprenant'}
+                </button>
+              </form>
+              {linkChildMessage && (
+                <p className={`text-sm mb-4 ${linkChildMessage.startsWith('Demande') ? 'text-green-600' : 'text-red-600'}`}>{linkChildMessage}</p>
+              )}
+              {childrenProgress.length === 0 ? (
+                <p className="text-gray-500 italic">Aucun apprenant lié. Saisissez le NumeroH ci-dessus pour commencer le suivi.</p>
+              ) : (
+                <div className="space-y-4">
+                  {childrenProgress.map((child) => (
+                    <div key={child.childNumeroH} className="bg-amber-50 rounded-lg border border-amber-200 p-4">
+                      <h4 className="font-bold text-gray-900 mb-1">👤 Apprenant</h4>
+                      <p className="text-sm text-gray-500 mb-2">{child.childNumeroH}</p>
+                      {child.formations.length === 0 ? (
+                        <p className="text-gray-500 text-sm">Aucune formation inscrite pour le moment.</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {child.formations.map((f) => (
+                            <li key={f.id} className="flex flex-wrap justify-between items-center text-sm border-b border-amber-100 pb-2 gap-2">
+                              <span className="font-medium">{f.formationTitle || 'Formation'}</span>
+                              <span className="text-gray-500">{f.category} • {f.level}</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${f.status === 'approved' ? 'bg-green-100 text-green-800' : f.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                                {f.status === 'approved' ? 'Approuvé' : f.status === 'pending' ? 'En attente' : f.status}
+                              </span>
+                              <span className="text-indigo-600 font-semibold">{f.progress}%</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">NumeroH du parent 2 (optionnel)</label>
-                      <input type="text" value={apprenantParent2} onChange={(e) => setApprenantParent2(e.target.value)} placeholder="Ex : G0C0P0R0E0F0 0" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                    </div>
-                    {registerParentsMessage && <p className={`text-sm ${registerParentsMessage.includes('enregistrés') || registerParentsMessage.includes('enregistré') ? 'text-green-600' : 'text-red-600'}`}>{registerParentsMessage}</p>}
-                    <button type="submit" disabled={registerParentsLoading} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium disabled:opacity-50">{registerParentsLoading ? 'Enregistrement...' : 'Enregistrer les NumeroH des parents'}</button>
-                  </form>
+                  ))}
                 </div>
-                <button type="button" onClick={() => setActiveTab('formation-scientifique')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium">Voir les formations et cours</button>
-              </div>
               )}
+            </div>
 
-              {inscriptionStep !== 'button' && (
-              <div className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-                <h3 className="text-xl font-bold text-gray-900 mb-3">👨‍👩‍👧 Suivi des apprenants</h3>
-                <p className="text-gray-700 mb-4">En tant que parent, suivez l&apos;évolution des apprenants : formations suivies, progression et cours. Saisissez votre <strong>NumeroH</strong> (parent) et le <strong>NumeroH de l&apos;apprenant</strong> pour accéder au suivi.</p>
-                {userData?.numeroH && (
-                  <p className="text-sm text-gray-600 mb-2">Votre NumeroH (parent) : <strong>{userData.numeroH}</strong></p>
-                )}
-                <form onSubmit={handleLinkChildByNumeroH} className="flex flex-wrap items-end gap-3 mb-4 max-w-xl">
-                  <div className="flex-1 min-w-[200px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">NumeroH de l&apos;apprenant</label>
-                    <input type="text" value={linkChildNumeroH} onChange={(e) => setLinkChildNumeroH(e.target.value)} placeholder="Ex : G0C0P0R0E0F0 0" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <button type="submit" disabled={linkChildLoading} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50">{linkChildLoading ? 'Envoi...' : 'Lier cet apprenant'}</button>
-                </form>
-                {linkChildMessage && <p className={`text-sm mb-4 ${linkChildMessage.startsWith('Demande') ? 'text-green-600' : 'text-red-600'}`}>{linkChildMessage}</p>}
-                {childrenProgress.length === 0 ? (
-                  <p className="text-gray-600 italic">Aucun apprenant lié à votre compte. Saisissez le NumeroH de l&apos;apprenant ci-dessus pour lier et suivre sa progression ici.</p>
-                ) : (
-                  <div className="space-y-6">
-                    {childrenProgress.map((child) => (
-                      <div key={child.childNumeroH} className="bg-white rounded-lg border border-amber-200 p-4">
-                        <h4 className="font-bold text-gray-900 mb-2">👤 Apprenant</h4>
-                        <p className="text-sm text-gray-500">{child.childNumeroH}</p>
-                        {child.formations.length === 0 ? (
-                          <p className="text-gray-500 text-sm">Aucune formation inscrite pour le moment.</p>
-                        ) : (
-                          <ul className="space-y-2">
-                            {child.formations.map((f) => (
-                              <li key={f.id} className="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
-                                <span className="font-medium">{f.formationTitle || 'Formation'}</span>
-                                <span className="text-gray-500">{f.category} • {f.level}</span>
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${f.status === 'approved' ? 'bg-green-100 text-green-800' : f.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>{f.status}</span>
-                                <span className="text-indigo-600 font-semibold">{f.progress}%</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {/* Lien vers la page Écoles */}
+            <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-200 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="text-4xl">🏫</div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Écoles & Professeurs</h3>
+                <p className="text-gray-600 text-sm">Consultez la liste de toutes les écoles partenaires et des professeurs disponibles.</p>
               </div>
-              )}
-
-              {/* Écoles : s'inscrire pour plus de visibilité */}
-              <div className="mt-8 p-6 bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-200">
-                <h3 className="text-xl font-bold text-gray-900 mb-3">🏫 Écoles : s&apos;inscrire pour plus de visibilité</h3>
-                <p className="text-gray-700 mb-4">Les établissements peuvent s&apos;enregistrer ici pour apparaître dans la liste des écoles partenaires. Votre compte (NumeroH) sera associé comme contact.</p>
-                <form onSubmit={handleRegisterSchool} className="space-y-3 max-w-xl mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l&apos;établissement <span className="text-red-500">*</span></label>
-                    <input type="text" value={schoolForm.name} onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })} placeholder="Ex : Lycée Les Enfants d'Adam" className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Adresse (optionnel)</label>
-                    <input type="text" value={schoolForm.address} onChange={(e) => setSchoolForm({ ...schoolForm, address: e.target.value })} placeholder="Ville, pays" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Contact (optionnel)</label>
-                    <input type="text" value={schoolForm.contact} onChange={(e) => setSchoolForm({ ...schoolForm, contact: e.target.value })} placeholder="Téléphone ou email" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Présentation courte (optionnel)</label>
-                    <textarea value={schoolForm.description} onChange={(e) => setSchoolForm({ ...schoolForm, description: e.target.value })} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Quelques mots sur l'établissement..." />
-                  </div>
-                  {schoolMessage && <p className={`text-sm ${schoolMessage.includes('visible') ? 'text-green-600' : 'text-red-600'}`}>{schoolMessage}</p>}
-                  <button type="submit" disabled={schoolLoading} className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium disabled:opacity-50">{schoolLoading ? 'Enregistrement...' : 'Enregistrer mon école'}</button>
-                </form>
-                {schools.length > 0 && (
-                  <div>
-                    <h4 className="font-bold text-gray-800 mb-2">Écoles partenaires</h4>
-                    <ul className="space-y-2">
-                      {schools.map((s) => (
-                        <li key={s.id} className="bg-white rounded-lg border border-violet-100 p-3 flex flex-wrap justify-between items-start gap-2">
-                          <div>
-                            <span className="font-medium text-gray-900">{s.name}</span>
-                            {s.address && <span className="text-gray-500 text-sm block">{s.address}</span>}
-                            {s.contact && <span className="text-gray-500 text-sm">Contact : {s.contact}</span>}
-                            {s.description && <p className="text-gray-600 text-sm mt-1">{s.description}</p>}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <p className="text-sm text-gray-500 mt-4">Inspiré de la plateforme IA Diangou : professeurs, apprenants et parents au cœur de l&apos;éducation.</p>
+              <button
+                onClick={() => navigate('/ecoles')}
+                className="flex-shrink-0 px-5 py-3 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors shadow-md"
+              >
+                Voir les écoles
+              </button>
             </div>
           </div>
         )}
@@ -1248,6 +1181,9 @@ export default function Education() {
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900">Formations Disponibles</h2>
               </div>
+            {formations.length === 0 ? (
+              <p className="text-gray-500 italic text-center py-4">Aucune formation disponible pour le moment. Les enseignants peuvent en proposer via l&apos;onglet Publier.</p>
+            ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {formations.map((formation) => (
                   <div key={formation.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
@@ -1280,6 +1216,7 @@ export default function Education() {
                   </div>
                 ))}
               </div>
+            )}
             </div>
 
             {/* Section 2: Mes Inscriptions */}
@@ -1322,6 +1259,9 @@ export default function Education() {
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900">Professeurs Disponibles</h2>
               </div>
+            {professors.length === 0 ? (
+              <p className="text-gray-500 italic text-center py-4">Aucun professeur disponible pour le moment. Les enseignants peuvent s&apos;inscrire via Mon Profil &gt; Actions.</p>
+            ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {professors.map((professor) => (
                   <div key={professor.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
@@ -1362,8 +1302,9 @@ export default function Education() {
                   </div>
                       ))}
                     </div>
+            )}
                   </div>
-                  
+
             {/* Section 4: Mes Demandes */}
             {myRequests.length > 0 && (
               <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-lg p-6 border-2 border-yellow-200">
@@ -1399,11 +1340,18 @@ export default function Education() {
 
             {/* Section 5: Mes Cours */}
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl shadow-lg p-6 border-2 border-indigo-200">
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-2">
                 <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center text-2xl">
                   🎯
-          </div>
-                <h2 className="text-3xl font-bold text-gray-900">Mes Cours</h2>
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900">Mes Cours</h2>
+                  {linkedCourses.length > 0 && (
+                    <p className="text-sm text-indigo-700 mt-1">
+                      📚 {linkedCourses.length} cours de votre professeur lié
+                    </p>
+                  )}
+                </div>
               </div>
               <nav className="flex space-x-4 mb-6">
                 {[
@@ -1432,10 +1380,30 @@ export default function Education() {
               </nav>
 
               {/* Contenu des cours */}
-          <div className="space-y-6">
+              <div className="space-y-6">
                 {activeCourseTab === 'audio' && (
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">🎵 Cours Audio</h3>
+                    {linkedCourses.filter(c => c.type === 'audio').length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">📌 De votre professeur</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {linkedCourses.filter(c => c.type === 'audio').map((course) => (
+                            <div key={course.id} className="border-2 border-indigo-300 rounded-lg p-4 bg-indigo-50">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">Prof</span>
+                                <h4 className="font-semibold text-gray-900">{course.title}</h4>
+                              </div>
+                              <p className="text-gray-600 text-sm mb-2">{course.description}</p>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
+                                <button className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">Écouter</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courses.filter(c => c.type === 'audio').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4">
@@ -1443,19 +1411,37 @@ export default function Education() {
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
-                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                              Écouter
-                  </button>
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">Écouter</button>
                           </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {activeCourseTab === 'video' && (
-          <div>
+                  <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">🎥 Cours Vidéo</h3>
+                    {linkedCourses.filter(c => c.type === 'video').length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">📌 De votre professeur</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {linkedCourses.filter(c => c.type === 'video').map((course) => (
+                            <div key={course.id} className="border-2 border-indigo-300 rounded-lg p-4 bg-indigo-50">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">Prof</span>
+                                <h4 className="font-semibold text-gray-900">{course.title}</h4>
+                              </div>
+                              <p className="text-gray-600 text-sm mb-2">{course.description}</p>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
+                                <button className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">Regarder</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courses.filter(c => c.type === 'video').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4">
@@ -1463,34 +1449,50 @@ export default function Education() {
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
-                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                              Regarder
-                            </button>
-            </div>
-                      </div>
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">Regarder</button>
+                          </div>
+                        </div>
                       ))}
-                      </div>
                     </div>
+                  </div>
                 )}
 
                 {activeCourseTab === 'written' && (
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">📝 Cours Écrits</h3>
+                    {linkedCourses.filter(c => c.type === 'written').length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">📌 De votre professeur</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {linkedCourses.filter(c => c.type === 'written').map((course) => (
+                            <div key={course.id} className="border-2 border-indigo-300 rounded-lg p-4 bg-indigo-50">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">Prof</span>
+                                <h4 className="font-semibold text-gray-900">{course.title}</h4>
+                              </div>
+                              <p className="text-gray-600 text-sm mb-2">{course.description}</p>
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-500">Pages: {course.duration}</span>
+                                <button className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">Lire</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courses.filter(c => c.type === 'written').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4">
                           <h4 className="font-semibold text-gray-900 mb-2">{course.title}</h4>
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
-                    <div className="flex justify-between items-center">
+                          <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">Pages: {course.duration}</span>
-                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                              Lire
-                      </button>
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">Lire</button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
                 )}
 
                 {activeCourseTab === 'exercice' && (
@@ -1634,6 +1636,38 @@ export default function Education() {
                           />
                         </div>
                       )}
+                      {/* Assigner à des apprenants liés (si professeur) */}
+                      {linkedStudents.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            👨‍🎓 Assigner à des apprenants (optionnel)
+                          </label>
+                          <p className="text-xs text-gray-500 mb-2">Cochez les apprenants qui doivent voir ce cours dans leur espace "Mes Cours".</p>
+                          <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                            {linkedStudents.map(student => (
+                              <label key={student.numeroH} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={publishAssignedStudents.includes(student.numeroH)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setPublishAssignedStudents(prev => [...prev, student.numeroH]);
+                                    } else {
+                                      setPublishAssignedStudents(prev => prev.filter(n => n !== student.numeroH));
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-blue-600"
+                                />
+                                <span className="text-sm text-gray-800">{student.name}</span>
+                                <span className="text-xs text-gray-500">({student.numeroH})</span>
+                              </label>
+                            ))}
+                          </div>
+                          {publishAssignedStudents.length === 0 && (
+                            <p className="text-xs text-gray-400 mt-1">Aucun sélectionné = visible par tous les apprenants liés</p>
+                          )}
+                        </div>
+                      )}
                       {publishSuccess && (
                         <p className={`text-sm ${publishSuccess.startsWith('Contenu') ? 'text-green-600' : 'text-red-600'}`}>
                           {publishSuccess}
@@ -1659,7 +1693,7 @@ export default function Education() {
                           <h4 className="font-semibold text-gray-900 mb-2">{course.title}</h4>
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="space-y-1">
-                            {course.materials.map((material, index) => (
+                            {(course.materials || []).map((material, index) => (
                               <div key={index} className="text-sm text-gray-500">• {material}</div>
                             ))}
                   </div>

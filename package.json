@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "cd backend && npm run start",
-    "dev": "cd frontend && npm run dev",
-    "start:both": "concurrently \"npm:dev\" \"npm:start\"",
+    "start:backend": "npm run dev --prefix backend",
+    "start:frontend": "npm run dev --prefix frontend",
+    "start:both": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
     "build:render": "cd frontend && npm ci && npm run build && cd ../backend && npm ci"
   },
   "dependencies": {
+    "compression": "^1.8.1",
     "concurrently": "^8.2.0",
     "pptxgenjs": "^4.0.1",
     "xlsx": "^0.18.5"

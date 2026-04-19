@@ -588,6 +588,18 @@ export default function AdminDashboard() {
                     Ouvrir
                   </button>
                 </div>
+                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-5 border border-red-200">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-3xl">🔍</span>
+                    <div>
+                      <h3 className="font-semibold text-red-900">Contrôle IA</h3>
+                      <p className="text-xs text-red-700">Détecter les images inappropriées</p>
+                    </div>
+                  </div>
+                  <button onClick={() => navigate("/admin/moderation")} className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                    Lancer le contrôle
+                  </button>
+                </div>
                 <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-3xl">👥</span>
@@ -1125,6 +1137,11 @@ export default function AdminDashboard() {
                   <div className="text-2xl mb-2">🎨</div>
                   <div className="font-semibold text-purple-900">Logos</div>
                   <div className="text-xs text-purple-700">Créer et assigner des logos professionnels</div>
+                </button>
+                <button onClick={() => navigate("/admin/moderation")} className="bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl p-5 text-left transition-colors">
+                  <div className="text-2xl mb-2">🔍</div>
+                  <div className="font-semibold text-red-900">Contrôle IA</div>
+                  <div className="text-xs text-red-700">Détecter et supprimer les images inappropriées (nudité)</div>
                 </button>
                 <button onClick={() => navigate("/famille")} className="bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl p-5 text-left transition-colors">
                   <div className="text-2xl mb-2">🌳</div>

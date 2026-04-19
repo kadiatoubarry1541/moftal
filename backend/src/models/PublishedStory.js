@@ -81,6 +81,11 @@ PublishedStory.init({
     type: DataTypes.INTEGER,
     defaultValue: 0,
     comment: 'Nombre de likes'
+  },
+  witnesses: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+    comment: 'Témoins ayant validé la publication (4 témoins : 2 famille + 2 amis/voisins)'
   }
 }, {
   sequelize,

@@ -72,7 +72,7 @@ FormationRegistration.init({
 }, {
   sequelize,
   modelName: 'FormationRegistration',
-  tableName: 'formation_registrations',
+  tableName: 'diangou_formation_registrations',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

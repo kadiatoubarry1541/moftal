@@ -163,13 +163,28 @@ export function DeceasedWrittenForm() {
     
     // ❌ NE PAS créer de session - les défunts ne peuvent pas se connecter
     // Les défunts existent uniquement dans l'arbre généalogique pour consultation
-    
+
+    // Sauvegarder dans la liste des défunts pour l'arbre généalogique
+    const sessionRaw = localStorage.getItem('session_user')
+    if (sessionRaw) {
+      try {
+        const session = JSON.parse(sessionRaw)
+        const ownerNumeroH = (session.userData || session).numeroH
+        if (ownerNumeroH) {
+          const key = `deceased_members_${ownerNumeroH}`
+          const existing = JSON.parse(localStorage.getItem(key) || '[]')
+          existing.push({ ...completeData, relation: data.relationDeclarant || 'autre', ownerNumeroH })
+          localStorage.setItem(key, JSON.stringify(existing))
+        }
+      } catch { /* ignore */ }
+    }
+
     // Afficher le succès avec le numeroHD généré automatiquement
     alert(`✅ Défunt enregistré avec succès dans l'arbre généalogique !\n\nNumeroHD généré automatiquement : ${numeroHD}\n\n⚠️ IMPORTANT : Les défunts n'ont pas de compte de connexion.\nIls existent uniquement dans l'arbre généalogique familial pour consultation.`)
     
-    // Rediriger vers la page d'accueil après 2 secondes
+    // Rediriger vers l'arbre généalogique après 2 secondes
     setTimeout(() => {
-      navigate('/')
+      navigate('/famille/moi/arbre')
     }, 2000)
   }
 

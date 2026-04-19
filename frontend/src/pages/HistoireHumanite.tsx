@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+
+interface WitnessProfile {
+  numeroH: string;
+  name: string;
+  age: number | null;
+  testimoniedAt: string;
+}
 
 interface PublishedStory {
   id: number;
@@ -16,6 +24,7 @@ interface PublishedStory {
   publishedAt: string;
   views: number;
   likes: number;
+  witnesses: WitnessProfile[];
 }
 
 const sectionIcons: Record<string, string> = {
@@ -35,6 +44,10 @@ export default function HistoireHumanite() {
   const [selectedSection, setSelectedSection] = useState<string>('all');
   const [selectedGeneration, setSelectedGeneration] = useState<string>('all');
   const [stats, setStats] = useState<any>(null);
+  const [currentUserNumeroH, setCurrentUserNumeroH] = useState<string | null>(null);
+  const [testifyingId, setTestifyingId] = useState<number | null>(null);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const navigate = useNavigate();
 
   const sections = [
@@ -49,9 +62,29 @@ export default function HistoireHumanite() {
   ];
 
   useEffect(() => {
+    const session = localStorage.getItem("session_user");
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        const user = parsed.userData || parsed;
+        if (user?.numeroH) setCurrentUserNumeroH(user.numeroH);
+      } catch {}
+    }
+    // Charger l'historique des recherches
+    try {
+      const saved = localStorage.getItem('histoire_search_history');
+      if (saved) setSearchHistory(JSON.parse(saved));
+    } catch {}
     loadStories();
     loadStats();
   }, [selectedSection, selectedGeneration, searchTerm]);
+
+  const saveSearchToHistory = (term: string) => {
+    if (!term.trim()) return;
+    const updated = [term, ...searchHistory.filter(h => h !== term)].slice(0, 8);
+    setSearchHistory(updated);
+    localStorage.setItem('histoire_search_history', JSON.stringify(updated));
+  };
 
   const loadStories = async () => {
     setLoading(true);
@@ -88,6 +121,42 @@ export default function HistoireHumanite() {
       }
     } catch (error) {
       console.error('Erreur lors du chargement des statistiques:', error);
+    }
+  };
+
+  const handleTestify = async (storyId: number) => {
+    if (!currentUserNumeroH) {
+      toast.error('Connectez-vous pour témoigner');
+      navigate('/login');
+      return;
+    }
+    setTestifyingId(storyId);
+    try {
+      const session = localStorage.getItem("session_user");
+      const token = session ? JSON.parse(session).token : null;
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/testify/${storyId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          }
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        toast.success('Votre témoignage a été enregistré !');
+        setStories(prev => prev.map(s =>
+          s.id === storyId ? { ...s, witnesses: data.witnesses } : s
+        ));
+      } else {
+        toast.error(data.message || 'Erreur lors du témoignage');
+      }
+    } catch {
+      toast.error('Erreur de connexion');
+    } finally {
+      setTestifyingId(null);
     }
   };
 
@@ -146,15 +215,45 @@ export default function HistoireHumanite() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Search */}
-            <div>
+            <div className="relative">
               <label className="block text-sm font-semibold text-gray-700 mb-2">🔍 Rechercher</label>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setShowHistory(true)}
+                onBlur={() => setTimeout(() => setShowHistory(false), 200)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchTerm.trim()) {
+                    saveSearchToHistory(searchTerm.trim());
+                    setShowHistory(false);
+                  }
+                }}
                 placeholder="Rechercher dans les histoires..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
+              {showHistory && searchHistory.length > 0 && !searchTerm && (
+                <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 overflow-hidden">
+                  <p className="text-xs font-semibold text-gray-400 px-3 pt-2 pb-1">Recherches récentes</p>
+                  {searchHistory.map((h, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={() => { setSearchTerm(h); setShowHistory(false); }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 flex items-center gap-2"
+                    >
+                      <span className="text-gray-400">🕐</span> {h}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onMouseDown={() => { setSearchHistory([]); localStorage.removeItem('histoire_search_history'); }}
+                    className="w-full text-center px-3 py-2 text-xs text-red-400 hover:text-red-600 border-t"
+                  >
+                    Effacer l'historique
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Section Filter */}
@@ -285,11 +384,64 @@ export default function HistoireHumanite() {
                     </div>
                   )}
 
+                  {/* Témoins — 4 slots toujours visibles */}
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">🤝 Témoins</span>
+                      <div className="flex items-center gap-1">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${(story.witnesses?.length || 0) >= 4 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {story.witnesses?.length || 0}/4
+                        </span>
+                        {currentUserNumeroH && currentUserNumeroH !== story.numeroH && (
+                          !(story.witnesses || []).some(w => w.numeroH === currentUserNumeroH) &&
+                          (story.witnesses?.length || 0) < 4 ? (
+                            <button
+                              onClick={() => handleTestify(story.id)}
+                              disabled={testifyingId === story.id}
+                              className="ml-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-full transition-colors disabled:opacity-50"
+                            >
+                              {testifyingId === story.id ? '⏳...' : '✋ Témoigner'}
+                            </button>
+                          ) : (story.witnesses || []).some(w => w.numeroH === currentUserNumeroH) ? (
+                            <span className="ml-1 text-xs text-green-600 font-semibold">✅ Témoigné</span>
+                          ) : null
+                        )}
+                      </div>
+                    </div>
+                    {/* 4 slots de témoins toujours affichés */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {Array.from({ length: 4 }, (_, i) => {
+                        const w = (story.witnesses || [])[i];
+                        return (
+                          <div key={i} className={`rounded-lg px-3 py-2 border text-xs flex items-center gap-2 ${w ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-dashed border-gray-200'}`}>
+                            {w ? (
+                              <>
+                                <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                  {w.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-indigo-900 truncate">{w.name}</p>
+                                  {w.age && <p className="text-gray-400">{w.age} ans</p>}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 flex-shrink-0 text-base">
+                                  ?
+                                </div>
+                                <p className="text-gray-400 italic">Témoin {i + 1}</p>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Stats */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <span>👁️ {story.views} vues</span>
-                      <span>❤️ {story.likes} likes</span>
                     </div>
                     {story.content.length > 500 && (
                       <button className="text-indigo-600 hover:text-indigo-700 font-semibold text-sm">

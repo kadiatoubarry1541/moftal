@@ -2,13 +2,27 @@
 <html lang="fr" class="light">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo.png" />
-    <link rel="apple-touch-icon" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0, user-scalable=yes" />
     <meta name="theme-color" content="#065f46" />
+    <meta name="description" content="Les Enfants d'Adam - Plateforme guinéenne d'enregistrement généalogique, santé, éducation et solidarité." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="mask-icon" href="/logo.svg" color="#065f46" />
+
+    <!-- PWA manifest (généré par vite-plugin-pwa) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Preload du logo en WebP (38KB au lieu de 222KB) — améliore le LCP -->
+    <link rel="preload" as="image" href="/logo.webp" type="image/webp" />
+
+    <!-- Évite le flash de contenu non-stylisé en mode sombre -->
+    <meta name="color-scheme" content="light dark" />
+
     <title>Les Enfants d'Adam - Plateforme Guinéenne</title>
   </head>
   <body>

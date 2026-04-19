@@ -76,7 +76,7 @@ CoursePermission.init({
 }, {
   sequelize,
   modelName: 'CoursePermission',
-  tableName: 'course_permissions',
+  tableName: 'diangou_course_permissions',
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',

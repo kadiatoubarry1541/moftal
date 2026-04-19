@@ -1,22 +1,36 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../utils/api'
 
 export function ForgotPassword() {
   const navigate = useNavigate()
-  const [step, setStep] = useState<'verify' | 'reset'>('verify')
+  const [searchParams] = useSearchParams()
+
+  const [step, setStep] = useState<'verify' | 'code' | 'reset'>('verify')
   const [numeroH, setNumeroH] = useState('')
   const [parentNumeroH, setParentNumeroH] = useState('')
-  const [dateNaissance, setDateNaissance] = useState('')
+  const [familyCode, setFamilyCode] = useState('')
+  const [otpToken, setOtpToken] = useState('')
+  const [otpCode, setOtpCode] = useState('')
   const [token, setToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [emailInfo, setEmailInfo] = useState<{ sent: boolean; masked: string | null } | null>(null)
+
+  // Si l'utilisateur clique sur le lien dans son email (?token=...)
+  useEffect(() => {
+    const urlToken = searchParams.get('token')
+    if (urlToken) {
+      setToken(urlToken)
+      setStep('reset')
+    }
+  }, [searchParams])
 
   const onVerify = async () => {
     setError('')
-    if (!numeroH.trim() || !parentNumeroH.trim() || !dateNaissance.trim()) {
+    if (!numeroH.trim() || !parentNumeroH.trim() || !familyCode.trim()) {
       setError('Veuillez remplir tous les champs.')
       return
     }
@@ -25,13 +39,39 @@ export function ForgotPassword() {
       const result = await api.forgotPasswordVerify(
         api.normalizeNumeroH(numeroH),
         api.normalizeNumeroH(parentNumeroH),
-        dateNaissance.trim()
+        familyCode.trim().toUpperCase()
       )
+      if (result.success && result.otpToken) {
+        setOtpToken(result.otpToken)
+        setEmailInfo({
+          sent: result.emailSent ?? false,
+          masked: result.maskedEmail ?? null,
+        })
+        setStep('code')
+      } else {
+        setError(result.message || 'Vérification échouée.')
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Erreur de connexion.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onVerifyCode = async () => {
+    setError('')
+    if (!otpCode.trim() || otpCode.trim().length !== 6) {
+      setError('Veuillez saisir le code à 6 chiffres reçu par email.')
+      return
+    }
+    setLoading(true)
+    try {
+      const result = await api.forgotPasswordVerifyCode(otpToken, otpCode.trim())
       if (result.success && result.token) {
         setToken(result.token)
         setStep('reset')
       } else {
-        setError(result.message || 'Vérification échouée.')
+        setError(result.message || 'Code incorrect.')
       }
     } catch (e: any) {
       setError(e?.message || 'Erreur de connexion.')
@@ -74,8 +114,9 @@ export function ForgotPassword() {
         {step === 'verify' ? (
           <>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Saisissez votre NumeroH, le NumeroH d’un de vos parents (père ou mère) et votre date de naissance pour vérifier votre identité.
+              Saisissez votre NumeroH, le NumeroH d'un de vos parents (père ou mère) et le numéro de votre arbre familial pour vérifier votre identité.
             </p>
+
             <div className="field">
               <label>Votre NumeroH</label>
               <input
@@ -85,7 +126,7 @@ export function ForgotPassword() {
               />
             </div>
             <div className="field">
-              <label>NumeroH d’un parent (père ou mère)</label>
+              <label>NumeroH d'un parent (père ou mère)</label>
               <input
                 value={parentNumeroH}
                 onChange={(e) => setParentNumeroH(e.target.value)}
@@ -93,12 +134,13 @@ export function ForgotPassword() {
               />
             </div>
             <div className="field">
-              <label>Votre date de naissance</label>
+              <label>Numéro de l'arbre familial</label>
               <input
-                type="date"
-                value={dateNaissance}
-                onChange={(e) => setDateNaissance(e.target.value)}
+                value={familyCode}
+                onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
+                placeholder="Ex: FADAMS3"
               />
+              <span className="text-xs text-gray-400">Visible dans votre arbre généalogique (disponible dès 10 membres)</span>
             </div>
             {error && <div className="error">{error}</div>}
             <div className="actions">
@@ -112,8 +154,53 @@ export function ForgotPassword() {
               </button>
             </div>
           </>
+        ) : step === 'code' ? (
+          <>
+            {/* Étape 2 : saisir le code reçu par email */}
+            {emailInfo?.sent && emailInfo.masked ? (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
+                Un code à 6 chiffres a été envoyé à <strong>{emailInfo.masked}</strong>. Saisissez-le ci-dessous.
+              </div>
+            ) : (
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-200">
+                Identité vérifiée. Aucun email associé à ce compte — veuillez contacter un administrateur.
+              </div>
+            )}
+            <div className="field">
+              <label>Code reçu par email</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="123456"
+                style={{ letterSpacing: '0.3em', fontSize: '1.5rem', textAlign: 'center' }}
+              />
+            </div>
+            {error && <div className="error">{error}</div>}
+            <div className="actions">
+              <button
+                type="button"
+                className="btn min-h-[44px]"
+                onClick={onVerifyCode}
+                disabled={loading || !emailInfo?.sent}
+              >
+                {loading ? 'Vérification…' : 'Valider le code'}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="link text-sm text-gray-500 dark:text-gray-400"
+              onClick={() => { setStep('verify'); setError(''); setOtpCode(''); setEmailInfo(null); }}
+            >
+              ← Modifier les informations de vérification
+            </button>
+          </>
         ) : (
           <>
+            {/* Étape 3 : nouveau mot de passe */}
+
             <p className="text-gray-600 dark:text-gray-400 text-sm">
               Choisissez un nouveau mot de passe (au moins 6 caractères).
             </p>
@@ -146,13 +233,16 @@ export function ForgotPassword() {
                 {loading ? 'Enregistrement…' : 'Enregistrer le nouveau mot de passe'}
               </button>
             </div>
-            <button
-              type="button"
-              className="link text-sm text-gray-500 dark:text-gray-400"
-              onClick={() => { setStep('verify'); setError(''); }}
-            >
-              ← Modifier les informations de vérification
-            </button>
+            {/* Bouton retour seulement si l'utilisateur n'est pas arrivé via un lien email */}
+            {!searchParams.get('token') && (
+              <button
+                type="button"
+                className="link text-sm text-gray-500 dark:text-gray-400"
+                onClick={() => { setStep('verify'); setError(''); setEmailInfo(null); }}
+              >
+                ← Modifier les informations de vérification
+              </button>
+            )}
           </>
         )}
         <div className="text-center mt-4 text-gray-600 dark:text-gray-400 text-sm">

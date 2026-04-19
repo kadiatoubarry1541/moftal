@@ -43,7 +43,7 @@ if (process.env.DATABASE_URL) {
     dialect: 'postgres',
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'diangou', // BASE DE DONNÉES DIANGOU
+    database: process.env.DB_NAME || 'enfants_adam_eve', // BASE PRINCIPALE partagée
     username: process.env.DB_USER || 'postgres',
     password: dbPassword,
     logging: process.env.NODE_ENV === 'development' ? console.log : false,

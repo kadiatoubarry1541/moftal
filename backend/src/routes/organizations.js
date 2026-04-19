@@ -29,10 +29,10 @@ const uploadInspir = multer({
   storage: inspirStorage,
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/')) {
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/') || file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
-      cb(new Error('Seuls image, vidéo et audio sont autorisés'), false);
+      cb(new Error('Seuls image, vidéo, audio et PDF sont autorisés'), false);
     }
   }
 });

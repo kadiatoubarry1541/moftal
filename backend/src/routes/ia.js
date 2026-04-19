@@ -1,4 +1,5 @@
 import express from 'express';
+import { Op } from 'sequelize';
 import IaKnowledge from '../models/IaKnowledge.js';
 import IaConversation from '../models/IaConversation.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
@@ -957,7 +958,34 @@ router.post('/search', async function(req, res) {
 });
 
 // POST /api/ia/chat  — endpoint principal
-router.post('/chat', async function(req, res) {
+// GET /api/ia/history — historique des conversations de l'utilisateur connecté
+router.get('/history', authenticate, async function(req, res) {
+  try {
+    const numeroH = req.user.numeroH;
+
+    // Supprimer automatiquement les conversations de plus de 3 mois
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    await IaConversation.destroy({
+      where: {
+        numeroH,
+        created_at: { [Op.lt]: threeMonthsAgo }
+      }
+    });
+
+    const conversations = await IaConversation.findAll({
+      where: { numeroH },
+      order: [['created_at', 'DESC']],
+      limit: 200
+    });
+    res.json({ success: true, conversations });
+  } catch (error) {
+    console.error('[IA] Erreur /history:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+router.post('/chat', authenticate, async function(req, res) {
   try {
     var body = req.body || {};
     var message = body.message;
@@ -971,8 +999,12 @@ router.post('/chat', async function(req, res) {
 
     // 1. Verification de reponse a un exercice precedent
     if (lastExercice) {
+      // Si un exercice est en cours, TOUTE réponse doit être évaluée.
+      // detectReponseExercice peut retourner null pour les réponses texte (conjugaison, etc.)
+      // → on utilise le message brut comme fallback.
       var reponseEleve = detectReponseExercice(message);
-      if (reponseEleve !== null) {
+      if (reponseEleve === null) reponseEleve = message.trim();
+      if (reponseEleve !== null && reponseEleve !== '') {
         var rep = String(lastExercice.reponse).replace(',', '.').trim().toLowerCase();
         var eleveNorm = String(reponseEleve).replace(',', '.').trim().toLowerCase();
         // Comparison : exacte ou numerique
@@ -1107,12 +1139,27 @@ router.post('/chat', async function(req, res) {
 
     // Sauvegarde de la conversation
     try {
+      const userNumeroH = req.user ? req.user.numeroH : null;
       await IaConversation.create({
         sessionId: null,
         userMessage: message,
         botResponse: answer,
         source: 'professeur_ia_backend',
+        numeroH: userNumeroH,
       });
+      // Auto-nettoyage : garder les 100 derniers messages par utilisateur
+      if (userNumeroH) {
+        const count = await IaConversation.count({ where: { numeroH: userNumeroH } });
+        if (count > 100) {
+          const oldest = await IaConversation.findAll({
+            where: { numeroH: userNumeroH },
+            order: [['created_at', 'ASC']],
+            limit: count - 100
+          });
+          const idsToDelete = oldest.map(r => r.id);
+          await IaConversation.destroy({ where: { id: idsToDelete } });
+        }
+      }
     } catch (e) {
       console.error('[IA] Erreur sauvegarde conversation:', e);
     }

@@ -211,13 +211,14 @@ function Mic({ card, setCard }: { card: CardState; setCard: React.Dispatch<React
 }
 
 // ─── Vidéo slot ──────────────────────────────────────────────────────────────
-function VideoSlot({ value, onChange, label = "Ajouter une video (max 30s)" }: { value: string | null; onChange: (v: string | null) => void; label?: string }) {
+function VideoSlot({ value, onChange, label = "Ajouter une video (max 1 min)" }: { value: string | null; onChange: (v: string | null) => void; label?: string }) {
   const ref = useRef<HTMLInputElement>(null);
   const handle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
     const v = document.createElement("video"); v.preload = "metadata";
     v.onloadedmetadata = () => {
-      if (v.duration > 30) { alert("Max 30 secondes."); return; }
+      URL.revokeObjectURL(v.src);
+      if (v.duration > 60) { alert("La vidéo ne doit pas dépasser 1 minute."); return; }
       const r = new FileReader();
       r.onload = ev => onChange(ev.target?.result as string);
       r.readAsDataURL(f);

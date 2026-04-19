@@ -471,6 +471,81 @@ export default function MonProfil() {
             </div>
 
           </div>
+
+          {/* ── Section Éducation ── */}
+          <div className="mt-6 border-t border-orange-100 pt-6">
+            <h4 className="text-base font-bold text-slate-700 mb-4">🎓 Inscriptions Éducatives</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+              {/* Professeur / Guide */}
+              <div className="border border-indigo-200 rounded-xl p-5 hover:border-indigo-400 hover:shadow-md transition-all duration-200 bg-indigo-50">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-2xl flex-shrink-0">
+                    🎓
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-indigo-800 text-base mb-1">Professeur / Guide</h4>
+                    <p className="text-sm text-indigo-700 mb-3 leading-relaxed">
+                      Proposez des cours, des formations et guidez des apprenants.
+                      Votre profil sera visible après validation par un administrateur.
+                    </p>
+                    <button
+                      onClick={() => navigate('/education?tab=inscription-suivi&role=professeur')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors duration-200"
+                    >
+                      🎓 Devenir professeur
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Apprenant */}
+              <div className="border border-emerald-200 rounded-xl p-5 hover:border-emerald-400 hover:shadow-md transition-all duration-200 bg-emerald-50">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-2xl flex-shrink-0">
+                    📖
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-emerald-800 text-base mb-1">Apprenant</h4>
+                    <p className="text-sm text-emerald-700 mb-3 leading-relaxed">
+                      Inscrivez vos parents (NumeroH) pour qu&apos;ils puissent suivre votre
+                      progression dans les formations et les cours.
+                    </p>
+                    <button
+                      onClick={() => navigate('/education?tab=inscription-suivi&role=apprenant')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors duration-200"
+                    >
+                      📖 S&apos;inscrire comme apprenant
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Inscrire une école */}
+              <div className="border border-violet-200 rounded-xl p-5 hover:border-violet-400 hover:shadow-md transition-all duration-200 bg-violet-50">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center text-2xl flex-shrink-0">
+                    🏫
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-violet-800 text-base mb-1">Inscrire une école</h4>
+                    <p className="text-sm text-violet-700 mb-3 leading-relaxed">
+                      Enregistrez votre établissement scolaire pour apparaître dans
+                      la liste des écoles partenaires de la communauté.
+                    </p>
+                    <button
+                      onClick={() => navigate('/ecoles')}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-lg transition-colors duration-200"
+                    >
+                      🏫 Inscrire mon école
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       )}
     </div>

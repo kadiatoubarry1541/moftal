@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import { sequelize } from '../config/database.js';
+import { sequelize } from '../../config/database.js';
 
 // Modèle pour les sections historiques
 export const HistorySection = sequelize.define('HistorySection', {
@@ -58,7 +58,8 @@ export const HistorySection = sequelize.define('HistorySection', {
   }
 }, {
   tableName: 'history_sections',
-  timestamps: true
+  timestamps: true,
+  underscored: false
 });
 
 // Modèle pour les membres de la famille
@@ -102,7 +103,8 @@ export const FamilyMember = sequelize.define('FamilyMember', {
   }
 }, {
   tableName: 'family_members',
-  timestamps: true
+  timestamps: true,
+  underscored: false
 });
 
 // Modèle pour l'arbre généalogique
@@ -145,13 +147,31 @@ export const FamilyTree = sequelize.define('FamilyTree', {
     defaultValue: [],
     comment: 'Liste des décédés dans l\'arbre (NumeroHD)'
   },
+  // Code unique de l'arbre : F<NomFamille>S<bloodNumber> (attribué dès 10 membres)
+  familyCode: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true,
+    comment: 'Code unique ex: F2S1 — attribué automatiquement dès 10 membres'
+  },
+  bloodNumber: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    comment: 'Numéro de sang (S) — gelé et masqué jusqu\'à 10 membres'
+  },
+  familyName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Nom de famille de la lignée (F) — extrait du rootMember'
+  },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
   }
 }, {
   tableName: 'family_trees',
-  timestamps: true
+  timestamps: true,
+  underscored: false
 });
 
 // Modèle pour les documents
@@ -228,7 +248,8 @@ export const Document = sequelize.define('Document', {
   }
 }, {
   tableName: 'documents',
-  timestamps: true
+  timestamps: true,
+  underscored: false
 });
 
 // Modèle pour les appels d'urgence
@@ -274,7 +295,8 @@ export const EmergencyCall = sequelize.define('EmergencyCall', {
   }
 }, {
   tableName: 'emergency_calls',
-  timestamps: true
+  timestamps: true,
+  underscored: false
 });
 
 // Modèle pour les vérifications de localisation
@@ -314,7 +336,8 @@ export const LocationCheck = sequelize.define('LocationCheck', {
   }
 }, {
   tableName: 'location_checks',
-  timestamps: true
+  timestamps: true,
+  underscored: false
 });
 
 // Modèle pour les dons
@@ -370,7 +393,8 @@ export const Donation = sequelize.define('Donation', {
   }
 }, {
   tableName: 'donations',
-  timestamps: true
+  timestamps: true,
+  underscored: false
 });
 
 // Modèle pour les calculs de zakat
@@ -413,7 +437,8 @@ export const ZakatCalculation = sequelize.define('ZakatCalculation', {
   }
 }, {
   tableName: 'zakat_calculations',
-  timestamps: true
+  timestamps: true,
+  underscored: false
 });
 
 // Relations

@@ -22,6 +22,7 @@ export const InvitationManager = {
       type: 'invitation_received',
       fromNumeroH: invitation.fromNumeroH,
       fromName: invitation.fromName,
+      fromPhoto: invitation.fromPhoto,
       message: `${invitation.fromName} vous invite à rejoindre son site en tant que ${invitation.relation}`,
       date: new Date().toISOString(),
       read: false

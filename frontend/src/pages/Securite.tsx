@@ -5,6 +5,8 @@ import ProSection from '../components/ProSection';
 import WorldMap from '../components/WorldMap';
 import './Securite.css';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -88,7 +90,7 @@ export default function Securite() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/security/agents', {
+      const response = await fetch(`${API_URL}/api/security/agents`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (response.ok) {
@@ -246,7 +248,7 @@ export default function Securite() {
     setLocationCheckResult(null);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/security/location-checks', {
+      const res = await fetch(`${API_URL}/api/security/location-checks`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -312,7 +314,7 @@ export default function Securite() {
             🗺️ Carte mondiale & géolocalisation
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Du monde entier jusqu’aux quartiers et rues : zoomez avec la molette ou les boutons +/− pour voir tous les détails. Cliquez sur « Ma position » pour vous localiser, ou sur la carte pour choisir un lieu et vérifier la sécurité.
+            Du monde entier jusqu'aux quartiers et rues : zoomez avec la molette ou les boutons +/− pour voir tous les détails. Cliquez sur « Ma position » pour vous localiser, ou sur la carte pour choisir un lieu et vérifier la sécurité.
           </p>
           <WorldMap
             showMyPositionButton={true}
