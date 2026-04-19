@@ -367,7 +367,6 @@ connectDB()
       console.log(`📁 Dossier uploads: ${path.join(__dirname, '../uploads')}`);
       startIaServer();
       startSubscriptionChecker();
-      startSubscriptionChecker();
     });
   })
   .catch((error) => {
@@ -586,47 +585,6 @@ if (process.env.NODE_ENV === 'production' || fs.existsSync(frontendDist)) {
   app.use('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Route non trouvée' });
   });
-}
-
-// ─── Vérification automatique des abonnements expirés ────────────────────────
-// Passe les comptes pros dont l'abonnement est expiré de "active" → "overdue",
-// puis notifie le propriétaire. Tourne toutes les 24h.
-async function checkExpiredSubscriptions() {
-  try {
-    const { default: ProfessionalAccount } = await import('./models/ProfessionalAccount.js');
-    const { default: Notification }        = await import('./models/Notification.js');
-    const { Op }                           = await import('sequelize');
-
-    const now     = new Date();
-    const expired = await ProfessionalAccount.findAll({
-      where: { subscriptionStatus: 'active', subscriptionValidUntil: { [Op.lt]: now } }
-    });
-
-    for (const account of expired) {
-      await account.update({ subscriptionStatus: 'overdue' });
-      await Notification.createNotification({
-        recipientNumeroH: account.ownerNumeroH,
-        type:    'subscription_expired',
-        title:   'Abonnement expiré',
-        message: `Votre abonnement pour "${account.name}" a expiré. Renouvelez votre paiement pour conserver l'accès à votre dashboard.`,
-        relatedId: account.id
-      }).catch(() => {});
-    }
-
-    if (expired.length > 0) {
-      console.log(`⏰ Abonnements expirés : ${expired.length} compte(s) passé(s) en "overdue"`);
-    }
-  } catch (err) {
-    console.error('⚠️  Erreur vérification abonnements:', err.message);
-  }
-}
-
-function startSubscriptionChecker() {
-  // Premier passage immédiat au démarrage
-  checkExpiredSubscriptions();
-  // Puis toutes les 24 heures
-  setInterval(checkExpiredSubscriptions, 24 * 60 * 60 * 1000);
-  console.log('⏰ Vérification automatique des abonnements activée (24h)');
 }
 
 // Démarrage du serveur : fait dans connectDB().then() plus haut (serveur ne démarre que si la base est connectée)
