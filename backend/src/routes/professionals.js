@@ -41,6 +41,26 @@ async function requireAdminOrSectorAdmin(req, res, next) {
   }
 }
 
+const SUPER_ADMIN_7 = 'G7C7P7R7E7F7 7';
+const SUB_ADMIN_0 = 'G0C0P0R0E0F0 0';
+
+function isSuperAdmin7(user) {
+  return user?.numeroH === SUPER_ADMIN_7;
+}
+
+function isSubAdmin0(user) {
+  return user?.numeroH === SUB_ADMIN_0;
+}
+
+/** Filtre les comptes pro pour le petit admin (G0) : 50% par défaut + ceux accordés explicitement */
+function filterProsForSubAdmin(accounts) {
+  const granted = accounts.filter(a => a.grantedToSubAdmin);
+  const grantedIds = new Set(granted.map(a => a.id));
+  const notGranted = accounts.filter(a => !grantedIds.has(a.id));
+  const quota = Math.ceil(notGranted.length / 2); // 50% des non-accordés
+  return [...notGranted.slice(0, quota), ...granted];
+}
+
 /** Retire le justificatif des réponses publiques : réservé à l'admin uniquement. */
 function sanitizeAccountForPublic(account) {
   const a = account?.toJSON ? account.toJSON() : { ...account };
@@ -208,6 +228,10 @@ router.get('/admin/pending', authenticate, requireAdminOrSectorAdmin, async (req
       const types = getProTypesForSectors(req.managedSectors);
       accounts = accounts.filter(a => types.includes(a.type));
     }
+    // Petit admin (G0) : seulement 50% + accordés
+    if (isSubAdmin0(req.user)) {
+      accounts = filterProsForSubAdmin(accounts);
+    }
     res.json({ success: true, accounts });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -225,8 +249,42 @@ router.get('/admin/all', authenticate, requireAdminOrSectorAdmin, async (req, re
       const types = getProTypesForSectors(req.managedSectors);
       where.type = types.length === 1 ? types[0] : { [Op.in]: types };
     }
-    const accounts = await ProfessionalAccount.findAll({ where, order: [['created_at', 'DESC']] });
+    let accounts = await ProfessionalAccount.findAll({ where, order: [['created_at', 'DESC']] });
+    // Petit admin (G0) : seulement 50% + accordés
+    if (isSubAdmin0(req.user)) {
+      accounts = filterProsForSubAdmin(accounts);
+    }
     res.json({ success: true, accounts });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/professionals/admin/grant-visibility/:id - Accorder visibilité au petit admin (G7 seulement)
+router.post('/admin/grant-visibility/:id', authenticate, async (req, res) => {
+  try {
+    if (!isSuperAdmin7(req.user)) {
+      return res.status(403).json({ success: false, message: 'Réservé au super admin principal' });
+    }
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    await account.update({ grantedToSubAdmin: true });
+    res.json({ success: true, message: `Visibilité accordée au petit admin pour "${account.name}"` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/professionals/admin/revoke-visibility/:id - Retirer visibilité au petit admin (G7 seulement)
+router.post('/admin/revoke-visibility/:id', authenticate, async (req, res) => {
+  try {
+    if (!isSuperAdmin7(req.user)) {
+      return res.status(403).json({ success: false, message: 'Réservé au super admin principal' });
+    }
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    await account.update({ grantedToSubAdmin: false });
+    res.json({ success: true, message: `Visibilité retirée pour "${account.name}"` });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }

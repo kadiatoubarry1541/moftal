@@ -179,6 +179,13 @@ ProfessionalAccount.init({
     type: DataTypes.JSON,
     allowNull: true,
     comment: 'Informations de paiement du professionnel (jamais exposées publiquement)'
+  },
+  // Visibilité accordée par le super admin (G7) au petit admin (G0)
+  grantedToSubAdmin: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'granted_to_sub_admin',
+    comment: 'Si true, le petit admin (G0) peut voir ce compte même hors du quota 50%'
   }
 }, {
   sequelize,

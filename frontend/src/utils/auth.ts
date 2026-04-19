@@ -95,6 +95,18 @@ export function isMasterAdmin(user: UserData | null): boolean {
   );
 }
 
+/** Super Admin Principal (G7) : accès complet + peut accorder la visibilité */
+export function isSuperAdmin7(user: UserData | null): boolean {
+  if (!user) return false;
+  return user.numeroH === 'G7C7P7R7E7F7 7';
+}
+
+/** Petit Admin (G0) : voit tout sauf 50% des comptes pro non accordés */
+export function isSubAdmin0(user: UserData | null): boolean {
+  if (!user) return false;
+  return user.numeroH === 'G0C0P0R0E0F0 0';
+}
+
 /**
  * Vérifie si l'utilisateur est connecté
  * @returns true si connecté, false sinon

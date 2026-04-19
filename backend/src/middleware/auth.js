@@ -242,12 +242,12 @@ export const requireAdmin = async (req, res, next) => {
       });
     }
     
-    // L'admin principal (G7...) bypass toutes les vérifications
-    if (req.user.numeroH === 'G7C7P7R7E7F7 7') {
+    // Super admin (G7) et petit admin (G0) bypass les vérifications de rôle
+    if (req.user.numeroH === 'G7C7P7R7E7F7 7' || req.user.numeroH === 'G0C0P0R0E0F0 0') {
       next();
       return;
     }
-    
+
     // Vérifier le rôle
     if (req.user.role !== 'admin' && req.user.role !== 'super-admin') {
       return res.status(403).json({

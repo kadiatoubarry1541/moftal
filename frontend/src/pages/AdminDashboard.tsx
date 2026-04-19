@@ -4,6 +4,7 @@ import { AdminPanel } from "../components/AdminPanel";
 import { getSessionUser, isAdmin, isMasterAdmin } from "../utils/auth";
 import { getStats, getAllUsers, getAllFamilies, getMySectors, getPageAdmins, addPageAdmin, removePageAdmin, type SectorInfo } from "../utils/adminApi";
 import { config } from "../config/api";
+import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 
 interface ProfessionalAccount {
   id: string;
@@ -426,6 +427,26 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleGrantVisibility = async (id: string, grant: boolean) => {
+    try {
+      const token = localStorage.getItem("token");
+      const action = grant ? "grant-visibility" : "revoke-visibility";
+      const res = await fetch(`${API_BASE}/api/professionals/admin/${action}/${id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadPendingPros();
+        loadAllPros(proFilter);
+      } else {
+        alert(data.message || "Erreur");
+      }
+    } catch (error) {
+      console.error("Erreur grant/revoke visibility:", error);
+    }
+  };
+
   const typeLabels: Record<string, { label: string; icon: string }> = {
     clinic: { label: "Clinique/Hôpital", icon: "🏥" },
     security_agency: { label: "Agence sécurité", icon: "🛡️" },
@@ -491,17 +512,36 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* En-tête Administrateur */}
-      <div className="bg-gradient-to-r from-red-600 to-purple-600 rounded-xl shadow-lg p-6 sm:p-8 mb-6 text-white">
+      <div className={`rounded-xl shadow-lg p-6 sm:p-8 mb-6 text-white bg-gradient-to-r ${
+        isSuperAdmin7(userData)
+          ? "from-yellow-600 to-red-700"
+          : isSubAdmin0(userData)
+          ? "from-blue-700 to-indigo-800"
+          : "from-red-600 to-purple-600"
+      }`}>
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold mb-2">
-              {sectorAdminOnly ? "✅ Validation des inscriptions professionnelles" : "👑 Administration Complète"}
+              {sectorAdminOnly
+                ? "✅ Validation des inscriptions professionnelles"
+                : isSuperAdmin7(userData)
+                ? "👑 Super Admin Principal"
+                : isSubAdmin0(userData)
+                ? "🛡️ Administrateur Délégué"
+                : "👑 Administration Complète"}
             </h1>
             <p className="text-lg opacity-90">
               {userData.prenom} {userData.nomFamille}
             </p>
             <p className="text-sm opacity-75 mt-1">
-              NuméroH: {userData.numeroH} | {sectorAdminOnly ? `Secteur(s): ${mySectors.map((s) => s.pageName).join(", ")}` : `Rôle: ${userData.role || "admin"}`}
+              NuméroH: {userData.numeroH} |{" "}
+              {sectorAdminOnly
+                ? `Secteur(s): ${mySectors.map((s) => s.pageName).join(", ")}`
+                : isSuperAdmin7(userData)
+                ? "Accès total — peut accorder des droits au petit admin"
+                : isSubAdmin0(userData)
+                ? "Accès limité — 50% des comptes pro (+ ceux accordés par le super admin)"
+                : `Rôle: ${userData.role || "admin"}`}
             </p>
           </div>
           <button onClick={() => navigate("/compte")} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
@@ -959,6 +999,30 @@ export default function AdminDashboard() {
                         {pro.description && <div className="text-xs text-gray-500 mt-1 line-clamp-2">{pro.description}</div>}
                       </div>
                       <div className="flex flex-wrap gap-2 self-end sm:self-center">
+                        {/* Bouton accorder/retirer visibilité — super admin G7 uniquement */}
+                        {isSuperAdmin7(userData) && (
+                          (pro as any).grantedToSubAdmin ? (
+                            <button
+                              onClick={() => handleGrantVisibility(pro.id, false)}
+                              className="min-h-[36px] px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg transition-colors"
+                              title="Retirer la visibilité au petit admin"
+                            >
+                              🔒 Retirer visibilité admin délégué
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleGrantVisibility(pro.id, true)}
+                              className="min-h-[36px] px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                              title="Accorder la visibilité au petit admin"
+                            >
+                              🔓 Accorder visibilité admin délégué
+                            </button>
+                          )
+                        )}
+                        {/* Badge si visible par l'admin délégué */}
+                        {isSuperAdmin7(userData) && (pro as any).grantedToSubAdmin && (
+                          <span className="self-center text-xs text-indigo-700 font-medium">✓ Vu par admin délégué</span>
+                        )}
                         {pro.justificatifDocument && (
                           <button
                             type="button"
