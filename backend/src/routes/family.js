@@ -5,6 +5,7 @@ import User from '../models/User.js';
 import FamilyGallery from '../models/FamilyGallery.js';
 import FamilyProblemMedia from '../models/FamilyProblemMedia.js';
 import { sequelize } from '../config/database.js';
+import { checkAndConsumeQuota } from './quotas.js';
 
 const router = express.Router();
 
@@ -381,8 +382,26 @@ router.post('/shared-gallery/:album', upload.single('media'), async (req, res) =
     const userData = await User.findOne({ where: { numeroH: req.user.numeroH } });
     const familyName = userData?.nomFamille;
     if (!familyName) return res.status(400).json({ success: false, message: 'Vous devez avoir un nom de famille pour partager des médias' });
-    const dataUrl = toDataUrl(req.file);
     const isVideoFile = req.file.mimetype.startsWith('video/');
+
+    // Vérifier et consommer le quota (5 photos + 1 vidéo gratuits par famille, puis points)
+    try {
+      await checkAndConsumeQuota('family', familyName, isVideoFile, req.user.numeroH, 5, 1);
+    } catch (quotaErr) {
+      if (quotaErr.code === 'QUOTA_EXCEEDED') {
+        const type = quotaErr.isVideo ? 'vidéo' : 'photo';
+        const pts = quotaErr.isVideo ? '2 points' : '1 point';
+        return res.status(402).json({
+          success: false,
+          code: 'QUOTA_EXCEEDED',
+          isVideo: quotaErr.isVideo,
+          message: `Quota gratuit de votre famille épuisé. Publiez une ${type} supplémentaire pour ${pts}. Achetez des points via l'admin.`
+        });
+      }
+      throw quotaErr;
+    }
+
+    const dataUrl = toDataUrl(req.file);
     const uploaderName = [userData.prenom, userData.nomFamille].filter(Boolean).join(' ') || 'Membre';
     const item = await FamilyGallery.create({
       familyName,

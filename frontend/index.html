@@ -9,7 +9,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Favicon -->
+    <!-- Favicon SVG (3KB vs 227KB PNG) -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="mask-icon" href="/logo.svg" color="#065f46" />
@@ -18,7 +19,10 @@
     <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- Preload du logo en WebP (38KB au lieu de 222KB) — améliore le LCP -->
-    <link rel="preload" as="image" href="/logo.webp" type="image/webp" />
+    <link rel="preload" as="image" href="/logo.webp" type="image/webp" fetchpriority="high" />
+
+    <!-- Préchargement de la connexion backend (utile en dev) -->
+    <link rel="dns-prefetch" href="http://localhost:5002" />
 
     <!-- Évite le flash de contenu non-stylisé en mode sombre -->
     <meta name="color-scheme" content="light dark" />

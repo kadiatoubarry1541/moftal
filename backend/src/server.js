@@ -45,6 +45,7 @@ import notificationRoutes from './routes/notifications.js';
 import iaRoutes from './routes/ia.js';
 import moderationRoutes from './routes/moderation.js';
 import paymentRoutes from './routes/payment.js';
+import quotasRoutes from './routes/quotas.js';
 import Payment from './models/Payment.js';
 import { handleUploadError } from './middleware/upload.js';
 import { config } from '../config.js';
@@ -383,44 +384,25 @@ app.use(helmet({
   contentSecurityPolicy: false, // désactivé car React gère ses propres scripts
 }));
 
-// Configuration CORS (autorise plusieurs origines localhost + production)
-const allowedOrigins = [
+// Configuration CORS
+// En prod : CORS_ORIGIN = URL Cloudflare Pages (ex: https://enfants-adam.pages.dev)
+// Plusieurs origines séparées par une virgule sont supportées.
+const rawOrigins = [
   config.FRONTEND_URL,
-  process.env.CORS_ORIGIN, // URL de production depuis les variables d'environnement
+  ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : []),
   'http://localhost:3000',
   'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:5175',
-  'http://localhost:5176',
-  'http://localhost:5177',
-  'http://localhost:5178',
-  'http://localhost:5179',
-  'http://127.0.0.1:3000',
-  'http://127.0.0.1:5173',
-  'http://127.0.0.1:5174',
-  'http://127.0.0.1:5175',
-  'http://127.0.0.1:5176',
-  'http://127.0.0.1:5177',
-  'http://127.0.0.1:5178',
-  'http://127.0.0.1:5179'
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // En développement : accepter localhost et 127.0.0.1 sur n'importe quel port
-    if (process.env.NODE_ENV === 'development') {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
-        return callback(null, true);
-      }
-      return callback(null, true); // En dev, accepter tout pour faciliter les tests
-    }
-    // En production
-    if (!process.env.CORS_ORIGIN) return callback(null, true);
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(null, true);
+    if (!origin) return callback(null, true); // appels server-to-server, Postman
+    // Dev : tout accepter
+    if (process.env.NODE_ENV === 'development') return callback(null, true);
+    // Prod : accepter les origines configurées + Cloudflare Pages (*.pages.dev)
+    if (rawOrigins.includes(origin)) return callback(null, true);
+    if (/^https:\/\/[a-z0-9-]+\.pages\.dev$/.test(origin)) return callback(null, true);
+    return callback(new Error(`CORS: origine non autorisée — ${origin}`));
   },
   credentials: true
 }));
@@ -486,6 +468,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/ia', iaRoutes);
 app.use('/api/admin/moderation', moderationRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/quotas', quotasRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test

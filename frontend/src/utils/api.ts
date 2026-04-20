@@ -1,7 +1,6 @@
-// API pour communiquer avec le backend (même origine en prod quand tout est sur un seul service Render)
-// En production : toujours même origine (le backend sert le frontend) → pas besoin de VITE_API_URL
-// En développement : localhost:5002
-const API_BASE_URL = (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5002') + '/api'
+// URL du backend. En prod, pointe vers Render ; en dev, vers localhost:5002.
+// La variable VITE_API_URL est définie dans .env (dev) et .env.production (prod).
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5002') + '/api'
 
 export interface User {
   numeroH: string

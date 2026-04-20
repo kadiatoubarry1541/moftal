@@ -1,6 +1,4 @@
-// API utilities for admin operations (same-origin en prod quand un seul service Render)
-// En production : toujours même origine, jamais de VITE_API_URL
-const API_URL = import.meta.env.MODE === 'production' ? '' : 'http://localhost:5002';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
 // Helper function to get auth token (session_user.token ou clé token séparée)
 const getAuthToken = (): string | null => {

@@ -479,8 +479,9 @@ export default function AdminDashboard() {
     { id: "parent-child", label: "Parent-Enfant", icon: "👶" },
     { id: "pros", label: "Professionnels", icon: "📋" },
     { id: "users", label: "Utilisateurs", icon: "👥" },
+    { id: "points", label: "Points Galerie", icon: "🪙" },
     { id: "tools", label: "Outils", icon: "🔧" },
-    ...(isMasterAdmin(userData) ? [{ id: "sector-admins", label: "Admins de secteurs", icon: "🏛️" }] : []),
+    ...(isSuperAdmin7(userData) ? [{ id: "sector-admins", label: "Admins de secteurs", icon: "🏛️" }] : []),
   ];
   const adminTabs = sectorAdminOnly
     ? allAdminTabs.filter((t) => t.id === "pros")
@@ -525,22 +526,21 @@ export default function AdminDashboard() {
               {sectorAdminOnly
                 ? "✅ Validation des inscriptions professionnelles"
                 : isSuperAdmin7(userData)
-                ? "👑 Super Admin Principal"
+                ? "👑 Administration"
                 : isSubAdmin0(userData)
-                ? "🛡️ Administrateur Délégué"
+                ? "🛡️ Admin"
                 : "👑 Administration Complète"}
             </h1>
             <p className="text-lg opacity-90">
               {userData.prenom} {userData.nomFamille}
             </p>
             <p className="text-sm opacity-75 mt-1">
-              NuméroH: {userData.numeroH} |{" "}
               {sectorAdminOnly
                 ? `Secteur(s): ${mySectors.map((s) => s.pageName).join(", ")}`
-                : isSuperAdmin7(userData)
-                ? "Accès total — peut accorder des droits au petit admin"
                 : isSubAdmin0(userData)
-                ? "Accès limité — 50% des comptes pro (+ ceux accordés par le super admin)"
+                ? "Accès limité — comptes pro accordés par l'administrateur principal"
+                : isSuperAdmin7(userData)
+                ? "Accès complet"
                 : `Rôle: ${userData.role || "admin"}`}
             </p>
           </div>
@@ -1184,6 +1184,54 @@ export default function AdminDashboard() {
                 )}
               </div>
               <AdminPanel userData={userData} />
+            </div>
+          )}
+
+          {/* ========== POINTS GALERIE ========== */}
+          {adminSection === "points" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-bold text-gray-800">🪙 Gestion des Points Galerie</h2>
+              </div>
+              <p className="text-sm text-gray-600">
+                Attribuez des points aux familles après réception de leur paiement.
+                <br />Tarifs : <strong>10 000 GNF = 20 pts</strong> · <strong>20 000 GNF = 40 pts</strong> · 1 point = 1 photo · 2 points = 1 vidéo
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-3xl">➕</span>
+                    <div>
+                      <h3 className="font-semibold text-indigo-900">Attribuer des points</h3>
+                      <p className="text-xs text-indigo-700">Après réception d'un paiement</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate("/admin/points")}
+                    className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-semibold"
+                  >
+                    Ouvrir la gestion des points
+                  </button>
+                </div>
+                <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="text-3xl">📋</span>
+                    <div>
+                      <h3 className="font-semibold text-amber-900">Historique des transactions</h3>
+                      <p className="text-xs text-amber-700">Voir toutes les attributions de points</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => navigate("/admin/points?tab=history")}
+                    className="w-full px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-semibold"
+                  >
+                    Voir l'historique
+                  </button>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                <strong>Comment ça marche :</strong> Quand un membre vous contacte pour acheter des points (via Orange Money, carte, espèces), notez son NuméroH familial et attribuez-lui les points correspondants. Les points sont débités automatiquement quand il publie au-delà de son quota gratuit.
+              </div>
             </div>
           )}
 

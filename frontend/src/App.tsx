@@ -44,6 +44,8 @@ const Ecoles = lazy(() => import("./pages/Ecoles"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminBadges = lazy(() => import("./pages/AdminBadges"));
 const AdminModeration = lazy(() => import("./pages/AdminModeration"));
+const AdminPoints = lazy(() => import("./pages/AdminPoints"));
+const AcheterPoints = lazy(() => import("./pages/AcheterPoints"));
 const TerreAdam = lazy(() => import("./pages/TerreAdam"));
 const Histoire = lazy(() => import("./pages/Histoire"));
 const ARetenir = lazy(() => import("./pages/ARetenir"));
@@ -68,12 +70,9 @@ const InfoWallou = lazy(() => import("./pages/InfoWallou"));
 const ConditionsUtilisation = lazy(() => import("./pages/ConditionsUtilisation"));
 const PaiementResultat = lazy(() => import("./pages/PaiementResultat"));
 
-// Barre de progression fine en haut (plus rapide visuellement qu'un spinner plein écran)
 const LoadingBar = () => (
   <div className="fixed top-0 left-0 w-full h-1 z-[9999] bg-gray-200">
-    <div className="h-full bg-blue-500 animate-[loading_1s_ease-in-out_infinite]"
-      style={{ animation: 'loadingBar 1.2s ease-in-out infinite', width: '70%' }} />
-    <style>{`@keyframes loadingBar { 0%{width:0%} 70%{width:80%} 100%{width:95%} }`}</style>
+    <div className="h-full bg-blue-500" style={{ animation: 'loadingBar 1.2s ease-in-out infinite' }} />
   </div>
 );
 
@@ -95,7 +94,7 @@ function App() {
   // Différé de 3s pour ne pas concurrencer le LCP / FCP initial
   useEffect(() => {
     const timer = setTimeout(() => {
-      const API = import.meta.env.MODE === 'production' ? '' : 'http://localhost:5002';
+      const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
       fetch(`${API}/api/health`).catch(() => {});
     }, 3000);
     return () => clearTimeout(timer);
@@ -196,6 +195,8 @@ function App() {
           <Route path="/admin/moderation" element={<AdminModeration />} />
           <Route path="/admin/logos" element={<Navigate to="/admin/badges?tab=logos" replace />} />
           <Route path="/admin/governments" element={<Navigate to="/admin" replace />} />
+          <Route path="/admin/points" element={<AdminPoints />} />
+          <Route path="/acheter-points" element={<AcheterPoints />} />
           <Route path="/famille" element={<Famille />} />
           <Route path="/famille/parents" element={<Parents />} />
           <Route path="/famille/femmes" element={<Partenaire />} />

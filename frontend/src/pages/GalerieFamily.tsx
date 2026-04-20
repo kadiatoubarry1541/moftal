@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
 
 interface GalleryItem {
   id: string
@@ -73,6 +73,12 @@ export default function GalerieFamily() {
   const [error, setError] = useState<string | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [quota, setQuota] = useState<{
+    photosLibres: number; videosLibres: number
+    photosUtilisees: number; videosUtilisees: number
+    photosRestantes: number; videosRestantes: number
+  } | null>(null)
+  const [points, setPoints] = useState<number>(0)
 
   const token = localStorage.getItem('token')
   const sessionRaw = localStorage.getItem('session_user')
@@ -85,12 +91,18 @@ export default function GalerieFamily() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE}/api/family/shared-gallery`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error('Erreur chargement galerie')
-      const data = await res.json()
-      setItems(data.items || [])
+      const [galRes, quotaRes] = await Promise.all([
+        fetch(`${API_BASE}/api/family/shared-gallery`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/quotas/family`, { headers: { Authorization: `Bearer ${token}` } })
+      ])
+      if (!galRes.ok) throw new Error('Erreur chargement galerie')
+      const galData = await galRes.json()
+      setItems(galData.items || [])
+      if (quotaRes.ok) {
+        const qData = await quotaRes.json()
+        if (qData.success && qData.quota) setQuota(qData.quota)
+        if (qData.success && qData.points) setPoints(qData.points.disponibles || 0)
+      }
     } catch {
       setError('Impossible de charger la galerie. Vérifiez votre connexion.')
     } finally {
@@ -145,7 +157,10 @@ export default function GalerieFamily() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'Erreur upload')
+        if (err.code === 'QUOTA_EXCEEDED') {
+          throw new Error(err.message || 'Quota épuisé')
+        }
+        throw new Error(err.error || err.message || 'Erreur upload')
       }
       await loadGallery()
       setShowUploadPanel(false)
@@ -212,6 +227,17 @@ export default function GalerieFamily() {
             <span className="hidden sm:inline-flex items-center text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full font-medium">
               {items.length} souvenir{items.length !== 1 ? 's' : ''}
             </span>
+            {quota && (
+              <Link
+                to="/acheter-points"
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-full font-medium hover:bg-amber-100 transition-colors"
+                title="Quota galerie familiale"
+              >
+                🪙 {quota.photosRestantes > 0 || quota.videosRestantes > 0
+                  ? `${quota.photosRestantes} photo${quota.photosRestantes !== 1 ? 's' : ''} + ${quota.videosRestantes} vidéo gratuite${quota.videosRestantes !== 1 ? 's' : ''}`
+                  : points > 0 ? `${points} pts` : 'Quota épuisé'}
+              </Link>
+            )}
             <button
               onClick={() => setShowUploadPanel(v => !v)}
               className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
@@ -236,6 +262,32 @@ export default function GalerieFamily() {
                 ✕
               </button>
             </div>
+
+            {/* Barre de quota */}
+            {quota && (
+              <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="font-semibold text-gray-600">Quota famille :</span>
+                    <span className={`flex items-center gap-1 ${quota.photosRestantes > 0 ? 'text-green-700' : 'text-red-500'}`}>
+                      📷 {quota.photosUtilisees}/{quota.photosLibres} photos gratuites
+                    </span>
+                    <span className={`flex items-center gap-1 ${quota.videosRestantes > 0 ? 'text-green-700' : 'text-red-500'}`}>
+                      🎥 {quota.videosUtilisees}/{quota.videosLibres} vidéo gratuite
+                    </span>
+                    <span className="text-indigo-600 font-semibold">🪙 {points} pts disponibles</span>
+                  </div>
+                  {quota.photosRestantes === 0 && quota.videosRestantes === 0 && points === 0 && (
+                    <Link to="/acheter-points" className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold transition-colors">
+                      Acheter des points →
+                    </Link>
+                  )}
+                </div>
+                {quota.photosRestantes === 0 && points > 0 && (
+                  <p className="mt-1.5 text-gray-500">Photos supplémentaires : <strong>1 point</strong> · Vidéos supplémentaires : <strong>2 points</strong></p>
+                )}
+              </div>
+            )}
             <div className="mb-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Album de destination</p>
               <div className="flex flex-wrap gap-2">

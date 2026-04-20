@@ -412,6 +412,7 @@ export const LANG_LABELS: Record<LangCode, string> = {
   pul: '𞤆𞤵𞤤𞤢𞤪' // Pular en Adlam
 }
 
+// Legacy export — conservé pour compatibilité, préférer l'import dynamique via I18nProvider
 export const STRINGS: Record<LangCode, Record<string, string>> = {
   fr: {
     'app.title': "ADAM, EVE ET SES ENFANTS",

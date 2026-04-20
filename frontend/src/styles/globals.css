@@ -200,6 +200,12 @@ iframe {
     }
 }
 
+@keyframes loadingBar {
+    0% { width: 0% }
+    70% { width: 80% }
+    100% { width: 95% }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
     * {
