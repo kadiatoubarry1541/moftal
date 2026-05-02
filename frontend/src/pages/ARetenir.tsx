@@ -142,7 +142,15 @@ export default function ARetenir() {
     return 0;
   };
 
+  const isAdminUser = (): boolean => {
+    if (!userData) return false;
+    return userData.role === 'admin' || userData.role === 'super-admin' ||
+      userData.isAdmin === true || userData.isMasterAdmin === true ||
+      (typeof userData.role === 'string' && userData.role.includes('admin'));
+  };
+
   const canPublishSection = (sectionId: string): boolean => {
+    if (isAdminUser()) return true; // admin : aucune limite
     const required = SECTION_AGE_REQUIREMENTS[sectionId] || 25;
     return getUserAge() >= required;
   };
@@ -372,8 +380,10 @@ export default function ARetenir() {
       formData.append('type', type);
       formData.append('numeroH', userData.numeroH);
 
+      const token = localStorage.getItem('token');
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/upload`, {
         method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
 
@@ -472,17 +482,20 @@ export default function ARetenir() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">📖 À Retenir</h1>
+              <h1 className="text-4xl font-bold text-white mb-2">📖 À Retenir — Génération 96</h1>
               <p className="text-blue-100 text-lg">
-                Racontez votre histoire en 7 étapes inspirées de la vie d'Adam
+                Vous êtes l'auteur de votre propre histoire — personne d'autre ne la raconte à votre place
+              </p>
+              <p className="text-blue-200 text-xs mt-1">
+                Avant vous, les anciens n'ont pas pu écrire eux-mêmes · Ici, chaque personne est responsable de son récit
               </p>
             </div>
             <div className="flex space-x-4">
               <button
-                onClick={() => navigate('/histoire-humanite')}
+                onClick={() => navigate('/histoire')}
                 className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg"
               >
-                📚 Voir l'Histoire de l'Humanité
+                📜 Chronique ancestrale (Gén. 1–95)
               </button>
               <button
                 onClick={handleSaveAll}
@@ -582,7 +595,7 @@ export default function ARetenir() {
                       <p className="text-sm text-gray-500">
                         {section.content.length} caractères {section.content.length < 50 && '(minimum 50 pour publier)'}
                       </p>
-                      {!canPublishSection(section.id) && (
+                      {!canPublishSection(section.id) && !isAdminUser() && (
                         <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
                           🔒 Vous pouvez sauvegarder votre brouillon maintenant et publier lorsque vous aurez {SECTION_AGE_REQUIREMENTS[section.id]} ans.
                         </p>
@@ -650,24 +663,26 @@ export default function ARetenir() {
                     </div>
                     {section.photos && section.photos.length > 0 && (
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-                        {section.photos.map((photo, index) => (
-                          <div key={index} className="relative group">
-                            <img
-                              src={`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}${photo}`}
-                              alt={`Photo ${index + 1}`}
-                              className="w-full h-48 object-cover rounded-lg"
-                              onError={(e) => {
-                                e.currentTarget.src = photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_URL || 'http://localhost:5002'}${photo}`;
-                              }}
-                            />
-                            <button
-                              onClick={() => handleRemoveMedia(section.id, photo, 'photo')}
-                              className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
+                        {section.photos.map((photo, index) => {
+                          const src = photo.startsWith('data:') || photo.startsWith('http')
+                            ? photo
+                            : `${import.meta.env.VITE_API_URL || 'http://localhost:5002'}${photo}`;
+                          return (
+                            <div key={index} className="relative group">
+                              <img
+                                src={src}
+                                alt={`Photo ${index + 1}`}
+                                className="w-full h-48 object-cover rounded-lg shadow"
+                              />
+                              <button
+                                onClick={() => handleRemoveMedia(section.id, photo, 'photo')}
+                                className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-bold"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -708,24 +723,26 @@ export default function ARetenir() {
                     </div>
                     {section.videos && section.videos.length > 0 && (
                       <div className="space-y-4 mb-4">
-                        {section.videos.map((video, index) => (
-                          <div key={index} className="relative group">
-                            <video
-                              src={`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}${video}`}
-                              controls
-                              className="w-full rounded-lg"
-                              onError={(e) => {
-                                e.currentTarget.src = video.startsWith('http') ? video : `${import.meta.env.VITE_API_URL || 'http://localhost:5002'}${video}`;
-                              }}
-                            />
-                            <button
-                              onClick={() => handleRemoveMedia(section.id, video, 'video')}
-                              className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
+                        {section.videos.map((video, index) => {
+                          const src = video.startsWith('data:') || video.startsWith('http')
+                            ? video
+                            : `${import.meta.env.VITE_API_URL || 'http://localhost:5002'}${video}`;
+                          return (
+                            <div key={index} className="relative group">
+                              <video
+                                src={src}
+                                controls
+                                className="w-full rounded-lg shadow"
+                              />
+                              <button
+                                onClick={() => handleRemoveMedia(section.id, video, 'video')}
+                                className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-bold"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

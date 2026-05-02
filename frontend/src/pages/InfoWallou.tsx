@@ -250,7 +250,7 @@ function CardHeader({ title, emoji, subtitle }: { title: string; emoji: string; 
   return (
     <div className="px-4 py-3 flex items-center justify-between border-b border-white/20">
       <div>
-        <p className="text-[9px] tracking-[2px] text-white/40 uppercase">Info-Wallou</p>
+        <p className="text-[9px] tracking-[2px] text-white/40 uppercase">Moftal Info</p>
         <h2 className="text-xl font-black text-white leading-tight">{title}</h2>
         {subtitle && <p className="text-white/55 text-xs mt-0.5">{subtitle}</p>}
       </div>
@@ -1249,7 +1249,7 @@ function CardViewModal({ saved, onClose }: { saved: SavedCard; onClose: () => vo
           </button>
           {/* Branding */}
           <div className="absolute top-4 left-4 z-20">
-            <span className="text-[9px] font-bold uppercase tracking-[3px] text-white/40">Info-Wallou</span>
+            <span className="text-[9px] font-bold uppercase tracking-[3px] text-white/40">Moftal Info</span>
           </div>
           {/* Info hero */}
           <div className="relative z-10 px-5 pt-14 pb-5">
@@ -1275,9 +1275,9 @@ function CardViewModal({ saved, onClose }: { saved: SavedCard; onClose: () => vo
           {photos.length > 1 && (
             <div>
               <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider mb-2">Photos</p>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-3 gap-3">
                 {photos.map((p, i) => (
-                  <div key={i} className="aspect-square rounded-xl overflow-hidden cursor-pointer group relative" onClick={() => setLightbox(p)}>
+                  <div key={i} className="aspect-square rounded-xl overflow-hidden cursor-pointer group relative border-2 border-white/10" onClick={() => setLightbox(p)}>
                     <img src={p} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                   </div>
@@ -1344,7 +1344,7 @@ function CardViewModal({ saved, onClose }: { saved: SavedCard; onClose: () => vo
           )}
 
           {/* Footer */}
-          <p className="text-center text-[9px] text-gray-700 uppercase tracking-widest pb-2">Les Enfants d'Adam · Info-Wallou</p>
+          <p className="text-center text-[9px] text-gray-700 uppercase tracking-widest pb-2">Les Enfants d'Adam · Moftal Info</p>
         </div>
       </div>
 
@@ -1411,12 +1411,12 @@ export default function InfoWallou() {
   const downloadCard = () => {
     const el = document.getElementById("iw-card");
     if (!el) return;
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Info-Wallou</title>
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Moftal Info</title>
 <style>body{margin:0;padding:16px;background:#0f172a;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;font-family:sans-serif;}</style>
 </head><body>${el.outerHTML}</body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `info-wallou-${card.type}-${Date.now()}.html`; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = `moftal-info-${card.type}-${Date.now()}.html`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -1463,7 +1463,7 @@ export default function InfoWallou() {
             </div>
             <div>
               <p className="text-[9px] uppercase tracking-[3px] text-gray-500 font-bold">Les Enfants d'Adam</p>
-              <h1 className="text-2xl font-black text-white leading-tight">Info-Wallou</h1>
+              <h1 className="text-2xl font-black text-white leading-tight">Moftal Info</h1>
             </div>
           </div>
           <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
@@ -1546,7 +1546,7 @@ export default function InfoWallou() {
           ))}
         </div>
 
-        <p className="text-center text-[10px] text-gray-800 uppercase tracking-widest pb-8">Les Enfants d'Adam · Info-Wallou</p>
+        <p className="text-center text-[10px] text-gray-800 uppercase tracking-widest pb-8">Les Enfants d'Adam · Moftal Info</p>
       </div>
 
       {viewingCard && <CardViewModal saved={viewingCard} onClose={() => setViewingCard(null)} />}
@@ -1570,7 +1570,7 @@ export default function InfoWallou() {
         </button>
         <div className="text-center">
           <p className="text-white font-bold text-sm">{getCardTitle(selected!)}</p>
-          <p className="text-gray-600 text-[10px]">Info-Wallou</p>
+          <p className="text-gray-600 text-[10px]">Moftal Info</p>
         </div>
         <button onClick={handleSaveCard}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all"
@@ -1586,7 +1586,7 @@ export default function InfoWallou() {
         <div id="iw-card">{renderCard()}</div>
 
         <p className="text-center text-[9px] text-gray-800 mt-2 uppercase tracking-widest">
-          Les Enfants d'Adam · Info-Wallou · {new Date().toLocaleDateString("fr-FR")}
+          Les Enfants d'Adam · Moftal Info · {new Date().toLocaleDateString("fr-FR")}
         </p>
 
         {/* Actions */}

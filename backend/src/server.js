@@ -1,3 +1,4 @@
+import http from 'http';
 import express from 'express';
 import compression from 'compression';
 import cors from 'cors';
@@ -8,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
+import { initSocket } from './socket.js';
 
 import connectDB, { sequelize } from '../config/database.js';
 import { connectDB_Pro } from '../config/database_pro.js';
@@ -40,18 +42,24 @@ import stateMessagesRoutes from './routes/stateMessages.js';
 import stateProductsRoutes from './routes/stateProducts.js';
 import userStoriesRoutes from './routes/userStories.js';
 import professionalRoutes from './routes/professionals.js';
+import clinicMgmtRoutes from './routes/clinic-management.js';
+import schoolMgmtRoutes from './routes/school-management.js';
 import appointmentRoutes from './routes/appointments.js';
 import notificationRoutes from './routes/notifications.js';
 import iaRoutes from './routes/ia.js';
 import moderationRoutes from './routes/moderation.js';
 import paymentRoutes from './routes/payment.js';
 import quotasRoutes from './routes/quotas.js';
+import familyFundRoutes from './routes/familyFund.js';
+import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
+import wallalPayRoutes from './routes/wallalPay.js';
 import Payment from './models/Payment.js';
 import { handleUploadError } from './middleware/upload.js';
 import { config } from '../config.js';
 import User from './models/User.js';
 import bcrypt from 'bcryptjs';
 import { startSubscriptionChecker } from './services/subscriptionChecker.js';
+import { startMessageCleanup } from './services/messageCleanup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,6 +68,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(path.dirname(__dirname), 'config.env') });
 
 const app = express();
+const httpServer = http.createServer(app);
 const PORT = process.env.PORT || config.PORT || 5002;
 
 // Démarrage automatique du serveur IA (Python) quand le backend démarre
@@ -77,7 +86,11 @@ const startIaServer = () => {
   }
 
   const iaDir = path.join(__dirname, '../../IA SC');
-  const pythonCmds = process.platform === 'win32' ? ['py', 'python'] : ['python3', 'python'];
+  // Cherche d'abord le Python du venv du projet, puis le Python système
+  const venvPython = path.join(__dirname, '../../.venv/Scripts/python.exe');
+  const pythonCmds = process.platform === 'win32'
+    ? [venvPython, 'py', 'python']
+    : [path.join(__dirname, '../../.venv/bin/python'), 'python3', 'python'];
 
   const trySpawn = (index) => {
     if (index >= pythonCmds.length) {
@@ -288,6 +301,130 @@ async function initAllTables() {
         `CREATE INDEX IF NOT EXISTS idx_pca_from ON "parent_child_activities" ("from_numero_h");`
       ],
       alters: [`ALTER TABLE "parent_child_activities" ALTER COLUMN "media_url" TYPE TEXT;`]
+    },
+    {
+      name: 'family_funds',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "family_funds" (
+          "id"               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+          "nom_famille"      VARCHAR(255) NOT NULL,
+          "tree_id"          UUID,
+          "solde_reserve"    BIGINT       NOT NULL DEFAULT 0,
+          "solde_sante"      BIGINT       NOT NULL DEFAULT 0,
+          "solde_nourriture" BIGINT       NOT NULL DEFAULT 0,
+          "solde_urgence"    BIGINT       NOT NULL DEFAULT 0,
+          "solde_projet"     BIGINT       NOT NULL DEFAULT 0,
+          "total_depose"     BIGINT       NOT NULL DEFAULT 0,
+          "total_depense"    BIGINT       NOT NULL DEFAULT 0,
+          "gerant1_numero_h"    VARCHAR(255),
+          "gerant2_numero_h"    VARCHAR(255),
+          "conseiller_numero_h" VARCHAR(255),
+          "conseiller_nom"      VARCHAR(255),
+          "is_active"           BOOLEAN      NOT NULL DEFAULT true,
+          "created_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_ff_nom_famille ON "family_funds" ("nom_famille");`,
+        `CREATE INDEX IF NOT EXISTS idx_ff_tree_id     ON "family_funds" ("tree_id");`
+      ],
+      alters: [
+        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "conseiller_numero_h" VARCHAR(255);`,
+        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "conseiller_nom"      VARCHAR(255);`
+      ]
+    },
+    {
+      name: 'family_fund_transactions',
+      sql: `
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_family_fund_transactions_type') THEN
+            CREATE TYPE "enum_family_fund_transactions_type" AS ENUM ('depot','paiement_sante','paiement_nourriture','urgence','projet','reserve_deblocage');
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_family_fund_transactions_statut') THEN
+            CREATE TYPE "enum_family_fund_transactions_statut" AS ENUM ('en_attente','confirme','echoue');
+          END IF;
+        END $$;
+        CREATE TABLE IF NOT EXISTS "family_fund_transactions" (
+          "id"                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+          "fund_id"              UUID        NOT NULL,
+          "acteur_numero_h"      VARCHAR(255) NOT NULL,
+          "acteur_nom"           VARCHAR(255),
+          "type"                 "enum_family_fund_transactions_type" NOT NULL,
+          "montant"              BIGINT       NOT NULL,
+          "beneficiaire_nom"     VARCHAR(255),
+          "beneficiaire_contact" VARCHAR(255),
+          "description"          TEXT,
+          "repartition"          JSONB,
+          "fedapay_ref"          VARCHAR(255),
+          "statut"               "enum_family_fund_transactions_statut" NOT NULL DEFAULT 'confirme',
+          "created_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_fft_fund_id   ON "family_fund_transactions" ("fund_id");`,
+        `CREATE INDEX IF NOT EXISTS idx_fft_acteur    ON "family_fund_transactions" ("acteur_numero_h");`,
+        `CREATE INDEX IF NOT EXISTS idx_fft_type      ON "family_fund_transactions" ("type");`
+      ],
+      alters: []
+    },
+    {
+      name: 'pro_withdrawal_requests',
+      sql: `
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_pro_withdrawal_requests_statut') THEN
+            CREATE TYPE "enum_pro_withdrawal_requests_statut" AS ENUM ('en_attente','valide','rejete');
+          END IF;
+        END $$;
+        CREATE TABLE IF NOT EXISTS "pro_withdrawal_requests" (
+          "id"                   UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "pro_account_id"       UUID         NOT NULL,
+          "pro_account_name"     VARCHAR(255),
+          "pro_account_type"     VARCHAR(100),
+          "pro_logo_url"         TEXT,
+          "owner_numero_h"       VARCHAR(255) NOT NULL,
+          "owner_nom"            VARCHAR(255),
+          "montant"              BIGINT       NOT NULL,
+          "motif"                TEXT,
+          "coordonnees_paiement" VARCHAR(255),
+          "statut"               "enum_pro_withdrawal_requests_statut" NOT NULL DEFAULT 'en_attente',
+          "valide_par"           VARCHAR(255),
+          "valide_par_nom"       VARCHAR(255),
+          "valide_at"            TIMESTAMPTZ,
+          "raison_rejet"         TEXT,
+          "receipt_ref"          VARCHAR(50),
+          "created_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_pwr_pro_id    ON "pro_withdrawal_requests" ("pro_account_id");`,
+        `CREATE INDEX IF NOT EXISTS idx_pwr_owner     ON "pro_withdrawal_requests" ("owner_numero_h");`,
+        `CREATE INDEX IF NOT EXISTS idx_pwr_statut    ON "pro_withdrawal_requests" ("statut");`
+      ],
+      alters: []
+    },
+    {
+      name: 'professional_wallets',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "professional_wallets" (
+          "id"                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+          "pro_account_id"       UUID        NOT NULL,
+          "owner_numero_h"       VARCHAR(255) NOT NULL,
+          "nom_pro"              VARCHAR(255),
+          "type_pro"             VARCHAR(100),
+          "solde"                BIGINT       NOT NULL DEFAULT 0,
+          "total_recu"           BIGINT       NOT NULL DEFAULT 0,
+          "total_retire"         BIGINT       NOT NULL DEFAULT 0,
+          "orange_money_numero"  VARCHAR(50),
+          "compte_bancaire_iban" VARCHAR(100),
+          "is_active"            BOOLEAN      NOT NULL DEFAULT true,
+          "created_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          CONSTRAINT uq_pw_pro_account UNIQUE ("pro_account_id")
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_pw_owner ON "professional_wallets" ("owner_numero_h");`
+      ],
+      alters: []
     }
   ];
 
@@ -302,10 +439,46 @@ async function initAllTables() {
     }
   }
 
+  // Tables logos et user_logos (badges visuels assignés aux utilisateurs)
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "logos" (
+        "id"          SERIAL PRIMARY KEY,
+        "name"        VARCHAR(255) NOT NULL,
+        "description" TEXT NOT NULL DEFAULT '',
+        "icon"        VARCHAR(255) DEFAULT '👤',
+        "color"       VARCHAR(255) DEFAULT '#3B82F6',
+        "category"    VARCHAR(255) DEFAULT 'personal',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_by"  VARCHAR(255) NOT NULL DEFAULT 'admin',
+        "usage_count" INTEGER DEFAULT 0,
+        "created_at"  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updated_at"  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "user_logos" (
+        "id"          SERIAL PRIMARY KEY,
+        "numero_h"    VARCHAR(255) NOT NULL,
+        "logo_id"     INTEGER NOT NULL REFERENCES "logos"("id") ON DELETE CASCADE,
+        "assigned_by" VARCHAR(255) NOT NULL DEFAULT 'admin',
+        "assigned_at" TIMESTAMPTZ DEFAULT NOW(),
+        "created_at"  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updated_at"  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Tables logos + user_logos prêtes');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [logos]:', err.message);
+  }
+
   // Colonne audio sur exchange_products (photo + audio 30s)
   try {
     await sequelize.query(`ALTER TABLE "exchange_products" ADD COLUMN IF NOT EXISTS "audio" JSONB DEFAULT '[]';`).catch(() => {});
   } catch (_) {}
+
+  // media_url doit être TEXT (base64 data URLs)
+  await sequelize.query(`ALTER TABLE "family_tree_messages" ALTER COLUMN "media_url" TYPE TEXT;`).catch(() => {});
 
   // Colonnes ajoutées récemment sur users (visibilité arbre généalogique)
   const userAlters = [
@@ -344,6 +517,194 @@ async function initAllTables() {
 
   // ia_conversations (numero_h) : géré par connectDB_IA() via sync({ alter: true })
   console.log('✅ Colonnes family_trees vérifiées');
+
+  // ── GESTION INTERNE : cliniques & écoles ──────────────────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "management_tenants" (
+        "id"                      SERIAL PRIMARY KEY,
+        "tenant_code"             VARCHAR(50) UNIQUE NOT NULL,
+        "type"                    VARCHAR(20) NOT NULL,
+        "name"                    VARCHAR(255) NOT NULL,
+        "logo_url"                TEXT,
+        "owner_numero_h"          VARCHAR(100) NOT NULL,
+        "professional_account_id" INTEGER,
+        "is_active"               BOOLEAN DEFAULT true,
+        "activated_at"            TIMESTAMPTZ DEFAULT NOW(),
+        "created_at"              TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "clinic_patients" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL,
+        "nom"              VARCHAR(255) NOT NULL,
+        "prenom"           VARCHAR(255) NOT NULL,
+        "date_naissance"   DATE,
+        "sexe"             VARCHAR(10),
+        "telephone"        VARCHAR(50),
+        "adresse"          TEXT,
+        "numero_matricule" VARCHAR(100),
+        "groupe_sanguin"   VARCHAR(10),
+        "allergies"        TEXT,
+        "created_at"       TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "clinic_staff" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255) NOT NULL,
+        "role"        VARCHAR(50) NOT NULL,
+        "service"     VARCHAR(255),
+        "specialite"  VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "email"       VARCHAR(255),
+        "matricule"   VARCHAR(100),
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "clinic_appointments_mgmt" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "patient_id"  INTEGER REFERENCES "clinic_patients"("id") ON DELETE SET NULL,
+        "staff_id"    INTEGER REFERENCES "clinic_staff"("id") ON DELETE SET NULL,
+        "service"     VARCHAR(255),
+        "date_rdv"    DATE NOT NULL,
+        "heure"       VARCHAR(10),
+        "statut"      VARCHAR(20) DEFAULT 'pending',
+        "motif"       TEXT,
+        "notes"       TEXT,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "clinic_prescriptions" (
+        "id"              SERIAL PRIMARY KEY,
+        "tenant_code"     VARCHAR(50) NOT NULL,
+        "patient_id"      INTEGER REFERENCES "clinic_patients"("id") ON DELETE SET NULL,
+        "staff_id"        INTEGER REFERENCES "clinic_staff"("id") ON DELETE SET NULL,
+        "date_prescription" DATE DEFAULT CURRENT_DATE,
+        "medicaments"     JSONB DEFAULT '[]',
+        "diagnostic"      TEXT,
+        "notes"           TEXT,
+        "numero_ordo"     VARCHAR(100),
+        "created_at"      TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "clinic_medical_records" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL,
+        "patient_id"       INTEGER REFERENCES "clinic_patients"("id") ON DELETE SET NULL,
+        "staff_id"         INTEGER REFERENCES "clinic_staff"("id") ON DELETE SET NULL,
+        "date_visite"      DATE DEFAULT CURRENT_DATE,
+        "type_consultation" VARCHAR(100),
+        "diagnostic"       TEXT,
+        "traitement"       TEXT,
+        "poids"            DECIMAL,
+        "tension"          VARCHAR(20),
+        "temperature"      DECIMAL,
+        "created_at"       TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "clinic_payments_mgmt" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "patient_id"   INTEGER REFERENCES "clinic_patients"("id") ON DELETE SET NULL,
+        "montant"      DECIMAL(15,0) NOT NULL,
+        "motif"        VARCHAR(255),
+        "date_paiement" DATE DEFAULT CURRENT_DATE,
+        "mode_paiement" VARCHAR(50) DEFAULT 'especes',
+        "recu_numero"  VARCHAR(100),
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "school_students" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL,
+        "nom"              VARCHAR(255) NOT NULL,
+        "prenom"           VARCHAR(255) NOT NULL,
+        "date_naissance"   DATE,
+        "sexe"             VARCHAR(10),
+        "telephone_parent" VARCHAR(50),
+        "nom_parent"       VARCHAR(255),
+        "adresse"          TEXT,
+        "classroom_id"     INTEGER,
+        "numero_matricule" VARCHAR(100),
+        "statut"           VARCHAR(20) DEFAULT 'actif',
+        "created_at"       TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "school_staff" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255) NOT NULL,
+        "role"        VARCHAR(50) NOT NULL,
+        "matieres"    JSONB DEFAULT '[]',
+        "telephone"   VARCHAR(50),
+        "email"       VARCHAR(255),
+        "matricule"   VARCHAR(100),
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "school_classrooms" (
+        "id"                      SERIAL PRIMARY KEY,
+        "tenant_code"             VARCHAR(50) NOT NULL,
+        "nom"                     VARCHAR(255) NOT NULL,
+        "niveau"                  VARCHAR(100),
+        "capacite"                INTEGER DEFAULT 30,
+        "professeur_principal_id" INTEGER REFERENCES "school_staff"("id") ON DELETE SET NULL,
+        "created_at"              TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "school_attendance" (
+        "id"             SERIAL PRIMARY KEY,
+        "tenant_code"    VARCHAR(50) NOT NULL,
+        "student_id"     INTEGER REFERENCES "school_students"("id") ON DELETE CASCADE,
+        "classroom_id"   INTEGER REFERENCES "school_classrooms"("id") ON DELETE SET NULL,
+        "date_presence"  DATE NOT NULL,
+        "est_present"    BOOLEAN DEFAULT true,
+        "motif_absence"  TEXT,
+        "created_at"     TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "school_grades" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "student_id"   INTEGER REFERENCES "school_students"("id") ON DELETE CASCADE,
+        "classroom_id" INTEGER REFERENCES "school_classrooms"("id") ON DELETE SET NULL,
+        "matiere"      VARCHAR(255) NOT NULL,
+        "note"         DECIMAL(5,2),
+        "note_max"     DECIMAL(5,2) DEFAULT 20,
+        "coefficient"  INTEGER DEFAULT 1,
+        "periode"      VARCHAR(50),
+        "commentaire"  TEXT,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "school_fees" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(50) NOT NULL,
+        "student_id"    INTEGER REFERENCES "school_students"("id") ON DELETE CASCADE,
+        "montant"       DECIMAL(15,0) NOT NULL,
+        "montant_paye"  DECIMAL(15,0) DEFAULT 0,
+        "type_frais"    VARCHAR(100),
+        "periode"       VARCHAR(50),
+        "date_paiement" DATE,
+        "est_paye"      BOOLEAN DEFAULT false,
+        "created_at"    TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    // Ajouter colonne tenant_code sur professional_accounts si absente
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "tenant_code" VARCHAR(50) UNIQUE;`).catch(() => {});
+    // Colonnes profil du tenant (logo, coordonnées)
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "address"     TEXT;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "phone"       VARCHAR(50);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "email"       VARCHAR(255);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "description" TEXT;`).catch(() => {});
+
+    // Tenants démo réservés à l'admin G7 (espaces de référence)
+    await sequelize.query(`
+      INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, is_active)
+      VALUES
+        ('DEMO-REF-CLIN', 'clinic',  'Clinique Référence Admin', 'ADMIN-G7', true),
+        ('DEMO-REF-ECO',  'school',  'École Référence Admin',    'ADMIN-G7', true)
+      ON CONFLICT (tenant_code) DO NOTHING;
+    `).catch(() => {});
+
+    console.log('✅ Tables gestion interne (cliniques + écoles) prêtes');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [gestion-interne]:', err.message);
+  }
 }
 
 // Démarrage : tout pointe sur enfants_adam_eve — une seule base, 5 instances Sequelize
@@ -361,13 +722,16 @@ connectDB()
   })
   .then(() => {
     console.log('✅ Tous les modèles synchronisés sur enfants_adam_eve');
-    app.listen(PORT, () => {
+    initSocket(httpServer, rawOrigins);
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Serveur démarré sur le port ${PORT}`);
       console.log(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 URL: http://localhost:${PORT}`);
       console.log(`📁 Dossier uploads: ${path.join(__dirname, '../uploads')}`);
+      console.log(`🔌 Socket.io activé (WebRTC signaling + temps réel)`);
       startIaServer();
       startSubscriptionChecker();
+      startMessageCleanup();
     });
   })
   .catch((error) => {
@@ -381,7 +745,20 @@ app.use(compression({ level: 6 }));
 
 // Middleware de sécurité
 app.use(helmet({
-  contentSecurityPolicy: false, // désactivé car React gère ses propres scripts
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", "https://api.flutterwave.com", "wss:", "ws:"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'", "data:", "blob:"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
 }));
 
 // Configuration CORS
@@ -408,13 +785,11 @@ app.use(cors({
 }));
 
 // Rate limiting
-// ⚠️ En développement, on assouplit fortement la limite pour éviter
-// de bloquer les tests (changement de photo de profil, reload, etc.)
 const isDev = process.env.NODE_ENV === 'development';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDev ? 10000 : 100, // en dev: 10 000 requêtes, en prod: 100
+  max: isDev ? 10000 : 500, // en dev: illimité pour tests, en prod: 500 par 15min
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -463,12 +838,17 @@ app.use('/api/state-messages', stateMessagesRoutes);
 app.use('/api/state-products', stateProductsRoutes);
 app.use('/api/user-stories', userStoriesRoutes);
 app.use('/api/professionals', professionalRoutes);
+app.use('/api/clinic-mgmt', clinicMgmtRoutes);
+app.use('/api/school-mgmt', schoolMgmtRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ia', iaRoutes);
 app.use('/api/admin/moderation', moderationRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/quotas', quotasRoutes);
+app.use('/api/family-fund', familyFundRoutes);
+app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);
+app.use('/api/wallal-pay', wallalPayRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test

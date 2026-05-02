@@ -620,7 +620,7 @@ export default function Activite() {
                       ? activityMessages.filter((m: any) => !['opportunite', 'outil'].includes(m.category || 'information'))
                       : activityMessages.filter((m: any) => (m.category || 'information') === feedFilter);
 
-                    // Cas spécial : onglet Outils de travail → afficher Info-Wallou + Assistant IA en haut
+                    // Cas spécial : onglet Moftal Info → afficher Moftal Info + Assistant IA en haut
                     if (feedFilter === 'outil') {
                       return (
                         <>
@@ -631,7 +631,7 @@ export default function Activite() {
                             >
                               <span className="text-4xl group-hover:scale-110 transition-transform">📋</span>
                               <div className="flex-1">
-                                <h3 className="font-bold text-white text-base">Info‑Wallou</h3>
+                                <h3 className="font-bold text-white text-base">Moftal Info</h3>
                                 <p className="text-sm text-blue-200">
                                   Créez des carreaux d'information avec photo, vidéo et audio
                                 </p>

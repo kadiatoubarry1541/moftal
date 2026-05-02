@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import path from 'path';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import FamilyGallery from '../models/FamilyGallery.js';
@@ -9,15 +10,21 @@ import { checkAndConsumeQuota } from './quotas.js';
 
 const router = express.Router();
 
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg'];
+const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
+
 // Stockage en mémoire (pas sur disque) → les fichiers sont convertis en base64 et stockés en DB
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo max
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const isImage = file.mimetype.startsWith('image/') && ALLOWED_IMAGE_EXTENSIONS.includes(ext);
+    const isVideo = file.mimetype.startsWith('video/') && ALLOWED_VIDEO_EXTENSIONS.includes(ext);
+    if (isImage || isVideo) {
       cb(null, true);
     } else {
-      cb(new Error('Seuls les fichiers image et vidéo sont autorisés'), false);
+      cb(new Error('Seuls les fichiers image (jpg, png, gif, webp) et vidéo (mp4, webm, mov) sont autorisés'), false);
     }
   }
 });

@@ -768,21 +768,24 @@ export default function Histoire() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">📚 Histoire de l'Humanité</h1>
-              <p className="mt-2 text-gray-600">De 4004 av. J.-C. à nos jours - {userData.prenom} fait partie de la Génération {userData.generation || '96'}</p>
+              <h1 className="text-3xl font-bold text-gray-900">📜 Chronique des origines</h1>
+              <p className="mt-1 text-gray-600">{userData.prenom} — Génération {userData.generation || '96'} · Vous commencez ici à écrire votre histoire</p>
+              <p className="mt-1 text-xs text-amber-700 font-semibold bg-amber-50 inline-block px-2 py-0.5 rounded">
+                📜 Gén. 1–95 : racontées par d'autres à leur place · Gén. 96 : chacun raconte sa propre histoire
+              </p>
             </div>
             <div className="flex space-x-4">
-              <button
-                onClick={() => navigate('/histoire-humanite')}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors font-semibold"
-              >
-                📚 Histoire de l'Humanité
-              </button>
               <button
                 onClick={() => navigate('/a-retenir')}
                 className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors font-semibold"
               >
-                📖 À Retenir
+                ✍️ Écrire mon histoire (Gén. 96)
+              </button>
+              <button
+                onClick={() => navigate('/histoire-humanite')}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition-colors text-sm"
+              >
+                📖 Histoires publiées
               </button>
               <button
                 onClick={() => navigate('/moi')}
@@ -800,10 +803,18 @@ export default function Histoire() {
         {/* Section Générations */}
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4 flex items-center gap-3">
-              <span>👑</span>
-              <span>Les 96 Générations de l'Humanité</span>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+              <span>📜</span>
+              <span>Les 95 premières générations — Traditions ancestrales</span>
             </h2>
+            <div className="mb-4 bg-amber-50 border-l-4 border-amber-400 px-4 py-3 rounded-r-lg">
+              <p className="text-amber-800 text-sm font-semibold">
+                📜 Ces générations (1 à 95) n'ont pas pu raconter leur histoire elles-mêmes. Ce sont d'autres personnes — historiens, transmetteurs, traditions religieuses et ancestrales — qui ont narré leur vie à leur place.
+              </p>
+              <p className="text-amber-700 text-xs mt-1">
+                👉 <strong>Génération 96</strong> : pour la première fois, chaque personne est l'auteur de sa propre histoire. C'est votre tour — utilisez le bouton <em>"Écrire mon histoire"</em> ci-dessus.
+              </p>
+            </div>
               
               {/* Saut rapide vers une génération */}
               <div className="mb-6 flex gap-4 items-center">
@@ -833,28 +844,55 @@ export default function Histoire() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {generations.map(gen => (
-                  <div 
-                    key={gen.id} 
-                    className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-6 border border-amber-200 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                    onClick={() => setSelectedGeneration(gen)}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-xl font-bold text-gray-900">{gen.name}</h3>
-                      <span className="text-sm text-gray-600 bg-white px-2 py-1 rounded-full">
-                        {gen.id}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700 mb-2">{gen.period}</p>
-                    <p className="text-gray-600 text-sm mb-3">{gen.description}</p>
-                    <div className="space-y-1">
-                      <div className="text-xs text-gray-500">
-                        📅 {gen.keyEvents[0]}
+                  gen.id === 96 ? (
+                    /* ── Génération 96 : spéciale "Votre histoire" ── */
+                    <div
+                      key={gen.id}
+                      className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-lg p-6 border-2 border-indigo-400 shadow-lg cursor-pointer hover:shadow-xl transition-all duration-300 col-span-1 md:col-span-2 lg:col-span-3"
+                      onClick={() => navigate('/a-retenir')}
+                    >
+                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl">✍️</span>
+                          <div>
+                            <h3 className="text-xl font-bold text-white">Génération 96 — Votre Histoire</h3>
+                            <p className="text-indigo-200 text-xs">Aujourd'hui · La première génération à écrire sa propre histoire</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold bg-white text-indigo-700 px-3 py-1 rounded-full">G96 — Vous</span>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        👑 {gen.importantFigures[0]}
+                      <p className="text-indigo-100 text-sm mb-4">{gen.description}</p>
+                      <div className="flex items-center gap-3">
+                        <span className="inline-block px-4 py-2 bg-white text-indigo-700 font-bold rounded-lg text-sm shadow hover:bg-indigo-50 transition-colors">
+                          ✍️ Écrire mon histoire maintenant →
+                        </span>
+                        <span className="text-indigo-200 text-xs">Vous êtes l'auteur — personne d'autre ne le fera à votre place</span>
                       </div>
                     </div>
-              </div>
+                  ) : (
+                    <div
+                      key={gen.id}
+                      className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-6 border border-amber-200 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                      onClick={() => setSelectedGeneration(gen)}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-xl font-bold text-gray-900">{gen.name}</h3>
+                        <span className="text-sm text-gray-600 bg-white px-2 py-1 rounded-full">
+                          {gen.id}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-2">{gen.period}</p>
+                      <p className="text-gray-600 text-sm mb-3">{gen.description}</p>
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-500">
+                          📅 {gen.keyEvents[0]}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          👑 {gen.importantFigures[0]}
+                        </div>
+                      </div>
+                    </div>
+                  )
                 ))}
               </div>
             </div>
