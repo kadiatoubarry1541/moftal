@@ -75,10 +75,24 @@ router.get('/published', async (req, res) => {
       );
     }
 
+    // Récupérer les photos de profil de tous les auteurs en une seule requête
+    const uniqueNumeroHs = [...new Set(filteredStories.map(s => s.numeroH))];
+    const authors = await User.findAll({
+      where: { numeroH: { [Op.in]: uniqueNumeroHs } },
+      attributes: ['numeroH', 'photo']
+    });
+    const photoMap = {};
+    authors.forEach(u => { photoMap[u.numeroH] = u.photo || null; });
+
+    const storiesWithPhoto = filteredStories.map(s => ({
+      ...s.toJSON(),
+      authorPhoto: photoMap[s.numeroH] || null
+    }));
+
     res.json({
       success: true,
-      stories: filteredStories,
-      total: filteredStories.length
+      stories: storiesWithPhoto,
+      total: storiesWithPhoto.length
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des histoires publiées:', error);
@@ -417,14 +431,19 @@ router.post('/publish', async (req, res) => {
     const user = await User.findByNumeroH(numeroH);
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
-    // --- Vérification de l'âge de l'auteur ---
-    const authorAge = user.getAge();
-    const requiredAge = SECTION_AGE_REQUIREMENTS[sectionId] || 25;
-    if (authorAge !== null && authorAge < requiredAge) {
-      return res.status(403).json({
-        success: false,
-        message: `Vous devez avoir au moins ${requiredAge} ans pour publier cette section. Vous pouvez sauvegarder votre brouillon et publier plus tard.`
-      });
+    // --- Vérification de l'âge (ignorée pour les admins) ---
+    const requestingUser = req.user;
+    const isAdminReq = requestingUser?.role === 'admin' || requestingUser?.role === 'super-admin' ||
+      requestingUser?.isMasterAdmin || requestingUser?.isAdmin;
+    if (!isAdminReq) {
+      const authorAge = user.getAge();
+      const requiredAge = SECTION_AGE_REQUIREMENTS[sectionId] || 25;
+      if (authorAge !== null && authorAge < requiredAge) {
+        return res.status(403).json({
+          success: false,
+          message: `Vous devez avoir au moins ${requiredAge} ans pour publier cette section. Vous pouvez sauvegarder votre brouillon et publier plus tard.`
+        });
+      }
     }
 
     // Les témoins sont optionnels à la publication — ils peuvent témoigner eux-mêmes plus tard

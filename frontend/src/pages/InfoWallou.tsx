@@ -218,7 +218,7 @@ function VideoSlot({ value, onChange, label = "Ajouter une video (max 1 min)" }:
     const v = document.createElement("video"); v.preload = "metadata";
     v.onloadedmetadata = () => {
       URL.revokeObjectURL(v.src);
-      if (v.duration > 60) { alert("La vidéo ne doit pas dépasser 1 minute."); return; }
+      if (v.duration > 30) { alert("La vidéo ne doit pas dépasser 1 minute."); return; }
       const r = new FileReader();
       r.onload = ev => onChange(ev.target?.result as string);
       r.readAsDataURL(f);

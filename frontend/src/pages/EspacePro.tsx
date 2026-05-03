@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
+import { getSessionUser, isAdmin } from "../utils/auth";
+import { ReçuTransaction } from "../components/ReçuTransaction";
 
 interface ProAccount {
   id: string;
@@ -12,12 +14,20 @@ interface ProAccount {
   country: string;
   phone: string;
   email: string;
-  services: string[];
+  services: any[];
   specialties: string[];
   status: string;
   ownerNumeroH: string;
   subscriptionStatus?: "never_paid" | "active" | "overdue" | "blocked";
   subscriptionValidUntil?: string | null;
+  photo?: string | null;
+}
+
+interface MenuItem {
+  name: string;
+  price: string;
+  category: string;
+  description: string;
 }
 
 interface Appointment {
@@ -35,7 +45,7 @@ interface Appointment {
   created_at: string;
 }
 
-type TabType = "pending" | "history" | "profile";
+type TabType = "pending" | "history" | "profile" | "menu" | "cours" | "retrait";
 type HistoryFilter = "all" | "accepted" | "rejected";
 
 /* =============================================
@@ -44,15 +54,19 @@ type HistoryFilter = "all" | "accepted" | "rejected";
 const TYPE_TO_SERVICE: Record<string, string> = {
   clinic:           "sante",
   enterprise:       "activite",
-  school:           "activite",
+  school:           "education",
   scientist:        "science",
   ngo:              "solidarite",
   security_agency:  "securite",
   supplier:         "echanges",
   vendor:           "echanges",
   producer:         "echanges",
-  broker:           "echanges",
+  broker:           "immobilier",
   journalist:       "echanges",
+  restaurant:       "restauration",
+  transport:        "transport",
+  beauty:           "beaute",
+  artisan:          "artisanat",
 };
 
 /* =============================================
@@ -165,6 +179,96 @@ const SERVICE_CONFIG: Record<string, ServiceCfg> = {
     ringColor: "ring-cyan-200 dark:ring-cyan-800",
     welcomeMsg: "Gérez vos échanges et communications",
   },
+  restauration: {
+    label: "Restauration",
+    icon: "🍽️",
+    bgGradient: "from-orange-500 to-amber-600",
+    accentBorder: "border-orange-500",
+    lightBg: "bg-orange-50",
+    darkBg: "dark:bg-orange-900/20",
+    textAccent: "text-orange-600 dark:text-orange-400",
+    badgeBg: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+    btnPrimary: "bg-orange-500 hover:bg-orange-600",
+    statCardBg: "bg-orange-500/20",
+    tabActive: "border-orange-500 text-orange-600 dark:text-orange-400",
+    ringColor: "ring-orange-200 dark:ring-orange-800",
+    welcomeMsg: "Gérez votre restaurant et publiez votre menu",
+  },
+  education: {
+    label: "Éducation",
+    icon: "🎓",
+    bgGradient: "from-blue-600 to-indigo-700",
+    accentBorder: "border-blue-500",
+    lightBg: "bg-blue-50",
+    darkBg: "dark:bg-blue-900/20",
+    textAccent: "text-blue-600 dark:text-blue-400",
+    badgeBg: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    btnPrimary: "bg-blue-600 hover:bg-blue-700",
+    statCardBg: "bg-blue-500/20",
+    tabActive: "border-blue-500 text-blue-600 dark:text-blue-400",
+    ringColor: "ring-blue-200 dark:ring-blue-800",
+    welcomeMsg: "Gérez vos cours, étudiants et publications pédagogiques",
+  },
+  immobilier: {
+    label: "Immobilier & Location",
+    icon: "🏘️",
+    bgGradient: "from-lime-600 to-green-700",
+    accentBorder: "border-lime-500",
+    lightBg: "bg-lime-50",
+    darkBg: "dark:bg-lime-900/20",
+    textAccent: "text-lime-700 dark:text-lime-400",
+    badgeBg: "bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-300",
+    btnPrimary: "bg-lime-600 hover:bg-lime-700",
+    statCardBg: "bg-lime-500/20",
+    tabActive: "border-lime-600 text-lime-700 dark:text-lime-400",
+    ringColor: "ring-lime-200 dark:ring-lime-800",
+    welcomeMsg: "Gérez vos mandats immobiliers et demandes de visite",
+  },
+  transport: {
+    label: "Transport & Livraison",
+    icon: "🚗",
+    bgGradient: "from-blue-500 to-indigo-600",
+    accentBorder: "border-blue-400",
+    lightBg: "bg-blue-50",
+    darkBg: "dark:bg-blue-900/20",
+    textAccent: "text-blue-600 dark:text-blue-400",
+    badgeBg: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    btnPrimary: "bg-blue-500 hover:bg-blue-600",
+    statCardBg: "bg-blue-500/20",
+    tabActive: "border-blue-500 text-blue-600 dark:text-blue-400",
+    ringColor: "ring-blue-200 dark:ring-blue-800",
+    welcomeMsg: "Gérez vos courses, livraisons et disponibilités",
+  },
+  beaute: {
+    label: "Beauté & Bien-être",
+    icon: "💈",
+    bgGradient: "from-fuchsia-500 to-purple-600",
+    accentBorder: "border-fuchsia-500",
+    lightBg: "bg-fuchsia-50",
+    darkBg: "dark:bg-fuchsia-900/20",
+    textAccent: "text-fuchsia-600 dark:text-fuchsia-400",
+    badgeBg: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300",
+    btnPrimary: "bg-fuchsia-500 hover:bg-fuchsia-600",
+    statCardBg: "bg-fuchsia-500/20",
+    tabActive: "border-fuchsia-500 text-fuchsia-600 dark:text-fuchsia-400",
+    ringColor: "ring-fuchsia-200 dark:ring-fuchsia-800",
+    welcomeMsg: "Gérez vos rendez-vous beauté et soins",
+  },
+  artisanat: {
+    label: "Artisanat & Services",
+    icon: "🔧",
+    bgGradient: "from-stone-600 to-amber-700",
+    accentBorder: "border-stone-500",
+    lightBg: "bg-stone-50",
+    darkBg: "dark:bg-stone-900/20",
+    textAccent: "text-stone-600 dark:text-stone-400",
+    badgeBg: "bg-stone-100 text-stone-700 dark:bg-stone-900/40 dark:text-stone-300",
+    btnPrimary: "bg-stone-600 hover:bg-stone-700",
+    statCardBg: "bg-stone-500/20",
+    tabActive: "border-stone-500 text-stone-600 dark:text-stone-400",
+    ringColor: "ring-stone-200 dark:ring-stone-700",
+    welcomeMsg: "Gérez vos interventions et demandes de service",
+  },
 };
 
 const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
@@ -176,9 +280,13 @@ const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
   supplier:        { label: "Fournisseur / Grossiste",       icon: "📦" },
   vendor:          { label: "Vendeur",                       icon: "🛒" },
   producer:        { label: "Entreprise de production",      icon: "🏭" },
-  broker:          { label: "Démarcheur / Location",         icon: "🏘️" },
+  broker:          { label: "Démarcheur / Immobilier",        icon: "🏘️" },
   scientist:       { label: "Chercheur / Scientifique",      icon: "🔬" },
   ngo:             { label: "ONG / Association",             icon: "🤝" },
+  restaurant:      { label: "Restaurant",                    icon: "🍽️" },
+  transport:       { label: "Transport & Livraison",          icon: "🚗" },
+  beauty:          { label: "Beauté & Bien-être",             icon: "💈" },
+  artisan:         { label: "Artisanat & Services",           icon: "🔧" },
 };
 
 import { config } from "../config/api";
@@ -275,7 +383,6 @@ function SubscriptionPaymentWall({
           purpose="subscription_pro"
           relatedId={account.id}
           description={`Abonnement mensuel — ${account.name}`}
-          userData={userData}
         />
       )}
     </div>
@@ -298,10 +405,38 @@ export default function EspacePro() {
   const [rejectId, setRejectId]         = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Logo
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoSuccess, setLogoSuccess]     = useState(false);
+
+  // Menu restaurant
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [showAddMenuItem, setShowAddMenuItem] = useState(false);
+  const [newMenuItem, setNewMenuItem] = useState<MenuItem>({ name: '', price: '', category: 'Plat', description: '' });
+  const [menuSaving, setMenuSaving] = useState(false);
+  const [menuTab, setMenuTab] = useState<string>('Tous');
+
+  // Retrait professionnel
+  const [retraitMontant, setRetraitMontant]             = useState('');
+  const [retraitMotif, setRetraitMotif]                 = useState('');
+  const [retraitCoord, setRetraitCoord]                 = useState('');
+  const [retraitLoading, setRetraitLoading]             = useState(false);
+  const [retraitMsg, setRetraitMsg]                     = useState('');
+  const [mesDemandes, setMesDemandes]                   = useState<any[]>([]);
+  const [loadingDemandes, setLoadingDemandes]           = useState(false);
+  const [retraitReçu, setRetraitReçu]                   = useState<any>(null);
+
+  // Cours école / prof
+  const [showPublishCourse, setShowPublishCourse] = useState(false);
+  const [newCourseData, setNewCourseData] = useState({ title: '', description: '', type: 'audio' as 'audio' | 'video' | 'ecrit', category: '', mediaFile: null as File | null });
+  const [courseSaving, setCourseSaving] = useState(false);
+  const [newStudentId, setNewStudentId] = useState('');
+  const [linkedStudents, setLinkedStudents] = useState<string[]>([]);
+
   // Vidéo réponse
   const [responseVideoId, setResponseVideoId]   = useState<string | null>(null);
   const [recording, setRecording]               = useState(false);
-  const [countdown, setCountdown]               = useState(30);
+  const [countdown, setCountdown] = useState(10);
   const [videoSent, setVideoSent]               = useState(false);
   const videoRef         = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -322,6 +457,7 @@ export default function EspacePro() {
 
   /* ---- Chargement initial ---- */
   useEffect(() => { loadAccount(); }, [id]);
+  useEffect(() => { if (tab === 'retrait' && account) loadMesDemandes(); }, [tab, account?.id]);
 
   const loadAccount = async () => {
     setLoading(true);
@@ -332,6 +468,7 @@ export default function EspacePro() {
       const data = await res.json();
       if (data.success) {
         setAccount(data.account);
+        loadMenuItems(data.account);
         await loadAppointments(data.account.id);
       }
     } catch (err) {
@@ -339,6 +476,48 @@ export default function EspacePro() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMesDemandes = async () => {
+    setLoadingDemandes(true);
+    try {
+      const res = await fetch(`${API}/api/withdrawal-requests/mes-demandes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setMesDemandes(data.demandes || []);
+    } catch { /* ignore */ } finally {
+      setLoadingDemandes(false);
+    }
+  };
+
+  const soumettreRetrait = async () => {
+    if (!account) return;
+    const montant = parseInt(retraitMontant);
+    if (!montant || montant < 1000) return setRetraitMsg('Montant minimum : 1 000 GNF');
+    if (!retraitCoord) return setRetraitMsg('Indiquez vos coordonnées de paiement (Orange Money...)');
+    setRetraitLoading(true);
+    setRetraitMsg('');
+    try {
+      const r = await fetch(`${API}/api/withdrawal-requests`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          proAccountId: account.id,
+          montant,
+          motif: retraitMotif,
+          coordonneesPaiement: retraitCoord
+        })
+      });
+      const d = await r.json();
+      if (d.success) {
+        setRetraitMsg('✅ ' + d.message);
+        setRetraitMontant(''); setRetraitMotif(''); setRetraitCoord('');
+        loadMesDemandes();
+      } else {
+        setRetraitMsg('❌ ' + d.message);
+      }
+    } finally { setRetraitLoading(false); }
   };
 
   const loadAppointments = useCallback(async (proId: string) => {
@@ -438,7 +617,7 @@ export default function EspacePro() {
 
       recorder.start();
       setRecording(true);
-      setCountdown(30);
+      setCountdown(10);
 
       const interval = setInterval(() => {
         setCountdown((c) => {
@@ -451,6 +630,108 @@ export default function EspacePro() {
       alert("Impossible d'accéder à la caméra");
       setResponseVideoId(null);
     }
+  };
+
+  /* ---- Upload logo ---- */
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !account) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Fichier trop grand. Maximum : 2 Mo");
+      return;
+    }
+    setLogoUploading(true);
+    setLogoSuccess(false);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      try {
+        const res  = await fetch(`${API}/api/professionals/${account.id}`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ photo: base64 }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setAccount(prev => prev ? { ...prev, photo: base64 } : prev);
+          setLogoSuccess(true);
+          setTimeout(() => setLogoSuccess(false), 3500);
+        }
+      } finally {
+        setLogoUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /* ---- Chargement menu restaurant ---- */
+  const loadMenuItems = (acc: ProAccount) => {
+    if (acc.type === 'restaurant') {
+      const items = (acc.services || []).filter((s: any) => typeof s === 'object' && s !== null && s.name);
+      setMenuItems(items);
+    }
+  };
+
+  /* ---- Sauvegarder le menu ---- */
+  const saveMenu = async (updatedItems: MenuItem[]) => {
+    if (!account) return;
+    setMenuSaving(true);
+    try {
+      const res = await fetch(`${API}/api/professionals/${account.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ services: updatedItems }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMenuItems(updatedItems);
+        setAccount(prev => prev ? { ...prev, services: updatedItems } : prev);
+      }
+    } catch (err) { console.error(err); }
+    finally { setMenuSaving(false); }
+  };
+
+  const addMenuItem = async () => {
+    if (!newMenuItem.name.trim() || !newMenuItem.price.trim()) {
+      alert("Nom et prix requis");
+      return;
+    }
+    const updated = [...menuItems, { ...newMenuItem }];
+    await saveMenu(updated);
+    setNewMenuItem({ name: '', price: '', category: 'Plat', description: '' });
+    setShowAddMenuItem(false);
+  };
+
+  const removeMenuItem = async (idx: number) => {
+    const updated = menuItems.filter((_, i) => i !== idx);
+    await saveMenu(updated);
+  };
+
+  /* ---- Publier un cours (école/prof) ---- */
+  const publishCourse = async () => {
+    if (!newCourseData.title.trim()) { alert("Titre requis"); return; }
+    setCourseSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", newCourseData.title.trim());
+      formData.append("description", newCourseData.description);
+      formData.append("type", newCourseData.type);
+      formData.append("category", newCourseData.category);
+      if (newCourseData.mediaFile) formData.append("media", newCourseData.mediaFile);
+      const res = await fetch(`${API}/api/education/courses/publish`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (res.ok) {
+        alert("Cours publié avec succès !");
+        setShowPublishCourse(false);
+        setNewCourseData({ title: '', description: '', type: 'audio', category: '', mediaFile: null });
+      } else {
+        alert("Erreur lors de la publication");
+      }
+    } catch (err) { console.error(err); }
+    finally { setCourseSaving(false); }
   };
 
   /* ---- Calculs dérivés ---- */
@@ -491,8 +772,11 @@ export default function EspacePro() {
     </div>
   );
 
-  // Si l'abonnement n'est pas actif, on bloque tout le dashboard pro avec bouton de paiement
-  if (account.status === "approved" && account.subscriptionStatus && account.subscriptionStatus !== "active") {
+  const currentUser = getSessionUser();
+  const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== account.ownerNumeroH;
+
+  // Mur d'abonnement — bypassé pour les admins (ils doivent pouvoir inspecter n'importe quel dashboard)
+  if (!isAdminViewing && account.status === "approved" && account.subscriptionStatus && account.subscriptionStatus !== "active") {
     return (
       <SubscriptionPaymentWall account={account} userData={userData} onSuccess={() => window.location.reload()} />
     );
@@ -503,6 +787,14 @@ export default function EspacePro() {
      ============================================================ */
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+
+      {/* Bannière super admin — visible uniquement quand l'admin consulte un compte qui ne lui appartient pas */}
+      {isAdminViewing && (
+        <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm font-semibold sticky top-[72px] z-50 shadow-md">
+          <span>👁️ Mode Admin — Vue lecture seule · Compte de <strong>{account.ownerNumeroH}</strong></span>
+          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Actions désactivées</span>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════
           HEADER SERVICE (gradient)
@@ -521,12 +813,30 @@ export default function EspacePro() {
             <span className="text-xs bg-white/25 px-3 py-1 rounded-full font-semibold tracking-wide uppercase">
               {svc.icon} {svc.label}
             </span>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => navigate("/wallet-pro")}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors min-h-[36px]"
+              >
+                💰 Mon Wallet Pro
+              </button>
+            </div>
           </div>
 
           {/* Identité du compte */}
           <div className="flex items-start gap-4 mb-6">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl flex-shrink-0 shadow-inner">
-              {typeInfo.icon}
+            <div className="w-16 h-16 rounded-2xl flex-shrink-0 shadow-inner overflow-hidden border-2 border-white/30">
+              {account.photo ? (
+                <img
+                  src={account.photo}
+                  alt={`Logo ${account.name}`}
+                  className="w-full h-full object-contain bg-white"
+                />
+              ) : (
+                <div className="w-full h-full bg-white/20 flex items-center justify-center text-4xl">
+                  {typeInfo.icon}
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{account.name}</h1>
@@ -567,8 +877,11 @@ export default function EspacePro() {
             {([
               { key: "pending"  as TabType, icon: "⏳", label: "Demandes",   badge: pendingApts.length },
               { key: "history"  as TabType, icon: "📋", label: "Historique", badge: 0 },
+              ...(account.type === 'restaurant' ? [{ key: "menu" as TabType, icon: "🍽️", label: "Mon Menu", badge: 0 }] : []),
+              ...(account.type === 'school' ? [{ key: "cours" as TabType, icon: "📚", label: "Cours", badge: 0 }] : []),
+              { key: "retrait" as TabType, icon: "💸", label: "Retrait", badge: mesDemandes.filter(d => d.statut === 'en_attente').length },
               { key: "profile"  as TabType, icon: "👤", label: "Mon profil", badge: 0 },
-            ] as const).map((t) => (
+            ]).map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
@@ -683,7 +996,7 @@ export default function EspacePro() {
                         ) : (
                           <div>
                             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">
-                              Message vidéo du patient (30 secondes)
+                              Message vidéo du patient (10 secondes)
                             </p>
                             {apt.videoUrl ? (
                               <video src={apt.videoUrl} controls
@@ -697,32 +1010,38 @@ export default function EspacePro() {
                         )}
                       </div>
 
-                      {/* Boutons d'action */}
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => handleAccept(apt.id)}
-                          disabled={!!actionLoading}
-                          className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          {actionLoading === apt.id
-                            ? <span className="animate-spin">⏳</span>
-                            : <>✅ Accepter</>}
-                        </button>
-                        <button
-                          onClick={() => startVideoRecording(apt.id)}
-                          disabled={!!actionLoading}
-                          className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          📹 Accepter + Vidéo
-                        </button>
-                        <button
-                          onClick={() => { setRejectId(apt.id); setRejectReason(""); }}
-                          disabled={!!actionLoading}
-                          className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          ❌ Refuser
-                        </button>
-                      </div>
+                      {/* Boutons d'action — masqués en mode admin lecture seule */}
+                      {isAdminViewing ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
+                          👁️ Vue admin — Vous ne pouvez pas agir sur ce rendez-vous
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleAccept(apt.id)}
+                            disabled={!!actionLoading}
+                            className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            {actionLoading === apt.id
+                              ? <span className="animate-spin">⏳</span>
+                              : <>✅ Accepter</>}
+                          </button>
+                          <button
+                            onClick={() => startVideoRecording(apt.id)}
+                            disabled={!!actionLoading}
+                            className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            📹 Accepter + Vidéo
+                          </button>
+                          <button
+                            onClick={() => { setRejectId(apt.id); setRejectReason(""); }}
+                            disabled={!!actionLoading}
+                            className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            ❌ Refuser
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -816,6 +1135,374 @@ export default function EspacePro() {
         )}
 
         {/* ─────────────────────────────
+            ONGLET : MON MENU (Restaurant)
+            ───────────────────────────── */}
+        {tab === "menu" && account.type === "restaurant" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 text-lg">
+                🍽️ Mon Menu — {menuItems.length} plat{menuItems.length > 1 ? "s" : ""}
+              </h2>
+              <button
+                onClick={() => setShowAddMenuItem(true)}
+                className={`min-h-[42px] px-4 py-2 ${svc.btnPrimary} text-white text-sm font-semibold rounded-xl transition-colors`}
+              >
+                ➕ Ajouter un plat
+              </button>
+            </div>
+
+            {/* Onglets catégories */}
+            {menuItems.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {['Tous', ...Array.from(new Set(menuItems.map(m => m.category || 'Plat')))].map(cat => (
+                  <button key={cat} onClick={() => setMenuTab(cat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${menuTab === cat ? `${svc.btnPrimary} text-white` : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {menuItems.length === 0 ? (
+              <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
+                <div className="text-6xl mb-4">🍽️</div>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">Votre menu est vide</p>
+                <p className="text-sm text-gray-400 mt-1">Ajoutez vos plats pour que les clients puissent les voir</p>
+                <button onClick={() => setShowAddMenuItem(true)}
+                  className={`mt-4 px-5 py-2 ${svc.btnPrimary} text-white font-semibold rounded-xl text-sm`}>
+                  ➕ Ajouter le premier plat
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {menuItems.filter(m => menuTab === 'Tous' || (m.category || 'Plat') === menuTab).map((item, idx) => (
+                  <div key={idx} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm ring-1 ${svc.ringColor} p-4 flex items-start justify-between gap-3`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 dark:text-gray-100">{item.name}</p>
+                      {item.description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.description}</p>}
+                      <span className={`inline-block mt-1 px-2 py-0.5 ${svc.badgeBg} rounded text-xs`}>{item.category}</span>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <span className="font-bold text-orange-600 dark:text-orange-400 text-sm whitespace-nowrap">{item.price}</span>
+                      {!isAdminViewing && (
+                        <button onClick={() => removeMenuItem(idx)} disabled={menuSaving}
+                          className="text-xs text-red-500 hover:text-red-700 font-medium">
+                          🗑️ Suppr.
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Formulaire ajout plat */}
+            {showAddMenuItem && !isAdminViewing && (
+              <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">➕ Ajouter un plat au menu</h3>
+                  <div className="space-y-3">
+                    <input type="text" placeholder="Nom du plat *" value={newMenuItem.name}
+                      onChange={e => setNewMenuItem(p => ({ ...p, name: e.target.value }))}
+                      className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                    <input type="text" placeholder="Prix (ex: 15 000 FG) *" value={newMenuItem.price}
+                      onChange={e => setNewMenuItem(p => ({ ...p, price: e.target.value }))}
+                      className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                    <select value={newMenuItem.category} onChange={e => setNewMenuItem(p => ({ ...p, category: e.target.value }))}
+                      className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-400">
+                      <option value="Plat">Plat principal</option>
+                      <option value="Entrée">Entrée</option>
+                      <option value="Dessert">Dessert</option>
+                      <option value="Boisson">Boisson</option>
+                      <option value="Spécialité">Spécialité</option>
+                    </select>
+                    <textarea placeholder="Description (optionnel)" value={newMenuItem.description}
+                      onChange={e => setNewMenuItem(p => ({ ...p, description: e.target.value }))}
+                      rows={2} className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <button onClick={() => setShowAddMenuItem(false)}
+                      className="flex-1 min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl">
+                      Annuler
+                    </button>
+                    <button onClick={addMenuItem} disabled={menuSaving}
+                      className={`flex-1 min-h-[44px] px-4 py-2 ${svc.btnPrimary} disabled:opacity-50 text-white font-semibold rounded-xl`}>
+                      {menuSaving ? "⏳ Enregistrement..." : "✅ Ajouter"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─────────────────────────────
+            ONGLET : COURS (École / Prof)
+            ───────────────────────────── */}
+        {tab === "cours" && account.type === "school" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 text-lg">📚 Gestion des cours</h2>
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => setShowPublishCourse(true)}
+                  className={`min-h-[42px] px-4 py-2 ${svc.btnPrimary} text-white text-sm font-semibold rounded-xl transition-colors`}>
+                  ➕ Publier un cours
+                </button>
+                <button onClick={() => window.open('/mes-cours', '_blank')}
+                  className="min-h-[42px] px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                  📖 Voir tous les cours
+                </button>
+              </div>
+            </div>
+
+            {/* Section lier un apprenant */}
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} p-5`}>
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
+                👥 Lier un apprenant à ce cours
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Entrez le NumeroH de l'apprenant pour lui donner accès aux cours de cette école.
+              </p>
+              <div className="flex gap-2">
+                <input type="text" placeholder="Ex: G0C0P0R0E0F0 0" value={newStudentId}
+                  onChange={e => setNewStudentId(e.target.value)}
+                  className="flex-1 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                <button
+                  onClick={() => {
+                    if (!newStudentId.trim()) return;
+                    if (!linkedStudents.includes(newStudentId.trim())) {
+                      setLinkedStudents(prev => [...prev, newStudentId.trim()]);
+                    }
+                    setNewStudentId('');
+                  }}
+                  className={`min-h-[42px] px-4 py-2 ${svc.btnPrimary} text-white text-sm font-semibold rounded-xl`}>
+                  Lier
+                </button>
+              </div>
+              {linkedStudents.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Apprenants liés :</p>
+                  {linkedStudents.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-3 py-2">
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">👤 {s}</span>
+                      <button onClick={() => setLinkedStudents(prev => prev.filter((_, j) => j !== i))}
+                        className="text-xs text-red-500 hover:text-red-700">Retirer</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Formulaire publication cours */}
+            {showPublishCourse && !isAdminViewing && (
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} p-5`}>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">📝 Nouveau cours</h3>
+                <div className="space-y-3">
+                  <input type="text" placeholder="Titre du cours *" value={newCourseData.title}
+                    onChange={e => setNewCourseData(p => ({ ...p, title: e.target.value }))}
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  <textarea placeholder="Description du cours" value={newCourseData.description}
+                    onChange={e => setNewCourseData(p => ({ ...p, description: e.target.value }))}
+                    rows={3} className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <select value={newCourseData.type} onChange={e => setNewCourseData(p => ({ ...p, type: e.target.value as any }))}
+                      className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                      <option value="audio">🎧 Audio</option>
+                      <option value="video">🎥 Vidéo</option>
+                      <option value="ecrit">📝 Écrit</option>
+                    </select>
+                    <input type="text" placeholder="Catégorie (Maths, Histoire…)" value={newCourseData.category}
+                      onChange={e => setNewCourseData(p => ({ ...p, category: e.target.value }))}
+                      className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Fichier (audio, vidéo ou document)</label>
+                    <input type="file" accept="audio/*,video/*,.pdf,.doc,.docx"
+                      onChange={e => {
+                        const file = e.target.files?.[0] || null;
+                        if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
+                          const url = URL.createObjectURL(file);
+                          const el = document.createElement(file.type.startsWith('video/') ? 'video' : 'audio');
+                          el.src = url;
+                          el.onloadedmetadata = () => {
+                            URL.revokeObjectURL(url);
+                            if (el.duration > 30) {
+                              alert("La durée du fichier audio/vidéo ne doit pas dépasser 30 secondes.");
+                              e.target.value = '';
+                            } else {
+                              setNewCourseData(p => ({ ...p, mediaFile: file }));
+                            }
+                          };
+                        } else {
+                          setNewCourseData(p => ({ ...p, mediaFile: file }));
+                        }
+                      }}
+                      className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-100 file:text-blue-800 file:font-medium" />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-4">
+                  <button onClick={() => setShowPublishCourse(false)}
+                    className="flex-1 min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl">
+                    Annuler
+                  </button>
+                  <button onClick={publishCourse} disabled={courseSaving}
+                    className={`flex-1 min-h-[44px] px-4 py-2 ${svc.btnPrimary} disabled:opacity-50 text-white font-semibold rounded-xl`}>
+                    {courseSaving ? "⏳ Publication..." : "📤 Publier le cours"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─────────────────────────────
+            ONGLET : RETRAIT PROFESSIONNEL
+            ───────────────────────────── */}
+        {tab === "retrait" && (
+          <div className="space-y-4">
+
+            {/* Reçu retrait */}
+            {retraitReçu && (
+              <ReçuTransaction
+                id={retraitReçu.id}
+                type="retrait_pro"
+                montant={retraitReçu.montant}
+                date={retraitReçu.date}
+                acteurNom={retraitReçu.acteurNom}
+                beneficiaireNom={retraitReçu.beneficiaireNom}
+                beneficiaireContact={retraitReçu.beneficiaireContact}
+                description={retraitReçu.description}
+                proNom={account?.name}
+                logoUrl={account?.photo || undefined}
+                onClose={() => setRetraitReçu(null)}
+              />
+            )}
+
+            {/* Formulaire de demande */}
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+              <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4`}>
+                <h2 className="text-white font-bold text-base">💸 Demande de retrait</h2>
+                <p className="text-white/70 text-xs mt-0.5">
+                  L'administrateur validera votre demande et vous remettra un reçu
+                </p>
+              </div>
+              <div className="p-5 space-y-3">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
+                  ⚠️ Tout retrait doit être approuvé par l'administrateur de la plateforme. Vous recevrez un reçu officiel avec le logo de votre établissement lors de la validation.
+                </div>
+
+                {account?.photo && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <img src={account.photo} alt={account.name} className="w-12 h-12 rounded-xl object-cover border border-gray-200" />
+                    <div>
+                      <p className="font-bold text-sm text-gray-900">{account.name}</p>
+                      <p className="text-xs text-gray-500">{account.type}</p>
+                    </div>
+                  </div>
+                )}
+
+                <input
+                  type="number"
+                  value={retraitMontant}
+                  onChange={e => setRetraitMontant(e.target.value)}
+                  placeholder="Montant à retirer en GNF (min 1 000)"
+                  min="1000"
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+                />
+                <input
+                  type="text"
+                  value={retraitCoord}
+                  onChange={e => setRetraitCoord(e.target.value)}
+                  placeholder="Orange Money ou compte bancaire pour le virement"
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+                />
+                <textarea
+                  value={retraitMotif}
+                  onChange={e => setRetraitMotif(e.target.value)}
+                  placeholder="Motif du retrait (ex: frais de fonctionnement, salaires...)"
+                  rows={2}
+                  className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none resize-none"
+                />
+
+                {retraitMsg && (
+                  <p className={`text-xs font-semibold text-center rounded-lg px-3 py-2 ${retraitMsg.startsWith('✅') ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                    {retraitMsg}
+                  </p>
+                )}
+
+                <button
+                  onClick={soumettreRetrait}
+                  disabled={retraitLoading}
+                  className={`w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50 ${svc.btnPrimary}`}
+                >
+                  {retraitLoading ? 'Envoi en cours...' : '📤 Soumettre la demande de retrait'}
+                </button>
+              </div>
+            </div>
+
+            {/* Mes demandes précédentes */}
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">Mes demandes de retrait</h3>
+              </div>
+              <div className="p-5">
+                {loadingDemandes ? (
+                  <div className="flex justify-center py-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                  </div>
+                ) : mesDemandes.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">Aucune demande de retrait pour le moment.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {mesDemandes.map(d => (
+                      <div key={d.id} className="flex items-start gap-3 p-4 rounded-xl border border-gray-100 bg-gray-50">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-gray-900 text-sm">{Number(d.montant).toLocaleString()} GNF</span>
+                            <span className={`text-xs font-bold rounded-full px-2 py-0.5 ${
+                              d.statut === 'valide' ? 'bg-green-100 text-green-700' :
+                              d.statut === 'rejete' ? 'bg-red-100 text-red-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>
+                              {d.statut === 'valide' ? '✅ Validé' : d.statut === 'rejete' ? '❌ Rejeté' : '⏳ En attente'}
+                            </span>
+                          </div>
+                          {d.motif && <p className="text-xs text-gray-500 mb-1">{d.motif}</p>}
+                          {d.coordonneesPaiement && <p className="text-xs text-gray-400">{d.coordonneesPaiement}</p>}
+                          {d.raisonRejet && <p className="text-xs text-red-600 mt-1">Motif rejet : {d.raisonRejet}</p>}
+                          {d.valideParNom && d.statut === 'valide' && (
+                            <p className="text-xs text-green-600 mt-1">Validé par {d.valideParNom}</p>
+                          )}
+                          <p className="text-xs text-gray-300 mt-1">
+                            {new Date(d.creeLe).toLocaleDateString('fr-GN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
+                        {d.statut === 'valide' && (
+                          <button
+                            onClick={() => setRetraitReçu({
+                              id: d.receiptRef || d.id,
+                              montant: Number(d.montant),
+                              date: d.valideAt || d.creeLe,
+                              acteurNom: d.ownerNom,
+                              beneficiaireNom: d.proAccountName,
+                              beneficiaireContact: d.coordonneesPaiement,
+                              description: d.motif,
+                            })}
+                            className="text-xs font-bold text-blue-600 underline flex-shrink-0"
+                          >
+                            🧾 Reçu
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─────────────────────────────────────────────
             ONGLET : MON PROFIL
             ───────────────────────────── */}
         {tab === "profile" && (
@@ -904,6 +1591,69 @@ export default function EspacePro() {
               </div>
             )}
 
+            {/* Moftal Pay card — clinic & supplier */}
+            {(account.type === 'clinic' || account.type === 'supplier') && (
+              <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl p-5 flex items-start gap-4">
+                <span className="text-3xl flex-shrink-0">💳</span>
+                <div className="flex-1">
+                  <h3 className="font-bold text-teal-900 text-sm mb-1">Moftal Pay</h3>
+                  <p className="text-xs text-teal-700 mb-3">
+                    {account.type === 'clinic'
+                      ? "Recevez des paiements de familles et gérez votre wallet professionnel depuis une seule interface."
+                      : "Encaissez les paiements de vos clients familles et suivez votre wallet fournisseur facilement."}
+                  </p>
+                  <button
+                    onClick={() => navigate("/wallet-pro")}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-bold"
+                    style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}
+                  >
+                    💰 Accéder à mon Wallet Pro
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Logo de l'établissement */}
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+              <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4`}>
+                <h2 className="text-white font-bold text-base">Logo de l'établissement</h2>
+                <p className="text-white/70 text-xs mt-0.5">
+                  Personnalisez l'interface — les membres reconnaîtront votre {typeInfo.label.toLowerCase()} grâce à ce logo
+                </p>
+              </div>
+              <div className="p-5 flex flex-col sm:flex-row items-center gap-5">
+                {/* Aperçu */}
+                <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center shadow-inner border border-gray-200 dark:border-gray-600">
+                  {account.photo ? (
+                    <img src={account.photo} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <span className="text-5xl">{typeInfo.icon}</span>
+                  )}
+                </div>
+                {/* Upload */}
+                <div className="flex-1 w-full">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    Ce logo apparaît dans votre dashboard et sur votre fiche publique. Format PNG, JPG ou SVG recommandé.
+                  </p>
+                  <label className={`cursor-pointer inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 ${logoUploading ? "opacity-60 cursor-not-allowed" : ""} ${svc.btnPrimary} text-white font-semibold rounded-xl transition-colors text-sm`}>
+                    {logoUploading ? "⏳ Envoi en cours..." : "📷 Choisir un logo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoUpload}
+                      disabled={logoUploading}
+                    />
+                  </label>
+                  {logoSuccess && (
+                    <p className="text-green-600 dark:text-green-400 text-sm mt-2 font-medium flex items-center gap-1">
+                      ✅ Logo mis à jour — visible dans votre header
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Bouton mettre à jour */}
             <button
               onClick={() => navigate(`/inscription-pro?edit=${account.id}`)}
@@ -985,7 +1735,7 @@ export default function EspacePro() {
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 rounded-b-xl">
                   <div
                     className="h-full bg-red-500 transition-all duration-1000 rounded-b-xl"
-                    style={{ width: `${((30 - countdown) / 30) * 100}%` }}
+                    style={{ width: `${((10 - countdown) / 10) * 100}%` }}
                   />
                 </div>
                 <video ref={videoRef} className="w-full rounded-xl bg-black aspect-video object-cover" muted playsInline />

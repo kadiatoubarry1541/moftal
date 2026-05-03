@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminPanel } from "../components/AdminPanel";
+import { AdminCompteFamille } from "../components/AdminCompteFamille";
+import { AdminWalletPro } from "../components/AdminWalletPro";
 import { getSessionUser, isAdmin, isMasterAdmin } from "../utils/auth";
 import { getStats, getAllUsers, getAllFamilies, getMySectors, getPageAdmins, addPageAdmin, removePageAdmin, type SectorInfo } from "../utils/adminApi";
 import { config } from "../config/api";
@@ -118,6 +120,7 @@ export default function AdminDashboard() {
     | "/securite"
     | "/journalisme"
   >("/sante");
+  const [servicesTypeFilter, setServicesTypeFilter] = useState<string>("all");
   const navigate = useNavigate();
 
   const API_BASE = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
@@ -481,11 +484,36 @@ export default function AdminDashboard() {
     { id: "users", label: "Utilisateurs", icon: "👥" },
     { id: "points", label: "Points Galerie", icon: "🪙" },
     { id: "tools", label: "Outils", icon: "🔧" },
-    ...(isSuperAdmin7(userData) ? [{ id: "sector-admins", label: "Admins de secteurs", icon: "🏛️" }] : []),
+    ...(isSuperAdmin7(userData) ? [
+      { id: "services", label: "Services", icon: "🌐" },
+      { id: "sector-admins", label: "Admins de secteurs", icon: "🏛️" },
+      { id: "moftal-pay", label: "Moftal Pay", icon: "💰" },
+    ] : []),
   ];
+  const G0_TABS = ["overview", "pros", "points"];
   const adminTabs = sectorAdminOnly
     ? allAdminTabs.filter((t) => t.id === "pros")
+    : isSubAdmin0(userData)
+    ? allAdminTabs.filter((t) => G0_TABS.includes(t.id))
     : allAdminTabs;
+
+  const SERVICE_GROUPS = [
+    { id: "all",        label: "Tous",       icon: "🌐", types: [] as string[], from: "from-gray-600",   to: "to-gray-700"   },
+    { id: "sante",      label: "Santé",      icon: "🏥", types: ["clinic"],                              from: "from-emerald-600", to: "to-teal-600"  },
+    { id: "securite",   label: "Sécurité",   icon: "🛡️", types: ["security_agency"],                    from: "from-slate-600",   to: "to-gray-700"  },
+    { id: "education",  label: "Éducation",  icon: "🎓", types: ["school", "enterprise"],               from: "from-amber-500",   to: "to-orange-500"},
+    { id: "science",    label: "Science",    icon: "🔬", types: ["scientist"],                           from: "from-indigo-600",  to: "to-violet-600"},
+    { id: "solidarite", label: "Solidarité", icon: "🤝", types: ["ngo"],                                from: "from-rose-500",    to: "to-pink-600"  },
+    { id: "echanges",   label: "Échanges",   icon: "🔄", types: ["supplier","vendor","producer","broker","journalist"], from: "from-cyan-600", to: "to-blue-600" },
+  ];
+
+  const approvedPros = allPros.filter(p => p.status === "approved");
+  const servicesFiltered = servicesTypeFilter === "all"
+    ? approvedPros
+    : approvedPros.filter(p => {
+        const group = SERVICE_GROUPS.find(g => g.id === servicesTypeFilter);
+        return group ? group.types.includes(p.type) : true;
+      });
 
   const filteredFamilies = families.filter(f =>
     !searchFamily || f.nomFamille.toLowerCase().includes(searchFamily.toLowerCase()) ||
@@ -551,7 +579,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Statistiques en temps réel (masquées pour admin secteur uniquement) */}
-      {!sectorAdminOnly && stats && (
+      {!sectorAdminOnly && !isSubAdmin0(userData) && stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
           {[
             { val: stats.totalUsers, label: "Utilisateurs", from: "from-blue-500", to: "to-blue-600" },
@@ -581,7 +609,8 @@ export default function AdminDashboard() {
                 if (tab.id === "families" && families.length === 0) loadFamilies();
                 if (tab.id === "couples" && couples.length === 0) loadCouples();
                 if (tab.id === "parent-child" && parentChildLinks.length === 0) loadParentChildLinks();
-                if (tab.id === "pros" && allPros.length === 0) loadAllPros(proFilter);
+                if (tab.id === "pros") { loadAllPros("all"); setProFilter("all"); }
+                if (tab.id === "services") loadAllPros("approved");
                 if (tab.id === "sector-admins") loadPageAdmins();
               }}
               className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
@@ -603,90 +632,131 @@ export default function AdminDashboard() {
           {/* ========== VUE D'ENSEMBLE ========== */}
           {adminSection === "overview" && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-3xl">🎖️</span>
-                    <div>
-                      <h3 className="font-semibold text-blue-900">Gestion des Badges</h3>
-                      <p className="text-xs text-blue-700">Créer et assigner des badges</p>
-                    </div>
+              {isSubAdmin0(userData) ? (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+                    <div className="text-5xl mb-3">🛡️</div>
+                    <h2 className="text-xl font-bold text-blue-900 mb-2">Espace Administration délégué</h2>
+                    <p className="text-blue-700 text-sm max-w-sm mx-auto">
+                      Gérez les comptes professionnels accordés par l'administrateur principal et attribuez des points galerie aux familles.
+                    </p>
                   </div>
-                  <button onClick={() => navigate("/admin/badges")} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                    Ouvrir
-                  </button>
-                </div>
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-3xl">🎨</span>
-                    <div>
-                      <h3 className="font-semibold text-purple-900">Gestion des Logos</h3>
-                      <p className="text-xs text-purple-700">Créer et assigner des logos</p>
-                    </div>
-                  </div>
-                  <button onClick={() => navigate("/admin/logos")} className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
-                    Ouvrir
-                  </button>
-                </div>
-                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-5 border border-red-200">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-3xl">🔍</span>
-                    <div>
-                      <h3 className="font-semibold text-red-900">Contrôle IA</h3>
-                      <p className="text-xs text-red-700">Détecter les images inappropriées</p>
-                    </div>
-                  </div>
-                  <button onClick={() => navigate("/admin/moderation")} className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
-                    Lancer le contrôle
-                  </button>
-                </div>
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="text-3xl">👥</span>
-                    <div>
-                      <h3 className="font-semibold text-green-900">Gestion Utilisateurs</h3>
-                      <p className="text-xs text-green-700">Voir et gérer tous les comptes</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setAdminSection("users")} className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                    Ouvrir
-                  </button>
-                </div>
-              </div>
-
-              {/* Aperçu rapide */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                  <h3 className="font-semibold text-gray-800 mb-3">📊 Statistiques</h3>
-                  {statsLoading ? <p className="text-sm text-gray-500">Chargement...</p> : stats ? (
-                    <div className="space-y-1.5 text-sm">
-                      <div className="flex justify-between"><span className="text-gray-600">Total utilisateurs</span><strong>{stats.totalUsers}</strong></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Actifs</span><strong className="text-green-600">{stats.activeUsers}</strong></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Familles</span><strong className="text-indigo-600">{stats.totalFamilies}</strong></div>
-                      <div className="flex justify-between"><span className="text-gray-600">Vivants / Défunts</span><strong>{stats.totalVivants} / {stats.totalDefunts}</strong></div>
-                    </div>
-                  ) : <p className="text-sm text-gray-500">Aucune donnée</p>}
-                  <button onClick={loadStats} className="mt-3 w-full px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors">Actualiser</button>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                  <h3 className="font-semibold text-gray-800 mb-3">👥 Utilisateurs récents</h3>
-                  {recentUsers.length > 0 ? (
-                    <div className="space-y-2">
-                      {recentUsers.slice(0, 5).map((u) => (
-                        <div key={u.numeroH} className="flex items-center gap-2 text-sm">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                            {u.prenom?.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-800">{u.prenom} {u.nomFamille}</div>
-                            <div className="text-xs text-gray-500">{u.numeroH}</div>
-                          </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl">📋</span>
+                        <div>
+                          <h3 className="font-semibold text-orange-900">Comptes Professionnels</h3>
+                          <p className="text-xs text-orange-700">Valider et gérer les abonnements accordés</p>
                         </div>
-                      ))}
+                      </div>
+                      <button onClick={() => { setAdminSection("pros"); loadAllPros(proFilter); }} className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium transition-colors">Ouvrir</button>
                     </div>
-                  ) : <p className="text-sm text-gray-500">Aucun utilisateur récent</p>}
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl">🪙</span>
+                        <div>
+                          <h3 className="font-semibold text-indigo-900">Points Galerie</h3>
+                          <p className="text-xs text-indigo-700">Attribuer des points aux familles</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setAdminSection("points")} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors">Ouvrir</button>
+                    </div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-sm text-amber-800">
+                      <strong>Rappel :</strong> Vous ne voyez que les comptes professionnels que l'administrateur principal vous a accordés. Les autres sections sont réservées à l'administration principale.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl">🎖️</span>
+                        <div>
+                          <h3 className="font-semibold text-blue-900">Gestion des Badges</h3>
+                          <p className="text-xs text-blue-700">Créer et assigner des badges</p>
+                        </div>
+                      </div>
+                      <button onClick={() => navigate("/admin/badges")} className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                        Ouvrir
+                      </button>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl">🎨</span>
+                        <div>
+                          <h3 className="font-semibold text-purple-900">Gestion des Logos</h3>
+                          <p className="text-xs text-purple-700">Créer et assigner des logos</p>
+                        </div>
+                      </div>
+                      <button onClick={() => navigate("/admin/logos")} className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
+                        Ouvrir
+                      </button>
+                    </div>
+                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-5 border border-red-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl">🔍</span>
+                        <div>
+                          <h3 className="font-semibold text-red-900">Contrôle IA</h3>
+                          <p className="text-xs text-red-700">Détecter les images inappropriées</p>
+                        </div>
+                      </div>
+                      <button onClick={() => navigate("/admin/moderation")} className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm">
+                        Lancer le contrôle
+                      </button>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl">👥</span>
+                        <div>
+                          <h3 className="font-semibold text-green-900">Gestion Utilisateurs</h3>
+                          <p className="text-xs text-green-700">Voir et gérer tous les comptes</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setAdminSection("users")} className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                        Ouvrir
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Aperçu rapide */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                      <h3 className="font-semibold text-gray-800 mb-3">📊 Statistiques</h3>
+                      {statsLoading ? <p className="text-sm text-gray-500">Chargement...</p> : stats ? (
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex justify-between"><span className="text-gray-600">Total utilisateurs</span><strong>{stats.totalUsers}</strong></div>
+                          <div className="flex justify-between"><span className="text-gray-600">Actifs</span><strong className="text-green-600">{stats.activeUsers}</strong></div>
+                          <div className="flex justify-between"><span className="text-gray-600">Familles</span><strong className="text-indigo-600">{stats.totalFamilies}</strong></div>
+                          <div className="flex justify-between"><span className="text-gray-600">Vivants / Défunts</span><strong>{stats.totalVivants} / {stats.totalDefunts}</strong></div>
+                        </div>
+                      ) : <p className="text-sm text-gray-500">Aucune donnée</p>}
+                      <button onClick={loadStats} className="mt-3 w-full px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors">Actualiser</button>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                      <h3 className="font-semibold text-gray-800 mb-3">👥 Utilisateurs récents</h3>
+                      {recentUsers.length > 0 ? (
+                        <div className="space-y-2">
+                          {recentUsers.slice(0, 5).map((u) => (
+                            <div key={u.numeroH} className="flex items-center gap-2 text-sm">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                {u.prenom?.charAt(0)}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-800">{u.prenom} {u.nomFamille}</div>
+                                <div className="text-xs text-gray-500">{u.numeroH}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-sm text-gray-500">Aucun utilisateur récent</p>}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -914,6 +984,77 @@ export default function AdminDashboard() {
           {/* ========== PROFESSIONNELS ========== */}
           {adminSection === "pros" && (
             <div className="space-y-4">
+
+              {/* ── PANORAMA DES TYPES DE COMPTES ── */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">🗂️ Panorama des types de comptes professionnels</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">15 types disponibles — tous ont un espace pro (rendez-vous / historique / profil)</p>
+                  </div>
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-200">
+                    {allPros.length} comptes au total
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-y divide-gray-100 sm:divide-x sm:divide-y-0" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px,1fr))" }}>
+                  {[
+                    { type: "clinic",          icon: "🏥", label: "Clinique / Hôpital",          service: "Santé",       dashboard: true,  gestionInterne: true  },
+                    { type: "school",           icon: "🎓", label: "École / Professeur",          service: "Éducation",   dashboard: true,  gestionInterne: true  },
+                    { type: "enterprise",       icon: "🏢", label: "Entreprise",                  service: "Activité",    dashboard: true,  gestionInterne: false },
+                    { type: "security_agency",  icon: "🛡️", label: "Agence de sécurité",          service: "Sécurité",    dashboard: true,  gestionInterne: false },
+                    { type: "journalist",       icon: "📰", label: "Journaliste / Média",         service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "scientist",        icon: "🔬", label: "Scientifique / Chercheur",    service: "Science",     dashboard: true,  gestionInterne: false },
+                    { type: "ngo",              icon: "🤝", label: "ONG / Association",           service: "Solidarité",  dashboard: true,  gestionInterne: false },
+                    { type: "supplier",         icon: "📦", label: "Fournisseur / Grossiste",     service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "vendor",           icon: "🛒", label: "Vendeur / Commerçant",        service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "producer",         icon: "🏭", label: "Entreprise de production",    service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "broker",           icon: "🏘️", label: "Démarcheur / Location",       service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "restaurant",       icon: "🍽️", label: "Restaurant / Restauration",  service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "transport",        icon: "🚗", label: "Transport & Livraison",       service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "beauty",           icon: "💈", label: "Beauté & Bien-être",          service: "Échanges",    dashboard: true,  gestionInterne: false },
+                    { type: "artisan",          icon: "🔧", label: "Artisanat & Services",        service: "Échanges",    dashboard: true,  gestionInterne: false },
+                  ].map(t => {
+                    const total    = allPros.filter(p => p.type === t.type).length;
+                    const pending  = allPros.filter(p => p.type === t.type && p.status === "pending").length;
+                    const approved = allPros.filter(p => p.type === t.type && p.status === "approved").length;
+                    const active   = allPros.filter(p => p.type === t.type && p.subscriptionStatus === "active").length;
+                    return (
+                      <div key={t.type} className="p-4 flex items-start gap-3 hover:bg-gray-50 transition-colors">
+                        <span className="text-2xl flex-shrink-0 mt-0.5">{t.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-1">
+                            <span className="font-semibold text-gray-900 text-sm leading-tight">{t.label}</span>
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0">{total}</span>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5">{t.service}</div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {pending > 0 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">{pending} en attente</span>
+                            )}
+                            {approved > 0 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium">{approved} approuvés</span>
+                            )}
+                            {active > 0 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium">{active} actifs</span>
+                            )}
+                          </div>
+                          <div className="flex gap-1 mt-2">
+                            <span className="text-xs px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 font-medium">✓ Espace Pro</span>
+                            {t.gestionInterne && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-teal-50 text-teal-700 font-medium">✓ Gestion Interne</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="px-5 py-3 bg-blue-50 border-t border-blue-100 flex flex-wrap gap-4 text-xs text-blue-700">
+                  <span>✓ <strong>Espace Pro</strong> : dashboard rendez-vous, historique, profil (tous les 15 types)</span>
+                  <span>✓ <strong>Gestion Interne</strong> : patients/élèves, personnel, facturation, ordonnances (clinic &amp; school uniquement — 3 000 000 GNF, paiement unique à vie)</span>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <h2 className="text-xl font-bold text-gray-800">
                   📋 Comptes Professionnels
@@ -1083,6 +1224,223 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ========== SERVICES (G7 uniquement) ========== */}
+          {adminSection === "services" && isSuperAdmin7(userData) && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">🌐 Interfaces des dashboards professionnels</h2>
+                <p className="text-sm text-gray-500 mt-1">Ce que chaque professionnel voit dans son espace — onglets, statistiques, actions disponibles.</p>
+              </div>
+
+              {[
+                {
+                  icon: "🏥", label: "Santé", subtitle: "Cliniques · Hôpitaux · Médecins",
+                  from: "from-emerald-600", to: "to-teal-600", bg: "bg-emerald-50", border: "border-emerald-200",
+                  sampleService: "Consultation générale", sampleType: "Rendez-vous écrit",
+                  stats: [{ l: "Total RDV", v: "12", c: "text-gray-700" }, { l: "En attente", v: "3", c: "text-orange-500" }, { l: "Acceptés", v: "8", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "🛡️", label: "Sécurité", subtitle: "Agences · Gardes · Protection",
+                  from: "from-slate-600", to: "to-gray-700", bg: "bg-slate-50", border: "border-slate-200",
+                  sampleService: "Gardiennage de locaux", sampleType: "Demande de service",
+                  stats: [{ l: "Total", v: "7", c: "text-gray-700" }, { l: "En attente", v: "2", c: "text-orange-500" }, { l: "Acceptés", v: "4", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "🎓", label: "Éducation", subtitle: "Écoles · Professeurs · Entreprises",
+                  from: "from-amber-500", to: "to-orange-500", bg: "bg-amber-50", border: "border-amber-200",
+                  sampleService: "Cours de mathématiques", sampleType: "Rendez-vous écrit",
+                  stats: [{ l: "Total", v: "20", c: "text-gray-700" }, { l: "En attente", v: "5", c: "text-orange-500" }, { l: "Acceptés", v: "14", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "🔬", label: "Science", subtitle: "Chercheurs · Scientifiques · Labos",
+                  from: "from-indigo-600", to: "to-violet-600", bg: "bg-indigo-50", border: "border-indigo-200",
+                  sampleService: "Consultation scientifique", sampleType: "Rendez-vous écrit",
+                  stats: [{ l: "Total", v: "5", c: "text-gray-700" }, { l: "En attente", v: "1", c: "text-orange-500" }, { l: "Acceptés", v: "4", c: "text-green-600" }, { l: "Refusés", v: "0", c: "text-red-500" }],
+                },
+                {
+                  icon: "🤝", label: "Solidarité & ONG", subtitle: "ONG · Associations · Aide humanitaire · Zakat",
+                  from: "from-rose-500", to: "to-pink-600", bg: "bg-rose-50", border: "border-rose-200",
+                  sampleService: "Demande d'aide alimentaire", sampleType: "Demande de soutien",
+                  stats: [{ l: "Total", v: "9", c: "text-gray-700" }, { l: "En attente", v: "2", c: "text-orange-500" }, { l: "Acceptés", v: "6", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "📦", label: "Fournisseurs & Grossistes", subtitle: "Type : supplier / producer — Grossistes · Importateurs · Distributeurs",
+                  from: "from-cyan-600", to: "to-blue-600", bg: "bg-cyan-50", border: "border-cyan-200",
+                  sampleService: "Commande en gros de riz", sampleType: "Demande d'approvisionnement",
+                  stats: [{ l: "Total", v: "15", c: "text-gray-700" }, { l: "En attente", v: "4", c: "text-orange-500" }, { l: "Acceptés", v: "10", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "🍽️", label: "Restauration", subtitle: "Type : restaurant — Restaurants · Cafés · Fast-food · Traiteurs",
+                  from: "from-orange-500", to: "to-red-500", bg: "bg-orange-50", border: "border-orange-200",
+                  sampleService: "Réservation de table pour 4 personnes", sampleType: "Demande de réservation",
+                  stats: [{ l: "Total", v: "11", c: "text-gray-700" }, { l: "En attente", v: "3", c: "text-orange-500" }, { l: "Acceptés", v: "7", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "🛒", label: "Vendeurs & Commerce", subtitle: "Type : vendor — Boutiques · Marchands · Marchés · Épiceries",
+                  from: "from-yellow-500", to: "to-amber-600", bg: "bg-yellow-50", border: "border-yellow-200",
+                  sampleService: "Achat de vêtements au marché", sampleType: "Demande commerciale",
+                  stats: [{ l: "Total", v: "18", c: "text-gray-700" }, { l: "En attente", v: "5", c: "text-orange-500" }, { l: "Acceptés", v: "12", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "🚗", label: "Transport & Livraison", subtitle: "Type : transport — Taxis · Motos · Camions · Livraison à domicile",
+                  from: "from-blue-500", to: "to-indigo-500", bg: "bg-blue-50", border: "border-blue-200",
+                  sampleService: "Course taxi Kaloum → Ratoma", sampleType: "Demande de course",
+                  stats: [{ l: "Total", v: "22", c: "text-gray-700" }, { l: "En attente", v: "6", c: "text-orange-500" }, { l: "Acceptés", v: "15", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "💈", label: "Beauté & Bien-être", subtitle: "Type : beauty — Salons · Coiffeurs · Spas · Instituts",
+                  from: "from-fuchsia-500", to: "to-purple-500", bg: "bg-fuchsia-50", border: "border-fuchsia-200",
+                  sampleService: "Coiffure et soin visage", sampleType: "Prise de rendez-vous",
+                  stats: [{ l: "Total", v: "8", c: "text-gray-700" }, { l: "En attente", v: "2", c: "text-orange-500" }, { l: "Acceptés", v: "5", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "🔧", label: "Artisanat & Services", subtitle: "Type : artisan — Plombiers · Électriciens · Menuisiers · Soudeurs",
+                  from: "from-stone-500", to: "to-zinc-600", bg: "bg-stone-50", border: "border-stone-200",
+                  sampleService: "Réparation fuite d'eau urgente", sampleType: "Demande d'intervention",
+                  stats: [{ l: "Total", v: "13", c: "text-gray-700" }, { l: "En attente", v: "4", c: "text-orange-500" }, { l: "Acceptés", v: "8", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "🏘️", label: "Immobilier & Location", subtitle: "Type : broker — Agents immobiliers · Démarcheurs · Locations · Ventes",
+                  from: "from-lime-600", to: "to-green-600", bg: "bg-lime-50", border: "border-lime-200",
+                  sampleService: "Location appartement F4 Conakry", sampleType: "Demande de visite",
+                  stats: [{ l: "Total", v: "6", c: "text-gray-700" }, { l: "En attente", v: "1", c: "text-orange-500" }, { l: "Acceptés", v: "4", c: "text-green-600" }, { l: "Refusés", v: "1", c: "text-red-500" }],
+                },
+                {
+                  icon: "📰", label: "Journalisme & Médias", subtitle: "Type : journalist — Journalistes · Médias · Correspondants",
+                  from: "from-gray-600", to: "to-slate-700", bg: "bg-gray-50", border: "border-gray-200",
+                  sampleService: "Interview ou reportage communautaire", sampleType: "Demande de contact",
+                  stats: [{ l: "Total", v: "4", c: "text-gray-700" }, { l: "En attente", v: "1", c: "text-orange-500" }, { l: "Acceptés", v: "3", c: "text-green-600" }, { l: "Refusés", v: "0", c: "text-red-500" }],
+                },
+              ].map(svc => (
+                <div key={svc.label} className={`border ${svc.border} rounded-2xl overflow-hidden shadow-sm`}>
+                  {/* En-tête service */}
+                  <div className={`bg-gradient-to-r ${svc.from} ${svc.to} px-5 py-4 flex items-center justify-between`}>
+                    <div className="flex items-center gap-3 text-white">
+                      <span className="text-4xl">{svc.icon}</span>
+                      <div>
+                        <h3 className="text-lg font-bold">{svc.label}</h3>
+                        <p className="text-xs opacity-75">{svc.subtitle}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-white/60 italic hidden sm:block">Espace professionnel</span>
+                  </div>
+
+                  {/* Statistiques */}
+                  <div className={`${svc.bg} px-5 py-3 grid grid-cols-4 gap-3 border-b ${svc.border}`}>
+                    {svc.stats.map((s, i) => (
+                      <div key={i} className="bg-white rounded-xl p-3 text-center shadow-sm">
+                        <div className={`text-2xl font-bold ${s.c}`}>{s.v}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{s.l}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Barre d'onglets */}
+                  <div className="bg-white border-b border-gray-100 flex">
+                    {["📋 Demandes", "📜 Historique", "👤 Profil"].map((tab, i) => (
+                      <div key={i} className={`px-5 py-3 text-sm font-medium border-b-2 ${i === 0 ? "border-blue-600 text-blue-600 bg-blue-50/40" : "border-transparent text-gray-400"}`}>
+                        {tab}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Contenu onglet Demandes — carte exemple */}
+                  <div className="bg-white p-5">
+                    <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/70">
+                      <div className="flex items-start justify-between flex-wrap gap-2 mb-3">
+                        <div>
+                          <p className="font-semibold text-gray-800 text-sm">Patient : Exemple Patient</p>
+                          <p className="text-xs text-gray-500">NumeroH : H0C1P2R3E4F5 6</p>
+                          <p className="text-xs text-gray-500 mt-1">📅 Aujourd'hui à 10h00</p>
+                          <p className="text-xs text-gray-600 mt-0.5">🩺 Service demandé : <strong>{svc.sampleService}</strong></p>
+                          <span className="inline-block mt-1.5 text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full font-medium">{svc.sampleType}</span>
+                        </div>
+                        <span className="text-xs px-2.5 py-1 bg-orange-100 text-orange-600 rounded-full font-semibold">⏳ En attente</span>
+                      </div>
+                      {/* Boutons d'action */}
+                      <div className="flex gap-2 flex-wrap">
+                        <button type="button" className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold cursor-default">✅ Accepter</button>
+                        <button type="button" className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold cursor-default">🎥 Accepter + Vidéo 30s</button>
+                        <button type="button" className="px-4 py-2 bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-semibold cursor-default">❌ Refuser</button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 text-center mt-3 italic">
+                      Aperçu de l'interface — les vraies demandes apparaissent ici quand des clients contactent ce service
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {/* ── Gestion Interne : espaces de référence admin ── */}
+              <div className="mt-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-xl font-bold text-gray-800">🗂️ Gestion Interne — Vos espaces de référence</h2>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">
+                  Ces espaces vous appartiennent exclusivement. Ils montrent <strong>exactement</strong> ce que chaque clinique ou école voit dans son espace payant. Vous pouvez y ajouter des données de test pour améliorer le système.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {/* Référence Clinique */}
+                  <div className="border border-emerald-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🏥</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Clinique Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-CLIN · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-emerald-50 px-5 py-3 text-sm text-emerald-800 border-b border-emerald-100">
+                      Patients · Personnel · RDV · Ordonnances · Dossiers · Paiements
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une clinique cliente (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-clinique/DEMO-REF-CLIN")}
+                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace clinique →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence École */}
+                  <div className="border border-amber-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🎓</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">École Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-ECO · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-amber-50 px-5 py-3 text-sm text-amber-800 border-b border-amber-100">
+                      Élèves · Personnel · Classes · Présences · Notes · Frais scolaires
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une école cliente (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-ecole/DEMO-REF-ECO")}
+                        className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace école →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+                  <strong>Comment ça marche :</strong> Chaque clinique ou école cliente reçoit son propre code unique (ex: CLIN-GN-00001) dès que l'admin approuve son inscription. Elle voit son nom et son logo, jamais le vôtre. Vous seul pouvez accéder aux espaces de référence ci-dessus.
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4">
+                <p className="text-sm text-yellow-900">
+                  <strong>👑 Note :</strong> Chaque service partage le même espace professionnel (3 onglets : Demandes, Historique, Profil). Les chiffres et données ci-dessus sont des exemples. Pour voir les vraies données d'un compte, allez dans l'onglet <strong>Professionnels</strong>.
+                </p>
+              </div>
             </div>
           )}
 
@@ -1278,8 +1636,56 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+          {/* ========== MOFTAL PAY (G7 uniquement) ========== */}
+          {adminSection === "moftal-pay" && isSuperAdmin7(userData) && (
+            <MoftalPayAdminSection token={localStorage.getItem('token') || ''} apiBase={API_BASE} />
+          )}
+
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Sous-section Moftal Pay : deux onglets (Comptes Famille / Wallets Pro) ───
+function MoftalPayAdminSection({ token, apiBase }: { token: string; apiBase: string }) {
+  const [sousOnglet, setSousOnglet] = useState<'famille' | 'pro'>('famille');
+  return (
+    <div className="space-y-5">
+      {/* Titre */}
+      <div>
+        <h2 className="text-2xl font-black text-gray-900">💰 Moftal Pay</h2>
+        <p className="text-blue-600 text-xs font-bold">Système de paiement interne Moftal — Vue super admin G7</p>
+      </div>
+
+      {/* Sous-onglets */}
+      <div className="flex rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+        {([
+          { key: 'famille' as const, label: 'Comptes Famille', icon: '🏠' },
+          { key: 'pro'     as const, label: 'Wallets Pro',     icon: '💼' },
+        ]).map(t => (
+          <button
+            key={t.key}
+            onClick={() => setSousOnglet(t.key)}
+            className={`flex-1 py-3 font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+              sousOnglet === t.key
+                ? 'text-white'
+                : 'text-gray-500 hover:text-gray-700 bg-white'
+            }`}
+            style={sousOnglet === t.key ? { background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' } : {}}
+          >
+            <span>{t.icon}</span> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Contenu */}
+      {sousOnglet === 'famille' && (
+        <AdminCompteFamille token={token} apiBase={apiBase} />
+      )}
+      {sousOnglet === 'pro' && (
+        <AdminWalletPro token={token} apiBase={apiBase} />
+      )}
     </div>
   );
 }

@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { TermsModal, resetTermsAcceptance } from '../components/TermsModal';
+import { TermsModal, resetTermsAcceptance, CONDITIONS } from '../components/TermsModal';
 
 export default function ConditionsUtilisation() {
   const navigate = useNavigate();
   const [showPreview, setShowPreview] = useState(false);
 
-  // Vérifier si l'utilisateur est admin
   const isAdmin = (() => {
     try {
       const s = localStorage.getItem('session_user');
@@ -24,29 +23,13 @@ export default function ConditionsUtilisation() {
       <div className="w-full py-10 px-4 text-center" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
         <div className="text-4xl mb-3">⚖️</div>
         <h1 className="text-white font-black text-2xl sm:text-3xl">Conditions Générales d'Utilisation</h1>
-        <p className="text-blue-200 text-sm mt-1">Les Enfants d'Adam · Avril 2026</p>
+        <p className="text-blue-200 text-sm mt-1">Moftal — Les Enfants d'Adam · Avril 2026</p>
       </div>
 
       {/* Contenu */}
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">
 
-        {[
-          {
-            num: 1,
-            titre: 'Légalité & Responsabilité',
-            texte: "En utilisant ce portail, vous reconnaissez connaître les lois de votre pays applicables à la protection des données et assumez seul l'entière responsabilité de ce que vous publiez — la plateforme ne peut en être tenue responsable.",
-          },
-          {
-            num: 2,
-            titre: 'Respect & Contenu',
-            texte: "Il est strictement interdit de publier sans consentement des informations sur autrui, ainsi que tout contenu sexuel, haineux, violent ou illégal ; tout manquement entraîne la suspension ou suppression immédiate du compte.",
-          },
-          {
-            num: 3,
-            titre: 'Liberté & Contrôle',
-            texte: "Vous êtes libre de définir ce que vous partagez, avec qui vous interagissez et ce que vous rendez visible, et vous pouvez supprimer votre compte à tout moment — vos données seront effacées conformément à la loi.",
-          },
-        ].map(a => (
+        {CONDITIONS.map(a => (
           <div key={a.num}
             className="rounded-2xl p-5"
             style={{ background: '#fff', border: '1px solid #e0e7ff', boxShadow: '0 2px 12px rgba(99,102,241,0.06)' }}>
@@ -72,7 +55,7 @@ export default function ConditionsUtilisation() {
           </p>
         </div>
 
-        {/* Bouton admin : prévisualiser la modal telle que les utilisateurs la voient */}
+        {/* Bouton admin */}
         {isAdmin && (
           <div className="rounded-2xl p-4 border-2 border-dashed border-amber-300 bg-amber-50">
             <p className="text-amber-800 font-bold text-sm mb-1">🔧 Mode Administrateur</p>

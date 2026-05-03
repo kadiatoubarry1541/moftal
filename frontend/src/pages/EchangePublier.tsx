@@ -34,8 +34,8 @@ const MODES = [
     key: 'photo_audio' as PublishMode,
     icon: '📷',
     label: 'Photo + Audio',
-    sub: 'Photo + message vocal 30 s',
-    desc: 'Prenez une photo de votre bien et enregistrez une présentation vocale de 30 secondes.',
+    sub: 'Photo + message vocal 10 s',
+    desc: 'Prenez une photo de votre bien et enregistrez une présentation vocale de 10 secondes maximum.',
     border: 'border-amber-500',
     bg: 'bg-amber-50',
     text: 'text-amber-700',
@@ -45,8 +45,8 @@ const MODES = [
     key: 'video' as PublishMode,
     icon: '🎥',
     label: 'Par vidéo',
-    sub: 'Vidéo de présentation',
-    desc: 'Enregistrez une courte vidéo (30 s à 1 min) pour présenter votre produit en direct.',
+    sub: 'Vidéo max 10 secondes',
+    desc: 'Enregistrez une courte vidéo (5 à 10 secondes) pour présenter votre produit.',
     border: 'border-blue-500',
     bg: 'bg-blue-50',
     text: 'text-blue-700',
@@ -413,10 +413,10 @@ export default function EchangePublier() {
                 <div className={`rounded-2xl border-2 p-5 space-y-3 ${errors.audio30s ? 'border-red-300 bg-red-50' : 'border-amber-200 bg-amber-50/40'}`}>
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
-                    <p className="text-sm font-bold text-gray-800">Message vocal <span className="text-gray-400 font-normal text-xs">30 s max</span></p>
+                    <p className="text-sm font-bold text-gray-800">Message vocal <span className="text-gray-400 font-normal text-xs">10 s max</span></p>
                     {product.audio30s && <span className="ml-auto text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">✓ Prêt</span>}
                   </div>
-                  <AudioRecorder maxDuration={30} onAudioRecorded={(blob) => {
+                  <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
                     const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
                     setProduct(p => ({ ...p, audio30s: file }));
                   }} />
@@ -430,7 +430,7 @@ export default function EchangePublier() {
               <div className="p-6 sm:p-8 space-y-5">
                 <div className="pb-4 border-b border-blue-100">
                   <h2 className="text-lg font-bold text-gray-800">Vidéo de présentation</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Enregistrez ou importez une vidéo de 30 s à 1 min</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Enregistrez ou importez une vidéo de 5 à 10 secondes maximum</p>
                 </div>
                 <div className={`rounded-2xl border-2 p-5 space-y-4 ${errors.videos ? 'border-red-300 bg-red-50' : 'border-blue-200 bg-blue-50/40'}`}>
                   {product.videos.length > 0 ? (
@@ -446,7 +446,7 @@ export default function EchangePublier() {
                     </div>
                   ) : (
                     <>
-                      <VideoRecorder maxDuration={60} onVideoRecorded={(blob) => {
+                      <VideoRecorder maxDuration={10} onVideoRecorded={(blob) => {
                         const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                         setProduct(p => ({ ...p, videos: [file, ...p.videos] }));
                       }} />
@@ -464,8 +464,8 @@ export default function EchangePublier() {
                             vid.preload = 'metadata';
                             vid.onloadedmetadata = () => {
                               URL.revokeObjectURL(vid.src);
-                              if (vid.duration > 60) {
-                                alert('La vidéo ne doit pas dépasser 1 minute.');
+                              if (vid.duration > 10) {
+                                alert('La vidéo ne doit pas dépasser 10 secondes.');
                                 e.target.value = '';
                                 return;
                               }

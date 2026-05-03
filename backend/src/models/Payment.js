@@ -13,7 +13,7 @@ const Payment = sequelize.define('Payment', {
     unique: true,
     allowNull: false,
   },
-  // ID de transaction Flutterwave (renvoyé après paiement réussi)
+  // Référence externe de la transaction (passerelle de paiement)
   flwRef: {
     type: DataTypes.STRING(200),
     allowNull: true,

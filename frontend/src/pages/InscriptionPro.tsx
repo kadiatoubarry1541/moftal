@@ -14,6 +14,9 @@ const PRO_TYPES = [
   { id: "broker", label: "Démarcheur / Location de maison", icon: "🏘️", desc: "Mise en relation pour location de maisons et biens tertiaires" },
   { id: "scientist", label: "Chercheur / Scientifique", icon: "🔬", desc: "Partagez vos travaux et publications" },
   { id: "ngo", label: "ONG / Association", icon: "🤝", desc: "Gérez vos projets humanitaires et bénévoles" },
+  { id: "transport", label: "Transport & Livraison", icon: "🚗", desc: "Taxi, moto, camion ou livraison à domicile" },
+  { id: "beauty", label: "Beauté & Bien-être", icon: "💈", desc: "Salon de coiffure, spa, institut de beauté" },
+  { id: "artisan", label: "Artisanat & Services", icon: "🔧", desc: "Plombier, électricien, menuisier, soudeur, maçon" },
 ];
 
 const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
@@ -64,6 +67,18 @@ const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
   ngo: {
     expect: "Nous attendons que vous présentiez vos projets humanitaires ou solidaires, vos besoins en bénévoles ou en dons, et que vous répondiez aux demandes de la communauté.",
     page: "Vous serez visible et publié sur la page **Solidarité** (onglet ONG) : les utilisateurs pourront découvrir vos actions et prendre rendez-vous ou vous contacter pour participer ou faire un don.",
+  },
+  transport: {
+    expect: "Nous attendons que vous proposiez un service de transport fiable (taxi, moto, camion, livraison) avec vos zones desservies, vos tarifs et vos disponibilités.",
+    page: "Vous serez visible sur la page **Transport & Livraison** : les utilisateurs pourront vous contacter, réserver une course ou demander une livraison directement depuis votre espace.",
+  },
+  beauty: {
+    expect: "Nous attendons que vous proposiez vos services de beauté (coiffure, soins, maquillage, massage, spa) avec vos tarifs, vos horaires et vos disponibilités pour les rendez-vous.",
+    page: "Vous serez visible sur la page **Beauté & Bien-être** : les clients pourront voir votre catalogue de soins et prendre rendez-vous directement depuis votre espace.",
+  },
+  artisan: {
+    expect: "Nous attendons que vous proposiez vos services artisanaux (plomberie, électricité, menuiserie, maçonnerie, soudure…) avec votre zone d'intervention, vos tarifs et vos disponibilités.",
+    page: "Vous serez visible sur la page **Artisanat & Services** : les utilisateurs pourront vous contacter, demander un devis ou prendre rendez-vous pour une intervention.",
   },
 };
 

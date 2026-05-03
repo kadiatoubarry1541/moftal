@@ -226,6 +226,27 @@ export default function MonProfil() {
         </div>
       </div>
 
+      {/* ── Vidéo d'inscription ── */}
+      {userData.video && (
+        <div
+          className="bg-white rounded-xl shadow-sm border border-blue-100 p-5 mt-6"
+          style={{ borderLeftWidth: "4px", borderLeftColor: "#3b82f6" }}
+        >
+          <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+            🎥 Ma vidéo d'inscription
+          </h3>
+          <p className="text-sm text-slate-500 mb-3">
+            Vidéo enregistrée lors de votre inscription. Elle sert à confirmer votre identité.
+          </p>
+          <video
+            src={userData.video as string}
+            controls
+            className="w-full max-w-sm rounded-xl border border-slate-200 shadow-sm"
+            style={{ maxHeight: 280 }}
+          />
+        </div>
+      )}
+
       <IdentiteModal
         open={open}
         onClose={() => setOpen(false)}

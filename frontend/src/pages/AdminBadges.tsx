@@ -311,7 +311,7 @@ export default function AdminBadges() {
     { path: '/education', name: 'Éducation' },
     { path: '/activite', name: 'Activité' },
     { path: '/famille', name: 'Famille' },
-    { path: '/histoire', name: 'Histoire' },
+    { path: '/histoire-humanite', name: 'Histoire' },
     { path: '/pays', name: 'Pays' },
   ];
 

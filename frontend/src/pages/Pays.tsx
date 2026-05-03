@@ -989,7 +989,7 @@ export default function Pays() {
                                 </div>
                               ) : (
                                 <div className="flex-1">
-                                  <AudioRecorder maxDuration={120} onAudioRecorded={(blob) => {
+                                  <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
                                     const file = new File([blob], 'vocal.webm', { type: blob.type });
                                     setNewResidencePost({...newResidencePost, type: 'audio', mediaFile: file});
                                   }} />
@@ -1222,7 +1222,7 @@ export default function Pays() {
                               </div>
                             ) : (
                               <div className="flex-1">
-                                <AudioRecorder maxDuration={120} onAudioRecorded={(blob) => {
+                                <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
                                   const file = new File([blob], 'vocal.webm', { type: blob.type });
                                   setNewRegionPost({...newRegionPost, type: 'audio', mediaFile: file});
                                 }} />

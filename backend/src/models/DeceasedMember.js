@@ -74,6 +74,10 @@ DeceasedMember.init({
   lieuDeces: {
     type: DataTypes.STRING
   },
+  causeDeces: {
+    type: DataTypes.TEXT,
+    field: 'cause_deces'
+  },
   // Relations familiales
   numeroHPere: {
     type: DataTypes.STRING,

@@ -2,13 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 
 interface AudioRecorderProps {
   onAudioRecorded: (audioBlob: Blob) => void;
-  /** Durée max en secondes (défaut 120) */
+  /** Durée max en secondes (défaut 10) */
   maxDuration?: number;
   /** Mode compact pour les barres de chat (défaut false) */
   compact?: boolean;
 }
 
-export function AudioRecorder({ onAudioRecorded, maxDuration = 120, compact = false }: AudioRecorderProps) {
+export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = false }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);

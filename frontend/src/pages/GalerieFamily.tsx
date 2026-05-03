@@ -133,23 +133,25 @@ export default function GalerieFamily() {
     setUploading(true)
     setError(null)
     try {
+      let videoDuration = 0
       if (file.type.startsWith('video/')) {
         const url = URL.createObjectURL(file)
         const v = document.createElement('video')
         v.preload = 'metadata'
-        const duration: number = await new Promise<number>((resolve, reject) => {
+        videoDuration = await new Promise<number>((resolve, reject) => {
           v.onloadedmetadata = () => resolve(v.duration || 0)
           v.onerror = () => reject(new Error('Impossible de lire la vidéo'))
           v.src = url
         }).finally(() => URL.revokeObjectURL(url))
-        if (duration > 180) {
-          setError('La vidéo est trop longue. Maximum 3 minutes pour la galerie familiale.')
+        if (videoDuration > 30) {
+          setError('La vidéo est trop longue. Maximum 30 secondes pour la galerie familiale.')
           setUploading(false)
           return
         }
       }
       const formData = new FormData()
       formData.append('media', file)
+      if (videoDuration > 0) formData.append('videoDuration', String(videoDuration))
       const res = await fetch(`${API_BASE}/api/family/shared-gallery/${uploadAlbum}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -284,7 +286,7 @@ export default function GalerieFamily() {
                   )}
                 </div>
                 {quota.photosRestantes === 0 && points > 0 && (
-                  <p className="mt-1.5 text-gray-500">Photos supplémentaires : <strong>1 point</strong> · Vidéos supplémentaires : <strong>2 points</strong></p>
+                  <p className="mt-1.5 text-gray-500">Photos : <strong>1 pt</strong> · Vidéo ≤10s : <strong>2 pts</strong> · ≤20s : <strong>3 pts</strong> · ≤30s : <strong>5 pts</strong></p>
                 )}
               </div>
             )}

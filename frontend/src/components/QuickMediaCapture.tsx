@@ -162,7 +162,7 @@ export function QuickMediaCapture({
 
     // Arrêt automatique à la durée max (max 60s)
     if (timerRef.current) window.clearTimeout(timerRef.current);
-    const safeMaxMs = Math.min(maxDurationSeconds, 60) * 1000;
+    const safeMaxMs = Math.min(maxDurationSeconds, 30) * 1000;
     timerRef.current = window.setTimeout(() => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();

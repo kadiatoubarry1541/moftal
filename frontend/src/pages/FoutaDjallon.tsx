@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../components/AudioRecorder';
+import { hideIncrement } from '../utils/formatNumeroH';
 
 interface UserData {
   numeroH: string;
@@ -816,7 +817,7 @@ export default function FoutaDjallon() {
                       <span className="text-sm font-medium text-gray-900">
                         {member.prenom} {member.nomFamille}
                       </span>
-                      <span className="text-xs text-gray-500">({member.numeroH})</span>
+                      <span className="text-xs text-gray-500">({hideIncrement(member.numeroH)})</span>
                 </div>
                   ))}
                 </div>
@@ -981,7 +982,7 @@ export default function FoutaDjallon() {
                             <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 hover:text-red-700 text-xs font-medium">✕</button>
                           </div>
                         ) : (
-                          <AudioRecorder compact maxDuration={120} onAudioRecorded={(blob) => {
+                          <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
                             const file = new File([blob], 'vocal.webm', { type: blob.type });
                             setNewMessage({...newMessage, mediaFile: file});
                           }} />

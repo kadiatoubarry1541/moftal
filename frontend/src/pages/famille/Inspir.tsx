@@ -314,7 +314,7 @@ export default function Inspir() {
                     <button onClick={() => setMediaFile(null)} className="text-red-400 text-xs ml-auto">✕ Refaire</button>
                   </div>
                 ) : (
-                  <VideoRecorder maxDuration={60}
+                  <VideoRecorder maxDuration={10}
                     onVideoRecorded={blob => setMediaFile(new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' }))} />
                 )
               ) : (
@@ -326,7 +326,7 @@ export default function Inspir() {
                     vid.preload = 'metadata';
                     vid.onloadedmetadata = () => {
                       URL.revokeObjectURL(vid.src);
-                      if (vid.duration > 60) { alert('La vidéo ne doit pas dépasser 1 minute (60 secondes).'); e.target.value = ''; return; }
+                      if (vid.duration > 10) { alert('La vidéo ne doit pas dépasser 10 secondes.'); e.target.value = ''; return; }
                       setMediaFile(file);
                     };
                     vid.src = URL.createObjectURL(file);

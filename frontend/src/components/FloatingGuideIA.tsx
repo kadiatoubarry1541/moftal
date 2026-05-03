@@ -61,8 +61,8 @@ const SITE_KNOWLEDGE = [
   },
   {
     keywords: ['histoire', 'historique', 'humanite', 'humanité', 'civilisation', 'origines', 'a retenir', 'à retenir'],
-    response: `**Les pages Histoire** 📜\n\nDécouvrez l'histoire :\n\n📖 **Histoire** — Histoire générale\n🌍 **Histoire de l'Humanité** — Les grandes étapes\n📌 **À Retenir** — Points historiques importants\n\n📌 Accéder :`,
-    links: [{ label: 'Histoire', path: '/histoire' }, { label: "Histoire de l'Humanité", path: '/histoire-humanite' }, { label: 'À Retenir', path: '/a-retenir' }]
+    response: `**Les pages Histoire** 📜\n\nDécouvrez l'histoire :\n\n🌍 **Histoire de l'Humanité** — 95 générations de G1 à aujourd'hui\n📌 **À Retenir (G96)** — Écrivez votre propre histoire\n\n📌 Accéder :`,
+    links: [{ label: "Histoire de l'Humanité", path: '/histoire-humanite' }, { label: 'À Retenir — G96', path: '/a-retenir' }]
   },
   {
     keywords: ['pro', 'professionnel', 'compte pro', 'espace pro', 'inscription pro', 'creer compte pro', 'créer compte pro', 'dashboard pro'],

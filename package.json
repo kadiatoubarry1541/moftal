@@ -5,8 +5,16 @@
   "scripts": {
     "start:backend": "npm run dev --prefix backend",
     "start:frontend": "npm run dev --prefix frontend",
-    "start:both": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "build:render": "cd frontend && npm ci && npm run build && cd ../backend && npm ci"
+    "start:both": "concurrently --names \"WORKER,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "setup": "npm run db:migrate:local --prefix backend && npm run db:seed --prefix backend",
+    "deploy:backend": "npm run deploy --prefix backend",
+    "build": "cd frontend && npm ci && npm run build",
+    "start:edication": "npm run start:both --prefix edication",
+    "start:edication:frontend": "npm run dev --prefix edication/frontend",
+    "start:edication:backend": "npm run dev --prefix edication/backend",
+    "start:clinique": "npm run start:both --prefix clinique",
+    "start:clinique:frontend": "npm run dev --prefix clinique/frontend",
+    "start:clinique:backend": "npm run dev --prefix clinique/backend"
   },
   "dependencies": {
     "compression": "^1.8.1",

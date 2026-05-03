@@ -1075,8 +1075,7 @@ export default function Famille() {
                 </button>
               </div>
 
-              {familyTreeData && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <div className="border rounded-lg p-4 bg-gradient-to-br from-purple-50 to-purple-100">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-12 h-12 bg-purple-200 rounded-full flex items-center justify-center text-2xl">
@@ -1085,7 +1084,7 @@ export default function Famille() {
                       <div>
                         <h3 className="font-semibold text-gray-900">Chef de famille 1</h3>
                         <p className="text-sm text-gray-600">
-                          {familyTreeData.chefFamille1 ? (
+                          {familyTreeData?.chefFamille1 ? (
                             <span className="font-mono">{familyTreeData.chefFamille1}</span>
                           ) : (
                             <span className="text-gray-400">Non défini</span>
@@ -1103,7 +1102,7 @@ export default function Famille() {
                       <div>
                         <h3 className="font-semibold text-gray-900">Chef de famille 2</h3>
                         <p className="text-sm text-gray-600">
-                          {familyTreeData.chefFamille2 ? (
+                          {familyTreeData?.chefFamille2 ? (
                             <span className="font-mono">{familyTreeData.chefFamille2}</span>
                           ) : (
                             <span className="text-gray-400">Non défini</span>
@@ -1113,7 +1112,6 @@ export default function Famille() {
                     </div>
                   </div>
                 </div>
-              )}
 
               {/* Formulaire pour nommer les chefs de famille */}
               {showSetHeadsForm && (

@@ -105,3 +105,8 @@ coverage/
 *.swp
 *.swo
 
+# Wrangler / Cloudflare Workers (contient des secrets locaux)
+backend/.dev.vars
+backend/.wrangler/
+backend/wrangler.toml
+

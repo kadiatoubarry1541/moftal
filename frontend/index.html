@@ -8,24 +8,28 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="index, follow" />
 
-    <!-- Favicon SVG (3KB vs 227KB PNG) -->
+    <!-- Favicon SVG (2.6KB) — priorité au SVG pour éviter de charger le PNG 227KB comme favicon -->
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="mask-icon" href="/logo.svg" color="#065f46" />
 
-    <!-- PWA manifest (généré par vite-plugin-pwa) -->
+    <!-- PWA manifest -->
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <!-- Preload du logo en WebP (38KB au lieu de 222KB) — améliore le LCP -->
+    <!-- Preload LCP : logo WebP (38KB au lieu de 227KB PNG) -->
     <link rel="preload" as="image" href="/logo.webp" type="image/webp" fetchpriority="high" />
 
-    <!-- Préchargement de la connexion backend (utile en dev) -->
-    <link rel="dns-prefetch" href="http://localhost:5002" />
+    <!-- Preconnect backend : connexion TCP établie avant la 1ère requête API -->
+    <link rel="preconnect" href="https://enfants-adam-backend.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://enfants-adam-backend.onrender.com" />
 
-    <!-- Évite le flash de contenu non-stylisé en mode sombre -->
-    <meta name="color-scheme" content="light dark" />
+    <!-- Script inline minimal pour bloquer le flash mode sombre avant le premier paint -->
+    <script>
+      (function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.replace('light','dark');}}catch(e){}})();
+    </script>
 
     <title>Les Enfants d'Adam - Plateforme Guinéenne</title>
   </head>

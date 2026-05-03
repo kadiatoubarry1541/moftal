@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { hideIncrement } from '../../utils/formatNumeroH'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
+import { getSocket, disconnectSocket } from '../../services/socket'
+import CallModal from '../../components/CallModal'
 
 interface UserData {
   numeroH: string
@@ -58,10 +61,11 @@ interface GalleryItem {
 }
 
 export default function Arbre() {
+  const navigate = useNavigate()
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges'>('echanges')
+  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges'>('arbre')
   const { t } = useI18n()
 
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -72,6 +76,19 @@ export default function Arbre() {
   const [isSending, setIsSending] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+
+  // Médias, audio, appels
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Appels (WebRTC)
+  const [outgoingCall, setOutgoingCall] = useState<{ to: string; toName: string; callType: 'audio' | 'video' } | null>(null)
+  const [incomingCall, setIncomingCall] = useState<{ from: string; callerName: string; offer: RTCSessionDescriptionInit; callType: 'audio' | 'video' } | null>(null)
+  const [showCall, setShowCall] = useState(false)
 
   // Galerie famille partagée
   const [showGallery, setShowGallery] = useState(false)
@@ -86,10 +103,47 @@ export default function Arbre() {
   // Personnes masquées dans mon arbre (je ne les vois plus)
   const [treeHidden, setTreeHidden] = useState<string[]>([])
 
+  // Méta de l'arbre (familyCode, bloodNumber — visible admin)
+  const [treeInfo, setTreeInfo] = useState<any>(null)
+
+  // Filtre vivants / décédés / tous
+  const [filtreArbre, setFiltreArbre] = useState<'vivants' | 'defunts' | 'tous'>('vivants')
+
+  // Modal signalement de décès
+  const [showDecesModal, setShowDecesModal] = useState(false)
+  const [memberToReport, setMemberToReport] = useState<any>(null)
+  const [dateDeces, setDateDeces] = useState('')
+  const [anneeDeces, setAnneeDeces] = useState('')
+  const [causeDeces, setCauseDeces] = useState('')
+  const [submittingDeces, setSubmittingDeces] = useState(false)
+  const [msgDeces, setMsgDeces] = useState('')
+
+  // Modal détail défunt
+  const [showDefuntDetail, setShowDefuntDetail] = useState(false)
+  const [defuntDetail, setDefuntDetail] = useState<any>(null)
+  const [loadingDefunt, setLoadingDefunt] = useState(false)
+
+  // Désignation des chefs de l'arbre (Gérant 1, Gérant 2, Conseiller)
+  const [fund, setFund] = useState<any>(null)
+  const [showDesignerChefs, setShowDesignerChefs] = useState(false)
+  const [newGerant1, setNewGerant1] = useState('')
+  const [newGerant2, setNewGerant2] = useState('')
+  const [newConseiller, setNewConseiller] = useState('')
+  const [savingChefs, setSavingChefs] = useState(false)
+  const [msgChefs, setMsgChefs] = useState('')
+
+  const effectiveUser = useMemo<UserData>(() => user ?? {
+    numeroH: '',
+    prenom: 'Invité',
+    nomFamille: '',
+    genre: 'HOMME'
+  }, [user])
+
 useEffect(() => {
   const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
   const u = sessionData.userData || sessionData
   if (u?.numeroH) setUser(u)
+  return () => { disconnectSocket() }
 }, [])
 
 useEffect(() => {
@@ -109,6 +163,23 @@ useEffect(() => {
     }
   }
   loadTreeHidden()
+}, [API_BASE])
+
+useEffect(() => {
+  const loadTreeMeta = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE}/api/family-tree/tree`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success && data.tree) setTreeInfo(data.tree)
+      }
+    } catch { /* ignore */ }
+  }
+  loadTreeMeta()
 }, [API_BASE])
 
 useEffect(() => {
@@ -177,19 +248,23 @@ useEffect(() => {
   loadPartnerAndParents()
 }, [API_BASE])
 
+  // Charger les données du fonds famille (pour afficher/désigner les chefs)
   useEffect(() => {
-    if (activeTab === 'echanges') {
-      loadFamilyMessages()
+    const loadFund = async () => {
+      const token = localStorage.getItem('token')
+      if (!token || !effectiveUser.nomFamille) return
+      try {
+        const res = await fetch(`${API_BASE}/api/family-fund/mon-compte`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success && data.existe) setFund(data.compte)
+        }
+      } catch { /* ignore */ }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
-
-  const effectiveUser: UserData = user || {
-    numeroH: '',
-    prenom: 'Invité',
-    nomFamille: '',
-    genre: 'HOMME'
-  }
+    if (effectiveUser.numeroH) loadFund()
+  }, [effectiveUser.numeroH, effectiveUser.nomFamille, API_BASE])
 
 const enhancedUser: UserData = useMemo(() => {
   let base: UserData = { ...effectiveUser }
@@ -273,6 +348,14 @@ const enhancedUser: UserData = useMemo(() => {
     }
   }
 
+  // Chargement initial des messages quand l'onglet échanges est actif
+  useEffect(() => {
+    if (activeTab === 'echanges') {
+      loadFamilyMessages()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+
   const sendFamilyMessage = async () => {
     if (!newMessage.trim() || isSending) return
 
@@ -285,16 +368,16 @@ const enhancedUser: UserData = useMemo(() => {
           Authorization: token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          content: newMessage.trim(),
-          messageType: 'text'
-        })
+        body: JSON.stringify({ content: newMessage.trim(), messageType: 'text' })
       })
 
       const data = await response.json()
-
       if (response.ok && data.success && data.message) {
-        setFamilyMessages((prev) => [...prev, data.message])
+        // Le socket diffuse aux autres membres ; on l'ajoute localement immédiatement
+        setFamilyMessages((prev) => {
+          if (prev.find(m => m.id === data.message.id)) return prev
+          return [...prev, data.message]
+        })
         setNewMessage('')
         setTimeout(scrollToBottom, 100)
       } else {
@@ -307,6 +390,138 @@ const enhancedUser: UserData = useMemo(() => {
       setIsSending(false)
     }
   }
+
+  // Vérifie la durée d'un fichier vidéo ou audio avant envoi
+  const checkMediaDuration = (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const isVideo = file.type.startsWith('video/')
+      const isAudio = file.type.startsWith('audio/')
+      if (!isVideo && !isAudio) { resolve(true); return }
+
+      const el = isVideo
+        ? document.createElement('video')
+        : document.createElement('audio')
+      const url = URL.createObjectURL(file)
+      el.src = url
+      el.onloadedmetadata = () => {
+        URL.revokeObjectURL(url)
+        if (el.duration > 30) {
+          alert(`⏱️ Durée maximale : 30 secondes.\nVotre fichier dure ${Math.round(el.duration)}s.`)
+          resolve(false)
+        } else {
+          resolve(true)
+        }
+      }
+      el.onerror = () => { URL.revokeObjectURL(url); resolve(true) }
+    })
+  }
+
+  // Envoi d'un fichier (photo / vidéo max 30s / audio max 30s)
+  const sendFamilyMediaMessage = useCallback(async (file: File) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    const ok = await checkMediaDuration(file)
+    if (!ok) return
+
+    setIsSending(true)
+    try {
+      const formData = new FormData()
+      formData.append('media', file)
+      const res = await fetch(`${API_BASE}/api/family-tree/messages/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok && data.success && data.message) {
+        setFamilyMessages(prev => {
+          if (prev.find(m => m.id === data.message.id)) return prev
+          return [...prev, data.message]
+        })
+        setTimeout(scrollToBottom, 100)
+      } else {
+        alert(data.message || 'Erreur envoi média')
+      }
+    } catch {
+      alert('Erreur de connexion au serveur')
+    } finally {
+      setIsSending(false)
+    }
+  }, [API_BASE])
+
+  // Enregistrement vocal : appui = démarre, relâche = envoie
+  const startRecording = useCallback(async () => {
+    if (isRecording) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      audioChunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const file = new File([blob], `vocal-${Date.now()}.webm`, { type: 'audio/webm' })
+        await sendFamilyMediaMessage(file)
+        setRecordingSeconds(0)
+      }
+      mr.start(200)
+      mediaRecorderRef.current = mr
+      setIsRecording(true)
+      let secs = 0
+      recordingTimerRef.current = setInterval(() => {
+        secs++
+        setRecordingSeconds(secs)
+        if (secs >= 30) stopRecording()
+      }, 1000)
+    } catch {
+      alert('Impossible d\'accéder au microphone')
+    }
+  }, [isRecording, sendFamilyMediaMessage])
+
+  const stopRecording = useCallback(() => {
+    if (!isRecording) return
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null }
+    mediaRecorderRef.current?.stop()
+    setIsRecording(false)
+  }, [isRecording])
+
+  // Lancer un appel vers un membre de la famille
+  const startCall = useCallback((to: string, toName: string, callType: 'audio' | 'video') => {
+    setOutgoingCall({ to, toName, callType })
+    setShowCall(true)
+  }, [])
+
+  // Socket.io : connexion uniquement quand l'onglet messages est ouvert
+  useEffect(() => {
+    const familyName = effectiveUser.nomFamille
+    if (!familyName || !effectiveUser.numeroH) return
+    if (activeTab !== 'echanges') return
+
+    const socket = getSocket()
+    socket.emit('join-family', familyName)
+
+    const onFamilyMsg = (msg: FamilyMessage) => {
+      setFamilyMessages(prev => {
+        if (prev.find(m => m.id === msg.id)) return prev
+        return [...prev, msg]
+      })
+      setTimeout(scrollToBottom, 100)
+    }
+
+    const onIncomingCall = (data: { from: string; callerName: string; offer: RTCSessionDescriptionInit; callType: 'audio' | 'video' }) => {
+      setIncomingCall(data)
+      setShowCall(true)
+    }
+
+    socket.on('family-message', onFamilyMsg)
+    socket.on('incoming-call', onIncomingCall)
+
+    return () => {
+      socket.off('family-message', onFamilyMsg)
+      socket.off('incoming-call', onIncomingCall)
+    }
+  }, [effectiveUser.nomFamille, effectiveUser.numeroH, activeTab])
 
   const loadSharedGallery = async () => {
     try {
@@ -381,6 +596,123 @@ const enhancedUser: UserData = useMemo(() => {
     }
   }
 
+  // Sauvegarde des gérants désignés depuis l'arbre
+  const sauvegarderChefs = async () => {
+    if (!newGerant1 && !newGerant2 && !newConseiller) return
+    setSavingChefs(true)
+    setMsgChefs('')
+    const token = localStorage.getItem('token')
+    try {
+      if (newGerant1 || newGerant2) {
+        const r = await fetch(`${API_BASE}/api/family-fund/gerants`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gerant1NumeroH: newGerant1 || fund?.gerant1 || '',
+            gerant2NumeroH: newGerant2 || fund?.gerant2 || ''
+          })
+        })
+        const d = await r.json()
+        if (!d.success) { setMsgChefs(d.message); setSavingChefs(false); return }
+      }
+      if (newConseiller) {
+        const r = await fetch(`${API_BASE}/api/family-fund/conseiller`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conseillerNumeroH: newConseiller })
+        })
+        const d = await r.json()
+        if (!d.success) { setMsgChefs(d.message); setSavingChefs(false); return }
+      }
+      setMsgChefs('✅ Chefs désignés avec succès !')
+      setNewGerant1(''); setNewGerant2(''); setNewConseiller('')
+      // Recharger le fonds
+      const res = await fetch(`${API_BASE}/api/family-fund/mon-compte`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.success && data.existe) setFund(data.compte)
+    } catch {
+      setMsgChefs('Erreur de connexion.')
+    } finally {
+      setSavingChefs(false)
+    }
+  }
+
+  const ouvrirDetailDefunt = async (d: any) => {
+    setDefuntDetail(d)
+    setShowDefuntDetail(true)
+    if (d.numeroHD) {
+      setLoadingDefunt(true)
+      try {
+        const token = localStorage.getItem('token')
+        const res = await fetch(`${API_BASE}/api/family-tree/deceased/${d.numeroHD}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success) setDefuntDetail(data.deceased)
+        }
+      } catch { /* utilise les données locales */ }
+      finally { setLoadingDefunt(false) }
+    }
+  }
+
+  const signalerDeces = async () => {
+    if (!memberToReport || submittingDeces) return
+    setSubmittingDeces(true)
+    setMsgDeces('')
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(`${API_BASE}/api/family-tree/report-death`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberNumeroH: memberToReport.numeroH,
+          dateDeces: dateDeces || undefined,
+          anneeDeces: anneeDeces || undefined,
+          causeDeces: causeDeces || undefined
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMsgDeces(`✅ ${data.message}`)
+        // Mettre à jour treeInfo localement
+        setTreeInfo((prev: any) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            members: (prev.members || []).filter((m: any) => m.numeroH !== memberToReport.numeroH),
+            deceasedMembers: [
+              ...(prev.deceasedMembers || []),
+              {
+                numeroHD: data.numeroHD,
+                prenom: memberToReport.prenom,
+                nomFamille: memberToReport.nomFamille,
+                photo: memberToReport.photo,
+                anneeDeces: anneeDeces ? parseInt(anneeDeces) : new Date().getFullYear()
+              }
+            ]
+          }
+        })
+        setTimeout(() => {
+          setShowDecesModal(false)
+          setMemberToReport(null)
+          setDateDeces('')
+          setAnneeDeces('')
+          setCauseDeces('')
+          setMsgDeces('')
+        }, 2000)
+      } else {
+        setMsgDeces(data.message || 'Erreur')
+      }
+    } catch {
+      setMsgDeces('Erreur de connexion.')
+    } finally {
+      setSubmittingDeces(false)
+    }
+  }
+
   const isVideo = (url: string) => /\.(mp4|webm|ogg|mov|avi)(\?|$)/i.test(url)
 
   // Gérer les URLs base64 (data:...), absolues (http...) et relatives (/uploads/...)
@@ -408,7 +740,15 @@ const enhancedUser: UserData = useMemo(() => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-6" />
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => navigate('/famille')}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
+        >
+          ← Ma famille
+        </button>
+      </div>
       <div className="card">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
           Choisissez une zone : trois grands boutons, touchez celui que vous voulez.
@@ -502,6 +842,162 @@ const enhancedUser: UserData = useMemo(() => {
           )}
         </div>
 
+        {/* ─── Numéro familial (familyCode) — visible dès 10 membres ─── */}
+        {treeInfo?.familyCode && (
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 mb-4 flex items-center gap-3">
+            <span className="text-2xl">🩸</span>
+            <div className="flex-1">
+              <p className="font-black text-sm text-indigo-900">Numéro de sang familial</p>
+              <p className="text-xs text-indigo-600 mt-0.5">Identifiant unique de votre lignée — jamais répété</p>
+            </div>
+            <div className="text-right">
+              <span className="font-black text-xl text-indigo-800 tracking-widest">{treeInfo.familyCode}</span>
+              {treeInfo.bloodNumber && (
+                <p className="text-xs text-indigo-500">Sang n°{treeInfo.bloodNumber}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Désignation des chefs de l'arbre ─── */}
+        {fund && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4">
+            <button
+              type="button"
+              onClick={() => { setShowDesignerChefs(v => !v); setMsgChefs('') }}
+              className="w-full flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👑</span>
+                <div className="text-left">
+                  <p className="font-black text-sm text-amber-900">Chefs de l'arbre familial</p>
+                  <p className="text-xs text-amber-700">Désignez le Patriarche, le Porte-parole et le Délégué</p>
+                </div>
+              </div>
+              <span className="text-amber-600 font-bold text-sm">{showDesignerChefs ? '▲' : '▼'}</span>
+            </button>
+
+            {/* Chefs actuels */}
+            {(() => {
+              // Supprime le compteur final du numeroH (ex: "G7C7P7R7 3" → "G7C7P7R7")
+              const stripIncrement = (n?: string) => n ? n.replace(/\s+\d+$/, '') : null
+              const chefs = [
+                {
+                  label: '🦁 Patriarche',
+                  nom: fund.conseillerNom,
+                  photo: fund.conseillerPhoto,
+                  numeroH: stripIncrement(fund.conseiller),
+                  color: '#92400e',
+                  bg: '#fef3c7'
+                },
+                {
+                  label: '🎙️ Porte-parole',
+                  nom: fund.gerant1Nom,
+                  photo: fund.gerant1Photo,
+                  numeroH: stripIncrement(fund.gerant1),
+                  color: '#1e40af',
+                  bg: '#eff6ff'
+                },
+                {
+                  label: '🤲 Délégué',
+                  nom: fund.gerant2Nom,
+                  photo: fund.gerant2Photo,
+                  numeroH: stripIncrement(fund.gerant2),
+                  color: '#374151',
+                  bg: '#f9fafb'
+                },
+              ]
+              return (
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {chefs.map(chef => (
+                    <div key={chef.label} className="rounded-xl p-2 text-center border border-amber-100 flex flex-col items-center gap-1" style={{ background: chef.bg }}>
+                      <p className="text-[10px] text-gray-500 font-semibold">{chef.label}</p>
+                      {chef.nom ? (
+                        <>
+                          {chef.photo
+                            ? <img src={chef.photo} alt={chef.nom} className="w-9 h-9 rounded-full object-cover border-2 border-white shadow" />
+                            : <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-base font-bold" style={{ color: chef.color }}>{chef.nom.charAt(0)}</div>
+                          }
+                          <p className="text-[10px] font-bold leading-tight truncate w-full" style={{ color: chef.color }}>{chef.nom}</p>
+                          <p className="text-[9px] text-gray-400 truncate w-full">#{chef.numeroH}</p>
+                        </>
+                      ) : (
+                        <p className="text-xs font-bold mt-1" style={{ color: chef.color }}>—</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+
+            {/* Formulaire de désignation */}
+            {showDesignerChefs && (
+              <div className="mt-4 space-y-3 border-t border-amber-200 pt-4">
+                {(fund.estAdmin || !fund.gerant1) && (
+                  <>
+                    <p className="text-xs text-amber-800 font-semibold">
+                      Entrez le numéro H du membre à désigner. Laissez vide pour conserver l'actuel.
+                    </p>
+                    {/* Patriarche en premier — le plus important */}
+                    {fund.estAdmin && (
+                      <div>
+                        <label className="text-xs font-bold text-amber-800 block mb-1">🦁 Patriarche — Chef à vie (actuel : {fund.conseillerNom || 'aucun'})</label>
+                        <input
+                          type="text"
+                          value={newConseiller}
+                          onChange={e => setNewConseiller(e.target.value)}
+                          placeholder="Numéro H du Patriarche (le plus âgé)"
+                          className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-xs font-bold text-gray-700 block mb-1">🎙️ Porte-parole (actuel : {fund.gerant1 ? `#${fund.gerant1}` : 'aucun'})</label>
+                      <input
+                        type="text"
+                        value={newGerant1}
+                        onChange={e => setNewGerant1(e.target.value)}
+                        placeholder="Numéro H du nouveau Porte-parole"
+                        className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-700 block mb-1">🤲 Délégué (actuel : {fund.gerant2 ? `#${fund.gerant2}` : 'aucun'})</label>
+                      <input
+                        type="text"
+                        value={newGerant2}
+                        onChange={e => setNewGerant2(e.target.value)}
+                        placeholder="Numéro H du nouveau Délégué"
+                        className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white"
+                      />
+                    </div>
+
+                    {msgChefs && (
+                      <p className={`text-xs font-semibold text-center rounded-lg px-3 py-2 ${msgChefs.includes('✅') ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                        {msgChefs}
+                      </p>
+                    )}
+
+                    <button
+                      onClick={sauvegarderChefs}
+                      disabled={savingChefs || (!newGerant1 && !newGerant2 && !newConseiller)}
+                      className="w-full py-2.5 rounded-xl text-white font-bold text-sm disabled:opacity-50"
+                      style={{ background: 'linear-gradient(135deg,#d97706,#b45309)' }}
+                    >
+                      {savingChefs ? 'Enregistrement...' : '👑 Confirmer la désignation'}
+                    </button>
+                  </>
+                )}
+                {!fund.estAdmin && fund.gerant1 && (
+                  <p className="text-xs text-amber-700 text-center">
+                    Seuls les administrateurs actuels peuvent changer les chefs.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'arbre-conjoint' && partner && (
           <>
             <div className="flex items-center gap-3 mb-4">
@@ -534,6 +1030,80 @@ const enhancedUser: UserData = useMemo(() => {
         {activeTab === 'arbre' && (
           <>
             <h2 className="text-2xl font-bold mb-4">🌳 Mon arbre généalogique</h2>
+
+            {/* ─── Filtre vivants / décédés ─── */}
+            {treeInfo && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  {(['vivants', 'defunts', 'tous'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFiltreArbre(f)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                        filtreArbre === f
+                          ? f === 'vivants'   ? 'bg-emerald-600 text-white border-emerald-600'
+                          : f === 'defunts'   ? 'bg-gray-700 text-white border-gray-700'
+                          :                     'bg-indigo-600 text-white border-indigo-600'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      {f === 'vivants' ? `🌿 Vivants (${(treeInfo.members || []).length})` : f === 'defunts' ? `🕯️ Décédés (${(treeInfo.deceasedMembers || []).length})` : '📋 Tous'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Liste membres vivants */}
+                {(filtreArbre === 'vivants' || filtreArbre === 'tous') && (treeInfo.members || []).length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+                    {(treeInfo.members as any[]).map((m: any) => (
+                      <div key={m.numeroH} className="flex flex-col items-center gap-1 rounded-xl border border-emerald-100 bg-emerald-50 p-2 text-center relative">
+                        {m.photo
+                          ? <img src={m.photo} alt={m.prenom} className="w-10 h-10 rounded-full object-cover border-2 border-emerald-200" />
+                          : <div className="w-10 h-10 rounded-full bg-emerald-200 flex items-center justify-center font-bold text-emerald-700">{(m.prenom || '?').charAt(0)}</div>
+                        }
+                        <p className="text-[11px] font-bold text-emerald-900 truncate w-full">{m.prenom} {m.nomFamille}</p>
+                        <p className="text-[9px] text-gray-400">#{hideIncrement(m.numeroH)}</p>
+                        {m.numeroH !== effectiveUser.numeroH && (
+                          <button
+                            onClick={() => { setMemberToReport(m); setShowDecesModal(true); setMsgDeces('') }}
+                            className="mt-1 text-[9px] px-2 py-0.5 rounded-full border border-gray-300 text-gray-500 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
+                          >
+                            Signaler décès
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Liste membres décédés — cliquables pour voir les détails */}
+                {(filtreArbre === 'defunts' || filtreArbre === 'tous') && (treeInfo.deceasedMembers || []).length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+                    {(treeInfo.deceasedMembers as any[]).map((d: any) => (
+                      <button
+                        key={d.numeroHD}
+                        onClick={() => ouvrirDetailDefunt(d)}
+                        className="flex flex-col items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-2 text-center opacity-75 hover:opacity-100 hover:border-gray-400 hover:shadow transition-all cursor-pointer"
+                      >
+                        {d.photo
+                          ? <img src={d.photo} alt={d.prenom} className="w-10 h-10 rounded-full object-cover border-2 border-gray-300 grayscale" />
+                          : <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center font-bold text-gray-600">{(d.prenom || '?').charAt(0)}</div>
+                        }
+                        <p className="text-[11px] font-bold text-gray-700 truncate w-full">{d.prenom} {d.nomFamille}</p>
+                        <p className="text-[9px] text-gray-400">🕯️ {d.anneeDeces || 'Décédé'}</p>
+                        <p className="text-[9px] text-indigo-400 font-mono">#{d.numeroHD}</p>
+                        <p className="text-[9px] text-gray-400">Voir détails →</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {filtreArbre === 'defunts' && (treeInfo.deceasedMembers || []).length === 0 && (
+                  <p className="text-xs text-gray-400 text-center py-4">Aucun membre décédé enregistré dans cet arbre.</p>
+                )}
+              </div>
+            )}
+
             <ArbreGenealogique
               userData={enhancedUser}
               cercleCounts={cercleCounts}
@@ -601,6 +1171,25 @@ const enhancedUser: UserData = useMemo(() => {
                       <p className="text-xs text-green-100">Espace privé entre membres de la famille</p>
                     </div>
                   </div>
+                  {/* Boutons appel (visible si conjoint lié) */}
+                  {partner && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => startCall(partner.numeroH, `${partner.prenom} ${partner.nomFamille}`, 'audio')}
+                        className="w-9 h-9 rounded-full bg-green-500 hover:bg-green-400 flex items-center justify-center text-lg transition-colors"
+                        title="Appel audio"
+                      >
+                        📞
+                      </button>
+                      <button
+                        onClick={() => startCall(partner.numeroH, `${partner.prenom} ${partner.nomFamille}`, 'video')}
+                        className="w-9 h-9 rounded-full bg-green-500 hover:bg-green-400 flex items-center justify-center text-lg transition-colors"
+                        title="Appel vidéo"
+                      >
+                        📹
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Zone de messages */}
@@ -688,14 +1277,53 @@ const enhancedUser: UserData = useMemo(() => {
 
                 {/* Zone de saisie */}
                 <div className="border-t border-gray-200 bg-gray-50 px-3 py-2">
+                  {/* Indicateur d'enregistrement */}
+                  {isRecording && (
+                    <div className="flex items-center gap-2 mb-2 px-2 py-1 bg-red-50 rounded-full border border-red-200">
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      <span className="text-xs text-red-600 font-medium">
+                        🎤 {recordingSeconds}s / 30s — relâchez pour envoyer
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xl text-gray-500 hover:bg-gray-100"
-                      title="Pièce jointe (bientôt disponible)"
+                    {/* Bouton photo / vidéo */}
+                    <label
+                      className={`w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xl text-gray-500 hover:bg-gray-100 cursor-pointer transition-colors ${isSending ? 'opacity-50 pointer-events-none' : ''}`}
+                      title="Envoyer une photo ou vidéo"
                     >
-                      📎
-                    </button>
+                      📷
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) sendFamilyMediaMessage(file)
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+
+                    {/* Bouton fichier audio */}
+                    <label
+                      className={`w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xl text-gray-500 hover:bg-gray-100 cursor-pointer transition-colors ${isSending ? 'opacity-50 pointer-events-none' : ''}`}
+                      title="Envoyer un fichier audio"
+                    >
+                      🎵
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) sendFamilyMediaMessage(file)
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+
                     <input
                       type="text"
                       value={newMessage}
@@ -709,18 +1337,36 @@ const enhancedUser: UserData = useMemo(() => {
                       placeholder="Écrivez un message familial..."
                       className="flex-1 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
                     />
+
+                    {/* Micro vocal : appui = enregistre, relâche = envoie */}
                     <button
                       type="button"
-                      onClick={sendFamilyMessage}
-                      disabled={!newMessage.trim() || isSending}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-lg transition-colors ${
-                        !newMessage.trim() || isSending
-                          ? 'bg-gray-300 cursor-not-allowed'
-                          : 'bg-green-600 hover:bg-green-700'
+                      onMouseDown={startRecording}
+                      onMouseUp={stopRecording}
+                      onTouchStart={(e) => { e.preventDefault(); startRecording() }}
+                      onTouchEnd={(e) => { e.preventDefault(); stopRecording() }}
+                      disabled={isSending}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
+                        isRecording
+                          ? 'bg-red-500 scale-110 shadow-lg'
+                          : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'
                       }`}
+                      title="Maintenir pour enregistrer un message vocal"
                     >
-                      ➤
+                      🎤
                     </button>
+
+                    {/* Envoyer texte */}
+                    {newMessage.trim() && (
+                      <button
+                        type="button"
+                        onClick={sendFamilyMessage}
+                        disabled={isSending}
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg bg-green-600 hover:bg-green-700 transition-colors"
+                      >
+                        ➤
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -729,6 +1375,181 @@ const enhancedUser: UserData = useMemo(() => {
         )}
 
       </div>
+
+      {/* ── MODAL DÉTAIL DÉFUNT ── */}
+      {showDefuntDetail && defuntDetail && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowDefuntDetail(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header gris */}
+            <div className="bg-gray-800 text-white px-5 py-4 flex items-center gap-3">
+              {defuntDetail.photo
+                ? <img src={defuntDetail.photo} alt={defuntDetail.prenom} className="w-14 h-14 rounded-full object-cover border-2 border-gray-600 grayscale" />
+                : <div className="w-14 h-14 rounded-full bg-gray-600 flex items-center justify-center text-2xl font-bold">{(defuntDetail.prenom || '?').charAt(0)}</div>
+              }
+              <div className="flex-1">
+                <p className="font-black text-lg leading-tight">{defuntDetail.prenom} {defuntDetail.nomFamille}</p>
+                <p className="text-gray-400 text-xs font-mono mt-0.5">#{defuntDetail.numeroHD}</p>
+                <p className="text-gray-300 text-xs mt-1">🕯️ Défunt</p>
+              </div>
+              <button onClick={() => setShowDefuntDetail(false)} className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-gray-300">✕</button>
+            </div>
+
+            {loadingDefunt ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="w-8 h-8 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="p-5 space-y-3">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  {defuntDetail.dateNaissance && (
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2">
+                      <p className="text-gray-400 mb-0.5">Naissance</p>
+                      <p className="font-bold text-gray-800">{new Date(defuntDetail.dateNaissance).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  )}
+                  {(defuntDetail.dateDeces || defuntDetail.anneeDeces) && (
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2">
+                      <p className="text-gray-400 mb-0.5">Décès</p>
+                      <p className="font-bold text-gray-800">
+                        {defuntDetail.dateDeces ? new Date(defuntDetail.dateDeces).toLocaleDateString('fr-FR') : defuntDetail.anneeDeces}
+                      </p>
+                    </div>
+                  )}
+                  {defuntDetail.lieuDeces && (
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2">
+                      <p className="text-gray-400 mb-0.5">Lieu du décès</p>
+                      <p className="font-bold text-gray-800">{defuntDetail.lieuDeces}</p>
+                    </div>
+                  )}
+                  {defuntDetail.causeDeces && (
+                    <div className="rounded-xl bg-red-50 border border-red-100 px-3 py-2">
+                      <p className="text-red-400 mb-0.5">Cause du décès</p>
+                      <p className="font-bold text-red-700">{defuntDetail.causeDeces}</p>
+                    </div>
+                  )}
+                  {defuntDetail.religion && (
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2">
+                      <p className="text-gray-400 mb-0.5">Religion</p>
+                      <p className="font-bold text-gray-800">{defuntDetail.religion}</p>
+                    </div>
+                  )}
+                  {defuntDetail.ethnie && (
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2">
+                      <p className="text-gray-400 mb-0.5">Ethnie</p>
+                      <p className="font-bold text-gray-800">{defuntDetail.ethnie}</p>
+                    </div>
+                  )}
+                  {(defuntDetail.pays || defuntDetail.regionOrigine) && (
+                    <div className="rounded-xl bg-gray-50 border border-gray-100 px-3 py-2 col-span-2">
+                      <p className="text-gray-400 mb-0.5">Origine</p>
+                      <p className="font-bold text-gray-800">{[defuntDetail.regionOrigine, defuntDetail.pays].filter(Boolean).join(', ')}</p>
+                    </div>
+                  )}
+                  {defuntDetail.generation && (
+                    <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2">
+                      <p className="text-indigo-400 mb-0.5">Génération</p>
+                      <p className="font-bold text-indigo-700">{defuntDetail.generation}</p>
+                    </div>
+                  )}
+                  {defuntDetail.decet && (
+                    <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2">
+                      <p className="text-indigo-400 mb-0.5">Décet</p>
+                      <p className="font-bold text-indigo-700">{defuntDetail.decet}</p>
+                    </div>
+                  )}
+                </div>
+
+                {(defuntDetail.numeroHPere || defuntDetail.numeroHMere) && (
+                  <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 text-xs">
+                    <p className="text-amber-600 font-semibold mb-1">Parents</p>
+                    {defuntDetail.numeroHPere && <p className="text-gray-700">Père : <span className="font-mono font-bold">#{hideIncrement(defuntDetail.numeroHPere)}</span></p>}
+                    {defuntDetail.numeroHMere && <p className="text-gray-700">Mère : <span className="font-mono font-bold">#{hideIncrement(defuntDetail.numeroHMere)}</span></p>}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL SIGNALEMENT DE DÉCÈS ── */}
+      {showDecesModal && memberToReport && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { if (!submittingDeces) setShowDecesModal(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              {memberToReport.photo
+                ? <img src={memberToReport.photo} alt={memberToReport.prenom} className="w-12 h-12 rounded-full object-cover grayscale border-2 border-gray-200" />
+                : <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600 text-lg">{(memberToReport.prenom || '?').charAt(0)}</div>
+              }
+              <div>
+                <h3 className="font-black text-gray-900">Signaler un décès</h3>
+                <p className="text-sm text-gray-600">{memberToReport.prenom} {memberToReport.nomFamille}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Cette action est irréversible. Le compte sera fermé et un numéro de défunt (DM…) sera généré automatiquement.
+            </p>
+
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">Date du décès</label>
+                <input
+                  type="date"
+                  value={dateDeces}
+                  onChange={e => { setDateDeces(e.target.value); if (e.target.value) setAnneeDeces(new Date(e.target.value).getFullYear().toString()) }}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">Année seulement (si date inconnue)</label>
+                <input
+                  type="number"
+                  value={anneeDeces}
+                  onChange={e => setAnneeDeces(e.target.value)}
+                  placeholder={`Ex: ${new Date().getFullYear()}`}
+                  min="1900"
+                  max={new Date().getFullYear()}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">Cause du décès (optionnel)</label>
+                <input
+                  type="text"
+                  value={causeDeces}
+                  onChange={e => setCauseDeces(e.target.value)}
+                  placeholder="Ex: maladie, accident, vieillesse..."
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                />
+              </div>
+            </div>
+
+            {msgDeces && (
+              <p className={`text-xs font-semibold text-center rounded-lg px-3 py-2 mb-3 ${msgDeces.includes('✅') ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                {msgDeces}
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowDecesModal(false); setMsgDeces(''); setDateDeces(''); setAnneeDeces(''); setCauseDeces('') }}
+                disabled={submittingDeces}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={signalerDeces}
+                disabled={submittingDeces || (!dateDeces && !anneeDeces)}
+                className="flex-1 py-2.5 rounded-xl bg-gray-800 text-white font-bold text-sm hover:bg-gray-700 disabled:opacity-50"
+              >
+                {submittingDeces ? 'Enregistrement...' : '🕯️ Confirmer le décès'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── GALERIE FAMILLE PAR ALBUMS (vue en deux colonnes) ── */}
       {showGallery && (
@@ -932,6 +1753,25 @@ const enhancedUser: UserData = useMemo(() => {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── MODAL APPEL WebRTC ─────────────────────────────────────────────── */}
+      {showCall && effectiveUser.numeroH && (
+        <CallModal
+          socket={getSocket()}
+          currentUser={{
+            numeroH: effectiveUser.numeroH,
+            prenom: effectiveUser.prenom,
+            nomFamille: effectiveUser.nomFamille,
+          }}
+          outgoingCall={outgoingCall ?? undefined}
+          incomingCall={incomingCall ?? undefined}
+          onClose={() => {
+            setShowCall(false)
+            setOutgoingCall(null)
+            setIncomingCall(null)
+          }}
+        />
       )}
 
       {/* ── VISIONNEUSE PLEIN ÉCRAN ── */}

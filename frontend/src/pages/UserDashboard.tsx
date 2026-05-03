@@ -10,7 +10,7 @@ import DefaultAvatar from "../assets/default-avatar.svg";
 const Activite = lazy(() => import("./Activite"));
 const Education = lazy(() => import("./Education"));
 const TerreAdam = lazy(() => import("./TerreAdam"));
-const Histoire = lazy(() => import("./Histoire"));
+const HistoireHumanite = lazy(() => import("./HistoireHumanite"));
 const Science = lazy(() => import("./Science"));
 const EchangesProfessionnel = lazy(() => import("../components/EchangesProfessionnel").then(m => ({ default: m.EchangesProfessionnel })));
 
@@ -465,7 +465,7 @@ function renderTabContent(tab: string, userData: UserData) {
     case "echanges":
       return <EchangesProfessionnel userData={userData as any} />;
     case "histoire":
-      return <Histoire />;
+      return <HistoireHumanite />;
     case "science":
       return <Science />;
     case "education":

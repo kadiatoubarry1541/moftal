@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 interface GuineaCoatOfArmsIconProps {
   className?: string;
@@ -8,29 +8,26 @@ interface GuineaCoatOfArmsIconProps {
 export function GuineaCoatOfArmsIcon({ className = "", size = 64 }: GuineaCoatOfArmsIconProps) {
   const [imageError, setImageError] = useState(false);
 
-  // Si l'image ne charge pas, afficher un emoji de secours
   if (imageError) {
     return (
-      <span className={`text-4xl ${className}`} style={{ width: size, height: size * 1.3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <span className={`text-4xl ${className}`} style={{ width: size, height: Math.round(size * 1.3), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         🇬🇳
       </span>
     );
   }
 
-  // Utiliser l'image exacte fournie par l'utilisateur
-  // Placez votre image PNG dans frontend/public/armoiries-guinee.png
+  // SVG (5KB) au lieu du PNG (325KB) — gain de 320KB par chargement
   return (
     <img
-      src="/armoiries-guinee.png"
+      src="/armoiries-guinee.svg"
       alt="Armoiries de la Guinée"
       width={size}
-      height={size * 1.3}
+      height={Math.round(size * 1.3)}
+      loading="lazy"
+      decoding="async"
       className={className}
       style={{ objectFit: 'contain', maxWidth: '100%', height: 'auto' }}
-      onError={() => {
-        console.error('Image armoiries-guinee.png non trouvée. Placez votre image dans frontend/public/armoiries-guinee.png');
-        setImageError(true);
-      }}
+      onError={() => setImageError(true)}
     />
   );
 }

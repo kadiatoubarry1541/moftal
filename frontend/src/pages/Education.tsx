@@ -157,7 +157,7 @@ interface School {
 
 export default function Education() {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'formation-scientifique' | 'defi-educatif'>('formation-scientifique');
+  const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'formation-scientifique' | 'mes-cours' | 'defi-educatif'>('formation-scientifique');
   const [formations, setFormations] = useState<Formation[]>([]);
   const [professors, setProfessors] = useState<Professor[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
@@ -251,24 +251,30 @@ export default function Education() {
 
   const loadData = async () => {
     setLoading(true);
-    // 1. Charger les cours en priorité (onglet par défaut) → affiche la page rapidement
-    await loadCourses();
+    // Charger formations et professeurs en priorité → affiche la page rapidement
+    await Promise.allSettled([loadFormations(), loadProfessors()]);
     setLoading(false);
-    // 2. Charger le reste en arrière-plan sans bloquer l'affichage
+    // Charger le reste en arrière-plan sans bloquer l'affichage
     Promise.allSettled([
-      loadFormations(),
-      loadProfessors(),
       loadStages(),
       loadMyRegistrations(),
       loadMyRequests(),
       loadMyStageRequests(),
-      loadMyProgress(),
-      loadMyCertificates(),
       loadMyProfessorProfile(),
       loadChildrenProgress(),
       loadSchools()
     ]).catch(() => {});
   };
+
+  useEffect(() => {
+    if (activeTab === 'mes-cours') {
+      loadCourses();
+      loadLinkedCourses();
+      loadLinkedStudents();
+      loadMyProgress();
+      loadMyCertificates();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMyProfessorProfile = async () => {
     try {
@@ -1016,7 +1022,8 @@ export default function Education() {
             {[
               { id: 'inscription-suivi', label: 'Inscription & suivi', icon: '👥' },
               { id: 'formation-scientifique', label: 'Formation scientifique', icon: '📚' },
-              { id: 'defi-educatif', label: 'Défi éducatif', icon: '🎯' }
+              { id: 'mes-cours', label: 'Mes Cours', icon: '🎯' },
+              { id: 'defi-educatif', label: 'Défi éducatif', icon: '🏆' }
             ].map((tab) => (
             <button
               key={tab.id}
@@ -1338,7 +1345,11 @@ export default function Education() {
                   </div>
             )}
 
-            {/* Section 5: Mes Cours */}
+          </div>
+        )}
+
+        {activeTab === 'mes-cours' && (
+          <div className="space-y-8">
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl shadow-lg p-6 border-2 border-indigo-200">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center text-2xl">

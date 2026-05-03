@@ -49,6 +49,7 @@ export default function EchangeTertiaire() {
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const [activeTab, setActiveTab] = useState<'maisons' | 'materiaux'>('maisons');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
+  const [brokers, setBrokers] = useState<any[]>([]);
   const navigate = useNavigate();
 
   const [newProduct, setNewProduct] = useState({
@@ -76,7 +77,18 @@ export default function EchangeTertiaire() {
       } catch { /* pas connecté */ }
     }
     loadData();
+    loadBrokers();
   }, []);
+
+  const loadBrokers = async () => {
+    try {
+      const res = await fetch(`${API_ORIGIN}/api/professionals/approved?type=broker`);
+      if (res.ok) {
+        const data = await res.json();
+        setBrokers(data.accounts || []);
+      }
+    } catch { /* silencieux */ }
+  };
 
   const loadData = async () => {
     try {
@@ -325,8 +337,8 @@ export default function EchangeTertiaire() {
             </div>
             {publishMode === 'photo_audio' && (
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Photo + message vocal (max 1 min)</label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Prenez une photo de votre bien et enregistrez un message vocal (max 1 min) pour le présenter.</p>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Photo + message vocal (max 10 secondes)</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Prenez une photo de votre bien et enregistrez un message vocal (max 10 s) pour le présenter.</p>
               <div className="rounded-xl border-2 border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/20 p-4 space-y-3">
                 <div>
                   <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Photo du bien</span>
@@ -337,8 +349,8 @@ export default function EchangeTertiaire() {
                   {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ Photo sélectionnée</p>}
                 </div>
                 <div>
-                  <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Audio de présentation (30 s)</span>
-                  <AudioRecorder maxDuration={30} onAudioRecorded={(blob) => {
+                  <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Message vocal (max 10 secondes)</span>
+                  <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
                     const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
                     setNewProduct((prev) => ({ ...prev, audio30s: file }));
                   }} />
@@ -349,9 +361,9 @@ export default function EchangeTertiaire() {
             )}
             {publishMode === 'video' && (
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Vidéo (max 1 min)</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Vidéo (max 10 secondes)</label>
               <div className="rounded-xl border-2 border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20 p-4">
-                <VideoRecorder maxDuration={60} onVideoRecorded={(blob) => {
+                <VideoRecorder maxDuration={10} onVideoRecorded={(blob) => {
                   const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                   setNewProduct((prev) => ({ ...prev, videos: [file, ...prev.videos] }));
                 }} />
@@ -404,6 +416,55 @@ export default function EchangeTertiaire() {
         </div>
       )}
 
+      {/* ── Agents immobiliers (démarcheurs) — onglet Maisons uniquement ── */}
+      {activeTab === 'maisons' && brokers.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-2xl">🏘️</span>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Agents immobiliers agréés</h2>
+            <span className="ml-2 px-2 py-0.5 bg-lime-100 text-lime-700 text-xs font-semibold rounded-full">{brokers.length} disponible{brokers.length > 1 ? 's' : ''}</span>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Ces professionnels peuvent vous aider à trouver, louer ou vendre un bien immobilier.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {brokers.map((broker) => (
+              <div key={broker.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-lime-200 dark:border-lime-800 shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  {broker.photo ? (
+                    <img src={broker.photo} alt={broker.name} className="w-12 h-12 rounded-full object-cover border-2 border-lime-200" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-lime-100 dark:bg-lime-900/30 flex items-center justify-center text-2xl">🏘️</div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight truncate">{broker.name}</p>
+                    {(broker.city || broker.country) && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">📍 {[broker.city, broker.country].filter(Boolean).join(', ')}</p>
+                    )}
+                  </div>
+                </div>
+                {broker.description && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{broker.description}</p>
+                )}
+                {broker.services?.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {broker.services.slice(0, 3).map((s: string, i: number) => (
+                      <span key={i} className="px-2 py-0.5 bg-lime-50 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300 text-xs rounded-full border border-lime-200 dark:border-lime-700">{s}</span>
+                    ))}
+                  </div>
+                )}
+                <button
+                  onClick={() => navigate(`/rendez-vous/${broker.id}`)}
+                  className="mt-auto w-full py-2.5 bg-lime-600 hover:bg-lime-700 text-white rounded-xl text-sm font-semibold transition-colors"
+                >
+                  Contacter / Prendre RDV
+                </button>
+              </div>
+            ))}
+          </div>
+          <hr className="mt-6 mb-2 border-gray-200 dark:border-gray-700" />
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">📋 Annonces de particuliers</h2>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.length === 0 ? (
           <div className="col-span-full text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
@@ -423,8 +484,32 @@ export default function EchangeTertiaire() {
           filtered.map((product) => (
             <div
               key={product.id}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl transition-all"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-all"
             >
+              {/* Media : photo, vidéo ou audio */}
+              {product.images && product.images.length > 0 ? (
+                <img src={buildImageUrl(product.images[0])} alt={product.title}
+                  className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+              ) : product.videos && product.videos.length > 0 ? (
+                <video
+                  src={buildImageUrl(product.videos[0])}
+                  className="w-full h-48 object-cover"
+                  autoPlay muted loop playsInline
+                  onError={(e) => { (e.target as HTMLVideoElement).style.display='none'; }}
+                />
+              ) : (product as any).audio && (product as any).audio.length > 0 ? (
+                <div className="w-full h-48 bg-amber-50 dark:bg-amber-900/20 flex flex-col items-center justify-center gap-2 px-4">
+                  <span className="text-4xl">🎙️</span>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium text-center">Message vocal du vendeur</p>
+                  <audio src={buildImageUrl((product as any).audio[0])} controls className="w-full" />
+                </div>
+              ) : (
+                <div className="w-full h-48 bg-amber-50 dark:bg-amber-900/20 flex flex-col items-center justify-center gap-2">
+                  <span className="text-5xl">📷</span>
+                  <p className="text-xs text-gray-400">Pas encore de photo</p>
+                </div>
+              )}
+              <div className="p-6">
               <div className="flex justify-between items-start mb-3">
                 <h3 className="font-bold text-gray-900 dark:text-white text-lg">{product.title}</h3>
                 <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 rounded-full text-xs font-medium">
@@ -449,6 +534,7 @@ export default function EchangeTertiaire() {
               >
                 Contacter
               </button>
+              </div>
             </div>
           ))
         )}

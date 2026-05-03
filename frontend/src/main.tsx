@@ -26,6 +26,22 @@ keysToClean.forEach(key => {
   }
 });
 
+// En dev uniquement : redirige les fetch hardcodés localhost:5002 vers VITE_API_URL
+// En production, le build Vite remplace déjà les URLs à la compilation (replaceLocalhostPlugin)
+if (import.meta.env.DEV) {
+  const _viteApiUrl = import.meta.env.VITE_API_URL;
+  if (_viteApiUrl) {
+    const _apiBase = _viteApiUrl.replace(/\/api\/?$/, '');
+    const _origFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      if (typeof input === 'string' && input.includes('localhost:5002')) {
+        input = input.replace('http://localhost:5002', _apiBase);
+      }
+      return _origFetch(input, init);
+    };
+  }
+}
+
 const basename = '';
 
 createRoot(document.getElementById("root")!).render(

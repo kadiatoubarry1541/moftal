@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* ===== Performance : rendu optimisé ===== */
+/* content-visibility: auto → le navigateur skip le rendu des éléments hors écran */
+/* Appliqué aux sections lourdes pour réduire le Layout cost */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 400px;
+}
+
 /* ===== Base Responsive Sécurisée ===== */
 * {
   box-sizing: border-box;

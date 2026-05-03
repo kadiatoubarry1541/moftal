@@ -391,13 +391,22 @@ router.post('/shared-gallery/:album', upload.single('media'), async (req, res) =
     if (!familyName) return res.status(400).json({ success: false, message: 'Vous devez avoir un nom de famille pour partager des médias' });
     const isVideoFile = req.file.mimetype.startsWith('video/');
 
+    // Coût vidéo selon la durée (envoyée par le frontend en secondes)
+    let videoCost = 5;
+    if (isVideoFile) {
+      const dur = parseFloat(req.body.videoDuration || '30');
+      if (dur <= 10) videoCost = 2;
+      else if (dur <= 20) videoCost = 3;
+      else videoCost = 5;
+    }
+
     // Vérifier et consommer le quota (5 photos + 1 vidéo gratuits par famille, puis points)
     try {
-      await checkAndConsumeQuota('family', familyName, isVideoFile, req.user.numeroH, 5, 1);
+      await checkAndConsumeQuota('family', familyName, isVideoFile, req.user.numeroH, 5, 1, isVideoFile ? videoCost : undefined);
     } catch (quotaErr) {
       if (quotaErr.code === 'QUOTA_EXCEEDED') {
         const type = quotaErr.isVideo ? 'vidéo' : 'photo';
-        const pts = quotaErr.isVideo ? '2 points' : '1 point';
+        const pts = quotaErr.isVideo ? `${videoCost} points` : '1 point';
         return res.status(402).json({
           success: false,
           code: 'QUOTA_EXCEEDED',

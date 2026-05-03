@@ -7,8 +7,7 @@ Plateforme guinéenne d'enregistrement généalogique, santé, éducation et sol
 ```
 /
 ├── frontend/          → Application React (déploiement : Cloudflare Pages)
-├── backend/           → API Node.js/Express (déploiement : Render + Neon)
-├── render.yaml        → Configuration déploiement backend sur Render
+├── backend/           → API Cloudflare Workers + Hono + D1
 ├── docs/              → Documentation projet
 └── scripts/           → Scripts de démarrage Windows (dev local)
 ```
@@ -22,57 +21,59 @@ Plateforme guinéenne d'enregistrement généalogique, santé, éducation et sol
    - **Répertoire racine** : `frontend`
    - **Commande de build** : `npm run build`
    - **Répertoire de sortie** : `dist`
-3. Variable d'environnement à ajouter dans Cloudflare :
+3. Variable d'environnement à ajouter dans Cloudflare Pages :
    ```
-   VITE_API_URL=https://enfants-adam-backend.onrender.com
+   VITE_API_URL=https://enfants-adam-backend.<votre-compte>.workers.dev
    ```
 
-### Backend → Render + Neon (PostgreSQL)
+### Backend → Cloudflare Workers + D1
 
-1. Créer une base PostgreSQL sur [Neon](https://console.neon.tech) → copier la **Connection string**
-2. Déployer le backend sur [Render](https://render.com) via `render.yaml` (répertoire racine : `backend/`)
-3. Variables d'environnement à définir sur Render :
+1. Installer Wrangler : `npm install -g wrangler`
+2. Se connecter : `wrangler login`
+3. Créer la base D1 : `cd backend && npm run db:create`
+4. Appliquer les migrations : `npm run db:migrate`
+5. Définir les secrets :
+   ```bash
+   wrangler secret put JWT_SECRET
+   wrangler secret put ADMIN_PASSWORD
+   wrangler secret put CORS_ORIGIN       # ex: https://votre-projet.pages.dev
+   wrangler secret put BREVO_API_KEY
    ```
-   DATABASE_URL=postgresql://user:pass@host/db?sslmode=require   ← depuis Neon
-   JWT_SECRET=une_clé_secrète_longue_et_aléatoire
-   ADMIN_PASSWORD=mot_de_passe_admin
-   CORS_ORIGIN=https://votre-projet.pages.dev
-   BREVO_API_KEY=votre_clé_brevo
-   FLW_PUBLIC_KEY=FLWPUBK_LIVE-...
-   FLW_SECRET_KEY=FLWSECK_LIVE-...
-   ```
+6. Déployer : `npm run deploy`
 
 ## Développement local
 
 ### Prérequis
 - Node.js 18+
-- PostgreSQL local (ou utiliser directement la base Neon)
+- Wrangler (`npm install -g wrangler`)
 
 ### Démarrage rapide
 
 ```bash
-# Terminal 1 — Backend (port 5002)
+# Terminal 1 — Backend Cloudflare Worker (port 8787)
 cd backend
-cp config.env.example config.env    # remplir les valeurs
 npm install
-npm run dev
+npm run db:migrate:local    # initialiser la DB locale D1
+npm run dev                 # Wrangler dev
 
 # Terminal 2 — Frontend (port 3000)
 cd frontend
-cp .env.example .env                # VITE_API_URL=http://localhost:5002 (déjà correct)
 npm install
 npm run dev
 ```
 
+L'application sera disponible sur http://localhost:3000
+
 ## Stack technique
 
-| Couche      | Technologie                       |
-|-------------|-----------------------------------|
-| Frontend    | React 19 + TypeScript + Vite 7    |
-| Styles      | TailwindCSS 4                     |
-| Backend     | Node.js + Express 4               |
-| ORM         | Sequelize 6 + PostgreSQL          |
-| Auth        | JWT + bcrypt                      |
-| Email       | Brevo (ex-Sendinblue)             |
-| Paiement    | Flutterwave                       |
-| Hébergement | Cloudflare Pages + Render + Neon  |
+| Couche      | Technologie                            |
+|-------------|----------------------------------------|
+| Frontend    | React 19 + TypeScript + Vite 7         |
+| Styles      | TailwindCSS 4                          |
+| Backend     | Cloudflare Workers + Hono              |
+| Base de données | Cloudflare D1 (SQLite serverless)  |
+| Fichiers    | Cloudflare R2                          |
+| Auth        | JWT + bcrypt                           |
+| Email       | Brevo (ex-Sendinblue)                  |
+| Paiement    | Flutterwave / FedaPay                  |
+| Hébergement | Cloudflare Pages + Cloudflare Workers  |

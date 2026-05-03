@@ -153,15 +153,27 @@ User.init({
     field: 'annees_avant_naissance'
   },
   
+  // Identifiant secondaire unique (numéro Diangou)
+  numeroD: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true,
+    field: 'numero_d'
+  },
+
   // Informations de contact
   email: {
     type: DataTypes.STRING,
+    allowNull: true,
+    unique: true,
     validate: {
       isEmail: true
     }
   },
   tel1: {
-    type: DataTypes.STRING
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true
   },
   tel2: {
     type: DataTypes.STRING
@@ -429,8 +441,10 @@ User.init({
   updatedAt: 'updated_at',
   indexes: [
     // On référence ici les noms de colonnes SQL réels (snake_case)
-    { fields: ['numero_h'] },
-    { fields: ['email'] },
+    { unique: true, fields: ['numero_h'] },
+    { unique: true, fields: ['numero_d'] },
+    { unique: true, fields: ['email'] },
+    { unique: true, fields: ['tel1'] },
     { fields: ['numero_h_pere'] },
     { fields: ['numero_h_mere'] },
     { fields: ['type'] },

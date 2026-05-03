@@ -1,5 +1,6 @@
 import { Navigate, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { hideIncrement } from '../../utils/formatNumeroH'
 
 interface UserData {
   numeroH: string
@@ -60,7 +61,7 @@ export default function Membres() {
               <div key={i} className="p-3 bg-white rounded-xl ring-1 ring-gray-200">
                 <div className="row">
                   <div className="col-6 font-medium">{m.nomComplet}</div>
-                  <div className="col-3 text-blue-700 font-semibold">{m.numeroH}</div>
+                  <div className="col-3 text-blue-700 font-semibold">{hideIncrement(m.numeroH)}</div>
                   <div className="col-3">{getTypeLabel(m.type)}</div>
                 </div>
               </div>

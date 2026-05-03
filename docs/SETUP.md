@@ -1,30 +1,35 @@
-# Configuration Rapide
+# Configuration Cloudflare
 
-## 1. Neon (Base de données)
-- Créer compte: https://neon.tech
-- New Project → Noter: Host, Database, User, Password
-- Exporter local: `pg_dump -h localhost -U postgres -d enfants_adam_eve > backup.sql`
-- Importer dans Neon SQL Editor
+## 1. Backend — Cloudflare Workers + D1
 
-## 2. Render (Backend)
-- Créer compte: https://render.com
-- New Web Service → Connecter GitHub repo
-- Root Directory: `backend`
-- Build: `npm install`
-- Start: `npm start`
-- Variables:
-  - DB_HOST= (votre host Neon)
-  - DB_NAME= (votre database Neon)
-  - DB_USER= (votre user Neon)
-  - DB_PASSWORD= (votre password Neon)
-  - JWT_SECRET= (générer un secret)
-  - CORS_ORIGIN=https://kadiatoubarry1541.github.io
+```bash
+cd backend
+npm install
+wrangler login
+wrangler d1 create enfants-adam-db        # créer la base D1
+npm run db:migrate                         # appliquer le schéma
+wrangler secret put JWT_SECRET
+wrangler secret put ADMIN_PASSWORD
+wrangler secret put CORS_ORIGIN            # https://votre-projet.pages.dev
+wrangler secret put BREVO_API_KEY
+npm run deploy                             # déployer le Worker
+```
 
-## 3. GitHub Pages
-- Settings → Pages → Source: GitHub Actions
-- Secrets → VITE_API_URL = (URL backend Render)
-- Actions → Run workflow
+## 2. Frontend — Cloudflare Pages
 
-## Lien final
-https://kadiatoubarry1541.github.io/Les-enfants-d-Adam/
+- Connecter le repo GitHub sur https://pages.cloudflare.com
+- Répertoire racine : `frontend`
+- Commande de build : `npm run build`
+- Répertoire de sortie : `dist`
+- Variable d'environnement :
+  - `VITE_API_URL` = URL de votre Worker (ex: `https://enfants-adam-backend.moncompte.workers.dev`)
 
+## 3. Développement local
+
+```bash
+# Terminal 1
+cd backend && npm run dev     # Wrangler sur port 8787
+
+# Terminal 2
+cd frontend && npm run dev    # Vite sur port 3000
+```

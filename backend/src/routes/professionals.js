@@ -238,6 +238,19 @@ router.get('/admin/pending', authenticate, requireAdminOrSectorAdmin, async (req
   }
 });
 
+// GET /api/professionals/admin/tenants - Tous les espaces Gestion Interne (admin seulement)
+router.get('/admin/tenants', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const tenants = await sequelize.query(
+      `SELECT * FROM management_tenants WHERE is_active = true ORDER BY type, name`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, tenants });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // GET /api/professionals/admin/all - Tous les comptes (admin ou admin secteur)
 router.get('/admin/all', authenticate, requireAdminOrSectorAdmin, async (req, res) => {
   try {
@@ -305,13 +318,25 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       });
     }
 
+    // Générer le code tenant unique pour les cliniques et écoles
+    const mgmtTypes = ['clinic', 'school', 'enterprise'];
+    let tenantCode = account.tenant_code || null;
+    if (mgmtTypes.includes(account.type) && !tenantCode) {
+      const prefix = account.type === 'clinic' ? 'CLIN' : account.type === 'school' ? 'ECO' : 'ENT';
+      tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
+      // Créer l'entrée dans management_tenants
+      await sequelize.query(
+        `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, professional_account_id) VALUES (:code, :type, :name, :owner, :pid) ON CONFLICT (tenant_code) DO NOTHING`,
+        { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH, pid: account.id } }
+      );
+    }
+
     await account.update({
       status: 'approved',
       approvedAt: new Date(),
       approvedBy: req.userId,
-      // Dès qu'un compte est approuvé, on le met en "never_paid" :
-      // l'abonnement devra être activé après paiement.
-      subscriptionStatus: account.subscriptionStatus || 'never_paid'
+      subscriptionStatus: account.subscriptionStatus || 'never_paid',
+      ...(tenantCode ? { tenant_code: tenantCode } : {})
     });
 
     // Notifier le propriétaire

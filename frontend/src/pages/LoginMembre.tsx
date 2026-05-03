@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useI18n } from '../i18n/useI18n'
 import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
 
-const API_BASE = import.meta.env.MODE === 'production' ? '' : 'http://localhost:5002'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export function LoginMembre() {
   const [numeroH, setNumeroH] = useState('')
@@ -24,17 +24,20 @@ export function LoginMembre() {
     setError('')
     setIsLoading(true)
 
-    if (!numeroH || !nomComplet || !password) {
-      setError('Veuillez remplir tous les champs.')
+    if (!numeroH || !password) {
+      setError('Veuillez remplir le NumeroH et le mot de passe.')
       setIsLoading(false)
       return
     }
+
+    // Normaliser le NumeroH : lettre O → chiffre 0 (erreur de saisie fréquente)
+    const normalizedNumeroH = numeroH.trim().replace(/O/g, '0').replace(/o/g, '0')
 
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ numeroH: numeroH.trim(), password }),
+        body: JSON.stringify({ numeroH: normalizedNumeroH, password }),
       })
       const data = await res.json()
 

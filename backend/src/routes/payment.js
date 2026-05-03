@@ -10,12 +10,15 @@ import {
 
 const router = express.Router();
 
-// Clés Flutterwave depuis les variables d'environnement
-const FLW_PUBLIC_KEY = process.env.FLW_PUBLIC_KEY || '';
-const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY || '';
-const FLW_ENCRYPTION_KEY = process.env.FLW_ENCRYPTION_KEY || '';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5002';
+const FEDAPAY_SECRET_KEY = process.env.FEDAPAY_SECRET_KEY || '';
+const FEDAPAY_ENV = process.env.FEDAPAY_ENV || 'sandbox'; // 'sandbox' ou 'live'
+const FEDAPAY_BASE = FEDAPAY_ENV === 'live'
+  ? 'https://api.fedapay.com/v1'
+  : 'https://sandbox.fedapay.com/v1';
+const FEDAPAY_CHECKOUT = FEDAPAY_ENV === 'live'
+  ? 'https://checkout.fedapay.com'
+  : 'https://sandbox-checkout.fedapay.com';
 
 // Génère une référence unique
 function generateTxRef(purpose) {
@@ -26,7 +29,7 @@ function generateTxRef(purpose) {
 
 /**
  * POST /api/payment/initiate
- * Crée un lien de paiement Flutterwave
+ * Initier un paiement via FedaPay
  */
 router.post('/initiate', authenticate, async (req, res) => {
   try {
@@ -37,16 +40,61 @@ router.post('/initiate', authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Montant et objet requis' });
     }
 
-    if (!FLW_PUBLIC_KEY) {
+    if (!FEDAPAY_SECRET_KEY) {
       return res.status(503).json({
         success: false,
-        message: 'Paiement non configuré. Ajoutez FLW_PUBLIC_KEY dans config.env',
+        message: 'Paiement bientôt disponible. Contactez l\'administrateur.',
       });
     }
 
     const txRef = generateTxRef(purpose);
 
-    // Sauvegarder la transaction en attente
+    // Créer la transaction FedaPay
+    const fedaRes = await fetch(`${FEDAPAY_BASE}/transactions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${FEDAPAY_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        description: description || purpose,
+        amount,
+        currency: { iso: currency },
+        customer: {
+          firstname: user.prenom || '',
+          lastname: user.nomFamille || '',
+          email: user.email || '',
+        },
+        callback_url: `${process.env.BACKEND_URL || ''}/api/payment/fedapay/webhook`,
+        return_url: `${FRONTEND_URL}/paiement-resultat?txRef=${txRef}`,
+      }),
+    });
+
+    if (!fedaRes.ok) {
+      const errData = await fedaRes.json().catch(() => ({}));
+      console.error('FedaPay erreur création:', errData);
+      return res.status(502).json({ success: false, message: 'Erreur FedaPay, réessayez.' });
+    }
+
+    const fedaData = await fedaRes.json();
+    const transactionId = fedaData?.v1?.transaction?.id;
+
+    if (!transactionId) {
+      return res.status(502).json({ success: false, message: 'Réponse FedaPay invalide.' });
+    }
+
+    // Obtenir le token de paiement
+    const tokenRes = await fetch(`${FEDAPAY_BASE}/transactions/${transactionId}/token`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET_KEY}` },
+    });
+
+    const tokenData = await tokenRes.json();
+    const token = tokenData?.v1?.token?.token;
+
+    const paymentUrl = `${FEDAPAY_CHECKOUT}/?token=${token}`;
+
+    // Sauvegarder la transaction en base
     await Payment.create({
       txRef,
       payerNumeroH: user.numeroH,
@@ -55,58 +103,10 @@ router.post('/initiate', authenticate, async (req, res) => {
       purpose,
       relatedId: relatedId || null,
       status: 'pending',
+      gatewayRef: String(transactionId),
     });
 
-    // Construire le lien de paiement Flutterwave (Inline Payment)
-    const paymentData = {
-      tx_ref: txRef,
-      amount: Number(amount),
-      currency,
-      redirect_url: `${BACKEND_URL}/api/payment/callback`,
-      customer: {
-        email: user.email || `${user.numeroH}@enfants-adam.app`,
-        phonenumber: user.telephone || '',
-        name: `${user.prenom || ''} ${user.nomFamille || ''}`.trim() || user.numeroH,
-      },
-      customizations: {
-        title: 'Les Enfants d\'Adam',
-        description: description || purpose,
-        logo: `${FRONTEND_URL}/logo.png`,
-      },
-      payment_options: 'mobilemoney,card,ussd',
-      meta: {
-        purpose,
-        relatedId: relatedId || '',
-        numeroH: user.numeroH,
-      },
-    };
-
-    // Appel API Flutterwave pour créer le lien de paiement
-    const flwResponse = await fetch('https://api.flutterwave.com/v3/payments', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${FLW_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentData),
-    });
-
-    const flwData = await flwResponse.json();
-
-    if (flwData.status === 'success') {
-      return res.json({
-        success: true,
-        txRef,
-        paymentLink: flwData.data.link,
-        publicKey: FLW_PUBLIC_KEY,
-        paymentData,
-      });
-    } else {
-      return res.status(500).json({
-        success: false,
-        message: flwData.message || 'Erreur Flutterwave',
-      });
-    }
+    return res.json({ success: true, txRef, paymentUrl });
   } catch (err) {
     console.error('Erreur initiation paiement:', err);
     return res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -114,85 +114,31 @@ router.post('/initiate', authenticate, async (req, res) => {
 });
 
 /**
- * GET /api/payment/callback
- * Flutterwave redirige ici après le paiement
+ * POST /api/payment/fedapay/webhook
+ * Notification automatique de FedaPay après paiement
  */
-router.get('/callback', async (req, res) => {
+router.post('/fedapay/webhook', async (req, res) => {
   try {
-    const { status, tx_ref, transaction_id } = req.query;
+    const event = req.body;
+    const transaction = event?.data?.object;
 
-    if (status === 'cancelled') {
-      await Payment.update({ status: 'cancelled' }, { where: { txRef: tx_ref } });
-      return res.redirect(`${FRONTEND_URL}/paiement/resultat?status=cancelled&tx_ref=${tx_ref}`);
-    }
+    if (!transaction) return res.sendStatus(200);
 
-    if (status !== 'successful') {
-      await Payment.update({ status: 'failed' }, { where: { txRef: tx_ref } });
-      return res.redirect(`${FRONTEND_URL}/paiement/resultat?status=failed&tx_ref=${tx_ref}`);
-    }
+    const { reference, approved } = transaction;
 
-    // Vérifier la transaction avec Flutterwave
-    const verifyRes = await fetch(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
-      headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` },
-    });
-    const verifyData = await verifyRes.json();
-
-    if (verifyData.status !== 'success' || verifyData.data.status !== 'successful') {
-      await Payment.update({ status: 'failed' }, { where: { txRef: tx_ref } });
-      return res.redirect(`${FRONTEND_URL}/paiement/resultat?status=failed&tx_ref=${tx_ref}`);
-    }
-
-    const txData = verifyData.data;
-
-    // Mettre à jour le paiement
-    const payment = await Payment.findOne({ where: { txRef: tx_ref } });
-    if (payment) {
-      payment.status = 'success';
-      payment.flwRef = txData.flw_ref;
-      payment.paymentMethod = txData.payment_type;
-      await payment.save();
-
-      // Actions post-paiement selon l'objet
-      await handlePostPayment(payment);
-    }
-
-    return res.redirect(`${FRONTEND_URL}/paiement/resultat?status=success&tx_ref=${tx_ref}`);
-  } catch (err) {
-    console.error('Erreur callback paiement:', err);
-    return res.redirect(`${FRONTEND_URL}/paiement/resultat?status=error`);
-  }
-});
-
-/**
- * POST /api/payment/webhook
- * Webhook Flutterwave (événements en temps réel)
- */
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  try {
-    const secretHash = process.env.FLW_WEBHOOK_HASH || '';
-    const signature = req.headers['verif-hash'];
-
-    if (secretHash && signature !== secretHash) {
-      return res.status(401).send('Unauthorized');
-    }
-
-    const payload = JSON.parse(req.body);
-
-    if (payload.event === 'charge.completed' && payload.data.status === 'successful') {
-      const payment = await Payment.findOne({ where: { txRef: payload.data.tx_ref } });
-      if (payment && payment.status !== 'success') {
-        payment.status = 'success';
-        payment.flwRef = payload.data.flw_ref;
-        payment.paymentMethod = payload.data.payment_type;
+    if (approved) {
+      const payment = await Payment.findOne({ where: { gatewayRef: String(transaction.id) } });
+      if (payment && payment.status !== 'completed') {
+        payment.status = 'completed';
         await payment.save();
         await handlePostPayment(payment);
       }
     }
 
-    return res.status(200).send('OK');
+    return res.sendStatus(200);
   } catch (err) {
-    console.error('Erreur webhook:', err);
-    return res.status(500).send('Error');
+    console.error('Webhook FedaPay erreur:', err);
+    return res.sendStatus(200);
   }
 });
 
@@ -239,7 +185,6 @@ router.get('/history', authenticate, async (req, res) => {
 async function handlePostPayment(payment) {
   try {
     if (payment.purpose === 'subscription_pro' && payment.relatedId) {
-      // Activer/renouveler le compte professionnel (abonnement 1 mois)
       const now = new Date();
       const expiresAt = new Date(now);
       expiresAt.setMonth(expiresAt.getMonth() + 1);
@@ -257,7 +202,6 @@ async function handlePostPayment(payment) {
       );
       console.log(`✅ Abonnement pro activé pour compte ${payment.relatedId}`);
 
-      // Récupérer l'email du compte pro (sinon celui du propriétaire)
       let proEmail = proAccount?.email || '';
       let proName  = proAccount?.name  || '';
 
@@ -267,10 +211,8 @@ async function handlePostPayment(payment) {
         if (!proName) proName = `${owner?.prenom || ''} ${owner?.nomFamille || ''}`.trim();
       }
 
-      // Envoi email via Brevo (reçu si premier paiement, renouvellement sinon)
       if (proEmail) {
         if (wasAlreadyActive) {
-          // Renouvellement
           sendSubscriptionRenewedEmail({
             proEmail,
             proName,
@@ -278,7 +220,6 @@ async function handlePostPayment(payment) {
             txRef: payment.txRef,
           }).catch(err => console.error('sendSubscriptionRenewedEmail:', err.message));
         } else {
-          // Premier paiement — reçu
           sendSubscriptionReceipt({
             proEmail,
             proName,

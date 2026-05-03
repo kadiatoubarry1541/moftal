@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Banner } from "./components/Banner";
@@ -47,7 +47,6 @@ const AdminModeration = lazy(() => import("./pages/AdminModeration"));
 const AdminPoints = lazy(() => import("./pages/AdminPoints"));
 const AcheterPoints = lazy(() => import("./pages/AcheterPoints"));
 const TerreAdam = lazy(() => import("./pages/TerreAdam"));
-const Histoire = lazy(() => import("./pages/Histoire"));
 const ARetenir = lazy(() => import("./pages/ARetenir"));
 const HistoireHumanite = lazy(() => import("./pages/HistoireHumanite"));
 const EchangesProfessionnel = lazy(() => import("./components/EchangesProfessionnel").then(m => ({ default: m.EchangesProfessionnel })));
@@ -64,11 +63,19 @@ const InscriptionPro = lazy(() => import("./pages/InscriptionPro"));
 const ListeProfessionnels = lazy(() => import("./pages/ListeProfessionnels"));
 const MesComptesPro = lazy(() => import("./pages/MesComptesPro"));
 const EspacePro = lazy(() => import("./pages/EspacePro"));
+const MonEspacePro = lazy(() => import("./pages/MonEspacePro"));
 const PrendreRendezVous = lazy(() => import("./pages/PrendreRendezVous"))
+const MesCours = lazy(() => import("./pages/MesCours"))
 const GalerieFamily = lazy(() => import("./pages/GalerieFamily"));
+const CompteFamille = lazy(() => import("./pages/CompteFamille"));
+const WalletPro = lazy(() => import("./pages/WalletPro"));
 const InfoWallou = lazy(() => import("./pages/InfoWallou"));
 const ConditionsUtilisation = lazy(() => import("./pages/ConditionsUtilisation"));
 const PaiementResultat = lazy(() => import("./pages/PaiementResultat"));
+const GestionInterne = lazy(() => import("./pages/GestionInterne"));
+const GestionClinique = lazy(() => import("./pages/GestionClinique"));
+const GestionEcole = lazy(() => import("./pages/GestionEcole"));
+const MoftalPay = lazy(() => import("./pages/MoftalPay"));
 
 const LoadingBar = () => (
   <div className="fixed top-0 left-0 w-full h-1 z-[9999] bg-gray-200">
@@ -89,6 +96,7 @@ function ZakaMuslimOnly() {
 function App() {
   const { lang, setLang } = useI18n();
   const { pathname } = useLocation();
+  const [guideReady, setGuideReady] = useState(false);
 
   // Réveille le backend après le premier rendu (Render free tier dort si inactif)
   // Différé de 3s pour ne pas concurrencer le LCP / FCP initial
@@ -100,11 +108,13 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Optimisation : mémoriser la vérification de session pour éviter les recalculs
-  const isLoggedIn = useMemo(() => {
-    const user = getSessionUser();
-    return user !== null;
-  }, [pathname]); // Recalculer seulement si le pathname change
+  // Différer le FloatingGuideIA après le premier rendu pour réduire le TBT initial
+  useEffect(() => {
+    const t = setTimeout(() => setGuideReady(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  const isLoggedIn = getSessionUser() !== null;
   
   const isHome = pathname === "/";
   const showFullHeader = !isLoggedIn || isHome;
@@ -125,7 +135,7 @@ function App() {
                   alt="Logo"
                   width="48"
                   height="48"
-                  fetchPriority="high"
+                  decoding="async"
                   className="h-9 w-9 xs:h-10 xs:w-10 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).style.display = 'none';
@@ -216,11 +226,11 @@ function App() {
           <Route path="/pays" element={<Navigate to="/terre-adam" replace />} />
           <Route path="/terre-adam" element={<TerreAdam />} />
           <Route path="/organisation" element={<Navigate to="/activite" replace />} />
-          <Route path="/histoire" element={<Histoire />} />
+          <Route path="/histoire" element={<Navigate to="/histoire-humanite" replace />} />
           <Route path="/a-retenir" element={<ARetenir />} />
           <Route path="/histoire-humanite" element={<HistoireHumanite />} />
           <Route path="/science" element={<Science />} />
-            <Route path="/echange" element={<EchangesProfessionnel userData={null} />} />
+            <Route path="/echange" element={<EchangesProfessionnel />} />
           <Route path="/echange/primaire" element={<EchangePrimaire />} />
             <Route path="/echange/nourriture" element={<EchangeNourriture />} />
             <Route path="/echange/medicament" element={<EchangeMedicament />} />
@@ -233,11 +243,19 @@ function App() {
           <Route path="/professionnels" element={<ListeProfessionnels />} />
           <Route path="/mes-comptes-pro" element={<MesComptesPro />} />
           <Route path="/espace-pro/:id" element={<EspacePro />} />
+          <Route path="/mon-espace-pro" element={<MonEspacePro />} />
           <Route path="/rendez-vous/:id" element={<PrendreRendezVous />} />
+          <Route path="/mes-cours" element={<MesCours />} />
           <Route path="/galerie-famille" element={<GalerieFamily />} />
+          <Route path="/moftal-pay" element={<MoftalPay />} />
+          <Route path="/compte-famille" element={<CompteFamille />} />
+          <Route path="/wallet-pro" element={<WalletPro />} />
           <Route path="/info-wallou" element={<InfoWallou />} />
           <Route path="/conditions-utilisation" element={<ConditionsUtilisation />} />
           <Route path="/paiement/resultat" element={<PaiementResultat />} />
+          <Route path="/gestion-interne" element={<GestionInterne />} />
+          <Route path="/gestion-clinique/:tenantCode" element={<GestionClinique />} />
+          <Route path="/gestion-ecole/:tenantCode" element={<GestionEcole />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
@@ -263,10 +281,12 @@ function App() {
         <Suspense fallback={null}><FloatingMessenger /></Suspense>
       )}
 
-      {/* Assistant IA Guide — visible sur toutes les pages, chargé en lazy */}
-      <Suspense fallback={null}>
-        <FloatingGuideIA />
-      </Suspense>
+      {/* Assistant IA Guide — chargé 1.5s après le rendu initial pour ne pas bloquer LCP/TBT */}
+      {guideReady && (
+        <Suspense fallback={null}>
+          <FloatingGuideIA />
+        </Suspense>
+      )}
 
       {/* Toast Notifications */}
       <Toaster

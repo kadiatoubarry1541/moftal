@@ -9,7 +9,7 @@ export default function PaiementResultat() {
 
   const [countdown, setCountdown] = useState(5);
 
-  const isSuccess   = status === 'success' || status === 'successful';
+  const isSuccess   = status === 'success' || status === 'successful' || status === 'approved';
   const isCancelled = status === 'cancelled';
   const redirectTarget = isSuccess ? '/mes-comptes-pro' : '/activite';
 

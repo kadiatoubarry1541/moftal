@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
 import { AudioRecorder } from '../components/AudioRecorder';
+import { hideIncrement } from '../utils/formatNumeroH';
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -670,14 +671,14 @@ export default function Activite() {
                                 <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
                                   {!isMyMessage && (
                                     <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1">
-                                      {(msg.authorName || msg.numeroH || '?').substring(0, 2).toUpperCase()}
+                                      {(msg.authorName || '?').substring(0, 2).toUpperCase()}
                                     </div>
                                   )}
                                   <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
                                     {!isMyMessage && (
                                       <div className="mb-1">
                                         <p className="text-xs font-semibold">{msg.authorName}</p>
-                                        <p className="text-xs opacity-60">{msg.numeroH}</p>
+                                        <p className="text-xs opacity-60">{hideIncrement(msg.numeroH)}</p>
                                       </div>
                                     )}
                                     {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
@@ -723,14 +724,14 @@ export default function Activite() {
                                 <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
                                   {!isMyMessage && (
                                     <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1">
-                                      {(msg.authorName || msg.numeroH || '?').substring(0, 2).toUpperCase()}
+                                      {(msg.authorName || '?').substring(0, 2).toUpperCase()}
                                     </div>
                                   )}
                                   <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
                                     {!isMyMessage && (
                                       <div className="mb-1">
                                         <p className="text-xs font-semibold">{msg.authorName}</p>
-                                        <p className="text-xs opacity-60">{msg.numeroH}</p>
+                                        <p className="text-xs opacity-60">{hideIncrement(msg.numeroH)}</p>
                                       </div>
                                     )}
                                     {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
@@ -769,7 +770,7 @@ export default function Activite() {
                             {!isMyMessage && (
                               <div className="mb-1">
                                 <p className="text-xs font-semibold">{msg.authorName}</p>
-                                <p className="text-xs opacity-60">{msg.numeroH}</p>
+                                <p className="text-xs opacity-60">{hideIncrement(msg.numeroH)}</p>
                               </div>
                             )}
                             {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
@@ -871,7 +872,7 @@ export default function Activite() {
                                 <button type="button" onClick={() => setNewActivityPost({...newActivityPost, mediaFile: null})} className="text-red-500 hover:text-red-700 text-xs font-medium">✕</button>
                               </div>
                             ) : (
-                              <AudioRecorder compact maxDuration={120} onAudioRecorded={(blob) => {
+                              <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
                                 const file = new File([blob], 'vocal.webm', { type: blob.type });
                                 setNewActivityPost({...newActivityPost, mediaFile: file});
                               }} />

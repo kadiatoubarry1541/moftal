@@ -34,7 +34,7 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
   const [newPartnerName, setNewPartnerName] = useState('')
 
   const isHomme = userData.genre === 'HOMME'
-  const title = isHomme ? 'Mon Homme' : 'Mon Homme'
+  const title = isHomme ? 'Ma Femme' : 'Mon Homme'
 
   const sessions = [
     { id: 'avant', title: 'Ma vie avant toi', icon: '👤', description: 'Mon parcours' },
@@ -111,7 +111,7 @@ export function MonPartenaire({ userData }: { userData: UserData }) {
     <div className="max-w-7xl mx-auto">
       {/* En-tête */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">{isHomme ? '🤵 Mon Homme' : '🤵 Mon Homme'}</h2>
+        <h2 className="text-3xl font-bold text-slate-800 mb-2">{isHomme ? '👰 Ma Femme' : '🤵 Mon Homme'}</h2>
         <p className="text-slate-600">Partagez vos moments et recevez les notes de votre partenaire</p>
       </div>
 

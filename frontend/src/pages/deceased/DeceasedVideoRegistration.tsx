@@ -400,7 +400,7 @@ export function DeceasedVideoRegistration() {
         <div className="card">
           <VideoRecorder 
             onVideoRecorded={handleVideoRecorded}
-            maxDuration={30}
+            maxDuration={10}
           />
           <div className="actions">
             <button className="btn" onClick={handleSubmit}>

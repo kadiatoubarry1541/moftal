@@ -14,7 +14,7 @@ interface PreviewProduct {
 }
 
 interface EchangesProfessionnelProps {
-  userData: any;
+  userData?: any;
 }
 
 const APERÇU_PRIMAIRE: PreviewProduct[] = [

@@ -34,13 +34,10 @@ export function MesParents({ userData }: { userData: UserData }) {
   const [showMediaUploader, setShowMediaUploader] = useState(false)
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
   
-  // Si c'est pour une femme (Mon Homme), une seule ligne, sinon deux (Papa/Maman)
-  const initialNotes = userData.genre === 'FEMME' 
-    ? [{ id: '1', parent: 'papa' as const, annee: 2024, note: 0 }]
-    : [
-        { id: '1', parent: 'papa' as const, annee: 2024, note: 0 },
-        { id: '2', parent: 'maman' as const, annee: 2024, note: 0 }
-      ]
+  const initialNotes = [
+    { id: '1', parent: 'papa' as const, annee: 2024, note: 0 },
+    { id: '2', parent: 'maman' as const, annee: 2024, note: 0 }
+  ]
   
   const [parentNotes, setParentNotes] = useState<ParentNote[]>(initialNotes)
 

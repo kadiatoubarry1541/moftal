@@ -504,29 +504,29 @@ export default function EchangeMedicament() {
               />
             </div>
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Photo + message vocal (max 1 min)</label>
-              <p className="text-xs text-gray-500 mb-2">Prenez une photo de votre bien et enregistrez un message vocal (max 1 min) pour le présenter.</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Photo + message vocal (max 10 secondes)</label>
+              <p className="text-xs text-gray-500 mb-2">Prenez une photo du produit et enregistrez un message vocal (max 10 s) pour le présenter.</p>
               <div className="rounded-xl border-2 border-slate-200 bg-slate-50 p-4 mb-4 space-y-3">
                 <div>
-                  <span className="block text-xs font-medium text-gray-600 mb-1">Photo du bien</span>
+                  <span className="block text-xs font-medium text-gray-600 mb-1">Photo du produit</span>
                   <input type="file" accept="image/*" capture="environment" onChange={(e) => setNewProduct((prev) => ({ ...prev, photoForAudio: e.target.files?.[0] || null }))} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-teal-100 file:text-teal-800" />
                   {newProduct.photoForAudio && <p className="mt-1 text-xs text-teal-600">✓ Photo sélectionnée</p>}
                 </div>
                 <div>
-                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 1 min)</span>
-                  <AudioRecorder maxDuration={60} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-30s-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
+                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 10 secondes)</span>
+                  <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-30s-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
                   {newProduct.audio30s && <p className="mt-2 text-xs text-emerald-600">✓ Message vocal enregistré</p>}
                 </div>
               </div>
             </div>
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 1 min)</label>
-              <p className="text-xs text-gray-500 mb-2">Enregistrez une vidéo de présentation (max 1 min).</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 10 secondes)</label>
+              <p className="text-xs text-gray-500 mb-2">Enregistrez une vidéo de 5 à 10 secondes pour présenter votre produit.</p>
               <div className="rounded-xl border-2 border-teal-200 bg-teal-50/50 p-4 mb-4">
                 <VideoRecorder
-                  maxDuration={60}
+                  maxDuration={10}
                   onVideoRecorded={(blob) => {
-                    const file = new File([blob], `video-1min-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
+                    const file = new File([blob], `video-10s-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                     setNewProduct((prev) => ({ ...prev, videos: [file, ...prev.videos] }));
                   }}
                 />
@@ -794,7 +794,31 @@ export default function EchangeMedicament() {
             </div>
           ) : (
             getFilteredProducts().map((product) => (
-              <div key={product.id} className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-blue-300 transform hover:-translate-y-2">
+              <div key={product.id} className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-blue-300 overflow-hidden">
+                {/* Media : photo, vidéo ou audio */}
+                {product.images && product.images.length > 0 ? (
+                  <img src={`${(config.API_BASE_URL || '').replace(/\/api\/?$/, '')}${product.images[0].startsWith('/') ? '' : '/'}${product.images[0]}`} alt={product.title}
+                    className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+                ) : product.videos && product.videos.length > 0 ? (
+                  <video
+                    src={`${(config.API_BASE_URL || '').replace(/\/api\/?$/, '')}${product.videos[0].startsWith('/') ? '' : '/'}${product.videos[0]}`}
+                    className="w-full h-48 object-cover"
+                    autoPlay muted loop playsInline
+                    onError={(e) => { (e.target as HTMLVideoElement).style.display='none'; }}
+                  />
+                ) : (product as any).audio && (product as any).audio.length > 0 ? (
+                  <div className="w-full h-48 bg-amber-50 flex flex-col items-center justify-center gap-2 px-4">
+                    <span className="text-4xl">🎙️</span>
+                    <p className="text-xs text-amber-700 font-medium text-center">Message vocal du vendeur</p>
+                    <audio src={`${(config.API_BASE_URL || '').replace(/\/api\/?$/, '')}${(product as any).audio[0].startsWith('/') ? '' : '/'}${(product as any).audio[0]}`} controls className="w-full" />
+                  </div>
+                ) : (
+                  <div className="w-full h-48 bg-blue-50 flex flex-col items-center justify-center gap-2">
+                    <span className="text-5xl">📷</span>
+                    <p className="text-xs text-gray-400">Pas encore de photo</p>
+                  </div>
+                )}
+                <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-900 text-lg mb-1">{product.title}</h3>
@@ -836,6 +860,7 @@ export default function EchangeMedicament() {
                   <button className="px-4 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
                     ❤️
                   </button>
+                </div>
                 </div>
               </div>
             ))

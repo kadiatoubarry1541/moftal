@@ -706,8 +706,8 @@ export default function EchangeSecondaire() {
             </>)}
             {publishMode === 'photo_audio' && (
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Photo + message vocal (max 1 min)</label>
-              <p className="text-xs text-gray-500 mb-2">Prenez une photo de votre bien et enregistrez un message vocal (max 1 min) pour le présenter.</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Photo + message vocal (max 10 secondes)</label>
+              <p className="text-xs text-gray-500 mb-2">Prenez une photo de votre bien et enregistrez un message vocal (max 10 s) pour le présenter.</p>
               <div className="rounded-xl border-2 border-amber-200 bg-amber-50/50 p-4 space-y-3">
                 <div>
                   <span className="block text-xs font-medium text-gray-600 mb-1">Photo du bien</span>
@@ -715,8 +715,8 @@ export default function EchangeSecondaire() {
                   {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600">✓ Photo sélectionnée</p>}
                 </div>
                 <div>
-                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 1 min)</span>
-                  <AudioRecorder maxDuration={60} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-30s-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
+                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 10 secondes)</span>
+                  <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-30s-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
                   {newProduct.audio30s && <p className="mt-2 text-xs text-green-600">✓ Audio enregistré</p>}
                 </div>
               </div>
@@ -724,11 +724,11 @@ export default function EchangeSecondaire() {
             )}
             {publishMode === 'video' && (
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 1 min)</label>
-              <p className="text-xs text-gray-500 mb-2">Enregistrez une courte vidéo pour présenter votre bien.</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 10 secondes)</label>
+              <p className="text-xs text-gray-500 mb-2">Enregistrez une courte vidéo de 5 à 10 secondes pour présenter votre bien.</p>
               <div className="rounded-xl border-2 border-blue-200 bg-blue-50/50 p-4">
                 <VideoRecorder
-                  maxDuration={60}
+                  maxDuration={10}
                   onVideoRecorded={(blob) => {
                     const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                     setNewProduct((prev) => ({ ...prev, videos: [file, ...prev.videos] }));
@@ -947,15 +947,22 @@ export default function EchangeSecondaire() {
               <img src={buildImageUrl(product.images[0])} alt={product.title}
                 className="w-full h-48 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
             ) : product.videos && product.videos.length > 0 ? (
-              <video src={buildImageUrl(product.videos[0])} className="w-full h-48 object-cover" controls />
+              <video
+                src={buildImageUrl(product.videos[0])}
+                className="w-full h-48 object-cover"
+                autoPlay muted loop playsInline
+                onError={(e) => { (e.target as HTMLVideoElement).style.display='none'; }}
+              />
             ) : product.audio && product.audio.length > 0 ? (
-              <div className="w-full h-48 bg-amber-50 flex flex-col items-center justify-center gap-2">
+              <div className="w-full h-48 bg-amber-50 flex flex-col items-center justify-center gap-2 px-4">
                 <span className="text-4xl">🎙️</span>
-                <audio src={buildImageUrl(product.audio[0])} controls className="w-full px-4" />
+                <p className="text-xs text-amber-700 font-medium text-center">Message vocal du vendeur</p>
+                <audio src={buildImageUrl(product.audio[0])} controls className="w-full" />
               </div>
             ) : (
-              <div className="w-full h-48 bg-blue-50 flex items-center justify-center">
-                <span className="text-5xl">🛍️</span>
+              <div className="w-full h-48 bg-blue-50 flex flex-col items-center justify-center gap-2">
+                <span className="text-5xl">📷</span>
+                <p className="text-xs text-gray-400">Pas encore de photo</p>
               </div>
             )}
             <div className="p-4">

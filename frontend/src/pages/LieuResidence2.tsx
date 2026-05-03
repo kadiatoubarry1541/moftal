@@ -700,7 +700,7 @@ export default function LieuResidence2() {
                         <button type="button" onClick={() => setNewPost({...newPost, mediaFile: null})} className="text-red-500 hover:text-red-700 text-xs font-medium">✕ Annuler</button>
                       </div>
                     ) : (
-                      <AudioRecorder maxDuration={120} onAudioRecorded={(blob) => {
+                      <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
                         const file = new File([blob], 'vocal.webm', { type: blob.type });
                         setNewPost({...newPost, mediaFile: file});
                       }} />

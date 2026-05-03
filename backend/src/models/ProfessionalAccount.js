@@ -59,7 +59,10 @@ ProfessionalAccount.init({
       'vendor',      // vendeurs / détaillants
       'producer',    // entreprises de production
       'broker',      // démarcheurs / agents pour location de maisons
-      'restaurant'   // restauration : menu, commandes, appel direct
+      'restaurant',  // restauration : menu, commandes, appel direct
+      'transport',   // taxi, moto, livraison à domicile
+      'beauty',      // salon de beauté, coiffeur, spa
+      'artisan'      // plombier, électricien, menuisier, soudeur
     ),
     allowNull: false
   },
@@ -155,8 +158,7 @@ ProfessionalAccount.init({
     type: DataTypes.ENUM('primaire', 'secondaire', 'tertiaire'),
     allowNull: true,
     defaultValue: null,
-    field: 'sub_sector',
-    comment: 'Niveau Échanges : primaire | secondaire | tertiaire (nul pour les autres types)'
+    field: 'sub_sector'
   },
   // Statut d'abonnement / de paiement du compte pro
   subscriptionStatus: {

@@ -13,169 +13,57 @@ export const authenticateToken = async (req, res, next) => {
 // Middleware pour vérifier l'authentification
 export const authenticate = async (req, res, next) => {
   try {
-    // Récupérer le token du header Authorization
     const authHeader = req.headers.authorization;
-    
-    
-    // Si pas de token, vérifier si c'est un admin via un header spécial
-    // (pour les cas où le token n'est pas disponible mais l'utilisateur est connecté)
-    if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.substring(7).trim() === '') {
-      // Vérifier si c'est une requête d'un admin via un header spécial
-      const adminHeader = req.headers['x-admin-numero-h'];
-      if (adminHeader) {
-        // Les comptes master admins (G7..., G0...) bypassent les vérifications classiques
-        if (MASTER_ADMIN_NUMEROS.includes(adminHeader)) {
-          const user = await User.findByNumeroH(adminHeader);
-          if (user) {
-            req.user = user;
-            req.userId = user.numeroH;
-            req.user.isMasterAdmin = true;
-            req.user.bypassRestrictions = true;
-            req.user.canViewAll = true;
-            req.user.canEditAll = true;
-            req.user.canDeleteAll = true;
-            next();
-            return;
-          }
-        }
-        
-        const user = await User.findByNumeroH(adminHeader);
-        
-        if (user && user.isActive) {
-          req.user = user;
-          req.userId = user.numeroH;
-          if (
-            MASTER_ADMIN_NUMEROS.includes(user.numeroH)
-          ) {
-            req.user.isMasterAdmin = true;
-          }
-          next();
-          return;
-        }
-      }
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
         message: 'Authentification requise - Token manquant'
       });
     }
 
-    // Extraire le token
-    const token = authHeader.substring(7); // Remove 'Bearer '
-    
-    // Si token vide mais header présent, essayer avec l'admin header
-    if (!token || token.trim() === '') {
-      const adminHeader = req.headers['x-admin-numero-h'];
-      if (adminHeader) {
-        const user = await User.findByNumeroH(adminHeader);
-        if (
-          user &&
-          user.isActive &&
-          (
-            user.role === 'admin' ||
-            user.role === 'super-admin' ||
-            MASTER_ADMIN_NUMEROS.includes(user.numeroH)
-          )
-        ) {
-          req.user = user;
-          req.userId = user.numeroH;
-          if (
-            MASTER_ADMIN_NUMEROS.includes(user.numeroH)
-          ) {
-            req.user.isMasterAdmin = true;
-          }
-          next();
-          return;
-        }
-      }
-      
+    const token = authHeader.substring(7).trim();
+
+    if (!token) {
       return res.status(401).json({
         success: false,
         message: 'Token invalide ou vide'
       });
     }
-    
-    // Vérifier le token
+
     try {
       const decoded = jwt.verify(token, config.JWT_SECRET);
-      
-      // Récupérer l'utilisateur depuis la base de données
+
       const user = await User.findByNumeroH(decoded.numeroH);
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,
           message: 'Utilisateur non trouvé'
         });
       }
-      
-      // Les comptes master admins bypassent toutes les vérifications classiques
-      if (MASTER_ADMIN_NUMEROS.includes(user.numeroH)) {
-        req.user = user;
-        req.userId = user.numeroH;
-        req.user.isMasterAdmin = true;
-        req.user.bypassRestrictions = true;
-        req.user.canViewAll = true;
-        req.user.canEditAll = true;
-        req.user.canDeleteAll = true;
-        next();
-        return;
-      }
-      
+
       if (!user.isActive) {
         return res.status(401).json({
           success: false,
           message: 'Compte désactivé'
         });
       }
-      
-      // Ajouter l'utilisateur à la requête
+
       req.user = user;
       req.userId = user.numeroH;
-      
-      next();
-    } catch (jwtError) {
-      // Si le JWT échoue (expiré, invalide, fallback), essayer x-admin-numero-h comme fallback
-      const adminHeader = req.headers['x-admin-numero-h'];
-      if (adminHeader) {
-        try {
-          if (MASTER_ADMIN_NUMEROS.includes(adminHeader)) {
-            const user = await User.findByNumeroH(adminHeader);
-            if (user) {
-              req.user = user;
-              req.userId = user.numeroH;
-              req.user.isMasterAdmin = true;
-              req.user.bypassRestrictions = true;
-              req.user.canViewAll = true;
-              req.user.canEditAll = true;
-              req.user.canDeleteAll = true;
-              next();
-              return;
-            }
-          }
 
-          const user = await User.findByNumeroH(adminHeader);
-          if (
-            user &&
-            user.isActive &&
-            (
-              user.role === 'admin' ||
-              user.role === 'super-admin' ||
-              MASTER_ADMIN_NUMEROS.includes(user.numeroH)
-            )
-          ) {
-            req.user = user;
-            req.userId = user.numeroH;
-            if (MASTER_ADMIN_NUMEROS.includes(user.numeroH)) {
-              req.user.isMasterAdmin = true;
-            }
-            next();
-            return;
-          }
-        } catch (fallbackError) {
-          console.error('Erreur fallback x-admin-numero-h:', fallbackError);
-        }
+      // Donner les droits master admin aux comptes admins reconnus (via JWT uniquement)
+      if (MASTER_ADMIN_NUMEROS.includes(user.numeroH)) {
+        req.user.isMasterAdmin = true;
+        req.user.bypassRestrictions = true;
+        req.user.canViewAll = true;
+        req.user.canEditAll = true;
+        req.user.canDeleteAll = true;
       }
 
+      next();
+    } catch (jwtError) {
       if (jwtError.name === 'TokenExpiredError') {
         return res.status(401).json({
           success: false,

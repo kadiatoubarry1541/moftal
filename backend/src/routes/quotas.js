@@ -77,8 +77,8 @@ export async function getOrCreateQuota(contextType, contextKey, defaultFreePhoto
 // que si la condition est vraie, et RETURNING nous dit combien de lignes ont été
 // affectées. Impossible de tricher avec des appels simultanés.
 //
-export async function checkAndConsumeQuota(contextType, contextKey, isVideoUpload, uploaderNumeroH, defaultFreePhotos, defaultFreeVideos) {
-  const costPoints = isVideoUpload ? 2 : 1;
+export async function checkAndConsumeQuota(contextType, contextKey, isVideoUpload, uploaderNumeroH, defaultFreePhotos, defaultFreeVideos, costOverride) {
+  const costPoints = costOverride ?? (isVideoUpload ? 5 : 1);
 
   // ── Étape 1 : s'assurer que la ligne quota existe ──
   await sequelize.query(`

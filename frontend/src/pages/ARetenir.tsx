@@ -492,7 +492,7 @@ export default function ARetenir() {
             </div>
             <div className="flex space-x-4">
               <button
-                onClick={() => navigate('/histoire')}
+                onClick={() => navigate('/histoire-humanite')}
                 className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg"
               >
                 📜 Chronique ancestrale (Gén. 1–95)
@@ -706,7 +706,7 @@ export default function ARetenir() {
                             vid.preload = 'metadata';
                             vid.onloadedmetadata = () => {
                               URL.revokeObjectURL(vid.src);
-                              if (vid.duration > 60) {
+                              if (vid.duration > 10) {
                                 toast.error('La vidéo ne doit pas dépasser 1 minute.');
                                 e.target.value = '';
                                 return;

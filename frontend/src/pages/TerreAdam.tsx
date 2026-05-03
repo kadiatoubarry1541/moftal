@@ -919,7 +919,7 @@ export default function TerreAdam() {
                                           </div>
                                         ) : (
                                           <div className="flex-1">
-                                            <AudioRecorder maxDuration={120} onAudioRecorded={(blob) => {
+                                            <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
                                               const file = new File([blob], 'vocal.webm', { type: blob.type });
                                               setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
                                             }} />

@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getSessionUser, isAdmin } from "../utils/auth";
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
 interface ProAccount {
   id: string;
@@ -26,9 +29,13 @@ const TYPES = [
   { id: "supplier", label: "Fournisseurs", icon: "📦" },
   { id: "vendor", label: "Vendeurs", icon: "🛒" },
   { id: "producer", label: "Producteurs", icon: "🏭" },
-  { id: "broker", label: "Démarcheurs", icon: "🏘️" },
+  { id: "broker", label: "Immobilier", icon: "🏘️" },
   { id: "scientist", label: "Scientifiques", icon: "🔬" },
   { id: "ngo", label: "ONG / Associations", icon: "🤝" },
+  { id: "restaurant", label: "Restaurants", icon: "🍽️" },
+  { id: "transport", label: "Transport", icon: "🚗" },
+  { id: "beauty", label: "Beauté", icon: "💈" },
+  { id: "artisan", label: "Artisanat", icon: "🔧" },
 ];
 
 function getTypeIcon(type: string) {
@@ -44,6 +51,9 @@ export default function ListeProfessionnels() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const filterType = searchParams.get("type") || "";
 
+  const currentUser = getSessionUser();
+  const userIsAdmin = isAdmin(currentUser);
+
   useEffect(() => {
     loadAccounts();
   }, [filterType]);
@@ -52,8 +62,8 @@ export default function ListeProfessionnels() {
     setLoading(true);
     try {
       const url = filterType
-        ? `http://localhost:5002/api/professionals/approved?type=${filterType}`
-        : "http://localhost:5002/api/professionals/approved";
+        ? `${API_BASE}/api/professionals/approved?type=${filterType}`
+        : `${API_BASE}/api/professionals/approved`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) setAccounts(data.accounts || []);
@@ -68,7 +78,7 @@ export default function ListeProfessionnels() {
     if (!search.trim()) { loadAccounts(); return; }
     setLoading(true);
     try {
-      const url = `http://localhost:5002/api/professionals/search?q=${encodeURIComponent(search)}&type=${filterType}`;
+      const url = `${API_BASE}/api/professionals/search?q=${encodeURIComponent(search)}&type=${filterType}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) setAccounts(data.accounts || []);
@@ -274,6 +284,16 @@ export default function ListeProfessionnels() {
                         >
                           📅 Prendre rendez-vous
                         </button>
+
+                        {/* Bouton admin — accès direct au dashboard du professionnel */}
+                        {userIsAdmin && (
+                          <button
+                            onClick={() => navigate(`/espace-pro/${pro.id}`)}
+                            className="w-full min-h-[40px] px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                          >
+                            👁️ Voir le dashboard (Admin)
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

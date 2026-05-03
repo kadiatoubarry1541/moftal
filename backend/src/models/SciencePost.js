@@ -107,7 +107,7 @@ SciencePost.init({
       fields: ['type']
     },
     {
-      fields: ['isActive']
+      fields: ['is_active']
     },
     {
       fields: ['created_at']

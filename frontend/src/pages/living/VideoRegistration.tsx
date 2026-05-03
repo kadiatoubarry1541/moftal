@@ -948,7 +948,7 @@ export function VideoRegistration() {
       <div className="stack">
         <h2>Enregistrement Vidéo</h2>
         <div className="card">
-          <VideoRecorder onVideoRecorded={handleVideoRecorded} maxDuration={30} />
+          <VideoRecorder onVideoRecorded={handleVideoRecorded} maxDuration={10} />
           {videoData.video && (
             <div className="actions" style={{ marginTop: '20px' }}>
               <button className="btn" onClick={handleSubmit} disabled={loading}>

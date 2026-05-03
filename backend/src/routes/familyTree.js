@@ -1,4 +1,7 @@
 import express from 'express';
+import multer from 'multer';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import DeceasedMember from '../models/DeceasedMember.js';
@@ -9,6 +12,26 @@ import { FamilyTree } from '../models/additional.js';
 import { Op } from 'sequelize';
 import Notification from '../models/Notification.js';
 import CoupleLink from '../models/CoupleLink.js';
+import { getIO } from '../socket.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Multer memory storage — stocké en base64 dans PostgreSQL (pas de disque, compatible Render)
+// Limites : image 3 MB, vidéo 5 MB (≈30s), audio 2 MB (≈30s)
+const MAX_SIZES = { image: 3, video: 5, audio: 2 }; // en MB
+
+const uploadFamilyMedia = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024 }, // 6 MB max absolu
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Type de fichier non supporté (image, vidéo ou audio uniquement)'), false);
+    }
+  }
+});
 
 const router = express.Router();
 
@@ -492,28 +515,145 @@ router.put('/set-family-heads', async (req, res) => {
 router.post('/add-deceased', async (req, res) => {
   try {
     const user = req.user;
-    const deceasedData = req.body;
+    const { numeroHD: _ignored, ...deceasedData } = req.body; // ignorer le numeroHD client
 
-    // Créer le membre décédé
+    // Générer automatiquement le numeroHD unique (DM0001, DM0002, …)
+    const numeroHD = await genererNumeroHD();
+
     const deceased = await DeceasedMember.create({
       ...deceasedData,
+      numeroHD,
       createdBy: user.numeroH
     });
 
-    // Ajouter le décédé à l'arbre familial
     await addDeceasedToFamilyTree(deceased.numeroHD, deceased.numeroHPere, deceased.numeroHMere);
 
     res.json({
       success: true,
-      message: 'Décédé ajouté à l\'arbre généalogique avec succès',
-      deceased
+      message: 'Défunt ajouté à l\'arbre généalogique avec succès',
+      deceased,
+      numeroHD
     });
   } catch (error) {
-    console.error('Erreur lors de l\'ajout du décédé:', error);
+    console.error('Erreur lors de l\'ajout du défunt:', error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors de l\'ajout du décédé'
+      message: 'Erreur serveur lors de l\'ajout du défunt'
     });
+  }
+});
+
+// Génère un numeroHD unique automatiquement : DM0001, DM0002, …
+async function genererNumeroHD() {
+  const total = await DeceasedMember.count();
+  let seq = total + 1;
+  let numeroHD = `DM${String(seq).padStart(4, '0')}`;
+  // Sécurité anti-collision
+  while (await DeceasedMember.findOne({ where: { numeroHD } })) {
+    seq++;
+    numeroHD = `DM${String(seq).padStart(4, '0')}`;
+  }
+  return numeroHD;
+}
+
+// @route   GET /api/family-tree/deceased/:numeroHD
+// @desc    Récupérer tous les détails d'un défunt par son numeroHD
+// @access  Authentifié
+router.get('/deceased/:numeroHD', async (req, res) => {
+  try {
+    const deceased = await DeceasedMember.findOne({
+      where: { numeroHD: req.params.numeroHD }
+    });
+    if (!deceased) {
+      return res.status(404).json({ success: false, message: 'Défunt introuvable.' });
+    }
+    res.json({ success: true, deceased });
+  } catch (err) {
+    console.error('family-tree/deceased/:numeroHD:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// ========== SIGNALEMENT DE DÉCÈS ==========
+
+// @route   POST /api/family-tree/report-death
+// @desc    Signaler le décès d'un membre avec un compte actif
+//          → ferme le compte, crée une fiche décédé (numeroHD auto), met à jour l'arbre
+// @access  Authentifié (même famille ou admin)
+router.post('/report-death', async (req, res) => {
+  try {
+    const { memberNumeroH, dateDeces, anneeDeces, causeDeces } = req.body;
+    const reporter = req.user;
+
+    if (!memberNumeroH) {
+      return res.status(400).json({ success: false, message: 'memberNumeroH requis.' });
+    }
+
+    const membre = await User.findOne({ where: { numeroH: memberNumeroH, type: 'vivant', isActive: true } });
+    if (!membre) {
+      return res.status(404).json({ success: false, message: 'Membre actif introuvable avec ce numéro H (déjà décédé ou inexistant).' });
+    }
+
+    const tree = await FamilyTree.findOne({
+      where: { members: { [Op.contains]: [memberNumeroH] }, isActive: true }
+    });
+    if (!tree) {
+      return res.status(404).json({ success: false, message: 'Ce membre n\'est dans aucun arbre actif.' });
+    }
+
+    const isAdmin = reporter.role === 'admin' || reporter.role === 'super-admin' || reporter.isMasterAdmin;
+    const isInSameTree = (tree.members || []).includes(reporter.numeroH)
+      || tree.chefFamille1 === reporter.numeroH
+      || tree.chefFamille2 === reporter.numeroH;
+
+    if (!isAdmin && !isInSameTree) {
+      return res.status(403).json({ success: false, message: 'Vous devez être membre de la même famille pour signaler un décès.' });
+    }
+
+    // Générer automatiquement le numeroHD unique (DM0001, DM0002, …)
+    const numeroHD = await genererNumeroHD();
+
+    const annee = anneeDeces
+      ? parseInt(anneeDeces)
+      : (dateDeces ? new Date(dateDeces).getFullYear() : new Date().getFullYear());
+
+    await DeceasedMember.create({
+      numeroHD,
+      prenom: membre.prenom,
+      nomFamille: membre.nomFamille,
+      genre: membre.genre,
+      dateNaissance: membre.dateNaissance || null,
+      dateDeces: dateDeces || null,
+      anneeDeces: annee,
+      causeDeces: causeDeces || null,
+      photo: membre.photo || null,
+      numeroHPere: membre.numeroHPere || null,
+      numeroHMere: membre.numeroHMere || null,
+      createdBy: reporter.numeroH
+    });
+
+    await membre.update({ type: 'defunt', isActive: false });
+
+    const updatedMembers = (tree.members || []).filter(m => m !== memberNumeroH);
+    const updatedDeceased = [...(tree.deceasedMembers || [])];
+    if (!updatedDeceased.includes(numeroHD)) updatedDeceased.push(numeroHD);
+    await tree.update({ members: updatedMembers, deceasedMembers: updatedDeceased });
+
+    const nomComplet = `${membre.prenom || ''} ${membre.nomFamille || ''}`.trim();
+
+    try {
+      const io = getIO();
+      if (io) io.to(`family-${membre.nomFamille}`).emit('member-deceased', { numeroHD, nom: nomComplet });
+    } catch { /* non bloquant */ }
+
+    res.json({
+      success: true,
+      message: `Le décès de ${nomComplet} a été enregistré. Son compte est désormais fermé (${numeroHD}).`,
+      numeroHD
+    });
+  } catch (err) {
+    console.error('family-tree/report-death:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 });
 
@@ -584,7 +724,7 @@ router.get('/messages', async (req, res) => {
 });
 
 // @route   POST /api/family-tree/messages
-// @desc    Envoyer un message dans la conversation familiale
+// @desc    Envoyer un message texte dans la conversation familiale
 // @access  Authentifié
 router.post('/messages', async (req, res) => {
   try {
@@ -594,17 +734,11 @@ router.post('/messages', async (req, res) => {
     const familyName = user.nomFamille || user.familyName;
 
     if (!familyName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nom de famille introuvable pour l\'utilisateur connecté'
-      });
+      return res.status(400).json({ success: false, message: 'Nom de famille introuvable' });
     }
 
     if ((!content || !String(content).trim()) && !mediaUrl) {
-      return res.status(400).json({
-        success: false,
-        message: 'Le contenu du message est requis'
-      });
+      return res.status(400).json({ success: false, message: 'Le contenu du message est requis' });
     }
 
     const message = await FamilyTreeMessage.create({
@@ -615,20 +749,81 @@ router.post('/messages', async (req, res) => {
       mediaUrl: mediaUrl || null
     });
 
-    res.status(201).json({
-      success: true,
-      message: {
-        ...message.toJSON(),
-        authorName: `${user.prenom} ${user.nomFamille}`,
-        familyName
-      }
-    });
+    const msgData = {
+      ...message.toJSON(),
+      authorName: `${user.prenom} ${user.nomFamille}`,
+      familyName
+    };
+
+    // Diffuse en temps réel aux membres de la famille connectés
+    const io = getIO();
+    if (io) io.to(`family-${familyName}`).emit('family-message', msgData);
+
+    res.status(201).json({ success: true, message: msgData });
   } catch (error) {
-    console.error('Erreur lors de l\'envoi du message familial:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de l\'envoi du message familial'
+    console.error('Erreur envoi message familial:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   POST /api/family-tree/messages/upload
+// @desc    Envoyer un message avec photo / vidéo (≤30s) / audio (≤30s)
+//          Stocké en base64 dans PostgreSQL — aucun fichier sur disque (compatible Render)
+// @access  Authentifié
+router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, res) => {
+  try {
+    const user = req.user;
+    const familyName = user.nomFamille || user.familyName;
+
+    if (!familyName) {
+      return res.status(400).json({ success: false, message: 'Nom de famille introuvable' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Aucun fichier reçu' });
+    }
+
+    const mime = req.file.mimetype;
+    let messageType = 'image';
+    if (mime.startsWith('video/')) messageType = 'video';
+    else if (mime.startsWith('audio/')) messageType = 'audio';
+
+    // Vérification taille selon type
+    const maxMB = MAX_SIZES[messageType] || 3;
+    if (req.file.size > maxMB * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        message: `Fichier trop volumineux (max ${maxMB} MB pour ${messageType}). Limitez à 30 secondes.`
+      });
+    }
+
+    // Conversion en data URL base64 — stocké directement en DB, pas sur le disque
+    const base64 = req.file.buffer.toString('base64');
+    const mediaUrl = `data:${mime};base64,${base64}`;
+
+    const content = req.body.content || (messageType === 'audio' ? '🎤 Message vocal' : messageType === 'video' ? '🎬 Vidéo' : '📷 Photo');
+
+    const message = await FamilyTreeMessage.create({
+      familyName,
+      numeroH: user.numeroH,
+      messageType,
+      content,
+      mediaUrl
     });
+
+    const msgData = {
+      ...message.toJSON(),
+      authorName: `${user.prenom} ${user.nomFamille}`,
+      familyName
+    };
+
+    const io = getIO();
+    if (io) io.to(`family-${familyName}`).emit('family-message', msgData);
+
+    res.status(201).json({ success: true, message: msgData });
+  } catch (error) {
+    console.error('Erreur upload message familial:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
@@ -686,8 +881,16 @@ async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
 }
 
 /**
- * Attribue automatiquement le code F<nomFamille>S<n> quand l'arbre atteint 10 membres.
- * Le bloodNumber (S) est le prochain entier disponible pour ce nom de famille.
+ * Attribue automatiquement le code F[x]S[y] quand l'arbre atteint 10 membres.
+ *
+ * F = index séquentiel global du nom de famille (F1, F2, F3…)
+ *     Chaque nom de famille unique reçoit le prochain F disponible.
+ *     Deux arbres du même nom de famille partagent le même F.
+ *
+ * S = index séquentiel global tous noms de famille confondus (S1, S2, S3…)
+ *     C'est le prochain S disponible parmi TOUS les arbres certifiés.
+ *
+ * Exemple : Barry (3ème famille à s'inscrire) atteint 10 membres → F3S5
  */
 async function assignFamilyCodeIfNeeded(tree, members) {
   if (tree.familyCode) return; // déjà attribué
@@ -700,15 +903,37 @@ async function assignFamilyCodeIfNeeded(tree, members) {
     familyName = root?.nomFamille || 'Inconnu';
   }
 
-  // Trouver le prochain bloodNumber disponible pour cette famille
-  const existing = await FamilyTree.findAll({
-    where: { familyName, bloodNumber: { [Op.not]: null } },
-    order: [['bloodNumber', 'DESC']],
-    limit: 1
+  // F = index de ce nom de famille parmi tous les noms de famille ayant déjà un code
+  const allCodedTrees = await FamilyTree.findAll({
+    where: { familyCode: { [Op.not]: null } },
+    attributes: ['familyName', 'familyCode']
   });
-  const nextBlood = existing.length > 0 ? (existing[0].bloodNumber + 1) : 1;
-  const code = `F${familyName}S${nextBlood}`;
 
+  // Chercher si ce nom de famille a déjà un F attribué
+  const sameFamily = allCodedTrees.find(
+    t => t.familyName?.toLowerCase().trim() === familyName.toLowerCase().trim()
+  );
+
+  let familyIndex;
+  if (sameFamily) {
+    // Extraire le F du code existant ex: "F3S5" → 3
+    const match = sameFamily.familyCode.match(/^F(\d+)S/);
+    familyIndex = match ? parseInt(match[1]) : null;
+  }
+
+  if (!familyIndex) {
+    // Nouveau nom de famille → prochain F global
+    const distinctFamilies = new Set(
+      allCodedTrees.map(t => t.familyName?.toLowerCase().trim()).filter(Boolean)
+    );
+    familyIndex = distinctFamilies.size + 1;
+  }
+
+  // S = prochain numéro global parmi TOUS les arbres certifiés
+  const maxBlood = await FamilyTree.max('bloodNumber') || 0;
+  const nextBlood = maxBlood + 1;
+
+  const code = `F${familyIndex}S${nextBlood}`;
   await tree.update({ familyCode: code, bloodNumber: nextBlood, familyName });
 }
 

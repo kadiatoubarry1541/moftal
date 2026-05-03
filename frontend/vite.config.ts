@@ -31,7 +31,8 @@ export default defineConfig(({ mode }) => {
       viteCompression({ algorithm: "brotliCompress", ext: ".br" }),
       VitePWA({
         registerType: "autoUpdate",
-        includeAssets: ["logo.png", "logo.webp", "logo.svg", "armoiries-guinee.png"],
+        // Seuls les assets réellement utiles pour l'app shell PWA
+        includeAssets: ["logo.webp", "logo.svg"],
         manifest: {
           name: "Les Enfants d'Adam",
           short_name: "Enfants d'Adam",
@@ -70,15 +71,15 @@ export default defineConfig(({ mode }) => {
               url: "/profil",
               icons: [{ src: "/logo.png", sizes: "96x96" }],
             },
-            {
-              name: "Arbre Généalogique",
-              url: "/arbre-genealogique",
-              icons: [{ src: "/logo.png", sizes: "96x96" }],
-            },
           ],
         },
         workbox: {
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
+          // PNG exclus du précache : logo.png (227KB) + armoiries (325KB) = 552KB économisés
+          // Le logo.webp (38KB) est suffisant et déjà préchargé
+          globPatterns: ["**/*.{js,css,html,ico,webp,woff2}"],
+          // Navigations SPA : toujours servir index.html
+          navigateFallback: "index.html",
+          navigateFallbackDenylist: [/\/api\//, /\/uploads\//],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -111,9 +112,21 @@ export default defineConfig(({ mode }) => {
                 },
               },
             },
+            // SVG et PNG servis localement : cache long
+            {
+              urlPattern: /\.(svg|png)$/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "images-cache",
+                expiration: {
+                  maxEntries: 30,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+              },
+            },
           ],
         },
-        devOptions: { enabled: true },
+        devOptions: { enabled: false },
       }),
     ],
     base: "/",
@@ -137,18 +150,45 @@ export default defineConfig(({ mode }) => {
       sourcemap: false,
       minify: "esbuild",
       target: "es2020",
-      chunkSizeWarningLimit: 600,
-      assetsInlineLimit: 2048,
-      modulePreload: { polyfill: true },
+      chunkSizeWarningLimit: 500,
+      // Inline les assets < 4KB en base64 (réduit les requêtes HTTP)
+      assetsInlineLimit: 4096,
+      // es2020+ supporte nativement modulepreload — pas besoin du polyfill
+      modulePreload: { polyfill: false },
+      // Accélère le build : ne calcule pas la taille compressée
+      reportCompressedSize: false,
       rollupOptions: {
         output: {
-          manualChunks: {
-            "react-vendor": ["react", "react-dom", "react-router-dom"],
-            ui: ["react-hot-toast"],
-            map: ["leaflet", "react-leaflet"],
-            markdown: ["react-markdown", "remark-gfm"],
-            query: ["@tanstack/react-query"],
-            qr: ["qrcode.react", "jsqr"],
+          // Fonction granulaire : chaque bibliothèque dans son propre chunk
+          // → bundle initial plus petit → moins de JS à parser → TBT réduit
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            // React DOM séparé de React (les deux sont toujours chargés ensemble mais splitté pour cache)
+            if (id.includes("/react-dom/")) return "react-dom";
+            // Router
+            if (id.includes("/react-router") || id.includes("/react-router-dom/")) return "router";
+            // Leaflet (cartes) — seulement sur les pages qui l'utilisent
+            if (id.includes("/leaflet") || id.includes("/react-leaflet/")) return "map";
+            // Markdown — seulement sur les pages qui l'utilisent
+            if (
+              id.includes("/react-markdown/") ||
+              id.includes("/remark-") ||
+              id.includes("/rehype-") ||
+              id.includes("/unified/") ||
+              id.includes("/vfile") ||
+              id.includes("/mdast") ||
+              id.includes("/micromark")
+            ) return "markdown";
+            // React Query
+            if (id.includes("/@tanstack/")) return "query";
+            // QR Code
+            if (id.includes("/qrcode") || id.includes("/jsqr")) return "qr";
+            // Toast
+            if (id.includes("/react-hot-toast/")) return "toast";
+            // socket.io — utilisé seulement dans Arbre.tsx (lazy), ne pas mettre dans vendor
+            if (id.includes("/socket.io") || id.includes("/engine.io")) return "socketio";
+            // Tout le reste dans vendor (React core, etc.)
+            return "vendor";
           },
         },
       },

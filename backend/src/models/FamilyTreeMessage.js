@@ -52,8 +52,8 @@ FamilyTreeMessage.init({
     allowNull: false
   },
   mediaUrl: {
-    type: DataTypes.STRING,
-    comment: 'URL du fichier média',
+    type: DataTypes.TEXT,
+    comment: 'Data URL base64 ou URL externe du fichier média',
     field: 'media_url'
   },
   isEdited: {

@@ -4,11 +4,30 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
+# JS/CSS buildés par Vite : hash dans le nom → immutables à vie
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Images WebP : cache 1 an immutable
 /*.webp
   Cache-Control: public, max-age=31536000, immutable
 
+# SVG : cache 7 jours (peut changer moins souvent que JS)
 /*.svg
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=604800
+
+# PNG : cache 7 jours
+/*.png
+  Cache-Control: public, max-age=604800
+
+# HTML : ne jamais cacher (SPA — l'index.html doit toujours être à jour)
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Service Worker : ne jamais cacher
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# PWA manifest : cache court
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600

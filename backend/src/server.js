@@ -52,7 +52,7 @@ import paymentRoutes from './routes/payment.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
-import wallalPayRoutes from './routes/wallalPay.js';
+import moftalPayRoutes from './routes/MoftalPay.js';
 import Payment from './models/Payment.js';
 import { handleUploadError } from './middleware/upload.js';
 import { config } from '../config.js';
@@ -317,9 +317,14 @@ async function initAllTables() {
           "total_depose"     BIGINT       NOT NULL DEFAULT 0,
           "total_depense"    BIGINT       NOT NULL DEFAULT 0,
           "gerant1_numero_h"    VARCHAR(255),
+          "gerant1_nom"         VARCHAR(255),
+          "gerant1_photo"       TEXT,
           "gerant2_numero_h"    VARCHAR(255),
+          "gerant2_nom"         VARCHAR(255),
+          "gerant2_photo"       TEXT,
           "conseiller_numero_h" VARCHAR(255),
           "conseiller_nom"      VARCHAR(255),
+          "conseiller_photo"    TEXT,
           "is_active"           BOOLEAN      NOT NULL DEFAULT true,
           "created_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
           "updated_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
@@ -330,7 +335,19 @@ async function initAllTables() {
       ],
       alters: [
         `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "conseiller_numero_h" VARCHAR(255);`,
-        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "conseiller_nom"      VARCHAR(255);`
+        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "conseiller_nom"      VARCHAR(255);`,
+        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "gerant1_nom"         VARCHAR(255);`,
+        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "gerant1_photo"       TEXT;`,
+        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "gerant2_nom"         VARCHAR(255);`,
+        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "gerant2_photo"       TEXT;`,
+        `ALTER TABLE "family_funds" ADD COLUMN IF NOT EXISTS "conseiller_photo"    TEXT;`
+      ]
+    },
+    {
+      name: 'deceased_members_migrations',
+      sql: `SELECT 1;`,
+      alters: [
+        `ALTER TABLE "deceased_members" ADD COLUMN IF NOT EXISTS "cause_deces" TEXT;`
       ]
     },
     {
@@ -751,7 +768,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],
-      connectSrc: ["'self'", "https://api.flutterwave.com", "wss:", "ws:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'", "data:", "blob:"],
@@ -848,7 +865,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);
 app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);
-app.use('/api/wallal-pay', wallalPayRoutes);
+app.use('/api/moftal-pay', moftalPayRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test

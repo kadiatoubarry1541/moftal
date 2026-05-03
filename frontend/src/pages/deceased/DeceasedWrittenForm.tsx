@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { VideoRecorder } from '../../components/VideoRecorder'
-import { FAMILLES, ETHNIES, ETHNIE_CODES, FAMILLE_CODES } from '../../utils/constants'
+import { FAMILLES, ETHNIES } from '../../utils/constants'
 
 interface DeceasedWrittenData {
   numeroHPere: string
@@ -15,12 +15,15 @@ interface DeceasedWrittenData {
   dateDeces: string
   religion: string
   lieuDeces: string
+  causeDeces: string
   video: Blob | null
   photo: File | null
   decet: string
   generation: string
   relationDeclarant: string
 }
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
 export function DeceasedWrittenForm() {
   const [data, setData] = useState<DeceasedWrittenData>({
@@ -35,12 +38,14 @@ export function DeceasedWrittenForm() {
     dateDeces: '',
     religion: '',
     lieuDeces: '',
+    causeDeces: '',
     video: null,
     photo: null,
     decet: '',
     generation: '',
     relationDeclarant: ''
   })
+  const [submitting, setSubmitting] = useState(false)
   const [step, setStep] = useState<'form' | 'video'>('form')
   const navigate = useNavigate()
 
@@ -90,102 +95,70 @@ export function DeceasedWrittenForm() {
     return years
   }
 
-  const generateNumeroHD = (d: DeceasedWrittenData): string => {
-    const decet = calculateDecet(d.dateDeces)
-    const generation = calculateGeneration(d.dateNaissance)
-    const continent = 'C1'
-    const pays = d.pays === 'Guinée' ? 'P2' : 'P1'
-    
-    const regionCodes: { [key: string]: string } = {
-      'Basse-Guinée': 'R1',
-      'Fouta-Djallon': 'R2',
-      'Haute-Guinée': 'R3',
-      'Guinée forestière': 'R4'
-    }
-    
-    const ethnieEntry = ETHNIE_CODES.find(e => e.label === d.ethnie)
-    const familleEntry = FAMILLE_CODES.find(f => f.label.toLowerCase() === (d.famille || '').toLowerCase())
-    
-    // Générer un code automatique si non trouvé (système séquentiel adaptatif)
-    const generateAutoCode = (name: string, prefix: string, existingCodes: string[]): string => {
-      if (!name) return prefix + '999'
-      // Trouver le plus grand numéro existant pour ce préfixe
-      const existingNums = existingCodes
-        .filter(c => c.startsWith(prefix))
-        .map(c => {
-          const numStr = c.substring(prefix.length)
-          const num = parseInt(numStr, 10)
-          return isNaN(num) ? 0 : num
-        })
-        .filter(n => n > 0)
-      
-      // Commencer au numéro suivant le plus grand existant
-      const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1
-      return prefix + nextNum.toString() // Pas de zéros devant : E1, E2, E10, E100, etc.
-    }
-    
-    const regionCode = regionCodes[d.region] || 'R1'
-    const ethnieCode = ethnieEntry?.code || generateAutoCode(d.ethnie || '', 'E', ETHNIE_CODES.map(e => e.code))
-    const familleCode = familleEntry?.code || generateAutoCode(d.famille || '', 'F', FAMILLE_CODES.map(f => f.code))
-    
-    const counter = localStorage.getItem('numeroHD_counter') || '0'
-    const nextNumber = parseInt(counter) + 1
-    localStorage.setItem('numeroHD_counter', nextNumber.toString())
-    
-    return `${decet}${generation}${continent}${pays}${regionCode}${ethnieCode}${familleCode} ${nextNumber}`
-  }
-
   const handleVideoRecorded = (videoBlob: Blob) => {
     setData(prev => ({ ...prev, video: videoBlob }))
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!data.relationDeclarant) {
       alert('Merci de choisir votre lien de parenté avec ce défunt (mère, père, fils, fille, etc.).')
       return
     }
-    const numeroHD = generateNumeroHD(data)
-    const completeData = { 
-      ...data, 
-      numeroHD,
-      decet: calculateDecet(data.dateDeces),
-      generation: calculateGeneration(data.dateNaissance),
-      age: calculateAge(data.dateNaissance, data.dateDeces),
-      yearsSinceDeath: calculateYearsSinceDeath(data.dateDeces),
-      relationDeclarant: data.relationDeclarant
-    }
-    
-    // ✅ IMPORTANT : Les défunts n'ont PAS de compte, ils existent uniquement dans l'arbre généalogique
-    localStorage.setItem('defunt_ecrit', JSON.stringify(completeData))
-    localStorage.setItem('dernier_defunt', JSON.stringify(completeData))
-    // Garder aussi la relation séparément pour compatibilité avec l'ancien flux
-    localStorage.setItem('defunt_relation', data.relationDeclarant)
-    
-    // ❌ NE PAS créer de session - les défunts ne peuvent pas se connecter
-    // Les défunts existent uniquement dans l'arbre généalogique pour consultation
+    if (submitting) return
+    setSubmitting(true)
 
-    // Sauvegarder dans la liste des défunts pour l'arbre généalogique
-    const sessionRaw = localStorage.getItem('session_user')
-    if (sessionRaw) {
-      try {
-        const session = JSON.parse(sessionRaw)
-        const ownerNumeroH = (session.userData || session).numeroH
-        if (ownerNumeroH) {
-          const key = `deceased_members_${ownerNumeroH}`
-          const existing = JSON.parse(localStorage.getItem(key) || '[]')
-          existing.push({ ...completeData, relation: data.relationDeclarant || 'autre', ownerNumeroH })
-          localStorage.setItem(key, JSON.stringify(existing))
-        }
-      } catch { /* ignore */ }
-    }
+    try {
+      const token = localStorage.getItem('token')
 
-    // Afficher le succès avec le numeroHD généré automatiquement
-    alert(`✅ Défunt enregistré avec succès dans l'arbre généalogique !\n\nNumeroHD généré automatiquement : ${numeroHD}\n\n⚠️ IMPORTANT : Les défunts n'ont pas de compte de connexion.\nIls existent uniquement dans l'arbre généalogique familial pour consultation.`)
-    
-    // Rediriger vers l'arbre généalogique après 2 secondes
-    setTimeout(() => {
-      navigate('/famille/moi/arbre')
-    }, 2000)
+      // Convertir la photo en base64 si présente
+      let photoBase64: string | null = null
+      if (data.photo) {
+        photoBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(data.photo as File)
+        })
+      }
+
+      const payload = {
+        prenom: (data as any).prenom || '',
+        nomFamille: data.famille || '',
+        genre: (data as any).genre || 'HOMME',
+        numeroHPere: data.numeroHPere || null,
+        numeroHMere: data.numeroHMere || null,
+        dateNaissance: data.dateNaissance || null,
+        dateDeces: data.dateDeces || null,
+        anneeDeces: data.dateDeces ? new Date(data.dateDeces).getFullYear() : null,
+        causeDeces: data.causeDeces || null,
+        lieuDeces: data.lieuDeces || null,
+        religion: data.religion || null,
+        ethnie: data.ethnie || null,
+        pays: data.pays || null,
+        regionOrigine: data.region || null,
+        decet: calculateDecet(data.dateDeces),
+        generation: calculateGeneration(data.dateNaissance),
+        photo: photoBase64
+      }
+
+      const res = await fetch(`${API_BASE}/api/family-tree/add-deceased`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      })
+      const result = await res.json()
+
+      if (result.success) {
+        alert(`✅ Défunt enregistré avec succès !\n\nNuméroHD attribué automatiquement : ${result.numeroHD}\n\nIl apparaîtra dans l'arbre généalogique familial.`)
+        navigate('/famille/moi/arbre')
+      } else {
+        alert(`Erreur : ${result.message || 'Impossible d\'enregistrer le défunt.'}`)
+      }
+    } catch {
+      alert('Erreur de connexion au serveur. Vérifiez votre connexion.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (step === 'form') {
@@ -336,6 +309,19 @@ export function DeceasedWrittenForm() {
           <div className="row">
             <div className="col-6">
               <div className="field">
+                <label>Cause du décès</label>
+                <input
+                  value={data.causeDeces}
+                  onChange={(e) => setData(prev => ({ ...prev, causeDeces: e.target.value }))}
+                  placeholder="Ex: maladie, accident, vieillesse..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-6">
+              <div className="field">
                 <label>Votre lien avec ce défunt</label>
                 <select
                   value={data.relationDeclarant}
@@ -410,9 +396,16 @@ export function DeceasedWrittenForm() {
             <button
               className="btn"
               onClick={() => setStep('video')}
-              disabled={!data.dateNaissance || !data.dateDeces || !data.pays || !data.region || !data.ethnie || !data.famille}
+              disabled={!data.dateDeces || !data.pays || !data.region || !data.ethnie || !data.famille}
             >
-              Passer à la vidéo
+              Passer à la vidéo (optionnel)
+            </button>
+            <button
+              className="btn"
+              onClick={handleSubmit}
+              disabled={submitting || !data.dateDeces || !data.pays || !data.region || !data.ethnie || !data.famille || !data.relationDeclarant}
+            >
+              {submitting ? 'Enregistrement...' : 'Enregistrer sans vidéo'}
             </button>
           </div>
         </div>
@@ -427,14 +420,14 @@ export function DeceasedWrittenForm() {
         <div className="card">
           <VideoRecorder
             onVideoRecorded={handleVideoRecorded}
-            maxDuration={30}
+            maxDuration={10}
           />
           <div className="actions">
             <button className="btn secondary" onClick={() => setStep('form')}>
               Retour au formulaire
             </button>
-            <button className="btn" onClick={handleSubmit}>
-              Terminer
+            <button className="btn" onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'Enregistrement...' : 'Terminer et enregistrer'}
             </button>
           </div>
         </div>

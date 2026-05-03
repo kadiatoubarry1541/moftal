@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { config } from '../config/api';
 
 interface PaymentModalProps {
@@ -11,51 +10,6 @@ interface PaymentModalProps {
   purpose: string;
   relatedId?: string;
   description: string;
-  userData: any;
-}
-
-interface FlutterwaveConfig {
-  public_key: string;
-  tx_ref: string;
-  amount: number;
-  currency: string;
-  payment_options: string;
-  customer: {
-    email: string;
-    phone_number: string;
-    name: string;
-  };
-  customizations: {
-    title: string;
-    description: string;
-    logo: string;
-  };
-  callback: (response: any) => void;
-  onclose: () => void;
-}
-
-// Composant interne qui utilise le hook Flutterwave
-function FlutterwaveButton({
-  flwConfig,
-  label,
-  disabled,
-}: {
-  flwConfig: FlutterwaveConfig;
-  label: string;
-  disabled: boolean;
-}) {
-  const handleFlutterPayment = useFlutterwave(flwConfig);
-
-  return (
-    <button
-      onClick={() => handleFlutterPayment({ callback: flwConfig.callback, onclose: flwConfig.onclose })}
-      disabled={disabled}
-      className="w-full py-3 px-6 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
-    >
-      <span>💳</span>
-      {label}
-    </button>
-  );
 }
 
 export default function PaymentModal({
@@ -67,12 +21,10 @@ export default function PaymentModal({
   purpose,
   relatedId,
   description,
-  userData,
 }: PaymentModalProps) {
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'choose' | 'processing' | 'done'>('choose');
+  const [step, setStep] = useState<'choose' | 'waiting' | 'done'>('choose');
   const [txRef, setTxRef] = useState('');
-  const [publicKey, setPublicKey] = useState('');
   const [error, setError] = useState('');
 
   const getToken = () => {
@@ -103,8 +55,9 @@ export default function PaymentModal({
       }
 
       setTxRef(data.txRef);
-      setPublicKey(data.publicKey);
-      setStep('processing');
+      // Ouvrir FedaPay dans un nouvel onglet
+      window.open(data.paymentUrl, '_blank', 'noopener,noreferrer');
+      setStep('waiting');
     } catch {
       setError('Impossible de contacter le serveur de paiement');
     } finally {
@@ -112,42 +65,46 @@ export default function PaymentModal({
     }
   };
 
-  const handlePaymentCallback = async (response: any) => {
-    closePaymentModal();
-    if (response.status === 'successful' || response.status === 'completed') {
-      setStep('done');
-      onSuccess(txRef);
-    } else {
-      setError('Paiement annulé ou échoué. Réessayez.');
-      setStep('choose');
+  const confirmPayment = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${config.API_BASE_URL}/payment/verify/${txRef}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (data.success && data.payment?.status === 'success') {
+        setStep('done');
+        onSuccess(txRef);
+      } else {
+        setError('Paiement non encore confirmé. Vérifiez que vous avez bien payé, puis réessayez.');
+      }
+    } catch {
+      setError('Erreur de vérification. Réessayez.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handlePaymentClose = () => {
-    setStep('choose');
-  };
-
-  const flwConfig: FlutterwaveConfig | null = publicKey && txRef ? {
-    public_key: publicKey,
-    tx_ref: txRef,
-    amount,
-    currency,
-    payment_options: 'mobilemoney,card,ussd',
-    customer: {
-      email: userData?.email || `${userData?.numeroH}@enfants-adam.app`,
-      phone_number: userData?.telephone || '',
-      name: `${userData?.prenom || ''} ${userData?.nomFamille || ''}`.trim() || userData?.numeroH || '',
-    },
-    customizations: {
-      title: 'Les Enfants d\'Adam',
-      description,
-      logo: '/logo.png',
-    },
-    callback: handlePaymentCallback,
-    onclose: handlePaymentClose,
-  } : null;
-
   if (!isOpen) return null;
+
+  // Paiement masqué si VITE_PAYMENTS_ENABLED n'est pas 'true'
+  const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';
+  if (!paymentsEnabled) {
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm p-8 text-center">
+          <div className="text-5xl mb-4">🔧</div>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2">Paiement en cours de configuration</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+            Le système de paiement sera disponible prochainement. Merci de votre patience.
+          </p>
+          <button onClick={onClose} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 rounded-xl text-gray-700 font-medium transition-colors">
+            Fermer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const amountFormatted = amount.toLocaleString('fr-FR');
 
@@ -156,7 +113,7 @@ export default function PaymentModal({
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-6 py-5 text-white">
+        <div className="bg-gradient-to-r from-purple-600 to-purple-800 px-6 py-5 text-white">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold">Paiement sécurisé</h2>
@@ -170,9 +127,9 @@ export default function PaymentModal({
           {step === 'choose' && (
             <>
               {/* Montant */}
-              <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mb-6 text-center">
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4 mb-6 text-center">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Montant à payer</p>
-                <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                <p className="text-3xl font-bold text-purple-700 dark:text-purple-400">
                   {amountFormatted} <span className="text-lg">{currency}</span>
                 </p>
               </div>
@@ -202,11 +159,10 @@ export default function PaymentModal({
                 </div>
               )}
 
-              {/* Bouton payer */}
               <button
                 onClick={initPayment}
                 disabled={loading}
-                className="w-full py-3 px-6 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 px-6 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -219,30 +175,45 @@ export default function PaymentModal({
               </button>
 
               <p className="text-xs text-gray-400 text-center mt-3">
-                Paiement sécurisé par Flutterwave • SSL 256-bit
+                Paiement sécurisé par Moftal Pay • SSL 256-bit
               </p>
             </>
           )}
 
-          {step === 'processing' && flwConfig && (
+          {step === 'waiting' && (
             <div className="text-center py-4">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-3xl">💳</span>
               </div>
               <h3 className="font-semibold text-gray-800 dark:text-white mb-2">
-                Prêt pour le paiement
+                Paiement en cours
               </h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Cliquez ci-dessous pour ouvrir la fenêtre de paiement sécurisée
+              <p className="text-sm text-gray-500 mb-2">
+                Une page de paiement s'est ouverte dans un nouvel onglet.
               </p>
-              <FlutterwaveButton
-                flwConfig={flwConfig}
-                label={`Payer ${amountFormatted} ${currency}`}
-                disabled={false}
-              />
+              <p className="text-sm text-gray-500 mb-6">
+                Complétez le paiement, puis cliquez sur <strong>J'ai payé</strong>.
+              </p>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
               <button
-                onClick={() => setStep('choose')}
-                className="mt-3 w-full py-2 text-sm text-gray-500 hover:text-gray-700"
+                onClick={confirmPayment}
+                disabled={loading}
+                className="w-full py-3 px-6 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 mb-3"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : '✅ J\'ai payé — Confirmer'}
+              </button>
+
+              <button
+                onClick={() => { setStep('choose'); setError(''); }}
+                className="w-full py-2 text-sm text-gray-500 hover:text-gray-700"
               >
                 Annuler
               </button>

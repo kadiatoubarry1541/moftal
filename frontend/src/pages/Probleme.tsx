@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Etat } from "../components/Etat";
+import { ReçuTransaction } from "../components/ReçuTransaction";
 
 interface UserData {
   numeroH: string;
@@ -25,6 +26,17 @@ export default function Probleme() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [description, setDescription] = useState('');
 
+  // Moftal Pay — paiement santé depuis problème familial
+  const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+  const [fundCompte, setFundCompte] = useState<any>(null);
+  const [showMoftalPay, setShowMoftalPay] = useState(false);
+  const [moftalMontant, setMoftalMontant] = useState('');
+  const [moftalBenef, setMoftalBenef] = useState('');
+  const [moftalContact, setMoftalContact] = useState('');
+  const [moftalRaison, setMoftalRaison] = useState('');
+  const [moftalLoading, setMoftalLoading] = useState(false);
+  const [moftalReçu, setMoftalReçu] = useState<any>(null);
+
   useEffect(() => {
     const session = localStorage.getItem("session_user");
     if (!session) {
@@ -44,6 +56,66 @@ export default function Probleme() {
       navigate("/login");
     }
   }, [navigate]);
+
+  // Charger le compte famille Moftal Pay pour paiement santé
+  useEffect(() => {
+    const loadFund = async () => {
+      if (!userData) return;
+      const token = localStorage.getItem("token");
+      try {
+        const res = await fetch(`${API}/api/family-fund/mon-compte`, {
+          headers: { Authorization: token ? `Bearer ${token}` : "" },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.existe) setFundCompte(data.compte);
+        }
+      } catch { /* ignore */ }
+    };
+    loadFund();
+  }, [userData, API]);
+
+  const payerSante = async () => {
+    const montant = parseInt(moftalMontant);
+    if (!montant || montant < 100) return alert("Montant invalide");
+    if (!moftalBenef) return alert("Indiquez le bénéficiaire (clinique ou médecin)");
+    if (!fundCompte?.estAdmin) return alert("Seuls les administrateurs du compte peuvent effectuer des paiements.");
+    setMoftalLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const r = await fetch(`${API}/api/family-fund/payer`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "paiement_sante",
+          montant,
+          beneficiaireNom: moftalBenef,
+          beneficiaireContact: moftalContact,
+          description: moftalRaison || "Problème de santé familial",
+        }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setMoftalReçu({
+          id: Date.now().toString(),
+          type: "paiement_sante",
+          montant,
+          date: new Date().toISOString(),
+          acteurNom: `${userData?.prenom || ""} ${userData?.nomFamille || ""}`.trim(),
+          beneficiaireNom: moftalBenef,
+          beneficiaireContact: moftalContact,
+          description: moftalRaison || "Problème de santé familial",
+          nomFamille: fundCompte?.nomFamille,
+        });
+        setMoftalMontant(""); setMoftalBenef(""); setMoftalContact(""); setMoftalRaison("");
+        setShowMoftalPay(false);
+      } else {
+        alert(d.message);
+      }
+    } finally {
+      setMoftalLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -126,10 +198,10 @@ export default function Probleme() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => navigate("/moi")}
+                onClick={() => navigate("/famille/moi/arbre")}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
-                ← Retour
+                ← Mon arbre
               </button>
             </div>
           </div>
@@ -232,7 +304,7 @@ export default function Probleme() {
                       vid.preload = 'metadata';
                       vid.onloadedmetadata = () => {
                         URL.revokeObjectURL(vid.src);
-                        if (vid.duration > 60) {
+                        if (vid.duration > 10) {
                           setUploadError('La vidéo ne doit pas dépasser 1 minute.');
                           e.target.value = '';
                           return;
@@ -284,6 +356,96 @@ export default function Probleme() {
             )}
           </div>
         </div>
+
+        {/* ─── Moftal Pay — Paiement santé depuis problème familial ─── */}
+        <div className="rounded-xl shadow-sm p-4 sm:p-5 border border-emerald-200" style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)' }}>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-3xl">💰</span>
+            <div>
+              <h2 className="text-lg font-bold text-emerald-900">Moftal Pay — Paiement Santé</h2>
+              <p className="text-sm text-emerald-700">
+                {fundCompte
+                  ? <>Solde santé disponible : <strong>{(fundCompte.soldes?.sante || 0).toLocaleString()} GNF</strong></>
+                  : 'Système de paiement familial et professionnel'}
+              </p>
+            </div>
+          </div>
+
+          {/* Accès rapide à Moftal Pay (toujours visible) */}
+          <button
+            onClick={() => navigate('/compte-famille')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm mb-3"
+            style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}
+          >
+            💰 Compte Famille Moftal Pay
+          </button>
+
+          {fundCompte ? (
+            <>
+              {!fundCompte.estAdmin && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                  ⚠️ Seuls les administrateurs du compte famille peuvent effectuer des paiements.
+                </p>
+              )}
+
+              {fundCompte.estAdmin && (
+                <>
+                  <button
+                    onClick={() => setShowMoftalPay(v => !v)}
+                    className="w-full py-2.5 rounded-xl text-white font-bold text-sm mb-3"
+                    style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}
+                  >
+                    {showMoftalPay ? '✕ Annuler' : '🏥 Payer une clinique ou médecin'}
+                  </button>
+
+                  {showMoftalPay && (
+                    <div className="space-y-3 bg-white rounded-xl p-4 border border-emerald-100">
+                      <p className="text-xs text-emerald-700 font-semibold">Paiement depuis la caisse santé de la famille</p>
+                      <input type="number" value={moftalMontant} onChange={e => setMoftalMontant(e.target.value)}
+                        placeholder="Montant en GNF" min="100"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
+                      <input type="text" value={moftalBenef} onChange={e => setMoftalBenef(e.target.value)}
+                        placeholder="Clinique / médecin (bénéficiaire)"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
+                      <input type="text" value={moftalContact} onChange={e => setMoftalContact(e.target.value)}
+                        placeholder="Numéro Orange Money du bénéficiaire"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
+                      <textarea value={moftalRaison} onChange={e => setMoftalRaison(e.target.value)}
+                        placeholder="Raison (ex: hospitalisation de Mamadou, 3 jours en clinique...)"
+                        rows={2}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none resize-none" />
+                      <button onClick={payerSante} disabled={moftalLoading}
+                        className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50"
+                        style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}>
+                        {moftalLoading ? 'Traitement...' : '✅ Confirmer le paiement santé'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              Vous n'avez pas encore de Compte Famille. Cliquez sur le bouton ci-dessus pour en créer un et commencer à gérer le budget familial.
+            </p>
+          )}
+        </div>
+
+        {/* Reçu Moftal Pay */}
+        {moftalReçu && (
+          <ReçuTransaction
+            id={moftalReçu.id}
+            type={moftalReçu.type}
+            montant={moftalReçu.montant}
+            date={moftalReçu.date}
+            acteurNom={moftalReçu.acteurNom}
+            beneficiaireNom={moftalReçu.beneficiaireNom}
+            beneficiaireContact={moftalReçu.beneficiaireContact}
+            description={moftalReçu.description}
+            nomFamille={moftalReçu.nomFamille}
+            onClose={() => setMoftalReçu(null)}
+          />
+        )}
 
         {/* Tableau de bord des états (familial + santé) */}
         <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
