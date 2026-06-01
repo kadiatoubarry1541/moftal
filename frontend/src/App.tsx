@@ -70,6 +70,7 @@ const CompteFamille = lazy(() => import("./pages/CompteFamille"));
 const WalletPro = lazy(() => import("./pages/WalletPro"));
 const InfoWallou = lazy(() => import("./pages/InfoWallou"));
 const ConditionsUtilisation = lazy(() => import("./pages/ConditionsUtilisation"));
+const PolitiqueConfidentialite = lazy(() => import("./pages/PolitiqueConfidentialite"));
 const PaiementResultat = lazy(() => import("./pages/PaiementResultat"));
 const GestionInterne = lazy(() => import("./pages/GestionInterne"));
 const GestionClinique = lazy(() => import("./pages/GestionClinique"));
@@ -342,6 +343,7 @@ function App() {
           <Route path="/wallet-pro" element={<WalletPro />} />
           <Route path="/info-wallou" element={<InfoWallou />} />
           <Route path="/conditions-utilisation" element={<ConditionsUtilisation />} />
+          <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
           <Route path="/paiement/resultat" element={<PaiementResultat />} />
           <Route path="/gestion-interne" element={<GestionInterne />} />
           <Route path="/gestion-clinique/:tenantCode" element={<GestionClinique />} />
@@ -404,12 +406,21 @@ function App() {
           <p className="text-gray-300 dark:text-gray-400 text-xs xs:text-sm sm:text-base">
             2025 Moftal et Eve - Système d'enregistrement généalogique
           </p>
-          <Link
-            to="/conditions-utilisation"
-            className="text-gray-400 hover:text-gray-200 text-xs mt-1 inline-block underline transition-colors"
-          >
-            Conditions Générales d'Utilisation
-          </Link>
+          <div className="flex items-center justify-center gap-4 mt-1 flex-wrap">
+            <Link
+              to="/conditions-utilisation"
+              className="text-gray-400 hover:text-gray-200 text-xs underline transition-colors"
+            >
+              Conditions d'Utilisation
+            </Link>
+            <span className="text-gray-600 text-xs">·</span>
+            <Link
+              to="/politique-confidentialite"
+              className="text-gray-400 hover:text-gray-200 text-xs underline transition-colors"
+            >
+              Politique de Confidentialité
+            </Link>
+          </div>
         </div>
       </footer>}
 
