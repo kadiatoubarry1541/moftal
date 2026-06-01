@@ -11,13 +11,13 @@ const config = {
   DB_PASSWORD: process.env.DB_PASSWORD || '',
   JWT_SECRET: process.env.JWT_SECRET || 'enfants-adam-dev-only-change-in-production',
   JWT_EXPIRE: process.env.JWT_EXPIRE || '7d',
-  BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS) || 12,
+  BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS) || 10,
   NODE_ENV: process.env.NODE_ENV || 'development',
 
   // ── Emails ────────────────────────────────────────────────────────────────
   // Expéditeur commun à tous les fournisseurs
-  FROM_EMAIL:  process.env.FROM_EMAIL  || 'noreply@enfants-adam.app',
-  FROM_NAME:   process.env.FROM_NAME   || "Les Enfants d'Adam",
+  FROM_EMAIL:  process.env.FROM_EMAIL  || 'noreply@moftal.com',
+  FROM_NAME:   process.env.FROM_NAME   || 'Moftal',
 
   // Brevo — comptes professionnels (reçu paiement, expiration, renouvellement)
   BREVO_API_KEY: process.env.BREVO_API_KEY || '',

@@ -17,7 +17,7 @@ import { getIO } from '../socket.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Multer memory storage — stocké en base64 dans PostgreSQL (pas de disque, compatible Render)
+// Multer memory storage — stocké en base64 dans PostgreSQL (pas de fichier sur disque)
 // Limites : image 3 MB, vidéo 5 MB (≈30s), audio 2 MB (≈30s)
 const MAX_SIZES = { image: 3, video: 5, audio: 2 }; // en MB
 
@@ -768,7 +768,7 @@ router.post('/messages', async (req, res) => {
 
 // @route   POST /api/family-tree/messages/upload
 // @desc    Envoyer un message avec photo / vidéo (≤30s) / audio (≤30s)
-//          Stocké en base64 dans PostgreSQL — aucun fichier sur disque (compatible Render)
+//          Stocké en base64 dans PostgreSQL — aucun fichier sur disque
 // @access  Authentifié
 router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, res) => {
   try {

@@ -359,7 +359,7 @@ router.post('/problems/media', upload.single('media'), async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GALERIE PARTAGÉE — visible par tous les membres de la même famille
-// Photos stockées en base64 dans PostgreSQL (Neon) — persistantes sur Render
+// Photos stockées en base64 dans PostgreSQL
 // ─────────────────────────────────────────────────────────────────────────────
 
 // GET /api/family/shared-gallery

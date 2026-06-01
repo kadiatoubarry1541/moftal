@@ -158,7 +158,7 @@ export default function WalletPro() {
         <div className="text-5xl mb-3">🔜</div>
         <p className="text-indigo-700 font-black text-lg mb-2">Bientôt disponible</p>
         <p className="text-gray-600 text-sm mb-3">
-          Le Wallet Professionnel Moftal Pay est actuellement disponible uniquement pour les services de <strong>Santé</strong> et d'<strong>Alimentation</strong>.
+          Moftal Pay est actuellement disponible uniquement pour les services de <strong>Santé</strong> et d'<strong>Alimentation</strong>.
         </p>
         <p className="text-gray-400 text-xs mb-5">
           Votre service sera intégré prochainement. Merci de votre patience.
@@ -180,7 +180,7 @@ export default function WalletPro() {
         <p className="text-red-600 font-bold mb-2">Accès refusé</p>
         <p className="text-gray-500 text-sm mb-4">{error}</p>
         <p className="text-gray-400 text-xs mb-4">
-          Seuls les comptes professionnels enregistrés sur Moftal peuvent accéder au Wallet Pro.
+          Seuls les comptes professionnels enregistrés sur Moftal peuvent accéder à Moftal Pay.
         </p>
         <button
           onClick={() => navigate('/inscription-pro')}
@@ -202,9 +202,9 @@ export default function WalletPro() {
           </div>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-blue-200 text-xs font-semibold tracking-wide uppercase">Moftal Pay Pro</p>
+              <p className="text-blue-200 text-xs font-semibold tracking-wide uppercase">Moftal Pay</p>
               <h1 className="text-white font-black text-xl leading-tight mt-0.5">
-                {wallet?.nomPro || 'Mon Wallet Professionnel'}
+                {wallet?.nomPro || 'Moftal Pay'}
               </h1>
               <p className="text-blue-300 text-xs mt-0.5">{wallet?.typePro || ''}</p>
             </div>
@@ -297,12 +297,12 @@ export default function WalletPro() {
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-600 block mb-1">
-                  Numéro Orange Money {wallet?.orangeMoney ? `(enregistré : ${wallet.orangeMoneyNumero})` : '(non enregistré)'}
+                  Numéro Orange Money {wallet?.orangeMoneyNumero ? `(enregistré : ${wallet.orangeMoneyNumero})` : '(non enregistré)'}
                 </label>
                 <input
                   type="tel"
                   value={numeroOM} onChange={e => setNumeroOM(e.target.value)}
-                  placeholder={wallet?.orangeMoney || 'Ex: 628000000'}
+                  placeholder={wallet?.orangeMoneyNumero || 'Ex: 628000000'}
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
                 />
                 <p className="text-xs text-gray-400 mt-1">Laissez vide pour utiliser le numéro enregistré.</p>

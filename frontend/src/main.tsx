@@ -26,25 +26,20 @@ keysToClean.forEach(key => {
   }
 });
 
-// En dev uniquement : redirige les fetch hardcodés localhost:5002 vers VITE_API_URL
-// En production, le build Vite remplace déjà les URLs à la compilation (replaceLocalhostPlugin)
-if (import.meta.env.DEV) {
-  const _viteApiUrl = import.meta.env.VITE_API_URL;
-  if (_viteApiUrl) {
-    const _apiBase = _viteApiUrl.replace(/\/api\/?$/, '');
-    const _origFetch = window.fetch.bind(window);
-    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-      if (typeof input === 'string' && input.includes('localhost:5002')) {
-        input = input.replace('http://localhost:5002', _apiBase);
-      }
-      return _origFetch(input, init);
-    };
-  }
-}
-
 const basename = '';
 
-createRoot(document.getElementById("root")!).render(
+async function clearSWAndRender() {
+  // Supprimer TOUS les service workers et caches avant de démarrer l'app
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(sw => sw.unregister()));
+  }
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  }
+
+  createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
       <BrowserRouter basename={basename}>
@@ -57,4 +52,7 @@ createRoot(document.getElementById("root")!).render(
       </BrowserRouter>
     </ErrorBoundary>
   </StrictMode>,
-);
+  );
+}
+
+clearSWAndRender();

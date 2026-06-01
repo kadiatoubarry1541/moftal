@@ -41,7 +41,7 @@ app.route('/api/admin', adminRoutes);
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 app.get('/', (c) => c.json({
-  name: "Les Enfants d'Adam — API",
+  name: "Moftal — API",
   version: '2.0.0',
   runtime: 'Cloudflare Workers + Hono + D1',
 }));

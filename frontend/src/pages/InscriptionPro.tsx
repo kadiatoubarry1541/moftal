@@ -2,21 +2,26 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 const PRO_TYPES = [
-  { id: "clinic", label: "Clinique / Hôpital", icon: "🏥", desc: "Recevez et gérez les rendez-vous des patients" },
-  { id: "security_agency", label: "Agence de sécurité", icon: "🛡️", desc: "Proposez vos services de sécurité" },
-  { id: "journalist", label: "Journaliste", icon: "📰", desc: "Publiez des informations sur Terre Adam" },
-  { id: "enterprise", label: "Entreprise", icon: "🏢", desc: "Publiez des outils de travail sur Activité" },
-  { id: "school", label: "École / Professeur", icon: "🎓", desc: "Publiez des formations et recevez des rendez-vous" },
-  { id: "restaurant", label: "Restaurant", icon: "🍽️", desc: "Publiez votre menu, recevez des commandes et appels directs" },
-  { id: "vendor", label: "Vendeur", icon: "🛒", desc: "Vente directe de produits (primaire, secondaire, tertiaire)" },
-  { id: "supplier", label: "Fournisseur / Grossiste", icon: "📦", desc: "Approvisionnement et gros pour les autres vendeurs" },
-  { id: "producer", label: "Entreprise de production", icon: "🏭", desc: "Production / transformation de biens pour les échanges" },
-  { id: "broker", label: "Démarcheur / Location de maison", icon: "🏘️", desc: "Mise en relation pour location de maisons et biens tertiaires" },
-  { id: "scientist", label: "Chercheur / Scientifique", icon: "🔬", desc: "Partagez vos travaux et publications" },
-  { id: "ngo", label: "ONG / Association", icon: "🤝", desc: "Gérez vos projets humanitaires et bénévoles" },
-  { id: "transport", label: "Transport & Livraison", icon: "🚗", desc: "Taxi, moto, camion ou livraison à domicile" },
-  { id: "beauty", label: "Beauté & Bien-être", icon: "💈", desc: "Salon de coiffure, spa, institut de beauté" },
-  { id: "artisan", label: "Artisanat & Services", icon: "🔧", desc: "Plombier, électricien, menuisier, soudeur, maçon" },
+  { id: "clinic",          label: "Clinique / Hôpital",              icon: "🏥", desc: "Recevez et gérez les rendez-vous des patients" },
+  { id: "health_worker",   label: "Médecin / Agent de santé",        icon: "👨‍⚕️", desc: "Publiez vos consultations et services médicaux individuels" },
+  { id: "school",          label: "École / Établissement",           icon: "🏫", desc: "Gérez élèves, notes, bulletins, frais et membres" },
+  { id: "mosque",          label: "Mosquée / Madrasa",               icon: "🕌", desc: "Registre fidèles, dons/zakat, annonces, élèves Coran" },
+  { id: "madrasa",         label: "Formation Religieuse",            icon: "📖", desc: "Daroul, médersa, franco-arabe — élèves, bulletins, frais" },
+  { id: "commerce",        label: "Commerce / Boutique",             icon: "🛒", desc: "Stock, ventes journalières, clients, crédits, caisse" },
+  { id: "security_agency", label: "Agent / Agence de sécurité",      icon: "🛡️", desc: "Police, gendarmerie, pompiers ou agent privé — proposez vos services" },
+  { id: "journalist",      label: "Journaliste",                     icon: "📰", desc: "Publiez des informations sur Terre Adam" },
+  { id: "enterprise",      label: "Membre publiant (outils/opportunités)", icon: "🏢", desc: "Partagez des outils de travail ou des opportunités sur Activité" },
+  { id: "restaurant",      label: "Restaurant",                      icon: "🍽️", desc: "Publiez votre menu, recevez des commandes et appels directs" },
+  { id: "vendor",          label: "Vendeur",                         icon: "🛒", desc: "Vente directe de produits (primaire, secondaire, tertiaire)" },
+  { id: "supplier",        label: "Fournisseur / Grossiste",         icon: "📦", desc: "Approvisionnement et gros pour les autres vendeurs" },
+  { id: "producer",        label: "Entreprise de production",        icon: "🏭", desc: "Production / transformation de biens pour les échanges" },
+  { id: "broker",          label: "Démarcheur / Location de maison", icon: "🏘️", desc: "Mise en relation pour location de maisons et biens tertiaires" },
+  { id: "scientist",       label: "Chercheur / Scientifique",        icon: "🔬", desc: "Partagez vos travaux et publications" },
+  { id: "ngo",             label: "ONG / Association",               icon: "🤝", desc: "Gérez vos projets humanitaires et bénévoles" },
+  { id: "transport",       label: "Transport & Livraison",           icon: "🚗", desc: "Taxi, moto, camion ou livraison à domicile" },
+  { id: "beauty",          label: "Beauté & Bien-être",              icon: "💈", desc: "Salon de coiffure, spa, institut de beauté" },
+  { id: "artisan",         label: "Artisanat & Services",            icon: "🔧", desc: "Plombier, électricien, menuisier, soudeur, maçon" },
+  { id: "mairie",          label: "Mairie / État Civil",             icon: "🏛️", desc: "Gérez les mariages, naissances, décès et certificats de résidence" },
 ];
 
 const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
@@ -24,9 +29,13 @@ const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
     expect: "Nous attendons que vous proposiez des soins ou services médicaux (consultations, urgences, spécialités) et que vous acceptiez les demandes de rendez-vous des utilisateurs.",
     page: "Vous serez visible et publié sur la page **Santé** : les utilisateurs pourront vous trouver, voir vos services et prendre rendez-vous avec vous.",
   },
+  health_worker: {
+    expect: "Nous attendons que vous proposiez des consultations ou des soins médicaux (médecine générale, spécialités, sage-femme, infirmier…) et que vous acceptiez les rendez-vous des patients.",
+    page: "Vous serez visible sur la page **Santé** (section Médecins) : les patients pourront trouver votre profil et prendre rendez-vous directement.",
+  },
   security_agency: {
-    expect: "Nous attendons que vous proposiez des services de sécurité (surveillance, gardiennage, protection) et que vous répondiez aux demandes de la communauté.",
-    page: "Vous serez visible et publié sur la page **Sécurité** : les utilisateurs pourront vous contacter et prendre rendez-vous pour vos services.",
+    expect: "Nous attendons que vous proposiez des services de sécurité adaptés à votre corps (surveillance, gardiennage, protection, secours) et que vous répondiez aux demandes de la communauté.",
+    page: "Vous serez visible et publié sur la page **Sécurité** dans la section correspondant à votre type (policier, gendarme, pompier ou agent privé).",
   },
   journalist: {
     expect: "Nous attendons que vous publiiez des informations, reportages ou actualités utiles à la communauté, dans le respect de l'éthique et des faits.",
@@ -80,6 +89,14 @@ const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
     expect: "Nous attendons que vous proposiez vos services artisanaux (plomberie, électricité, menuiserie, maçonnerie, soudure…) avec votre zone d'intervention, vos tarifs et vos disponibilités.",
     page: "Vous serez visible sur la page **Artisanat & Services** : les utilisateurs pourront vous contacter, demander un devis ou prendre rendez-vous pour une intervention.",
   },
+  mosque: {
+    expect: "Nous attendons que vous teniez un registre actif de vos fidèles, que vous publiiez des annonces (prières, événements, cours Coran) et que vous gériez les collectes de dons et zakat de façon transparente.",
+    page: "Votre mosquée disposera d'un **espace de gestion interne** complet : registre des fidèles, madrasa Coran, collecte de dons/zakat, annonces envoyées par notification aux membres inscrits sur la plateforme.",
+  },
+  commerce: {
+    expect: "Nous attendons que vous teniez votre stock à jour, enregistriez vos ventes quotidiennes, suiviez vos créances clients et mainteniez une caisse lisible pour vous et vos employés.",
+    page: "Votre boutique disposera d'un **espace de gestion interne** complet : gestion du stock (alertes rupture), ventes journalières, caisse, suivi des crédits clients avec relance, et bilan mensuel simple.",
+  },
 };
 
 const PRO_TYPE_IDS = new Set(PRO_TYPES.map((t) => t.id));
@@ -117,6 +134,32 @@ export default function InscriptionPro() {
     services: "", specialties: "",
   });
   const [subSector, setSubSector] = useState<"primaire" | "secondaire" | "tertiaire" | "">("");
+  const [securityType, setSecurityType] = useState<"policier" | "gendarme" | "pompier" | "agent_prive" | "">("");
+
+  const getServicesPlaceholder = () => {
+    switch (selectedType) {
+      case "security_agency": return "Ex: Gardiennage, Surveillance, Escorte VIP";
+      case "health_worker": return "Ex: Consultation générale, Soins, Vaccination";
+      case "clinic": return "Ex: Consultations, Urgences, Chirurgie";
+      case "school": return "Ex: Maternelle, Primaire, Secondaire";
+      case "ngo": return "Ex: Aide alimentaire, Formation, Santé communautaire";
+      case "transport": return "Ex: Taxi, Moto, Livraison à domicile";
+      case "beauty": return "Ex: Coiffure, Soins du visage, Massage";
+      case "artisan": return "Ex: Plomberie, Électricité, Menuiserie";
+      default: return "Ex: Services proposés...";
+    }
+  };
+
+  const getSpecialtiesPlaceholder = () => {
+    switch (selectedType) {
+      case "security_agency": return "Ex: Sécurité événementielle, Protection de personnalité, Intervention d'urgence";
+      case "health_worker": return "Ex: Médecine générale, Pédiatrie, Gynécologie, Cardiologie";
+      case "clinic": return "Ex: Cardiologie, Pédiatrie, Gynécologie, Neurologie";
+      case "school": return "Ex: Mathématiques, Sciences, Langues, Sport";
+      case "scientist": return "Ex: Biologie, Chimie, Physique, Informatique";
+      default: return "Ex: Spécialités...";
+    }
+  };
   const [justificatifFileName, setJustificatifFileName] = useState("");
 
   // Types Échanges qui nécessitent un sous-secteur
@@ -175,6 +218,16 @@ export default function InscriptionPro() {
       } else {
         services = form.services ? form.services.split(",").map(s => s.trim()).filter(Boolean) : [];
         specialties = form.specialties ? form.specialties.split(",").map(s => s.trim()).filter(Boolean) : [];
+        // Inclure le type de sécurité dans les spécialités
+        if (selectedType === "security_agency" && securityType) {
+          const secLabels: Record<string, string> = {
+            policier: "👮 Policier",
+            gendarme: "👮‍♂️ Gendarme",
+            pompier: "🚒 Pompier",
+            agent_prive: "🛡️ Agent de Sécurité Privée",
+          };
+          specialties.unshift(secLabels[securityType] || securityType);
+        }
       }
 
       const res = await fetch("http://localhost:5002/api/professionals/register", {
@@ -363,6 +416,37 @@ export default function InscriptionPro() {
               </div>
             )}
 
+            {/* ── Type de sécurité (policier / gendarme / pompier / agent privé) ── */}
+            {selectedType === "security_agency" && (
+              <div className="sm:col-span-2 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3">
+                  Type de service de sécurité *
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {([
+                    { value: "policier",    icon: "👮",   label: "Policier" },
+                    { value: "gendarme",    icon: "👮‍♂️",  label: "Gendarme" },
+                    { value: "pompier",     icon: "🚒",   label: "Pompier" },
+                    { value: "agent_prive", icon: "🛡️",   label: "Agent Privé" },
+                  ] as const).map(opt => (
+                    <button key={opt.value} type="button"
+                      onClick={() => setSecurityType(opt.value)}
+                      className={`p-3 rounded-xl border-2 text-center transition-all ${
+                        securityType === opt.value
+                          ? "border-slate-600 bg-slate-200 dark:bg-slate-700"
+                          : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-slate-400"
+                      }`}>
+                      <div className="text-2xl mb-1">{opt.icon}</div>
+                      <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{opt.label}</div>
+                    </button>
+                  ))}
+                </div>
+                {!securityType && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Veuillez choisir votre type de service.</p>
+                )}
+              </div>
+            )}
+
             {/* ── Champs spécifiques restaurant ── */}
             {selectedType === "restaurant" && (
               <>
@@ -457,12 +541,12 @@ export default function InscriptionPro() {
                 <div>
                   <label className={labelCls}>Services (séparés par virgule)</label>
                   <input type="text" value={form.services} onChange={e => setForm({ ...form, services: e.target.value })}
-                    className={inputCls} placeholder="Ex: Consultation, Chirurgie, Urgence" />
+                    className={inputCls} placeholder={getServicesPlaceholder()} />
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelCls}>Spécialités (séparées par virgule)</label>
                   <input type="text" value={form.specialties} onChange={e => setForm({ ...form, specialties: e.target.value })}
-                    className={inputCls} placeholder="Ex: Cardiologie, Pédiatrie" />
+                    className={inputCls} placeholder={getSpecialtiesPlaceholder()} />
                 </div>
               </>
             )}

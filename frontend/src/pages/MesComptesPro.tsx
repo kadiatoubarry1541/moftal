@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "http://localhost:5002";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
 interface ProAccount {
   id: string;
@@ -131,8 +131,8 @@ export default function MesComptesPro() {
         }),
       });
       const data = await res.json();
-      if (data.success && data.paymentLink) {
-        window.location.href = data.paymentLink;
+      if (data.success && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
       } else {
         setPayError(data.message || "Impossible d'initier le paiement. Réessayez.");
       }

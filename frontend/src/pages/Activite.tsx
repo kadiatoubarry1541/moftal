@@ -78,6 +78,61 @@ export default function Activite() {
   // Filtre du fil : tout, opportunités ou outils de travail
   const [feedFilter, setFeedFilter] = useState<'all' | 'opportunite' | 'outil'>('all');
 
+  // Transforme un texte en JSX avec les URLs rendues cliquables
+  const renderTextWithLinks = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) =>
+      urlRegex.test(part)
+        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline break-all opacity-90 hover:opacity-100">{part}</a>
+        : <span key={i}>{part}</span>
+    );
+  };
+
+  // Bulle de message avec profil (style WhatsApp)
+  const renderMessage = (msg: any, bgColor: string, avatarBg: string) => {
+    const isMyMessage = msg.numeroH === userData?.numeroH;
+    const displayName = isMyMessage
+      ? `${userData?.prenom || ''} ${userData?.nomFamille || ''}`.trim()
+      : (msg.authorName || '');
+    const displayNumero = isMyMessage ? (userData?.numeroH || '') : (msg.numeroH || '');
+    const initials = displayName ? displayName.substring(0, 2).toUpperCase() : '?';
+
+    return (
+      <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'} items-end`}>
+        {!isMyMessage && (
+          <div className={`w-9 h-9 rounded-full ${avatarBg} text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0`}>
+            {initials}
+          </div>
+        )}
+        <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? bgColor + ' text-white' : 'bg-white text-gray-900'} shadow-sm`}>
+          {/* Profil en haut du message */}
+          <div className={`mb-1 ${isMyMessage ? 'text-right' : 'text-left'}`}>
+            <p className="text-xs font-semibold opacity-90">{displayName}</p>
+            <p className="text-xs opacity-60">{hideIncrement(displayNumero)}</p>
+          </div>
+          {msg.messageType === 'text' && msg.content && (
+            <p className="text-sm">{renderTextWithLinks(msg.content)}</p>
+          )}
+          {msg.messageType === 'image' && msg.mediaUrl && (
+            <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />
+          )}
+          {msg.messageType === 'video' && msg.mediaUrl && (
+            <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />
+          )}
+          {msg.messageType === 'audio' && msg.mediaUrl && (
+            <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />
+          )}
+        </div>
+        {isMyMessage && (
+          <div className={`w-9 h-9 rounded-full ${avatarBg} text-white flex items-center justify-center text-xs font-bold ml-2 flex-shrink-0`}>
+            {initials}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Formulaire dédié aux outils
   const [toolForm, setToolForm] = useState({ nom: '', description: '' });
 
@@ -360,12 +415,12 @@ export default function Activite() {
     }
     
     if (newActivityPost.type === 'text' && !newActivityPost.content.trim()) {
-      alert('Veuillez entrer un message');
+      alert('Veuillez entrer un message ou un lien');
       return;
     }
-    
+
     if (newActivityPost.type !== 'text' && !newActivityPost.mediaFile) {
-      alert('Veuillez sélectionner un fichier média');
+      alert('Veuillez sélectionner un fichier (image, vidéo ou audio)');
       return;
     }
     
@@ -665,30 +720,7 @@ export default function Activite() {
                               <p>Aucun outil partagé. Proposez une ressource !</p>
                             </div>
                           ) : (
-                            filtered.map((msg: any) => {
-                              const isMyMessage = msg.numeroH === userData?.numeroH;
-                              return (
-                                <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                                  {!isMyMessage && (
-                                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1">
-                                      {(msg.authorName || '?').substring(0, 2).toUpperCase()}
-                                    </div>
-                                  )}
-                                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
-                                    {!isMyMessage && (
-                                      <div className="mb-1">
-                                        <p className="text-xs font-semibold">{msg.authorName}</p>
-                                        <p className="text-xs opacity-60">{hideIncrement(msg.numeroH)}</p>
-                                      </div>
-                                    )}
-                                    {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
-                                    {msg.messageType === 'image' && msg.mediaUrl && <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />}
-                                    {msg.messageType === 'video' && msg.mediaUrl && <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />}
-                                    {msg.messageType === 'audio' && msg.mediaUrl && <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />}
-                                  </div>
-                                </div>
-                              );
-                            })
+                            filtered.map((msg: any) => renderMessage(msg, 'bg-blue-600', 'bg-blue-600'))
                           )}
                         </>
                       );
@@ -718,30 +750,7 @@ export default function Activite() {
                               <p className="text-sm">Soyez le premier à partager une opportunité dans ce groupe !</p>
                             </div>
                           ) : (
-                            filtered.map((msg: any) => {
-                              const isMyMessage = msg.numeroH === userData?.numeroH;
-                              return (
-                                <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                                  {!isMyMessage && (
-                                    <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1">
-                                      {(msg.authorName || '?').substring(0, 2).toUpperCase()}
-                                    </div>
-                                  )}
-                                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
-                                    {!isMyMessage && (
-                                      <div className="mb-1">
-                                        <p className="text-xs font-semibold">{msg.authorName}</p>
-                                        <p className="text-xs opacity-60">{hideIncrement(msg.numeroH)}</p>
-                                      </div>
-                                    )}
-                                    {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
-                                    {msg.messageType === 'image' && msg.mediaUrl && <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />}
-                                    {msg.messageType === 'video' && msg.mediaUrl && <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />}
-                                    {msg.messageType === 'audio' && msg.mediaUrl && <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />}
-                                  </div>
-                                </div>
-                              );
-                            })
+                            filtered.map((msg: any) => renderMessage(msg, 'bg-amber-500', 'bg-amber-500'))
                           )}
                         </>
                       );
@@ -757,36 +766,7 @@ export default function Activite() {
                       );
                     }
 
-                    return filtered.map((msg: any) => {
-                      const isMyMessage = msg.numeroH === userData?.numeroH;
-                      return (
-                        <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                          {!isMyMessage && (
-                            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0 mt-1">
-                              {(msg.authorName || msg.numeroH || '?').substring(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                          <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? 'bg-green-500 text-white' : 'bg-white text-gray-900'}`}>
-                            {!isMyMessage && (
-                              <div className="mb-1">
-                                <p className="text-xs font-semibold">{msg.authorName}</p>
-                                <p className="text-xs opacity-60">{hideIncrement(msg.numeroH)}</p>
-                              </div>
-                            )}
-                            {msg.messageType === 'text' && msg.content && <p className="text-sm">{msg.content}</p>}
-                            {msg.messageType === 'image' && msg.mediaUrl && (
-                              <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />
-                            )}
-                            {msg.messageType === 'video' && msg.mediaUrl && (
-                              <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />
-                            )}
-                            {msg.messageType === 'audio' && msg.mediaUrl && (
-                              <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    });
+                    return filtered.map((msg: any) => renderMessage(msg, 'bg-green-500', 'bg-indigo-600'));
                   })()}
                   <div ref={messagesEndRefActivity} />
                       </div>
@@ -917,12 +897,12 @@ export default function Activite() {
             </div>
             )}
 
-        {/* Section Entreprises Professionnelles (approuvées par l'admin) */}
+        {/* Section publiants validés */}
         <ProSection
           type="enterprise"
-          title="Entreprises"
-          icon="🏢"
-          description="Les entreprises peuvent s'inscrire ici. Après validation par l'administrateur, elles pourront publier leurs outils de travail et opportunités sur la page Activité."
+          title="Membres publiants validés"
+          icon="✅"
+          description="Vous souhaitez partager des opportunités ou des outils de travail dans ce groupe ? Inscrivez-vous pour obtenir les droits de publication. L'administrateur valide les inscriptions afin de garantir la qualité des contenus partagés."
         />
 
       </div>

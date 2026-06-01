@@ -343,4 +343,28 @@ router.post('/admin/assign', requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/quotas/consume-infowallou → consomme 2 points pour créer une carte InfoWallou (= 1 000 FG)
+router.post('/consume-infowallou', async (req, res) => {
+  try {
+    const result = await sequelize.query(`
+      UPDATE gallery_points
+      SET points_disponibles = points_disponibles - 2,
+          updated_at = NOW()
+      WHERE numero_h = :numeroH AND points_disponibles >= 2
+      RETURNING points_disponibles
+    `, { replacements: { numeroH: req.user.numeroH }, type: sequelize.QueryTypes.UPDATE });
+
+    const rows = result[0];
+    if (!rows || rows.length === 0) {
+      return res.status(402).json({
+        success: false,
+        message: 'Points insuffisants. Achetez des points pour créer cette carte.'
+      });
+    }
+    res.json({ success: true, pointsRestants: rows[0].points_disponibles });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 export default router;

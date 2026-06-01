@@ -15,7 +15,7 @@ let sequelize;
 if (process.env.DATABASE_URL) {
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    logging: false,
     dialectOptions: {
       ssl: {
         require: true,
@@ -42,8 +42,8 @@ if (process.env.DATABASE_URL) {
     database: process.env.DB_NAME || 'enfants_adam_eve',
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || '',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    dialectOptions: process.env.DB_HOST && process.env.DB_HOST.includes('neon.tech') ? {
+    logging: false,
+    dialectOptions: process.env.DB_SSL === 'true' ? {
       ssl: {
         require: true,
         rejectUnauthorized: false
@@ -81,7 +81,7 @@ const connectDB = async () => {
           console.log('Modeles synchronises avec la base de donnees (dev)');
         } else {
           // En production : sync sans alter → crée uniquement les tables manquantes,
-          // ne modifie pas les tables existantes (sécurisé pour Render/Neon)
+          // ne modifie pas les tables existantes
           await sequelize.sync({ force: false });
           console.log('Modeles synchronises avec la base de donnees (production)');
         }

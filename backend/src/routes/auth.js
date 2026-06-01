@@ -493,8 +493,8 @@ router.post('/login', [
         });
       }
 
-      user.lastLogin = new Date();
-      await user.save();
+      // Mise à jour lastLogin en arrière-plan, sans bloquer la réponse
+      user.update({ lastLogin: new Date() }).catch(() => {});
 
       const token = jwt.sign(
         { userId: user.numeroH, numeroH: user.numeroH },
@@ -959,15 +959,15 @@ router.put('/me/tree-hidden', authenticate, async (req, res) => {
 });
 
 // @route   DELETE /api/auth/account
-// @desc    Supprimer son propre compte (mot de passe requis + confirmation)
+// @desc    Supprimer son propre compte (confirmation par email requis)
 // @access  Private
 router.delete('/account', authenticate, async (req, res) => {
   try {
-    const { password } = req.body;
-    if (!password || typeof password !== 'string' || !password.trim()) {
+    const { email } = req.body;
+    if (!email || typeof email !== 'string' || !email.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Mot de passe requis pour supprimer le compte'
+        message: 'Votre adresse email est requise pour confirmer la suppression'
       });
     }
 
@@ -980,18 +980,18 @@ router.delete('/account', authenticate, async (req, res) => {
     }
 
     // Ne pas permettre à l'admin principal de supprimer son compte
-    if (user.numeroH === 'G0C0P0R0E0F0 0') {
+    if (user.numeroH === 'G0C0P0R0E0F0 0' || user.numeroH === 'G7C7P7R7E7F7 7') {
       return res.status(403).json({
         success: false,
-        message: 'Le compte administrateur principal ne peut pas être supprimé'
+        message: 'Le compte administrateur ne peut pas être supprimé'
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(password.trim(), user.password);
-    if (!isPasswordValid) {
+    // Vérifier que l'email fourni correspond bien au compte
+    if (!user.email || user.email.toLowerCase().trim() !== email.toLowerCase().trim()) {
       return res.status(401).json({
         success: false,
-        message: 'Mot de passe incorrect'
+        message: 'L\'adresse email ne correspond pas à votre compte'
       });
     }
 
@@ -999,7 +999,7 @@ router.delete('/account', authenticate, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Compte supprimé avec succès'
+      message: 'Votre compte a été supprimé avec succès'
     });
   } catch (error) {
     console.error('Erreur lors de la suppression du compte:', error);

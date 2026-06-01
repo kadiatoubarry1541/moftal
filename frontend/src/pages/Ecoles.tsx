@@ -115,7 +115,7 @@ export default function Ecoles() {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Ex : Lycée Les Enfants d'Adam"
+                  placeholder="Ex : Lycée Moftal"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                   required
                 />

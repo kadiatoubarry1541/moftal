@@ -457,6 +457,65 @@ router.post('/zakat/calculations', authenticateToken, requireMuslimOrAdmin, asyn
   }
 });
 
+// ─── Routes /api/developpement ───────────────────────────────────────────────
+
+// GET /api/developpement/stats → total collecté et répartition par domaine
+router.get('/developpement/stats', authenticateToken, async (req, res) => {
+  try {
+    const dons = await Donation.findAll({ where: { donationType: 'developpement', status: 'completed' } });
+    const totalCollecte = dons.reduce((sum, d) => sum + parseFloat(d.amount || 0), 0);
+    const parDomaine = {};
+    dons.forEach(d => {
+      parDomaine[d.recipient] = (parDomaine[d.recipient] || 0) + parseFloat(d.amount || 0);
+    });
+    res.json({ success: true, totalCollecte, parDomaine, nbDonneurs: dons.length });
+  } catch (error) {
+    console.error('Erreur /api/developpement/stats:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+// GET /api/developpement/mes-dons → dons de l'utilisateur connecté
+router.get('/developpement/mes-dons', authenticateToken, async (req, res) => {
+  try {
+    const dons = await Donation.findAll({
+      where: { donor: req.user.numeroH, donationType: 'developpement' },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json({ success: true, dons });
+  } catch (error) {
+    console.error('Erreur /api/developpement/mes-dons:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+// POST /api/developpement/donate → soumettre un don pour le développement
+router.post('/developpement/donate', authenticateToken, async (req, res) => {
+  try {
+    const { amount, currency, domaine, domaineLabel, message } = req.body;
+    const user = req.user;
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+      return res.status(400).json({ success: false, error: 'Montant invalide' });
+    }
+    const don = await Donation.create({
+      donor: user.numeroH,
+      donorName: `${user.prenom} ${user.nomFamille}`,
+      recipient: domaine || 'general',
+      recipientName: domaineLabel || 'Fonds Général de Développement',
+      amount: parseFloat(amount),
+      currency: currency || 'FG',
+      type: 'money',
+      donationType: 'developpement',
+      description: message || `Don pour le développement — ${domaineLabel || 'Fonds Général'}`,
+      status: 'completed'
+    });
+    res.status(201).json({ success: true, don });
+  } catch (error) {
+    console.error('Erreur /api/developpement/donate:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 // ─── Routes /api/user/info et /api/user/update-info ─────────────────────────
 
 // GET /api/user/info → retourne le profil de l'utilisateur connecté

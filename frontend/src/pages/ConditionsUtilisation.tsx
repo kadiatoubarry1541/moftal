@@ -23,7 +23,7 @@ export default function ConditionsUtilisation() {
       <div className="w-full py-10 px-4 text-center" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
         <div className="text-4xl mb-3">⚖️</div>
         <h1 className="text-white font-black text-2xl sm:text-3xl">Conditions Générales d'Utilisation</h1>
-        <p className="text-blue-200 text-sm mt-1">Moftal — Les Enfants d'Adam · Avril 2026</p>
+        <p className="text-blue-200 text-sm mt-1">Moftal — Moftal · Avril 2026</p>
       </div>
 
       {/* Contenu */}

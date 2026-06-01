@@ -131,6 +131,7 @@ export default function Famille() {
         <Card to="/famille/mari"       emoji="🤵"    label="Mon homme"  />
         <Card to="/famille/mes-amours" emoji="💕"    label="Amitié"     />
         <Card to="/famille/moi/arbre"  emoji="🌳"    label="Mon arbre"  />
+        <Card to="/famille/racines"    emoji="🌿"    label="Racines"    />
       </div>
 
     </div>

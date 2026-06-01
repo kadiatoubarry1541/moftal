@@ -43,7 +43,29 @@ import stateProductsRoutes from './routes/stateProducts.js';
 import userStoriesRoutes from './routes/userStories.js';
 import professionalRoutes from './routes/professionals.js';
 import clinicMgmtRoutes from './routes/clinic-management.js';
+import mairieMgmtRoutes  from './routes/mairie-management.js';
+import mairePublicRoutes  from './routes/mairie-public.js';
+import clinicPublicRoutes from './routes/clinic-public.js';
+import commercePublicRoutes from './routes/commerce-public.js';
+import proPublicRoutes from './routes/pro-public.js';
 import schoolMgmtRoutes from './routes/school-management.js';
+import mosqueMgmtRoutes from './routes/mosque-management.js';
+import madrasaMgmtRoutes from './routes/madrasa-management.js';
+import imamMgmtRoutes from './routes/imam-management.js';
+import ngoMgmtRoutes        from './routes/ngo-management.js';
+import journalistMgmtRoutes from './routes/journalist-management.js';
+import commerceMgmtRoutes    from './routes/commerce-management.js';
+import enterpriseMgmtRoutes  from './routes/enterprise-management.js';
+import scientistMgmtRoutes   from './routes/scientist-management.js';
+import supplierMgmtRoutes  from './routes/supplier-management.js';
+import securityMgmtRoutes  from './routes/security-management.js';
+import retailerMgmtRoutes  from './routes/retailer-management.js';
+import reseauMgmtRoutes      from './routes/reseau-management.js';
+import immoMgmtRoutes        from './routes/immo-management.js';
+import restaurantMgmtRoutes  from './routes/restaurant-management.js';
+import transportMgmtRoutes  from './routes/transport-management.js';
+import imamNetworkRoutes from './routes/imam-network.js';
+import proNetworkRoutes from './routes/professional-network.js';
 import appointmentRoutes from './routes/appointments.js';
 import notificationRoutes from './routes/notifications.js';
 import iaRoutes from './routes/ia.js';
@@ -53,6 +75,7 @@ import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
 import moftalPayRoutes from './routes/MoftalPay.js';
+import racinesRoutes from './routes/racines.js';
 import Payment from './models/Payment.js';
 import { handleUploadError } from './middleware/upload.js';
 import { config } from '../config.js';
@@ -131,43 +154,43 @@ const startIaServer = () => {
   trySpawn(0);
 };
 
-// Créer ou mettre à jour le compte admin au démarrage (pour Render / production)
+// Créer ou mettre à jour les comptes admin au démarrage
 async function ensureAdmin() {
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminPassword) return;
-  const adminNumeroH = (process.env.ADMIN_NUMERO_H || 'G0C0P0R0E0F0 0').trim().replace(/\s+/g, ' ');
-  try {
-    let admin = await User.findByNumeroH(adminNumeroH);
-    const saltRounds = config.BCRYPT_ROUNDS || 12;
-    const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
-    if (admin) {
-      const valid = await bcrypt.compare(adminPassword, admin.password);
-      if (!valid) {
-        await admin.update({ password: hashedPassword, role: 'super-admin', isActive: true });
-        console.log('✅ Compte admin mis à jour (mot de passe synchronisé avec ADMIN_PASSWORD)');
+  const saltRounds = config.BCRYPT_ROUNDS || 12;
+  const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
+
+  const admins = [
+    { numeroH: (process.env.ADMIN_NUMERO_H || 'G0C0P0R0E0F0 0').trim().replace(/\s+/g, ' '), generation: 'G0', prenom: 'Administrateur', nom: 'Principal' },
+    { numeroH: 'G7C7P7R7E7F7 7', generation: 'G7', prenom: 'Super', nom: 'Admin' },
+  ];
+
+  for (const { numeroH, generation, prenom, nom } of admins) {
+    try {
+      let admin = await User.findByNumeroH(numeroH);
+      if (admin) {
+        const valid = await bcrypt.compare(adminPassword, admin.password);
+        if (!valid) {
+          await admin.update({ password: hashedPassword, role: 'super-admin', isActive: true });
+          console.log(`✅ Compte ${numeroH} mis à jour`);
+        }
+      } else {
+        await User.create({
+          numeroH, prenom, nomFamille: nom, password: hashedPassword,
+          role: 'super-admin', isActive: true, isVerified: true,
+          type: 'vivant', genre: 'AUTRE', generation
+        });
+        console.log(`✅ Compte ${numeroH} créé`);
       }
-    } else {
-      admin = await User.create({
-        numeroH: adminNumeroH,
-        prenom: 'Administrateur',
-        nomFamille: 'Principal',
-        password: hashedPassword,
-        role: 'super-admin',
-        isActive: true,
-        isVerified: true,
-        type: 'vivant',
-        genre: 'AUTRE',
-        generation: 'G0'
-      });
-      console.log('✅ Compte admin créé (NumeroH:', adminNumeroH, ')');
+    } catch (e) {
+      console.warn(`⚠️ ensureAdmin [${numeroH}]:`, e.message);
     }
-  } catch (e) {
-    console.warn('⚠️ ensureAdmin:', e.message);
   }
 }
 
 // Crée toutes les tables supplémentaires (galerie, activités couple/parent-enfant)
-// en production sur Render où sequelize.sync({ alter }) n'est pas exécuté
+// en production où sequelize.sync({ alter }) n'est pas exécuté
 async function initAllTables() {
   const tables = [
     {
@@ -700,27 +723,1258 @@ async function initAllTables() {
         "est_paye"      BOOLEAN DEFAULT false,
         "created_at"    TIMESTAMPTZ DEFAULT NOW()
       );
+      -- Membres école liés par numéroH
+      CREATE TABLE IF NOT EXISTS "school_members" (
+        "id"                SERIAL PRIMARY KEY,
+        "tenant_code"       VARCHAR(50) NOT NULL,
+        "numero_h"          VARCHAR(50) NOT NULL,
+        "role"              VARCHAR(20) NOT NULL DEFAULT 'parent',
+        "linked_student_id" INTEGER REFERENCES "school_students"("id") ON DELETE SET NULL,
+        "nom_display"       VARCHAR(255),
+        "added_by"          VARCHAR(50),
+        "is_active"         BOOLEAN DEFAULT true,
+        "created_at"        TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(tenant_code, numero_h)
+      );
+      -- Bulletins de notes
+      CREATE TABLE IF NOT EXISTS "school_bulletins" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL,
+        "student_id"       INTEGER REFERENCES "school_students"("id") ON DELETE CASCADE,
+        "periode"          VARCHAR(50) NOT NULL,
+        "annee_scolaire"   VARCHAR(20),
+        "moyenne_generale" DECIMAL(5,2),
+        "rang"             INTEGER,
+        "effectif"         INTEGER,
+        "mention"          VARCHAR(100),
+        "appreciation"     TEXT,
+        "is_published"     BOOLEAN DEFAULT false,
+        "published_at"     TIMESTAMPTZ,
+        "created_at"       TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(tenant_code, student_id, periode)
+      );
+      -- Mosquée
+      CREATE TABLE IF NOT EXISTS "mosque_members" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(50),
+        "role"        VARCHAR(50) DEFAULT 'fidèle',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "mosque_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "mosque_donations" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "donateur_nom" VARCHAR(255),
+        "montant"      DECIMAL(15,0) NOT NULL,
+        "type_don"     VARCHAR(50) DEFAULT 'sadaqa',
+        "date_don"     DATE DEFAULT CURRENT_DATE,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "mosque_quran_students" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL,
+        "nom"              VARCHAR(255) NOT NULL,
+        "prenom"           VARCHAR(255),
+        "niveau_coran"     VARCHAR(100) DEFAULT 'Débutant',
+        "telephone_parent" VARCHAR(50),
+        "enseignant_id"    INTEGER REFERENCES "mosque_members"("id") ON DELETE SET NULL,
+        "statut"           VARCHAR(20) DEFAULT 'actif',
+        "created_at"       TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Imams mosquée (jusqu'à 3 cheikh imams par mosquée)
+      CREATE TABLE IF NOT EXISTS "mosque_imams" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "rang"        INTEGER NOT NULL DEFAULT 1,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(100),
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT uq_mosque_imam_rang UNIQUE (tenant_code, rang)
+      );
+      -- Réseau / Association générique
+      CREATE TABLE IF NOT EXISTS "reseau_members" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "email"       VARCHAR(255),
+        "numero_h"    VARCHAR(100),
+        "role"        VARCHAR(100) DEFAULT 'membre',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "reseau_projets" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "description" TEXT,
+        "statut"      VARCHAR(50) DEFAULT 'en_cours',
+        "responsable" VARCHAR(255),
+        "date_debut"  DATE,
+        "date_fin"    DATE,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "reseau_cotisations" (
+        "id"             SERIAL PRIMARY KEY,
+        "tenant_code"    VARCHAR(50) NOT NULL,
+        "membre_nom"     VARCHAR(255),
+        "montant"        DECIMAL(15,0) DEFAULT 0,
+        "type_cot"       VARCHAR(50) DEFAULT 'mensuelle',
+        "periode"        VARCHAR(50),
+        "est_paye"       BOOLEAN DEFAULT true,
+        "date_paiement"  TIMESTAMPTZ DEFAULT NOW(),
+        "created_at"     TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "reseau_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Immobilier
+      CREATE TABLE IF NOT EXISTS "immo_properties" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(50) NOT NULL,
+        "nom"           VARCHAR(255) NOT NULL,
+        "type_bien"     VARCHAR(100) DEFAULT 'appartement',
+        "adresse"       VARCHAR(255),
+        "ville"         VARCHAR(100),
+        "surface"       DECIMAL(10,2),
+        "nb_pieces"     INTEGER,
+        "loyer_mensuel" DECIMAL(15,2) DEFAULT 0,
+        "charges"       DECIMAL(15,2) DEFAULT 0,
+        "statut"        VARCHAR(50) DEFAULT 'vacant',
+        "description"   TEXT,
+        "created_at"    TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "immo_tenants" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "email"       VARCHAR(255),
+        "cni"         VARCHAR(100),
+        "property_id" INTEGER REFERENCES immo_properties(id) ON DELETE SET NULL,
+        "date_entree" DATE,
+        "loyer"       DECIMAL(15,2) DEFAULT 0,
+        "caution"     DECIMAL(15,2) DEFAULT 0,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "immo_payments" (
+        "id"             SERIAL PRIMARY KEY,
+        "tenant_code"    VARCHAR(50) NOT NULL,
+        "tenant_id"      INTEGER REFERENCES immo_tenants(id) ON DELETE SET NULL,
+        "property_id"    INTEGER REFERENCES immo_properties(id) ON DELETE SET NULL,
+        "montant"        DECIMAL(15,2) DEFAULT 0,
+        "mois_concerne"  VARCHAR(7),
+        "type_paiement"  VARCHAR(50) DEFAULT 'especes',
+        "statut"         VARCHAR(50) DEFAULT 'paye',
+        "notes"          TEXT,
+        "date_paiement"  TIMESTAMPTZ DEFAULT NOW(),
+        "created_at"     TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "immo_leases" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "tenant_id"   INTEGER REFERENCES immo_tenants(id) ON DELETE SET NULL,
+        "property_id" INTEGER REFERENCES immo_properties(id) ON DELETE SET NULL,
+        "date_debut"  DATE,
+        "date_fin"    DATE,
+        "statut"      VARCHAR(50) DEFAULT 'actif',
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "immo_maintenance" (
+        "id"                SERIAL PRIMARY KEY,
+        "tenant_code"       VARCHAR(50) NOT NULL,
+        "property_id"       INTEGER REFERENCES immo_properties(id) ON DELETE SET NULL,
+        "titre"             VARCHAR(255) NOT NULL,
+        "description"       TEXT,
+        "type_intervention" VARCHAR(100) DEFAULT 'reparation',
+        "priorite"          VARCHAR(50) DEFAULT 'normale',
+        "cout_estime"       DECIMAL(15,2) DEFAULT 0,
+        "statut"            VARCHAR(50) DEFAULT 'en_cours',
+        "created_at"        TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "immo_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Restaurant
+      CREATE TABLE IF NOT EXISTS "resto_dishes" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "categorie"   VARCHAR(100) DEFAULT 'Plat principal',
+        "prix"        DECIMAL(15,2) DEFAULT 0,
+        "description" TEXT,
+        "disponible"  BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "resto_tables" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "numero"      VARCHAR(20) NOT NULL,
+        "capacite"    INTEGER DEFAULT 4,
+        "zone"        VARCHAR(100) DEFAULT 'Salle',
+        "statut"      VARCHAR(50) DEFAULT 'libre',
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "resto_orders" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(50) NOT NULL,
+        "table_id"      INTEGER REFERENCES resto_tables(id) ON DELETE SET NULL,
+        "table_num"     VARCHAR(20),
+        "items"         JSONB DEFAULT '[]',
+        "total"         DECIMAL(15,2) DEFAULT 0,
+        "type_service"  VARCHAR(50) DEFAULT 'sur_place',
+        "type_paiement" VARCHAR(50) DEFAULT 'especes',
+        "notes"         TEXT,
+        "statut"        VARCHAR(50) DEFAULT 'en_preparation',
+        "created_at"    TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "resto_staff" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "poste"       VARCHAR(100) DEFAULT 'Serveur',
+        "telephone"   VARCHAR(50),
+        "salaire"     DECIMAL(15,2) DEFAULT 0,
+        "actif"       BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "resto_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "mosque_predications" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'khutba',
+        "contenu"     TEXT,
+        "sourate"     VARCHAR(100),
+        "date_pred"   DATE DEFAULT CURRENT_DATE,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "mosque_partenaires" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom_mosquee" VARCHAR(255) NOT NULL,
+        "ville"       VARCHAR(100),
+        "imam_nom"    VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Réseau Imam
+      CREATE TABLE IF NOT EXISTS "imam_network_imams" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(100),
+        "specialite"  VARCHAR(100) DEFAULT 'Général',
+        "mosquee"     VARCHAR(255),
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "imam_network_predications" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "imam_id"     INTEGER REFERENCES "imam_network_imams"("id") ON DELETE SET NULL,
+        "imam_nom"    VARCHAR(255),
+        "titre"       VARCHAR(255) NOT NULL,
+        "type_pred"   VARCHAR(50) DEFAULT 'khutba',
+        "date_pred"   DATE DEFAULT CURRENT_DATE,
+        "mosquee"     VARCHAR(255),
+        "notes"       TEXT,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "imam_network_mosques" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "nom"          VARCHAR(255) NOT NULL,
+        "adresse"      VARCHAR(255),
+        "responsable"  VARCHAR(255),
+        "telephone"    VARCHAR(50),
+        "is_active"    BOOLEAN DEFAULT true,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "imam_network_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "imam_network_members" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(100),
+        "role"        VARCHAR(100) DEFAULT 'fidèle',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "imam_network_donations" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "donateur_nom" VARCHAR(255) DEFAULT 'Anonyme',
+        "montant"      NUMERIC(12,2) NOT NULL,
+        "type_don"     VARCHAR(50) DEFAULT 'sadaqa',
+        "date_don"     DATE DEFAULT CURRENT_DATE,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "imam_network_quran_students" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL,
+        "nom"              VARCHAR(255) NOT NULL,
+        "prenom"           VARCHAR(255),
+        "niveau_coran"     VARCHAR(100) DEFAULT 'Débutant',
+        "telephone_parent" VARCHAR(50),
+        "statut"           VARCHAR(20) DEFAULT 'actif',
+        "created_at"       TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- ONG & Associations
+      CREATE TABLE IF NOT EXISTS "ngo_members" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(100),
+        "role"        VARCHAR(100) DEFAULT 'bénévole',
+        "competence"  VARCHAR(255),
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "ngo_projects" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "titre"        VARCHAR(255) NOT NULL,
+        "description"  TEXT,
+        "statut"       VARCHAR(50) DEFAULT 'en_cours',
+        "date_debut"   DATE DEFAULT CURRENT_DATE,
+        "date_fin"     DATE,
+        "budget"       DECIMAL(15,0) DEFAULT 0,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "ngo_donations" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "donateur_nom" VARCHAR(255),
+        "montant"      DECIMAL(15,0) NOT NULL,
+        "type_don"     VARCHAR(50) DEFAULT 'financier',
+        "projet_id"    INTEGER REFERENCES "ngo_projects"("id") ON DELETE SET NULL,
+        "projet_titre" VARCHAR(255),
+        "date_don"     DATE DEFAULT CURRENT_DATE,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "ngo_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Journalistes / Médias
+      CREATE TABLE IF NOT EXISTS "journalist_reporters" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(100),
+        "specialite"  VARCHAR(100) DEFAULT 'Général',
+        "role"        VARCHAR(100) DEFAULT 'journaliste',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "journalist_articles" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(50) NOT NULL,
+        "reporter_id"   INTEGER REFERENCES "journalist_reporters"("id") ON DELETE SET NULL,
+        "reporter_nom"  VARCHAR(255),
+        "titre"         VARCHAR(255) NOT NULL,
+        "contenu"       TEXT,
+        "categorie"     VARCHAR(100) DEFAULT 'Actualité',
+        "statut"        VARCHAR(50) DEFAULT 'brouillon',
+        "date_pub"      DATE DEFAULT CURRENT_DATE,
+        "created_at"    TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "journalist_subscribers" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "telephone"   VARCHAR(50),
+        "email"       VARCHAR(255),
+        "type_abo"    VARCHAR(50) DEFAULT 'gratuit',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "journalist_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Scientifiques
+      CREATE TABLE IF NOT EXISTS "scientist_members" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "nom"          VARCHAR(255) NOT NULL,
+        "prenom"       VARCHAR(255),
+        "telephone"    VARCHAR(50),
+        "numero_h"     VARCHAR(100),
+        "titre"        VARCHAR(100) DEFAULT 'Chercheur',
+        "domaine"      VARCHAR(255),
+        "institution"  VARCHAR(255),
+        "is_active"    BOOLEAN DEFAULT true,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "scientist_publications" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(50) NOT NULL,
+        "auteur_id"     INTEGER REFERENCES "scientist_members"("id") ON DELETE SET NULL,
+        "auteur_nom"    VARCHAR(255),
+        "titre"         VARCHAR(255) NOT NULL,
+        "type_pub"      VARCHAR(100) DEFAULT 'article',
+        "domaine"       VARCHAR(100),
+        "statut"        VARCHAR(50) DEFAULT 'en_cours',
+        "date_pub"      DATE DEFAULT CURRENT_DATE,
+        "resume"        TEXT,
+        "created_at"    TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "scientist_projects" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "titre"        VARCHAR(255) NOT NULL,
+        "description"  TEXT,
+        "responsable"  VARCHAR(255),
+        "statut"       VARCHAR(50) DEFAULT 'en_cours',
+        "date_debut"   DATE DEFAULT CURRENT_DATE,
+        "date_fin"     DATE,
+        "budget"       DECIMAL(15,0) DEFAULT 0,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "scientist_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Fournisseurs / Grossistes
+      CREATE TABLE IF NOT EXISTS "supplier_products" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "categorie"   VARCHAR(100),
+        "prix_gros"   DECIMAL(15,0) DEFAULT 0,
+        "prix_detail" DECIMAL(15,0) DEFAULT 0,
+        "stock"       INTEGER DEFAULT 0,
+        "unite"       VARCHAR(50) DEFAULT 'unité',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "supplier_clients" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "telephone"   VARCHAR(50),
+        "adresse"     VARCHAR(255),
+        "type_client" VARCHAR(50) DEFAULT 'revendeur',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "supplier_orders" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "client_nom"   VARCHAR(255),
+        "client_id"    INTEGER REFERENCES "supplier_clients"("id") ON DELETE SET NULL,
+        "montant_total" DECIMAL(15,0) DEFAULT 0,
+        "statut"       VARCHAR(50) DEFAULT 'en_attente',
+        "date_commande" DATE DEFAULT CURRENT_DATE,
+        "notes"        TEXT,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "supplier_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Agences de Sécurité
+      CREATE TABLE IF NOT EXISTS "security_agents" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(100),
+        "grade"       VARCHAR(100) DEFAULT 'Agent',
+        "zone"        VARCHAR(255),
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "security_missions" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "agent_id"     INTEGER REFERENCES "security_agents"("id") ON DELETE SET NULL,
+        "agent_nom"    VARCHAR(255),
+        "titre"        VARCHAR(255) NOT NULL,
+        "client_nom"   VARCHAR(255),
+        "lieu"         VARCHAR(255),
+        "date_debut"   DATE DEFAULT CURRENT_DATE,
+        "date_fin"     DATE,
+        "statut"       VARCHAR(50) DEFAULT 'en_cours',
+        "notes"        TEXT,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "security_clients" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "telephone"   VARCHAR(50),
+        "adresse"     VARCHAR(255),
+        "type_contrat" VARCHAR(100) DEFAULT 'ponctuel',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "security_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Entreprises
+      CREATE TABLE IF NOT EXISTS "enterprise_employees" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "prenom"      VARCHAR(255),
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(100),
+        "poste"       VARCHAR(100) DEFAULT 'Employé',
+        "departement" VARCHAR(100),
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "enterprise_clients" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "nom"          VARCHAR(255) NOT NULL,
+        "telephone"    VARCHAR(50),
+        "adresse"      VARCHAR(255),
+        "secteur"      VARCHAR(100),
+        "is_active"    BOOLEAN DEFAULT true,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "enterprise_contracts" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "client_nom"  VARCHAR(255),
+        "client_id"   INTEGER REFERENCES "enterprise_clients"("id") ON DELETE SET NULL,
+        "budget"      DECIMAL(15,0) DEFAULT 0,
+        "statut"      VARCHAR(50) DEFAULT 'en_cours',
+        "date_debut"  DATE DEFAULT CURRENT_DATE,
+        "date_fin"    DATE,
+        "description" TEXT,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "enterprise_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "titre"       VARCHAR(255) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Gestionnaires de quartier (1 chef + 1 gestionnaire de caisse)
+      CREATE TABLE IF NOT EXISTS "quartier_managers" (
+        "id"                    SERIAL PRIMARY KEY,
+        "quartier_nom"          VARCHAR(255) NOT NULL UNIQUE,
+        "chef_numero_h"         VARCHAR(100),
+        "chef_nom"              VARCHAR(255),
+        "gestionnaire_numero_h" VARCHAR(100),
+        "gestionnaire_nom"      VARCHAR(255),
+        "created_at"            TIMESTAMPTZ DEFAULT NOW(),
+        "updated_at"            TIMESTAMPTZ DEFAULT NOW()
+      );
+      -- Commerce / Boutique
+      CREATE TABLE IF NOT EXISTS "commerce_products" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL,
+        "nom"         VARCHAR(255) NOT NULL,
+        "categorie"   VARCHAR(100),
+        "prix_vente"  DECIMAL(15,0) NOT NULL DEFAULT 0,
+        "prix_achat"  DECIMAL(15,0) DEFAULT 0,
+        "stock"       INTEGER DEFAULT 0,
+        "stock_min"   INTEGER DEFAULT 5,
+        "unite"       VARCHAR(50) DEFAULT 'pièce',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "commerce_sales" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(50) NOT NULL,
+        "client_nom"    VARCHAR(255),
+        "total"         DECIMAL(15,0) NOT NULL DEFAULT 0,
+        "montant_recu"  DECIMAL(15,0) DEFAULT 0,
+        "type_paiement" VARCHAR(50) DEFAULT 'especes',
+        "est_credit"    BOOLEAN DEFAULT false,
+        "notes"         TEXT,
+        "items"         JSONB DEFAULT '[]',
+        "date_vente"    TIMESTAMPTZ DEFAULT NOW(),
+        "created_at"    TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "commerce_clients" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "nom"          VARCHAR(255) NOT NULL,
+        "telephone"    VARCHAR(50),
+        "adresse"      TEXT,
+        "credit_total" DECIMAL(15,0) DEFAULT 0,
+        "is_active"    BOOLEAN DEFAULT true,
+        "created_at"   TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "commerce_expenses" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(50) NOT NULL,
+        "description"  VARCHAR(300) NOT NULL,
+        "montant"      DECIMAL(15,0) NOT NULL DEFAULT 0,
+        "categorie"    VARCHAR(100) DEFAULT 'Autre',
+        "date_depense" TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
-    // Ajouter colonne tenant_code sur professional_accounts si absente
+    // Colonnes supplémentaires (idempotentes)
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "tenant_code" VARCHAR(50) UNIQUE;`).catch(() => {});
-    // Colonnes profil du tenant (logo, coordonnées)
-    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "address"     TEXT;`).catch(() => {});
-    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "phone"       VARCHAR(50);`).catch(() => {});
-    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "email"       VARCHAR(255);`).catch(() => {});
-    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "description" TEXT;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "numero_h" VARCHAR(50);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "parent_numero_h" VARCHAR(50);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "address"      TEXT;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "phone"        VARCHAR(50);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "email"        VARCHAR(255);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "description"  TEXT;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "logo_url"     TEXT;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "city"         VARCHAR(255);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "is_active"    BOOLEAN DEFAULT true;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "activated_at" TIMESTAMPTZ DEFAULT NOW();`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "clinic_patients"       ADD COLUMN IF NOT EXISTS "numero_h"      VARCHAR(100);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "clinic_prescriptions" ADD COLUMN IF NOT EXISTS "pharma_statut" VARCHAR(30) DEFAULT 'en_attente';`).catch(() => {});
 
-    // Tenants démo réservés à l'admin G7 (espaces de référence)
+    // Migration : créer tenant_code pour comptes pros approuvés+actifs sans tenant_code
+    try {
+      const missingTenants = await sequelize.query(
+        `SELECT id, type, name, owner_numero_h FROM professional_accounts
+         WHERE status='approved' AND subscription_status='active' AND (tenant_code IS NULL OR tenant_code='')
+         AND type IN ('clinic','school','enterprise','mosque','madrasa','commerce','ngo','journalist','scientist','supplier','security_agency')`,
+        { type: sequelize.QueryTypes.SELECT }
+      );
+      const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU' };
+      for (const acc of missingTenants) {
+        const prefix = prefixMap[acc.type] || 'PRO';
+        const code = `${prefix}-GN-${String(acc.id).padStart(5,'0')}`;
+        await sequelize.query(
+          `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code,:type,:name,:owner) ON CONFLICT (tenant_code) DO NOTHING`,
+          { replacements: { code, type: acc.type, name: acc.name, owner: acc.owner_numero_h } }
+        ).catch(()=>{});
+        await sequelize.query(
+          `UPDATE professional_accounts SET tenant_code=:code WHERE id=:id AND (tenant_code IS NULL OR tenant_code='')`,
+          { replacements: { code, id: acc.id } }
+        ).catch(()=>{});
+      }
+      if (missingTenants.length > 0) console.log(`✅ Migration tenant_code : ${missingTenants.length} compte(s) mis à jour`);
+    } catch(e) { console.warn('⚠️ Migration tenant_code:', e.message); }
+
+    // Tenants démo réservés à l'admin G7 — un exemplaire par type de service
     await sequelize.query(`
       INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, is_active)
       VALUES
-        ('DEMO-REF-CLIN', 'clinic',  'Clinique Référence Admin', 'ADMIN-G7', true),
-        ('DEMO-REF-ECO',  'school',  'École Référence Admin',    'ADMIN-G7', true)
+        ('DEMO-REF-CLIN', 'clinic',           'Clinique Référence Admin',             'ADMIN-G7', true),
+        ('DEMO-REF-ECO',  'school',           'École Référence Admin',                'ADMIN-G7', true),
+        ('DEMO-REF-MSQ',  'mosque',           'Mosquée Référence Admin',              'ADMIN-G7', true),
+        ('DEMO-REF-MDS',    'madrasa',  'Madrasa Référence Admin',              'ADMIN-G7', true),
+        ('DEMO-REF-RESEAU', 'reseau',   'Réseau Référence Admin',               'ADMIN-G7', true),
+        ('DEMO-REF-COM',  'commerce',         'Boutique Référence Admin',             'ADMIN-G7', true),
+        ('DEMO-REF-ENT',  'enterprise',       'Entreprise Référence Admin',           'ADMIN-G7', true),
+        ('DEMO-REF-IMAM', 'imam',             'Réseau Imam Référence Admin',          'ADMIN-G7', true),
+        ('DEMO-REF-NGO',  'ngo',              'ONG Référence Admin',                  'ADMIN-G7', true),
+        ('DEMO-REF-JOUR', 'journalist',       'Média Référence Admin',                'ADMIN-G7', true),
+        ('DEMO-REF-SCIEN','scientist',        'Science Référence Admin',              'ADMIN-G7', true),
+        ('DEMO-REF-FOUR', 'supplier',         'Fournisseur Référence Admin',          'ADMIN-G7', true),
+        ('DEMO-REF-SECU',   'security_agency',  'Sécurité Référence Admin',             'ADMIN-G7', true),
+        ('DEMO-REF-IMMO',   'immobilier',       'Immobilier Référence Admin',           'ADMIN-G7', true),
+        ('DEMO-REF-RESTO',  'restaurant',       'Restaurant Référence Admin',           'ADMIN-G7', true),
+        ('DEMO-REF-VENT', 'retailer',         'Vendeur Détail Référence Admin',        'ADMIN-G7', true),
+        ('DEMO-REF-TRANS','transport',        'Transport Référence Admin',             'ADMIN-G7', true),
+        ('DEMO-REF-MAIR', 'mairie',          'Mairie Référence Admin',                'ADMIN-G7', true)
       ON CONFLICT (tenant_code) DO NOTHING;
     `).catch(() => {});
 
-    console.log('✅ Tables gestion interne (cliniques + écoles) prêtes');
+    // ── Formation Religieuse (Madrasa / Daroul)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "madrasa_students" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "prenom"           VARCHAR(100) NOT NULL,
+        "nom"              VARCHAR(100) NOT NULL,
+        "date_naissance"   DATE,
+        "sexe"             CHAR(1) DEFAULT 'M',
+        "niveau"           VARCHAR(50) DEFAULT 'Iqra',
+        "telephone_parent" VARCHAR(50),
+        "numero_h"         VARCHAR(30),
+        "parent_numero_h"  VARCHAR(30),
+        "is_active"        BOOLEAN DEFAULT true,
+        "created_at"       TIMESTAMP DEFAULT NOW(),
+        "updated_at"       TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "madrasa_staff" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "prenom"      VARCHAR(100) NOT NULL,
+        "nom"         VARCHAR(100) NOT NULL,
+        "role"        VARCHAR(50) DEFAULT 'Enseignant',
+        "specialite"  VARCHAR(100) DEFAULT 'Coran',
+        "telephone"   VARCHAR(50),
+        "numero_h"    VARCHAR(30),
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "madrasa_halaqas" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"           VARCHAR(100) NOT NULL,
+        "niveau"        VARCHAR(50) DEFAULT 'Iqra',
+        "capacite"      INTEGER DEFAULT 20,
+        "enseignant_id" INTEGER REFERENCES "madrasa_staff"("id") ON DELETE SET NULL,
+        "created_at"    TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "madrasa_attendance" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(30) NOT NULL,
+        "student_id"    INTEGER NOT NULL REFERENCES "madrasa_students"("id") ON DELETE CASCADE,
+        "date_presence" DATE NOT NULL DEFAULT CURRENT_DATE,
+        "statut"        VARCHAR(20) DEFAULT 'present',
+        UNIQUE("tenant_code", "student_id", "date_presence")
+      );
+      CREATE TABLE IF NOT EXISTS "madrasa_grades" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL,
+        "student_id"  INTEGER NOT NULL REFERENCES "madrasa_students"("id") ON DELETE CASCADE,
+        "matiere"     VARCHAR(100) DEFAULT 'Coran',
+        "note"        NUMERIC(5,2) DEFAULT 0,
+        "note_max"    NUMERIC(5,2) DEFAULT 20,
+        "periode"     VARCHAR(50),
+        "sourate"     VARCHAR(100),
+        "commentaire" TEXT,
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "madrasa_fees" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(30) NOT NULL,
+        "student_id"    INTEGER NOT NULL REFERENCES "madrasa_students"("id") ON DELETE CASCADE,
+        "type_frais"    VARCHAR(100) DEFAULT 'Frais mensuels',
+        "montant"       INTEGER NOT NULL,
+        "echeance"      DATE,
+        "est_paye"      BOOLEAN DEFAULT false,
+        "date_paiement" TIMESTAMP,
+        "created_at"    TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "madrasa_members" (
+        "id"                SERIAL PRIMARY KEY,
+        "tenant_code"       VARCHAR(30) NOT NULL,
+        "numero_h"          VARCHAR(30) NOT NULL,
+        "role"              VARCHAR(30) DEFAULT 'apprenant',
+        "linked_student_id" INTEGER REFERENCES "madrasa_students"("id") ON DELETE SET NULL,
+        "nom_display"       VARCHAR(200),
+        "is_active"         BOOLEAN DEFAULT true,
+        "created_at"        TIMESTAMP DEFAULT NOW(),
+        UNIQUE("tenant_code", "numero_h")
+      );
+      CREATE TABLE IF NOT EXISTS "madrasa_bulletins" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(30) NOT NULL,
+        "student_id"       INTEGER NOT NULL REFERENCES "madrasa_students"("id") ON DELETE CASCADE,
+        "periode"          VARCHAR(50) NOT NULL,
+        "annee_scolaire"   VARCHAR(20),
+        "moyenne_generale" NUMERIC(5,2),
+        "mention"          VARCHAR(100),
+        "is_published"     BOOLEAN DEFAULT false,
+        "published_at"     TIMESTAMP,
+        "created_at"       TIMESTAMP DEFAULT NOW(),
+        UNIQUE("tenant_code", "student_id", "periode")
+      );
+    `).catch(() => {});
+
+    // ── Vendeurs en Détail ──────────────────────────────────────────────────────
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "retailer_products" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"         VARCHAR(200) NOT NULL,
+        "categorie"   VARCHAR(100) DEFAULT '',
+        "prix_vente"  INTEGER NOT NULL DEFAULT 0,
+        "prix_achat"  INTEGER DEFAULT 0,
+        "stock"       INTEGER DEFAULT 0,
+        "stock_min"   INTEGER DEFAULT 5,
+        "unite"       VARCHAR(30) DEFAULT 'pièce',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "retailer_sales" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "client_nom"    VARCHAR(200) DEFAULT 'Client',
+        "type_paiement" VARCHAR(30) DEFAULT 'especes',
+        "total"         INTEGER NOT NULL DEFAULT 0,
+        "est_credit"    BOOLEAN DEFAULT false,
+        "notes"         TEXT DEFAULT '',
+        "date_vente"    TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "retailer_sale_items" (
+        "id"            SERIAL PRIMARY KEY,
+        "sale_id"       INTEGER NOT NULL REFERENCES "retailer_sales"("id") ON DELETE CASCADE,
+        "tenant_code"   VARCHAR(30) NOT NULL,
+        "nom"           VARCHAR(200) NOT NULL,
+        "product_id"    INTEGER REFERENCES "retailer_products"("id") ON DELETE SET NULL,
+        "prix_unitaire" INTEGER NOT NULL DEFAULT 0,
+        "quantite"      NUMERIC(10,2) DEFAULT 1,
+        "sous_total"    INTEGER DEFAULT 0
+      );
+      CREATE TABLE IF NOT EXISTS "retailer_clients" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"          VARCHAR(200) NOT NULL,
+        "telephone"    VARCHAR(50) DEFAULT '',
+        "adresse"      VARCHAR(200) DEFAULT '',
+        "credit_total" INTEGER DEFAULT 0,
+        "is_active"    BOOLEAN DEFAULT true,
+        "created_at"   TIMESTAMP DEFAULT NOW(),
+        UNIQUE("tenant_code", "nom")
+      );
+      CREATE TABLE IF NOT EXISTS "retailer_expenses" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "description"  VARCHAR(300) NOT NULL,
+        "montant"      INTEGER NOT NULL DEFAULT 0,
+        "categorie"    VARCHAR(100) DEFAULT 'Autre',
+        "date_depense" TIMESTAMP DEFAULT NOW()
+      );
+    `).catch(() => {});
+
+    console.log('✅ Tables gestion interne (cliniques + écoles + mosquées + madrasa + commerce + vendeurs) prêtes');
   } catch (err) {
     console.warn('⚠️ initAllTables [gestion-interne]:', err.message);
+  }
+
+  // ── Mairie (État Civil) ────────────────────────────────────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "mairie_mariages" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "numero_dossier"   VARCHAR(50) UNIQUE NOT NULL,
+        "epoux_nom"        VARCHAR(100) NOT NULL,
+        "epoux_prenom"     VARCHAR(100) NOT NULL,
+        "epoux_ddn"        DATE,
+        "epoux_numero_h"   VARCHAR(50),
+        "epouse_nom"       VARCHAR(100) NOT NULL,
+        "epouse_prenom"    VARCHAR(100) NOT NULL,
+        "epouse_ddn"       DATE,
+        "epouse_numero_h"  VARCHAR(50),
+        "date_mariage"     DATE NOT NULL,
+        "lieu_mariage"     VARCHAR(200) DEFAULT '',
+        "temoin1_nom"      VARCHAR(100),
+        "temoin2_nom"      VARCHAR(100),
+        "statut"           VARCHAR(30) DEFAULT 'en_attente',
+        "notes"            TEXT,
+        "created_at"       TIMESTAMPTZ DEFAULT NOW(),
+        "updated_at"       TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "mairie_naissances" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "numero_dossier"   VARCHAR(50) UNIQUE NOT NULL,
+        "enfant_nom"       VARCHAR(100) NOT NULL,
+        "enfant_prenom"    VARCHAR(100) NOT NULL,
+        "date_naissance"   DATE NOT NULL,
+        "lieu_naissance"   VARCHAR(200) DEFAULT '',
+        "sexe"             VARCHAR(10) DEFAULT 'M',
+        "pere_nom"         VARCHAR(100),
+        "pere_prenom"      VARCHAR(100),
+        "mere_nom"         VARCHAR(100),
+        "mere_prenom"      VARCHAR(100),
+        "declarant_nom"    VARCHAR(100),
+        "statut"           VARCHAR(30) DEFAULT 'en_attente',
+        "notes"            TEXT,
+        "created_at"       TIMESTAMPTZ DEFAULT NOW(),
+        "updated_at"       TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "mairie_deces" (
+        "id"                   SERIAL PRIMARY KEY,
+        "tenant_code"          VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "numero_dossier"       VARCHAR(50) UNIQUE NOT NULL,
+        "defunt_nom"           VARCHAR(100) NOT NULL,
+        "defunt_prenom"        VARCHAR(100) NOT NULL,
+        "defunt_ddn"           DATE,
+        "defunt_numero_h"      VARCHAR(50),
+        "date_deces"           DATE NOT NULL,
+        "lieu_deces"           VARCHAR(200) DEFAULT '',
+        "cause_deces"          VARCHAR(200) DEFAULT '',
+        "declarant_nom"        VARCHAR(100),
+        "declarant_telephone"  VARCHAR(50),
+        "statut"               VARCHAR(30) DEFAULT 'en_attente',
+        "notes"                TEXT,
+        "created_at"           TIMESTAMPTZ DEFAULT NOW(),
+        "updated_at"           TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "mairie_agents" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"         VARCHAR(100) NOT NULL,
+        "prenom"      VARCHAR(100) NOT NULL,
+        "role"        VARCHAR(50) DEFAULT 'Agent',
+        "telephone"   VARCHAR(50),
+        "email"       VARCHAR(255),
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMPTZ DEFAULT NOW()
+      );
+    `).catch(() => {});
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "mairie_residences" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "numero_dossier"   VARCHAR(50) UNIQUE NOT NULL,
+        "nom"              VARCHAR(100) NOT NULL,
+        "prenom"           VARCHAR(100) NOT NULL,
+        "date_naissance"   DATE,
+        "numero_h"         VARCHAR(50),
+        "adresse"          VARCHAR(300) NOT NULL,
+        "depuis_quand"     VARCHAR(100) DEFAULT '',
+        "motif"            VARCHAR(100) DEFAULT 'Autre',
+        "statut"           VARCHAR(30) DEFAULT 'en_attente',
+        "notes"            TEXT,
+        "chef_quartier_id"          INTEGER,
+        "chef_quartier_nom"         VARCHAR(150),
+        "chef_quartier_telephone"   VARCHAR(50),
+        "chef_quartier_valide"      BOOLEAN DEFAULT FALSE,
+        "chef_quartier_date"        TIMESTAMPTZ,
+        "created_at"       TIMESTAMPTZ DEFAULT NOW(),
+        "updated_at"       TIMESTAMPTZ DEFAULT NOW()
+      );
+    `).catch(() => {});
+    // Ajouter les colonnes chef de quartier sur les bases existantes (migration douce)
+    await sequelize.query(`ALTER TABLE mairie_residences ADD COLUMN IF NOT EXISTS chef_quartier_id INTEGER`).catch(() => {});
+    await sequelize.query(`ALTER TABLE mairie_residences ADD COLUMN IF NOT EXISTS chef_quartier_nom VARCHAR(150)`).catch(() => {});
+    await sequelize.query(`ALTER TABLE mairie_residences ADD COLUMN IF NOT EXISTS chef_quartier_telephone VARCHAR(50)`).catch(() => {});
+    await sequelize.query(`ALTER TABLE mairie_residences ADD COLUMN IF NOT EXISTS chef_quartier_valide BOOLEAN DEFAULT FALSE`).catch(() => {});
+    await sequelize.query(`ALTER TABLE mairie_residences ADD COLUMN IF NOT EXISTS chef_quartier_date TIMESTAMPTZ`).catch(() => {});
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "mairie_chefs_quartier" (
+        "id"                    SERIAL PRIMARY KEY,
+        "tenant_code"           VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"                   VARCHAR(100) NOT NULL,
+        "prenom"                VARCHAR(100) DEFAULT '',
+        "quartier"              VARCHAR(150) NOT NULL,
+        "telephone"             VARCHAR(50),
+        "date_prise_fonction"   DATE,
+        "is_active"             BOOLEAN DEFAULT TRUE,
+        "created_at"            TIMESTAMPTZ DEFAULT NOW()
+      );
+    `).catch(() => {});
+    console.log('✅ Tables mairie (état civil) prêtes');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [gestion-interne]:', err.message);
+  }
+
+  // ── Transport & Livraison ───────────────────────────────────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "transport_vehicles" (
+        "id"             SERIAL PRIMARY KEY,
+        "tenant_code"    VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "immatriculation" VARCHAR(50) NOT NULL,
+        "type_vehicule"  VARCHAR(50) DEFAULT 'voiture',
+        "marque"         VARCHAR(100),
+        "capacite"       INTEGER DEFAULT 4,
+        "driver_id"      INTEGER,
+        "description"    TEXT,
+        "statut"         VARCHAR(30) DEFAULT 'actif',
+        "created_at"     TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "transport_drivers" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"         VARCHAR(100) NOT NULL,
+        "prenom"      VARCHAR(100),
+        "telephone"   VARCHAR(50),
+        "permis"      VARCHAR(50),
+        "type_permis" VARCHAR(20),
+        "salaire"     INTEGER DEFAULT 0,
+        "notes"       TEXT,
+        "statut"      VARCHAR(30) DEFAULT 'disponible',
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "transport_trips" (
+        "id"              SERIAL PRIMARY KEY,
+        "tenant_code"     VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "lieu_depart"     VARCHAR(200) NOT NULL,
+        "lieu_arrivee"    VARCHAR(200) NOT NULL,
+        "date_depart"     DATE NOT NULL,
+        "heure_depart"    TIME,
+        "prix"            INTEGER DEFAULT 0,
+        "places_total"    INTEGER DEFAULT 4,
+        "places_restantes" INTEGER DEFAULT 4,
+        "driver_id"       INTEGER REFERENCES "transport_drivers"("id") ON DELETE SET NULL,
+        "vehicle_id"      INTEGER REFERENCES "transport_vehicles"("id") ON DELETE SET NULL,
+        "notes"           TEXT,
+        "statut"          VARCHAR(30) DEFAULT 'prevu',
+        "created_at"      TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "transport_bookings" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "trip_id"          INTEGER REFERENCES "transport_trips"("id") ON DELETE SET NULL,
+        "client_nom"       VARCHAR(200) NOT NULL,
+        "client_telephone" VARCHAR(50),
+        "places"           INTEGER DEFAULT 1,
+        "montant"          INTEGER DEFAULT 0,
+        "notes"            TEXT,
+        "statut"           VARCHAR(30) DEFAULT 'en_attente',
+        "created_at"       TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "transport_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "titre"       VARCHAR(200) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "transport_deliveries" (
+        "id"               SERIAL PRIMARY KEY,
+        "tenant_code"      VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "client_nom"       VARCHAR(200) NOT NULL,
+        "client_telephone" VARCHAR(50),
+        "adresse_collecte" VARCHAR(300) NOT NULL,
+        "adresse_livraison" VARCHAR(300) NOT NULL,
+        "description"      TEXT,
+        "poids"            NUMERIC(8,2) DEFAULT 0,
+        "montant"          INTEGER DEFAULT 0,
+        "driver_id"        INTEGER REFERENCES "transport_drivers"("id") ON DELETE SET NULL,
+        "vehicle_id"       INTEGER REFERENCES "transport_vehicles"("id") ON DELETE SET NULL,
+        "notes"            TEXT,
+        "statut"           VARCHAR(30) DEFAULT 'en_attente',
+        "created_at"       TIMESTAMP DEFAULT NOW()
+      );
+    `).catch(() => {});
+    console.log('✅ Tables transport prêtes');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [transport]:', err.message);
+  }
+
+  // ── Réseau des Imams ────────────────────────────────────────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "imam_network_profiles" (
+        "id"          SERIAL PRIMARY KEY,
+        "numero_h"    VARCHAR(50) UNIQUE NOT NULL,
+        "nom_mosquee" VARCHAR(255) NOT NULL,
+        "adresse"     VARCHAR(255) DEFAULT '',
+        "quartier"    VARCHAR(100) DEFAULT '',
+        "ville"       VARCHAR(100) NOT NULL,
+        "pays"        VARCHAR(100) NOT NULL,
+        "bio"         TEXT DEFAULT '',
+        "is_verified" BOOLEAN DEFAULT false,
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMP DEFAULT NOW(),
+        "updated_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "imam_connections" (
+        "id"                   SERIAL PRIMARY KEY,
+        "imam_numero_h"        VARCHAR(50) NOT NULL,
+        "connected_numero_h"   VARCHAR(50) NOT NULL,
+        "statut"               VARCHAR(20) DEFAULT 'pending',
+        "created_at"           TIMESTAMP DEFAULT NOW(),
+        UNIQUE("imam_numero_h", "connected_numero_h")
+      );
+      CREATE TABLE IF NOT EXISTS "imam_community_members" (
+        "id"               SERIAL PRIMARY KEY,
+        "imam_numero_h"    VARCHAR(50) NOT NULL,
+        "fidele_numero_h"  VARCHAR(50),
+        "fidele_nom"       VARCHAR(255) DEFAULT '',
+        "fidele_telephone" VARCHAR(50)  DEFAULT '',
+        "quartier"         VARCHAR(100) DEFAULT '',
+        "is_active"        BOOLEAN DEFAULT true,
+        "joined_at"        TIMESTAMP DEFAULT NOW(),
+        UNIQUE("imam_numero_h", "fidele_numero_h")
+      );
+      CREATE TABLE IF NOT EXISTS "friday_announcements" (
+        "id"                  SERIAL PRIMARY KEY,
+        "imam_numero_h"       VARCHAR(50) NOT NULL,
+        "sourate_numero"      INTEGER,
+        "sourate_nom"         VARCHAR(100) DEFAULT '',
+        "versets_debut"       INTEGER,
+        "versets_fin"         INTEGER,
+        "texte_arabe"         TEXT DEFAULT '',
+        "traduction"          TEXT DEFAULT '',
+        "message_imam"        TEXT NOT NULL,
+        "date_vendredi"       DATE NOT NULL,
+        "is_sent"             BOOLEAN DEFAULT false,
+        "sent_at"             TIMESTAMP,
+        "nb_fideles_notifies" INTEGER DEFAULT 0,
+        "created_at"          TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "national_religious_coordinators" (
+        "id"         SERIAL PRIMARY KEY,
+        "numero_h"   VARCHAR(50) UNIQUE NOT NULL,
+        "pays"       VARCHAR(100) NOT NULL,
+        "titre"      VARCHAR(255) DEFAULT '',
+        "is_active"  BOOLEAN DEFAULT true,
+        "created_at" TIMESTAMP DEFAULT NOW()
+      );
+    `).catch(() => {});
+    console.log('✅ Tables réseau des imams prêtes');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [imam-network]:', err.message);
+  }
+
+  // ── Réseau Professionnel Générique ──────────────────────────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "pro_network_profiles" (
+        "id"            SERIAL PRIMARY KEY,
+        "numero_h"      VARCHAR(50)  NOT NULL,
+        "pro_type"      VARCHAR(50)  NOT NULL,
+        "nom_structure" VARCHAR(255) NOT NULL,
+        "adresse"       VARCHAR(255) DEFAULT '',
+        "quartier"      VARCHAR(100) DEFAULT '',
+        "ville"         VARCHAR(100) NOT NULL,
+        "pays"          VARCHAR(100) DEFAULT '',
+        "bio"           TEXT         DEFAULT '',
+        "is_active"     BOOLEAN      DEFAULT true,
+        "created_at"    TIMESTAMP    DEFAULT NOW(),
+        "updated_at"    TIMESTAMP    DEFAULT NOW(),
+        UNIQUE("numero_h", "pro_type")
+      );
+      CREATE TABLE IF NOT EXISTS "pro_connections" (
+        "id"              SERIAL PRIMARY KEY,
+        "from_numero_h"   VARCHAR(50) NOT NULL,
+        "to_numero_h"     VARCHAR(50) NOT NULL,
+        "pro_type"        VARCHAR(50) NOT NULL,
+        "statut"          VARCHAR(20) DEFAULT 'pending',
+        "created_at"      TIMESTAMP   DEFAULT NOW(),
+        UNIQUE("from_numero_h", "to_numero_h", "pro_type")
+      );
+      CREATE TABLE IF NOT EXISTS "pro_community_members" (
+        "id"              SERIAL PRIMARY KEY,
+        "pro_numero_h"    VARCHAR(50) NOT NULL,
+        "member_numero_h" VARCHAR(50),
+        "pro_type"        VARCHAR(50) NOT NULL,
+        "nom_membre"      VARCHAR(255) DEFAULT '',
+        "telephone"       VARCHAR(50)  DEFAULT '',
+        "quartier"        VARCHAR(100) DEFAULT '',
+        "is_active"       BOOLEAN      DEFAULT true,
+        "joined_at"       TIMESTAMP    DEFAULT NOW(),
+        UNIQUE("pro_numero_h", "member_numero_h", "pro_type")
+      );
+      CREATE TABLE IF NOT EXISTS "pro_announcements" (
+        "id"           SERIAL PRIMARY KEY,
+        "pro_numero_h" VARCHAR(50)  NOT NULL,
+        "pro_type"     VARCHAR(50)  NOT NULL,
+        "titre"        VARCHAR(255) DEFAULT '',
+        "contenu"      TEXT         NOT NULL,
+        "date_annonce" DATE         NOT NULL,
+        "is_sent"      BOOLEAN      DEFAULT false,
+        "sent_at"      TIMESTAMP,
+        "nb_notifies"  INTEGER      DEFAULT 0,
+        "created_at"   TIMESTAMP    DEFAULT NOW()
+      );
+    `).catch(() => {});
+    console.log('✅ Tables réseau professionnel générique prêtes');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [pro-network]:', err.message);
+  }
+
+  // ── Seed des tenants DEMO (vitrines + gestion admin) ───────────────────────
+  try {
+    const DEMO_TENANTS = [
+      { code: 'DEMO-REF-CLIN',  type: 'clinic',          name: 'Clinique Référence Admin' },
+      { code: 'DEMO-REF-ECO',   type: 'school',          name: 'École Référence Admin' },
+      { code: 'DEMO-REF-MSQ',   type: 'mosque',          name: 'Réseau Imam Référence Admin' },
+      { code: 'DEMO-REF-RESEAU',type: 'reseau',          name: 'Réseau Référence Admin' },
+      { code: 'DEMO-REF-MDS',   type: 'madrasa',         name: 'Madrasa Référence Admin' },
+      { code: 'DEMO-REF-COM',   type: 'commerce',        name: 'Boutique Référence Admin' },
+      { code: 'DEMO-REF-ENT',   type: 'enterprise',      name: 'Entreprise Référence Admin' },
+      { code: 'DEMO-REF-NGO',   type: 'ngo',             name: 'ONG Référence Admin' },
+      { code: 'DEMO-REF-JOUR',  type: 'journalist',      name: 'Média Référence Admin' },
+      { code: 'DEMO-REF-SCIEN', type: 'scientist',       name: 'Science Référence Admin' },
+      { code: 'DEMO-REF-FOUR',  type: 'supplier',        name: 'Fournisseur Référence Admin' },
+      { code: 'DEMO-REF-SECU',  type: 'security_agency', name: 'Sécurité Référence Admin' },
+      { code: 'DEMO-REF-IMMO',  type: 'immobilier',      name: 'Immobilier Référence Admin' },
+      { code: 'DEMO-REF-RESTO', type: 'restaurant',      name: 'Restaurant Référence Admin' },
+      { code: 'DEMO-REF-TRANS', type: 'transport',       name: 'Transport Référence Admin' },
+      { code: 'DEMO-REF-MAIR',  type: 'mairie',          name: 'Mairie Référence Admin' },
+    ];
+    for (const t of DEMO_TENANTS) {
+      await sequelize.query(
+        `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, is_active)
+         VALUES (:code, :type, :name, 'G7C7P7R7E7F7 7', true)
+         ON CONFLICT (tenant_code) DO NOTHING`,
+        { replacements: { code: t.code, type: t.type, name: t.name } }
+      ).catch(() => {});
+    }
+    console.log('✅ Tenants DEMO seedés dans management_tenants');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [demo-seed]:', err.message);
   }
 }
 
@@ -740,6 +1994,15 @@ connectDB()
   .then(() => {
     console.log('✅ Tous les modèles synchronisés sur enfants_adam_eve');
     initSocket(httpServer, rawOrigins);
+    httpServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        process.exit(0);
+      } else {
+        console.error('❌ Erreur serveur:', err.message);
+        process.exit(1);
+      }
+    });
+
     httpServer.listen(PORT, () => {
       console.log(`🚀 Serveur démarré sur le port ${PORT}`);
       console.log(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`);
@@ -750,6 +2013,13 @@ connectDB()
       startSubscriptionChecker();
       startMessageCleanup();
     });
+
+    // Écouter aussi sur 5002 pour compatibilité avec les anciens clients
+    if (String(PORT) !== '5002') {
+      const alias = http.createServer(app);
+      alias.on('error', () => {});
+      alias.listen(5002, () => console.log(`🔗 Alias port 5002 actif`));
+    }
   })
   .catch((error) => {
     console.error('❌ Impossible de démarrer sans base de données.');
@@ -768,7 +2038,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],
-      connectSrc: ["'self'", "wss:", "ws:"],
+      connectSrc: ["'self'", "wss:", "ws:", "http://localhost:7777", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'", "data:", "blob:"],
@@ -776,6 +2046,7 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false,
 }));
 
 // Configuration CORS
@@ -855,8 +2126,30 @@ app.use('/api/state-messages', stateMessagesRoutes);
 app.use('/api/state-products', stateProductsRoutes);
 app.use('/api/user-stories', userStoriesRoutes);
 app.use('/api/professionals', professionalRoutes);
-app.use('/api/clinic-mgmt', clinicMgmtRoutes);
-app.use('/api/school-mgmt', schoolMgmtRoutes);
+app.use('/api/clinic-mgmt',   clinicMgmtRoutes);
+app.use('/api/mairie-mgmt',   mairieMgmtRoutes);
+app.use('/api/mairie-public', mairePublicRoutes);
+app.use('/api/clinic-public',    clinicPublicRoutes);
+app.use('/api/commerce-public', commercePublicRoutes);
+app.use('/api/pro-public',      proPublicRoutes);
+app.use('/api/school-mgmt',   schoolMgmtRoutes);
+app.use('/api/mosque-mgmt',   mosqueMgmtRoutes);
+app.use('/api/madrasa-mgmt',  madrasaMgmtRoutes);
+app.use('/api/imam-mgmt',     imamMgmtRoutes);
+app.use('/api/ngo-mgmt',          ngoMgmtRoutes);
+app.use('/api/journalist-mgmt',   journalistMgmtRoutes);
+app.use('/api/commerce-mgmt',    commerceMgmtRoutes);
+app.use('/api/enterprise-mgmt', enterpriseMgmtRoutes);
+app.use('/api/scientist-mgmt',  scientistMgmtRoutes);
+app.use('/api/supplier-mgmt',  supplierMgmtRoutes);
+app.use('/api/security-mgmt',  securityMgmtRoutes);
+app.use('/api/retailer-mgmt',  retailerMgmtRoutes);
+app.use('/api/reseau-mgmt',      reseauMgmtRoutes);
+app.use('/api/immo-mgmt',        immoMgmtRoutes);
+app.use('/api/restaurant-mgmt',  restaurantMgmtRoutes);
+app.use('/api/transport-mgmt',   transportMgmtRoutes);
+app.use('/api/imam-network',     imamNetworkRoutes);
+app.use('/api/pro-network',   proNetworkRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ia', iaRoutes);
@@ -866,6 +2159,7 @@ app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);
 app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);
 app.use('/api/moftal-pay', moftalPayRoutes);
+app.use('/api/racines', racinesRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test

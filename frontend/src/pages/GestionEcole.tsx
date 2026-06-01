@@ -263,7 +263,7 @@ export default function GestionEcole() {
 
         {/* Footer */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: 8, flexShrink: 0 }}>
-          <button onClick={() => navigate("/compte")} title={collapsed ? "Retour" : undefined}
+          <button onClick={() => navigate(-1 as any)} title={collapsed ? "Retour" : undefined}
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "rgba(187,247,208,0.45)", fontSize: 12, justifyContent: collapsed ? "center" : "flex-start" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(187,247,208,0.45)"; }}>

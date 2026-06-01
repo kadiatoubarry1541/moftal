@@ -6,7 +6,7 @@ import { config } from '../config/api';
 const SITE_KNOWLEDGE = [
   {
     keywords: ['compte', 'inscription', 'enregistrer', 'creer', 'créer', 's inscrire', 'inscris', 'nouveau', 'rejoindre', 'register', 'sign up'],
-    response: `**Comment créer un compte sur Les Enfants d'Adam ?**\n\nVous avez **2 types de comptes** :\n\n👤 **Compte Vivant** — Pour vous-même\n→ Cliquez sur "S'inscrire" puis choisissez **"Vivant"**\n→ Renseignez vos informations personnelles\n→ Un **Numéro H** unique vous est attribué (votre identifiant)\n\n🕊️ **Compte Défunt** — Pour un proche décédé\n→ Choisissez **"Défunt"** lors de l'inscription\n→ Créez un profil mémoriel pour votre proche\n\n📌 Liens directs :`,
+    response: `**Comment créer un compte sur Moftal ?**\n\nVous avez **2 types de comptes** :\n\n👤 **Compte Vivant** — Pour vous-même\n→ Cliquez sur "S'inscrire" puis choisissez **"Vivant"**\n→ Renseignez vos informations personnelles\n→ Un **Numéro H** unique vous est attribué (votre identifiant)\n\n🕊️ **Compte Défunt** — Pour un proche décédé\n→ Choisissez **"Défunt"** lors de l'inscription\n→ Créez un profil mémoriel pour votre proche\n\n📌 Liens directs :`,
     links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Se connecter', path: '/login' }]
   },
   {
@@ -86,7 +86,7 @@ const SITE_KNOWLEDGE = [
   },
   {
     keywords: ['aide', 'comment', 'utiliser', 'guide', 'tutoriel', 'commencer', 'debut', 'début', 'que faire', 'bonjour', 'salut', 'hello'],
-    response: `**Bienvenue sur Les Enfants d'Adam !** 🌟\n\nVoici les premières étapes pour bien démarrer :\n\n1️⃣ **Créer votre compte** → Choisissez Vivant ou Défunt\n2️⃣ **Vous connecter** avec votre Numéro H\n3️⃣ **Compléter votre profil**\n4️⃣ **Construire votre arbre familial** → Page Famille\n5️⃣ **Découvrir les services** → Santé, Échanges, Éducation...\n\n💬 Posez-moi n'importe quelle question, je suis là pour vous guider !`,
+    response: `**Bienvenue sur Moftal !** 🌟\n\nVoici les premières étapes pour bien démarrer :\n\n1️⃣ **Créer votre compte** → Choisissez Vivant ou Défunt\n2️⃣ **Vous connecter** avec votre Numéro H\n3️⃣ **Compléter votre profil**\n4️⃣ **Construire votre arbre familial** → Page Famille\n5️⃣ **Découvrir les services** → Santé, Échanges, Éducation...\n\n💬 Posez-moi n'importe quelle question, je suis là pour vous guider !`,
     links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Se connecter', path: '/login' }]
   },
 ];
@@ -146,7 +146,7 @@ export function FloatingGuideIA() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: ++_id,
-      text: `Bonjour ! Je suis l'**Assistant IA** des **Enfants d'Adam** 🌳\n\nJe suis ici pour vous guider — pages du site, création de compte, rendez-vous, fonctionnalités...\n\nPosez-moi n'importe quelle question !`,
+      text: `Bonjour ! Je suis l'**Assistant IA** des **Moftal** 🌳\n\nJe suis ici pour vous guider — pages du site, création de compte, rendez-vous, fonctionnalités...\n\nPosez-moi n'importe quelle question !`,
       isUser: false,
       links: [],
       timestamp: new Date(),
@@ -189,7 +189,7 @@ export function FloatingGuideIA() {
     // 2. Fallback API IA
     try {
       const API = import.meta.env.MODE === 'production' ? '' : config.API_BASE_URL;
-      const prompt = `Tu es l'Assistant Guide du site "Les Enfants d'Adam" (plateforme généalogique et communautaire). Réponds de façon concise et professionnelle à cette question d'un utilisateur : ${q}`;
+      const prompt = `Tu es l'Assistant Guide du site "Moftal" (plateforme généalogique et communautaire). Réponds de façon concise et professionnelle à cette question d'un utilisateur : ${q}`;
       const res = await fetch(`${API}/api/ia/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -272,7 +272,7 @@ export function FloatingGuideIA() {
               style={{ background: 'rgba(255,255,255,0.2)', fontSize: 20 }}>🌳</div>
             <div className="flex-1 min-w-0">
               <p className="text-white font-bold text-sm leading-tight">Assistant IA</p>
-              <p className="text-green-200 text-[11px]">Les Enfants d'Adam • Guide officiel</p>
+              <p className="text-green-200 text-[11px]">Moftal • Guide officiel</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="flex items-center gap-1.5">
@@ -437,7 +437,7 @@ export function FloatingGuideIA() {
               </button>
             </div>
             <p className="text-center text-[10px] mt-1.5" style={{ color: '#86efac' }}>
-              Les Enfants d'Adam • Assistant IA
+              Moftal • Assistant IA
             </p>
           </div>
         </div>

@@ -138,7 +138,7 @@ export function ReçuTransaction({
             <div style={{ background: '#f8fafc', padding: 14, textAlign: 'center', borderTop: '1px dashed #ccc' }}>
               <div style={{ fontSize: 10, color: '#888', lineHeight: 1.6 }}>
                 <div>Conservez ce reçu comme justificatif officiel</div>
-                <div style={{ marginTop: 4 }}>Moftal Pay · Les Enfants d'Adam · {new Date().getFullYear()}</div>
+                <div style={{ marginTop: 4 }}>Moftal Pay · Moftal · {new Date().getFullYear()}</div>
               </div>
             </div>
           </div>

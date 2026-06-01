@@ -485,12 +485,13 @@ export default function AdminDashboard() {
     { id: "points", label: "Points Galerie", icon: "🪙" },
     { id: "tools", label: "Outils", icon: "🔧" },
     ...(isSuperAdmin7(userData) ? [
-      { id: "services", label: "Services", icon: "🌐" },
-      { id: "sector-admins", label: "Admins de secteurs", icon: "🏛️" },
-      { id: "moftal-pay", label: "Moftal Pay", icon: "💰" },
+      { id: "services",       label: "Espaces RDV",     icon: "📅" },
+      { id: "gestion-interne", label: "Gestion Interne", icon: "🔧" },
+      { id: "sector-admins",  label: "Admins secteurs", icon: "🏛️" },
+      { id: "moftal-pay",     label: "Moftal Pay",      icon: "💰" },
     ] : []),
   ];
-  const G0_TABS = ["overview", "pros", "points"];
+  const G0_TABS = ["overview", "families", "couples", "parent-child", "users", "points", "tools"];
   const adminTabs = sectorAdminOnly
     ? allAdminTabs.filter((t) => t.id === "pros")
     : isSubAdmin0(userData)
@@ -566,7 +567,7 @@ export default function AdminDashboard() {
               {sectorAdminOnly
                 ? `Secteur(s): ${mySectors.map((s) => s.pageName).join(", ")}`
                 : isSubAdmin0(userData)
-                ? "Accès limité — comptes pro accordés par l'administrateur principal"
+                ? "Accès complet aux fonctionnalités du site"
                 : isSuperAdmin7(userData)
                 ? "Accès complet"
                 : `Rôle: ${userData.role || "admin"}`}
@@ -579,7 +580,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Statistiques en temps réel (masquées pour admin secteur uniquement) */}
-      {!sectorAdminOnly && !isSubAdmin0(userData) && stats && (
+      {!sectorAdminOnly && stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
           {[
             { val: stats.totalUsers, label: "Utilisateurs", from: "from-blue-500", to: "to-blue-600" },
@@ -605,6 +606,7 @@ export default function AdminDashboard() {
             <button
               key={tab.id}
               onClick={() => {
+                if (tab.id === "gestion-interne") { navigate("/gestion-interne"); return; }
                 setAdminSection(tab.id);
                 if (tab.id === "families" && families.length === 0) loadFamilies();
                 if (tab.id === "couples" && couples.length === 0) loadCouples();
@@ -632,46 +634,7 @@ export default function AdminDashboard() {
           {/* ========== VUE D'ENSEMBLE ========== */}
           {adminSection === "overview" && (
             <div className="space-y-6">
-              {isSubAdmin0(userData) ? (
-                <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                    <div className="text-5xl mb-3">🛡️</div>
-                    <h2 className="text-xl font-bold text-blue-900 mb-2">Espace Administration délégué</h2>
-                    <p className="text-blue-700 text-sm max-w-sm mx-auto">
-                      Gérez les comptes professionnels accordés par l'administrateur principal et attribuez des points galerie aux familles.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-3xl">📋</span>
-                        <div>
-                          <h3 className="font-semibold text-orange-900">Comptes Professionnels</h3>
-                          <p className="text-xs text-orange-700">Valider et gérer les abonnements accordés</p>
-                        </div>
-                      </div>
-                      <button onClick={() => { setAdminSection("pros"); loadAllPros(proFilter); }} className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium transition-colors">Ouvrir</button>
-                    </div>
-                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-3xl">🪙</span>
-                        <div>
-                          <h3 className="font-semibold text-indigo-900">Points Galerie</h3>
-                          <p className="text-xs text-indigo-700">Attribuer des points aux familles</p>
-                        </div>
-                      </div>
-                      <button onClick={() => setAdminSection("points")} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors">Ouvrir</button>
-                    </div>
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <p className="text-sm text-amber-800">
-                      <strong>Rappel :</strong> Vous ne voyez que les comptes professionnels que l'administrateur principal vous a accordés. Les autres sections sont réservées à l'administration principale.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-3xl">🎖️</span>
@@ -720,43 +683,41 @@ export default function AdminDashboard() {
                         Ouvrir
                       </button>
                     </div>
-                  </div>
+              </div>
 
-                  {/* Aperçu rapide */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                      <h3 className="font-semibold text-gray-800 mb-3">📊 Statistiques</h3>
-                      {statsLoading ? <p className="text-sm text-gray-500">Chargement...</p> : stats ? (
-                        <div className="space-y-1.5 text-sm">
-                          <div className="flex justify-between"><span className="text-gray-600">Total utilisateurs</span><strong>{stats.totalUsers}</strong></div>
-                          <div className="flex justify-between"><span className="text-gray-600">Actifs</span><strong className="text-green-600">{stats.activeUsers}</strong></div>
-                          <div className="flex justify-between"><span className="text-gray-600">Familles</span><strong className="text-indigo-600">{stats.totalFamilies}</strong></div>
-                          <div className="flex justify-between"><span className="text-gray-600">Vivants / Défunts</span><strong>{stats.totalVivants} / {stats.totalDefunts}</strong></div>
-                        </div>
-                      ) : <p className="text-sm text-gray-500">Aucune donnée</p>}
-                      <button onClick={loadStats} className="mt-3 w-full px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors">Actualiser</button>
+              {/* Aperçu rapide */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                  <h3 className="font-semibold text-gray-800 mb-3">📊 Statistiques</h3>
+                  {statsLoading ? <p className="text-sm text-gray-500">Chargement...</p> : stats ? (
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between"><span className="text-gray-600">Total utilisateurs</span><strong>{stats.totalUsers}</strong></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Actifs</span><strong className="text-green-600">{stats.activeUsers}</strong></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Familles</span><strong className="text-indigo-600">{stats.totalFamilies}</strong></div>
+                      <div className="flex justify-between"><span className="text-gray-600">Vivants / Défunts</span><strong>{stats.totalVivants} / {stats.totalDefunts}</strong></div>
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                      <h3 className="font-semibold text-gray-800 mb-3">👥 Utilisateurs récents</h3>
-                      {recentUsers.length > 0 ? (
-                        <div className="space-y-2">
-                          {recentUsers.slice(0, 5).map((u) => (
-                            <div key={u.numeroH} className="flex items-center gap-2 text-sm">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                                {u.prenom?.charAt(0)}
-                              </div>
-                              <div>
-                                <div className="font-medium text-gray-800">{u.prenom} {u.nomFamille}</div>
-                                <div className="text-xs text-gray-500">{u.numeroH}</div>
-                              </div>
-                            </div>
-                          ))}
+                  ) : <p className="text-sm text-gray-500">Aucune donnée</p>}
+                  <button onClick={loadStats} className="mt-3 w-full px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors">Actualiser</button>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                  <h3 className="font-semibold text-gray-800 mb-3">👥 Utilisateurs récents</h3>
+                  {recentUsers.length > 0 ? (
+                    <div className="space-y-2">
+                      {recentUsers.slice(0, 5).map((u) => (
+                        <div key={u.numeroH} className="flex items-center gap-2 text-sm">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                            {u.prenom?.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-800">{u.prenom} {u.nomFamille}</div>
+                            <div className="text-xs text-gray-500">{u.numeroH}</div>
+                          </div>
                         </div>
-                      ) : <p className="text-sm text-gray-500">Aucun utilisateur récent</p>}
+                      ))}
                     </div>
-                  </div>
-                </>
-              )}
+                  ) : <p className="text-sm text-gray-500">Aucun utilisateur récent</p>}
+                </div>
+              </div>
             </div>
           )}
 
@@ -982,7 +943,7 @@ export default function AdminDashboard() {
           )}
 
           {/* ========== PROFESSIONNELS ========== */}
-          {adminSection === "pros" && (
+          {adminSection === "pros" && !isSubAdmin0(userData) && (
             <div className="space-y-4">
 
               {/* ── PANORAMA DES TYPES DE COMPTES ── */}
@@ -1374,16 +1335,10 @@ export default function AdminDashboard() {
                 </div>
               ))}
 
-              {/* ── Gestion Interne : espaces de référence admin ── */}
-              <div className="mt-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-xl font-bold text-gray-800">🗂️ Gestion Interne — Vos espaces de référence</h2>
-                </div>
-                <p className="text-sm text-gray-500 mb-4">
-                  Ces espaces vous appartiennent exclusivement. Ils montrent <strong>exactement</strong> ce que chaque clinique ou école voit dans son espace payant. Vous pouvez y ajouter des données de test pour améliorer le système.
-                </p>
+              {/* Gestion Interne accessible via l'onglet dédié 🔧 */}
+              <div className="hidden">
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {/* Référence Clinique */}
                   <div className="border border-emerald-200 rounded-2xl overflow-hidden shadow-sm">
                     <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 flex items-center gap-3">
@@ -1429,17 +1384,238 @@ export default function AdminDashboard() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Référence Mosquée */}
+                  <div className="border border-green-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-green-700 to-emerald-600 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🕌</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Mosquée Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-MSQ · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-green-50 px-5 py-3 text-sm text-green-800 border-b border-green-100">
+                      Fidèles · Prières · Annonces · Dons · Imams · Événements
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une mosquée cliente (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-mosquee/DEMO-REF-MSQ")}
+                        className="w-full py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace mosquée →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence Madrasa */}
+                  <div className="border border-cyan-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-cyan-600 to-blue-600 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">📖</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Madrasa Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-MDS · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-cyan-50 px-5 py-3 text-sm text-cyan-800 border-b border-cyan-100">
+                      Élèves · Enseignants · Cours religieux · Présences · Certificats
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une madrasa cliente (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-madrasa/DEMO-REF-MDS")}
+                        className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace madrasa →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence Commerce */}
+                  <div className="border border-orange-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-orange-500 to-yellow-500 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🏪</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Commerce Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-COM · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-orange-50 px-5 py-3 text-sm text-orange-800 border-b border-orange-100">
+                      Stock · Ventes · Clients · Caisse · Crédits · Fournisseurs
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une boutique ou entreprise cliente (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-commerce/DEMO-REF-COM")}
+                        className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace commerce →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence Entreprise */}
+                  <div className="border border-indigo-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🏢</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Entreprise Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-ENT · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-indigo-50 px-5 py-3 text-sm text-indigo-800 border-b border-indigo-100">
+                      Activité · Produits · Équipe · Clients · Facturation · Rapports
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit une entreprise cliente (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-entreprise/DEMO-REF-ENT")}
+                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace entreprise →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence Réseau Imam */}
+                  <div className="border border-violet-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-violet-700 to-purple-700 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🕋</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Réseau Imam Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-IMAM · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-violet-50 px-5 py-3 text-sm text-violet-800 border-b border-violet-100">
+                      Imams · Prédications · Mosquées partenaires · Annonces
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit un réseau imam client (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-imam/DEMO-REF-IMAM")}
+                        className="w-full py-2.5 bg-violet-700 hover:bg-violet-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace imam →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence ONG */}
+                  <div className="border border-rose-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-rose-700 to-pink-600 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🤝</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">ONG Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-NGO · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-rose-50 px-5 py-3 text-sm text-rose-800 border-b border-rose-100">
+                      Bénévoles · Projets solidaires · Collectes · Annonces
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit une ONG cliente (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-ngo/DEMO-REF-NGO")}
+                        className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace ONG →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence Journalistes */}
+                  <div className="border border-red-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-red-700 to-red-600 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">📰</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Journalistes Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-JOUR · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-red-50 px-5 py-3 text-sm text-red-800 border-b border-red-100">
+                      Journalistes · Articles · Abonnés · Annonces
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit un média client (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-journaliste/DEMO-REF-JOUR")}
+                        className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace journalistes →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence Scientifiques */}
+                  <div className="border border-indigo-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-indigo-800 to-indigo-600 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🔬</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Scientifiques Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-SCIEN · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-indigo-50 px-5 py-3 text-sm text-indigo-800 border-b border-indigo-100">
+                      Chercheurs · Publications · Projets scientifiques · Annonces
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit un laboratoire ou centre de recherche client (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-scientifique/DEMO-REF-SCIEN")}
+                        className="w-full py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace scientifiques →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence Fournisseurs */}
+                  <div className="border border-cyan-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-cyan-700 to-cyan-500 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🚚</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Fournisseurs Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-FOUR · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-cyan-50 px-5 py-3 text-sm text-cyan-800 border-b border-cyan-100">
+                      Produits · Clients / Revendeurs · Commandes · Annonces
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit un grossiste ou fournisseur client (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-fournisseur/DEMO-REF-FOUR")}
+                        className="w-full py-2.5 bg-cyan-700 hover:bg-cyan-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace fournisseurs →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Référence Sécurité */}
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-slate-700 to-slate-500 px-5 py-4 flex items-center gap-3">
+                      <span className="text-4xl">🛡️</span>
+                      <div className="text-white">
+                        <h3 className="font-bold text-base">Sécurité Référence Admin</h3>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-SECU · Accès exclusif G7</p>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 px-5 py-3 text-sm text-slate-700 border-b border-slate-200">
+                      Agents · Missions · Clients · Annonces sécurité
+                    </div>
+                    <div className="bg-white p-4">
+                      <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit une agence de sécurité cliente (3 000 000 GNF — paiement unique, à vie).</p>
+                      <button
+                        onClick={() => navigate("/gestion-securite/DEMO-REF-SECU")}
+                        className="w-full py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                      >
+                        Ouvrir l'espace sécurité →
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-                  <strong>Comment ça marche :</strong> Chaque clinique ou école cliente reçoit son propre code unique (ex: CLIN-GN-00001) dès que l'admin approuve son inscription. Elle voit son nom et son logo, jamais le vôtre. Vous seul pouvez accéder aux espaces de référence ci-dessus.
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4">
-                <p className="text-sm text-yellow-900">
-                  <strong>👑 Note :</strong> Chaque service partage le même espace professionnel (3 onglets : Demandes, Historique, Profil). Les chiffres et données ci-dessus sont des exemples. Pour voir les vraies données d'un compte, allez dans l'onglet <strong>Professionnels</strong>.
-                </p>
               </div>
             </div>
           )}
@@ -1628,11 +1804,13 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-yellow-900">Sécurité</div>
                   <div className="text-xs text-yellow-700">Agences de sécurité, agents</div>
                 </button>
-                <button onClick={() => { setAdminSection("pros"); loadAllPros("pending"); }} className="bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl p-5 text-left transition-colors">
-                  <div className="text-2xl mb-2">📋</div>
-                  <div className="font-semibold text-orange-900">Comptes Pro</div>
-                  <div className="text-xs text-orange-700">Approuver et gérer les professionnels</div>
-                </button>
+                {!isSubAdmin0(userData) && (
+                  <button onClick={() => { setAdminSection("pros"); loadAllPros("pending"); }} className="bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl p-5 text-left transition-colors">
+                    <div className="text-2xl mb-2">📋</div>
+                    <div className="font-semibold text-orange-900">Comptes Pro</div>
+                    <div className="text-xs text-orange-700">Approuver et gérer les professionnels</div>
+                  </button>
+                )}
               </div>
             </div>
           )}

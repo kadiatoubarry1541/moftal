@@ -1,31 +1,87 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
+type PaymentStatus = 'loading' | 'success' | 'cancelled' | 'failed';
+
 export default function PaiementResultat() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const status = searchParams.get('status');
-  const txRef = searchParams.get('tx_ref');
 
+  // FedaPay ajoute status + id dans le return_url, payment.js ajoute txRef
+  const txRef    = searchParams.get('txRef');
+  const status   = searchParams.get('status');  // 'approved' | 'declined' | 'cancelled' envoyé par FedaPay
+
+  const [payStatus, setPayStatus] = useState<PaymentStatus>('loading');
   const [countdown, setCountdown] = useState(5);
 
-  const isSuccess   = status === 'success' || status === 'successful' || status === 'approved';
-  const isCancelled = status === 'cancelled';
+  useEffect(() => {
+    verifier();
+  }, []);
+
+  async function verifier() {
+    // Résultat immédiat via param FedaPay
+    if (status === 'cancelled') { setPayStatus('cancelled'); return; }
+    if (status === 'declined')  { setPayStatus('failed');    return; }
+
+    // Si on a un txRef, on vérifie auprès du backend
+    if (txRef) {
+      try {
+        const token = localStorage.getItem('token');
+        const r = await fetch(`${API}/api/payment/verify/${encodeURIComponent(txRef)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        const d = await r.json();
+        if (d.success && d.payment?.status === 'completed') {
+          setPayStatus('success');
+        } else if (d.success && d.payment?.status === 'pending') {
+          // FedaPay a dit approved mais backend pas encore mis à jour (webhook en cours)
+          // On fait confiance au status FedaPay
+          if (status === 'approved') setPayStatus('success');
+          else setPayStatus('failed');
+        } else {
+          setPayStatus('failed');
+        }
+      } catch {
+        // Fallback sur le param URL si le backend ne répond pas
+        if (status === 'approved') setPayStatus('success');
+        else setPayStatus('failed');
+      }
+    } else {
+      // Pas de txRef (ex: dépôt compte famille) — on lit juste le param status
+      if (status === 'approved' || status === 'successful' || status === 'success') {
+        setPayStatus('success');
+      } else {
+        setPayStatus('failed');
+      }
+    }
+  }
+
+  const isSuccess   = payStatus === 'success';
+  const isCancelled = payStatus === 'cancelled';
+  const isLoading   = payStatus === 'loading';
   const redirectTarget = isSuccess ? '/mes-comptes-pro' : '/activite';
 
   useEffect(() => {
+    if (isLoading) return;
     const timer = setInterval(() => {
       setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          navigate(redirectTarget);
-          return 0;
-        }
+        if (prev <= 1) { clearInterval(timer); navigate(redirectTarget); return 0; }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [navigate, redirectTarget]);
+  }, [isLoading, navigate, redirectTarget]);
+
+  if (isLoading) return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+      <div className="text-center">
+        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-gray-500 text-sm">Vérification du paiement...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">

@@ -1,11 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, Link, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Banner } from "./components/Banner";
 import { ThemeToggleCompact } from "./components/ThemeToggle";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
-const FloatingMessenger = lazy(() => import("./components/FloatingMessenger").then(m => ({ default: m.FloatingMessenger })));
 import { getSessionUser, isAdmin } from "./utils/auth";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
@@ -74,8 +73,45 @@ const ConditionsUtilisation = lazy(() => import("./pages/ConditionsUtilisation")
 const PaiementResultat = lazy(() => import("./pages/PaiementResultat"));
 const GestionInterne = lazy(() => import("./pages/GestionInterne"));
 const GestionClinique = lazy(() => import("./pages/GestionClinique"));
-const GestionEcole = lazy(() => import("./pages/GestionEcole"));
+const GestionMairie   = lazy(() => import("./pages/GestionMairie"));
+const MaireVitrine    = lazy(() => import("./pages/MaireVitrine"));
+const CliniqueVitrine = lazy(() => import("./pages/CliniqueVitrine"));
+const CommerceVitrine = lazy(() => import("./pages/CommerceVitrine"));
+const EspacePatientClinique = lazy(() => import("./pages/EspacePatientClinique"));
+const GestionCommerce = lazy(() => import("./pages/GestionCommerce"));
+const GestionIslamique = lazy(() => import("./pages/GestionIslamique"));
+const GestionMosquee = lazy(() => import("./pages/GestionMosquee"));
+const GestionReseau  = lazy(() => import("./pages/GestionReseau"));
+const GestionEnseignement = lazy(() => import("./pages/GestionEnseignement"));
+const GestionEntreprise   = lazy(() => import("./pages/GestionEntreprise"));
+const GestionNgo          = lazy(() => import("./pages/GestionNgo"));
+const GestionJournaliste  = lazy(() => import("./pages/GestionJournaliste"));
+const GestionScientifique = lazy(() => import("./pages/GestionScientifique"));
+const GestionFournisseur  = lazy(() => import("./pages/GestionFournisseur"));
+const FournisseurVitrine  = lazy(() => import("./pages/FournisseurVitrine"));
+const GestionSecurite     = lazy(() => import("./pages/GestionSecurite"));
+const GestionImmobilier   = lazy(() => import("./pages/GestionImmobilier"));
+const GestionRestaurant   = lazy(() => import("./pages/GestionRestaurant"));
+const GestionTransport    = lazy(() => import("./pages/GestionTransport"));
+const EcoleVitrine        = lazy(() => import("./pages/EcoleVitrine"));
+const MadrasaVitrine      = lazy(() => import("./pages/MadrasaVitrine"));
+const MosqueeVitrine      = lazy(() => import("./pages/MosqueeVitrine"));
+const NgoVitrine          = lazy(() => import("./pages/NgoVitrine"));
+const EntrepriseVitrine   = lazy(() => import("./pages/EntrepriseVitrine"));
+const JournalisteVitrine  = lazy(() => import("./pages/JournalisteVitrine"));
+const ScientifiqueVitrine = lazy(() => import("./pages/ScientifiqueVitrine"));
+const SecuriteVitrine     = lazy(() => import("./pages/SecuriteVitrine"));
+const ImmobilierVitrine   = lazy(() => import("./pages/ImmobilierVitrine"));
+const RestaurantVitrine   = lazy(() => import("./pages/RestaurantVitrine"));
+const TransportVitrine    = lazy(() => import("./pages/TransportVitrine"));
+const ReseauVitrine       = lazy(() => import("./pages/ReseauVitrine"));
+const ReseauImam = lazy(() => import("./pages/ReseauImam"));
+const ReseauPro = lazy(() => import("./pages/ReseauPro"));
 const MoftalPay = lazy(() => import("./pages/MoftalPay"));
+const Quartier = lazy(() => import("./pages/Quartier"));
+const Info = lazy(() => import("./pages/Info"));
+const Developpement = lazy(() => import("./pages/Developpement"));
+const Racines = lazy(() => import("./pages/Racines"));
 
 const LoadingBar = () => (
   <div className="fixed top-0 left-0 w-full h-1 z-[9999] bg-gray-200">
@@ -98,32 +134,42 @@ function App() {
   const { pathname } = useLocation();
   const [guideReady, setGuideReady] = useState(false);
 
-  // Réveille le backend après le premier rendu (Render free tier dort si inactif)
-  // Différé de 3s pour ne pas concurrencer le LCP / FCP initial
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
-      fetch(`${API}/api/health`).catch(() => {});
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
   // Différer le FloatingGuideIA après le premier rendu pour réduire le TBT initial
   useEffect(() => {
     const t = setTimeout(() => setGuideReady(true), 1500);
     return () => clearTimeout(t);
   }, []);
 
-  const isLoggedIn = getSessionUser() !== null;
-  
+  const navigate = useNavigate();
+  const currentUser = getSessionUser();
+  const isLoggedIn = currentUser !== null;
+  const isGestionMode = pathname.startsWith("/gestion");
+  const isVitrineMode =
+    pathname.startsWith("/clinique/") ||
+    pathname.startsWith("/commerce/") ||
+    pathname.startsWith("/ecole/") ||
+    pathname.startsWith("/madrasa/") ||
+    pathname.startsWith("/mosquee/") ||
+    pathname.startsWith("/imam/") ||
+    pathname.startsWith("/ngo/") ||
+    pathname.startsWith("/entreprise/") ||
+    pathname.startsWith("/journaliste/") ||
+    pathname.startsWith("/scientifique/") ||
+    pathname.startsWith("/securite/") ||
+    pathname.startsWith("/immobilier/") ||
+    pathname.startsWith("/restaurant/") ||
+    pathname.startsWith("/transport/") ||
+    pathname.startsWith("/reseau-vitrine/") ||
+    pathname.startsWith("/mairie/");
+  const isFullscreenPage = isGestionMode || isVitrineMode;
   const isHome = pathname === "/";
   const showFullHeader = !isLoggedIn || isHome;
   return (
     <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden">
-      {showFullHeader && <Banner />}
+      {!isFullscreenPage && showFullHeader && <Banner />}
 
-      {/* Header responsive: PC, tablette, mobile */}
-      <header className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 safe-area-inset-top">
+      {/* Header site principal — masqué en mode Espace Gestion ou Vitrine */}
+      {!isFullscreenPage && <header className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 safe-area-inset-top">
         <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
             {/* Logo */}
@@ -166,7 +212,51 @@ function App() {
             </div>
           </div>
         </div>
-      </header>
+      </header>}
+
+      {/* ── Barre Espace Gestion (comme Messenger est séparé de Facebook) ── */}
+      {isGestionMode && (
+        <header style={{ background: "#0f172a", position: "sticky", top: 0, zIndex: 50, borderBottom: "2px solid #1e293b", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
+          <div style={{ maxWidth: 980, margin: "0 auto", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            {/* Logo + nom de l'app */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
+              <picture>
+                <source srcSet="/logo.webp" type="image/webp" />
+                <img src="/logo.png" alt="Logo" style={{ height: 34, width: 34, borderRadius: 8, objectFit: "contain" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+              </picture>
+              <div>
+                <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>Espace Gestion</div>
+                <div style={{ color: "#475569", fontSize: 11, fontWeight: 500 }}>Moftal</div>
+              </div>
+            </div>
+            {/* Actions droite */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {currentUser && (
+                <div style={{ textAlign: "right", marginRight: 4 }}>
+                  <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: 600, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {(currentUser as any).prenom || (currentUser as any).nom || "Gérant"}
+                  </div>
+                  <div style={{ color: "#475569", fontSize: 11 }}>{(currentUser as any).numeroH || ""}</div>
+                </div>
+              )}
+              <button onClick={() => navigate("/gestion-interne")}
+                title="Mes espaces de gestion"
+                style={{ background: "rgba(255,255,255,0.07)", color: "#94a3b8", border: "1px solid #1e293b", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "background 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.12)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"; }}>
+                🏠 <span style={{ display: "none" }}>Mes espaces</span>
+              </button>
+              <button onClick={() => { localStorage.removeItem("token"); navigate("/login"); }}
+                title="Se déconnecter"
+                style={{ background: "rgba(220,38,38,0.15)", color: "#f87171", border: "1px solid rgba(220,38,38,0.3)", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "background 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.25)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.15)"; }}>
+                ⏻ Quitter
+              </button>
+            </div>
+          </div>
+        </header>
+      )}
 
       {/* Main content - plein écran, chaque page gère son propre container */}
       <main className="flex-1 w-full overflow-x-hidden">
@@ -255,17 +345,64 @@ function App() {
           <Route path="/paiement/resultat" element={<PaiementResultat />} />
           <Route path="/gestion-interne" element={<GestionInterne />} />
           <Route path="/gestion-clinique/:tenantCode" element={<GestionClinique />} />
-          <Route path="/gestion-ecole/:tenantCode" element={<GestionEcole />} />
+          <Route path="/gestion-mairie/:tenantCode"   element={<GestionMairie />} />
+          <Route path="/clinique/:tenantCode" element={<CliniqueVitrine />} />
+          <Route path="/clinique/:tenantCode/espace-patient" element={<EspacePatientClinique />} />
+          <Route path="/gestion-ecole/:tenantCode" element={<GestionEnseignement mode="school" />} />
+          <Route path="/gestion-commerce/:tenantCode" element={<GestionCommerce />} />
+          <Route path="/commerce/:tenantCode" element={<CommerceVitrine />} />
+          <Route path="/ecole/:tenantCode"         element={<EcoleVitrine />} />
+          <Route path="/madrasa/:tenantCode"       element={<MadrasaVitrine />} />
+          <Route path="/mosquee/:tenantCode"       element={<MosqueeVitrine />} />
+          <Route path="/imam/:tenantCode"          element={<MosqueeVitrine />} />
+          <Route path="/ngo/:tenantCode"           element={<NgoVitrine />} />
+          <Route path="/entreprise/:tenantCode"    element={<EntrepriseVitrine />} />
+          <Route path="/journaliste/:tenantCode"   element={<JournalisteVitrine />} />
+          <Route path="/scientifique/:tenantCode"  element={<ScientifiqueVitrine />} />
+          <Route path="/securite/:tenantCode"      element={<SecuriteVitrine />} />
+          <Route path="/immobilier/:tenantCode"    element={<ImmobilierVitrine />} />
+          <Route path="/restaurant/:tenantCode"    element={<RestaurantVitrine />} />
+          <Route path="/transport/:tenantCode"     element={<TransportVitrine />} />
+          <Route path="/mairie/:tenantCode"           element={<MaireVitrine />} />
+          <Route path="/reseau-vitrine/:tenantCode" element={<ReseauVitrine />} />
+          <Route path="/gestion-mosquee/:tenantCode" element={<GestionMosquee />} />
+          <Route path="/gestion-madrasa/:tenantCode" element={<GestionEnseignement mode="madrasa" />} />
+          <Route path="/gestion-imam/:tenantCode"    element={<GestionMosquee />} />
+          <Route path="/gestion-reseau/:tenantCode"   element={<GestionReseau />} />
+          <Route path="/gestion-ngo/:tenantCode"          element={<GestionNgo />} />
+          <Route path="/gestion-entreprise/:tenantCode"    element={<GestionEntreprise />} />
+          <Route path="/gestion-journaliste/:tenantCode"  element={<GestionJournaliste />} />
+          <Route path="/gestion-scientifique/:tenantCode" element={<GestionScientifique />} />
+          <Route path="/gestion-fournisseur/:tenantCode"  element={<GestionFournisseur />} />
+          <Route path="/fournisseur/:tenantCode"         element={<FournisseurVitrine />} />
+          <Route path="/gestion-securite/:tenantCode"     element={<GestionSecurite />} />
+          <Route path="/gestion-immobilier/:tenantCode"  element={<GestionImmobilier />} />
+          <Route path="/gestion-restaurant/:tenantCode"  element={<GestionRestaurant />} />
+          <Route path="/gestion-transport/:tenantCode"   element={<GestionTransport />} />
+          <Route path="/gestion-vendeur/:tenantCode"     element={<Navigate to="/gestion-interne" replace />} />
+          <Route path="/reseau-imam" element={<ReseauImam />} />
+          <Route path="/reseau/:type" element={<ReseauPro />} />
+          <Route path="/quartier" element={<Quartier />} />
+          <Route path="/info" element={<Info />} />
+          <Route path="/developpement" element={<Developpement />} />
+          <Route path="/famille/racines" element={<Racines />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
       </main>
 
-      {/* Footer responsive */}
-      <footer className="bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black text-white py-4 sm:py-6 mt-auto safe-area-inset-bottom">
+      {/* Footer minimal Espace Gestion */}
+      {isGestionMode && (
+        <div style={{ textAlign: "center", padding: "12px 16px", fontSize: 11, color: "#94a3b8", borderTop: "1px solid #f1f5f9", background: "white" }}>
+          Moftal · Espace Gestion Interne
+        </div>
+      )}
+
+      {/* Footer site principal — masqué en mode Espace Gestion */}
+      {!isGestionMode && <footer className="bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black text-white py-4 sm:py-6 mt-auto safe-area-inset-bottom">
         <div className="max-w-7xl mx-auto px-3 xs:px-4 text-center">
           <p className="text-gray-300 dark:text-gray-400 text-xs xs:text-sm sm:text-base">
-            2025 Les Enfants d'Adam et Eve - Système d'enregistrement généalogique
+            2025 Moftal et Eve - Système d'enregistrement généalogique
           </p>
           <Link
             to="/conditions-utilisation"
@@ -274,15 +411,10 @@ function App() {
             Conditions Générales d'Utilisation
           </Link>
         </div>
-      </footer>
+      </footer>}
 
-      {/* Messenger uniquement sur la page Mes Amours — chargé en lazy */}
-      {pathname === "/famille/mes-amours" && (
-        <Suspense fallback={null}><FloatingMessenger /></Suspense>
-      )}
-
-      {/* Assistant IA Guide — chargé 1.5s après le rendu initial pour ne pas bloquer LCP/TBT */}
-      {guideReady && (
+      {/* Assistant IA Guide — masqué en mode gestion */}
+      {!isGestionMode && guideReady && (
         <Suspense fallback={null}>
           <FloatingGuideIA />
         </Suspense>

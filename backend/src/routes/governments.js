@@ -3,7 +3,7 @@ import Government from '../models/Government.js';
 import GovernmentMember from '../models/GovernmentMember.js';
 import User from '../models/User.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
-import { sequelize } from '../../config/database.js';
+import { sequelize } from '../config/database.js';
 
 // Initialiser les modèles
 Government.init(sequelize);

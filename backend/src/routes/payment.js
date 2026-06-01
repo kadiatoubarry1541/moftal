@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth.js';
 import Payment from '../models/Payment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
+import { sequelize } from '../../config/database.js';
 import {
   sendSubscriptionReceipt,
   sendSubscriptionRenewedEmail,
@@ -66,7 +67,7 @@ router.post('/initiate', authenticate, async (req, res) => {
           email: user.email || '',
         },
         callback_url: `${process.env.BACKEND_URL || ''}/api/payment/fedapay/webhook`,
-        return_url: `${FRONTEND_URL}/paiement-resultat?txRef=${txRef}`,
+        return_url: `${FRONTEND_URL}/paiement/resultat?txRef=${txRef}`,
       }),
     });
 
@@ -182,6 +183,15 @@ router.get('/history', authenticate, async (req, res) => {
 /**
  * Actions déclenchées automatiquement après un paiement réussi
  */
+const TENANT_PREFIX = {
+  clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ',
+  madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR',
+  scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU',
+  vendor: 'VENT', producer: 'PROD', broker: 'BROK',
+  restaurant: 'REST', transport: 'TRANS', beauty: 'BEAU',
+  artisan: 'ARTI', mairie: 'MAIR',
+};
+
 async function handlePostPayment(payment) {
   try {
     if (payment.purpose === 'subscription_pro' && payment.relatedId) {
@@ -190,17 +200,33 @@ async function handlePostPayment(payment) {
       expiresAt.setMonth(expiresAt.getMonth() + 1);
 
       const proAccount = await ProfessionalAccount.findByPk(payment.relatedId);
-      const wasAlreadyActive = proAccount?.subscriptionStatus === 'active';
+      if (!proAccount) return;
+      const wasAlreadyActive = proAccount.subscriptionStatus === 'active';
+
+      // Générer tenant_code s'il manque
+      let tenantCode = proAccount.tenant_code;
+      if (!tenantCode) {
+        const prefix = TENANT_PREFIX[proAccount.type] || 'PRO';
+        tenantCode = `${prefix}-GN-${String(proAccount.id).padStart(5, '0')}`;
+        // Créer l'entrée dans management_tenants
+        await sequelize.query(
+          `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h)
+           VALUES (:code, :type, :name, :owner)
+           ON CONFLICT (tenant_code) DO NOTHING`,
+          { replacements: { code: tenantCode, type: proAccount.type, name: proAccount.name, owner: proAccount.ownerNumeroH } }
+        ).catch(e => console.warn('management_tenants insert:', e.message));
+      }
 
       await ProfessionalAccount.update(
         {
           subscriptionStatus: 'active',
           subscriptionValidUntil: expiresAt,
           status: 'approved',
+          tenant_code: tenantCode,
         },
         { where: { id: payment.relatedId } }
       );
-      console.log(`✅ Abonnement pro activé pour compte ${payment.relatedId}`);
+      console.log(`✅ Abonnement pro activé — ${proAccount.name} | tenant: ${tenantCode}`);
 
       let proEmail = proAccount?.email || '';
       let proName  = proAccount?.name  || '';

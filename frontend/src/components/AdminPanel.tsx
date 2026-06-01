@@ -424,7 +424,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">Nom de la plateforme</label>
-                <input className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm" type="text" value="Les Enfants d'Adam et Eve" readOnly />
+                <input className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm" type="text" value="Moftal et Eve" readOnly />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">Version</label>

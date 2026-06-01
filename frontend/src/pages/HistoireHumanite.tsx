@@ -502,7 +502,7 @@ const HISTORICAL_DATA: HistoricalEntry[] = [
     keyEvents: ["Union Africaine intégrée au G20 2023", "Agenda 2063 : L'Afrique que nous voulons"],
     figures: ["Ngozi Okonjo-Iweala (à l'OMC)", "Fatoumata Diawara (voix africaine mondiale)", "Paul Kagame (bâtisseur du Rwanda moderne, modèle de renaissance — Rwanda)", "Lupita Nyong'o (actrice primée, ambassadrice de la dignité africaine — Kenya/Mexique)"] },
 
-  { generation: 95, title: "Les Enfants d'Adam — Une Seule Humanité", era: "Présent", icon: "🌍",
+  { generation: 95, title: "Moftal — Une Seule Humanité", era: "Présent", icon: "🌍",
     content: "Nous sommes tous les enfants d'Adam et Hawa — une seule humanité, diverse dans ses cultures, unie dans son origine. De la première famille qui marcha sur cette terre aux milliards d'êtres humains d'aujourd'hui, le fil est ininterrompu. Chaque génération reçoit l'héritage de celles qui l'ont précédée et a la responsabilité de le transmettre enrichi. Notre défi : construire un monde de justice, de paix et de dignité.",
     keyEvents: ["L'Afrique continent de l'avenir — 1,4 milliard d'habitants", "Votre génération écrit son propre chapitre"],
     figures: ["Toutes les femmes et hommes de bonne volonté", "Les enfants d'Adam de chaque nation", "La jeunesse africaine — avenir de l'humanité (continent africain)"] },
@@ -528,6 +528,7 @@ export default function HistoireHumanite() {
   const [highlightedGen, setHighlightedGen] = useState<number | null>(null);
   const [expandedGens, setExpandedGens] = useState<Set<number>>(new Set());
   const [expandedBookSections, setExpandedBookSections] = useState<Set<string>>(new Set());
+  const [witnessesVisible, setWitnessesVisible] = useState<Set<string>>(new Set());
   const genRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const navigate = useNavigate();
 
@@ -647,6 +648,14 @@ export default function HistoireHumanite() {
     });
   };
 
+  const toggleWitnesses = (key: string) => {
+    setWitnessesVisible(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+
   const toggleGen = (gen: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedGens(prev => {
@@ -676,7 +685,7 @@ export default function HistoireHumanite() {
                 ✍️ Écrire mon histoire (G96)
               </button>
               <button onClick={() => navigate('/moi')}
-                className="border-2 border-white text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-white hover:text-indigo-700 transition-colors text-sm">
+                className="bg-white text-indigo-700 px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-md text-sm border-2 border-white">
                 ← Retour
               </button>
             </div>
@@ -714,8 +723,9 @@ export default function HistoireHumanite() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
                 <option value="all">Toutes les générations</option>
                 {Array.from({ length: 95 }, (_, i) => i + 1).map(g => (
-                  <option key={g} value={`G${g}`}>Génération {g}</option>
+                  <option key={g} value={`G${g}`}>Génération {g}{g === 95 ? ' (premières histoires personnelles)' : ''}</option>
                 ))}
+                <option value="G96">Génération 96 (notre époque)</option>
               </select>
             </div>
 
@@ -763,7 +773,7 @@ export default function HistoireHumanite() {
               <div className="flex-1 h-px bg-amber-300"></div>
             </div>
             <p className="text-xs text-amber-700 mb-5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
-              Contenu mis à disposition par la plateforme <strong>Les Enfants d'Adam</strong>. Ces histoires couvrent l'humanité depuis Adam jusqu'à aujourd'hui, racontées par les historiens, les traditions et les transmetteurs de chaque époque.
+              Contenu mis à disposition par la plateforme <strong>Moftal</strong>. Ces histoires couvrent l'humanité depuis Adam jusqu'à aujourd'hui, racontées par les historiens, les traditions et les transmetteurs de chaque époque.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -884,16 +894,80 @@ export default function HistoireHumanite() {
                       return (
                         <div key={sid} className="p-4">
                           {/* Titre de section */}
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-lg">{sectionIcons[sid] || '📖'}</span>
                               <span className="font-semibold text-gray-800 text-sm">{firstStory.sectionTitle}</span>
                               {firstStory.generation && (
                                 <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{firstStory.generation}</span>
                               )}
                             </div>
-                            <span className="text-xs text-gray-400">{new Date(firstStory.publishedAt).toLocaleDateString('fr-FR')}</span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {/* Bouton témoins — toujours visible */}
+                              <button
+                                onClick={() => toggleWitnesses(bookKey)}
+                                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border font-semibold transition-colors ${
+                                  witnessesVisible.has(bookKey)
+                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                    : (firstStory.witnesses?.length || 0) >= 4
+                                      ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100'
+                                      : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                                }`}
+                              >
+                                🤝 {firstStory.witnesses?.length || 0}/4
+                              </button>
+                              <span className="text-xs text-gray-400">{new Date(firstStory.publishedAt).toLocaleDateString('fr-FR')}</span>
+                            </div>
                           </div>
+
+                          {/* Mini-panel témoins — s'affiche au clic sans avoir besoin d'étendre */}
+                          {witnessesVisible.has(bookKey) && (
+                            <div className="mb-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">🤝 Témoins ({firstStory.witnesses?.length || 0}/4)</span>
+                                {currentUserNumeroH && currentUserNumeroH !== firstStory.numeroH &&
+                                  !(firstStory.witnesses || []).some(w => w.numeroH === currentUserNumeroH) &&
+                                  (firstStory.witnesses?.length || 0) < 4 && (
+                                    <button
+                                      onClick={() => handleTestify(firstStory.id)}
+                                      disabled={testifyingId === firstStory.id}
+                                      className="px-2.5 py-1 bg-indigo-600 text-white text-xs rounded-full disabled:opacity-50 font-semibold hover:bg-indigo-700"
+                                    >
+                                      {testifyingId === firstStory.id ? '⏳' : '✋ Témoigner'}
+                                    </button>
+                                  )
+                                }
+                                {(firstStory.witnesses || []).some(w => w.numeroH === currentUserNumeroH) && (
+                                  <span className="text-xs text-green-600 font-semibold">✅ Vous avez témoigné</span>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {Array.from({ length: 4 }, (_, i) => {
+                                  const w = (firstStory.witnesses || [])[i];
+                                  return (
+                                    <div key={i} className={`rounded-lg px-2 py-1.5 border text-xs flex items-center gap-1.5 ${w ? 'bg-white border-indigo-200' : 'bg-gray-50 border-dashed border-gray-200'}`}>
+                                      {w ? (
+                                        <>
+                                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                            {w.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                                          </div>
+                                          <div className="min-w-0">
+                                            <p className="font-semibold text-indigo-900 truncate">{w.name}</p>
+                                            {w.age && <p className="text-gray-400">{w.age} ans</p>}
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 flex-shrink-0">?</div>
+                                          <p className="text-gray-400 italic">Témoin {i + 1}</p>
+                                        </>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Aperçu du contenu */}
                           <p className={`text-gray-700 text-sm leading-relaxed whitespace-pre-wrap ${isExpanded ? '' : 'line-clamp-2'}`}>
@@ -916,43 +990,6 @@ export default function HistoireHumanite() {
                                 </div>
                               )}
 
-                              {/* Témoins */}
-                              <div className="mt-4 pt-3 border-t border-gray-100">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">🤝 Témoins</span>
-                                  <div className="flex items-center gap-1">
-                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${(firstStory.witnesses?.length || 0) >= 4 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                      {firstStory.witnesses?.length || 0}/4
-                                    </span>
-                                    {currentUserNumeroH && currentUserNumeroH !== firstStory.numeroH && (
-                                      !(firstStory.witnesses || []).some(w => w.numeroH === currentUserNumeroH) && (firstStory.witnesses?.length || 0) < 4 ? (
-                                        <button onClick={() => handleTestify(firstStory.id)} disabled={testifyingId === firstStory.id}
-                                          className="ml-1 px-2 py-0.5 bg-indigo-600 text-white text-xs rounded-full disabled:opacity-50">
-                                          {testifyingId === firstStory.id ? '⏳' : '✋ Témoigner'}
-                                        </button>
-                                      ) : (firstStory.witnesses || []).some(w => w.numeroH === currentUserNumeroH) ? (
-                                        <span className="ml-1 text-xs text-green-600 font-semibold">✅ Témoigné</span>
-                                      ) : null
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {Array.from({ length: 4 }, (_, i) => {
-                                    const w = (firstStory.witnesses || [])[i];
-                                    return (
-                                      <div key={i} className={`rounded-lg px-3 py-2 border text-xs flex items-center gap-2 ${w ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-dashed border-gray-200'}`}>
-                                        {w ? (
-                                          <><div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
-                                            {w.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-                                          </div><div className="min-w-0"><p className="font-semibold text-indigo-900 truncate">{w.name}</p>{w.age && <p className="text-gray-400">{w.age} ans</p>}</div></>
-                                        ) : (
-                                          <><div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 flex-shrink-0">?</div><p className="text-gray-400 italic">Témoin {i + 1}</p></>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
                             </>
                           )}
 
@@ -1006,7 +1043,7 @@ export default function HistoireHumanite() {
               </div>
             </div>
             <div className="flex items-center justify-between px-6 py-3 border-t border-amber-100 bg-amber-50 flex-shrink-0">
-              <span className="text-sm text-amber-700 font-medium">🏛️ Les Enfants d'Adam — Patrimoine Historique</span>
+              <span className="text-sm text-amber-700 font-medium">🏛️ Moftal — Patrimoine Historique</span>
               <button onClick={() => setSelectedHistorical(null)} className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700">Fermer</button>
             </div>
           </div>

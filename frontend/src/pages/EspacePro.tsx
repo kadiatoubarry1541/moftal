@@ -818,7 +818,7 @@ export default function EspacePro() {
                 onClick={() => navigate("/wallet-pro")}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors min-h-[36px]"
               >
-                💰 Mon Wallet Pro
+                💰 Moftal Pay
               </button>
             </div>
           </div>
@@ -1599,15 +1599,15 @@ export default function EspacePro() {
                   <h3 className="font-bold text-teal-900 text-sm mb-1">Moftal Pay</h3>
                   <p className="text-xs text-teal-700 mb-3">
                     {account.type === 'clinic'
-                      ? "Recevez des paiements de familles et gérez votre wallet professionnel depuis une seule interface."
-                      : "Encaissez les paiements de vos clients familles et suivez votre wallet fournisseur facilement."}
+                      ? "Recevez des paiements de familles et gérez votre Moftal Pay depuis une seule interface."
+                      : "Encaissez les paiements de vos clients familles et suivez votre Moftal Pay facilement."}
                   </p>
                   <button
                     onClick={() => navigate("/wallet-pro")}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-bold"
                     style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}
                   >
-                    💰 Accéder à mon Wallet Pro
+                    💰 Accéder à Moftal Pay
                   </button>
                 </div>
               </div>

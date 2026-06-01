@@ -57,6 +57,16 @@ export default function CompteFamille() {
   const [raison, setRaison] = useState('');
   const [loadingPaiement, setLoadingPaiement] = useState(false);
 
+  // Paiement direct vers un professionnel (Moftal Pay interne)
+  const [showPayerPro, setShowPayerPro] = useState(false);
+  const [rechercheProQ, setRechercheProQ] = useState('');
+  const [proResults, setProResults] = useState<any[]>([]);
+  const [proSelectionne, setProSelectionne] = useState<any>(null);
+  const [montantPayerPro, setMontantPayerPro] = useState('');
+  const [categoriePro, setCategoriePro] = useState<'sante' | 'nourriture'>('sante');
+  const [descriptionPayerPro, setDescriptionPayerPro] = useState('');
+  const [loadingPayerPro, setLoadingPayerPro] = useState(false);
+
   // Reçu à afficher après opération
   const [reçu, setReçu] = useState<any>(null);
 
@@ -170,6 +180,64 @@ export default function CompteFamille() {
         alert(d.message);
       }
     } finally { setLoadingPaiement(false); }
+  }
+
+  async function rechercherPros(q: string) {
+    setRechercheProQ(q);
+    setProSelectionne(null);
+    if (q.trim().length < 2) { setProResults([]); return; }
+    try {
+      const r = await fetch(`${API}/api/professionals/search?q=${encodeURIComponent(q.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = await r.json();
+      const filtres = (d.accounts || []).filter((a: any) =>
+        ['clinic', 'supplier'].includes(a.type) && a.status === 'approved'
+      );
+      setProResults(filtres);
+    } catch { setProResults([]); }
+  }
+
+  async function payerPro() {
+    const montant = parseInt(montantPayerPro);
+    if (!montant || montant < 100) return alert('Montant minimum : 100 GNF');
+    if (!proSelectionne) return alert('Sélectionnez un professionnel dans les résultats');
+    setLoadingPayerPro(true);
+    try {
+      const r = await fetch(`${API}/api/moftal-pay/paiement-interne`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          montant,
+          proAccountId: proSelectionne.id,
+          categorie: categoriePro,
+          description: descriptionPayerPro || `Paiement famille → ${proSelectionne.name}`
+        })
+      });
+      const d = await r.json();
+      if (d.success) {
+        setShowPayerPro(false);
+        setProSelectionne(null); setRechercheProQ(''); setProResults([]);
+        setMontantPayerPro(''); setDescriptionPayerPro('');
+        const session = JSON.parse(localStorage.getItem('session_user') || '{}');
+        const u = session.userData || session;
+        setReçu({
+          id: Date.now().toString(),
+          type: categoriePro === 'sante' ? 'paiement_sante' : 'paiement_nourriture',
+          montant,
+          date: new Date().toISOString(),
+          acteurNom: `${u?.prenom || ''} ${u?.nomFamille || ''}`.trim(),
+          beneficiaireNom: proSelectionne.name,
+          description: descriptionPayerPro,
+          nomFamille: compte?.nomFamille,
+          proNom: proSelectionne.name,
+          logoUrl: proSelectionne.photo || null,
+        });
+        charger();
+      } else {
+        alert(d.message);
+      }
+    } finally { setLoadingPayerPro(false); }
   }
 
   // Peut voir le budget ? (18 ans ou plus)
@@ -471,6 +539,143 @@ export default function CompteFamille() {
                       className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50"
                       style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}>
                       {loadingPaiement ? 'Traitement...' : 'Confirmer le paiement'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ─── Payer un professionnel Moftal (admins, santé ou alimentation) ─── */}
+            {compte.estAdmin && peutVoirBudget && (
+              <>
+                <button
+                  onClick={() => { setShowPayerPro(!showPayerPro); setShowPaiement(false); }}
+                  className="w-full py-3 rounded-2xl text-white font-bold text-sm"
+                  style={{ background: 'linear-gradient(135deg,#0ea5e9,#2563eb)' }}>
+                  {showPayerPro ? '✕ Annuler' : '🏥 Payer un professionnel Moftal'}
+                </button>
+
+                {showPayerPro && (
+                  <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100 space-y-3">
+                    <h3 className="font-bold text-gray-900">Paiement vers un professionnel</h3>
+                    <p className="text-xs text-blue-700 font-semibold bg-blue-50 rounded-lg px-3 py-2">
+                      💸 Transfert interne <strong>100% gratuit</strong> — aucun frais FedaPay
+                    </p>
+
+                    {/* Catégorie */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 block mb-1">Budget utilisé</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setCategoriePro('sante')}
+                          className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                            categoriePro === 'sante'
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                              : 'border-gray-200 text-gray-500'
+                          }`}>
+                          🏥 Santé ({compte.soldes.sante.toLocaleString()} FG)
+                        </button>
+                        <button
+                          onClick={() => setCategoriePro('nourriture')}
+                          className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                            categoriePro === 'nourriture'
+                              ? 'border-amber-500 bg-amber-50 text-amber-700'
+                              : 'border-gray-200 text-gray-500'
+                          }`}>
+                          🌾 Aliment. ({compte.soldes.nourriture.toLocaleString()} FG)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Recherche */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 block mb-1">
+                        Chercher une {categoriePro === 'sante' ? 'clinique / médecin' : 'épicerie / fournisseur'}
+                      </label>
+                      <input
+                        type="text"
+                        value={rechercheProQ}
+                        onChange={e => rechercherPros(e.target.value)}
+                        placeholder="Tapez le nom (min 2 caractères)..."
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+                      />
+                    </div>
+
+                    {/* Résultats de recherche */}
+                    {proResults.length > 0 && !proSelectionne && (
+                      <div className="rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-50">
+                        {proResults.map(pro => (
+                          <button
+                            key={pro.id}
+                            onClick={() => {
+                              setProSelectionne(pro);
+                              setProResults([]);
+                              if (pro.type === 'clinic') setCategoriePro('sante');
+                              else if (pro.type === 'supplier') setCategoriePro('nourriture');
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 text-left transition-colors">
+                            <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center text-lg">
+                              {pro.photo ? <img src={pro.photo} className="w-full h-full object-cover" alt="" /> : (pro.type === 'clinic' ? '🏥' : '🛒')}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-gray-800 truncate">{pro.name}</p>
+                              <p className="text-xs text-gray-400">{pro.type === 'clinic' ? 'Santé' : 'Alimentation'} · {pro.city || ''}</p>
+                            </div>
+                            <span className="text-blue-500 text-xs font-bold">Choisir →</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {rechercheProQ.length >= 2 && proResults.length === 0 && !proSelectionne && (
+                      <p className="text-xs text-gray-400 text-center py-2">Aucun professionnel Moftal trouvé pour "{rechercheProQ}"</p>
+                    )}
+
+                    {/* Pro sélectionné */}
+                    {proSelectionne && (
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-white flex items-center justify-center text-xl">
+                          {proSelectionne.photo ? <img src={proSelectionne.photo} className="w-full h-full object-cover" alt="" /> : (proSelectionne.type === 'clinic' ? '🏥' : '🛒')}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-black text-blue-900">{proSelectionne.name}</p>
+                          <p className="text-xs text-blue-600">{proSelectionne.city || ''}</p>
+                        </div>
+                        <button onClick={() => { setProSelectionne(null); setRechercheProQ(''); }}
+                          className="text-xs text-red-400 hover:text-red-600 font-bold">✕</button>
+                      </div>
+                    )}
+
+                    {/* Montant */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 block mb-1">Montant (GNF)</label>
+                      <input
+                        type="number" min="100" step="100"
+                        value={montantPayerPro}
+                        onChange={e => setMontantPayerPro(e.target.value)}
+                        placeholder="Ex: 500000"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 block mb-1">Motif (optionnel)</label>
+                      <input
+                        type="text"
+                        value={descriptionPayerPro}
+                        onChange={e => setDescriptionPayerPro(e.target.value)}
+                        placeholder="Ex: Consultation médicale Aminata, achat vivres"
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
+                      />
+                    </div>
+
+                    <button
+                      onClick={payerPro}
+                      disabled={loadingPayerPro || !proSelectionne}
+                      className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50 transition-all"
+                      style={{ background: 'linear-gradient(135deg,#0ea5e9,#2563eb)' }}>
+                      {loadingPayerPro ? 'Traitement...' : `💸 Envoyer ${montantPayerPro ? parseInt(montantPayerPro).toLocaleString() + ' FG' : ''} → ${proSelectionne?.name || '...'}`}
                     </button>
                   </div>
                 )}

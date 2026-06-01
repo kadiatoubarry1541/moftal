@@ -23,10 +23,22 @@ export default defineConfig(({ mode }) => {
     },
   };
 
+  // Plugin qui force le navigateur à supprimer les anciens caches/SW en dev
+  const clearSwPlugin: Plugin = {
+    name: 'clear-sw-dev',
+    configureServer(server) {
+      server.middlewares.use((_req, res, next) => {
+        res.setHeader('Clear-Site-Data', '"cache"')
+        next()
+      })
+    }
+  }
+
   return {
     plugins: [
       react(),
       replaceLocalhostPlugin,
+      ...(mode === 'development' ? [clearSwPlugin] : []),
       viteCompression({ algorithm: "gzip", ext: ".gz" }),
       viteCompression({ algorithm: "brotliCompress", ext: ".br" }),
       VitePWA({
@@ -34,10 +46,10 @@ export default defineConfig(({ mode }) => {
         // Seuls les assets réellement utiles pour l'app shell PWA
         includeAssets: ["logo.webp", "logo.svg"],
         manifest: {
-          name: "Les Enfants d'Adam",
-          short_name: "Enfants d'Adam",
+          name: "Moftal",
+          short_name: "Moftal",
           description:
-            "Plateforme guinéenne d'enregistrement généalogique, santé, éducation et solidarité.",
+            "La plateforme Moftal — famille, santé, éducation et solidarité.",
           theme_color: "#065f46",
           background_color: "#ffffff",
           display: "standalone",
@@ -59,7 +71,7 @@ export default defineConfig(({ mode }) => {
               purpose: "any maskable",
             },
           ],
-          categories: ["social", "health", "education"],
+          categories: ["social", "health", "education", "business"],
           shortcuts: [
             {
               name: "Accueil",
@@ -69,6 +81,13 @@ export default defineConfig(({ mode }) => {
             {
               name: "Mon Profil",
               url: "/profil",
+              icons: [{ src: "/logo.png", sizes: "96x96" }],
+            },
+            {
+              name: "Espace Gestion",
+              short_name: "Gestion",
+              description: "Accès direct à vos espaces de gestion professionnelle",
+              url: "/gestion-interne",
               icons: [{ src: "/logo.png", sizes: "96x96" }],
             },
           ],
@@ -136,11 +155,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: '0.0.0.0',
       port: 3000,
       open: false,
       proxy: {
-        "/api": { target: "http://localhost:5002", changeOrigin: true },
-        "/uploads": { target: "http://localhost:5002", changeOrigin: true },
+        "/api": { target: "http://localhost:7777", changeOrigin: true },
+        "/uploads": { target: "http://localhost:7777", changeOrigin: true },
       },
       hmr: { overlay: true },
       watch: { usePolling: true },

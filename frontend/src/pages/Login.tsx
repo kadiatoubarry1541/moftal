@@ -9,8 +9,11 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [isNetworkError, setIsNetworkError] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [slowServer, setSlowServer] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  const [retryCountdown, setRetryCountdown] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useI18n()
@@ -41,35 +44,59 @@ export function Login() {
   const onSubmit = async () => {
     if (loading) return
     setError('')
+    setIsNetworkError(false)
+    setSlowServer(false)
+    setRetryCountdown(0)
     if (!numeroH || !password) {
       setError(t('login.error_required'))
       return
     }
-    
+
     try {
       setLoading(true)
-      // Connexion directe et rapide
+      const slowTimer = setTimeout(() => setSlowServer(true), 8000)
+
       const result = await api.login(numeroH, password)
-      
-      if (result.success) {
+      clearTimeout(slowTimer)
+      setSlowServer(false)
+
+      if (result?.success) {
         navigate('/compte', { state: { fromLogin: true } })
+      } else if (result?.networkError) {
+        setIsNetworkError(true)
+        setError(result.message || 'Serveur inaccessible. Réessayez dans quelques instants.')
+        setRetryCountdown(10)
       } else {
-        // Afficher le vrai message d'erreur (backend éteint, mauvais identifiants, etc.)
-        if (result.message && result.message !== 'Erreur de connexion') {
+        if (result?.numeroHExists) {
+          setError('Mot de passe incorrect.')
+        } else if (result?.message) {
           setError(result.message)
-        } else if (result.numeroHExists) {
-          setError('Mot de passe incorrect')
         } else {
-          setError('NumeroH ou mot de passe incorrect')
+          setError('NumeroH ou mot de passe incorrect.')
         }
       }
-    } catch (error: any) {
-      // Message d'erreur simple
-      setError(error?.message || 'Erreur de connexion. Vérifiez vos identifiants.')
+    } catch {
+      setSlowServer(false)
+      setIsNetworkError(true)
+      setError('Serveur inaccessible. Réessayez dans quelques instants.')
+      setRetryCountdown(10)
     } finally {
       setLoading(false)
     }
   }
+
+  // Compte à rebours avant reconnexion automatique
+  useEffect(() => {
+    if (retryCountdown <= 0) return
+    const timer = setTimeout(() => {
+      if (retryCountdown === 1) {
+        onSubmit()
+      } else {
+        setRetryCountdown(c => c - 1)
+      }
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [retryCountdown])
 
   return (
     <>
@@ -133,8 +160,52 @@ export function Login() {
             {successMessage}
           </div>
         )}
+        {slowServer && loading && (
+          <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2.5 rounded-lg">
+            <svg className="animate-spin h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            <span>Démarrage du serveur en cours, veuillez patienter…</span>
+          </div>
+        )}
         {error && (
-          <div className="error">{error}</div>
+          <div className={`rounded-lg px-4 py-3 text-sm flex flex-col gap-3 ${isNetworkError ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'}`}>
+            {isNetworkError ? (
+              <>
+                <div className="flex items-start gap-2">
+                  <svg className="h-5 w-5 shrink-0 mt-0.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  <span className="font-medium">{error}</span>
+                </div>
+                <div className="flex items-center gap-3 pl-7">
+                  <button
+                    type="button"
+                    onClick={() => { setRetryCountdown(0); onSubmit() }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-orange-600 hover:bg-orange-700 text-white transition-colors"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Réessayer
+                  </button>
+                  {retryCountdown > 0 && (
+                    <span className="text-xs text-orange-600 dark:text-orange-400">
+                      Nouvelle tentative automatique dans {retryCountdown}s…
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-start gap-2">
+                <svg className="h-5 w-5 shrink-0 mt-0.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+          </div>
         )}
         <div className="actions">
         <button

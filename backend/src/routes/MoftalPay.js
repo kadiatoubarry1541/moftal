@@ -256,7 +256,7 @@ router.post('/retrait-pro', authenticate, async (req, res) => {
     }
 
     const proAccount = await ProfessionalAccount.findOne({
-      where: { ownerNumeroH: numeroH, status: 'active' }
+      where: { ownerNumeroH: numeroH, status: 'approved' }
     });
     if (!proAccount) {
       return res.status(403).json({ success: false, message: 'Compte professionnel actif requis.' });

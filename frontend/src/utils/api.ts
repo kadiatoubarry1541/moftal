@@ -1,4 +1,8 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || '') + '/api'
+// En dev : proxy Vite (/api → localhost:7777 via vite.config.ts)
+// En prod : VITE_API_URL défini dans .env.production
+const API_BASE_URL = import.meta.env.VITE_API_URL
+  ? import.meta.env.VITE_API_URL + '/api'
+  : '/api'
 
 export interface User {
   numeroH: string
@@ -130,31 +134,59 @@ export const api = {
       .replace(/o/g, '0')
   },
 
-  // Connexion utilisateur - Version optimisée et rapide
   async login(numeroH: string, password: string) {
     const normalizedNumeroH = this.normalizeNumeroH(numeroH)
-    
+    // En dev : 10s (serveur local, doit répondre immédiatement)
+    // En prod : 65s (démarrage à froid Render ~50s)
+    const TIMEOUT_MS = import.meta.env.DEV ? 10000 : 65000
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
+
+    const loginUrl = `${API_BASE_URL}/auth/login`
+    console.log('[LOGIN] URL:', loginUrl, '| DEV:', import.meta.env.DEV)
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(loginUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ numeroH: normalizedNumeroH, password })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numeroH: normalizedNumeroH, password }),
+        signal: controller.signal
       })
-      
+      clearTimeout(timeoutId)
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        const message = errorData.message || 'Erreur de connexion'
-        return { success: false, message }
+        return { success: false, message: errorData.message || 'Identifiants incorrects.' }
       }
-      
+
       const result = await response.json()
-      
+
       if (result.success) {
+        // Stocker seulement les champs essentiels (évite QuotaExceededError sur gros comptes)
+        const userSession = {
+          numeroH: result.user.numeroH,
+          prenom: result.user.prenom,
+          nomFamille: result.user.nomFamille,
+          genre: result.user.genre,
+          generation: result.user.generation,
+          type: result.user.type,
+          role: result.user.role,
+          isActive: result.user.isActive,
+          isVerified: result.user.isVerified,
+          wallet: result.user.wallet,
+          walletCurrency: result.user.walletCurrency,
+          statutSocial: result.user.statutSocial,
+          lieuResidence1: result.user.lieuResidence1,
+          treeVisibility: result.user.treeVisibility,
+        }
+        // Supprimer uniquement les anciennes données de session (pas les préférences)
+        localStorage.removeItem('session_user')
+        localStorage.removeItem('dernier_vivant')
+        localStorage.removeItem('vivant_video')
+        localStorage.removeItem('vivant_written')
         localStorage.setItem('session_user', JSON.stringify({
           numeroH: normalizedNumeroH,
-          userData: result.user,
+          userData: { ...userSession },
           token: result.token
         }))
         localStorage.setItem('token', result.token ?? '')
@@ -162,16 +194,20 @@ export const api = {
       } else {
         return {
           success: false,
-          message: result.message || 'NumeroH ou mot de passe incorrect',
+          message: result.message || 'NumeroH ou mot de passe incorrect.',
           numeroHExists: result.numeroHExists
         }
       }
-    } catch (error) {
-      console.error('Erreur connexion:', error)
+    } catch (error: any) {
+      clearTimeout(timeoutId)
+      console.error('[LOGIN] Erreur fetch:', error?.name, error?.message)
+      const isAbort = error?.name === 'AbortError'
       return {
         success: false,
-        message:
-          "Le serveur est indisponible ou trop lent. La connexion n'a pas pu être effectuée. Veuillez réessayer."
+        networkError: true,
+        message: isAbort
+          ? 'Connexion trop lente. Vérifiez votre connexion et réessayez.'
+          : 'Serveur momentanément indisponible. Veuillez réessayer dans quelques instants.'
       }
     }
   },

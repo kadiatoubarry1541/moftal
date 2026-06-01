@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start:backend": "npm run dev --prefix backend",
+    "start:backend": "npm start --prefix backend",
     "start:frontend": "npm run dev --prefix frontend",
-    "start:both": "concurrently --names \"WORKER,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "prestart:both": "node scripts/kill-ports.js",
+    "start:both": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\" \"npm start --prefix backend\" \"npm run dev --prefix frontend\"",
     "setup": "npm run db:migrate:local --prefix backend && npm run db:seed --prefix backend",
     "deploy:backend": "npm run deploy --prefix backend",
     "build": "cd frontend && npm ci && npm run build",

@@ -2,7 +2,7 @@ import express from 'express';
 import PageAdmin from '../models/PageAdmin.js';
 import User from '../models/User.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
-import { sequelize } from '../../config/database.js';
+import { sequelize } from '../config/database.js';
 import { SECTOR_PAGE_PATHS } from '../utils/sectorAdmin.js';
 
 // Initialiser le modèle PageAdmin

@@ -1344,7 +1344,7 @@ function CardViewModal({ saved, onClose }: { saved: SavedCard; onClose: () => vo
           )}
 
           {/* Footer */}
-          <p className="text-center text-[9px] text-gray-700 uppercase tracking-widest pb-2">Les Enfants d'Adam · Moftal Info</p>
+          <p className="text-center text-[9px] text-gray-700 uppercase tracking-widest pb-2">Moftal · Moftal Info</p>
         </div>
       </div>
 
@@ -1361,6 +1361,8 @@ function CardViewModal({ saved, onClose }: { saved: SavedCard; onClose: () => vo
   );
 }
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 export default function InfoWallou() {
   const [selected, setSelected] = useState<CardType | null>(null);
   const [card, setCard] = useState<CardState>(defaultCard("mariage"));
@@ -1369,6 +1371,33 @@ export default function InfoWallou() {
   const [viewingCard, setViewingCard] = useState<SavedCard | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Système de points InfoWallou
+  const [pointsDisponibles, setPointsDisponibles] = useState<number | null>(null);
+  const [userNumeroH, setUserNumeroH] = useState<string | null>(null);
+  const [showAcheterPoints, setShowAcheterPoints] = useState(false);
+
+  useEffect(() => {
+    const session = localStorage.getItem("session_user");
+    if (!session) return;
+    try {
+      const parsed = JSON.parse(session);
+      const user = parsed.userData || parsed;
+      if (user?.numeroH) {
+        setUserNumeroH(user.numeroH);
+        const token = localStorage.getItem("token");
+        fetch(`${API_BASE}/api/quotas/my-points`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json()).then(d => {
+          if (d.success) setPointsDisponibles(d.pointsDisponibles);
+        }).catch(() => {});
+      }
+    } catch {}
+  }, []);
+
+  // "Carte gratuite" = première carte créée dans cette session (trackée par localStorage par user)
+  const freeCardKey = userNumeroH ? `iw_free_${userNumeroH}` : null;
+  const freeCardUsed = freeCardKey ? localStorage.getItem(freeCardKey) === "1" : false;
 
   // Touch swipe pour le carousel
   const touchStartX = useRef(0);
@@ -1385,15 +1414,51 @@ export default function InfoWallou() {
     return () => { el.removeEventListener("touchstart", onStart); el.removeEventListener("touchend", onEnd); };
   }, [savedCards]);
 
-  const handleSaveCard = () => {
+  const handleSaveCard = async () => {
     if (!selected) return;
+
+    // Mode édition : pas de coût
     if (editingId) {
       setSavedCards(prev => prev.map(s => s.id === editingId ? { ...s, card, type: selected } : s));
       setEditingId(null);
-    } else {
-      setSavedCards(prev => [...prev, { id: Date.now().toString(), type: selected, card, savedAt: Date.now() }]);
+      setSelected(null);
+      return;
     }
-    setSelected(null);
+
+    // Nouvelle carte : vérifier si la carte gratuite a déjà été utilisée
+    if (!freeCardUsed) {
+      // Première carte → GRATUITE, on marque dans localStorage
+      if (freeCardKey) localStorage.setItem(freeCardKey, "1");
+      setSavedCards(prev => [...prev, { id: Date.now().toString(), type: selected, card, savedAt: Date.now() }]);
+      setSelected(null);
+      return;
+    }
+
+    // Cartes suivantes → coûtent 2 points (= 1 000 FG)
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Connectez-vous pour créer une carte payante.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/quotas/consume-infowallou`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setShowAcheterPoints(true);
+        return;
+      }
+
+      setPointsDisponibles(data.pointsRestants);
+      setSavedCards(prev => [...prev, { id: Date.now().toString(), type: selected, card, savedAt: Date.now() }]);
+      setSelected(null);
+    } catch {
+      alert("Erreur réseau. Vérifiez votre connexion et réessayez.");
+    }
   };
 
   const handleEditSaved = (saved: SavedCard) => {
@@ -1462,7 +1527,7 @@ export default function InfoWallou() {
               📢
             </div>
             <div>
-              <p className="text-[9px] uppercase tracking-[3px] text-gray-500 font-bold">Les Enfants d'Adam</p>
+              <p className="text-[9px] uppercase tracking-[3px] text-gray-500 font-bold">Moftal</p>
               <h1 className="text-2xl font-black text-white leading-tight">Moftal Info</h1>
             </div>
           </div>
@@ -1476,6 +1541,26 @@ export default function InfoWallou() {
                 {icon} {label}
               </span>
             ))}
+          </div>
+
+          {/* Badge points / statut freemium */}
+          <div className="mt-4 flex items-center gap-3">
+            {!freeCardUsed ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-emerald-300 border border-emerald-500/30"
+                style={{ background: "rgba(16,185,129,0.1)" }}>
+                🎁 1ère carte GRATUITE disponible
+              </span>
+            ) : (
+              <button onClick={() => setShowAcheterPoints(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors"
+                style={{
+                  background: (pointsDisponibles ?? 0) > 0 ? "rgba(99,102,241,0.15)" : "rgba(239,68,68,0.1)",
+                  borderColor: (pointsDisponibles ?? 0) > 0 ? "rgba(99,102,241,0.4)" : "rgba(239,68,68,0.4)",
+                  color: (pointsDisponibles ?? 0) > 0 ? "#a5b4fc" : "#fca5a5"
+                }}>
+                🪙 {pointsDisponibles ?? "—"} pts · {(pointsDisponibles ?? 0) > 0 ? `${Math.floor((pointsDisponibles ?? 0) / 2)} cartes restantes` : "Acheter des points →"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1546,10 +1631,49 @@ export default function InfoWallou() {
           ))}
         </div>
 
-        <p className="text-center text-[10px] text-gray-800 uppercase tracking-widest pb-8">Les Enfants d'Adam · Moftal Info</p>
+        <p className="text-center text-[10px] text-gray-800 uppercase tracking-widest pb-8">Moftal · Moftal Info</p>
       </div>
 
       {viewingCard && <CardViewModal saved={viewingCard} onClose={() => setViewingCard(null)} />}
+
+      {/* Modal : Points insuffisants (écran de choix) */}
+      {showAcheterPoints && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}>
+          <div className="rounded-2xl w-full max-w-sm overflow-hidden" style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div className="p-6 text-center">
+              <div className="text-4xl mb-3">🪙</div>
+              <h3 className="text-white font-black text-lg mb-1">Points insuffisants</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Chaque carte coûte <strong className="text-white">1 000 FG</strong> (2 points).<br/>
+                Achetez des points pour continuer à créer des annonces.
+              </p>
+              <div className="rounded-xl p-4 mb-4 text-left" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                <p className="text-indigo-300 text-xs font-bold mb-2">Offre disponible</p>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-white font-bold text-sm">Pack mensuel</p>
+                    <p className="text-gray-400 text-xs">Cartes illimitées pendant 1 mois</p>
+                  </div>
+                  <span className="text-indigo-300 font-black text-base">10 000 FG</span>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setShowAcheterPoints(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+                  style={{ background: "rgba(255,255,255,0.06)" }}>
+                  Annuler
+                </button>
+                <button onClick={() => { setShowAcheterPoints(false); window.location.href = "/acheter-points"; }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+                  style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
+                  Acheter des points
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1586,7 +1710,7 @@ export default function InfoWallou() {
         <div id="iw-card">{renderCard()}</div>
 
         <p className="text-center text-[9px] text-gray-800 mt-2 uppercase tracking-widest">
-          Les Enfants d'Adam · Moftal Info · {new Date().toLocaleDateString("fr-FR")}
+          Moftal · Moftal Info · {new Date().toLocaleDateString("fr-FR")}
         </p>
 
         {/* Actions */}
@@ -1641,6 +1765,48 @@ export default function InfoWallou() {
       )}
 
       {viewingCard && <CardViewModal saved={viewingCard} onClose={() => setViewingCard(null)} />}
+
+      {/* Modal : Points insuffisants → acheter */}
+      {showAcheterPoints && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}>
+          <div className="rounded-2xl w-full max-w-sm overflow-hidden" style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div className="p-6 text-center">
+              <div className="text-4xl mb-3">🪙</div>
+              <h3 className="text-white font-black text-lg mb-1">Points insuffisants</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Chaque carte coûte <strong className="text-white">1 000 FG</strong> (2 points).<br/>
+                Achetez des points pour continuer à créer des annonces.
+              </p>
+              <div className="rounded-xl p-4 mb-4 text-left" style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                <p className="text-indigo-300 text-xs font-bold mb-2">Offre disponible</p>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-white font-bold text-sm">Pack mensuel</p>
+                    <p className="text-gray-400 text-xs">Cartes illimitées pendant 1 mois</p>
+                  </div>
+                  <span className="text-indigo-300 font-black text-base">10 000 FG</span>
+                </div>
+              </div>
+              <p className="text-gray-600 text-xs mb-4">
+                Contactez l'administrateur via WhatsApp pour acheter vos points.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowAcheterPoints(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+                  style={{ background: "rgba(255,255,255,0.06)" }}>
+                  Annuler
+                </button>
+                <button onClick={() => { setShowAcheterPoints(false); window.location.href = "/acheter-points"; }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+                  style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
+                  Acheter des points
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

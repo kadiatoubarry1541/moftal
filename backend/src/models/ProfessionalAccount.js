@@ -55,6 +55,9 @@ ProfessionalAccount.init({
       'supplier',
       'scientist',
       'ngo',
+      'mosque',      // mosquée / madrasa : fidèles, dons, Coran
+      'madrasa',     // formation religieuse indépendante : daroul, médersa, franco-arabe
+      'commerce',    // boutique / commerce : stock, ventes, clients
       // Types spécifiques au secteur Échanges
       'vendor',      // vendeurs / détaillants
       'producer',    // entreprises de production
@@ -62,7 +65,8 @@ ProfessionalAccount.init({
       'restaurant',  // restauration : menu, commandes, appel direct
       'transport',   // taxi, moto, livraison à domicile
       'beauty',      // salon de beauté, coiffeur, spa
-      'artisan'      // plombier, électricien, menuisier, soudeur
+      'artisan',     // plombier, électricien, menuisier, soudeur
+      'mairie'       // mairie / état civil : mariages, naissances, décès, résidences
     ),
     allowNull: false
   },
@@ -181,6 +185,13 @@ ProfessionalAccount.init({
     type: DataTypes.JSON,
     allowNull: true,
     comment: 'Informations de paiement du professionnel (jamais exposées publiquement)'
+  },
+  // Code tenant Gestion Interne (ex: CLIN-GN-00001, NGO-GN-00002)
+  // Attribut en snake_case pour correspondre à ce qu'attend le frontend (a.tenant_code)
+  tenant_code: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    unique: true
   },
   // Visibilité accordée par le super admin (G7) au petit admin (G0)
   grantedToSubAdmin: {

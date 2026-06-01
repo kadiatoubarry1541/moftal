@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { Op } from 'sequelize';
-import { sequelize } from '../../config/database.js';
+import { sequelize } from '../config/database.js';
 import User from '../models/User.js';
 import PublishedStory from '../models/PublishedStory.js';
 import Friend from '../models/Friend.js';
 import { authenticate } from '../middleware/auth.js';
 
-// Stockage en mémoire → conversion en base64 et stockage en DB (persistant sur Render)
+// Stockage en mémoire → conversion en base64 et stockage en DB
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -382,7 +382,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       };
     }
 
-    // Convertir en base64 et stocker en DB (persistant sur Render)
+    // Convertir en base64 et stocker en DB
     const dataUrl = toDataUrl(req.file);
     if (type === 'photo') {
       if (!stories[sectionId].photos) stories[sectionId].photos = [];
@@ -431,20 +431,7 @@ router.post('/publish', async (req, res) => {
     const user = await User.findByNumeroH(numeroH);
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
-    // --- Vérification de l'âge (ignorée pour les admins) ---
-    const requestingUser = req.user;
-    const isAdminReq = requestingUser?.role === 'admin' || requestingUser?.role === 'super-admin' ||
-      requestingUser?.isMasterAdmin || requestingUser?.isAdmin;
-    if (!isAdminReq) {
-      const authorAge = user.getAge();
-      const requiredAge = SECTION_AGE_REQUIREMENTS[sectionId] || 25;
-      if (authorAge !== null && authorAge < requiredAge) {
-        return res.status(403).json({
-          success: false,
-          message: `Vous devez avoir au moins ${requiredAge} ans pour publier cette section. Vous pouvez sauvegarder votre brouillon et publier plus tard.`
-        });
-      }
-    }
+    // Pas de restriction d'âge : chacun peut publier ses sections librement
 
     // Les témoins sont optionnels à la publication — ils peuvent témoigner eux-mêmes plus tard
     const witnessDetails = [];

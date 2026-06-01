@@ -149,11 +149,7 @@ export default function ARetenir() {
       (typeof userData.role === 'string' && userData.role.includes('admin'));
   };
 
-  const canPublishSection = (sectionId: string): boolean => {
-    if (isAdminUser()) return true; // admin : aucune limite
-    const required = SECTION_AGE_REQUIREMENTS[sectionId] || 25;
-    return getUserAge() >= required;
-  };
+  const canPublishSection = (_sectionId: string): boolean => true;
 
   const isSectionPublished = (sectionId: string): boolean => {
     return publishedSections.some(p => p.sectionId === sectionId);
@@ -380,10 +376,11 @@ export default function ARetenir() {
       formData.append('type', type);
       formData.append('numeroH', userData.numeroH);
 
-      const token = localStorage.getItem('token');
+      const sessionUpload = localStorage.getItem("session_user");
+      const token = sessionUpload ? JSON.parse(sessionUpload).token : null;
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/upload`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
         body: formData
       });
 
@@ -476,37 +473,43 @@ export default function ARetenir() {
   if (!userData) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-4xl font-bold text-white mb-2">📖 À Retenir — Génération 96</h1>
-              <p className="text-blue-100 text-lg">
-                Vous êtes l'auteur de votre propre histoire — personne d'autre ne la raconte à votre place
-              </p>
-              <p className="text-blue-200 text-xs mt-1">
-                Avant vous, les anciens n'ont pas pu écrire eux-mêmes · Ici, chaque personne est responsable de son récit
-              </p>
+          <div className="flex justify-between items-center py-6 flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              {/* Logo distinct : plume/écriture */}
+              <div className="w-16 h-16 rounded-2xl bg-white/20 border-2 border-white/40 flex items-center justify-center text-4xl shadow-lg flex-shrink-0">
+                ✍️
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-1">À Retenir — Génération 96</h1>
+                <p className="text-amber-100 text-base">
+                  Vous êtes l'auteur de votre propre histoire — personne d'autre ne la raconte à votre place
+                </p>
+                <p className="text-amber-200 text-xs mt-1">
+                  Avant vous, les anciens n'ont pas pu écrire eux-mêmes · Ici, chaque personne est responsable de son récit
+                </p>
+              </div>
             </div>
-            <div className="flex space-x-4">
+            <div className="flex space-x-3 flex-wrap gap-2">
               <button
                 onClick={() => navigate('/histoire-humanite')}
-                className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg"
+                className="bg-white text-amber-600 px-5 py-2.5 rounded-lg font-semibold hover:bg-amber-50 transition-colors shadow-lg text-sm"
               >
-                📜 Chronique ancestrale (Gén. 1–95)
+                📚 Chronique ancestrale (Gén. 1–95)
               </button>
               <button
                 onClick={handleSaveAll}
                 disabled={saving}
-                className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="bg-white text-amber-600 px-5 py-2.5 rounded-lg font-semibold hover:bg-amber-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-sm"
               >
-                {saving ? 'Sauvegarde...' : '💾 Sauvegarder tout'}
+                {saving ? 'Sauvegarde...' : '💾 Tout sauvegarder'}
               </button>
               <button
                 onClick={() => navigate('/moi')}
-                className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg"
+                className="bg-white/20 hover:bg-white/30 text-white px-5 py-2.5 rounded-lg font-semibold transition-colors shadow-lg text-sm border border-white/30"
               >
                 ← Retour
               </button>
@@ -517,8 +520,8 @@ export default function ARetenir() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8 bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">📚 Guide d'utilisation</h2>
+        <div className="mb-8 bg-white rounded-xl shadow-lg p-6 border-l-4 border-amber-500">
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">✍️ Guide d'utilisation</h2>
           <p className="text-gray-700 leading-relaxed">
             Cette page vous permet de raconter votre histoire personnelle en vous inspirant des 7 étapes principales 
             de la vie d'Adam. Chaque section vous guide pour partager vos expériences, vos valeurs 
@@ -535,7 +538,7 @@ export default function ARetenir() {
             >
               {/* Section Header */}
               <div
-                className="bg-gradient-to-r from-blue-500 to-indigo-500 p-6 cursor-pointer"
+                className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 cursor-pointer"
                 onClick={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
               >
                 <div className="flex items-center justify-between">
@@ -547,9 +550,9 @@ export default function ARetenir() {
                           Étape {index + 1}
                         </span>
                         <h3 className="text-2xl font-bold text-white">{section.title}</h3>
-                        {/* Badge âge requis */}
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${canPublishSection(section.id) ? 'bg-green-400 text-green-900' : 'bg-yellow-300 text-yellow-900'}`}>
-                          {canPublishSection(section.id) ? '✓ Publication débloquée' : `🔒 ${SECTION_AGE_REQUIREMENTS[section.id]} ans requis`}
+                        {/* Badge publication */}
+                        <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-400 text-green-900">
+                          ✓ Publication disponible
                         </span>
                         {/* Badge publié */}
                         {isSectionPublished(section.id) && (
@@ -569,15 +572,15 @@ export default function ARetenir() {
               {expandedSection === section.id && (
                 <div className="p-6 space-y-6">
                   {/* Description */}
-                  <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
-                    <h4 className="font-semibold text-blue-900 mb-2">📝 Description de la section</h4>
-                    <p className="text-blue-800">{section.description}</p>
+                  <div className="bg-amber-50 rounded-lg p-4 border-l-4 border-amber-500">
+                    <h4 className="font-semibold text-amber-900 mb-2">📝 Description de la section</h4>
+                    <p className="text-amber-800">{section.description}</p>
                   </div>
 
                   {/* Reference */}
-                  <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
-                    <h4 className="font-semibold text-blue-900 mb-2">📖 Référence historique</h4>
-                    <p className="text-blue-800 italic">{section.reference}</p>
+                  <div className="bg-amber-50 rounded-lg p-4 border-l-4 border-amber-500">
+                    <h4 className="font-semibold text-amber-900 mb-2">📖 Référence historique</h4>
+                    <p className="text-amber-800 italic">{section.reference}</p>
                   </div>
 
                   {/* Text Editor */}
@@ -589,22 +592,17 @@ export default function ARetenir() {
                       value={section.content}
                       onChange={(e) => handleContentChange(section.id, e.target.value)}
                       placeholder={`Racontez votre histoire pour cette section...\n\nExemple : ${section.description}`}
-                      className="w-full min-h-[300px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y font-serif text-gray-700 leading-relaxed"
+                      className="w-full min-h-[300px] px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-y font-serif text-gray-700 leading-relaxed"
                     />
                     <div className="mt-2 flex flex-col gap-2">
                       <p className="text-sm text-gray-500">
                         {section.content.length} caractères {section.content.length < 50 && '(minimum 50 pour publier)'}
                       </p>
-                      {!canPublishSection(section.id) && !isAdminUser() && (
-                        <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
-                          🔒 Vous pouvez sauvegarder votre brouillon maintenant et publier lorsque vous aurez {SECTION_AGE_REQUIREMENTS[section.id]} ans.
-                        </p>
-                      )}
                       <div className="flex flex-wrap gap-3">
                         <button
                           onClick={() => handleSave(section.id)}
                           disabled={saving}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                          className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                         >
                           {saving ? '⏳ Sauvegarde...' : '💾 Sauvegarder brouillon'}
                         </button>
@@ -622,7 +620,7 @@ export default function ARetenir() {
                             <button
                               onClick={() => handlePublishClick(section.id)}
                               disabled={saving || !section.content || section.content.length < 50}
-                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-colors disabled:opacity-50 font-semibold shadow-lg"
+                              className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg hover:from-amber-700 hover:to-orange-700 transition-colors disabled:opacity-50 font-semibold shadow-lg"
                             >
                               🔄 Republier (mettre à jour)
                             </button>
@@ -753,31 +751,31 @@ export default function ARetenir() {
         </div>
 
         {/* Footer Info */}
-        <div className="mt-12 bg-white rounded-xl shadow-lg p-6 border-t-4 border-blue-500">
+        <div className="mt-12 bg-white rounded-xl shadow-lg p-6 border-t-4 border-amber-500">
           <h3 className="text-xl font-bold text-gray-900 mb-3">💡 Conseils pour raconter votre histoire</h3>
           <ul className="space-y-2 text-gray-700">
             <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
+              <span className="text-amber-600 mr-2">•</span>
               <span>Soyez authentique et sincère dans vos récits</span>
             </li>
             <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
+              <span className="text-amber-600 mr-2">•</span>
               <span>Incluez des détails significatifs et des moments marquants</span>
             </li>
             <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
+              <span className="text-amber-600 mr-2">•</span>
               <span>Mentionnez les personnes qui ont influencé votre vie</span>
             </li>
             <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
+              <span className="text-amber-600 mr-2">•</span>
               <span>Partagez les valeurs et les enseignements que vous souhaitez transmettre</span>
             </li>
             <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
+              <span className="text-amber-600 mr-2">•</span>
               <span>Vous pouvez ajouter des photos et des vidéos (max 5 minutes) pour illustrer votre histoire</span>
             </li>
             <li className="flex items-start">
-              <span className="text-blue-600 mr-2">•</span>
+              <span className="text-amber-600 mr-2">•</span>
               <span>Vous pouvez revenir modifier vos histoires à tout moment</span>
             </li>
           </ul>

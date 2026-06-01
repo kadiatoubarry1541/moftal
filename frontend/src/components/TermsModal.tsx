@@ -3,18 +3,26 @@ import { useState, useEffect, useRef } from 'react';
 const TERMS_KEY = 'terms_accepted_v1';
 
 export function hasAcceptedTerms(): boolean {
-  return localStorage.getItem(TERMS_KEY) === 'true';
+  // Vérifie localStorage ET sessionStorage — résiste au clear() de localStorage
+  return localStorage.getItem(TERMS_KEY) === 'true'
+      || sessionStorage.getItem(TERMS_KEY) === 'true';
+}
+
+export function acceptTerms(): void {
+  try { localStorage.setItem(TERMS_KEY, 'true') } catch (_) {}
+  sessionStorage.setItem(TERMS_KEY, 'true');
 }
 
 export function resetTermsAcceptance(): void {
   localStorage.removeItem(TERMS_KEY);
+  sessionStorage.removeItem(TERMS_KEY);
 }
 
 export const CONDITIONS = [
   {
     num: 1,
     titre: 'Identification de la plateforme',
-    texte: "La plateforme Moftal (« Les Enfants d'Adam ») est exploitée par son fondateur, entrepreneur individuel enregistré en République de Guinée (RCCM Conakry). Pour tout contact : moftal.contact@gmail.com. En créant un compte, vous concluez un accord juridiquement contraignant avec Moftal.",
+    texte: "La plateforme Moftal (« Moftal ») est exploitée par son fondateur, entrepreneur individuel enregistré en République de Guinée (RCCM Conakry). Pour tout contact : moftal.contact@gmail.com. En créant un compte, vous concluez un accord juridiquement contraignant avec Moftal.",
   },
   {
     num: 2,
@@ -116,7 +124,7 @@ export function TermsModal({ onAccept, onDecline }: TermsModalProps) {
 
   const handleAccept = () => {
     if (!checked) return;
-    localStorage.setItem(TERMS_KEY, 'true');
+    acceptTerms();
     onAccept();
   };
 

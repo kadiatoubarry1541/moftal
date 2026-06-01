@@ -10,7 +10,7 @@ export default function PolitiqueConfidentialite() {
       <div className="w-full py-10 px-4 text-center" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
         <div className="text-4xl mb-3">🔒</div>
         <h1 className="text-white font-black text-2xl sm:text-3xl">Politique de Confidentialité</h1>
-        <p className="text-blue-200 text-sm mt-1">Moftal — Les Enfants d'Adam · Mai 2026</p>
+        <p className="text-blue-200 text-sm mt-1">Moftal — Moftal · Mai 2026</p>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -18,7 +18,7 @@ export default function PolitiqueConfidentialite() {
         {/* Intro */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
           <p className="text-gray-700 text-sm leading-relaxed">
-            La plateforme <strong>Les Enfants d'Adam (Moftal)</strong> respecte votre vie privée.
+            La plateforme <strong>Moftal (Moftal)</strong> respecte votre vie privée.
             Ce document explique quelles données nous collectons, pourquoi, et comment nous les protégeons.
             En vous inscrivant, vous acceptez librement cette politique.
           </p>
@@ -27,9 +27,9 @@ export default function PolitiqueConfidentialite() {
         {/* Section 1 */}
         <Section titre="1. Qui sommes-nous ?">
           <p>
-            Les Enfants d'Adam est une plateforme numérique guinéenne proposant des services
+            Moftal est une plateforme numérique guinéenne proposant des services
             de généalogie familiale, santé, éducation, solidarité et échanges.
-            Elle est hébergée sur des serveurs internationaux sécurisés (Cloudflare, Render).
+            Elle est hébergée sur des serveurs internationaux sécurisés.
           </p>
           <p className="mt-2">
             Contact : <strong>alphadjomodiza@gmail.com</strong>

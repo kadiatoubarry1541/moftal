@@ -7,7 +7,7 @@ const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://loca
 const BASE = (code: string) => `${API}/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "patients" | "staff" | "appointments" | "prescriptions" | "records" | "payments" | "factures" | "settings";
+type Section = "dashboard" | "patients" | "staff" | "appointments" | "prescriptions" | "records" | "payments" | "factures" | "pharmacie" | "settings";
 
 const SERVICES = ["Médecine générale", "Chirurgie", "Maternité", "Pédiatrie", "Ophtalmologie", "Gynécologie", "Urgences", "Radiologie", "Autre"];
 const ROLES_CLINIC = ["Admin", "Médecin", "Spécialiste", "Infirmier(e)", "Sage-femme", "Laborantin", "Radiologue", "Secrétaire", "Comptable", "Autre"];
@@ -44,6 +44,7 @@ const NAV_ITEMS: { id: Section; label: string; icon: string }[] = [
   { id: "records",       label: "Dossiers médicaux", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" },
   { id: "payments",      label: "Paiements",         icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
   { id: "factures",      label: "Factures",          icon: "M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" },
+  { id: "pharmacie",     label: "Pharmacie",         icon: "M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" },
   { id: "settings",      label: "Paramètres",        icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
 ];
 
@@ -68,7 +69,7 @@ ${p.diagnostic?`<div class="s-label">Diagnostic</div><div class="diag">${p.diagn
 ${meds.length===0?'<p style="color:#94a3b8;font-size:13px">Aucun médicament</p>':meds.map((m:any)=>`<div class="med-item">◆ &nbsp;${m.medicament||m}</div>`).join("")}
 ${p.notes?`<div class="s-label">Notes</div><p style="font-size:12px;color:#64748b;font-style:italic">${p.notes}</p>`:""}
 <div class="footer"><div class="sig">Dr. ${p.s_nom?`${p.s_prenom||""} ${p.s_nom}`:"..."}<br>Médecin prescripteur</div></div>
-<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Les Enfants d'Adam · Plateforme de santé</div>
+<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Moftal · Plateforme de santé</div>
 </body></html>`;
   const w = window.open("", "_blank", "width=800,height=900");
   if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
@@ -89,7 +90,7 @@ ${+f.remise>0?`<tr><td colspan="3" style="text-align:right;color:#64748b">Remise
 ${f.mode_paiement&&isPaid?`<p style="font-size:12px;color:#64748b;margin-top:8px">Mode de paiement : <strong>${PAYMENT_LABELS[f.mode_paiement]||f.mode_paiement}</strong></p>`:""}
 ${f.notes?`<p style="font-size:12px;color:#64748b;margin-top:8px;font-style:italic">Notes : ${f.notes}</p>`:""}
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature &amp; Cachet</div></div>
-<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Les Enfants d'Adam · Plateforme de santé</div>
+<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Moftal · Plateforme de santé</div>
 </body></html>`;
   const w = window.open("", "_blank", "width=800,height=900");
   if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
@@ -112,6 +113,13 @@ export default function GestionClinique() {
   const [records, setRecords] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [pharmacyStock, setPharmacyStock] = useState<any[]>([]);
+  const [pharmacyPending, setPharmacyPending] = useState<any[]>([]);
+  const [pharmacyHistory, setPharmacyHistory] = useState<any[]>([]);
+  const [pharmacyStats, setPharmacyStats] = useState<any>(null);
+  const [pharmacyTab, setPharmacyTab] = useState<"stock"|"pending"|"history">("pending");
+  const [dispensingId, setDispensingId] = useState<number|null>(null);
+  const [dispensingMed, setDispensingMed] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<string | null>(null);
   const [form, setForm] = useState<any>({});
@@ -173,6 +181,7 @@ export default function GestionClinique() {
     get("/dashboard")
       .then(d => { if (d.success) { setStats(d.stats); setRecentPatients(d.recentPatients || []); } })
       .catch(() => {});
+    get("/pharmacy/stats").then(d => d.success && setPharmacyStats(d.stats)).catch(() => {});
   }, [get, navigate, tenantCode]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,7 +233,20 @@ export default function GestionClinique() {
       get("/patients").then(d => d.success && setPatients(d.patients));
       get("/staff").then(d => d.success && setStaff(d.staff));
     }
+    if (s === "pharmacie") {
+      get("/pharmacy/stock").then(d => d.success && setPharmacyStock(d.stock));
+      get("/pharmacy/pending").then(d => d.success && setPharmacyPending(d.prescriptions));
+      get("/pharmacy/history").then(d => d.success && setPharmacyHistory(d.history));
+      get("/pharmacy/stats").then(d => d.success && setPharmacyStats(d.stats));
+    }
   }, [get]);
+
+  const reloadPharmacy = () => {
+    get("/pharmacy/stock").then(d => d.success && setPharmacyStock(d.stock));
+    get("/pharmacy/pending").then(d => d.success && setPharmacyPending(d.prescriptions));
+    get("/pharmacy/history").then(d => d.success && setPharmacyHistory(d.history));
+    get("/pharmacy/stats").then(d => d.success && setPharmacyStats(d.stats));
+  };
 
   // Invoice line helpers
   const addLine = () => setForm((f: any) => ({ ...f, lignes: [...(f.lignes || []), { description: "", quantite: 1, prix_unitaire: 0 }] }));
@@ -272,6 +294,15 @@ export default function GestionClinique() {
         if (!form.montant) { showToast("Montant obligatoire", false); return; }
         const d = await post("/payments", form);
         if (d.success) { setPayments(p => [d.payment, ...p]); setModal(null); setForm({}); showToast("Paiement enregistré"); }
+        else showToast(d.message || "Erreur", false);
+      } else if (modal === "add-stock") {
+        if (!form.nom) { showToast("Nom du médicament obligatoire", false); return; }
+        const d = await post("/pharmacy/stock", form);
+        if (d.success) { setPharmacyStock(p => [d.item, ...p]); setModal(null); setForm({}); showToast("Médicament ajouté au stock"); reloadPharmacy(); }
+        else showToast(d.message || "Erreur", false);
+      } else if (modal === "edit-stock") {
+        const d = await put(`/pharmacy/stock/${form.id}`, form);
+        if (d.success) { reloadPharmacy(); setModal(null); setForm({}); showToast("Stock mis à jour"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-invoice") {
         if (!(form.lignes || []).length) { showToast("Ajoutez au moins une ligne", false); return; }
@@ -366,7 +397,7 @@ export default function GestionClinique() {
           })}
         </nav>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: 8, flexShrink: 0 }}>
-          <button onClick={() => navigate("/compte")} title={collapsed ? "Retour" : undefined}
+          <button onClick={() => navigate(-1 as any)} title={collapsed ? "Retour" : undefined}
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "rgba(153,246,228,0.45)", fontSize: 12, justifyContent: collapsed ? "center" : "flex-start" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(153,246,228,0.45)"; }}>
@@ -399,11 +430,18 @@ export default function GestionClinique() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <button
+              onClick={() => navigate(`/clinique/${tenantCode}`)}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdfa", color: TEAL_DARK, border: `1px solid #99f6e4`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+              title="Voir la page vitrine publique de la clinique"
+            >
+              🌐 Vitrine
+            </button>
+            <button
               onClick={() => navigate("/wallet-pro")}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#0d9488,#0891b2)", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
-              title="Mon Wallet Professionnel Moftal Pay"
+              title="Moftal Pay"
             >
-              💰 Wallet Pro
+              💰 Moftal Pay
             </button>
             {section === "patients"      && <BtnAdd label="Nouveau patient"    onClick={() => { setModal("add-patient"); setForm({}); }} />}
             {section === "staff"         && <BtnAdd label="Ajouter personnel"  onClick={() => { setModal("add-staff"); setForm({}); }} />}
@@ -412,6 +450,7 @@ export default function GestionClinique() {
             {section === "records"       && <BtnAdd label="Nouvelle consultation" onClick={() => { setModal("add-record"); setForm({}); }} />}
             {section === "payments"      && <BtnAdd label="Encaisser paiement" onClick={() => { setModal("add-payment"); setForm({}); }} />}
             {section === "factures"      && <BtnAdd label="Nouvelle facture"   onClick={() => { setModal("add-invoice"); setForm({ lignes: [{ description: "", quantite: 1, prix_unitaire: 0 }], statut: "impaye", mode_paiement: "especes" }); }} />}
+            {section === "pharmacie" && pharmacyTab === "stock" && <BtnAdd label="Ajouter médicament" onClick={() => { setModal("add-stock"); setForm({ forme: "comprimé", quantite: 0, quantite_min: 5, prix_unitaire: 0 }); }} />}
           </div>
         </div>
 
@@ -421,6 +460,33 @@ export default function GestionClinique() {
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {/* Alertes pharmacie */}
+              {(pharmacyStats?.pending > 0 || pharmacyStats?.rupture > 0) && (
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {pharmacyStats?.pending > 0 && (
+                    <div onClick={() => loadSection("pharmacie")} role="button" style={{ flex: 1, minWidth: 250, cursor: "pointer", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ color: "white", fontSize: 14 }}>💊</span>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#92400e", fontSize: 13 }}>{pharmacyStats.pending} ordonnance{pharmacyStats.pending>1?"s":""} en attente à la pharmacie</div>
+                        <div style={{ fontSize: 11, color: "#b45309" }}>Cliquez pour traiter</div>
+                      </div>
+                    </div>
+                  )}
+                  {pharmacyStats?.rupture > 0 && (
+                    <div onClick={() => { loadSection("pharmacie"); setPharmacyTab("stock"); }} role="button" style={{ flex: 1, minWidth: 250, cursor: "pointer", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="14" height="14" fill="none" stroke="white" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#991b1b", fontSize: 13 }}>{pharmacyStats.rupture} médicament{pharmacyStats.rupture>1?"s":""} en rupture de stock</div>
+                        <div style={{ fontSize: 11, color: "#b91c1c" }}>Réapprovisionnement nécessaire</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Urgences banner */}
               {stats?.urgences > 0 && (
                 <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "12px 18px", display: "flex", alignItems: "center", gap: 10 }} onClick={() => loadSection("appointments")} role="button" style={{ cursor: "pointer", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "12px 18px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -822,6 +888,236 @@ export default function GestionClinique() {
             </div>
           )}
 
+          {/* ── PHARMACIE ── */}
+          {section === "pharmacie" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* Stats pharmacie */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+                {[
+                  { label: "Ordonnances en attente", val: pharmacyStats?.pending ?? "—",       color: "#d97706", bg: "#fffbeb", urgent: (pharmacyStats?.pending||0) > 0 },
+                  { label: "Dispensées aujourd'hui", val: pharmacyStats?.dispensedToday ?? "—", color: TEAL,      bg: "#f0fdfa" },
+                  { label: "Médicaments en stock",   val: pharmacyStats?.totalStock ?? "—",     color: "#7c3aed", bg: "#f5f3ff" },
+                  { label: "Ruptures de stock",       val: pharmacyStats?.rupture ?? "—",        color: "#ef4444", bg: "#fef2f2", urgent: (pharmacyStats?.rupture||0) > 0 },
+                ].map((s, i) => (
+                  <div key={i} style={{ background: "white", borderRadius: 12, border: `1px solid ${s.urgent ? s.color+"55" : "#e2e8f0"}`, padding: "14px 16px", borderLeft: `3px solid ${s.color}`, boxShadow: s.urgent ? `0 0 0 2px ${s.color}22` : "0 1px 3px rgba(0,0,0,0.06)" }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{s.label}</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Sous-onglets */}
+              <div style={{ display: "flex", gap: 4, background: "white", borderRadius: 10, padding: 5, border: "1px solid #e2e8f0" }}>
+                {([
+                  { id: "pending", label: "Ordonnances en attente", badge: pharmacyStats?.pending },
+                  { id: "stock",   label: "Stock médicaments",      badge: pharmacyStats?.rupture ? `${pharmacyStats.rupture} rupture${pharmacyStats.rupture>1?"s":""}` : null },
+                  { id: "history", label: "Historique dispensation" },
+                ] as { id: "pending"|"stock"|"history"; label: string; badge?: any }[]).map(t => (
+                  <button key={t.id} onClick={() => setPharmacyTab(t.id)}
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: pharmacyTab === t.id ? 700 : 500, background: pharmacyTab === t.id ? TEAL : "transparent", color: pharmacyTab === t.id ? "white" : "#64748b", transition: "all 0.15s" }}>
+                    {t.label}
+                    {t.badge != null && t.badge !== 0 && (
+                      <span style={{ background: pharmacyTab === t.id ? "rgba(255,255,255,0.25)" : "#ef4444", color: pharmacyTab === t.id ? "white" : "white", fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10 }}>{t.badge}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* ─ Stock médicaments ─ */}
+              {pharmacyTab === "stock" && (
+                <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                        {["Médicament","Forme","Dosage","Stock","Seuil","Prix","Expiration","Actions"].map(h => (
+                          <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pharmacyStock.length === 0 ? (
+                        <tr><td colSpan={8} style={{ padding: "48px", textAlign: "center", color: "#94a3b8" }}>Aucun médicament en stock. Ajoutez des médicaments pour commencer.</td></tr>
+                      ) : pharmacyStock.map(m => {
+                        const rupture = m.quantite <= m.quantite_min;
+                        return (
+                          <tr key={m.id} style={{ borderBottom: "1px solid #f8fafc", background: rupture ? "#fff7f7" : "transparent" }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = rupture ? "#fef2f2" : "#fafafa"}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = rupture ? "#fff7f7" : "transparent"}>
+                            <td style={{ padding: "11px 14px", fontWeight: 700, color: "#0f172a" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ fontSize: 18 }}>💊</span>
+                                {m.nom}
+                                {rupture && <span style={{ padding: "1px 7px", background: "#fef2f2", color: "#ef4444", borderRadius: 10, fontSize: 10, fontWeight: 700 }}>RUPTURE</span>}
+                              </div>
+                            </td>
+                            <td style={{ padding: "11px 14px", color: "#64748b" }}>{m.forme || "—"}</td>
+                            <td style={{ padding: "11px 14px", color: "#64748b" }}>{m.dosage || "—"}</td>
+                            <td style={{ padding: "11px 14px", fontWeight: 700, color: rupture ? "#ef4444" : "#0f172a", fontSize: 15 }}>{m.quantite}</td>
+                            <td style={{ padding: "11px 14px", color: "#94a3b8" }}>{m.quantite_min}</td>
+                            <td style={{ padding: "11px 14px", color: TEAL_DARK, fontWeight: 600 }}>{fmtMoney(m.prix_unitaire)}</td>
+                            <td style={{ padding: "11px 14px", color: m.date_expiration && new Date(m.date_expiration) < new Date() ? "#ef4444" : "#64748b" }}>{fmtDate(m.date_expiration)}</td>
+                            <td style={{ padding: "11px 14px" }}>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <button onClick={() => { setForm({ ...m }); setModal("edit-stock"); }} style={{ padding: "4px 10px", background: "#eff6ff", color: "#0369a1", border: "1px solid #bfdbfe", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Modifier</button>
+                                <button onClick={async () => { if (confirm(`Supprimer ${m.nom} du stock ?`)) { await del(`/pharmacy/stock/${m.id}`); reloadPharmacy(); showToast("Médicament supprimé"); }}} style={{ padding: "4px 10px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* ─ Ordonnances en attente de dispensation ─ */}
+              {pharmacyTab === "pending" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {pharmacyPending.length === 0 ? (
+                    <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center" }}>
+                      <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", marginBottom: 4 }}>Aucune ordonnance en attente</div>
+                      <div style={{ fontSize: 13, color: "#94a3b8" }}>Toutes les ordonnances ont été dispensées.</div>
+                    </div>
+                  ) : pharmacyPending.map(p => {
+                    const meds: any[] = Array.isArray(p.medicaments) ? p.medicaments : [];
+                    return (
+                      <div key={p.id} style={{ background: "white", borderRadius: 12, border: "1px solid #fde68a", padding: "18px 22px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", borderLeft: "4px solid #f59e0b" }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                              <span style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>{p.p_prenom} {p.p_nom}</span>
+                              <span style={{ fontFamily: "monospace", fontSize: 11, color: "#94a3b8", background: "#f8fafc", padding: "1px 7px", borderRadius: 6 }}>{p.p_matricule}</span>
+                            </div>
+                            <div style={{ fontSize: 12, color: "#64748b" }}>
+                              Ordonnance <strong style={{ fontFamily: "monospace" }}>N° {p.numero_ordo}</strong> · Dr. {p.s_prenom || ""} {p.s_nom || "?"} · {fmtDate(p.created_at)}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <span style={{ padding: "3px 12px", background: "#fffbeb", color: "#d97706", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>En attente</span>
+                            <button
+                              onClick={async () => {
+                                if (dispensingId === p.id) return;
+                                setDispensingId(p.id);
+                                setDispensingMed(p);
+                              }}
+                              style={{ padding: "7px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                              Dispenser →
+                            </button>
+                          </div>
+                        </div>
+                        {p.diagnostic && <div style={{ background: "#fffbeb", borderRadius: 8, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: "#78350f", borderLeft: "3px solid #fbbf24" }}><strong>Diagnostic :</strong> {p.diagnostic}</div>}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {meds.length === 0
+                            ? <span style={{ color: "#94a3b8", fontSize: 12 }}>Aucun médicament listé</span>
+                            : meds.map((m: any, i: number) => (
+                              <span key={i} style={{ padding: "4px 12px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 20, fontSize: 12, fontWeight: 600, border: `1px solid #99f6e4` }}>💊 {m.medicament || m}</span>
+                            ))
+                          }
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Modal dispensation rapide */}
+                  {dispensingId && dispensingMed && (
+                    <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000, padding: 16, backdropFilter: "blur(2px)" }}>
+                      <div style={{ background: "white", borderRadius: 16, width: "100%", maxWidth: 520, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+                        <div style={{ height: 3, background: `linear-gradient(90deg,${TEAL},${TEAL_LIGHT})` }} />
+                        <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9" }}>
+                          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Dispenser l'ordonnance {dispensingMed.numero_ordo}</h3>
+                          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>Patient : {dispensingMed.p_prenom} {dispensingMed.p_nom}</p>
+                        </div>
+                        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+                          <div style={{ background: "#f0fdfa", borderRadius: 10, padding: "12px 14px" }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#0f766e", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Médicaments à dispenser</div>
+                            {(Array.isArray(dispensingMed.medicaments) ? dispensingMed.medicaments : []).map((m: any, i: number) => (
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < dispensingMed.medicaments.length-1 ? "1px solid #ccfbf1" : "none" }}>
+                                <span style={{ color: TEAL }}>💊</span>
+                                <span style={{ flex: 1, fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{m.medicament || m}</span>
+                              </div>
+                            ))}
+                            {(!dispensingMed.medicaments || dispensingMed.medicaments.length === 0) && <p style={{ color: "#94a3b8", fontSize: 13, margin: 0 }}>Aucun médicament listé dans l'ordonnance</p>}
+                          </div>
+                          <div>
+                            <label style={{ ...labelStyle, marginBottom: 6, display: "block" }}>Notes (optionnel)</label>
+                            <textarea className={inp} style={{ ...inpStyle, height: 70, resize: "none" as const, marginTop: 4 }} placeholder="Notes de dispensation..." id="dispense-notes" />
+                          </div>
+                          <div style={{ background: "#fffbeb", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#92400e", borderLeft: "3px solid #f59e0b" }}>
+                            ⚠️ La déduction de stock automatique se fait uniquement si les médicaments sont liés aux articles en stock. Pour gérer le stock précisément, utilisez l'onglet "Stock médicaments".
+                          </div>
+                        </div>
+                        <div style={{ padding: "14px 24px", borderTop: "1px solid #f1f5f9", display: "flex", gap: 10 }}>
+                          <button onClick={() => { setDispensingId(null); setDispensingMed(null); }} style={{ flex: 1, padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                          <button onClick={async () => {
+                            const notes = (document.getElementById("dispense-notes") as HTMLTextAreaElement)?.value || "";
+                            setSaving(true);
+                            try {
+                              const d = await post(`/pharmacy/dispense/${dispensingId}`, { notes, stock_movements: [] });
+                              if (d.success) {
+                                setPharmacyPending(prev => prev.filter(x => x.id !== dispensingId));
+                                setDispensingId(null); setDispensingMed(null);
+                                showToast("Ordonnance dispensée avec succès !");
+                                reloadPharmacy();
+                              } else showToast(d.message || "Erreur", false);
+                            } catch { showToast("Erreur de connexion", false); }
+                            finally { setSaving(false); }
+                          }} disabled={saving} style={{ flex: 2, padding: "9px 16px", background: saving ? "#94a3b8" : TEAL, color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                            {saving ? "Dispensation..." : "✓ Confirmer la dispensation"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ─ Historique dispensation ─ */}
+              {pharmacyTab === "history" && (
+                <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                        {["Ordonnance","Patient","Prescripteur","Médicaments dispensés","Date & Heure"].map(h => (
+                          <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pharmacyHistory.length === 0 ? (
+                        <tr><td colSpan={5} style={{ padding: "48px", textAlign: "center", color: "#94a3b8" }}>Aucune dispensation enregistrée</td></tr>
+                      ) : pharmacyHistory.map(h => {
+                        const meds: any[] = Array.isArray(h.medicaments_dispensed) ? h.medicaments_dispensed : [];
+                        return (
+                          <tr key={h.id} style={{ borderBottom: "1px solid #f8fafc" }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#fafafa"}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                            <td style={{ padding: "11px 14px", fontFamily: "monospace", fontSize: 11, color: "#94a3b8" }}>{h.numero_ordo || "—"}</td>
+                            <td style={{ padding: "11px 14px", fontWeight: 600, color: "#0f172a" }}>{h.p_prenom || ""} {h.p_nom || "Patient"}</td>
+                            <td style={{ padding: "11px 14px", color: "#475569" }}>{h.s_nom ? `Dr. ${h.s_prenom||""} ${h.s_nom}` : "—"}</td>
+                            <td style={{ padding: "11px 14px" }}>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                {meds.slice(0, 3).map((m: any, i: number) => (
+                                  <span key={i} style={{ padding: "2px 8px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 12, fontSize: 11 }}>💊 {m.medicament || m}</span>
+                                ))}
+                                {meds.length > 3 && <span style={{ color: "#94a3b8", fontSize: 11 }}>+{meds.length-3}</span>}
+                              </div>
+                            </td>
+                            <td style={{ padding: "11px 14px", color: "#64748b", whiteSpace: "nowrap" }}>
+                              {new Date(h.dispense_at).toLocaleDateString("fr-FR")} {new Date(h.dispense_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {pharmacyHistory.length > 0 && <div style={{ padding: "10px 16px", borderTop: "1px solid #f1f5f9", fontSize: 12, color: "#94a3b8" }}>{pharmacyHistory.length} dispensation{pharmacyHistory.length > 1 ? "s" : ""}</div>}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── PARAMÈTRES ── */}
           {section === "settings" && (
             <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
@@ -920,11 +1216,19 @@ export default function GestionClinique() {
                 {modal === "add-record"       && "Nouvelle consultation"}
                 {modal === "add-payment"      && "Encaisser un paiement"}
                 {modal === "add-invoice"      && "Créer une facture"}
+                {modal === "add-stock"        && "Ajouter un médicament au stock"}
+                {modal === "edit-stock"       && "Modifier le stock"}
               </h3>
             </div>
             <div style={{ padding: "20px 24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
 
               {modal === "add-patient" && <>
+                {/* Lien Moftal */}
+                <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 10, padding: "12px 14px" }}>
+                  <label style={{ ...labelStyle, color: TEAL_DARK }}>Numéro Moftal (optionnel)</label>
+                  <input className={inp} style={{ ...inpStyle, marginTop: 6, fontFamily: "monospace" }} placeholder="Ex: H-12345 — permet l'accès à l'espace patient en ligne" value={form.numero_h || ""} onChange={e => setForm((f: any) => ({ ...f, numero_h: e.target.value }))} />
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#0f766e" }}>Si le patient a un compte Moftal, entrez son numéro H pour lui donner accès à son espace patient numérique.</p>
+                </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div><label style={labelStyle}>Nom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f: any) => ({ ...f, nom: e.target.value }))} /></div>
                   <div><label style={labelStyle}>Prénom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prenom || ""} onChange={e => setForm((f: any) => ({ ...f, prenom: e.target.value }))} /></div>
@@ -994,6 +1298,20 @@ export default function GestionClinique() {
                 <div><label style={labelStyle}>Montant (GNF) *</label><input type="number" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.montant || ""} onChange={e => setForm((f: any) => ({ ...f, montant: e.target.value }))} /></div>
                 <div><label style={labelStyle}>Motif</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Consultation, Médicaments..." value={form.motif || ""} onChange={e => setForm((f: any) => ({ ...f, motif: e.target.value }))} /></div>
                 <div><label style={labelStyle}>Mode de paiement</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.mode_paiement || "especes"} onChange={e => setForm((f: any) => ({ ...f, mode_paiement: e.target.value }))}>{PAYMENT_MODES.map(m => <option key={m} value={m}>{PAYMENT_LABELS[m]}</option>)}</select></div>
+              </>}
+
+              {(modal === "add-stock" || modal === "edit-stock") && <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ gridColumn: "1/-1" }}><label style={labelStyle}>Nom du médicament *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f:any)=>({...f,nom:e.target.value}))} placeholder="Ex: Paracétamol, Amoxicilline..." /></div>
+                  <div><label style={labelStyle}>Forme</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.forme || "comprimé"} onChange={e => setForm((f:any)=>({...f,forme:e.target.value}))}>
+                    {["comprimé","sirop","injection","crème","pommade","gélule","suppositoire","gouttes","spray","patch","autre"].map(f => <option key={f}>{f}</option>)}
+                  </select></div>
+                  <div><label style={labelStyle}>Dosage</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.dosage || ""} onChange={e => setForm((f:any)=>({...f,dosage:e.target.value}))} placeholder="Ex: 500mg, 1g..." /></div>
+                  <div><label style={labelStyle}>Quantité en stock</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.quantite ?? 0} onChange={e => setForm((f:any)=>({...f,quantite:+e.target.value}))} /></div>
+                  <div><label style={labelStyle}>Seuil d'alerte (rupture)</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.quantite_min ?? 5} onChange={e => setForm((f:any)=>({...f,quantite_min:+e.target.value}))} /></div>
+                  <div><label style={labelStyle}>Prix unitaire (GNF)</label><input type="number" min={0} className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prix_unitaire ?? 0} onChange={e => setForm((f:any)=>({...f,prix_unitaire:+e.target.value}))} /></div>
+                  <div><label style={labelStyle}>Date d'expiration</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_expiration?.slice(0,10) || ""} onChange={e => setForm((f:any)=>({...f,date_expiration:e.target.value}))} /></div>
+                </div>
               </>}
 
               {modal === "add-invoice" && <>

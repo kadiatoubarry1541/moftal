@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import IdentiteModal from "../components/IdentiteModal";
 import EditProfileModal from "../components/EditProfileModal";
 import { AdminPanel } from "../components/AdminPanel";
@@ -41,6 +42,9 @@ export default function MonProfil() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [emailConfirm, setEmailConfirm] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const navigate = useNavigate();
 
   const loadUserData = () => {
@@ -85,6 +89,39 @@ export default function MonProfil() {
       }
     } catch (error) {
       console.error('Erreur lors du chargement des logos:', error);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!emailConfirm.trim()) {
+      toast.error('Veuillez saisir votre adresse email pour confirmer');
+      return;
+    }
+    setDeletingAccount(true);
+    try {
+      const session = localStorage.getItem("session_user");
+      const token = session ? JSON.parse(session).token : null;
+      const API_BASE = config.API_BASE_URL || 'http://localhost:5002/api';
+      const response = await fetch(`${API_BASE}/auth/account`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ email: emailConfirm.trim() })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.removeItem('session_user');
+        localStorage.removeItem('token');
+        navigate('/login', { state: { message: 'Votre compte a été supprimé avec succès.' } });
+      } else {
+        toast.error(data.message || 'Erreur lors de la suppression du compte');
+      }
+    } catch {
+      toast.error('Erreur de connexion au serveur');
+    } finally {
+      setDeletingAccount(false);
     }
   };
 
@@ -222,9 +259,72 @@ export default function MonProfil() {
                 {showActions ? '▲' : '▼'}
               </span>
             </button>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex-1 sm:flex-none min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-semibold rounded-lg transition-colors duration-200 text-sm sm:text-base border border-red-200"
+            >
+              🗑️ Supprimer mon compte
+            </button>
           </div>
         </div>
       </div>
+
+      {/* ── Logos d'activité professionnelle ── */}
+      {userLogos.length > 0 && (
+        <div
+          className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mt-6"
+          style={{ borderLeftWidth: "4px", borderLeftColor: "#6366f1" }}
+        >
+          <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+            🏅 Mes activités professionnelles
+          </h3>
+          <p className="text-xs text-slate-400 mb-4">
+            Logos attribués par les administrateurs de chaque service — ils reflètent vos activités sur la plateforme
+          </p>
+          <div className="flex flex-wrap gap-4">
+            {userLogos.map((userLogo) => {
+              if (!userLogo?.logo) return null;
+              return (
+                <div
+                  key={userLogo.id}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 min-w-[100px]"
+                  style={{ borderColor: userLogo.logo.color || "#6366f1", background: (userLogo.logo.color || "#6366f1") + "11" }}
+                >
+                  {/* Grand icône */}
+                  <div
+                    className="w-14 h-14 rounded-full flex items-center justify-center text-3xl shadow-md border-4 border-white"
+                    style={{ background: (userLogo.logo.color || "#6366f1") + "22" }}
+                  >
+                    <span style={{ color: userLogo.logo.color || "#6366f1" }}>
+                      {userLogo.logo.icon}
+                    </span>
+                  </div>
+                  {/* Nom du logo */}
+                  <span className="text-xs font-bold text-slate-700 text-center leading-tight max-w-[90px]">
+                    {userLogo.logo.name}
+                  </span>
+                  {/* Catégorie / description */}
+                  {userLogo.logo.category && (
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                      style={{ background: (userLogo.logo.color || "#6366f1") + "22", color: userLogo.logo.color || "#6366f1" }}
+                    >
+                      {userLogo.logo.category}
+                    </span>
+                  )}
+                  {/* Date d'attribution */}
+                  <span className="text-xs text-slate-400">
+                    {new Date(userLogo.assignedAt).toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-slate-400 mt-4 italic">
+            Ces logos ne sont pas attribués automatiquement — ils sont accordés par l'administrateur ou le chef de chaque service.
+          </p>
+        </div>
+      )}
 
       {/* ── Vidéo d'inscription ── */}
       {userData.video && (
@@ -567,6 +667,68 @@ export default function MonProfil() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ── Modale suppression de compte ── */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            {/* Header rouge */}
+            <div className="bg-red-600 p-5">
+              <h2 className="text-xl font-bold text-white">🗑️ Supprimer mon compte</h2>
+              <p className="text-red-100 text-sm mt-1">Cette action est irréversible</p>
+            </div>
+
+            {/* Corps */}
+            <div className="p-6 space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">
+                <p className="font-bold mb-1">⚠️ Attention — Action définitive</p>
+                <p>En supprimant votre compte, vous perdrez :</p>
+                <ul className="list-disc ml-4 mt-1 space-y-0.5">
+                  <li>Votre profil et toutes vos informations</li>
+                  <li>Votre arbre familial</li>
+                  <li>Vos histoires publiées</li>
+                  <li>Vos comptes professionnels</li>
+                </ul>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Saisissez votre adresse email pour confirmer
+                </label>
+                <input
+                  type="email"
+                  value={emailConfirm}
+                  onChange={(e) => setEmailConfirm(e.target.value)}
+                  placeholder="votre@email.com"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+                  onKeyDown={(e) => e.key === 'Enter' && handleDeleteAccount()}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Votre email enregistré : <strong>{userData.email || 'non renseigné'}</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* Boutons */}
+            <div className="flex gap-3 px-6 pb-6">
+              <button
+                onClick={() => { setShowDeleteModal(false); setEmailConfirm(''); }}
+                disabled={deletingAccount}
+                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount || !emailConfirm.trim()}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 text-sm"
+              >
+                {deletingAccount ? '⏳ Suppression...' : '🗑️ Confirmer la suppression'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -62,16 +62,16 @@ export function AdminWalletPro({ token, apiBase }: Props) {
   const fmt = (n: number) => n.toLocaleString('fr-GN') + ' FG';
 
   if (loading) return (
-    <div className="text-center py-10 text-gray-400">Chargement des wallets professionnels...</div>
+    <div className="text-center py-10 text-gray-400">Chargement des comptes Moftal Pay...</div>
   );
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-gray-800">💼 Moftal Pay — Wallets Professionnels</h2>
-        <p className="text-blue-600 text-xs font-bold">Comptes de retrait des professionnels Moftal</p>
+        <h2 className="text-xl font-bold text-gray-800">💼 Moftal Pay — Comptes Professionnels</h2>
+        <p className="text-blue-600 text-xs font-bold">Comptes Moftal Pay des professionnels</p>
         <p className="text-sm text-gray-500 mt-1">
-          Tous les wallets pro actifs — retraits Orange Money uniquement via FedaPay.
+          Tous les comptes Moftal Pay actifs — retraits Orange Money uniquement via FedaPay.
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
       {totaux && (
         <div className="rounded-2xl p-5 text-white" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
           <p className="text-blue-200 text-sm mb-3 font-semibold">
-            Vue globale — {wallets.length} wallet{wallets.length > 1 ? 's' : ''} professionnel{wallets.length > 1 ? 's' : ''}
+            Vue globale — {wallets.length} compte{wallets.length > 1 ? 's' : ''} Moftal Pay
           </p>
           <div className="grid grid-cols-3 gap-3">
             {[
@@ -106,7 +106,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
       {/* Liste */}
       <div className="space-y-3">
         {filtrés.length === 0 && (
-          <p className="text-center text-gray-400 py-6">Aucun wallet professionnel trouvé.</p>
+          <p className="text-center text-gray-400 py-6">Aucun compte Moftal Pay trouvé.</p>
         )}
         {filtrés.map(w => (
           <div key={w.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">

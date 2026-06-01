@@ -4,7 +4,7 @@ const BREVO_API = 'https://api.brevo.com/v3/smtp/email';
 
 export async function sendEmail({ apiKey, to, subject, html, from, fromName }) {
   const payload = {
-    sender: { email: from ?? 'noreply@enfants-adam.app', name: fromName ?? 'Les Enfants d\'Adam' },
+    sender: { email: from ?? 'noreply@moftal.com', name: fromName ?? 'Moftal' },
     to: Array.isArray(to) ? to : [{ email: to }],
     subject,
     htmlContent: html,
@@ -28,7 +28,7 @@ export async function sendPasswordResetEmail({ apiKey, toEmail, resetLink, preno
   return sendEmail({
     apiKey,
     to: toEmail,
-    subject: 'Réinitialisation de votre mot de passe — Les Enfants d\'Adam',
+    subject: 'Réinitialisation de votre mot de passe — Moftal',
     html: `
       <div style="font-family:sans-serif;max-width:500px;margin:auto">
         <h2 style="color:#065f46">Réinitialisation du mot de passe</h2>
@@ -47,7 +47,7 @@ export async function sendWelcomeEmail({ apiKey, toEmail, prenom, numeroH }) {
   return sendEmail({
     apiKey,
     to: toEmail,
-    subject: 'Bienvenue dans la famille — Les Enfants d\'Adam',
+    subject: 'Bienvenue dans la famille — Moftal',
     html: `
       <div style="font-family:sans-serif;max-width:500px;margin:auto">
         <h2 style="color:#065f46">Bienvenue, ${prenom} !</h2>

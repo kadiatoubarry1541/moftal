@@ -85,6 +85,9 @@ async function fixProEnum() {
       'supplier',
       'scientist',
       'ngo',
+      'mosque',
+      'madrasa',
+      'commerce',
       'vendor',
       'producer',
       'broker',
@@ -92,6 +95,7 @@ async function fixProEnum() {
       'transport',
       'beauty',
       'artisan',
+      'mairie',
     ];
 
     /* ── 5. Ajouter les valeurs manquantes ── */

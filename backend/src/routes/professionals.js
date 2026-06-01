@@ -186,6 +186,43 @@ router.get('/my-accounts', authenticate, async (req, res) => {
   }
 });
 
+// POST /api/professionals/:id/ensure-tenant
+// Auto-génère le tenant_code et l'entrée management_tenants si manquants
+router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
+
+    const ownerMatch = account.ownerNumeroH === req.userId || account.ownerNumeroH === req.user?.numeroH;
+    const isAdminUser = !!(req.user?.isMasterAdmin || req.user?.role === 'admin' || req.user?.role === 'super-admin');
+    if (!ownerMatch && !isAdminUser) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+
+    if (account.status !== 'approved') {
+      return res.status(400).json({ success: false, message: 'Le compte doit être approuvé.' });
+    }
+
+    const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU', vendor:'VENT', producer:'PROD', broker:'BROK', restaurant:'REST', transport:'TRANS', mairie:'MAIR', beauty:'BEAU', artisan:'ARTIS', immobilier:'IMMO', reseau:'RESEAU' };
+    const prefix = prefixMap[account.type] || 'PRO';
+    const tenantCode = account.tenant_code || `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
+
+    await sequelize.query(
+      `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
+      { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
+    ).catch(() => {});
+
+    if (!account.tenant_code) {
+      await account.update({ tenant_code: tenantCode });
+    }
+
+    res.json({ success: true, tenantCode });
+  } catch (e) {
+    console.error('ensure-tenant:', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // PUT /api/professionals/:id - Mettre à jour mon compte
 router.put('/:id', authenticate, async (req, res) => {
   try {
@@ -318,16 +355,17 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       });
     }
 
-    // Générer le code tenant unique pour les cliniques et écoles
-    const mgmtTypes = ['clinic', 'school', 'enterprise'];
+    // Générer le code tenant unique pour tous les types avec Gestion Interne
+    const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
     let tenantCode = account.tenant_code || null;
     if (mgmtTypes.includes(account.type) && !tenantCode) {
-      const prefix = account.type === 'clinic' ? 'CLIN' : account.type === 'school' ? 'ECO' : 'ENT';
+      const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU' };
+      const prefix = prefixMap[account.type] || 'PRO';
       tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
       // Créer l'entrée dans management_tenants
       await sequelize.query(
-        `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, professional_account_id) VALUES (:code, :type, :name, :owner, :pid) ON CONFLICT (tenant_code) DO NOTHING`,
-        { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH, pid: account.id } }
+        `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
+        { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
       );
     }
 
@@ -404,6 +442,21 @@ router.post('/admin/subscription/:id', authenticate, requireAdmin, async (req, r
       subscriptionStatus: status,
       subscriptionValidUntil: newValidUntil
     });
+
+    // Créer le tenant_code et l'entrée management si manquant lors d'une activation
+    if (status === 'active' && !account.tenant_code) {
+      const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
+      if (mgmtTypes.includes(account.type)) {
+        const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU' };
+        const prefix = prefixMap[account.type] || 'PRO';
+        const newTenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
+        await sequelize.query(
+          `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
+          { replacements: { code: newTenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
+        );
+        await account.update({ tenant_code: newTenantCode });
+      }
+    }
 
     // Envoyer une notification si activation ou suspension
     if (status === 'active') {
