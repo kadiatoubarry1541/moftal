@@ -26,9 +26,11 @@ interface WrittenData {
   activite1Autre?: string
   ethnieAutre?: string
   familleAutre?: string
-  activiteDescription?: string   // Description facultative de la profession (Autre)
-  activiteDoc?: File | null       // Document professionnel facultatif (diplôme, attestation…)
-  activitePreuve?: File | null    // Preuve d'activité : photo, PDF, document
+  activiteDescription?: string
+  activiteDoc?: File | null
+  activitePreuve?: File | null
+  specialite?: string              // Spécialité dans l'activité principale
+  statutMatrimonial?: string       // Statut matrimonial
   prenom: string
   telephone: string
   email: string
@@ -74,6 +76,8 @@ export function WrittenRegistration() {
     activiteDescription: '',
     activiteDoc: null,
     activitePreuve: null,
+    specialite: '',
+    statutMatrimonial: '',
     prenom: '',
     telephone: '',
     email: '',
@@ -99,6 +103,7 @@ export function WrittenRegistration() {
   const [hasShownReminder, setHasShownReminder] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set())
   const [paysSectionExpanded, setPaysSectionExpanded] = useState(true)
+  const [genreExpanded, setGenreExpanded] = useState(true)
   const navigate = useNavigate()
 
   const countries = useMemo(
@@ -499,14 +504,92 @@ export function WrittenRegistration() {
           </div>
           <div className="col-6">
             <div className="field">
-              <label>Genre</label>
-              <select
-                value={data.genre}
-                onChange={(e) => setData((prev) => ({ ...prev, genre: e.target.value }))}
-              >
-                <option value="HOMME">HOMME</option>
-                <option value="FEMME">FEMME</option>
-              </select>
+              <label>Genre & Statut</label>
+              {/* Accordéon : fermé = résumé cliquable / ouvert = sélecteurs */}
+              {data.genre && data.statutMatrimonial && !genreExpanded ? (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setGenreExpanded(true)}
+                  onKeyDown={(e) => e.key === 'Enter' && setGenreExpanded(true)}
+                  className="w-full px-4 py-3 border-2 border-green-400 rounded-lg bg-white cursor-pointer hover:border-blue-400 flex items-center justify-between transition-colors"
+                >
+                  <span className="text-gray-800 font-medium">
+                    {data.genre === 'HOMME' ? '👨 Homme' : data.genre === 'FEMME' ? '👩 Femme' : data.genre}
+                    {' · '}
+                    {data.statutMatrimonial}
+                  </span>
+                  <span className="text-gray-400 text-sm">✏️</span>
+                </div>
+              ) : (
+                <div
+                  className="space-y-3 p-4 border-2 border-gray-300 rounded-lg bg-white"
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node) && data.genre && data.statutMatrimonial) {
+                      setGenreExpanded(false)
+                    }
+                  }}
+                >
+                  {/* Genre */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-2">Genre *</label>
+                    <div className="flex gap-3">
+                      {[
+                        { val: 'HOMME', label: '👨 Homme' },
+                        { val: 'FEMME', label: '👩 Femme' },
+                        { val: 'AUTRE', label: '🧑 Autre' },
+                      ].map(({ val, label }) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setData((prev) => ({ ...prev, genre: val }))}
+                          className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                            data.genre === val
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Statut matrimonial — apparaît quand le genre est choisi */}
+                  {data.genre && (
+                    <div style={{ animation: 'fadeInDown 0.25s ease' }}>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">
+                        Statut matrimonial *
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { val: 'Célibataire',   icon: '🔵' },
+                          { val: 'Marié(e)',       icon: '💍' },
+                          { val: 'Veuf/Veuve',    icon: '🕊️' },
+                          { val: 'Divorcé(e)',    icon: '📝' },
+                          { val: 'Séparé(e)',     icon: '↔️' },
+                        ].map(({ val, icon }) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => {
+                              setData((prev) => ({ ...prev, statutMatrimonial: val }))
+                              // Ferme automatiquement quand les deux sont choisis
+                              setTimeout(() => setGenreExpanded(false), 300)
+                            }}
+                            className={`py-2 px-3 rounded-full border-2 text-sm font-medium transition-all ${
+                              data.statutMatrimonial === val
+                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                            }`}
+                          >
+                            {icon} {val}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -687,6 +770,32 @@ export function WrittenRegistration() {
                   <option value="Retraité">Retraité</option>
                   <option value="Autre">✏️ Autre (je saisis mon activité)</option>
                 </select>
+
+                {/* ── Spécialité : apparaît dès qu'une activité est choisie ── */}
+                {data.activite1 && data.activite1 !== 'Autre' && (
+                  <div className="mt-3" style={{ animation: 'fadeInDown 0.25s ease', borderLeft: '3px solid #10b981', paddingLeft: '0.75rem' }}>
+                    <label className="block text-xs font-semibold text-emerald-700 mb-1">
+                      🎯 Votre spécialité dans « {data.activite1} »
+                      <span className="text-gray-400 font-normal ml-1">(optionnel mais utile)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={data.specialite || ''}
+                      onChange={(e) => setData((prev) => ({ ...prev, specialite: e.target.value }))}
+                      placeholder={`Ex : ${
+                        data.activite1 === 'Santé' ? 'Cardiologie, Pédiatrie, Sage-femme…' :
+                        data.activite1 === 'Enseignement' ? 'Mathématiques, Primaire, Lycée…' :
+                        data.activite1 === 'Commerce' ? 'Textile, Alimentation, Électronique…' :
+                        data.activite1 === 'Agriculture' ? 'Maraîchage, Riziculture, Élevage bovin…' :
+                        data.activite1 === 'Transport' ? 'Taxi, Moto, Livraison, Bus…' :
+                        data.activite1 === 'Informatique' ? 'Développement web, IA, Réseaux…' :
+                        data.activite1 === 'Construction' ? 'Maçonnerie, Génie civil, Architecture…' :
+                        'Précisez votre domaine exact…'
+                      }`}
+                      className="w-full px-3 py-2 border-2 border-emerald-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30"
+                    />
+                  </div>
+                )}
 
                 {/* Sous-champs quand "Autre" est sélectionné */}
                 {data.activite1 === 'Autre' && (

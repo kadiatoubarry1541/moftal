@@ -4,6 +4,7 @@ import { config } from '../config/api';
 import ProSection from '../components/ProSection';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { hideIncrement } from '../utils/formatNumeroH';
+import { getUserGeoContext } from '../utils/proximity';
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -561,6 +562,34 @@ export default function Activite() {
           </div>
         </div>
       </div>
+
+      {/* Bandeau géographique — montre ta ville + ton activité */}
+      {userData && (() => {
+        const geo = getUserGeoContext();
+        const userCity = geo.city || geo.region || geo.country || '';
+        const userActivity = userData.activite1 || '';
+        const userSpec = (userData as any).specialite || '';
+        if (!userCity && !userActivity) return null;
+        return (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
+            <div className="max-w-7xl mx-auto flex items-center gap-3 text-sm text-amber-800 flex-wrap">
+              {userCity && (
+                <span className="flex items-center gap-1">
+                  📍 <strong>{userCity.charAt(0).toUpperCase() + userCity.slice(1)}</strong>
+                </span>
+              )}
+              {userActivity && (
+                <span className="flex items-center gap-1">
+                  🎯 {userActivity}{userSpec ? ` · ${userSpec}` : ''}
+                </span>
+              )}
+              <span className="text-amber-500 text-xs ml-auto">
+                Vous voyez les publications de votre groupe d'activité
+              </span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Navigation Tabs */}
       <div className="bg-white border-b">

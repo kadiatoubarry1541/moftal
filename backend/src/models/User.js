@@ -339,6 +339,17 @@ User.init({
   activite3: {
     type: DataTypes.STRING
   },
+  // Spécialité dans l'activité principale
+  specialite: {
+    type: DataTypes.STRING,
+    defaultValue: ''
+  },
+  // Statut matrimonial (mis à jour par l'utilisateur)
+  statutMatrimonial: {
+    type: DataTypes.STRING,
+    field: 'statut_matrimonial',
+    defaultValue: ''
+  },
   
   // Lieux de résidence
   lieu1: {

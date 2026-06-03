@@ -30,6 +30,8 @@ interface UserData {
   activite1?: string;
   activite2?: string;
   activite3?: string;
+  specialite?: string;
+  statutMatrimonial?: string;
   lieu1?: string;
   lieu2?: string;
   lieu3?: string;
@@ -194,6 +196,8 @@ export default function EditProfileModal({
             activite1: formData.activite1,
             activite2: formData.activite2,
             activite3: formData.activite3,
+            specialite: formData.specialite,
+            statutMatrimonial: formData.statutMatrimonial,
             lieu1: formData.lieu1,
             lieu2: formData.lieu2,
             lieu3: formData.lieu3,
@@ -507,7 +511,7 @@ export default function EditProfileModal({
             </p>
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Activité 1</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Activité principale</label>
                 <select
                   value={formData.activite1 || ""}
                   onChange={(e) => handleInputChange("activite1", e.target.value)}
@@ -520,6 +524,51 @@ export default function EditProfileModal({
                     </option>
                   ))}
                 </select>
+                {/* Spécialité — apparaît dès qu'une activité est choisie */}
+                {formData.activite1 && (
+                  <div className="mt-2">
+                    <label className="block text-xs font-semibold text-emerald-700 mb-1">
+                      🎯 Spécialité dans « {formData.activite1} »
+                      <span className="text-gray-400 font-normal ml-1">(optionnel)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.specialite || ""}
+                      onChange={(e) => handleInputChange("specialite", e.target.value)}
+                      placeholder="Ex : Cardiologie, Maraîchage, Développement web…"
+                      className="w-full px-3 py-2 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30 text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+              {/* Statut matrimonial */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  💍 Statut matrimonial
+                  <span className="text-gray-400 font-normal ml-1">(vous pouvez le mettre à jour à tout moment)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { val: 'Célibataire',   icon: '🔵' },
+                    { val: 'Marié(e)',       icon: '💍' },
+                    { val: 'Veuf/Veuve',    icon: '🕊️' },
+                    { val: 'Divorcé(e)',    icon: '📝' },
+                    { val: 'Séparé(e)',     icon: '↔️' },
+                  ].map(({ val, icon }) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleInputChange("statutMatrimonial", formData.statutMatrimonial === val ? '' : val)}
+                      className={`py-2 px-3 rounded-full border-2 text-sm font-medium transition-all ${
+                        formData.statutMatrimonial === val
+                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      {icon} {val}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Activité 2 (optionnel)</label>
