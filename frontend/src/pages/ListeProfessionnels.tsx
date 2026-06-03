@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import { sortByProximity, proximityScore, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -45,7 +46,7 @@ function getTypeIcon(type: string) {
 export default function ListeProfessionnels() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [accounts, setAccounts] = useState<ProAccount[]>([]);
+  const [rawAccounts, setRawAccounts] = useState<ProAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -53,10 +54,41 @@ export default function ListeProfessionnels() {
 
   const currentUser = getSessionUser();
   const userIsAdmin = isAdmin(currentUser);
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const [gpsActive, setGpsActive] = useState(false);
+
+  // Tri réactif : se recalcule quand GPS arrive ou liste change
+  const accounts = useMemo(
+    () => sortByProximity(rawAccounts, userGeo),
+    [rawAccounts, userGeo]
+  );
+
+  // Groupes géographiques : même zone (score ≤ 150) vs reste du monde
+  const hasGeoContext = !!(userGeo.city || userGeo.region || userGeo.country || userGeo.coords);
+  const { localAccounts, otherAccounts } = useMemo(() => {
+    if (!hasGeoContext) return { localAccounts: [] as ProAccount[], otherAccounts: accounts };
+    const local: ProAccount[] = [];
+    const other: ProAccount[] = [];
+    for (const pro of accounts) {
+      if (proximityScore(pro, userGeo) <= 150) local.push(pro);
+      else other.push(pro);
+    }
+    return { localAccounts: local, otherAccounts: other };
+  }, [accounts, userGeo, hasGeoContext]);
 
   useEffect(() => {
     loadAccounts();
   }, [filterType]);
+
+  // Demande GPS silencieuse au chargement
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) {
+        setUserGeo(prev => ({ ...prev, coords }));
+        setGpsActive(true);
+      }
+    });
+  }, []);
 
   const loadAccounts = async () => {
     setLoading(true);
@@ -66,7 +98,7 @@ export default function ListeProfessionnels() {
         : `${API_BASE}/api/professionals/approved`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) setAccounts(data.accounts || []);
+      if (data.success) setRawAccounts(data.accounts || []);
     } catch (error) {
       console.error("Erreur:", error);
     } finally {
@@ -81,7 +113,7 @@ export default function ListeProfessionnels() {
       const url = `${API_BASE}/api/professionals/search?q=${encodeURIComponent(search)}&type=${filterType}`;
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) setAccounts(data.accounts || []);
+      if (data.success) setRawAccounts(data.accounts || []);
     } catch (error) {
       console.error("Erreur:", error);
     } finally {
@@ -135,6 +167,19 @@ export default function ListeProfessionnels() {
           ))}
         </div>
 
+        {/* Indicateur proximité active */}
+        {(userGeo.city || userGeo.country || gpsActive) && (
+          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-4">
+            <span>{gpsActive ? "📡" : "📍"}</span>
+            <span>
+              {gpsActive
+                ? "Résultats triés par distance GPS — les plus proches de vous apparaissent en premier"
+                : `Résultats triés par proximité (${userGeo.city || userGeo.country}) — les plus proches de vous apparaissent en premier`
+              }
+            </span>
+          </div>
+        )}
+
         {/* Liste */}
         {loading ? (
           <div className="text-center py-12 text-gray-500">Chargement...</div>
@@ -143,11 +188,22 @@ export default function ListeProfessionnels() {
             <div className="text-4xl mb-3">📭</div>
             <p className="text-gray-500">Aucun professionnel trouvé</p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {accounts.map((pro) => {
-              const isExpanded = expandedId === pro.id;
-              const location = buildLocation(pro);
+        ) : hasGeoContext ? (
+          <>
+            {/* ── SECTION : DANS VOTRE ZONE ── */}
+            {localAccounts.length > 0 && (
+              <section className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm">
+                    <span>{gpsActive ? "📡" : "📍"}</span>
+                    <span>{gpsActive ? `Près de vous (${localAccounts.length})` : `Dans votre pays (${localAccounts.length})`}</span>
+                  </div>
+                  <div className="flex-1 h-px bg-emerald-200 dark:bg-emerald-800" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {localAccounts.map((pro) => {
+                    const isExpanded = expandedId === pro.id;
+                    const location = buildLocation(pro);
 
               return (
                 <div key={pro.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
@@ -169,6 +225,16 @@ export default function ListeProfessionnels() {
                     <span className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-full shadow-sm">
                       {TYPES.find(t => t.id === pro.type)?.icon} {TYPES.find(t => t.id === pro.type)?.label}
                     </span>
+                    {/* Badge proximité */}
+                    {(() => {
+                      const prox = proximityLabel(pro, userGeo);
+                      return prox ? (
+                        <span className="absolute top-2 right-2 px-2 py-0.5 text-white text-xs font-semibold rounded-full shadow-sm"
+                          style={{ backgroundColor: prox.color }}>
+                          {prox.text}
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
 
                   {/* ── INFOS PRINCIPALES ── */}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProSection from '../components/ProSection';
+import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from '../utils/proximity';
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -62,6 +63,8 @@ export default function Sante() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const [gpsActive, setGpsActive] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -85,6 +88,16 @@ export default function Sante() {
       navigate("/login");
     }
   }, [navigate]);
+
+  // Demande GPS silencieuse
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) {
+        setUserGeo(prev => ({ ...prev, coords }));
+        setGpsActive(true);
+      }
+    });
+  }, []);
 
   const loadData = async () => {
     try {
@@ -112,13 +125,14 @@ export default function Sante() {
       
       if (response.ok) {
         const data = await response.json();
-        setHospitals(data.hospitals || []);
+        const geo = getUserGeoContext();
+        setHospitals(sortByProximity(data.hospitals || [], geo));
       } else {
-        setHospitals(getDefaultHospitals());
+        setHospitals(sortByProximity(getDefaultHospitals(), getUserGeoContext()));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des hôpitaux:', error);
-      setHospitals(getDefaultHospitals());
+      setHospitals(sortByProximity(getDefaultHospitals(), getUserGeoContext()));
     }
   };
 
@@ -131,16 +145,17 @@ export default function Sante() {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        setDoctors(data.doctors || []);
+        const geo = getUserGeoContext();
+        setDoctors(sortByProximity(data.doctors || [], geo));
       } else {
-        setDoctors(getDefaultDoctors());
+        setDoctors(sortByProximity(getDefaultDoctors(), getUserGeoContext()));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des médecins:', error);
-      setDoctors(getDefaultDoctors());
+      setDoctors(sortByProximity(getDefaultDoctors(), getUserGeoContext()));
     }
   };
 
