@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
@@ -33,6 +33,8 @@ interface ActivityGroup {
   isActive: boolean;
   createdBy: string;
   createdAt: string;
+  pays?: string;
+  region?: string;
 }
 
 interface ActivityPost {
@@ -149,6 +151,11 @@ export default function Activite() {
   // Formulaire dédié aux outils
   const [toolForm, setToolForm] = useState({ nom: '', description: '' });
 
+  // Garde paiement outils
+  const [outilsAcces, setOutilsAcces] = useState<boolean | null>(null);
+  const [outilsPayLoading, setOutilsPayLoading] = useState(false);
+  const [showOutilsModal, setShowOutilsModal] = useState(false);
+
   useEffect(() => {
     const session = localStorage.getItem("session_user");
     if (!session) {
@@ -164,6 +171,14 @@ export default function Activite() {
         return;
       }
       setUserData(user);
+
+      // Vérifier accès outils
+      const token = parsed.token || localStorage.getItem('token');
+      if (token) {
+        fetch(`${API_BASE_URL.replace('/api', '')}/api/payment/acces-outils`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json()).then(d => setOutilsAcces(!!d.aAcces)).catch(() => setOutilsAcces(false));
+      }
 
       // Pays de l'utilisateur : pays > lieuResidence1 > ''
       const userPays = user.pays || user.lieuResidence1 || '';
@@ -238,10 +253,9 @@ export default function Activite() {
     }
   };
 
-  const loadActivityGroups = async () => {
+  const loadActivityGroups = useCallback(async () => {
     try {
       const token = getToken();
-      // Passe le pays pour filtrer les groupes : l'utilisateur voit d'abord son pays
       const paysParam = selectedPays ? `&pays=${encodeURIComponent(selectedPays)}` : '';
       const response = await fetch(`${API_BASE_URL}/activities/groups?activity=${activeTab}${paysParam}`, {
         headers: {
@@ -301,14 +315,14 @@ export default function Activite() {
       console.error('Erreur lors du chargement des groupes:', error);
       const defaultGroups = getDefaultActivityGroups();
       setGroups(defaultGroups);
-      // Auto-sélectionner le premier groupe par défaut pour permettre la publication
       if (defaultGroups.length > 0) {
         if (!selectedGroup || selectedGroup.activity !== activeTab) {
           setSelectedGroup(defaultGroups[0]);
         }
       }
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedPays]);
 
   const getDefaultActivityGroups = (): ActivityGroup[] => [
     {
@@ -488,9 +502,28 @@ export default function Activite() {
     }
   };
 
+  const payerOutils = async () => {
+    setOutilsPayLoading(true);
+    try {
+      const session = localStorage.getItem("session_user");
+      const token = session ? (JSON.parse(session).token || localStorage.getItem('token')) : localStorage.getItem('token');
+      const r = await fetch(`${API_BASE_URL.replace('/api', '')}/api/payment/initiate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 20000, currency: 'GNF', purpose: 'publication_outil_pass', description: 'Pass publication outils Activité — 20 000 GNF/an' }),
+      });
+      const d = await r.json();
+      if (d.success && d.paymentUrl) { window.location.href = d.paymentUrl; }
+      else alert(d.message || 'Erreur. Réessayez.');
+    } catch { alert('Erreur de connexion.'); }
+    finally { setOutilsPayLoading(false); }
+  };
+
   const sendTool = async () => {
     if (!selectedGroup) { alert('Veuillez sélectionner un groupe'); return; }
     if (!toolForm.nom.trim()) { alert('Veuillez entrer le nom ou le lien de l\'outil'); return; }
+    // Vérifier le paiement
+    if (outilsAcces === false) { setShowOutilsModal(true); return; }
 
     try {
       const formData = new FormData();
@@ -556,7 +589,7 @@ export default function Activite() {
     setFeedFilter('all');
     setSelectedGroup(null);
     loadActivityGroups();
-  }, [activeTab, selectedPays]);
+  }, [activeTab, selectedPays, loadActivityGroups]);
 
   const filteredGroups = groups.filter(group => group.activity === activeTab);
 
@@ -967,5 +1000,29 @@ export default function Activite() {
       </div>
     </div>
   </div>
+
+  {/* ── Modal paiement pass outils ── */}
+  {showOutilsModal && (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
+        <div className="text-4xl mb-3">🛠️</div>
+        <h3 className="font-black text-lg text-gray-900 mb-1">Publication d'outil</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Pour publier un outil dans Activité, un abonnement annuel est requis.
+        </p>
+        <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 mb-4">
+          <p className="font-black text-2xl text-blue-900">20 000 GNF</p>
+          <p className="text-xs text-blue-500">par an · publications illimitées</p>
+        </div>
+        <button onClick={payerOutils} disabled={outilsPayLoading}
+          className="w-full py-3 rounded-xl font-black text-white text-sm mb-2 disabled:opacity-50"
+          style={{ background: 'linear-gradient(135deg,#2563eb,#1e3a5f)' }}>
+          {outilsPayLoading ? '⏳ Redirection...' : '💳 Payer 20 000 GNF → Publier'}
+        </button>
+        <button onClick={() => setShowOutilsModal(false)} className="w-full py-2 text-sm text-gray-400 hover:text-gray-600">Annuler</button>
+        <p className="text-xs text-gray-300 mt-2">Paiement sécurisé via FedaPay</p>
+      </div>
+    </div>
+  )}
   );
 }
