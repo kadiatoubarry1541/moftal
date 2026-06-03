@@ -12,62 +12,80 @@ const router = express.Router();
 router.use(authenticate);
 
 // @route   GET /api/activities/groups
-// @desc    Récupérer les organisations d'activités
+// @desc    Récupérer les groupes d'activités, filtrés par pays si fourni
 // @access  Authentifié
 router.get('/groups', async (req, res) => {
   try {
-    const { activity } = req.query;
-    
+    const { activity, pays } = req.query;
+
     const where = { isActive: true };
-    if (activity) {
-      where.activity = activity;
+    if (activity) where.activity = activity;
+
+    // Filtre par pays : si fourni, on retourne les groupes de ce pays
+    // + les groupes sans pays (groupes globaux legacy)
+    if (pays) {
+      where[Op.or] = [
+        { pays },
+        { pays: '' },
+        { pays: null }
+      ];
     }
-    
+
     const groups = await ActivityGroup.findAll({
       where,
-      order: [['created_at', 'DESC']]
+      order: [
+        // Les groupes du pays demandé apparaissent en premier
+        ...(pays ? [[ActivityGroup.sequelize.literal(`CASE WHEN pays = '${pays.replace(/'/g, "''")}' THEN 0 ELSE 1 END`), 'ASC']] : []),
+        ['created_at', 'DESC']
+      ]
     });
-    
-    res.json({
-      success: true,
-      groups
-    });
+
+    res.json({ success: true, groups });
   } catch (error) {
-    console.error('Erreur lors de la récupération des organisations:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la récupération des organisations'
-    });
+    console.error('Erreur lors de la récupération des groupes:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
 // @route   POST /api/activities/groups
-// @desc    Créer un nouveau organisation d'activité
+// @desc    Créer un groupe d'activité — tagué automatiquement au pays de l'utilisateur
 // @access  Authentifié
 router.post('/groups', async (req, res) => {
   try {
-    const { name, description, activity, createdBy } = req.body;
-    
+    const { name, description, activity, createdBy, pays } = req.body;
+
+    // Récupère le pays depuis : body > profil utilisateur connecté
+    let groupPays = pays || '';
+    if (!groupPays && req.user?.numeroH) {
+      try {
+        const creator = await User.findByPk(req.user.numeroH);
+        groupPays = creator?.pays || creator?.lieuResidence1 || '';
+      } catch { /* ignore */ }
+    }
+
+    // Vérifie si un groupe existe déjà pour ce pays + activité pour éviter les doublons
+    const existing = await ActivityGroup.findOne({
+      where: { activity, pays: groupPays || '', isActive: true }
+    });
+
+    if (existing) {
+      return res.status(200).json({ success: true, group: existing, message: 'Groupe existant' });
+    }
+
     const group = await ActivityGroup.create({
-      name,
-      description,
+      name: name || `Groupe ${activity}${groupPays ? ` — ${groupPays}` : ''}`,
+      description: description || `Groupe d'activité pour les membres de ${groupPays || 'la plateforme'}`,
       activity,
+      pays: groupPays,
       members: [createdBy || req.user.numeroH],
       posts: [],
       createdBy: createdBy || req.user.numeroH
     });
-    
-    res.status(201).json({
-      success: true,
-      group,
-      message: 'Organisation créé avec succès'
-    });
+
+    res.status(201).json({ success: true, group, message: 'Groupe créé avec succès' });
   } catch (error) {
-    console.error('Erreur lors de la création du organisation:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la création du organisation'
-    });
+    console.error('Erreur lors de la création du groupe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

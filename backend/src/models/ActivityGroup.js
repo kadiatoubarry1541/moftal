@@ -51,6 +51,16 @@ ActivityGroup.init({
     type: DataTypes.STRING,
     allowNull: false,
     comment: 'NumeroH du créateur'
+  },
+  pays: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+    comment: 'Pays du groupe — chaque pays a ses propres groupes par activité'
+  },
+  region: {
+    type: DataTypes.STRING,
+    defaultValue: '',
+    comment: 'Région optionnelle pour sous-groupes géographiques'
   }
 }, {
   sequelize,
@@ -60,12 +70,9 @@ ActivityGroup.init({
   createdAt: 'created_at',
   updatedAt: 'updated_at',
   indexes: [
-    {
-      fields: ['activity']
-    },
-    {
-      fields: ['is_active']
-    }
+    { fields: ['activity'] },
+    { fields: ['is_active'] },
+    { fields: ['pays'] }
   ]
 });
 

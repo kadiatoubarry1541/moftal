@@ -59,10 +59,22 @@ interface ActivityComment {
 }
 
 
+// Liste de pays pour le sélecteur — les plus utilisés d'abord
+const PAYS_LISTE = [
+  'Guinée', 'Sénégal', 'Mali', 'Côte d\'Ivoire', 'Burkina Faso',
+  'Niger', 'Mauritanie', 'Guinée-Bissau', 'Sierra Leone', 'Liberia',
+  'Ghana', 'Bénin', 'Togo', 'Cameroun', 'Congo', 'Gabon',
+  'France', 'Belgique', 'Canada', 'États-Unis', 'Maroc', 'Algérie',
+  'Tunisie', 'Égypte', 'Afrique du Sud', 'Autre'
+];
+
 export default function Activite() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'Activité1' | 'Activité2' | 'Activité3'>('Activité1');
-  
+
+  // Pays sélectionné — par défaut = pays de l'utilisateur connecté
+  const [selectedPays, setSelectedPays] = useState<string>('');
+
   const [groups, setGroups] = useState<ActivityGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ActivityGroup | null>(null);
   const [activityMessages, setActivityMessages] = useState<any[]>([]);
@@ -153,6 +165,10 @@ export default function Activite() {
       }
       setUserData(user);
 
+      // Pays de l'utilisateur : pays > lieuResidence1 > ''
+      const userPays = user.pays || user.lieuResidence1 || '';
+      setSelectedPays(userPays);
+
       // Choisir l'onglet initial en fonction des activités réellement renseignées
       if (user.activite1) {
         setActiveTab('Activité1');
@@ -161,7 +177,6 @@ export default function Activite() {
       } else if (user.activite3) {
         setActiveTab('Activité3');
       } else {
-        // Aucun activité renseignée: garder Activité1 par défaut
         setActiveTab('Activité1');
       }
 
@@ -226,27 +241,30 @@ export default function Activite() {
   const loadActivityGroups = async () => {
     try {
       const token = getToken();
-      const response = await fetch(`${API_BASE_URL}/activities/groups?activity=${activeTab}`, {
+      // Passe le pays pour filtrer les groupes : l'utilisateur voit d'abord son pays
+      const paysParam = selectedPays ? `&pays=${encodeURIComponent(selectedPays)}` : '';
+      const response = await fetch(`${API_BASE_URL}/activities/groups?activity=${activeTab}${paysParam}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         let groups = data.groups || [];
 
-        // Si aucun groupe n'existe pour cette activité, en créer un automatiquement
-        if (groups.length === 0) {
+        // Si aucun groupe n'existe pour ce pays + activité, en créer un automatiquement
+        if (groups.length === 0 || !groups.some((g: ActivityGroup & {pays?: string}) => g.pays === selectedPays)) {
           try {
             const createRes = await fetch(`${API_BASE_URL}/activities/groups`, {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                name: `Groupe ${activeTab}`,
-                description: `Groupe principal pour les membres partageant ${activeTab}`,
+                name: `${activeTab}${selectedPays ? ` — ${selectedPays}` : ''}`,
+                description: `Groupe d'activité pour les membres de ${selectedPays || 'la plateforme'}`,
                 activity: activeTab,
+                pays: selectedPays,
                 createdBy: userData?.numeroH || ''
               })
             });
@@ -538,7 +556,7 @@ export default function Activite() {
     setFeedFilter('all');
     setSelectedGroup(null);
     loadActivityGroups();
-  }, [activeTab]);
+  }, [activeTab, selectedPays]);
 
   const filteredGroups = groups.filter(group => group.activity === activeTab);
 
@@ -563,33 +581,45 @@ export default function Activite() {
         </div>
       </div>
 
-      {/* Bandeau géographique — montre ta ville + ton activité */}
-      {userData && (() => {
-        const geo = getUserGeoContext();
-        const userCity = geo.city || geo.region || geo.country || '';
-        const userActivity = userData.activite1 || '';
-        const userSpec = (userData as any).specialite || '';
-        if (!userCity && !userActivity) return null;
-        return (
-          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
-            <div className="max-w-7xl mx-auto flex items-center gap-3 text-sm text-amber-800 flex-wrap">
-              {userCity && (
-                <span className="flex items-center gap-1">
-                  📍 <strong>{userCity.charAt(0).toUpperCase() + userCity.slice(1)}</strong>
-                </span>
-              )}
-              {userActivity && (
-                <span className="flex items-center gap-1">
-                  🎯 {userActivity}{userSpec ? ` · ${userSpec}` : ''}
-                </span>
-              )}
-              <span className="text-amber-500 text-xs ml-auto">
-                Vous voyez les publications de votre groupe d'activité
-              </span>
-            </div>
+      {/* Bandeau pays + sélecteur */}
+      <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
+        <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap">
+          {/* Sélecteur de pays */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-amber-700 font-medium">🌍 Pays :</span>
+            <select
+              value={selectedPays}
+              onChange={(e) => {
+                setSelectedPays(e.target.value);
+                setSelectedGroup(null);
+              }}
+              className="text-sm border border-amber-300 rounded-lg px-2 py-1 bg-white text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+            >
+              <option value="">— Tous les pays —</option>
+              {PAYS_LISTE.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
           </div>
-        );
-      })()}
+          {/* Activité + spécialité */}
+          {userData?.activite1 && (
+            <span className="text-sm text-amber-700 flex items-center gap-1">
+              🎯 <strong>
+                {activeTab === 'Activité1' ? userData.activite1 :
+                 activeTab === 'Activité2' ? userData.activite2 :
+                 userData.activite3}
+              </strong>
+              {(userData as any).specialite && ` · ${(userData as any).specialite}`}
+            </span>
+          )}
+          <span className="text-amber-500 text-xs ml-auto">
+            {selectedPays
+              ? `Vous voyez les groupes de ${selectedPays}`
+              : 'Vous voyez tous les groupes de la plateforme'
+            }
+          </span>
+        </div>
+      </div>
 
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
