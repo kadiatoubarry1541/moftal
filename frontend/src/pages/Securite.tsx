@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n/useI18n';
 import ProSection from '../components/ProSection';
+import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from '../utils/proximity';
 import WorldMap from '../components/WorldMap';
 import './Securite.css';
 
@@ -44,16 +45,21 @@ export default function Securite() {
   const [userCountry, setUserCountry] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [activeTab, setActiveTab] = useState<'policiers' | 'gendarmes' | 'pompiers' | 'agents'>('policiers');
-  const [agents, setAgents] = useState<SecurityAgent[]>([]);
+  const [rawAgents, setRawAgents] = useState<SecurityAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const [gpsActive, setGpsActive] = useState(false);
   const [selectedMapPosition, setSelectedMapPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [locationCheckResult, setLocationCheckResult] = useState<{ safetyLevel?: string; recommendations?: string[] } | null>(null);
   const [locationCheckLoading, setLocationCheckLoading] = useState(false);
   const navigate = useNavigate();
   const { t } = useI18n();
+
+  // Re-tri réactif quand GPS arrive
+  const agents = useMemo(() => sortByProximity(rawAgents, userGeo), [rawAgents, userGeo]);
 
   // Liste des pays disponibles
   const countries = ['Guinée', 'Sénégal', 'Mali', 'Côte d\'Ivoire', 'Burkina Faso', 'Niger', 'France', 'Canada'];
@@ -85,6 +91,16 @@ export default function Securite() {
     if (userCountry) loadAgents();
   }, [userCountry, activeTab]);
 
+  // GPS silencieux
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) {
+        setUserGeo(prev => ({ ...prev, coords }));
+        setGpsActive(true);
+      }
+    });
+  }, []);
+
   const loadAgents = async () => {
     if (!userCountry) return;
     try {
@@ -95,13 +111,13 @@ export default function Securite() {
       });
       if (response.ok) {
         const data = await response.json();
-        setAgents(data.agents || []);
+        setRawAgents(data.agents || []);
       } else {
-        setAgents(getDefaultAgents());
+        setRawAgents(getDefaultAgents());
       }
     } catch (error) {
       console.error('Erreur lors du chargement des agents:', error);
-      setAgents(getDefaultAgents());
+      setRawAgents(getDefaultAgents());
     } finally {
       setLoading(false);
     }
@@ -487,10 +503,25 @@ export default function Securite() {
           </div>
         </div>
 
+        {/* Bannière proximité */}
+        {(userGeo.city || userGeo.country || gpsActive) && (
+          <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mb-4">
+            <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
+            <span>
+              {gpsActive
+                ? "Les agents les plus proches de vous apparaissent en premier"
+                : `Résultats personnalisés — les agents de ${userGeo.city || userGeo.country || selectedCountry} apparaissent en premier`
+              }
+            </span>
+          </div>
+        )}
+
         {/* Liste des agents */}
         <div className="space-y-4">
           {filteredAgents.length > 0 ? (
-            filteredAgents.map((agent) => (
+            filteredAgents.map((agent) => {
+              const aprox = proximityLabel(agent, userGeo);
+              return (
               <div
                 key={agent.id}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 sm:p-6 hover:shadow-lg transition-shadow"
@@ -500,15 +531,22 @@ export default function Securite() {
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0">
                         <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-2xl">
-                          {activeTab === 'policiers' ? '👮' : 
+                          {activeTab === 'policiers' ? '👮' :
                            activeTab === 'gendarmes' ? '👮‍♂️' :
                            activeTab === 'pompiers' ? '🚒' : '🛡️'}
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                          {agent.name}
-                        </h3>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                            {agent.name}
+                          </h3>
+                          {aprox && (
+                            <span className="px-2 py-0.5 text-white text-xs font-semibold rounded-full" style={{ backgroundColor: aprox.color }}>
+                              {aprox.text}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-gray-600 dark:text-gray-400 mb-2">
                           {agent.agency}
                           {agent.badgeNumber && ` • Badge: ${agent.badgeNumber}`}
@@ -575,7 +613,8 @@ export default function Securite() {
                   </div>
                 </div>
               </div>
-            ))
+              );
+            })
           ) : (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
               <div className="text-4xl mb-4">🔍</div>

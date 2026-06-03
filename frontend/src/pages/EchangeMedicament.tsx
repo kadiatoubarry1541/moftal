@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
+import { sortAnyByProximity, getUserGeoContext } from '../utils/proximity';
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
@@ -133,7 +134,7 @@ export default function EchangeMedicament() {
       
       if (productsResponse.ok) {
         const productsData = await productsResponse.json();
-        setProducts(productsData.products || []);
+        setProducts(sortAnyByProximity(productsData.products || [], getUserGeoContext()));
       } else {
         setProducts([]);
       }
@@ -146,10 +147,10 @@ export default function EchangeMedicament() {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (suppliersResponse.ok) {
         const suppliersData = await suppliersResponse.json();
-        setSuppliers(suppliersData.suppliers || []);
+        setSuppliers(sortAnyByProximity(suppliersData.suppliers || [], getUserGeoContext()));
       } else {
         setSuppliers([]);
       }

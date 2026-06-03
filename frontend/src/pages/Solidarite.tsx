@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { isAdmin } from '../utils/auth';
 import ProSection from '../components/ProSection';
+import { sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 
 interface UserData {
   numeroH: string;
@@ -69,7 +70,10 @@ export default function Solidarite() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'dons' | 'zaka' | 'livres' | 'realite' | 'ong'>('dons');
   const [donsSubTab, setDonsSubTab] = useState<'pauvres' | 'mes-dons'>('pauvres');
-  const [poorPeople, setPoorPeople] = useState<PoorPerson[]>([]);
+  const [rawPoorPeople, setRawPoorPeople] = useState<PoorPerson[]>([]);
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const [gpsActive, setGpsActive] = useState(false);
+  const poorPeople = useMemo(() => sortAnyByProximity(rawPoorPeople, userGeo), [rawPoorPeople, userGeo]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [holyBooks, setHolyBooks] = useState<HolyBook[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,13 +257,13 @@ export default function Solidarite() {
       
       if (response.ok) {
         const data = await response.json();
-        setPoorPeople(data.poorPeople || []);
+        setRawPoorPeople(data.poorPeople || []);
       } else {
-        setPoorPeople(getDefaultPoorPeople());
+        setRawPoorPeople(getDefaultPoorPeople());
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des pauvres:', error);
-      setPoorPeople(getDefaultPoorPeople());
+      console.error('Erreur lors du chargement:', error);
+      setRawPoorPeople(getDefaultPoorPeople());
     }
   };
 
@@ -531,6 +535,13 @@ export default function Solidarite() {
       navigate("/login");
     }
   }, [navigate]);
+
+  // GPS silencieux
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) setUserGeo(prev => ({ ...prev, coords }));
+    });
+  }, []);
 
   if (loading) {
     return (

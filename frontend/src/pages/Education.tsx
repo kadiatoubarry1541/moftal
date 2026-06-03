@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DefiEducatifContent from '../components/DefiEducatifContent';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
+import { sortByProximity, sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 
 interface UserData {
   numeroH: string;
@@ -433,7 +434,7 @@ export default function Education() {
       });
       if (response.ok) {
         const data = await response.json();
-        setSchools(data.schools || []);
+        setSchools(sortAnyByProximity(data.schools || [], getUserGeoContext()));
       } else {
         setSchools([]);
       }
@@ -483,7 +484,7 @@ export default function Education() {
       });
       if (response.ok) {
         const data = await response.json();
-        setFormations(data.formations || []);
+        setFormations(sortByProximity(data.formations || [], getUserGeoContext()));
       } else {
         setFormations([]);
       }
@@ -500,7 +501,7 @@ export default function Education() {
       });
       if (response.ok) {
         const data = await response.json();
-        setProfessors(data.professors || []);
+        setProfessors(sortByProximity(data.professors || [], getUserGeoContext()));
       } else {
         setProfessors([]);
       }

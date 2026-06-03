@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
+import { sortAnyByProximity, getUserGeoContext } from '../utils/proximity';
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
@@ -135,9 +136,9 @@ export default function EchangeSecondaire() {
       
       if (productsResponse.ok) {
         const productsData = await productsResponse.json();
-        setProducts(productsData.products || []);
+        setProducts(sortAnyByProximity(productsData.products || [], getUserGeoContext()));
       } else {
-        setProducts([]);
+        setProducts(sortAnyByProximity(getDefaultProducts(), getUserGeoContext()));
       }
 
       // Charger les fournisseurs
@@ -148,17 +149,17 @@ export default function EchangeSecondaire() {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (suppliersResponse.ok) {
         const suppliersData = await suppliersResponse.json();
-        setSuppliers(suppliersData.suppliers || []);
+        setSuppliers(sortAnyByProximity(suppliersData.suppliers || [], getUserGeoContext()));
       } else {
         setSuppliers([]);
       }
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setProducts(getDefaultProducts());
+      setProducts(sortAnyByProximity(getDefaultProducts(), getUserGeoContext()));
       setSuppliers([]);
     } finally {
       setLoading(false);

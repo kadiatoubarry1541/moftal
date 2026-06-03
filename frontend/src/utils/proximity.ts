@@ -106,6 +106,39 @@ export function sortByProximity<T extends { city?: string; country?: string; coo
   );
 }
 
+// ─── Tri universel : accepte n'importe quel champ de localisation ─
+// Normalise location / address / ville → city avant de trier
+export function sortAnyByProximity<T extends Record<string, any>>(
+  items: T[],
+  user: UserGeoContext
+): T[] {
+  if (!user.city && !user.region && !user.country && !user.coords) {
+    return items;
+  }
+  const normalize = (item: T) => ({
+    city:    item.city || item.location || item.ville || item.localisation || "",
+    country: item.country || item.pays || "",
+    coordinates: item.coordinates || item.coords || undefined,
+  });
+  return [...items].sort(
+    (a, b) => proximityScore(normalize(a), user) - proximityScore(normalize(b), user)
+  );
+}
+
+// ─── Badge universel (même logique, champ flexible) ─────────────
+export function anyProximityLabel(
+  item: Record<string, any>,
+  user: UserGeoContext
+): { text: string; color: string } | null {
+  return proximityLabel(
+    {
+      city:    item.city || item.location || item.ville || "",
+      country: item.country || item.pays || "",
+    },
+    user
+  );
+}
+
 // ─── Hook : demande la position GPS au navigateur ────────────────
 export function requestGPS(): Promise<GeoCoords | null> {
   return new Promise((resolve) => {
