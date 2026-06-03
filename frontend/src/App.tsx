@@ -113,6 +113,35 @@ const Quartier = lazy(() => import("./pages/Quartier"));
 const Info = lazy(() => import("./pages/Info"));
 const Developpement = lazy(() => import("./pages/Developpement"));
 const Racines = lazy(() => import("./pages/Racines"));
+const Antiquite = lazy(() => import("./pages/Antiquite"));
+const Prehistoire = lazy(() => import("./pages/Prehistoire"));
+const Guinee = lazy(() => import("./pages/Guinee"));
+const BasseGuinee = lazy(() => import("./pages/BasseGuinee"));
+const HauteGuinee = lazy(() => import("./pages/HauteGuinee"));
+const FoutaDjallon = lazy(() => import("./pages/FoutaDjallon"));
+const GuineeForestiere = lazy(() => import("./pages/GuineeForestiere"));
+const Femmes = lazy(() => import("./pages/Femmes"));
+const Hommes = lazy(() => import("./pages/Hommes"));
+const Communaute = lazy(() => import("./pages/Communaute"));
+const TrouverProfesseur = lazy(() => import("./pages/TrouverProfesseur"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard"));
+const Activite1 = lazy(() => import("./pages/Activite1"));
+const Activite2 = lazy(() => import("./pages/Activite2"));
+const Activite3 = lazy(() => import("./pages/Activite3"));
+const ZakaEtDons = lazy(() => import("./pages/ZakaEtDons"));
+const GuideEntrepreneur = lazy(() => import("./pages/GuideEntrepreneur"));
+const LivresDeDieu = lazy(() => import("./pages/LivresDeDieu"));
+const Reflechissons = lazy(() => import("./pages/Reflechissons"));
+const Donations = lazy(() => import("./pages/Donations").then(m => ({ default: m.Donations })));
+const InscriptionFormation = lazy(() => import("./pages/InscriptionFormation"));
+const Pays = lazy(() => import("./pages/Pays"));
+const LieuResidence1 = lazy(() => import("./pages/LieuResidence1"));
+const LieuResidence2 = lazy(() => import("./pages/LieuResidence2"));
+const LieuResidence3 = lazy(() => import("./pages/LieuResidence3"));
+const AdminGovernments = lazy(() => import("./pages/AdminGovernments"));
+const GestionImam = lazy(() => import("./pages/GestionImam"));
+const GestionMadrasa = lazy(() => import("./pages/GestionMadrasa"));
+const GestionEcole = lazy(() => import("./pages/GestionEcole"));
 
 const LoadingBar = () => (
   <div className="fixed top-0 left-0 w-full h-1 z-[9999] bg-gray-200">
@@ -288,14 +317,14 @@ function App() {
           <Route path="/foi" element={<Navigate to="/" replace />} />
           <Route path="/solidarite" element={<Solidarite />} />
           <Route path="/dons" element={<Navigate to="/" replace />} />
-          <Route path="/donations" element={<Navigate to="/" replace />} />
+          <Route path="/donations" element={<Donations />} />
           <Route path="/zaka" element={<ZakaMuslimOnly />} />
-          <Route path="/zaka-et-dons" element={<Navigate to="/zaka" replace />} />
+          <Route path="/zaka-et-dons" element={<ZakaEtDons />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/badges" element={<AdminBadges />} />
           <Route path="/admin/moderation" element={<AdminModeration />} />
           <Route path="/admin/logos" element={<Navigate to="/admin/badges?tab=logos" replace />} />
-          <Route path="/admin/governments" element={<Navigate to="/admin" replace />} />
+          <Route path="/admin/governments" element={<AdminGovernments />} />
           <Route path="/admin/points" element={<AdminPoints />} />
           <Route path="/acheter-points" element={<AcheterPoints />} />
           <Route path="/famille" element={<Famille />} />
@@ -314,7 +343,7 @@ function App() {
           <Route path="/famille/admin" element={<FamilleAdmin />} />
           <Route path="/famille/inspir" element={<Inspir />} />
           <Route path="/lieux-residence" element={<Navigate to="/terre-adam" replace />} />
-          <Route path="/pays" element={<Navigate to="/terre-adam" replace />} />
+          <Route path="/pays" element={<Pays />} />
           <Route path="/terre-adam" element={<TerreAdam />} />
           <Route path="/organisation" element={<Navigate to="/activite" replace />} />
           <Route path="/histoire" element={<Navigate to="/histoire-humanite" replace />} />
@@ -388,6 +417,39 @@ function App() {
           <Route path="/info" element={<Info />} />
           <Route path="/developpement" element={<Developpement />} />
           <Route path="/famille/racines" element={<Racines />} />
+          {/* Histoire & civilisations */}
+          <Route path="/prehistoire"       element={<Prehistoire />} />
+          <Route path="/antiquite"         element={<Antiquite />} />
+          {/* Géographie Guinée */}
+          <Route path="/guinee"            element={<Guinee />} />
+          <Route path="/basse-guinee"      element={<BasseGuinee />} />
+          <Route path="/haute-guinee"      element={<HauteGuinee />} />
+          <Route path="/fouta-djallon"     element={<FoutaDjallon />} />
+          <Route path="/guinee-forestiere" element={<GuineeForestiere />} />
+          {/* Communauté */}
+          <Route path="/communaute"        element={<Communaute />} />
+          <Route path="/femmes"            element={<Femmes />} />
+          <Route path="/hommes"            element={<Hommes />} />
+          <Route path="/livres-de-dieu"    element={<LivresDeDieu />} />
+          <Route path="/reflechissons"     element={<Reflechissons />} />
+          {/* Services professionnels */}
+          <Route path="/trouver-professeur"  element={<TrouverProfesseur />} />
+          <Route path="/guide-entrepreneur"  element={<GuideEntrepreneur />} />
+          <Route path="/tableau-de-bord"     element={<UserDashboard />} />
+          {/* Activités (sous-pages) */}
+          <Route path="/activite/primaire"   element={<Activite1 />} />
+          <Route path="/activite/secondaire" element={<Activite2 />} />
+          <Route path="/activite/tertiaire"  element={<Activite3 />} />
+          {/* Inscription formation */}
+          <Route path="/inscription-formation" element={<InscriptionFormation />} />
+          {/* Lieux de résidence */}
+          <Route path="/lieu-residence/1"  element={<LieuResidence1 />} />
+          <Route path="/lieu-residence/2"  element={<LieuResidence2 />} />
+          <Route path="/lieu-residence/3"  element={<LieuResidence3 />} />
+          {/* Gestion imam avec son propre dashboard */}
+          <Route path="/gestion-imam-pro/:tenantCode"   element={<GestionImam />} />
+          <Route path="/gestion-madrasa-v2/:tenantCode" element={<GestionMadrasa />} />
+          <Route path="/gestion-ecole-v1/:tenantCode"   element={<GestionEcole />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
