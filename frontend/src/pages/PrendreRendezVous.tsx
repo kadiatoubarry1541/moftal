@@ -17,12 +17,27 @@ interface ProAccount {
 }
 
 const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
-  clinic: { label: "Clinique / Hôpital", icon: "🏥" },
-  security_agency: { label: "Agence de sécurité", icon: "🛡️" },
-  journalist: { label: "Journaliste", icon: "📰" },
-  enterprise: { label: "Entreprise", icon: "🏢" },
-  school: { label: "École / Professeur", icon: "🎓" },
-  supplier: { label: "Fournisseur", icon: "📦" },
+  clinic:          { label: "Clinique / Hôpital",         icon: "🏥" },
+  health_worker:   { label: "Médecin / Agent de santé",   icon: "👨‍⚕️" },
+  security_agency: { label: "Agence de sécurité",         icon: "🛡️" },
+  journalist:      { label: "Journaliste / Média",        icon: "📰" },
+  enterprise:      { label: "Entreprise",                 icon: "🏢" },
+  school:          { label: "École / Établissement",      icon: "🎓" },
+  supplier:        { label: "Fournisseur / Grossiste",    icon: "📦" },
+  mosque:          { label: "Mosquée",                    icon: "🕌" },
+  madrasa:         { label: "Madrasa / Formation",        icon: "📖" },
+  commerce:        { label: "Commerce / Boutique",        icon: "🏪" },
+  restaurant:      { label: "Restaurant",                 icon: "🍽️" },
+  vendor:          { label: "Vendeur / Détaillant",       icon: "🛒" },
+  producer:        { label: "Entreprise de production",   icon: "🏭" },
+  broker:          { label: "Immobilier / Démarcheur",    icon: "🏠" },
+  scientist:       { label: "Chercheur / Scientifique",   icon: "🔬" },
+  ngo:             { label: "ONG / Association",          icon: "🤝" },
+  transport:       { label: "Transport & Livraison",      icon: "🚌" },
+  beauty:          { label: "Beauté & Bien-être",         icon: "💈" },
+  artisan:         { label: "Artisan / Services",         icon: "🔧" },
+  mairie:          { label: "Mairie / État Civil",        icon: "🏛️" },
+  reseau:          { label: "Association / Réseau",       icon: "🌐" },
 };
 
 export default function PrendreRendezVous() {

@@ -513,7 +513,7 @@ const sectionIcons: Record<string, string> = {
   revelation: '✨', persecution: '🛡️', unification: '🏆', heritage: '📜'
 };
 
-export default function HistoireHumanite() {
+export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boolean }) {
   const [stories, setStories] = useState<PublishedStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -521,6 +521,11 @@ export default function HistoireHumanite() {
   const [selectedGeneration, setSelectedGeneration] = useState('all');
   const [stats, setStats] = useState<any>(null);
   const [currentUserNumeroH, setCurrentUserNumeroH] = useState<string | null>(null);
+  const [narrateurContact, setNarrateurContact] = useState('');
+  const [narrateurContactSave, setNarrateurContactSave] = useState('');
+  const [narrateurSaving, setNarrateurSaving] = useState(false);
+  const [narrateurMsg, setNarrateurMsg] = useState('');
+  const [showNarrateurForm, setShowNarrateurForm] = useState(false);
   const [testifyingId, setTestifyingId] = useState<number | null>(null);
   const [selectedStory, setSelectedStory] = useState<PublishedStory | null>(null);
   const [selectedHistorical, setSelectedHistorical] = useState<HistoricalEntry | null>(null);
@@ -553,7 +558,18 @@ export default function HistoireHumanite() {
       try {
         const parsed = JSON.parse(session);
         const user = parsed.userData || parsed;
-        if (user?.numeroH) setCurrentUserNumeroH(user.numeroH);
+        if (user?.numeroH) {
+          setCurrentUserNumeroH(user.numeroH);
+          // Charger le numéro narrateur
+          const token = localStorage.getItem('token') || parsed.token;
+          if (token) {
+            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/mon-contact-narrateur`, {
+              headers: { Authorization: `Bearer ${token}` }
+            }).then(r => r.json()).then(d => {
+              if (d.success && d.contact) { setNarrateurContact(d.contact); setNarrateurContactSave(d.contact); }
+            }).catch(() => {});
+          }
+        }
       } catch {}
     }
     loadStories();
@@ -648,6 +664,25 @@ export default function HistoireHumanite() {
     });
   };
 
+  const sauvegarderContact = async () => {
+    if (!narrateurContact.trim()) return;
+    setNarrateurSaving(true);
+    setNarrateurMsg('');
+    try {
+      const session = localStorage.getItem("session_user");
+      const token = session ? (JSON.parse(session).token || localStorage.getItem('token')) : localStorage.getItem('token');
+      const r = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/mon-contact-narrateur`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact: narrateurContact }),
+      });
+      const d = await r.json();
+      if (d.success) { setNarrateurContactSave(narrateurContact); setNarrateurMsg('✅ Numéro enregistré !'); setShowNarrateurForm(false); }
+      else setNarrateurMsg(d.message || 'Erreur');
+    } catch { setNarrateurMsg('Erreur de connexion'); }
+    finally { setNarrateurSaving(false); }
+  };
+
   const toggleWitnesses = (key: string) => {
     setWitnessesVisible(prev => {
       const next = new Set(prev);
@@ -684,7 +719,7 @@ export default function HistoireHumanite() {
                 className="bg-white text-indigo-700 px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg text-sm">
                 ✍️ Écrire mon histoire (G96)
               </button>
-              <button onClick={() => navigate('/moi')}
+              <button onClick={() => navigate(-1)}
                 className="bg-white text-indigo-700 px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-md text-sm border-2 border-white">
                 ← Retour
               </button>
@@ -692,6 +727,41 @@ export default function HistoireHumanite() {
           </div>
         </div>
       </div>
+
+      {/* ── Bloc Narrateur — numéro Orange Money pour paiement admin ── */}
+      {currentUserNumeroH && (
+        <div className="bg-indigo-900 border-b border-indigo-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-indigo-200 text-xs">📜 Narrateur Reci :</span>
+              {narrateurContactSave ? (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-white bg-indigo-700 px-3 py-1 rounded-full">📞 {narrateurContactSave}</span>
+                  <button onClick={() => setShowNarrateurForm(true)} className="text-indigo-300 hover:text-white text-xs underline">Modifier</button>
+                </div>
+              ) : (
+                <button onClick={() => setShowNarrateurForm(true)}
+                  className="text-xs text-amber-300 hover:text-amber-100 underline font-semibold">
+                  + Laisser mon numéro pour être payé par l'admin
+                </button>
+              )}
+              {showNarrateurForm && (
+                <div className="flex items-center gap-2 ml-2">
+                  <input type="tel" value={narrateurContact} onChange={e => setNarrateurContact(e.target.value)}
+                    placeholder="Ex: 628000000"
+                    className="text-xs px-3 py-1.5 rounded-lg bg-indigo-800 text-white border border-indigo-500 outline-none focus:border-amber-400 w-36" />
+                  <button onClick={sauvegarderContact} disabled={narrateurSaving}
+                    className="text-xs px-3 py-1.5 bg-amber-400 text-indigo-900 font-bold rounded-lg hover:bg-amber-300 disabled:opacity-50">
+                    {narrateurSaving ? '...' : 'Enregistrer'}
+                  </button>
+                  <button onClick={() => setShowNarrateurForm(false)} className="text-indigo-400 hover:text-white text-xs">✕</button>
+                </div>
+              )}
+              {narrateurMsg && <span className="text-xs text-green-300">{narrateurMsg}</span>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Note G96 ── */}
       <div className="bg-amber-50 border-b border-amber-200">
@@ -831,6 +901,7 @@ export default function HistoireHumanite() {
             <div className="flex-1 h-px bg-indigo-300"></div>
             <h2 className="text-lg font-bold text-indigo-800 flex items-center gap-2 whitespace-nowrap">
               📖 Récits Personnels — Nos Membres Racontent Leur Vie
+              {!estAbonne && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">🔒 Abonnement requis</span>}
               {!loading && (
                 <span className="text-sm font-normal bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
                   {filteredStories.length} récit{filteredStories.length > 1 ? 's' : ''}
@@ -843,7 +914,29 @@ export default function HistoireHumanite() {
             Chaque membre de la plateforme raconte <strong>sa propre vie</strong> — son histoire personnelle, sa famille, ses épreuves et ses joies.
           </p>
 
-          {loading ? (
+          {!estAbonne ? (
+            /* ── Paywall récits ── */
+            <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-8 text-center">
+              <div className="text-5xl mb-3">🔒</div>
+              <h3 className="font-black text-lg text-amber-900 mb-2">Lisez les récits de nos membres</h3>
+              <p className="text-sm text-amber-700 mb-5 leading-relaxed">
+                Des centaines de membres ont partagé leur vie ici. Abonnez-vous pour lire leurs témoignages, leurs joies et leurs épreuves.
+              </p>
+              <div className="rounded-xl bg-white border border-amber-200 px-4 py-3 mb-5 inline-block">
+                <p className="font-black text-xl text-amber-900">{stats?.totalStories || 0} récits disponibles</p>
+                <p className="text-xs text-amber-600">Accès annuel · paiement unique</p>
+              </div>
+              <br />
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 rounded-xl font-black text-white text-sm"
+                style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
+              >
+                📜 S'abonner pour lire les récits
+              </button>
+              <p className="text-xs text-amber-500 mt-3">Vous pouvez quand même publier votre propre récit librement ✍️</p>
+            </div>
+          ) : loading ? (
             <div className="text-center py-12 text-gray-500">Chargement des récits...</div>
           ) : filteredStories.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-indigo-100">

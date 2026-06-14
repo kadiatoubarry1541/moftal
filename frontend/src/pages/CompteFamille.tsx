@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getDeviseUtilisateur, formaterMontant, type DeviseInfo } from '../utils/currency';
 import { ReçuTransaction } from '../components/ReçuTransaction';
 
@@ -31,6 +31,7 @@ function calculerAge(dateNaissance: string | undefined): number {
 
 export default function CompteFamille() {
   const navigate = useNavigate();
+  const location = useLocation();
   const devise: DeviseInfo = getDeviseUtilisateur();
 
   const [compte, setCompte] = useState<any>(null);
@@ -80,6 +81,24 @@ export default function CompteFamille() {
     if (dn) setUserAge(calculerAge(dn));
   }, []);
 
+  // Détecter le retour FedaPay après paiement (?paiement=succes ou echec)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const statut = params.get('paiement');
+    const montantParam = params.get('montant');
+    if (statut === 'succes') {
+      charger();
+      if (montantParam) {
+        alert(`Dépôt de ${parseInt(montantParam).toLocaleString('fr-GN')} GNF enregistré avec succès.`);
+      }
+      // Nettoyer les params de l'URL
+      navigate('/compte-famille', { replace: true });
+    } else if (statut === 'echec') {
+      alert('Le paiement a échoué ou a été annulé. Aucun débit effectué.');
+      navigate('/compte-famille', { replace: true });
+    }
+  }, [location.search]);
+
   useEffect(() => { charger(); }, []);
 
   async function charger() {
@@ -116,30 +135,48 @@ export default function CompteFamille() {
     if (!montant || montant < 1000) return alert('Montant minimum : 1 000 GNF');
     setLoadingDepot(true);
     try {
-      const r = await fetch(`${API}/api/family-fund/deposer`, {
+      // Étape 1 : essayer de passer par FedaPay (production)
+      const rFeda = await fetch(`${API}/api/moftal-pay/initier-depot`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ montant })
+        body: JSON.stringify({ montant, type: 'famille' })
       });
-      const d = await r.json();
-      if (d.success) {
-        setMontantDepot('');
-        // Afficher le reçu
-        const session = JSON.parse(localStorage.getItem('session_user') || '{}');
-        const u = session.userData || session;
-        setReçu({
-          id: Date.now().toString(),
-          type: 'depot',
-          montant,
-          date: new Date().toISOString(),
-          acteurNom: `${u?.prenom || ''} ${u?.nomFamille || ''}`.trim(),
-          nomFamille: compte?.nomFamille,
-          repartition: d.repartition,
-        });
-        charger();
-      } else {
-        alert(d.message);
+      const dFeda = await rFeda.json();
+
+      if (dFeda.paymentUrl) {
+        // FedaPay configuré → rediriger vers la page de paiement
+        window.location.href = dFeda.paymentUrl;
+        return;
       }
+
+      // Étape 2 : FedaPay non configuré (mode démo) → dépôt direct
+      if (dFeda.demo || !dFeda.success) {
+        const r = await fetch(`${API}/api/family-fund/deposer`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ montant })
+        });
+        const d = await r.json();
+        if (d.success) {
+          setMontantDepot('');
+          const session = JSON.parse(localStorage.getItem('session_user') || '{}');
+          const u = session.userData || session;
+          setReçu({
+            id: Date.now().toString(),
+            type: 'depot',
+            montant,
+            date: new Date().toISOString(),
+            acteurNom: `${u?.prenom || ''} ${u?.nomFamille || ''}`.trim(),
+            nomFamille: compte?.nomFamille,
+            repartition: d.repartition,
+          });
+          charger();
+        } else {
+          alert(d.message);
+        }
+      }
+    } catch {
+      alert('Erreur de connexion au serveur.');
     } finally { setLoadingDepot(false); }
   }
 
@@ -291,32 +328,32 @@ export default function CompteFamille() {
         )}
 
         {/* Arbre pas encore assez grand */}
-        {!existe && !msgErreur && nbMembres < 10 && (
+        {!existe && !msgErreur && nbMembres < 5 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-blue-100">
             <div className="text-center mb-4">
               <div className="text-5xl mb-3">🌳</div>
-              <h2 className="font-bold text-gray-900 text-lg mb-1">Moftal Pay s'ouvre à 10 membres</h2>
+              <h2 className="font-bold text-gray-900 text-lg mb-1">Moftal Pay s'ouvre à 5 membres</h2>
               <p className="text-gray-500 text-sm">
-                Votre arbre familial doit rassembler <strong>10 membres</strong> pour activer le Moftal Pay.
+                Votre arbre familial doit rassembler <strong>5 membres</strong> pour activer le Moftal Pay.
               </p>
             </div>
             <div className="mb-4">
               <div className="flex justify-between text-xs font-semibold mb-1.5">
                 <span className="text-gray-600">Membres actuels</span>
-                <span style={{ color: '#2563eb' }}>{nbMembres} / 10</span>
+                <span style={{ color: '#2563eb' }}>{nbMembres} / 5</span>
               </div>
               <div className="w-full h-3 bg-blue-100 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
-                  style={{ width: `${Math.min((nbMembres / 10) * 100, 100)}%`, background: 'linear-gradient(90deg,#2563eb,#1e3a5f)' }}
+                  style={{ width: `${Math.min((nbMembres / 5) * 100, 100)}%`, background: 'linear-gradient(90deg,#2563eb,#1e3a5f)' }}
                 />
               </div>
               <p className="text-blue-600 text-xs font-bold mt-1.5 text-center">
-                Encore {10 - nbMembres} membre{10 - nbMembres > 1 ? 's' : ''} à inviter dans l'arbre
+                Encore {5 - nbMembres} membre{5 - nbMembres > 1 ? 's' : ''} à inviter dans l'arbre
               </p>
             </div>
             <div className="rounded-xl p-3 text-sm space-y-1" style={{ background: '#f0f7ff' }}>
-              <p className="font-semibold text-blue-900 text-xs mb-1">Ce qui s'active à 10 membres :</p>
+              <p className="font-semibold text-blue-900 text-xs mb-1">Ce qui s'active à 5 membres :</p>
               {CATEGORIES.map(c => (
                 <div key={c.key} className="flex items-center gap-2 text-xs text-gray-600">
                   <span>{c.icon}</span>
@@ -328,7 +365,7 @@ export default function CompteFamille() {
         )}
 
         {/* Activation en cours */}
-        {!existe && !msgErreur && nbMembres >= 10 && (
+        {!existe && !msgErreur && nbMembres >= 5 && (
           <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-green-100">
             <div className="text-5xl mb-3">⏳</div>
             <h2 className="font-bold text-gray-900 text-lg mb-1">Activation en cours…</h2>
@@ -731,6 +768,27 @@ export default function CompteFamille() {
             )}
           </>
         )}
+
+        {/* Démarches administratives — Mairie */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="text-3xl">🏛️</div>
+            <div>
+              <h3 className="font-bold text-gray-900 text-base">Mairie de votre commune</h3>
+              <p className="text-gray-500 text-xs">Actes de naissance, mariage, résidence…</p>
+            </div>
+          </div>
+          <p className="text-gray-600 text-sm mb-4">
+            Prenez rendez-vous à la mairie pour obtenir les papiers officiels de votre famille.
+          </p>
+          <button
+            onClick={() => navigate('/liste-professionnels?type=mairie')}
+            className="w-full py-3 rounded-xl font-bold text-sm text-white"
+            style={{ background: 'linear-gradient(135deg,#1e3a8a,#2563eb)' }}
+          >
+            🏛️ Prendre rendez-vous à la mairie
+          </button>
+        </div>
 
         <button onClick={() => navigate(-1)}
           className="w-full py-3 rounded-2xl text-blue-700 font-semibold text-sm bg-white border border-blue-100 shadow-sm">

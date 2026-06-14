@@ -32,9 +32,17 @@ const Enfants = lazy(() => import("./pages/famille/Enfants"));
 const MesAmours = lazy(() => import("./pages/famille/MesAmours"));
 const FamilleAdmin = lazy(() => import("./pages/famille/FamilleAdmin"));
 const Inspir = lazy(() => import("./pages/famille/Inspir"));
+const Noyau = lazy(() => import("./pages/famille/Noyau"));
 const Probleme = lazy(() => import("./pages/Probleme"));
+const Journalistes = lazy(() => import("./pages/Journalistes"));
+const Transport = lazy(() => import("./pages/Transport"));
+const Mosquee = lazy(() => import("./pages/Mosquee"));
+const Madrasa = lazy(() => import("./pages/Madrasa"));
+const Beaute = lazy(() => import("./pages/Beaute"));
+const Artisans = lazy(() => import("./pages/Artisans"));
 const Sante = lazy(() => import("./pages/Sante"));
 const Securite = lazy(() => import("./pages/Securite"));
+const Services = lazy(() => import("./pages/Services"));
 const Solidarite = lazy(() => import("./pages/Solidarite"));
 const Identite = lazy(() => import("./pages/Identite"));
 const Activite = lazy(() => import("./pages/Activite"));
@@ -67,7 +75,8 @@ const PrendreRendezVous = lazy(() => import("./pages/PrendreRendezVous"))
 const MesCours = lazy(() => import("./pages/MesCours"))
 const GalerieFamily = lazy(() => import("./pages/GalerieFamily"));
 const CompteFamille = lazy(() => import("./pages/CompteFamille"));
-const WalletPro = lazy(() => import("./pages/WalletPro"));
+const MoftalPayPro = lazy(() => import("./pages/WalletPro"));
+const PublierFormation = lazy(() => import("./pages/PublierFormation"));
 const InfoWallou = lazy(() => import("./pages/InfoWallou"));
 const ConditionsUtilisation = lazy(() => import("./pages/ConditionsUtilisation"));
 const PolitiqueConfidentialite = lazy(() => import("./pages/PolitiqueConfidentialite"));
@@ -80,7 +89,10 @@ const CliniqueVitrine = lazy(() => import("./pages/CliniqueVitrine"));
 const CommerceVitrine = lazy(() => import("./pages/CommerceVitrine"));
 const EspacePatientClinique = lazy(() => import("./pages/EspacePatientClinique"));
 const GestionCommerce = lazy(() => import("./pages/GestionCommerce"));
-const GestionIslamique = lazy(() => import("./pages/GestionIslamique"));
+const GestionVendeur  = lazy(() => import("./pages/GestionVendeur"));
+const GestionBeauty   = lazy(() => import("./pages/GestionBeauty"));
+const GestionArtisan  = lazy(() => import("./pages/GestionArtisan"));
+const GestionProducer = lazy(() => import("./pages/GestionProducer"));
 const GestionMosquee = lazy(() => import("./pages/GestionMosquee"));
 const GestionReseau  = lazy(() => import("./pages/GestionReseau"));
 const GestionEnseignement = lazy(() => import("./pages/GestionEnseignement"));
@@ -93,6 +105,8 @@ const FournisseurVitrine  = lazy(() => import("./pages/FournisseurVitrine"));
 const GestionSecurite     = lazy(() => import("./pages/GestionSecurite"));
 const GestionImmobilier   = lazy(() => import("./pages/GestionImmobilier"));
 const GestionRestaurant   = lazy(() => import("./pages/GestionRestaurant"));
+const Immobilier          = lazy(() => import("./pages/Immobilier"));
+const Restaurants         = lazy(() => import("./pages/Restaurants"));
 const GestionTransport    = lazy(() => import("./pages/GestionTransport"));
 const EcoleVitrine        = lazy(() => import("./pages/EcoleVitrine"));
 const MadrasaVitrine      = lazy(() => import("./pages/MadrasaVitrine"));
@@ -255,7 +269,7 @@ function App() {
                 <img src="/logo.png" alt="Logo" style={{ height: 34, width: 34, borderRadius: 8, objectFit: "contain" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
               </picture>
               <div>
-                <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>Espace Gestion</div>
+                <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>Professionnel</div>
                 <div style={{ color: "#475569", fontSize: 11, fontWeight: 500 }}>Moftal</div>
               </div>
             </div>
@@ -306,6 +320,15 @@ function App() {
           <Route path="/moi/arbre" element={<Navigate to="/famille/moi/arbre" replace />} />
           <Route path="/moi/arbre/membres" element={<Navigate to="/famille/moi/arbre/membres" replace />} />
           <Route path="/probleme" element={<Probleme />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/journalistes" element={<Journalistes />} />
+          <Route path="/transport" element={<Transport />} />
+          <Route path="/immobilier" element={<Immobilier />} />
+          <Route path="/restaurants" element={<Restaurants />} />
+          <Route path="/mosquee" element={<Mosquee />} />
+          <Route path="/madrasa" element={<Madrasa />} />
+          <Route path="/beaute" element={<Beaute />} />
+          <Route path="/artisans" element={<Artisans />} />
           <Route path="/sante" element={<Sante />} />
           <Route path="/securite" element={<Securite />} />
           <Route path="/mes-amours" element={<Navigate to="/famille/mes-amours" replace />} />
@@ -342,13 +365,15 @@ function App() {
           <Route path="/famille/mes-amours" element={<MesAmours />} />
           <Route path="/famille/admin" element={<FamilleAdmin />} />
           <Route path="/famille/inspir" element={<Inspir />} />
+          <Route path="/famille/noyau" element={<Noyau />} />
           <Route path="/lieux-residence" element={<Navigate to="/terre-adam" replace />} />
           <Route path="/pays" element={<Pays />} />
           <Route path="/terre-adam" element={<TerreAdam />} />
           <Route path="/organisation" element={<Navigate to="/activite" replace />} />
-          <Route path="/histoire" element={<Navigate to="/histoire-humanite" replace />} />
+          <Route path="/histoire" element={<Navigate to="/famille/histoire" replace />} />
+          <Route path="/histoire-humanite" element={<Navigate to="/famille/histoire" replace />} />
+          <Route path="/famille/histoire" element={<HistoireHumanite />} />
           <Route path="/a-retenir" element={<ARetenir />} />
-          <Route path="/histoire-humanite" element={<HistoireHumanite />} />
           <Route path="/science" element={<Science />} />
             <Route path="/echange" element={<EchangesProfessionnel />} />
           <Route path="/echange/primaire" element={<EchangePrimaire />} />
@@ -369,7 +394,8 @@ function App() {
           <Route path="/galerie-famille" element={<GalerieFamily />} />
           <Route path="/moftal-pay" element={<MoftalPay />} />
           <Route path="/compte-famille" element={<CompteFamille />} />
-          <Route path="/wallet-pro" element={<WalletPro />} />
+          <Route path="/moftal-pay-pro" element={<MoftalPayPro />} />
+          <Route path="/publier-formation" element={<PublierFormation />} />
           <Route path="/info-wallou" element={<InfoWallou />} />
           <Route path="/conditions-utilisation" element={<ConditionsUtilisation />} />
           <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
@@ -398,7 +424,7 @@ function App() {
           <Route path="/reseau-vitrine/:tenantCode" element={<ReseauVitrine />} />
           <Route path="/gestion-mosquee/:tenantCode" element={<GestionMosquee />} />
           <Route path="/gestion-madrasa/:tenantCode" element={<GestionEnseignement mode="madrasa" />} />
-          <Route path="/gestion-imam/:tenantCode"    element={<GestionMosquee />} />
+          <Route path="/gestion-imam/:tenantCode"    element={<GestionImam />} />
           <Route path="/gestion-reseau/:tenantCode"   element={<GestionReseau />} />
           <Route path="/gestion-ngo/:tenantCode"          element={<GestionNgo />} />
           <Route path="/gestion-entreprise/:tenantCode"    element={<GestionEntreprise />} />
@@ -410,7 +436,10 @@ function App() {
           <Route path="/gestion-immobilier/:tenantCode"  element={<GestionImmobilier />} />
           <Route path="/gestion-restaurant/:tenantCode"  element={<GestionRestaurant />} />
           <Route path="/gestion-transport/:tenantCode"   element={<GestionTransport />} />
-          <Route path="/gestion-vendeur/:tenantCode"     element={<Navigate to="/gestion-interne" replace />} />
+          <Route path="/gestion-vendeur/:tenantCode"   element={<GestionVendeur />} />
+          <Route path="/gestion-beauty/:tenantCode"    element={<GestionBeauty />} />
+          <Route path="/gestion-artisan/:tenantCode"   element={<GestionArtisan />} />
+          <Route path="/gestion-producer/:tenantCode"  element={<GestionProducer />} />
           <Route path="/reseau-imam" element={<ReseauImam />} />
           <Route path="/reseau/:type" element={<ReseauPro />} />
           <Route path="/quartier" element={<Quartier />} />
@@ -446,10 +475,10 @@ function App() {
           <Route path="/lieu-residence/1"  element={<LieuResidence1 />} />
           <Route path="/lieu-residence/2"  element={<LieuResidence2 />} />
           <Route path="/lieu-residence/3"  element={<LieuResidence3 />} />
-          {/* Gestion imam avec son propre dashboard */}
+          {/* Alias legacy conservés pour rétrocompatibilité */}
           <Route path="/gestion-imam-pro/:tenantCode"   element={<GestionImam />} />
-          <Route path="/gestion-madrasa-v2/:tenantCode" element={<GestionMadrasa />} />
-          <Route path="/gestion-ecole-v1/:tenantCode"   element={<GestionEcole />} />
+          <Route path="/gestion-madrasa-v2/:tenantCode" element={<GestionEnseignement mode="madrasa" />} />
+          <Route path="/gestion-ecole-v1/:tenantCode"   element={<GestionEnseignement mode="school" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>
@@ -458,7 +487,7 @@ function App() {
       {/* Footer minimal Espace Gestion */}
       {isGestionMode && (
         <div style={{ textAlign: "center", padding: "12px 16px", fontSize: 11, color: "#94a3b8", borderTop: "1px solid #f1f5f9", background: "white" }}>
-          Moftal · Espace Gestion Interne
+          Moftal · Espace Professionnel
         </div>
       )}
 

@@ -60,12 +60,167 @@ interface GalleryItem {
   created_at: string
 }
 
+// Durées disponibles : 5 ans = 1 part, 10 ans = 2 parts, 15 ans = 3 parts, 20 ans = 4 parts
+const DUREES = [
+  { ans: 5,  label: '5 ans',  parts: 1 },
+  { ans: 10, label: '10 ans', parts: 2 },
+  { ans: 15, label: '15 ans', parts: 3 },
+  { ans: 20, label: '20 ans', parts: 4 },
+]
+
+function ActivationArbreCard({ treeId, apiBase }: { treeId: string; apiBase: string }) {
+  const [loading, setLoading] = useState(false);
+  const [erreur, setErreur] = useState('');
+  const [prixBase, setPrixBase] = useState<number | null>(null);
+  const [zone, setZone] = useState('');
+  const [dureeIdx, setDureeIdx] = useState(0); // 0 = 5 ans par défaut
+
+  const dureeChoisie = DUREES[dureeIdx];
+  const montantTotal = prixBase !== null ? prixBase * dureeChoisie.parts : null;
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    fetch(`${apiBase}/api/payment/prix-activation`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(d => { if (d.success) { setPrixBase(d.prix); setZone(d.label); } })
+      .catch(() => { setPrixBase(100000); setZone('Tarif Afrique'); });
+  }, [apiBase]);
+
+  async function payer() {
+    if (!montantTotal) return;
+    setLoading(true);
+    setErreur('');
+    try {
+      const token = localStorage.getItem('token');
+      const r = await fetch(`${apiBase}/api/payment/initiate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: montantTotal,
+          currency: 'GNF',
+          purpose: 'activation_famille',
+          relatedId: treeId,
+          dureeAns: dureeChoisie.ans,
+          description: `Activation arbre familial Moftal — ${dureeChoisie.ans} ans — ${montantTotal.toLocaleString()} GNF`,
+        }),
+      });
+      const d = await r.json();
+      if (d.success && d.paymentUrl) {
+        window.location.href = d.paymentUrl;
+      } else {
+        setErreur(d.message || 'Impossible d\'initier le paiement. Réessayez.');
+      }
+    } catch {
+      setErreur('Erreur de connexion. Vérifiez votre internet.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-4 mb-4">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-3xl">🔒</span>
+        <div className="flex-1">
+          <p className="font-black text-sm text-amber-900">Numéro de sang familial — Non activé</p>
+          <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+            Votre lignée est enregistrée. Activez votre arbre pour révéler votre <strong>code de sang unique</strong> et débloquer toutes les fonctionnalités familiales.
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <span className="font-black text-2xl tracking-widest" style={{ color: '#fbbf24' }}>F?S?</span>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-white border border-amber-200 px-3 py-2 mb-3 text-xs text-amber-800 space-y-1">
+        <p>✅ Code de sang unique de votre lignée, jamais répété</p>
+        <p>✅ Accès complet à l'arbre généalogique familial</p>
+        <p>✅ Moftal Pay familial activé (caisse commune)</p>
+        <p>✅ Désignation des chefs de famille</p>
+      </div>
+
+      {/* Choix de la durée d'activation */}
+      <div className="mb-3">
+        <p className="text-xs font-bold text-amber-900 mb-2">⏳ Choisissez la durée d'activation :</p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {DUREES.map((d, i) => (
+            <button
+              key={d.ans}
+              type="button"
+              onClick={() => setDureeIdx(i)}
+              className={`rounded-xl py-2 text-xs font-black transition-all border-2 ${
+                dureeIdx === i
+                  ? 'bg-amber-500 text-white border-amber-500 shadow-md scale-[1.04]'
+                  : 'bg-white text-amber-800 border-amber-200 hover:border-amber-400'
+              }`}
+            >
+              {d.label}
+              {prixBase !== null && (
+                <span className={`block text-[9px] font-medium mt-0.5 ${dureeIdx === i ? 'text-amber-100' : 'text-amber-500'}`}>
+                  {(prixBase * d.parts).toLocaleString()} GNF
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] text-amber-600 mt-1.5 text-center">
+          Renouvelable tous les {dureeChoisie.ans} ans · {prixBase !== null ? `${prixBase.toLocaleString()} GNF / 5 ans` : '…'}
+        </p>
+      </div>
+
+      {/* Prix total selon zone géographique */}
+      {montantTotal !== null && (
+        <div className="flex items-center justify-between rounded-xl bg-amber-100 border border-amber-200 px-3 py-2 mb-3">
+          <div>
+            <p className="text-xs font-bold text-amber-800">{zone} · {dureeChoisie.ans} ans</p>
+            <p className="text-xs text-amber-600">{zone === 'Tarif Afrique' ? '🌍 Continent africain' : '🌎 Hors Afrique'}</p>
+          </div>
+          <span className="font-black text-lg text-amber-900">{montantTotal.toLocaleString()} GNF</span>
+        </div>
+      )}
+
+      {erreur && (
+        <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-2">{erreur}</p>
+      )}
+
+      <button
+        onClick={payer}
+        disabled={loading || montantTotal === null}
+        className="w-full py-3 rounded-xl font-black text-sm text-white disabled:opacity-50 transition-all active:scale-95"
+        style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}
+      >
+        {loading
+          ? '⏳ Redirection vers le paiement...'
+          : montantTotal === null
+            ? 'Chargement du prix...'
+            : `🩸 Activer mon arbre — ${dureeChoisie.ans} ans — ${montantTotal.toLocaleString()} GNF`}
+      </button>
+      <p className="text-xs text-center text-amber-600 mt-1.5">Paiement sécurisé via FedaPay · Orange Money / Carte</p>
+    </div>
+  );
+}
+
+function FoyerCard({ to, emoji, label }: { to: string; emoji: string; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="w-full flex flex-col items-center justify-center gap-0.5 py-3 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-emerald-50 hover:border-emerald-200 active:scale-95"
+    >
+      <span className="text-2xl leading-none">{emoji}</span>
+      <span className="text-[10px] font-medium text-gray-600 text-center leading-tight">{label}</span>
+    </Link>
+  )
+}
+
 export default function Arbre() {
   const navigate = useNavigate()
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
   const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges'>('arbre')
+  const [foyerOpen, setFoyerOpen] = useState(false)
   const { t } = useI18n()
 
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -749,32 +904,72 @@ const enhancedUser: UserData = useMemo(() => {
           ← Ma famille
         </button>
       </div>
+
+      {/* En-tête */}
+      <div className="mb-4 flex items-center gap-3 rounded-2xl bg-emerald-600 px-4 py-3 text-white shadow-md">
+        <span className="text-3xl leading-none">🌳</span>
+        <div>
+          <h1 className="text-base font-bold leading-tight">Héritage</h1>
+          <p className="text-xs text-emerald-100 mt-0.5">Votre arbre généalogique et votre univers familial</p>
+        </div>
+      </div>
+
+      {/* ── Cercle familial — accès rapide ── */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setFoyerOpen(o => !o)}
+          className={`w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl border shadow-sm transition active:scale-[0.99] ${
+            foyerOpen
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+              : 'bg-white border-gray-100 hover:bg-emerald-50 hover:border-emerald-200 text-gray-600'
+          }`}
+        >
+          <span className="flex items-center gap-2 font-bold text-sm">
+            <span className="text-2xl leading-none">👥</span>
+            Cercle familial
+          </span>
+          <span className="text-emerald-600 font-bold text-sm">{foyerOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {foyerOpen && (
+          <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20 p-3">
+            <div className="grid grid-cols-4 gap-1.5">
+              <FoyerCard to="/famille/parents"   emoji="👨‍👩‍👦" label="Parents"   />
+              <FoyerCard to="/famille/enfants"   emoji="👶"    label="Enfants"   />
+              <FoyerCard to="/famille/femmes"    emoji="👰"    label="Ma femme"  />
+              <FoyerCard to="/famille/mari"      emoji="🤵"    label="Mon homme" />
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="card">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-          Choisissez une zone : trois grands boutons, touchez celui que vous voulez.
+          Choisissez une zone :
         </p>
         <div
-          className={`grid gap-3 mb-6 ${partner ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}
+          className={`grid gap-1 mb-2 ${partner ? 'grid-cols-4' : 'grid-cols-3'}`}
           role="tablist"
-          aria-label="Arbre, messages ou galerie"
+          aria-label="Arbre, messages et galerie"
         >
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === 'echanges'}
             onClick={() => setActiveTab('echanges')}
-            className={`min-h-[120px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
+            className={`min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
               activeTab === 'echanges'
                 ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg scale-[1.02]'
                 : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100'
             }`}
           >
-            <span className="text-5xl leading-none" aria-hidden>
+            <span className="text-lg leading-none" aria-hidden>
               💬
             </span>
-            <span className="text-base font-bold leading-tight">Messages famille</span>
+            <span className="text-[8px] font-bold leading-tight truncate w-full">Messages famille</span>
             <span
-              className={`text-xs font-medium ${activeTab === 'echanges' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}
+              className={`text-[7px] truncate w-full font-medium ${activeTab === 'echanges' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}
             >
               Parler à la famille
             </span>
@@ -783,13 +978,13 @@ const enhancedUser: UserData = useMemo(() => {
           <button
             type="button"
             onClick={openGallery}
-            className={`min-h-[120px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100`}
+            className="min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100"
           >
-            <span className="text-5xl leading-none" aria-hidden>
+            <span className="text-lg leading-none" aria-hidden>
               📷
             </span>
-            <span className="text-base font-bold leading-tight">Galerie famille</span>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Photos et vidéos</span>
+            <span className="text-[8px] font-bold leading-tight truncate w-full">Galerie famille</span>
+            <span className="text-[7px] font-medium text-gray-500 dark:text-gray-400 truncate w-full">Photos et vidéos</span>
           </button>
 
           <button
@@ -797,15 +992,15 @@ const enhancedUser: UserData = useMemo(() => {
             role="tab"
             aria-selected={activeTab === 'arbre'}
             onClick={() => setActiveTab('arbre')}
-            className={`min-h-[120px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
+            className={`min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
               activeTab === 'arbre'
                 ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg scale-[1.02]'
                 : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100'
             }`}
           >
-            <span className="text-5xl leading-none" aria-hidden>🌳</span>
-            <span className="text-base font-bold leading-tight">Mon arbre</span>
-            <span className={`text-xs font-medium ${activeTab === 'arbre' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}>
+            <span className="text-lg leading-none" aria-hidden>🌳</span>
+            <span className="text-[8px] font-bold leading-tight truncate w-full">Mon arbre</span>
+            <span className={`text-[7px] truncate w-full font-medium ${activeTab === 'arbre' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}>
               Voir mes liens
             </span>
           </button>
@@ -817,7 +1012,7 @@ const enhancedUser: UserData = useMemo(() => {
               role="tab"
               aria-selected={activeTab === 'arbre-conjoint'}
               onClick={() => setActiveTab('arbre-conjoint')}
-              className={`min-h-[120px] rounded-2xl border-2 flex flex-col items-center justify-center gap-2 px-3 py-4 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-pink-400 ${
+              className={`min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-pink-400 ${
                 activeTab === 'arbre-conjoint'
                   ? 'border-pink-500 bg-pink-500 text-white shadow-lg scale-[1.02]'
                   : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-pink-400 text-gray-800 dark:text-gray-100'
@@ -827,23 +1022,48 @@ const enhancedUser: UserData = useMemo(() => {
                 <img
                   src={partner.photo}
                   alt={partner.prenom}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow"
+                  className="w-6 h-6 rounded-full object-cover border-2 border-white shadow"
                 />
               ) : (
-                <span className="text-5xl leading-none" aria-hidden>💑</span>
+                <span className="text-lg leading-none" aria-hidden>💑</span>
               )}
-              <span className="text-base font-bold leading-tight">
+              <span className="text-[8px] font-bold leading-tight truncate w-full">
                 Arbre de {partner.prenom}
               </span>
-              <span className={`text-xs font-medium ${activeTab === 'arbre-conjoint' ? 'text-pink-100' : 'text-gray-500 dark:text-gray-400'}`}>
+              <span className={`text-[7px] truncate w-full font-medium ${activeTab === 'arbre-conjoint' ? 'text-pink-100' : 'text-gray-500 dark:text-gray-400'}`}>
                 Voir ses liens
               </span>
             </button>
           )}
         </div>
 
-        {/* ─── Numéro familial (familyCode) — visible dès 10 membres ─── */}
-        {treeInfo?.familyCode && (
+        {/* ─── Accès rapides — quittent cette page ─── */}
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              const session = JSON.parse(localStorage.getItem('session_user') || '{}')
+              const u = session.userData || session
+              const sousPrefecture = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || ''
+              const params = new URLSearchParams({ type: 'mairie' })
+              if (sousPrefecture) params.set('city', sousPrefecture)
+              navigate(`/liste-professionnels?${params.toString()}`)
+            }}
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 transition-all hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400"
+          >
+            <span aria-hidden>🏛️</span> Mairie <span className="text-gray-400" aria-hidden>↗</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/probleme')}
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 transition-all hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400"
+          >
+            <span aria-hidden>🚨</span> Mes problèmes <span className="text-gray-400" aria-hidden>↗</span>
+          </button>
+        </div>
+
+        {/* ─── Numéro de sang familial ─── */}
+        {treeInfo?.familyCode ? (
           <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 mb-4 flex items-center gap-3">
             <span className="text-2xl">🩸</span>
             <div className="flex-1">
@@ -857,7 +1077,9 @@ const enhancedUser: UserData = useMemo(() => {
               )}
             </div>
           </div>
-        )}
+        ) : treeInfo?.codePaiementRequis ? (
+          <ActivationArbreCard treeId={treeInfo.id} apiBase={API_BASE} />
+        ) : null}
 
         {/* ─── Désignation des chefs de l'arbre ─── */}
         {fund && (

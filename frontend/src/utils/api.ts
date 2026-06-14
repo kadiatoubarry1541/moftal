@@ -176,7 +176,16 @@ export const api = {
           wallet: result.user.wallet,
           walletCurrency: result.user.walletCurrency,
           statutSocial: result.user.statutSocial,
+          lieu1: result.user.lieu1,
+          lieu2: result.user.lieu2,
+          lieu3: result.user.lieu3,
           lieuResidence1: result.user.lieuResidence1,
+          lieuResidence2: result.user.lieuResidence2,
+          lieuResidence3: result.user.lieuResidence3,
+          prefecture: result.user.prefecture,
+          sousPrefecture: result.user.sousPrefecture,
+          pays: result.user.pays,
+          regionOrigine: result.user.regionOrigine,
           treeVisibility: result.user.treeVisibility,
         }
         // Supprimer uniquement les anciennes données de session (pas les préférences)

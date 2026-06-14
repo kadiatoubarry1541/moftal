@@ -27,18 +27,20 @@
 
 .view-controls {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .view-btn {
-  padding: 8px 16px;
-  border: 2px solid #4CAF50;
+  padding: 4px 7px;
+  border: 1.5px solid #4CAF50;
   background: white;
   color: #4CAF50;
-  border-radius: 20px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
+  font-size: 0.7rem;
 }
 
 .view-btn.active {
@@ -704,7 +706,7 @@
 
   .view-btn {
     flex: 1;
-    min-width: 130px;
+    min-width: 60px;
   }
 
   .form-grid {

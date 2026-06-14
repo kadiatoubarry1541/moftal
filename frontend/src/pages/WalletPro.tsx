@@ -4,7 +4,7 @@ import { getSessionUser } from '../utils/auth';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
-interface Wallet {
+interface CompteMoftalPayPro {
   id: string;
   nomPro: string;
   typePro: string;
@@ -49,7 +49,7 @@ export default function WalletPro() {
   const user = getSessionUser();
   const token = localStorage.getItem('token');
 
-  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [wallet, setWallet] = useState<CompteMoftalPayPro | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -77,14 +77,14 @@ export default function WalletPro() {
     setError('');
     try {
       const [wRes, tRes] = await Promise.all([
-        fetch(`${API}/api/moftal-pay/mon-wallet`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API}/api/moftal-pay/mon-moftal-pay-pro`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API}/api/moftal-pay/mes-transactions`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       const wData = await wRes.json();
       const tData = await tRes.json();
-      if (wData.success) setWallet(wData.wallet);
+      if (wData.success) setWallet(wData.comptePro);
       else if (wData.restricted) setRestricted(true);
-      else setError(wData.message || 'Impossible de charger le wallet');
+      else setError(wData.message || 'Impossible de charger le Moftal Pay Pro');
       if (tData.success) setTransactions(tData.transactions || []);
     } catch {
       setError('Erreur de connexion au serveur');
@@ -147,7 +147,7 @@ export default function WalletPro() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-gray-500 text-sm">Chargement de votre wallet...</p>
+        <p className="text-gray-500 text-sm">Chargement de votre Moftal Pay Pro...</p>
       </div>
     </div>
   );
@@ -202,9 +202,9 @@ export default function WalletPro() {
           </div>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-blue-200 text-xs font-semibold tracking-wide uppercase">Moftal Pay</p>
+              <p className="text-blue-200 text-xs font-semibold tracking-wide uppercase">Moftal Pay Pro</p>
               <h1 className="text-white font-black text-xl leading-tight mt-0.5">
-                {wallet?.nomPro || 'Moftal Pay'}
+                {wallet?.nomPro || 'Moftal Pay Pro'}
               </h1>
               <p className="text-blue-300 text-xs mt-0.5">{wallet?.typePro || ''}</p>
             </div>

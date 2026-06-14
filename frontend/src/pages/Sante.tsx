@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProSection from '../components/ProSection';
 import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from '../utils/proximity';
@@ -57,8 +57,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 export default function Sante() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'hopitaux' | 'medecins'>('hopitaux');
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [rawHospitals, setRawHospitals] = useState<Hospital[]>([]);
+  const [rawDoctors, setRawDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
@@ -66,6 +66,10 @@ export default function Sante() {
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
   const [gpsActive, setGpsActive] = useState(false);
   const navigate = useNavigate();
+
+  // Re-tri réactif quand GPS arrive ou données changent
+  const hospitals = useMemo(() => sortByProximity(rawHospitals, userGeo), [rawHospitals, userGeo]);
+  const doctors = useMemo(() => sortByProximity(rawDoctors, userGeo), [rawDoctors, userGeo]);
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -125,14 +129,13 @@ export default function Sante() {
       
       if (response.ok) {
         const data = await response.json();
-        const geo = getUserGeoContext();
-        setHospitals(sortByProximity(data.hospitals || [], geo));
+        setRawHospitals(data.hospitals || []);
       } else {
-        setHospitals(sortByProximity(getDefaultHospitals(), getUserGeoContext()));
+        setRawHospitals(getDefaultHospitals());
       }
     } catch (error) {
       console.error('Erreur lors du chargement des hôpitaux:', error);
-      setHospitals(sortByProximity(getDefaultHospitals(), getUserGeoContext()));
+      setRawHospitals(getDefaultHospitals());
     }
   };
 
@@ -148,14 +151,13 @@ export default function Sante() {
 
       if (response.ok) {
         const data = await response.json();
-        const geo = getUserGeoContext();
-        setDoctors(sortByProximity(data.doctors || [], geo));
+        setRawDoctors(data.doctors || []);
       } else {
-        setDoctors(sortByProximity(getDefaultDoctors(), getUserGeoContext()));
+        setRawDoctors(getDefaultDoctors());
       }
     } catch (error) {
       console.error('Erreur lors du chargement des médecins:', error);
-      setDoctors(sortByProximity(getDefaultDoctors(), getUserGeoContext()));
+      setRawDoctors(getDefaultDoctors());
     }
   };
 
@@ -344,7 +346,7 @@ export default function Sante() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
               { id: 'hopitaux', label: 'Trouver un hôpital', icon: '🏥' },
               { id: 'medecins', label: 'Trouver un médecin', icon: '👨‍⚕️' }
@@ -352,14 +354,14 @@ export default function Sante() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-emerald-500 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
+                <span className="text-base sm:text-lg">{tab.icon}</span>
+                <span className="text-center leading-tight">{tab.label}</span>
               </button>
             ))}
           </nav>
@@ -368,6 +370,20 @@ export default function Sante() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Bannière proximité */}
+        {(userGeo.city || userGeo.country || gpsActive) && (
+          <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mb-4">
+            <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
+            <span>
+              {gpsActive
+                ? "Les établissements les plus proches de vous apparaissent en premier"
+                : `Résultats personnalisés — les établissements de ${userGeo.city || userGeo.country} apparaissent en premier`
+              }
+            </span>
+          </div>
+        )}
+
         {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -433,11 +449,20 @@ export default function Sante() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">🏥 Hôpitaux Guinéens</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-                {filteredHospitals.map((hospital) => (
+                {filteredHospitals.map((hospital) => {
+                  const hprox = proximityLabel(hospital, userGeo);
+                  return (
                   <div key={hospital.id} className="border rounded-lg p-3 sm:p-6 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="text-xl font-semibold text-gray-900">{hospital.name}</h3>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-xl font-semibold text-gray-900">{hospital.name}</h3>
+                        {hprox && (
+                          <span className="inline-block mt-1 px-2 py-0.5 text-white text-xs font-semibold rounded-full" style={{ backgroundColor: hprox.color }}>
+                            {hprox.text}
+                          </span>
+                        )}
+                      </div>
+                      <span className={`ml-2 flex-shrink-0 px-2 py-1 rounded text-xs font-medium ${
                         hospital.type === 'public' ? 'bg-blue-100 text-blue-800' :
                         hospital.type === 'privé' ? 'bg-green-100 text-green-800' :
                         'bg-purple-100 text-purple-800'
@@ -487,7 +512,8 @@ export default function Sante() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -498,9 +524,14 @@ export default function Sante() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">👨‍⚕️ Médecins Compétents</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
-                {filteredDoctors.map((doctor) => (
+                {filteredDoctors.map((doctor) => {
+                  const dprox = proximityLabel(doctor, userGeo);
+                  return (
                   <div key={doctor.id} className="border rounded-lg p-3 sm:p-6 hover:shadow-md transition-shadow">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{doctor.name}</h3>
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-xl font-semibold text-gray-900">{doctor.name}</h3>
+                      {dprox && <span className="ml-2 flex-shrink-0 px-2 py-0.5 text-white text-xs font-semibold rounded-full" style={{ backgroundColor: dprox.color }}>{dprox.text}</span>}
+                    </div>
                     
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center text-sm text-gray-600">
@@ -550,7 +581,8 @@ export default function Sante() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

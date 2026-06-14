@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { getSessionUser } from "../utils/auth";
+import { getSessionUser, isAdmin } from "../utils/auth";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
 
@@ -110,6 +110,7 @@ export default function Racines() {
       .finally(() => setLoading(false));
   }, []);
 
+  const userIsAdmin = isAdmin(user as any);
   const myNumeroH = user?.numeroH || user?.numero_h || "";
 
   const filtered = members.filter(m => {
@@ -129,8 +130,8 @@ export default function Racines() {
     </div>
   );
 
-  // Pas d'ethnie dans le profil
-  if (!ethnie) return (
+  // Pas d'ethnie dans le profil — utilisateur normal
+  if (!ethnie && !userIsAdmin) return (
     <div style={{ maxWidth: 480, margin: "60px auto", padding: "0 24px", textAlign: "center" }}>
       <div style={{
         width: 80, height: 80, borderRadius: "50%",
@@ -166,11 +167,10 @@ export default function Racines() {
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 16px" }}>
 
-      {/* Retour Famille */}
+      {/* Retour Mon arbre */}
       <div style={{ marginBottom: 16 }}>
         <Link
-          to="/famille"
-          state={{ returnToHub: true }}
+          to="/famille/moi/arbre"
           style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             padding: "6px 14px", background: "#f1f5f9", borderRadius: 8,
@@ -178,9 +178,39 @@ export default function Racines() {
             textDecoration: "none", border: "1px solid #e2e8f0"
           }}
         >
-          ← Famille
+          ← Mon arbre
         </Link>
       </div>
+
+      {/* Bannière admin si pas d'ethnie */}
+      {userIsAdmin && !ethnie && (
+        <div style={{
+          background: "#fffbeb", border: "2px solid #f59e0b", borderRadius: 14,
+          padding: "16px 20px", marginBottom: 20,
+          display: "flex", gap: 14, alignItems: "flex-start"
+        }}>
+          <span style={{ fontSize: 26, flexShrink: 0 }}>👑</span>
+          <div>
+            <div style={{ fontWeight: 700, color: "#92400e", fontSize: 15, marginBottom: 6 }}>
+              Mode aperçu administrateur
+            </div>
+            <div style={{ fontSize: 13, color: "#78350f", lineHeight: 1.6 }}>
+              Votre ethnie n'est pas renseignée. Vos utilisateurs verront ici tous les membres qui partagent leur ethnie — avec leurs noms, photos, villes et générations.
+              Ajoutez votre ethnie dans votre profil pour voir votre vraie communauté.
+            </div>
+            <button
+              onClick={() => navigate("/moi/profil")}
+              style={{
+                marginTop: 10, background: "#f59e0b", color: "#fff",
+                border: "none", borderRadius: 8, padding: "7px 16px",
+                fontSize: 13, fontWeight: 600, cursor: "pointer"
+              }}
+            >
+              Compléter mon profil
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{
@@ -206,7 +236,7 @@ export default function Racines() {
               Tes Racines
             </div>
             <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>
-              Communauté {ethnie}
+              {ethnie ? `Communauté ${ethnie}` : "Aperçu — Page Racines"}
             </h1>
           </div>
         </div>
@@ -217,7 +247,10 @@ export default function Racines() {
           </div>
           <div style={{ width: 1, background: "rgba(255,255,255,0.2)" }} />
           <div style={{ fontSize: 14, opacity: 0.9, lineHeight: 1.5, maxWidth: 340 }}>
-            Tous les membres de la plateforme qui partagent l'ethnie <strong>{ethnie}</strong> sont automatiquement ici.
+            {ethnie
+              ? <>Tous les membres de la plateforme qui partagent l'ethnie <strong>{ethnie}</strong> sont automatiquement ici.</>
+              : "Ici s'affichent automatiquement tous les membres qui partagent la même ethnie que l'utilisateur."
+            }
           </div>
         </div>
       </div>
@@ -254,7 +287,10 @@ export default function Racines() {
       {/* Grille des membres */}
       {filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8", fontSize: 15 }}>
-          Aucun membre trouvé
+          {!ethnie && userIsAdmin
+            ? <><div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>Les membres s'afficheront ici selon leur ethnie commune</>
+            : "Aucun membre trouvé"
+          }
         </div>
       ) : (
         <div style={{

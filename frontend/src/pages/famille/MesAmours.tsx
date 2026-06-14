@@ -701,7 +701,7 @@ export default function MesAmours() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
               { id: 'friends', label: 'Mes Amis', icon: '👥' },
               { id: 'requests', label: 'Demandes', icon: '📨' },
@@ -710,14 +710,14 @@ export default function MesAmours() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-emerald-500 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
+                <span className="text-base sm:text-lg">{tab.icon}</span>
+                <span className="text-center leading-tight">{tab.label}</span>
               </button>
             ))}
           </nav>

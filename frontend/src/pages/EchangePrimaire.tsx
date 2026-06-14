@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
-import { sortAnyByProximity, getUserGeoContext } from '../utils/proximity';
+import { sortAnyByProximity, anyProximityLabel, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
@@ -61,8 +61,12 @@ function buildImageUrl(p: string | undefined): string | undefined {
 
 export default function EchangePrimaire() {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [products, setProducts] = useState<ExchangeProduct[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
+  const [rawSuppliers, setRawSuppliers] = useState<Supplier[]>([]);
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const [gpsActive, setGpsActive] = useState(false);
+  const products = useMemo(() => sortAnyByProximity(rawProducts, userGeo), [rawProducts, userGeo]);
+  const suppliers = useMemo(() => sortAnyByProximity(rawSuppliers, userGeo), [rawSuppliers, userGeo]);
   const [loading, setLoading] = useState(true);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
@@ -118,6 +122,12 @@ export default function EchangePrimaire() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) { setUserGeo(prev => ({ ...prev, coords })); setGpsActive(true); }
+    });
+  }, []);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -136,9 +146,9 @@ export default function EchangePrimaire() {
       if (productsResponse.ok) {
         const productsData = await productsResponse.json();
         const geo = getUserGeoContext();
-        setProducts(sortAnyByProximity(productsData.products || [], geo));
+        setRawProducts(productsData.products || []);
       } else {
-        setProducts(sortAnyByProximity(getDefaultProducts(), getUserGeoContext()));
+        setRawProducts(getDefaultProducts());
       }
 
       // Charger les fournisseurs
@@ -152,15 +162,15 @@ export default function EchangePrimaire() {
 
       if (suppliersResponse.ok) {
         const suppliersData = await suppliersResponse.json();
-        setSuppliers(sortAnyByProximity(suppliersData.suppliers || [], getUserGeoContext()));
+        setRawSuppliers(suppliersData.suppliers || []);
       } else {
-        setSuppliers([]);
+        setRawSuppliers([]);
       }
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setProducts(sortAnyByProximity(getDefaultProducts(), getUserGeoContext()));
-      setSuppliers([]);
+      setRawProducts(getDefaultProducts());
+      setRawSuppliers([]);
     } finally {
       setLoading(false);
     }
@@ -424,6 +434,38 @@ export default function EchangePrimaire() {
       >
         ← Retour
       </button>
+
+      {/* Bannière proximité */}
+      {(userGeo.city || userGeo.country || gpsActive) && (
+        <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mb-4">
+          <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
+          <span>{gpsActive ? "Annonces triées par distance GPS — les plus proches apparaissent en premier" : `Annonces de ${userGeo.city || userGeo.country} apparaissent en premier`}</span>
+        </div>
+      )}
+
+      {/* ── Vendeur Officiel Moftal ── */}
+      <div className="mb-6 rounded-2xl overflow-hidden shadow-lg border-2 border-yellow-400 dark:border-yellow-500">
+        <div className="bg-gradient-to-r from-yellow-500 to-amber-500 px-4 py-2 flex items-center gap-2">
+          <span className="text-lg">⭐</span>
+          <span className="text-white font-bold text-sm tracking-wide uppercase">Vendeur Officiel Moftal</span>
+          <span className="ml-auto bg-white text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">OFFICIEL</span>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <span className="text-5xl">🌾</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-gray-900 dark:text-white">Alimentation — Produits certifiés</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Riz, huiles, légumes, produits locaux. Contactez-nous directement pour passer commande.
+            </p>
+          </div>
+          <a
+            href="mailto:lontal.profestionnelles@gmail.com"
+            className="flex-shrink-0 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-semibold transition-colors"
+          >
+            Nous contacter
+          </a>
+        </div>
+      </div>
 
       {/* Bannière en-tête Primaire */}
       <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-6 mb-6 text-white shadow-lg">

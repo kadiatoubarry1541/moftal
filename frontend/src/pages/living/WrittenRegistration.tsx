@@ -161,6 +161,7 @@ export function WrittenRegistration() {
     if (!data.prenom) errors.add('prenom')
     if (!data.dateNaissance) errors.add('dateNaissance')
     if (!hasCustomActivite) errors.add('activite1')
+    if (data.activite1 && data.activite1 !== 'Autre' && !(data.specialite && data.specialite.trim())) errors.add('specialite')
     if (!data.email) errors.add('email')
     if (!data.telephone) errors.add('telephone')
     if (!data.password) errors.add('password')
@@ -775,13 +776,21 @@ export function WrittenRegistration() {
                 {data.activite1 && data.activite1 !== 'Autre' && (
                   <div className="mt-3" style={{ animation: 'fadeInDown 0.25s ease', borderLeft: '3px solid #10b981', paddingLeft: '0.75rem' }}>
                     <label className="block text-xs font-semibold text-emerald-700 mb-1">
-                      🎯 Votre spécialité dans « {data.activite1} »
-                      <span className="text-gray-400 font-normal ml-1">(optionnel mais utile)</span>
+                      🎯 Votre spécialité dans « {data.activite1} » *
                     </label>
                     <input
                       type="text"
                       value={data.specialite || ''}
-                      onChange={(e) => setData((prev) => ({ ...prev, specialite: e.target.value }))}
+                      onChange={(e) => {
+                        setData((prev) => ({ ...prev, specialite: e.target.value }))
+                        if (e.target.value.trim()) {
+                          setValidationErrors((prev) => {
+                            const next = new Set(prev)
+                            next.delete('specialite')
+                            return next
+                          })
+                        }
+                      }}
                       placeholder={`Ex : ${
                         data.activite1 === 'Santé' ? 'Cardiologie, Pédiatrie, Sage-femme…' :
                         data.activite1 === 'Enseignement' ? 'Mathématiques, Primaire, Lycée…' :
@@ -792,7 +801,9 @@ export function WrittenRegistration() {
                         data.activite1 === 'Construction' ? 'Maçonnerie, Génie civil, Architecture…' :
                         'Précisez votre domaine exact…'
                       }`}
-                      className="w-full px-3 py-2 border-2 border-emerald-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30"
+                      className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 bg-emerald-50/30 ${
+                        validationErrors.has('specialite') ? 'border-red-500 focus:ring-red-400' : 'border-emerald-300 focus:ring-emerald-400'
+                      }`}
                     />
                   </div>
                 )}

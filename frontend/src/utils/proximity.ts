@@ -5,6 +5,72 @@
 //  Niveau 3 : même pays         → Niveau 4 : reste du monde
 // ═══════════════════════════════════════════════════════════════
 
+import { WORLD_GEOGRAPHY } from './worldGeography';
+
+// ─── Liste de pays pour le filtre manuel des pages service ──────
+export const PAYS_LISTE = [
+  'Guinée', 'Sénégal', 'Mali', 'Côte d\'Ivoire', 'Burkina Faso',
+  'Niger', 'Mauritanie', 'Guinée-Bissau', 'Sierra Leone', 'Liberia',
+  'Ghana', 'Bénin', 'Togo', 'Cameroun', 'Congo', 'Gabon',
+  'France', 'Belgique', 'Canada', 'États-Unis', 'Maroc', 'Algérie',
+  'Tunisie', 'Égypte', 'Afrique du Sud', 'Autre'
+];
+
+const normalizeText = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+// Cache des noms de villes/régions par pays (calculé depuis WORLD_GEOGRAPHY)
+const countryPlaceNamesCache = new Map<string, Set<string>>();
+
+function placeNamesForCountry(country: string): Set<string> {
+  const key = normalizeText(country);
+  const cached = countryPlaceNamesCache.get(key);
+  if (cached) return cached;
+
+  const names = new Set<string>();
+  const collect = (node: { name: string; children?: any[] }) => {
+    names.add(normalizeText(node.name));
+    (node.children || []).forEach(collect);
+  };
+  for (const continent of WORLD_GEOGRAPHY) {
+    for (const pays of continent.children || []) {
+      if (normalizeText(pays.name) === key) {
+        collect(pays);
+        break;
+      }
+    }
+  }
+  countryPlaceNamesCache.set(key, names);
+  return names;
+}
+
+// ─── Filtre strict par pays pour les pages service ──────────────
+// Un élément correspond au pays choisi si :
+//  - son champ pays/country explicite correspond, OU
+//  - sa localisation (ville/quartier en texte libre) appartient à ce pays, OU
+//  - il n'a aucune info de localisation et le pays choisi est la Guinée (pays par défaut de la plateforme)
+export function matchesCountryFilter(item: Record<string, any>, pays: string): boolean {
+  if (!pays) return true;
+  const target = normalizeText(pays);
+
+  const explicitCountry = item.country || item.pays || item.address?.country;
+  if (explicitCountry && normalizeText(explicitCountry) !== 'pays') {
+    return normalizeText(explicitCountry) === target;
+  }
+
+  const loc = item.location || item.city || item.ville || item.localisation || '';
+  if (loc) {
+    const locNorm = normalizeText(loc);
+    const places = placeNamesForCountry(pays);
+    for (const place of places) {
+      if (place && (locNorm.includes(place) || place.includes(locNorm))) return true;
+    }
+    return false;
+  }
+
+  return target === normalizeText('Guinée');
+}
+
 export interface GeoCoords {
   lat: number;
   lng: number;

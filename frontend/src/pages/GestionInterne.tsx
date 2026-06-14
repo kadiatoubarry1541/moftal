@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { config } from "../config/api";
+import Activite from "./Activite";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
@@ -10,7 +12,7 @@ const ADMIN_SERVICES = [
   { type: "clinic",          demoCode: "DEMO-REF-CLIN",  label: "Clinique / Hôpital",       emoji: "🏥", color: "#0d9488", bg: "#f0fdfa", path: "gestion-clinique",      vitrinePath: "clinique",        reseauPath: "reseau/clinic",          desc: "Patients, personnel médical, consultations, dossiers" },
   { type: "school",          demoCode: "DEMO-REF-ECO",   label: "École / Université",        emoji: "🏫", color: "#16a34a", bg: "#f0fdf4", path: "gestion-ecole",         vitrinePath: "ecole",           reseauPath: "reseau/school",          desc: "Élèves, cours, présences, notes, enseignants" },
   { type: "mosque",          demoCode: "DEMO-REF-MSQ",   label: "Réseau Imam",               emoji: "🕌", color: "#059669", bg: "#ecfdf5", path: "gestion-mosquee",       vitrinePath: "mosquee",         reseauPath: "reseau/mosque",          desc: "Imams, fidèles, prédications, mosquées partenaires, dons, Coran" },
-  { type: "reseau",          demoCode: "DEMO-REF-RESEAU",label: "Réseau",                    emoji: "🌐", color: "#2563eb", bg: "#eff6ff", path: "gestion-reseau",        vitrinePath: "reseau-vitrine",  reseauPath: "reseau/reseau",          desc: "Membres, projets, cotisations, annonces — pour tout type de réseau" },
+  { type: "reseau",          demoCode: "DEMO-REF-RESEAU",label: "Association / Réseau",      emoji: "🌐", color: "#2563eb", bg: "#eff6ff", path: "gestion-reseau",        vitrinePath: "reseau-vitrine",  reseauPath: "reseau/reseau",          desc: "Membres, projets, cotisations, annonces — pour associations et groupes organisés" },
   { type: "madrasa",         demoCode: "DEMO-REF-MDS",   label: "Madrasa / Daroul",          emoji: "📖", color: "#0891b2", bg: "#ecfeff", path: "gestion-madrasa",       vitrinePath: "madrasa",         reseauPath: "reseau/madrasa",         desc: "Élèves, enseignants, cours religieux, certificats" },
   { type: "commerce",        demoCode: "DEMO-REF-COM",   label: "Boutique / Commerce",       emoji: "🏪", color: "#d97706", bg: "#fffbeb", path: "gestion-commerce",      vitrinePath: "commerce",        reseauPath: "reseau/commerce",        desc: "Stock, ventes, clients, caisse, crédits" },
   { type: "enterprise",      demoCode: "DEMO-REF-ENT",   label: "Entreprise",                emoji: "🏢", color: "#4f46e5", bg: "#eef2ff", path: "gestion-entreprise",    vitrinePath: "entreprise",      reseauPath: "reseau/enterprise",      desc: "Employés, clients, contrats, projets, annonces" },
@@ -19,10 +21,15 @@ const ADMIN_SERVICES = [
   { type: "scientist",       demoCode: "DEMO-REF-SCIEN", label: "Scientifiques",             emoji: "🔬", color: "#4338ca", bg: "#eef2ff", path: "gestion-scientifique",  vitrinePath: "scientifique",    reseauPath: "reseau/scientist",       desc: "Chercheurs, publications, projets scientifiques" },
   { type: "supplier",        demoCode: "DEMO-REF-FOUR",  label: "Fournisseurs / Grossistes", emoji: "🚚", color: "#0e7490", bg: "#ecfeff", path: "gestion-fournisseur",   vitrinePath: "fournisseur",     reseauPath: "reseau/supplier",        desc: "Produits, clients, commandes, annonces" },
   { type: "security_agency", demoCode: "DEMO-REF-SECU",  label: "Agences de Sécurité",       emoji: "🛡️", color: "#475569", bg: "#f8fafc", path: "gestion-securite",      vitrinePath: "securite",        reseauPath: "reseau/security_agency", desc: "Agents, missions, clients, annonces sécurité" },
-  { type: "immobilier",      demoCode: "DEMO-REF-IMMO",  label: "Immobilier",                emoji: "🏠", color: "#b45309", bg: "#fffbeb", path: "gestion-immobilier",    vitrinePath: "immobilier",      reseauPath: "reseau/immobilier",      desc: "Biens, locataires, loyers, maintenance, annonces" },
+  { type: "broker",          demoCode: "DEMO-REF-IMMO",  label: "Immobilier / Démarcheur",   emoji: "🏠", color: "#b45309", bg: "#fffbeb", path: "gestion-immobilier",    vitrinePath: "immobilier",      reseauPath: "reseau/broker",          desc: "Biens, locataires, loyers, maintenance, annonces" },
   { type: "restaurant",      demoCode: "DEMO-REF-RESTO", label: "Restaurant / Restauration", emoji: "🍽️", color: "#ea580c", bg: "#fff7ed", path: "gestion-restaurant",    vitrinePath: "restaurant",      reseauPath: "reseau/restaurant",      desc: "Menu, tables, commandes, équipe, annonces" },
   { type: "transport",       demoCode: "DEMO-REF-TRANS", label: "Transport & Livraison",     emoji: "🚌", color: "#1d4ed8", bg: "#eff6ff", path: "gestion-transport",     vitrinePath: "transport",       reseauPath: "reseau/transport",       desc: "Véhicules, chauffeurs, trajets, réservations, annonces" },
   { type: "mairie",          demoCode: "DEMO-REF-MAIR",  label: "Mairie / État Civil",       emoji: "🏛️", color: "#1d4ed8", bg: "#eff6ff", path: "gestion-mairie",        vitrinePath: "mairie",          reseauPath: "",                       desc: "Mariages, naissances, décès, certificats de résidence, agents" },
+  { type: "vendor",          demoCode: "DEMO-REF-VENT",  label: "Vendeur / Détaillant",      emoji: "🛒", color: "#0891b2", bg: "#ecfeff", path: "gestion-vendeur",       vitrinePath: "",                reseauPath: "reseau/vendor",          desc: "Produits, ventes, clients, dépenses" },
+  { type: "producer",        demoCode: "DEMO-REF-PROD",  label: "Entreprise de Production",  emoji: "🏭", color: "#7c3aed", bg: "#f5f3ff", path: "gestion-producer",      vitrinePath: "",                reseauPath: "reseau/producer",        desc: "Produits fabriqués, lots, commandes, personnel" },
+  { type: "beauty",          demoCode: "DEMO-REF-BEAU",  label: "Beauté & Bien-être",        emoji: "💈", color: "#db2777", bg: "#fdf2f8", path: "gestion-beauty",        vitrinePath: "",                reseauPath: "reseau/beauty",          desc: "Services, rendez-vous, personnel, clients" },
+  { type: "artisan",         demoCode: "DEMO-REF-ARTI",  label: "Artisanat & Services",      emoji: "🔧", color: "#d97706", bg: "#fffbeb", path: "gestion-artisan",       vitrinePath: "",                reseauPath: "reseau/artisan",         desc: "Interventions, services, clients, annonces" },
+  { type: "health_worker",   demoCode: "DEMO-REF-HLTH",  label: "Médecin / Agent de santé",  emoji: "👨‍⚕️", color: "#0d9488", bg: "#f0fdfa", path: "gestion-clinique",      vitrinePath: "clinique",        reseauPath: "reseau/clinic",          desc: "Consultations, patients, rendez-vous (dashboard clinique)" },
 ];
 
 function getTypeInfo(type: string) {
@@ -33,35 +40,40 @@ function getTypeInfo(type: string) {
 
 export default function GestionInterne() {
   const navigate = useNavigate();
-  const [accounts, setAccounts]       = useState<any[]>([]);
-  const [adminTenants, setAdminTenants] = useState<any[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [search, setSearch]           = useState("");
+  const [accounts, setAccounts]           = useState<any[]>([]);
+  const [adminTenants, setAdminTenants]   = useState<any[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [search, setSearch]               = useState("");
+  const [accesGI, setAccesGI]             = useState<any>(null);
+  const [payGILoading, setPayGILoading]   = useState(false);
+  const [showPaywall, setShowPaywall]     = useState(false);
+  const [tabOverride, setTabOverride]     = useState<'pro' | 'activite' | null>(null);
 
   const currentUser = getSessionUser();
   const userIsAdmin = isAdmin(currentUser);
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
     if (!currentUser) { navigate("/login"); return; }
-    const token = localStorage.getItem("token");
 
     const myAccountsPromise = fetch(`${API}/api/professionals/my-accounts`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())
       .then(data => {
-        // Tous les comptes approuvés — le backend verifyTenant gère l'accès réel
-        const mgmt = (data.accounts || []).filter((a: any) =>
-          a.status === "approved"
-        );
+        const mgmt = (data.accounts || []).filter((a: any) => a.status === "approved");
         setAccounts(mgmt);
-        if (!userIsAdmin && mgmt.length === 1 && mgmt[0].tenant_code) {
-          const a = mgmt[0];
-          const info = getTypeInfo(a.type);
-          navigate(`/${info.path}/${a.tenant_code}`);
-        }
+        // Redirection auto seulement si accès confirmé (vérifié plus bas)
       })
       .catch(() => {});
+
+    // Vérifier l'accès à la Gestion Interne (essai ou vie)
+    const accesPromise = !userIsAdmin
+      ? fetch(`${API}/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(d => { if (d.success) setAccesGI(d); })
+          .catch(() => {})
+      : Promise.resolve();
 
     const adminTenantsPromise = userIsAdmin
       ? fetch(`${API}/api/professionals/admin/tenants`, { headers: { Authorization: `Bearer ${token}` } })
@@ -70,18 +82,59 @@ export default function GestionInterne() {
           .catch(() => {})
       : Promise.resolve();
 
-    Promise.all([myAccountsPromise, adminTenantsPromise]).finally(() => setLoading(false));
+    Promise.all([myAccountsPromise, accesPromise, adminTenantsPromise]).finally(() => setLoading(false));
   }, []);
 
-  // Ouvre la gestion : auto-setup tenant_code si manquant, puis navigate
+  // Redirection auto si un seul compte + accès confirmé
+  useEffect(() => {
+    if (userIsAdmin || accounts.length !== 1 || !accesGI) return;
+    if (!accesGI.aAcces) return; // pas d'accès → rester sur la page (paywall)
+    const a = accounts[0];
+    if (a.tenant_code) {
+      const info = getTypeInfo(a.type);
+      navigate(`/${info.path}/${a.tenant_code}`);
+    }
+  }, [accounts, accesGI]);
+
+  async function payerGestionInterne(periode: 'mois' | 'an' | 'cinqAns') {
+    setPayGILoading(true);
+    try {
+      const purposeMap = { mois: 'gestion_mois', an: 'gestion_an', cinqAns: 'gestion_5ans' };
+      const prixMap = { mois: accesGI?.prixMois, an: accesGI?.prixAn, cinqAns: accesGI?.prixCinqAns };
+      const r = await fetch(`${API}/api/payment/initiate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: prixMap[periode] || 0,
+          currency: "GNF",
+          purpose: purposeMap[periode],
+          relatedId: accesGI?.proId,
+          description: `Gestion Interne ${periode === 'mois' ? 'mensuel' : periode === 'an' ? 'annuel' : '5 ans'}`,
+        }),
+      });
+      const d = await r.json();
+      if (d.paymentUrl) { window.location.href = d.paymentUrl; }
+      else alert(d.message || "Impossible de lancer le paiement. Réessayez.");
+    } catch { alert("Erreur de connexion."); }
+    finally { setPayGILoading(false); }
+  }
+
+  // Raccourci pour l'ancien bouton (5 ans)
+  const payerGestionInterneVie = () => payerGestionInterne('cinqAns');
+
+  // Ouvre la gestion : vérifie l'accès, auto-setup tenant_code si manquant
   async function ouvrirGestion(account: any) {
+    // Bloquer si l'essai est terminé et pas payé à vie
+    if (accesGI && !accesGI.aAcces) {
+      alert("Votre essai gratuit est terminé. Achetez l'accès à vie ci-dessous pour continuer.");
+      return;
+    }
     const info = getTypeInfo(account.type);
     if (account.tenant_code) {
       navigate(`/${info.path}/${account.tenant_code}`);
       return;
     }
     try {
-      const token = localStorage.getItem("token");
       const r = await fetch(`${API}/api/professionals/${account.id}/ensure-tenant`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
@@ -104,25 +157,75 @@ export default function GestionInterne() {
     </div>
   );
 
-  if (!userIsAdmin && accounts.length === 0) return (
-    <div style={{ maxWidth:520, margin:"60px auto", padding:"0 24px", textAlign:"center" }}>
-      <div style={{ width:60, height:60, borderRadius:"50%", background:"#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px" }}>
-        <svg width="28" height="28" fill="none" stroke="#64748b" strokeWidth={1.8} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+  // Bandeau essai/vie pour utilisateurs non-admin ayant accès
+  const BandeauAcces = () => {
+    if (userIsAdmin || !accesGI?.aAcces) return null;
+    if (accesGI.mode === 'vie') return (
+      <div style={{ background:"#f0fdf4", border:"1px solid #86efac", borderRadius:10, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
+        <span style={{ fontSize:20 }}>♾️</span>
+        <p style={{ margin:0, fontSize:13, color:"#166534", fontWeight:700 }}>Accès à vie — Espace Professionnel débloqué définitivement.</p>
       </div>
-      <h2 style={{ fontSize:20, fontWeight:700, color:"#0f172a", marginBottom:8 }}>Accès Gestion Interne</h2>
-      <p style={{ fontSize:14, color:"#64748b", marginBottom:20, lineHeight:1.6 }}>
-        Ce module est réservé aux établissements avec un abonnement actif.
+    );
+    if (accesGI.mode === 'essai') return (
+      <div style={{ background:"#eff6ff", border:"1px solid #93c5fd", borderRadius:10, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:20 }}>⏳</span>
+          <p style={{ margin:0, fontSize:13, color:"#1e40af", fontWeight:700 }}>
+            Essai gratuit — <strong>{accesGI.joursRestants} jour{accesGI.joursRestants > 1 ? 's' : ''}</strong> restant{accesGI.joursRestants > 1 ? 's' : ''}
+          </p>
+        </div>
+        <button onClick={payerGestionInterneVie} disabled={payGILoading}
+          style={{ padding:"6px 14px", background:"#2563eb", color:"white", border:"none", borderRadius:7, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
+          {payGILoading ? "..." : `💳 Débloquer à vie — ${(accesGI.prixVie||3000000).toLocaleString("fr-GN")} GNF`}
+        </button>
+      </div>
+    );
+    return null;
+  };
+
+  // Offre à vie — affichée quand l'essai est terminé et que l'utilisateur clique sur "Débloquer"
+  const OffreVie = () => (
+    <div style={{ background:"linear-gradient(135deg,#1e3a5f,#2563eb)", borderRadius:16, padding:"24px 22px", marginBottom:16, color:"white" }}>
+      <p style={{ fontSize:13, fontWeight:600, color:"#93c5fd", marginBottom:4, textTransform:"uppercase", letterSpacing:1 }}>Accès à vie</p>
+      <p style={{ fontSize:36, fontWeight:900, margin:"4px 0" }}>
+        {(accesGI?.prixVie || 3000000).toLocaleString("fr-GN")} GNF
       </p>
-      <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:10, padding:"16px 20px", textAlign:"left", marginBottom:24 }}>
-        <p style={{ fontSize:13, fontWeight:700, color:"#92400e", marginBottom:8 }}>Conditions d'accès :</p>
-        <ul style={{ margin:0, paddingLeft:18, fontSize:13, color:"#78350f", lineHeight:2 }}>
-          <li>Avoir un compte professionnel approuvé</li>
-          <li>Avoir souscrit à l'abonnement Gestion Interne</li>
-          <li>Que l'administrateur ait activé votre accès</li>
-        </ul>
+      <p style={{ fontSize:13, color:"#bfdbfe", marginBottom:16 }}>Compte pro inclus automatiquement</p>
+      <div style={{ display:"grid", gap:10 }}>
+        {([
+          { periode: 'mois' as const, label: '📅 Mensuel', prix: accesGI?.prixMois },
+          { periode: 'an'  as const, label: '📆 Annuel',  prix: accesGI?.prixAn, badge: '2 mois offerts' },
+          { periode: 'cinqAns' as const, label: '🏆 5 ans', prix: accesGI?.prixCinqAns, badge: '1 an offert' },
+        ]).map(opt => (
+          <button key={opt.periode}
+            onClick={() => payerGestionInterne(opt.periode)}
+            disabled={payGILoading}
+            style={{ width:"100%", padding:"12px 16px", background:"white", color:"#1e3a5f", border:"none", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:800, opacity: payGILoading ? 0.6 : 1, display:"flex", justifyContent:"space-between", alignItems:"center" }}
+          >
+            <span>{opt.label}</span>
+            <span>
+              {opt.prix?.toLocaleString("fr-GN")} GNF
+              {opt.badge && <span style={{ marginLeft:8, fontSize:11, background:"#22c55e", color:"white", padding:"2px 6px", borderRadius:999 }}>{opt.badge}</span>}
+            </span>
+          </button>
+        ))}
       </div>
-      <button onClick={() => navigate("/mes-comptes-pro")} style={{ padding:"10px 24px", background:"#16a34a", color:"white", border:"none", borderRadius:8, cursor:"pointer", fontSize:14, fontWeight:600 }}>
-        Voir mon espace professionnel
+      <p style={{ fontSize:12, color:"#bfdbfe", marginTop:14, marginBottom:0, textAlign:"center" }}>Paiement sécurisé via FedaPay (Orange Money, Wave, carte)</p>
+    </div>
+  );
+
+  // Sans compte pro (et non admin) : on ouvre directement Activité (page créée depuis l'inscription, déjà accessible)
+  const defaultTab: 'pro' | 'activite' = (!userIsAdmin && accounts.length === 0) ? 'activite' : 'pro';
+  const tab = tabOverride ?? defaultTab;
+
+  // Deux espaces toujours visibles : Activité / Espace Pro (Activité en premier : tout le monde en a une, pas forcément un compte pro)
+  const TabButtons = ({ proLabel, onProClick }: { proLabel: string; onProClick: () => void }) => (
+    <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+      <button onClick={() => setTabOverride('activite')} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'activite' ? "#16a34a" : "#f1f5f9", color: tab === 'activite' ? "white" : "#475569" }}>
+        Activité
+      </button>
+      <button onClick={onProClick} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'pro' ? "#16a34a" : "#f1f5f9", color: tab === 'pro' ? "white" : "#475569" }}>
+        {proLabel}
       </button>
     </div>
   );
@@ -160,9 +263,14 @@ export default function GestionInterne() {
     const RESEAU_SERVICES: any[] = [];
 
     return (
+      <>
       <div style={{ maxWidth:1000, margin:"0 auto", padding:"32px 20px" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
+        <div className="mb-3"><InstallAppButton /></div>
+        <TabButtons proLabel="Espace Pro" onProClick={() => setTabOverride('pro')} />
+
+        {tab === 'pro' && <>
         {/* Header Super Admin */}
         <div style={{ background:"linear-gradient(135deg,#1d4ed8,#4f46e5)", borderRadius:16, padding:"22px 28px", marginBottom:36, display:"flex", alignItems:"center", gap:16 }}>
           <div style={{ fontSize:40 }}>👑</div>
@@ -183,7 +291,7 @@ export default function GestionInterne() {
         <div style={{ marginBottom:40 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
             <div style={{ width:4, height:24, background:"#16a34a", borderRadius:2 }} />
-            <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0f172a" }}>Gestion Interne — {GESTION_SERVICES.length} espaces de référence</h2>
+            <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0f172a" }}>Professionnel — {GESTION_SERVICES.length} espaces de référence</h2>
           </div>
           <p style={{ margin:"0 0 20px 14px", fontSize:13, color:"#64748b" }}>
             Chaque espace vous appartient exclusivement. C'est exactement ce que voit un établissement client après abonnement (3 000 000 GNF — à vie).
@@ -297,7 +405,10 @@ export default function GestionInterne() {
             </div>
           </>
         )}
+        </>}
       </div>
+      {tab === 'activite' && <Activite embedded />}
+      </>
     );
   }
 
@@ -306,61 +417,127 @@ export default function GestionInterne() {
     !search || a.name?.toLowerCase().includes(search.toLowerCase()) || a.tenant_code?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const sansAcces = accounts.length > 0 && accesGI && !accesGI.aAcces;
+
+  // Bouton "Espace Pro" unique, adapté à la situation de l'utilisateur
+  let espacePro: { emoji: string; titre: string; desc: string; label: string; onClick: () => void };
+  if (accounts.length === 0) {
+    espacePro = {
+      emoji: "💼",
+      titre: "Espace Pro",
+      desc: "Inscrivez-vous comme professionnel pour ouvrir votre espace de gestion.",
+      label: "Créer un compte pro",
+      onClick: () => navigate("/inscription-pro"),
+    };
+  } else if (sansAcces) {
+    espacePro = {
+      emoji: "🔒",
+      titre: "Espace Pro",
+      desc: "Votre essai gratuit est terminé. Débloquez l'accès pour ouvrir votre espace.",
+      label: "Débloquer mon Espace Pro",
+      onClick: () => setShowPaywall(v => !v),
+    };
+  } else if (accounts.length === 1) {
+    espacePro = {
+      emoji: "📊",
+      titre: "Espace Pro",
+      desc: accounts[0].name || "",
+      label: "Ouvrir mon Espace Pro",
+      onClick: () => ouvrirGestion(accounts[0]),
+    };
+  } else {
+    espacePro = {
+      emoji: "📊",
+      titre: "Espace Pro",
+      desc: `${accounts.length} établissements`,
+      label: "Mes espaces pro",
+      onClick: () => document.getElementById("mes-espaces-pro-liste")?.scrollIntoView({ behavior: "smooth" }),
+    };
+  }
+
   return (
-    <div style={{ maxWidth:700, margin:"0 auto", padding:"32px 20px" }}>
-      <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+    <div>
+      <div style={{ maxWidth:700, margin:"0 auto", padding:"20px 20px 0" }}>
+        <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
-      <div style={{ marginBottom:24, display:"flex", alignItems:"center", justifyContent:"space-between", gap:16 }}>
-        <div>
-          <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:"#0f172a" }}>Mes espaces de gestion</h1>
-          <p style={{ margin:"4px 0 0", fontSize:13, color:"#94a3b8" }}>Vos établissements avec abonnement actif</p>
-        </div>
-        <button onClick={() => navigate(-1 as any)} style={{ padding:"8px 16px", background:"#f1f5f9", color:"#475569", border:"1px solid #e2e8f0", borderRadius:9, cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", flexShrink:0 }}>← Retour</button>
-      </div>
+        <div className="mb-3"><InstallAppButton /></div>
+        <TabButtons
+          proLabel={accounts.length === 0 ? "Créer un compte pro" : "Espace Pro"}
+          onProClick={() => accounts.length === 0 ? navigate("/inscription-pro") : setTabOverride('pro')}
+        />
 
-      {accounts.length > 4 && (
-        <div style={{ position:"relative", marginBottom:20 }}>
-          <svg style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)" }} width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher..." style={{ width:"100%", border:"1px solid #e2e8f0", borderRadius:8, padding:"9px 12px 9px 34px", fontSize:13, outline:"none", boxSizing:"border-box" }} />
-        </div>
-      )}
-
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        {filtered.map((a: any, i: number) => {
-          const info = getTypeInfo(a.type);
-          return (
-            <div key={a.tenant_code || a.id} style={{ background:"white", border:"1px solid #e2e8f0", borderRadius:12, overflow:"hidden", animation:`fadeIn 0.2s ease ${i * 0.05}s both`, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
-              <button onClick={() => ouvrirGestion(a)}
-                style={{ display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left", padding:"16px 20px", cursor:"pointer", background:"transparent", border:"none", transition:"background 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#f8fafc"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-              >
-                <div style={{ width:44, height:44, borderRadius:10, background:info.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>{info.emoji}</div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontWeight:700, color:"#0f172a", fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{a.name}</div>
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:3, flexWrap:"wrap" }}>
-                    <span style={{ padding:"1px 8px", background:info.bg, color:info.color, borderRadius:20, fontSize:11, fontWeight:600 }}>{info.label}</span>
-                    {a.subscriptionStatus !== "active" && (
-                      <span style={{ padding:"1px 8px", background:"#fffbeb", color:"#b45309", borderRadius:20, fontSize:11, fontWeight:600 }}>⚠️ Abonnement requis</span>
-                    )}
-                    {a.tenant_code && <span style={{ fontFamily:"monospace", fontSize:11, color:"#94a3b8" }}>{a.tenant_code}</span>}
-                  </div>
-                </div>
-                <div style={{ color:info.color, fontSize:13, fontWeight:600, flexShrink:0 }}>Gérer ›</div>
-              </button>
-              {info.vitrinePath && (
-                <div style={{ borderTop:"1px solid #f1f5f9", padding:"8px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fafbfc" }}>
-                  <span style={{ fontSize:12, color:"#64748b" }}>Site public visible par les clients</span>
-                  <button onClick={() => navigate(`/${info.vitrinePath}/${a.tenant_code}`)}
-                    style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", background:info.color, color:"white", border:"none", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>
-                    🌐 Voir le site client
-                  </button>
-                </div>
-              )}
+        {tab === 'pro' && <>
+        {/* Bandeau Espace Pro adaptatif */}
+        <div style={{ background:"linear-gradient(135deg,#16a34a,#15803d)", borderRadius:14, padding:"18px 22px", marginBottom:12, display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", justifyContent:"space-between" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            <div style={{ fontSize:32 }}>{espacePro.emoji}</div>
+            <div>
+              <div style={{ color:"white", fontWeight:800, fontSize:16 }}>{espacePro.titre}</div>
+              <div style={{ color:"rgba(255,255,255,0.85)", fontSize:13, marginTop:2 }}>{espacePro.desc}</div>
             </div>
-          );
-        })}
+          </div>
+          <button onClick={espacePro.onClick} style={{ padding:"10px 18px", background:"white", color:"#15803d", border:"none", borderRadius:10, cursor:"pointer", fontSize:13, fontWeight:800, whiteSpace:"nowrap" }}>
+            {espacePro.label}
+          </button>
+        </div>
+
+        {showPaywall && sansAcces && <OffreVie />}
+
+        <BandeauAcces />
+
+        {accounts.length > 1 && (
+          <div id="mes-espaces-pro-liste" style={{ marginBottom:16 }}>
+            <h2 style={{ margin:"0 0 10px", fontSize:15, fontWeight:800, color:"#0f172a" }}>Mes espaces de gestion</h2>
+
+            {accounts.length > 4 && (
+              <div style={{ position:"relative", marginBottom:12 }}>
+                <svg style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)" }} width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher..." style={{ width:"100%", border:"1px solid #e2e8f0", borderRadius:8, padding:"9px 12px 9px 34px", fontSize:13, outline:"none", boxSizing:"border-box" }} />
+              </div>
+            )}
+
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {filtered.map((a: any, i: number) => {
+                const info = getTypeInfo(a.type);
+                return (
+                  <div key={a.tenant_code || a.id} style={{ background:"white", border:"1px solid #e2e8f0", borderRadius:12, overflow:"hidden", animation:`fadeIn 0.2s ease ${i * 0.05}s both`, boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
+                    <button onClick={() => ouvrirGestion(a)}
+                      style={{ display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left", padding:"16px 20px", cursor:"pointer", background:"transparent", border:"none", transition:"background 0.15s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#f8fafc"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                    >
+                      <div style={{ width:44, height:44, borderRadius:10, background:info.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>{info.emoji}</div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:700, color:"#0f172a", fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{a.name}</div>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:3, flexWrap:"wrap" }}>
+                          <span style={{ padding:"1px 8px", background:info.bg, color:info.color, borderRadius:20, fontSize:11, fontWeight:600 }}>{info.label}</span>
+                          {a.subscriptionStatus !== "active" && (
+                            <span style={{ padding:"1px 8px", background:"#fffbeb", color:"#b45309", borderRadius:20, fontSize:11, fontWeight:600 }}>⚠️ Abonnement requis</span>
+                          )}
+                          {a.tenant_code && <span style={{ fontFamily:"monospace", fontSize:11, color:"#94a3b8" }}>{a.tenant_code}</span>}
+                        </div>
+                      </div>
+                      <div style={{ color:info.color, fontSize:13, fontWeight:600, flexShrink:0 }}>Gérer ›</div>
+                    </button>
+                    {info.vitrinePath && (
+                      <div style={{ borderTop:"1px solid #f1f5f9", padding:"8px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fafbfc" }}>
+                        <span style={{ fontSize:12, color:"#64748b" }}>Site public visible par les clients</span>
+                        <button onClick={() => navigate(`/${info.vitrinePath}/${a.tenant_code}`)}
+                          style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", background:info.color, color:"white", border:"none", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>
+                          🌐 Voir le site client
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        </>}
       </div>
+
+      {tab === 'activite' && <Activite embedded />}
     </div>
   );
 }

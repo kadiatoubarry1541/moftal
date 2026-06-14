@@ -5,6 +5,7 @@ import ProSection from '../components/ProSection';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { hideIncrement } from '../utils/formatNumeroH';
 import { getUserGeoContext } from '../utils/proximity';
+import { isAdmin } from '../utils/auth';
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -27,7 +28,9 @@ interface ActivityGroup {
   id: string;
   name: string;
   description: string;
-  activity: 'Activité1' | 'Activité2' | 'Activité3';
+  // Nom réel de l'activité (ex: "Santé") — déterminé par le profil de chaque membre,
+  // pas par le slot (Activité1/2/3) : tout le monde qui fait "Santé" est dans le même groupe
+  activity: string;
   members: string[];
   posts: ActivityPost[];
   isActive: boolean;
@@ -70,7 +73,7 @@ const PAYS_LISTE = [
   'Tunisie', 'Égypte', 'Afrique du Sud', 'Autre'
 ];
 
-export default function Activite() {
+export default function Activite({ embedded = false }: { embedded?: boolean } = {}) {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'Activité1' | 'Activité2' | 'Activité3'>('Activité1');
 
@@ -151,10 +154,46 @@ export default function Activite() {
   // Formulaire dédié aux outils
   const [toolForm, setToolForm] = useState({ nom: '', description: '' });
 
-  // Garde paiement outils
+  // Carte outil cliquable — URL ouvre le lien, app name → recherche Google
+  const renderToolCard = (msg: any) => {
+    const content = msg.content || '';
+    const dashIdx = content.indexOf(' — ');
+    const nom = dashIdx > -1 ? content.substring(0, dashIdx) : content;
+    const description = dashIdx > -1 ? content.substring(dashIdx + 3) : '';
+    const isUrl = /^https?:\/\//i.test(nom.trim());
+    const openUrl = isUrl ? nom.trim() : `https://www.google.com/search?q=${encodeURIComponent(nom.trim())}`;
+    const publisherName = msg.authorName || '';
+    const publisherNumero = hideIncrement(msg.numeroH || '');
+
+    return (
+      <div key={msg.id} className="mb-3 bg-white rounded-xl border border-blue-200 shadow-sm overflow-hidden">
+        <div className="p-4 flex items-start gap-3">
+          <div className="text-3xl flex-shrink-0">{isUrl ? '🌐' : '📱'}</div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-bold text-gray-900 text-sm break-all">{nom}</h4>
+            {description && <p className="text-xs text-gray-500 mt-1">{description}</p>}
+            <p className="text-xs text-gray-400 mt-1">
+              Publié par <strong>{publisherName}</strong> · {publisherNumero}
+            </p>
+          </div>
+          <a
+            href={openUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+          >
+            {isUrl ? '🔗 Ouvrir' : '🔍 Rechercher'}
+          </a>
+        </div>
+      </div>
+    );
+  };
+
+  // Garde paiement Info Moftal
   const [outilsAcces, setOutilsAcces] = useState<boolean | null>(null);
   const [outilsPayLoading, setOutilsPayLoading] = useState(false);
   const [showOutilsModal, setShowOutilsModal] = useState(false);
+  const [prixInfoMoftal, setPrixInfoMoftal] = useState<{ mois: number; an: number } | null>(null);
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -172,12 +211,42 @@ export default function Activite() {
       }
       setUserData(user);
 
-      // Vérifier accès outils
+      // Vérifier accès Info Moftal + charger les prix selon le pays
       const token = parsed.token || localStorage.getItem('token');
       if (token) {
-        fetch(`${API_BASE_URL.replace('/api', '')}/api/payment/acces-outils`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).then(r => r.json()).then(d => setOutilsAcces(!!d.aAcces)).catch(() => setOutilsAcces(false));
+        const base = API_BASE_URL.replace('/api', '');
+        fetch(`${base}/api/payment/acces-outils`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json()).then(d => setOutilsAcces(!!d.aAcces)).catch(() => setOutilsAcces(false));
+        fetch(`${base}/api/payment/prix-outils`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json()).then(d => { if (d.success) setPrixInfoMoftal({ mois: d.mois, an: d.an }); }).catch(() => {});
+
+        // 🔄 Rafraîchir activite1/2/3 + specialite depuis le serveur :
+        // la session locale peut être incomplète si elle a été créée avant
+        // que ces activités soient renseignées dans le profil.
+        fetch(`${base}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => {
+            if (!d?.success || !d.user) return;
+            const merged = { ...user, ...d.user };
+            setUserData(merged);
+            if (merged.activite1) setActiveTab('Activité1');
+            else if (merged.activite2) setActiveTab('Activité2');
+            else if (merged.activite3) setActiveTab('Activité3');
+
+            try {
+              const rawSession = localStorage.getItem("session_user");
+              if (rawSession) {
+                const parsedSession = JSON.parse(rawSession);
+                if (parsedSession.userData) {
+                  parsedSession.userData = { ...parsedSession.userData, ...d.user };
+                } else {
+                  Object.assign(parsedSession, d.user);
+                }
+                localStorage.setItem("session_user", JSON.stringify(parsedSession));
+              }
+            } catch { /* ignore */ }
+          })
+          .catch(() => { /* hors-ligne : on garde les données en cache */ });
       }
 
       // Pays de l'utilisateur : pays > lieuResidence1 > ''
@@ -245,7 +314,7 @@ export default function Activite() {
       case 'opportunite':
         return 'Opportunité';
       case 'outil':
-        return 'Outil de travail';
+        return 'Info Moftal';
       case 'reunion':
         return 'Réunion';
       default:
@@ -253,11 +322,27 @@ export default function Activite() {
     }
   };
 
+  // Le groupe est déterminé par le NOM réel de l'activité (ex: "Santé") + le pays —
+  // pas par le slot (Activité1/2/3) : tout le monde qui exerce "Santé" dans un même
+  // pays appartient au même groupe, que ce soit leur activité 1, 2 ou 3.
+  const getActivityName = (tab: 'Activité1' | 'Activité2' | 'Activité3'): string => {
+    if (tab === 'Activité1') return userData?.activite1 || '';
+    if (tab === 'Activité2') return userData?.activite2 || '';
+    return userData?.activite3 || '';
+  };
+
   const loadActivityGroups = useCallback(async () => {
+    const activityName = getActivityName(activeTab);
+    if (!activityName) {
+      setGroups([]);
+      setSelectedGroup(null);
+      return;
+    }
+
     try {
       const token = getToken();
       const paysParam = selectedPays ? `&pays=${encodeURIComponent(selectedPays)}` : '';
-      const response = await fetch(`${API_BASE_URL}/activities/groups?activity=${activeTab}${paysParam}`, {
+      const response = await fetch(`${API_BASE_URL}/activities/groups?activity=${encodeURIComponent(activityName)}${paysParam}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -275,9 +360,9 @@ export default function Activite() {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                name: `${activeTab}${selectedPays ? ` — ${selectedPays}` : ''}`,
-                description: `Groupe d'activité pour les membres de ${selectedPays || 'la plateforme'}`,
-                activity: activeTab,
+                name: `${activityName}${selectedPays ? ` — ${selectedPays}` : ''}`,
+                description: `Groupe d'activité ${activityName} pour les membres de ${selectedPays || 'la plateforme'}`,
+                activity: activityName,
                 pays: selectedPays,
                 createdBy: userData?.numeroH || ''
               })
@@ -292,9 +377,9 @@ export default function Activite() {
         setGroups(groups);
 
         // Auto-sélectionner le premier groupe pour permettre la publication directe
-        if (groups.length > 0 && (!selectedGroup || selectedGroup.activity !== activeTab)) {
+        if (groups.length > 0 && (!selectedGroup || selectedGroup.activity !== activityName)) {
           setSelectedGroup(groups[0]);
-        } else if (groups.length > 0 && selectedGroup && selectedGroup.activity === activeTab) {
+        } else if (groups.length > 0 && selectedGroup && selectedGroup.activity === activityName) {
           // Mettre à jour le groupe sélectionné si les données ont changé
           const updatedGroup = groups.find((g: ActivityGroup) => g.id === selectedGroup.id);
           if (updatedGroup) {
@@ -306,7 +391,7 @@ export default function Activite() {
         setGroups(defaultGroups);
         // Auto-sélectionner le premier groupe par défaut pour permettre la publication
         if (defaultGroups.length > 0) {
-          if (!selectedGroup || selectedGroup.activity !== activeTab) {
+          if (!selectedGroup || selectedGroup.activity !== activityName) {
             setSelectedGroup(defaultGroups[0]);
           }
         }
@@ -316,13 +401,13 @@ export default function Activite() {
       const defaultGroups = getDefaultActivityGroups();
       setGroups(defaultGroups);
       if (defaultGroups.length > 0) {
-        if (!selectedGroup || selectedGroup.activity !== activeTab) {
+        if (!selectedGroup || selectedGroup.activity !== activityName) {
           setSelectedGroup(defaultGroups[0]);
         }
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedPays]);
+  }, [activeTab, selectedPays, userData?.activite1, userData?.activite2, userData?.activite3]);
 
   const getDefaultActivityGroups = (): ActivityGroup[] => [
     {
@@ -502,15 +587,20 @@ export default function Activite() {
     }
   };
 
-  const payerOutils = async () => {
+  const payerOutils = async (periode: 'mois' | 'an') => {
     setOutilsPayLoading(true);
     try {
       const session = localStorage.getItem("session_user");
       const token = session ? (JSON.parse(session).token || localStorage.getItem('token')) : localStorage.getItem('token');
+      const purpose = periode === 'mois' ? 'publication_outil_mois' : 'publication_outil_an';
+      const prix = periode === 'mois' ? (prixInfoMoftal?.mois ?? 5000) : (prixInfoMoftal?.an ?? 50000);
       const r = await fetch(`${API_BASE_URL.replace('/api', '')}/api/payment/initiate`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: 20000, currency: 'GNF', purpose: 'publication_outil_pass', description: 'Pass publication outils Activité — 20 000 GNF/an' }),
+        body: JSON.stringify({
+          amount: prix, currency: 'GNF', purpose,
+          description: `Pass Info Moftal — ${prix.toLocaleString('fr-GN')} GNF/${periode === 'mois' ? 'mois' : 'an'}`
+        }),
       });
       const d = await r.json();
       if (d.success && d.paymentUrl) { window.location.href = d.paymentUrl; }
@@ -591,20 +681,23 @@ export default function Activite() {
     loadActivityGroups();
   }, [activeTab, selectedPays, loadActivityGroups]);
 
-  const filteredGroups = groups.filter(group => group.activity === activeTab);
+  const activeActivityName = getActivityName(activeTab);
+  const filteredGroups = groups.filter(group => group.activity === activeActivityName);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+    <div className={embedded ? "bg-gray-50" : "min-h-screen bg-gray-50"}>
       {/* Header */}
+      {!embedded && (
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">🎯 Activités</h1>
+              <h1 className="text-3xl font-bold text-gray-900">🌐 Professionnel</h1>
             </div>
-            <div className="flex space-x-4">
+            <div className="flex space-x-4 items-center gap-3">
               <button
-                onClick={() => navigate('/moi')}
+                onClick={() => navigate(-1)}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
                 ← Retour
@@ -613,38 +706,22 @@ export default function Activite() {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Bandeau pays + sélecteur */}
+      {/* Bandeau activité + pays (détection automatique selon le profil) */}
       <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
         <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap">
-          {/* Sélecteur de pays */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-amber-700 font-medium">🌍 Pays :</span>
-            <select
-              value={selectedPays}
-              onChange={(e) => {
-                setSelectedPays(e.target.value);
-                setSelectedGroup(null);
-              }}
-              className="text-sm border border-amber-300 rounded-lg px-2 py-1 bg-white text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-            >
-              <option value="">— Tous les pays —</option>
-              {PAYS_LISTE.map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
           {/* Activité + spécialité */}
-          {userData?.activite1 && (
-            <span className="text-sm text-amber-700 flex items-center gap-1">
-              🎯 <strong>
-                {activeTab === 'Activité1' ? userData.activite1 :
-                 activeTab === 'Activité2' ? userData.activite2 :
-                 userData.activite3}
-              </strong>
-              {(userData as any).specialite && ` · ${(userData as any).specialite}`}
-            </span>
-          )}
+          {(() => {
+            const currentActivityName = getActivityName(activeTab);
+            if (!currentActivityName) return null;
+            return (
+              <span className="text-sm text-amber-700 flex items-center gap-1">
+                🎯 <strong>{currentActivityName}</strong>
+                {(userData as any)?.specialite && ` · ${(userData as any).specialite}`}
+              </span>
+            );
+          })()}
           <span className="text-amber-500 text-xs ml-auto">
             {selectedPays
               ? `Vous voyez les groupes de ${selectedPays}`
@@ -657,33 +734,39 @@ export default function Activite() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {(() => {
               if (!userData) return null;
 
-              // Ne montrer que les onglets correspondant aux activités présentes dans le profil
-              const tabs = [
-                { id: 'Activité1' as const, defaultLabel: 'Activité 1', icon: '🏃‍♂️', field: 'activite1' },
-                { id: 'Activité2' as const, defaultLabel: 'Activité 2', icon: '👷‍♂️👷‍♀️', field: 'activite2' },
-                { id: 'Activité3' as const, defaultLabel: 'Activité 3', icon: '💼', field: 'activite3' }
-              ].filter(tab => !!userData[tab.field]);
+              // Un bouton n'apparaît que si l'utilisateur a renseigné cette
+              // activité dans son profil ; son libellé est le nom réel
+              // de l'activité (ex: "Santé"). L'admin voit toujours les 3
+              // boutons (il a besoin de tout connaître), avec un libellé
+              // par défaut sur les emplacements non renseignés.
+              const allTabs = [
+                { id: 'Activité1' as const, defaultLabel: 'Activité 1', icon: '🌐' },
+                { id: 'Activité2' as const, defaultLabel: 'Activité 2', icon: '👥' },
+                { id: 'Activité3' as const, defaultLabel: 'Activité 3', icon: '🤝' }
+              ];
 
-              // Si aucune activité n'est définie, on n'affiche pas de tabs et on laisse un message plus bas
+              const tabs = isAdmin(userData)
+                ? allTabs
+                : allTabs.filter((tab) => !!getActivityName(tab.id));
+
               if (tabs.length === 0) return null;
 
               return tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'bg-amber-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="mr-2">{tab.icon}</span>
-                  {/* Nom de la page = nom de l'activité dans le profil */}
-                  {userData[tab.field] || tab.defaultLabel}
+                  <span className="text-base sm:text-lg">{tab.icon}</span>
+                  <span className="text-center leading-tight">{getActivityName(tab.id) || tab.defaultLabel}</span>
                 </button>
               ));
             })()}
@@ -715,9 +798,9 @@ export default function Activite() {
                 ) : (
                   <div className="text-center py-8">
                     <div className="text-6xl mb-4">
-                      {activeTab === 'Activité1' && '🏃‍♂️'}
-                      {activeTab === 'Activité2' && '👷‍♂️👷‍♀️'}
-                      {activeTab === 'Activité3' && '💼'}
+                      {activeTab === 'Activité1' && '🌐'}
+                      {activeTab === 'Activité2' && '👥'}
+                      {activeTab === 'Activité3' && '🤝'}
             </div>
                     <p className="text-gray-500 mb-4">Aucun groupe pour cette activité</p>
                     <p className="text-sm text-gray-400">Les organisations sont créées automatiquement lors de l'enregistrement des utilisateurs. Les personnes ayant la même activité se retrouvent dans le même groupe.</p>
@@ -756,7 +839,7 @@ export default function Activite() {
                       feedFilter === 'outil' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
                     }`}
                   >
-                    🛠️ Outils de travail
+                    🛠️ Outils
                   </button>
                 </div>
 
@@ -768,10 +851,11 @@ export default function Activite() {
                       ? activityMessages.filter((m: any) => !['opportunite', 'outil'].includes(m.category || 'information'))
                       : activityMessages.filter((m: any) => (m.category || 'information') === feedFilter);
 
-                    // Cas spécial : onglet Moftal Info → afficher Moftal Info + Assistant IA en haut
+                    // Onglet Outils — outils fixes + cartes publiées par les membres
                     if (feedFilter === 'outil') {
                       return (
                         <>
+                          {/* Outils fixes de la plateforme */}
                           <div className="mb-4 flex justify-center">
                             <Link
                               to="/info-wallou"
@@ -807,12 +891,13 @@ export default function Activite() {
                             </Link>
                           </div>
 
+                          {/* Outils publiés par les membres */}
                           {filtered.length === 0 ? (
-                            <div className="text-center text-gray-500 py-8">
+                            <div className="text-center text-gray-500 py-6">
                               <p>Aucun outil partagé. Proposez une ressource !</p>
                             </div>
                           ) : (
-                            filtered.map((msg: any) => renderMessage(msg, 'bg-blue-600', 'bg-blue-600'))
+                            filtered.map((msg: any) => renderToolCard(msg))
                           )}
                         </>
                       );
@@ -868,12 +953,12 @@ export default function Activite() {
                   {/* Formulaire dédié pour publier un outil (visible seulement dans l'onglet Outils) */}
                   {feedFilter === 'outil' && (
                     <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
-                      <p className="text-xs font-bold text-blue-800">🛠️ Proposer un outil de travail</p>
+                      <p className="text-xs font-bold text-blue-800">🛠️ Partager un outil</p>
                       <input
                         type="text"
                         value={toolForm.nom}
                         onChange={(e) => setToolForm({ ...toolForm, nom: e.target.value })}
-                        placeholder="Nom ou lien de l'outil (ex: Google Docs, ChatGPT...)"
+                        placeholder="Lien (https://...) ou nom d'application (ex: WhatsApp, Canva...)"
                         className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                       />
                       <input
@@ -888,7 +973,7 @@ export default function Activite() {
                         disabled={!toolForm.nom.trim()}
                         className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        ✅ Publier cet outil
+                        ✅ Partager l'outil
                       </button>
                     </div>
                   )}
@@ -1001,28 +1086,59 @@ export default function Activite() {
     </div>
   </div>
 
-  {/* ── Modal paiement pass outils ── */}
+  {/* ── Modal paiement pass Info Moftal ── */}
   {showOutilsModal && (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
-        <div className="text-4xl mb-3">🛠️</div>
-        <h3 className="font-black text-lg text-gray-900 mb-1">Publication d'outil</h3>
+        <div className="text-4xl mb-3">📋</div>
+        <h3 className="font-black text-lg text-gray-900 mb-1">Pass Info Moftal</h3>
         <p className="text-sm text-gray-500 mb-4">
-          Pour publier un outil dans Activité, un abonnement annuel est requis.
+          Choisissez votre abonnement pour publier vos Info Moftal dans vos groupes d'Activité.
         </p>
-        <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 mb-4">
-          <p className="font-black text-2xl text-blue-900">20 000 GNF</p>
-          <p className="text-xs text-blue-500">par an · publications illimitées</p>
-        </div>
-        <button onClick={payerOutils} disabled={outilsPayLoading}
-          className="w-full py-3 rounded-xl font-black text-white text-sm mb-2 disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg,#2563eb,#1e3a5f)' }}>
-          {outilsPayLoading ? '⏳ Redirection...' : '💳 Payer 20 000 GNF → Publier'}
+
+        {/* Option mensuelle */}
+        <button
+          onClick={() => payerOutils('mois')}
+          disabled={outilsPayLoading}
+          className="w-full rounded-xl border-2 border-blue-300 px-4 py-3 mb-3 text-left hover:bg-blue-50 transition-colors disabled:opacity-50"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-black text-blue-900 text-base">
+                {(prixInfoMoftal?.mois ?? 5000).toLocaleString('fr-GN')} GNF
+              </p>
+              <p className="text-xs text-blue-500">par mois · publications illimitées</p>
+            </div>
+            <span className="text-2xl">📅</span>
+          </div>
         </button>
+
+        {/* Option annuelle */}
+        <button
+          onClick={() => payerOutils('an')}
+          disabled={outilsPayLoading}
+          className="w-full rounded-xl border-2 border-green-300 px-4 py-3 mb-4 text-left hover:bg-green-50 transition-colors disabled:opacity-50 relative"
+        >
+          <div className="absolute -top-2 right-3 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            Économique
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-black text-green-900 text-base">
+                {(prixInfoMoftal?.an ?? 50000).toLocaleString('fr-GN')} GNF
+              </p>
+              <p className="text-xs text-green-600">par an · économisez 2 mois</p>
+            </div>
+            <span className="text-2xl">📆</span>
+          </div>
+        </button>
+
+        {outilsPayLoading && <p className="text-sm text-blue-500 mb-2">⏳ Redirection vers le paiement...</p>}
         <button onClick={() => setShowOutilsModal(false)} className="w-full py-2 text-sm text-gray-400 hover:text-gray-600">Annuler</button>
         <p className="text-xs text-gray-300 mt-2">Paiement sécurisé via FedaPay</p>
       </div>
     </div>
   )}
+    </>
   );
 }

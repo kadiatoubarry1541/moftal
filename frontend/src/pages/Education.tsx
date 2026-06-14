@@ -159,8 +159,12 @@ interface School {
 export default function Education() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'formation-scientifique' | 'mes-cours' | 'defi-educatif'>('formation-scientifique');
-  const [formations, setFormations] = useState<Formation[]>([]);
-  const [professors, setProfessors] = useState<Professor[]>([]);
+  const [rawFormations, setRawFormations] = useState<Formation[]>([]);
+  const [rawProfessors, setRawProfessors] = useState<Professor[]>([]);
+  const [rawSchoolsList, setRawSchoolsList] = useState<School[]>([]);
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const formations = useMemo(() => sortByProximity(rawFormations, userGeo), [rawFormations, userGeo]);
+  const professors = useMemo(() => sortByProximity(rawProfessors, userGeo), [rawProfessors, userGeo]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [linkedCourses, setLinkedCourses] = useState<Course[]>([]);
@@ -195,7 +199,7 @@ export default function Education() {
   const [apprenantParent2, setApprenantParent2] = useState('');
   const [registerParentsLoading, setRegisterParentsLoading] = useState(false);
   const [registerParentsMessage, setRegisterParentsMessage] = useState<string | null>(null);
-  const [schools, setSchools] = useState<School[]>([]);
+  const schools = useMemo(() => sortAnyByProximity(rawSchoolsList, userGeo), [rawSchoolsList, userGeo]);
   const [schoolForm, setSchoolForm] = useState({ name: '', address: '', contact: '', description: '' });
   const [schoolLoading, setSchoolLoading] = useState(false);
   const [schoolMessage, setSchoolMessage] = useState<string | null>(null);
@@ -249,6 +253,13 @@ export default function Education() {
       navigate("/login");
     }
   }, [navigate]);
+
+  // GPS silencieux
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) setUserGeo(prev => ({ ...prev, coords }));
+    });
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -434,12 +445,12 @@ export default function Education() {
       });
       if (response.ok) {
         const data = await response.json();
-        setSchools(sortAnyByProximity(data.schools || [], getUserGeoContext()));
+        setRawSchoolsList(data.schools || []);
       } else {
-        setSchools([]);
+        setRawSchoolsList([]);
       }
     } catch {
-      setSchools([]);
+      setRawSchoolsList([]);
     }
   };
 
@@ -484,12 +495,12 @@ export default function Education() {
       });
       if (response.ok) {
         const data = await response.json();
-        setFormations(sortByProximity(data.formations || [], getUserGeoContext()));
+        setRawFormations(data.formations || []);
       } else {
-        setFormations([]);
+        setRawFormations([]);
       }
     } catch {
-      setFormations([]);
+      setRawFormations([]);
     }
   };
 
@@ -501,12 +512,12 @@ export default function Education() {
       });
       if (response.ok) {
         const data = await response.json();
-        setProfessors(sortByProximity(data.professors || [], getUserGeoContext()));
+        setRawProfessors(data.professors || []);
       } else {
-        setProfessors([]);
+        setRawProfessors([]);
       }
     } catch {
-      setProfessors([]);
+      setRawProfessors([]);
     }
   };
 
@@ -1019,7 +1030,7 @@ export default function Education() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
               { id: 'inscription-suivi', label: 'Inscription & suivi', icon: '👥' },
               { id: 'formation-scientifique', label: 'Formation scientifique', icon: '📚' },
@@ -1036,14 +1047,14 @@ export default function Education() {
                   if (tab.id === 'inscription-suivi') setInscriptionStep('button');
                 }
               }}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                 activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-                <span className="mr-2">{tab.icon}</span>
-              {tab.label}
+              <span className="text-base sm:text-lg">{tab.icon}</span>
+              <span className="text-center leading-tight">{tab.label}</span>
             </button>
           ))}
           </nav>

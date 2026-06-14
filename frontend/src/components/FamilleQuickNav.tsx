@@ -31,7 +31,8 @@ const ICON_RING: Record<string, string> = {
   enfants: 'bg-amber-100 ring-amber-200/80 dark:bg-amber-900/40 dark:ring-amber-700',
   mari: 'bg-slate-100 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-600',
   femme: 'bg-rose-100 ring-rose-200/80 dark:bg-rose-900/40 dark:ring-rose-700',
-  amours: 'bg-pink-100 ring-pink-200/80 dark:bg-pink-900/40 dark:ring-pink-700'
+  amours: 'bg-pink-100 ring-pink-200/80 dark:bg-pink-900/40 dark:ring-pink-700',
+  noyau: 'bg-emerald-100 ring-emerald-200/80 dark:bg-emerald-900/40 dark:ring-emerald-700'
 }
 
 const CARD_UNIFIED =
@@ -55,7 +56,8 @@ function useEntourageItems(user: Props['user']): NavItem[] {
     ...(showFemme
       ? [{ id: 'femme', to: '/famille/femmes', emoji: '👰', label: 'Ma femme', hint: 'Ma conjointe' } as NavItem]
       : []),
-    { id: 'amours', to: '/famille/mes-amours', emoji: '💕', label: 'Mes amours', hint: 'Mes amours' }
+    { id: 'amours', to: '/famille/mes-amours', emoji: '💕', label: 'Mes amours', hint: 'Mes amours' },
+    { id: 'noyau', to: '/famille/noyau', emoji: '🏠', label: 'Mon Noyau', hint: 'Famille restreinte : noyau et livre familial' }
   ]
 }
 

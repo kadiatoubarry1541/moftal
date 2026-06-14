@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
 import { ReçuTransaction } from "../components/ReçuTransaction";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
+import { AddPersonModal } from "../components/AddPersonModal";
 
 interface ProAccount {
   id: string;
@@ -20,6 +23,7 @@ interface ProAccount {
   ownerNumeroH: string;
   subscriptionStatus?: "never_paid" | "active" | "overdue" | "blocked";
   subscriptionValidUntil?: string | null;
+  isTrial?: boolean;
   photo?: string | null;
 }
 
@@ -45,7 +49,7 @@ interface Appointment {
   created_at: string;
 }
 
-type TabType = "pending" | "history" | "profile" | "menu" | "cours" | "retrait";
+type TabType = "pending" | "history" | "profile" | "menu" | "cours" | "retrait" | "membres";
 type HistoryFilter = "all" | "accepted" | "rejected";
 
 /* =============================================
@@ -67,6 +71,10 @@ const TYPE_TO_SERVICE: Record<string, string> = {
   transport:        "transport",
   beauty:           "beaute",
   artisan:          "artisanat",
+  mairie:           "mairie",
+  madrasa:          "education",
+  mosque:           "solidarite",
+  commerce:         "echanges",
 };
 
 /* =============================================
@@ -269,6 +277,70 @@ const SERVICE_CONFIG: Record<string, ServiceCfg> = {
     ringColor: "ring-stone-200 dark:ring-stone-700",
     welcomeMsg: "Gérez vos interventions et demandes de service",
   },
+  mairie: {
+    label: "Mairie · État Civil",
+    icon: "🏛️",
+    bgGradient: "from-blue-800 to-blue-600",
+    accentBorder: "border-blue-700",
+    lightBg: "bg-blue-50",
+    darkBg: "dark:bg-blue-900/20",
+    textAccent: "text-blue-700 dark:text-blue-400",
+    badgeBg: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+    btnPrimary: "bg-blue-700 hover:bg-blue-800",
+    statCardBg: "bg-blue-700/20",
+    tabActive: "border-blue-700 text-blue-700 dark:text-blue-400",
+    ringColor: "ring-blue-200 dark:ring-blue-800",
+    welcomeMsg: "Gérez les demandes de rendez-vous et actes d'état civil",
+  },
+};
+
+/* =============================================
+   COULEUR DE THÈME PAR SERVICE (icône PWA installée)
+   ============================================= */
+const SERVICE_MANIFEST_COLOR: Record<string, string> = {
+  sante: "#0d9488",
+  activite: "#f59e0b",
+  science: "#4f46e5",
+  solidarite: "#f43f5e",
+  securite: "#334155",
+  echanges: "#06b6d4",
+  restauration: "#f97316",
+  education: "#2563eb",
+  immobilier: "#65a30d",
+  transport: "#3b82f6",
+  beaute: "#d946ef",
+  artisanat: "#57534e",
+  mairie: "#1e40af",
+};
+
+/* =============================================
+   CARNET D'ACCÈS — libellés par type de compte pro
+   ============================================= */
+const MEMBER_LABELS: Record<string, { tab: string; empty: string; defaultRole: string }> = {
+  school:        { tab: "Élèves & parents", empty: "Aucun élève ni parent ajouté pour l'instant.", defaultRole: "eleve" },
+  madrasa:       { tab: "Apprenants",       empty: "Aucun apprenant ajouté pour l'instant.",        defaultRole: "apprenant" },
+  clinic:        { tab: "Patients",         empty: "Aucun patient ajouté pour l'instant.",          defaultRole: "patient" },
+  health_worker: { tab: "Patients",         empty: "Aucun patient ajouté pour l'instant.",          defaultRole: "patient" },
+  mosque:        { tab: "Fidèles",          empty: "Aucun fidèle ajouté pour l'instant.",           defaultRole: "fidele" },
+  ngo:           { tab: "Membres",          empty: "Aucun membre ajouté pour l'instant.",           defaultRole: "membre" },
+  reseau:        { tab: "Membres",          empty: "Aucun membre ajouté pour l'instant.",           defaultRole: "membre" },
+  journalist:    { tab: "Abonnés",          empty: "Aucun abonné ajouté pour l'instant.",           defaultRole: "abonne" },
+  scientist:     { tab: "Collaborateurs",   empty: "Aucun collaborateur ajouté pour l'instant.",    defaultRole: "collaborateur" },
+  mairie:        { tab: "Administrés",      empty: "Aucun administré ajouté pour l'instant.",       defaultRole: "administre" },
+};
+const DEFAULT_MEMBER_LABEL = { tab: "Clients", empty: "Aucun client ajouté pour l'instant.", defaultRole: "client" };
+
+const ROLE_DISPLAY: Record<string, string> = {
+  eleve: "🎓 Élève",
+  parent: "👨‍👩‍👧 Parent",
+  apprenant: "🎓 Apprenant",
+  patient: "🩺 Patient",
+  fidele: "🕌 Fidèle",
+  membre: "🤝 Membre",
+  abonne: "📰 Abonné",
+  collaborateur: "🔬 Collaborateur",
+  administre: "🏛️ Administré",
+  client: "🧑 Client",
 };
 
 const TYPE_LABELS: Record<string, { label: string; icon: string }> = {
@@ -433,6 +505,13 @@ export default function EspacePro() {
   const [newStudentId, setNewStudentId] = useState('');
   const [linkedStudents, setLinkedStudents] = useState<string[]>([]);
 
+  // Carnet d'accès (membres liés)
+  const [members, setMembers]           = useState<any[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [showAddMember, setShowAddMember]   = useState(false);
+  const [addMemberRole, setAddMemberRole]   = useState('client');
+  const [memberMsg, setMemberMsg]           = useState('');
+
   // Vidéo réponse
   const [responseVideoId, setResponseVideoId]   = useState<string | null>(null);
   const [recording, setRecording]               = useState(false);
@@ -454,10 +533,12 @@ export default function EspacePro() {
   const serviceKey = account ? (TYPE_TO_SERVICE[account.type] || "activite") : "activite";
   const svc        = SERVICE_CONFIG[serviceKey];
   const typeInfo   = account ? (TYPE_LABELS[account.type] || { label: account.type, icon: "📄" }) : { label: "", icon: "📄" };
+  const memberLabel = account ? (MEMBER_LABELS[account.type] || DEFAULT_MEMBER_LABEL) : DEFAULT_MEMBER_LABEL;
 
   /* ---- Chargement initial ---- */
   useEffect(() => { loadAccount(); }, [id]);
   useEffect(() => { if (tab === 'retrait' && account) loadMesDemandes(); }, [tab, account?.id]);
+  useEffect(() => { if (tab === 'membres' && account) loadMembers(); }, [tab, account?.id]);
 
   const loadAccount = async () => {
     setLoading(true);
@@ -476,6 +557,53 @@ export default function EspacePro() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMembers = async () => {
+    if (!account) return;
+    setMembersLoading(true);
+    try {
+      const res = await fetch(`${API}/api/pro-members/${account.id}/members`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) setMembers(data.members || []);
+    } catch { /* ignore */ } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  const addMember = async (numeroH: string, role: string) => {
+    if (!account) return;
+    setMemberMsg('');
+    try {
+      const res = await fetch(`${API}/api/pro-members/${account.id}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ numeroH, role }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddMember(false);
+        loadMembers();
+      } else {
+        setMemberMsg(data.message || "Impossible d'ajouter cette personne.");
+      }
+    } catch {
+      setMemberMsg('Erreur réseau. Vérifiez votre connexion.');
+    }
+  };
+
+  const removeMember = async (memberId: string) => {
+    if (!account) return;
+    if (!window.confirm('Retirer cette personne ?')) return;
+    try {
+      await fetch(`${API}/api/pro-members/${account.id}/members/${memberId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      loadMembers();
+    } catch { /* ignore */ }
   };
 
   const loadMesDemandes = async () => {
@@ -815,7 +943,7 @@ export default function EspacePro() {
             </span>
             <div className="ml-auto flex items-center gap-2">
               <button
-                onClick={() => navigate("/wallet-pro")}
+                onClick={() => navigate("/moftal-pay-pro")}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors min-h-[36px]"
               >
                 💰 Moftal Pay
@@ -869,6 +997,48 @@ export default function EspacePro() {
       </div>
 
       {/* ══════════════════════════════════════════
+          APPLICATION INSTALLABLE
+          Icône + nom propres à l'établissement, accès direct à cet espace
+          ══════════════════════════════════════════ */}
+      <DynamicAppManifest
+        name={account.name}
+        description={`Gestion ${typeInfo.label} — ${account.name}`}
+        iconUrl={getPhotoUrl(account.photo)}
+        startUrl={`/espace-pro/${account.id}`}
+        themeColor={SERVICE_MANIFEST_COLOR[serviceKey] || "#0d9488"}
+      />
+      <div className="max-w-5xl mx-auto px-4 pt-3">
+        <InstallAppButton />
+      </div>
+
+      {/* ══════════════════════════════════════════
+          BANNIÈRE ESSAI GRATUIT
+          ══════════════════════════════════════════ */}
+      {account.isTrial && account.subscriptionStatus === "active" && account.subscriptionValidUntil && (() => {
+        const expiry = new Date(account.subscriptionValidUntil);
+        const now = new Date();
+        const daysLeft = Math.max(0, Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        const isUrgent = daysLeft <= 14;
+        return (
+          <div className={`${isUrgent ? "bg-orange-50 border-orange-300" : "bg-amber-50 border-amber-200"} border-b px-4 py-3`}>
+            <div className="max-w-5xl mx-auto flex items-center gap-3">
+              <span className="text-xl flex-shrink-0">{isUrgent ? "⚠️" : "🎁"}</span>
+              <div className="flex-1 min-w-0">
+                <span className={`font-bold text-sm ${isUrgent ? "text-orange-800" : "text-amber-800"}`}>
+                  {isUrgent ? `Essai gratuit — plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} !` : `Essai gratuit — ${daysLeft} jours restants`}
+                </span>
+                <span className={`ml-2 text-xs ${isUrgent ? "text-orange-600" : "text-amber-600"}`}>
+                  {isUrgent
+                    ? "Contactez l'administrateur pour continuer sans interruption."
+                    : `Visibilité, rendez-vous et gestion interne inclus jusqu'au ${expiry.toLocaleDateString("fr-FR")}.`}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ══════════════════════════════════════════
           ONGLETS DE NAVIGATION
           ══════════════════════════════════════════ */}
       <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-[72px] z-40 border-b border-gray-200 dark:border-gray-700">
@@ -877,6 +1047,7 @@ export default function EspacePro() {
             {([
               { key: "pending"  as TabType, icon: "⏳", label: "Demandes",   badge: pendingApts.length },
               { key: "history"  as TabType, icon: "📋", label: "Historique", badge: 0 },
+              { key: "membres"  as TabType, icon: "👥", label: memberLabel.tab, badge: 0 },
               ...(account.type === 'restaurant' ? [{ key: "menu" as TabType, icon: "🍽️", label: "Mon Menu", badge: 0 }] : []),
               ...(account.type === 'school' ? [{ key: "cours" as TabType, icon: "📚", label: "Cours", badge: 0 }] : []),
               { key: "retrait" as TabType, icon: "💸", label: "Retrait", badge: mesDemandes.filter(d => d.statut === 'en_attente').length },
@@ -1502,6 +1673,80 @@ export default function EspacePro() {
           </div>
         )}
 
+        {/* ─────────────────────────────
+            ONGLET : MEMBRES (carnet d'accès)
+            ───────────────────────────── */}
+        {tab === "membres" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="font-bold text-gray-900 dark:text-gray-100">{memberLabel.tab}</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Ajoutez les personnes qui ont accès à votre espace — par NuméroH, téléphone ou QR Code.
+                </p>
+              </div>
+              {account.type === 'school' ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setAddMemberRole('eleve'); setMemberMsg(''); setShowAddMember(true); }}
+                    className={`${svc.btnPrimary} text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-colors`}
+                  >
+                    + Élève
+                  </button>
+                  <button
+                    onClick={() => { setAddMemberRole('parent'); setMemberMsg(''); setShowAddMember(true); }}
+                    className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-colors"
+                  >
+                    + Parent
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setAddMemberRole(memberLabel.defaultRole); setMemberMsg(''); setShowAddMember(true); }}
+                  className={`${svc.btnPrimary} text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors`}
+                >
+                  + Ajouter
+                </button>
+              )}
+            </div>
+
+            {memberMsg && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{memberMsg}</p>}
+
+            {membersLoading ? (
+              <p className="text-center text-gray-400 dark:text-gray-500 py-8 text-sm">Chargement...</p>
+            ) : members.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-5xl mb-3">👥</div>
+                <p className="text-gray-500 dark:text-gray-400">{memberLabel.empty}</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {members.map((m) => (
+                  <div key={m.id} className={`flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl p-3 ring-1 ${svc.ringColor}`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-full ${svc.lightBg} ${svc.darkBg} flex items-center justify-center text-sm font-bold ${svc.textAccent} flex-shrink-0`}>
+                        {(m.prenom?.[0] || m.nom_display?.[0] || "?").toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
+                          {m.prenom ? `${m.prenom} ${m.nom || ""}`.trim() : (m.nom_display || m.numero_h)}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{ROLE_DISPLAY[m.role] || m.role}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeMember(m.id)}
+                      className="flex-shrink-0 text-xs text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ─────────────────────────────────────────────
             ONGLET : MON PROFIL
             ───────────────────────────── */}
@@ -1603,7 +1848,7 @@ export default function EspacePro() {
                       : "Encaissez les paiements de vos clients familles et suivez votre Moftal Pay facilement."}
                   </p>
                   <button
-                    onClick={() => navigate("/wallet-pro")}
+                    onClick={() => navigate("/moftal-pay-pro")}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-bold"
                     style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}
                   >
@@ -1664,6 +1909,20 @@ export default function EspacePro() {
           </div>
         )}
       </div>
+
+      {/* ══════════════════════════════════════════
+          MODAL : AJOUTER UN MEMBRE (carnet d'accès)
+          ══════════════════════════════════════════ */}
+      {showAddMember && (
+        <AddPersonModal
+          title="Trouver la personne à ajouter"
+          myNumeroH={userData?.numeroH}
+          myPrenom={userData?.prenom}
+          myNom={userData?.nomFamille}
+          onSelect={(numeroH) => addMember(numeroH, addMemberRole)}
+          onClose={() => setShowAddMember(false)}
+        />
+      )}
 
       {/* ══════════════════════════════════════════
           MODAL : REFUS AVEC RAISON

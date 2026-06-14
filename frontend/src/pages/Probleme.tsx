@@ -227,7 +227,7 @@ export default function Probleme() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-blue-100 p-5 flex flex-col gap-3 opacity-80">
+          <div className="bg-white rounded-xl shadow-sm border border-emerald-100 p-5 flex flex-col gap-3">
             <div className="flex items-center gap-3">
               <span className="text-3xl">👨‍👩‍👧‍👦</span>
               <div>
@@ -239,9 +239,15 @@ export default function Probleme() {
                 </p>
               </div>
             </div>
-            <span className="mt-2 text-xs text-gray-500">
-              Section en préparation.
-            </span>
+            <p className="text-sm text-gray-600">
+              Retrouve les membres de ta communauté ethnique pour s'entraider en cas de besoin.
+            </p>
+            <button
+              onClick={() => navigate('/famille/racines')}
+              className="self-start inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
+            >
+              🌿 Découvrir ma communauté
+            </button>
           </div>
         </div>
 

@@ -37,6 +37,7 @@ const TYPES = [
   { id: "transport", label: "Transport", icon: "🚗" },
   { id: "beauty", label: "Beauté", icon: "💈" },
   { id: "artisan", label: "Artisanat", icon: "🔧" },
+  { id: "mairie",  label: "Mairie",    icon: "🏛️" },
 ];
 
 function getTypeIcon(type: string) {
@@ -51,21 +52,36 @@ export default function ListeProfessionnels() {
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const filterType = searchParams.get("type") || "";
+  const filterCity = searchParams.get("city") || "";
+  const isMairie   = filterType === "mairie";
 
   const currentUser = getSessionUser();
   const userIsAdmin = isAdmin(currentUser);
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
   const [gpsActive, setGpsActive] = useState(false);
 
+  // Quand type=mairie et city fournie, on filtre strictement par commune
+  const accountsFiltered = useMemo(() => {
+    if (isMairie && filterCity) {
+      const city = filterCity.toLowerCase().trim();
+      return rawAccounts.filter(p =>
+        (p.city || "").toLowerCase().includes(city) ||
+        city.includes((p.city || "").toLowerCase().trim())
+      );
+    }
+    return rawAccounts;
+  }, [rawAccounts, isMairie, filterCity]);
+
   // Tri réactif : se recalcule quand GPS arrive ou liste change
   const accounts = useMemo(
-    () => sortByProximity(rawAccounts, userGeo),
-    [rawAccounts, userGeo]
+    () => sortByProximity(accountsFiltered, userGeo),
+    [accountsFiltered, userGeo]
   );
 
   // Groupes géographiques : même zone (score ≤ 150) vs reste du monde
   const hasGeoContext = !!(userGeo.city || userGeo.region || userGeo.country || userGeo.coords);
   const { localAccounts, otherAccounts } = useMemo(() => {
+    if (isMairie && filterCity) return { localAccounts: accounts, otherAccounts: [] as ProAccount[] };
     if (!hasGeoContext) return { localAccounts: [] as ProAccount[], otherAccounts: accounts };
     const local: ProAccount[] = [];
     const other: ProAccount[] = [];
@@ -74,7 +90,7 @@ export default function ListeProfessionnels() {
       else other.push(pro);
     }
     return { localAccounts: local, otherAccounts: other };
-  }, [accounts, userGeo, hasGeoContext]);
+  }, [accounts, userGeo, hasGeoContext, isMairie, filterCity]);
 
   useEffect(() => {
     loadAccounts();
@@ -149,6 +165,24 @@ export default function ListeProfessionnels() {
             🔍
           </button>
         </div>
+
+        {/* Bandeau mairie par commune */}
+        {isMairie && filterCity && (
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <span className="text-xl">🏛️</span>
+            <div>
+              <p className="text-sm font-bold text-blue-900">
+                Mairie de votre sous-préfecture : <span className="capitalize">{filterCity}</span>
+              </p>
+              <p className="text-xs text-blue-600">Seule la mairie de votre sous-préfecture est affichée</p>
+            </div>
+          </div>
+        )}
+        {isMairie && filterCity && accounts.length === 0 && !loading && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Aucune mairie enregistrée pour la sous-préfecture de <strong className="capitalize">{filterCity}</strong> pour le moment.
+          </div>
+        )}
 
         {/* Filtres par type */}
         <div className="flex gap-1.5 overflow-x-auto pb-2 mb-6 scrollbar-thin">
@@ -360,6 +394,102 @@ export default function ListeProfessionnels() {
                             👁️ Voir le dashboard (Admin)
                           </button>
                         )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+                </div>
+              </section>
+            )}
+
+            {/* ── SECTION : RESTE DU MONDE ── */}
+            {otherAccounts.length > 0 && (
+              <section>
+                {localAccounts.length > 0 && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2 bg-gray-400 dark:bg-gray-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm">
+                      <span>🌍</span>
+                      <span>Autres pays ({otherAccounts.length})</span>
+                    </div>
+                    <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {otherAccounts.map((pro) => {
+                    const isExpanded = expandedId === pro.id;
+                    const location = buildLocation(pro);
+                    const prox = proximityLabel(pro, userGeo);
+                    return (
+                      <div key={pro.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+                        <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                          {pro.photo ? <img src={pro.photo} alt={pro.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">{getTypeIcon(pro.type)}</div>}
+                          <span className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-full shadow-sm">{TYPES.find(t => t.id === pro.type)?.icon} {TYPES.find(t => t.id === pro.type)?.label}</span>
+                          {prox && <span className="absolute top-2 right-2 px-2 py-0.5 text-white text-xs font-semibold rounded-full shadow-sm" style={{ backgroundColor: prox.color }}>{prox.text}</span>}
+                        </div>
+                        <div className="p-4 flex flex-col flex-1">
+                          <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 mb-2 leading-snug">{pro.name}</h3>
+                          {pro.services?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-3">
+                              {pro.services.slice(0, 4).map((s, i) => <span key={i} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full border border-blue-100 dark:border-blue-800">{s}</span>)}
+                              {pro.services.length > 4 && <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 text-xs rounded-full">+{pro.services.length - 4}</span>}
+                            </div>
+                          )}
+                          {location && <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2"><span className="mt-0.5 flex-shrink-0">📍</span><span>{location}</span></div>}
+                          {pro.phone && <div className="flex items-center gap-1.5 mb-3"><span className="text-sm flex-shrink-0">📞</span><a href={`tel:${pro.phone}`} className="text-sm font-semibold text-green-600 dark:text-green-400 hover:underline">{pro.phone}</a></div>}
+                          <div className="flex-1" />
+                          <div className="flex gap-2 mt-2">
+                            {pro.phone && <a href={`tel:${pro.phone}`} className="flex-1 flex items-center justify-center gap-1 min-h-[38px] px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-xl transition-colors">📞 Appeler</a>}
+                            <button onClick={() => setExpandedId(isExpanded ? null : pro.id)} className={`flex items-center justify-center gap-1 min-h-[38px] px-3 py-2 text-xs font-semibold rounded-xl transition-colors border ${isExpanded ? "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-500" : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"}`}>{isExpanded ? "✕ Fermer" : "＋ Plus d'infos"}</button>
+                          </div>
+                          {isExpanded && (
+                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                              {pro.description && <div><p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Description</p><p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{pro.description}</p></div>}
+                              {pro.specialties?.length > 0 && <div><p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Spécialités</p><div className="flex flex-wrap gap-1">{pro.specialties.map((s, i) => <span key={i} className="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full border border-purple-100 dark:border-purple-800">{s}</span>)}</div></div>}
+                              {pro.email && <div className="flex items-center gap-1.5"><span className="text-sm">✉️</span><a href={`mailto:${pro.email}`} className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all">{pro.email}</a></div>}
+                              <button onClick={() => navigate(`/rendez-vous/${pro.id}`)} className="w-full min-h-[40px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors mt-2">📅 Prendre rendez-vous</button>
+                              {userIsAdmin && <button onClick={() => navigate(`/espace-pro/${pro.id}`)} className="w-full min-h-[40px] px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2">👁️ Voir le dashboard (Admin)</button>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {accounts.map((pro) => {
+              const isExpanded = expandedId === pro.id;
+              const location = buildLocation(pro);
+              const prox = proximityLabel(pro, userGeo);
+              return (
+                <div key={pro.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+                  <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-700 flex-shrink-0">
+                    {pro.photo ? <img src={pro.photo} alt={pro.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">{getTypeIcon(pro.type)}</div>}
+                    <span className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-full shadow-sm">{TYPES.find(t => t.id === pro.type)?.icon} {TYPES.find(t => t.id === pro.type)?.label}</span>
+                    {prox && <span className="absolute top-2 right-2 px-2 py-0.5 text-white text-xs font-semibold rounded-full shadow-sm" style={{ backgroundColor: prox.color }}>{prox.text}</span>}
+                  </div>
+                  <div className="p-4 flex flex-col flex-1">
+                    <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 mb-2 leading-snug">{pro.name}</h3>
+                    {pro.services?.length > 0 && <div className="flex flex-wrap gap-1.5 mb-3">{pro.services.slice(0, 4).map((s, i) => <span key={i} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full border border-blue-100 dark:border-blue-800">{s}</span>)}{pro.services.length > 4 && <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 text-xs rounded-full">+{pro.services.length - 4}</span>}</div>}
+                    {location && <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2"><span className="mt-0.5 flex-shrink-0">📍</span><span>{location}</span></div>}
+                    {pro.phone && <div className="flex items-center gap-1.5 mb-3"><span className="text-sm flex-shrink-0">📞</span><a href={`tel:${pro.phone}`} className="text-sm font-semibold text-green-600 dark:text-green-400 hover:underline">{pro.phone}</a></div>}
+                    <div className="flex-1" />
+                    <div className="flex gap-2 mt-2">
+                      {pro.phone && <a href={`tel:${pro.phone}`} className="flex-1 flex items-center justify-center gap-1 min-h-[38px] px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-xl transition-colors">📞 Appeler</a>}
+                      <button onClick={() => setExpandedId(isExpanded ? null : pro.id)} className={`flex items-center justify-center gap-1 min-h-[38px] px-3 py-2 text-xs font-semibold rounded-xl transition-colors border ${isExpanded ? "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-500" : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"}`}>{isExpanded ? "✕ Fermer" : "＋ Plus d'infos"}</button>
+                    </div>
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 space-y-3">
+                        {pro.description && <div><p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Description</p><p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{pro.description}</p></div>}
+                        {pro.specialties?.length > 0 && <div><p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Spécialités</p><div className="flex flex-wrap gap-1">{pro.specialties.map((s, i) => <span key={i} className="px-2 py-0.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full border border-purple-100 dark:border-purple-800">{s}</span>)}</div></div>}
+                        {pro.email && <div className="flex items-center gap-1.5"><span className="text-sm">✉️</span><a href={`mailto:${pro.email}`} className="text-sm text-blue-600 dark:text-blue-400 hover:underline break-all">{pro.email}</a></div>}
+                        <button onClick={() => navigate(`/rendez-vous/${pro.id}`)} className="w-full min-h-[40px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors mt-2">📅 Prendre rendez-vous</button>
+                        {userIsAdmin && <button onClick={() => navigate(`/espace-pro/${pro.id}`)} className="w-full min-h-[40px] px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2">👁️ Voir le dashboard (Admin)</button>}
                       </div>
                     )}
                   </div>

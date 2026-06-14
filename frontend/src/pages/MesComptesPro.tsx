@@ -97,16 +97,35 @@ export default function MesComptesPro() {
   const [paying, setPaying]       = useState<string | null>(null); // id du compte en cours de paiement
   const [payError, setPayError]   = useState<string | null>(null);
 
-  useEffect(() => { loadAccounts(); }, []);
+  // Prix par compte (chargés dynamiquement depuis le backend)
+  const [prix, setPrix] = useState<Record<string, any>>({});
+  const [paiementModal, setPaiementModal] = useState<{ acc: ProAccount; mode: 'visibilite' | 'gestion' } | null>(null);
+  const [periodeChoisie, setPeriodeChoisie] = useState<'mois' | 'an' | 'cinqAns'>('mois');
+
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    loadAccounts();
+  }, []);
 
   const loadAccounts = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res   = await fetch(`${API}/api/professionals/my-accounts`, {
+      const res = await fetch(`${API}/api/professionals/my-accounts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (data.success) setAccounts(data.accounts || []);
+      if (data.success) {
+        const accs = data.accounts || [];
+        setAccounts(accs);
+        // Charger les prix pour chaque compte
+        accs.forEach((acc: ProAccount) => {
+          fetch(`${API}/api/payment/prix-compte-pro?proId=${acc.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(r => r.json()).then(d => {
+            if (d.success) setPrix(prev => ({ ...prev, [acc.id]: d }));
+          }).catch(() => {});
+        });
+      }
     } catch (err) {
       console.error("Erreur:", err);
     } finally {
@@ -114,20 +133,29 @@ export default function MesComptesPro() {
     }
   };
 
-  const handlePay = async (acc: ProAccount) => {
+  const handlePay = async (acc: ProAccount, mode: 'visibilite' | 'gestion', periode: 'mois' | 'an' | 'cinqAns') => {
     setPayError(null);
     setPaying(acc.id);
     try {
-      const token = localStorage.getItem("token");
-      const res   = await fetch(`${API}/api/payment/initiate`, {
+      const purposeMap = {
+        visibilite: { mois: 'visibilite_mois', an: 'visibilite_an', cinqAns: 'visibilite_5ans' },
+        gestion:    { mois: 'gestion_mois',    an: 'gestion_an',    cinqAns: 'gestion_5ans' },
+      };
+      const purpose = purposeMap[mode][periode];
+      const p = prix[acc.id];
+      const montant = p ? p[mode === 'visibilite' ? 'visibilite' : 'gestionInterne'][periode] : 0;
+      const periodeLabel = periode === 'mois' ? 'mensuel' : periode === 'an' ? 'annuel' : '5 ans';
+      const modeLabel = mode === 'visibilite' ? 'Visibilité' : 'Gestion Interne';
+
+      const res = await fetch(`${API}/api/payment/initiate`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount:      50000,
+          amount:      montant,
           currency:    "GNF",
-          purpose:     "subscription_pro",
+          purpose,
           relatedId:   acc.id,
-          description: `Abonnement mensuel – ${acc.name}`,
+          description: `${modeLabel} ${periodeLabel} — ${acc.name}`,
         }),
       });
       const data = await res.json();
@@ -273,31 +301,57 @@ export default function MesComptesPro() {
                   )}
 
                   {acc.status === "approved" && !canOpenDashboard && (
-                    <div className="flex flex-col gap-2 flex-shrink-0 items-end">
-                      <p className={`text-xs font-semibold px-3 py-1.5 rounded-xl ${
-                        expiringSoon
-                          ? "bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300"
-                          : isExpired
-                          ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"
-                          : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300"
-                      }`}>
-                        {expiringSoon
-                          ? `⚠️ Expire dans ${daysLeft}j`
-                          : isExpired
-                          ? "⛔ Abonnement expiré"
-                          : "🔒 Abonnement requis"}
-                      </p>
-                      <button
-                        onClick={() => handlePay(acc)}
-                        disabled={paying === acc.id}
-                        className="min-h-[42px] px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
-                      >
-                        {paying === acc.id ? (
-                          <><span className="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> Chargement...</>
-                        ) : (
-                          <>{isExpired || expiringSoon ? "🔄 Renouveler (50 000 GNF)" : "💳 Payer l'abonnement (50 000 GNF)"}</>
-                        )}
-                      </button>
+                    <div className="w-full mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                      {(isExpired || expiringSoon) && (
+                        <p className="text-xs font-bold text-red-600 mb-2">
+                          {isExpired ? "⛔ Abonnement expiré — choisissez une formule" : `⚠️ Expire dans ${daysLeft} jours — renouvelez`}
+                        </p>
+                      )}
+                      {!isExpired && !expiringSoon && (
+                        <p className="text-xs font-bold text-amber-600 mb-2">🔒 Choisissez votre formule pour activer</p>
+                      )}
+
+                      {/* Grille 2 colonnes : Visibilité | Gestion Interne */}
+                      {prix[acc.id] ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* Visibilité seulement */}
+                          <div className="border border-gray-200 rounded-xl p-3 bg-gray-50">
+                            <p className="font-bold text-gray-700 text-xs mb-2">👁️ Visibilité seulement</p>
+                            <p className="text-xs text-gray-500 mb-2">Profil public + rendez-vous</p>
+                            {(['mois','an','cinqAns'] as const).map(p => (
+                              <button key={p}
+                                onClick={() => handlePay(acc, 'visibilite', p)}
+                                disabled={paying === acc.id}
+                                className="w-full text-left px-3 py-1.5 mb-1 rounded-lg text-xs font-semibold bg-white border border-gray-300 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                              >
+                                {p === 'mois' ? '📅 Mensuel' : p === 'an' ? '📆 Annuel' : '🏆 5 ans'} —{' '}
+                                <span className="text-blue-700">{prix[acc.id].visibilite[p].toLocaleString('fr-GN')} GNF</span>
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Gestion Interne */}
+                          <div className="border-2 border-green-300 rounded-xl p-3 bg-green-50">
+                            <p className="font-bold text-green-800 text-xs mb-1">⚡ Gestion Interne</p>
+                            <p className="text-xs text-green-600 mb-2">Tout inclus + compte pro gratuit</p>
+                            {(['mois','an','cinqAns'] as const).map(p => (
+                              <button key={p}
+                                onClick={() => handlePay(acc, 'gestion', p)}
+                                disabled={paying === acc.id}
+                                className="w-full text-left px-3 py-1.5 mb-1 rounded-lg text-xs font-bold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50"
+                              >
+                                {p === 'mois' ? '📅 Mensuel' : p === 'an' ? '📆 Annuel' : '🏆 5 ans'} —{' '}
+                                {prix[acc.id].gestionInterne[p].toLocaleString('fr-GN')} GNF
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-400">Chargement des prix...</div>
+                      )}
+                      {paying === acc.id && (
+                        <p className="text-xs text-blue-600 mt-2 text-center">⏳ Redirection vers le paiement...</p>
+                      )}
                     </div>
                   )}
 

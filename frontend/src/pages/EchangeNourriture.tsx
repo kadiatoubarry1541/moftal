@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
-import { sortAnyByProximity, getUserGeoContext } from '../utils/proximity';
+import { sortAnyByProximity, anyProximityLabel, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
@@ -53,8 +53,12 @@ interface Supplier {
 
 export default function EchangeNourriture() {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [products, setProducts] = useState<ExchangeProduct[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
+  const [rawSuppliers, setRawSuppliers] = useState<Supplier[]>([]);
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const [gpsActive, setGpsActive] = useState(false);
+  const products = useMemo(() => sortAnyByProximity(rawProducts, userGeo), [rawProducts, userGeo]);
+  const suppliers = useMemo(() => sortAnyByProximity(rawSuppliers, userGeo), [rawSuppliers, userGeo]);
   const [loading, setLoading] = useState(true);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
@@ -117,6 +121,12 @@ export default function EchangeNourriture() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) { setUserGeo(prev => ({ ...prev, coords })); setGpsActive(true); }
+    });
+  }, []);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -134,9 +144,9 @@ export default function EchangeNourriture() {
       
       if (productsResponse.ok) {
         const productsData = await productsResponse.json();
-        setProducts(sortAnyByProximity(productsData.products || [], getUserGeoContext()));
+        setRawProducts(productsData.products || []);
       } else {
-        setProducts([]);
+        setRawProducts([]);
       }
 
       // Charger les fournisseurs
@@ -150,15 +160,15 @@ export default function EchangeNourriture() {
 
       if (suppliersResponse.ok) {
         const suppliersData = await suppliersResponse.json();
-        setSuppliers(sortAnyByProximity(suppliersData.suppliers || [], getUserGeoContext()));
+        setRawSuppliers(suppliersData.suppliers || []);
       } else {
-        setSuppliers([]);
+        setRawSuppliers([]);
       }
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setProducts([]);
-      setSuppliers([]);
+      setRawProducts([]);
+      setRawSuppliers([]);
     } finally {
       setLoading(false);
     }
@@ -353,6 +363,14 @@ export default function EchangeNourriture() {
       >
         ← Retour
       </button>
+
+      {/* Bannière proximité */}
+      {(userGeo.city || userGeo.country || gpsActive) && (
+        <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mb-4">
+          <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
+          <span>{gpsActive ? "Annonces triées par distance GPS — les plus proches apparaissent en premier" : `Annonces de ${userGeo.city || userGeo.country} apparaissent en premier`}</span>
+        </div>
+      )}
 
       {/* Boutons publier + admin */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">

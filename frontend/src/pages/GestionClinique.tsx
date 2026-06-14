@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const BASE = (code: string) => `${API}/api/clinic-mgmt/${code}`;
@@ -422,6 +424,15 @@ export default function GestionClinique() {
           </div>
         )}
 
+        {/* Application installable : icône + nom de la clinique, accès direct à cet espace */}
+        <DynamicAppManifest
+          name={tenant.name}
+          description={`Gestion clinique — ${tenant.name}`}
+          iconUrl={settingsForm.logo_url || tenant.logo_url}
+          startUrl={`/gestion-clinique/${tenantCode}`}
+          themeColor={TEAL}
+        />
+
         {/* Header */}
         <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
@@ -429,6 +440,7 @@ export default function GestionClinique() {
             <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <InstallAppButton />
             <button
               onClick={() => navigate(`/clinique/${tenantCode}`)}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdfa", color: TEAL_DARK, border: `1px solid #99f6e4`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
@@ -437,7 +449,7 @@ export default function GestionClinique() {
               🌐 Vitrine
             </button>
             <button
-              onClick={() => navigate("/wallet-pro")}
+              onClick={() => navigate("/moftal-pay-pro")}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#0d9488,#0891b2)", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
               title="Moftal Pay"
             >
@@ -489,7 +501,7 @@ export default function GestionClinique() {
               )}
               {/* Urgences banner */}
               {stats?.urgences > 0 && (
-                <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "12px 18px", display: "flex", alignItems: "center", gap: 10 }} onClick={() => loadSection("appointments")} role="button" style={{ cursor: "pointer", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "12px 18px", display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ cursor: "pointer", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "12px 18px", display: "flex", alignItems: "center", gap: 10 }} onClick={() => loadSection("appointments")} role="button">
                   <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <svg width="16" height="16" fill="none" stroke="white" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
                   </div>

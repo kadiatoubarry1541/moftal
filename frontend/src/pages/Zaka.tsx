@@ -179,11 +179,16 @@ interface Certificate {
 
 export default function Zaka() {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'pauvres' | 'dons' | 'zakat' | 'communaute' | 'formation-religieux'>('pauvres');
+  const [activeTab, setActiveTab] = useState<'pauvres' | 'mon-compte' | 'dons' | 'zakat' | 'communaute' | 'formation-religieux'>('pauvres');
   const [poorPeople, setPoorPeople] = useState<PoorPerson[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [zakatCalculations, setZakatCalculations] = useState<ZakatCalculation[]>([]);
   const [communities, setCommunities] = useState<ReligiousCommunity[]>([]);
+
+  // Compte Zakat du donateur
+  const [monCompteZakat, setMonCompteZakat] = useState<{ solde: number; totalDepose: number; totalDonne: number } | null>(null);
+  const [montantDepotZakat, setMontantDepotZakat] = useState('');
+  const [loadingDepotZakat, setLoadingDepotZakat] = useState(false);
   const [formations, setFormations] = useState<Formation[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -277,13 +282,45 @@ export default function Zaka() {
         loadPoorPeople(),
         loadDonations(),
         loadZakatCalculations(),
-        loadCommunities()
+        loadCommunities(),
+        loadMonCompteZakat(),
       ]);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMonCompteZakat = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const r = await fetch('/api/zakat/mon-compte', { headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json();
+      if (d.success) setMonCompteZakat(d.compte);
+    } catch { /* non bloquant */ }
+  };
+
+  const deposerDansCompteZakat = async () => {
+    const montant = parseInt(montantDepotZakat);
+    if (!montant || montant < 1000) return alert('Montant minimum : 1 000 GNF');
+    setLoadingDepotZakat(true);
+    try {
+      const token = localStorage.getItem("token");
+      const r = await fetch('/api/zakat/deposer', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ montant })
+      });
+      const d = await r.json();
+      if (d.success) {
+        setMontantDepotZakat('');
+        alert(d.message);
+        loadMonCompteZakat();
+      } else {
+        alert(d.message || 'Erreur lors du dépôt');
+      }
+    } finally { setLoadingDepotZakat(false); }
   };
   
   const loadCommunities = async () => {
@@ -627,23 +664,12 @@ export default function Zaka() {
   const loadDonations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/donations', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await fetch('/api/zakat/mes-dons', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       if (response.ok) {
         const data = await response.json();
-        const allDonations = data.donations || [];
-        // Si admin, voir tous les dons (zakat et sadaqah), sinon seulement les zakat
-        const userIsAdmin = userData ? isAdmin(userData) : false;
-        if (userIsAdmin) {
-          setDonations(allDonations);
-        } else {
-          setDonations(allDonations.filter((d: Donation) => d.donationType === 'zakat'));
-        }
+        setDonations(data.dons || []);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des dons:', error);
@@ -653,16 +679,12 @@ export default function Zaka() {
   const loadZakatCalculations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/calculations', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await fetch('/api/zakat/mes-calculs', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      
       if (response.ok) {
         const data = await response.json();
-        setZakatCalculations(data.calculations || []);
+        setZakatCalculations(data.calculs || []);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des calculs:', error);
@@ -758,39 +780,37 @@ export default function Zaka() {
 
   const submitDonation = async () => {
     if (!donationForm.amount || !selectedPoorPerson) return;
+    const montant = parseFloat(donationForm.amount);
+    if (!montant || montant <= 0) return alert('Montant invalide');
+
+    // Vérifier le solde avant d'envoyer
+    if (monCompteZakat && montant > monCompteZakat.solde) {
+      return alert(`Solde insuffisant. Votre solde Zakat : ${monCompteZakat.solde.toLocaleString('fr-GN')} GNF.\nDéposez d'abord de l'argent dans l'onglet "Mon Compte Zakat".`);
+    }
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/make-donation', {
+      const response = await fetch(`/api/zakat/donner-au-pauvre/${selectedPoorPerson.id}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          donor: userData?.numeroH,
-          donorName: `${userData?.prenom} ${userData?.nomFamille}`,
-          recipient: selectedPoorPerson.id,
-          recipientName: `${selectedPoorPerson.prenom} ${selectedPoorPerson.nomFamille}`,
-          amount: parseFloat(donationForm.amount),
-          currency: donationForm.currency,
-          type: donationForm.type,
-          description: donationForm.description,
-          donationType: 'zakat' // Toujours zakat pour cette page
+          montant,
+          description: donationForm.description || `Zakat de ${userData?.prenom} → ${selectedPoorPerson.prenom} ${selectedPoorPerson.nomFamille}`,
         })
       });
-      
-      if (response.ok) {
-        alert('Zakat effectuée avec succès !');
+
+      const d = await response.json();
+      if (d.success) {
+        alert(d.message);
         setShowDonationForm(false);
         loadDonations();
         loadPoorPeople();
+        loadMonCompteZakat();
       } else {
-        alert('Erreur lors de la zakat');
+        alert(d.message || 'Erreur lors de la Zakat');
       }
-    } catch (error) {
-      console.error('Erreur lors de la zakat:', error);
-      alert('Erreur lors de la zakat');
+    } catch {
+      alert('Erreur de connexion au serveur');
     }
   };
 
@@ -801,18 +821,10 @@ export default function Zaka() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/calculations', {
+      const response = await fetch('/api/zakat/calculer', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          user: userData?.numeroH,
-          userName: `${userData?.prenom} ${userData?.nomFamille}`,
-          totalWealth,
-          currency: zakatForm.currency
-        })
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patrimoine: totalWealth, currency: zakatForm.currency })
       });
       
       if (response.ok) {
@@ -905,25 +917,26 @@ export default function Zaka() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
-              { id: 'pauvres', label: 'Pauvres Musulmans', icon: '👥' },
-              { id: 'dons', label: 'Mes Zakat', icon: '💝' },
-              { id: 'zakat', label: 'Calculs Zakat', icon: '🧮' },
-              { id: 'communaute', label: 'Communauté', icon: '👥' },
-              { id: 'formation-religieux', label: 'Formation religieux', icon: '📚' }
+              { id: 'pauvres', label: 'Personnes dans le besoin', icon: '👥' },
+              { id: 'mon-compte', label: 'Mon Compte Zakat', icon: '💰' },
+              { id: 'dons', label: 'Mes Dons', icon: '💝' },
+              { id: 'zakat', label: 'Calcul Zakat', icon: '🧮' },
+              { id: 'communaute', label: 'Communauté', icon: '🕌' },
+              { id: 'formation-religieux', label: 'Formation', icon: '📚' }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
-                    ? 'border-green-500 text-green-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-green-500 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-700'
                 }`}
               >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
+                <span className="text-base sm:text-lg">{tab.icon}</span>
+                <span className="text-center leading-tight">{tab.label}</span>
               </button>
             ))}
           </nav>
@@ -1077,10 +1090,68 @@ export default function Zaka() {
           </div>
         )}
 
+        {activeTab === 'mon-compte' && (
+          <div className="space-y-6">
+            {/* Solde du compte Zakat */}
+            <div className="rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg,#065f46,#059669)' }}>
+              <p className="text-green-200 text-xs font-bold uppercase tracking-wider mb-1">Mon Compte Zakat</p>
+              <p className="text-white font-black text-3xl mb-1">
+                {(monCompteZakat?.solde || 0).toLocaleString('fr-GN')} GNF
+              </p>
+              <p className="text-green-200 text-sm">disponible pour donner</p>
+              <div className="flex gap-6 mt-4">
+                <div>
+                  <p className="text-green-300 text-xs">Total déposé</p>
+                  <p className="text-white font-bold">{(monCompteZakat?.totalDepose || 0).toLocaleString('fr-GN')} GNF</p>
+                </div>
+                <div>
+                  <p className="text-green-300 text-xs">Total donné</p>
+                  <p className="text-white font-bold">{(monCompteZakat?.totalDonne || 0).toLocaleString('fr-GN')} GNF</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Explication */}
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
+              <p className="font-bold mb-1">Comment ça marche ?</p>
+              <ol className="space-y-1 list-decimal list-inside text-green-700">
+                <li>Déposez de l'argent dans votre compte Zakat ci-dessous</li>
+                <li>Allez dans l'onglet <strong>"Personnes dans le besoin"</strong></li>
+                <li>Choisissez une personne et cliquez <strong>"Donner Zakat"</strong></li>
+                <li>La personne reçoit l'argent et peut payer une clinique ou un fournisseur depuis la plateforme</li>
+              </ol>
+            </div>
+
+            {/* Formulaire de dépôt */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h3 className="font-bold text-gray-800 mb-1">Déposer dans mon compte Zakat</h3>
+              <p className="text-gray-400 text-xs mb-4">Minimum : 1 000 GNF</p>
+              <div className="flex gap-3">
+                <input
+                  type="number"
+                  min="1000"
+                  step="1000"
+                  value={montantDepotZakat}
+                  onChange={e => setMontantDepotZakat(e.target.value)}
+                  placeholder="Montant en GNF"
+                  className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <button
+                  onClick={deposerDansCompteZakat}
+                  disabled={loadingDepotZakat}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm disabled:opacity-50 transition-colors"
+                >
+                  {loadingDepotZakat ? '...' : 'Déposer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'dons' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">💝 Mes Zakat</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">💝 Mes Dons Zakat</h2>
               <div className="space-y-4">
                 {donations.map((donation) => (
                   <div key={donation.id} className="border rounded-lg p-4">
@@ -1173,6 +1244,22 @@ export default function Zaka() {
 
         {activeTab === 'communaute' && (
           <div className="space-y-6">
+
+            {/* Mosquées & Imams */}
+            <a
+              href="/mosquee"
+              className="flex items-center gap-4 rounded-xl border-2 border-teal-200 hover:border-teal-400 bg-white px-5 py-4 shadow-sm transition hover:shadow-md"
+            >
+              <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center text-3xl flex-shrink-0">
+                🕌
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-base text-teal-800">Mosquées & Imams</div>
+                <div className="text-xs text-gray-500 mt-0.5">Mosquées et imams enregistrés dans votre région</div>
+              </div>
+              <span className="text-gray-400 text-lg flex-shrink-0">→</span>
+            </a>
+
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-900">

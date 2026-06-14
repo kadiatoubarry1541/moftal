@@ -168,6 +168,8 @@ export default function Guinee() {
       city: 'Boké',
       district: 'Boké'
     }
+  ];
+
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");

@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
 
 interface ProAccount {
   id: string;
@@ -18,7 +19,7 @@ interface ProAccount {
 }
 
 interface ProSectionProps {
-  type: "clinic" | "security_agency" | "journalist" | "enterprise" | "school" | "supplier" | "scientist" | "ngo";
+  type: "clinic" | "security_agency" | "journalist" | "enterprise" | "school" | "supplier" | "scientist" | "ngo" | "broker" | "restaurant" | "transport" | "commerce" | "vendor" | "producer" | "artisan" | "beauty" | "mosque" | "madrasa" | "mairie";
   title: string;
   icon: string;
   description: string;
@@ -28,19 +29,32 @@ interface ProSectionProps {
 
 export default function ProSection({ type, title, icon, description, hideEmptyMessage }: ProSectionProps) {
   const navigate = useNavigate();
-  const [accounts, setAccounts] = useState<ProAccount[]>([]);
+  const [rawAccounts, setRawAccounts] = useState<ProAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const [gpsActive, setGpsActive] = useState(false);
+
+  const accounts = useMemo(() => sortByProximity(rawAccounts, userGeo), [rawAccounts, userGeo]);
 
   useEffect(() => { loadAccounts(); }, [type]);
+
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) {
+        setUserGeo(prev => ({ ...prev, coords }));
+        setGpsActive(true);
+      }
+    });
+  }, []);
 
   const loadAccounts = async () => {
     setLoading(true);
     try {
       const res = await fetch(`http://localhost:5002/api/professionals/approved?type=${type}`);
       const data = await res.json();
-      if (data.success) setAccounts(data.accounts || []);
+      if (data.success) setRawAccounts(data.accounts || []);
     } catch (error) {
       console.error("Erreur:", error);
     } finally {
@@ -69,6 +83,18 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
       </div>
       {description && <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">{description}</p>}
 
+      {/* Bannière proximité géographique */}
+      {(userGeo.city || userGeo.country || gpsActive) && accounts.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2 mb-4">
+          <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
+          <span>
+            {gpsActive
+              ? "Les résultats les plus proches de vous apparaissent en premier"
+              : `Résultats personnalisés — ceux de ${userGeo.city || userGeo.country} apparaissent en premier`}
+          </span>
+        </div>
+      )}
+
       {/* Recherche */}
       {accounts.length > 0 && (
         <input type="text" value={search} onChange={e => setSearch(e.target.value)}
@@ -90,6 +116,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
           {filtered.map((pro) => {
             const isExpanded = expandedId === pro.id;
             const location = buildLocation(pro);
+            const prox = proximityLabel(pro, userGeo);
 
             return (
               <div key={pro.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden hover:shadow-lg transition-shadow flex">
@@ -121,9 +148,19 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                 <div className="p-3 sm:p-4 flex flex-col flex-1 min-w-0">
 
                   {/* Nom */}
-                  <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-gray-100 mb-1 leading-snug truncate">
-                    {pro.name}
-                  </h3>
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-gray-100 leading-snug truncate">
+                      {pro.name}
+                    </h3>
+                    {prox && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                        style={{ color: prox.color, backgroundColor: `${prox.color}1A`, border: `1px solid ${prox.color}33` }}
+                      >
+                        {prox.text}
+                      </span>
+                    )}
+                  </div>
 
                   {/* Services */}
                   {pro.services?.length > 0 ? (

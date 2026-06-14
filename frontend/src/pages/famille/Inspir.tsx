@@ -18,13 +18,14 @@ interface UserData {
 }
 
 type Audience = 'hommes' | 'femmes' | 'enfants';
-type MediaTab = 'video' | 'audio' | 'image' | 'text';
+type MediaTab = 'video' | 'audio' | 'image' | 'text' | 'livres';
 
 const MEDIA_TABS: { id: MediaTab; label: string; icon: string; desc: string }[] = [
   { id: 'video', label: 'Vidéos', icon: '🎬', desc: 'max 1 minute' },
   { id: 'audio', label: 'Audio', icon: '🎵', desc: 'max 3 minutes' },
   { id: 'image', label: 'Photos', icon: '📷', desc: 'images' },
   { id: 'text', label: 'PDF & Écriture', icon: '📄', desc: 'texte ou PDF' },
+  { id: 'livres', label: 'Bibliothèque', icon: '📚', desc: 'livres publiés' },
 ];
 
 const CATEGORIES = [
@@ -55,6 +56,17 @@ export default function Inspir() {
   const [mediaTab, setMediaTab] = useState<MediaTab>('video');
   const [posts, setPosts] = useState<any[]>([]);
   const [sending, setSending] = useState(false);
+
+  // États Bibliothèque (livres)
+  const [aAccesLivres, setAAccesLivres] = useState(false);
+  const [prixLivres, setPrixLivres] = useState(5000);
+  const [livres, setLivres] = useState<any[]>([]);
+  const [livreFile, setLivreFile] = useState<File | null>(null);
+  const [livreTitre, setLivreTitre] = useState('');
+  const [livreDescription, setLivreDescription] = useState('');
+  const [livreAuteur, setLivreAuteur] = useState('');
+  const [sendingLivre, setSendingLivre] = useState(false);
+  const [achatLivresLoading, setAchatLivresLoading] = useState(false);
 
   // Form state
   const [content, setContent] = useState('');
@@ -93,6 +105,107 @@ export default function Inspir() {
       setLoading(false);
     } catch { navigate('/login'); }
   }, [navigate]);
+
+  // Vérifier l'accès à la bibliothèque et charger le prix
+  useEffect(() => {
+    if (!userData) return;
+    const token = localStorage.getItem('token');
+    Promise.all([
+      fetch(`${API_ORIGIN}/api/payment/acces-livres`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`${API_ORIGIN}/api/payment/prix-livres`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    ]).then(([accesData, prixData]) => {
+      if (accesData.aAcces) setAAccesLivres(true);
+      if (prixData.an) setPrixLivres(prixData.an);
+    }).catch(() => {});
+  }, [userData]);
+
+  // Charger les livres publiés
+  const loadLivres = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(
+        `${API_ORIGIN}/api/organizations/posts?category=livres_inspir&subcategory=tous`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setLivres((data.posts || []).reverse());
+      }
+    } catch { /* silencieux */ }
+  };
+
+  useEffect(() => {
+    if (userData && aAccesLivres && mediaTab === 'livres') {
+      loadLivres();
+    }
+  }, [userData, aAccesLivres, mediaTab]);
+
+  // Acheter l'abonnement bibliothèque
+  const acheterAbonnementLivres = async () => {
+    setAchatLivresLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_ORIGIN}/api/payment/initiate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purpose: 'subscription_livres_an', description: 'Abonnement Bibliothèque Inspir — 1 an' }),
+      });
+      const data = await res.json();
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(data.message || 'Erreur lors de l\'initiation du paiement.');
+      }
+    } catch {
+      alert('Erreur réseau. Vérifiez que le backend est démarré.');
+    } finally {
+      setAchatLivresLoading(false);
+    }
+  };
+
+  // Publier un livre
+  const handlePublierLivre = async () => {
+    if (!livreTitre.trim() || !livreFile) {
+      alert('Le titre et le fichier PDF sont obligatoires.');
+      return;
+    }
+    setSendingLivre(true);
+    try {
+      const formData = new FormData();
+      formData.append('content', `**${livreTitre}**\n\nAuteur : ${livreAuteur || (userData?.prenom + ' ' + userData?.nomFamille)}\n\n${livreDescription}`);
+      formData.append('messageType', 'text');
+      formData.append('category', 'livres_inspir');
+      formData.append('subcategory', 'tous');
+      formData.append('postCategory', 'livres');
+      formData.append('media', livreFile);
+
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_ORIGIN}/api/organizations/create-post`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setLivreTitre('');
+          setLivreDescription('');
+          setLivreAuteur('');
+          setLivreFile(null);
+          await loadLivres();
+        } else {
+          alert(data.message || 'Erreur lors de la publication.');
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || `Erreur ${res.status}`);
+      }
+    } catch {
+      alert('Erreur réseau.');
+    } finally {
+      setSendingLivre(false);
+    }
+  };
 
   // Load posts
   const loadPosts = async () => {
@@ -282,7 +395,140 @@ export default function Inspir() {
           </div>
         </div>
 
+        {/* ── Section Bibliothèque (livres) ── */}
+        {mediaTab === 'livres' && (
+          <div className="space-y-4">
+            {!aAccesLivres ? (
+              /* Paywall bibliothèque */
+              <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-8 text-center text-white">
+                  <div className="text-5xl mb-3">📚</div>
+                  <h2 className="text-2xl font-black mb-1">Bibliothèque Inspir</h2>
+                  <p className="text-amber-100 text-sm">Des livres publiés par la communauté, pour vous</p>
+                </div>
+                <div className="p-6 text-center space-y-4">
+                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      Accédez à tous les livres publiés par les membres de la communauté.
+                      Vous pourrez aussi <strong>publier vos propres livres</strong> pour les partager avec la famille humaine.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="text-center">
+                      <div className="text-3xl font-black text-amber-600">{prixLivres.toLocaleString()} GNF</div>
+                      <div className="text-gray-500 text-xs">par an</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={acheterAbonnementLivres}
+                    disabled={achatLivresLoading}
+                    className="w-full py-4 rounded-xl font-bold text-white text-sm transition-all disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}>
+                    {achatLivresLoading ? 'Redirection vers le paiement...' : `📚 S'abonner pour ${prixLivres.toLocaleString()} GNF/an`}
+                  </button>
+                  <p className="text-gray-400 text-xs">Paiement sécurisé via FedaPay · Orange Money · Wave</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Formulaire publication livre */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
+                  <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">📖 Publier un livre</h3>
+                  <input
+                    type="text"
+                    value={livreTitre}
+                    onChange={e => setLivreTitre(e.target.value)}
+                    placeholder="Titre du livre *"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  <input
+                    type="text"
+                    value={livreAuteur}
+                    onChange={e => setLivreAuteur(e.target.value)}
+                    placeholder={`Auteur (par défaut : ${userData?.prenom} ${userData?.nomFamille})`}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  <textarea
+                    value={livreDescription}
+                    onChange={e => setLivreDescription(e.target.value)}
+                    placeholder="Description courte du livre..."
+                    rows={2}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                  />
+                  <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-amber-200 rounded-xl cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition-all">
+                    {livreFile ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-700 text-sm font-semibold">📄 {livreFile.name}</span>
+                        <button onClick={e => { e.preventDefault(); setLivreFile(null); }} className="text-red-400 text-xs">✕</button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-3xl mb-1">📄</span>
+                        <span className="text-sm font-semibold text-gray-600">Joindre le PDF du livre *</span>
+                        <span className="text-xs text-gray-400">Fichier PDF uniquement</span>
+                      </>
+                    )}
+                    <input type="file" accept=".pdf" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) setLivreFile(f); }} />
+                  </label>
+                  <button
+                    onClick={handlePublierLivre}
+                    disabled={sendingLivre || !livreTitre.trim() || !livreFile}
+                    className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-40"
+                    style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}>
+                    {sendingLivre ? 'Publication en cours...' : '📚 Publier le livre'}
+                  </button>
+                </div>
+
+                {/* Liste des livres */}
+                <div className="space-y-3">
+                  <h3 className="font-bold text-gray-700 text-sm px-1">📚 Livres disponibles ({livres.length})</h3>
+                  {livres.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                      <div className="text-4xl mb-3">📚</div>
+                      <p className="text-gray-400 text-sm">Aucun livre publié pour le moment.</p>
+                      <p className="text-gray-300 text-xs mt-1">Soyez le premier à partager un livre !</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {livres.map(livre => {
+                        const mediaUrl = livre.mediaUrl ? `${API_ORIGIN}${livre.mediaUrl}` : null;
+                        const lines = (livre.content || '').split('\n');
+                        const titre = lines[0]?.replace(/\*\*/g, '') || 'Sans titre';
+                        const auteurLine = lines[1] || '';
+                        const desc = lines.slice(3).join('\n');
+                        return (
+                          <div key={livre.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex gap-4 items-start">
+                            <div className="text-4xl flex-shrink-0">📖</div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-gray-900 text-sm">{titre}</h4>
+                              <p className="text-xs text-amber-600 font-medium">{auteurLine.replace('Auteur : ', '')}</p>
+                              {desc && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{desc}</p>}
+                              <div className="flex items-center gap-2 mt-2">
+                                {mediaUrl && (
+                                  <a href={mediaUrl} target="_blank" rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors">
+                                    📥 Télécharger / Lire
+                                  </a>
+                                )}
+                                <span className="text-xs text-gray-400">
+                                  {new Date(livre.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* ── Zone publication ── */}
+        {mediaTab !== 'livres' && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
@@ -434,8 +680,10 @@ export default function Inspir() {
             {sending ? 'Publication en cours...' : '✦ Publier'}
           </button>
         </div>
+        )}
 
-        {/* ── Liste des posts ── */}
+        {/* ── Liste des posts (sauf livres) ── */}
+        {mediaTab !== 'livres' && (
         <div className="space-y-3">
           <h3 className="font-bold text-gray-700 text-sm px-1">
             {MEDIA_TABS.find(t => t.id === mediaTab)?.icon} {MEDIA_TABS.find(t => t.id === mediaTab)?.label} publiées ({filteredPosts.length})
@@ -508,6 +756,8 @@ export default function Inspir() {
             </div>
           )}
         </div>
+        )}
+
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 const PRO_TYPES = [
@@ -22,6 +22,7 @@ const PRO_TYPES = [
   { id: "beauty",          label: "Beauté & Bien-être",              icon: "💈", desc: "Salon de coiffure, spa, institut de beauté" },
   { id: "artisan",         label: "Artisanat & Services",            icon: "🔧", desc: "Plombier, électricien, menuisier, soudeur, maçon" },
   { id: "mairie",          label: "Mairie / État Civil",             icon: "🏛️", desc: "Gérez les mariages, naissances, décès et certificats de résidence" },
+  { id: "reseau",          label: "Association / Réseau",            icon: "🌐", desc: "Association, comité, groupe communautaire — membres, projets, cotisations" },
 ];
 
 const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
@@ -97,6 +98,10 @@ const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
     expect: "Nous attendons que vous teniez votre stock à jour, enregistriez vos ventes quotidiennes, suiviez vos créances clients et mainteniez une caisse lisible pour vous et vos employés.",
     page: "Votre boutique disposera d'un **espace de gestion interne** complet : gestion du stock (alertes rupture), ventes journalières, caisse, suivi des crédits clients avec relance, et bilan mensuel simple.",
   },
+  reseau: {
+    expect: "Nous attendons que vous gériez une association, un comité ou un groupe communautaire organisé, avec des membres cotisants, des projets collectifs et des annonces régulières.",
+    page: "Votre réseau disposera d'un **espace de gestion interne** : registre des membres, suivi des cotisations, gestion des projets, annonces visibles sur la plateforme.",
+  },
 };
 
 const PRO_TYPE_IDS = new Set(PRO_TYPES.map((t) => t.id));
@@ -133,6 +138,33 @@ export default function InscriptionPro() {
     phone: "", email: "", website: "", mediaUrl: "", justificatifDocument: "",
     services: "", specialties: "",
   });
+
+  // Vérification du nom en temps réel
+  type NomStatut = '' | 'checking' | 'disponible' | 'pris';
+  const [nomStatut, setNomStatut] = useState<NomStatut>('');
+  const nomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const nom = form.name.trim();
+    if (!nom || nom.length < 2) { setNomStatut(''); return; }
+
+    setNomStatut('checking');
+    if (nomTimerRef.current) clearTimeout(nomTimerRef.current);
+
+    nomTimerRef.current = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const r = await fetch(
+          `http://localhost:5002/api/professionals/verifier-nom?nom=${encodeURIComponent(nom)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const d = await r.json();
+        setNomStatut(d.disponible ? 'disponible' : 'pris');
+      } catch {
+        setNomStatut('');
+      }
+    }, 600);
+  }, [form.name]);
   const [subSector, setSubSector] = useState<"primaire" | "secondaire" | "tertiaire" | "">("");
   const [securityType, setSecurityType] = useState<"policier" | "gendarme" | "pompier" | "agent_prive" | "">("");
 
@@ -185,6 +217,14 @@ export default function InscriptionPro() {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
     if (!form.name.trim()) { setError("Le nom est requis"); return; }
+    if (nomStatut === 'pris') {
+      setError(`Le nom "${form.name.trim()}" est déjà utilisé. Veuillez en choisir un autre.`);
+      return;
+    }
+    if (nomStatut === 'checking') {
+      setError("Vérification du nom en cours, attendez un instant...");
+      return;
+    }
     if (NEEDS_SUBSECTOR.includes(selectedType) && !subSector) {
       setError("Veuillez choisir votre niveau d'échanges (primaire, secondaire ou tertiaire).");
       return;
@@ -286,13 +326,28 @@ export default function InscriptionPro() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4">
           <button type="button" onClick={() => navigate("/compte")} className="min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-200 font-medium transition-colors">
             ← Retour
           </button>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
             Inscription Professionnelle
           </h1>
+        </div>
+
+        {/* Bannière 3 mois gratuits */}
+        <div className="mb-6 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-white shadow-md">
+          <div className="text-4xl flex-shrink-0">🎁</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-extrabold text-lg leading-tight">3 mois gratuits d'essai</div>
+            <div className="text-sm text-orange-100 mt-0.5">
+              Inscrivez-vous aujourd'hui — aucun paiement requis pour commencer.
+              Votre compte sera visible dès validation par l'administration.
+            </div>
+          </div>
+          <div className="flex-shrink-0 bg-white/20 rounded-xl px-3 py-1.5 text-sm font-bold">
+            Gratuit
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-2xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 p-6 sm:p-8">
@@ -334,8 +389,31 @@ export default function InscriptionPro() {
               <label className={labelCls}>
                 {selectedType === "restaurant" ? "Nom du restaurant *" : "Nom *"}
               </label>
-              <input type="text" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                className={inputCls} placeholder={selectedType === "restaurant" ? "Ex: Restaurant Chez Kadiatou" : "Nom de votre établissement"} />
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  className={`${inputCls} ${nomStatut === 'pris' ? 'border-red-400 focus:ring-red-400' : nomStatut === 'disponible' ? 'border-green-400 focus:ring-green-400' : ''}`}
+                  placeholder={selectedType === "restaurant" ? "Ex: Restaurant Chez Kadiatou" : "Nom de votre établissement"}
+                />
+                {nomStatut === 'checking' && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+              {nomStatut === 'pris' && (
+                <p className="mt-1 text-sm text-red-600 font-semibold">
+                  ❌ Ce nom est déjà utilisé. Choisissez un autre nom.
+                </p>
+              )}
+              {nomStatut === 'disponible' && (
+                <p className="mt-1 text-sm text-green-600 font-semibold">
+                  ✅ Ce nom est disponible.
+                </p>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label className={labelCls}>Description</label>

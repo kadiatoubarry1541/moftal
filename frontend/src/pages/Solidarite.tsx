@@ -579,7 +579,7 @@ export default function Solidarite() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
               { id: 'dons', label: 'Dons', icon: '🤝' },
               // Onglet Zaka uniquement pour les musulmans (ou admin)
@@ -592,15 +592,15 @@ export default function Solidarite() {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                onClick={() => tab.id === 'zaka' ? navigate('/zaka') : setActiveTab(tab.id as any)}
+                className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
-                    ? (tab.id === 'zaka' || tab.id === 'dons') ? 'border-green-500 text-green-600' : (tab.id === 'ong' ? 'border-teal-500 text-teal-600' : 'border-blue-500 text-blue-600')
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-green-500 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
+                <span className="text-base sm:text-lg">{tab.icon}</span>
+                <span className="text-center leading-tight">{tab.label}</span>
               </button>
             ))}
           </nav>
@@ -615,7 +615,7 @@ export default function Solidarite() {
             {/* Navigation sous-onglets pour Dons */}
             <div className="bg-white border-b">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <nav className="flex space-x-8">
+                <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
                   {[
                     { id: 'pauvres', label: 'Liste des Pauvres', icon: '👥' },
                     { id: 'mes-dons', label: 'Mes Dons', icon: '💝' }
@@ -623,14 +623,14 @@ export default function Solidarite() {
                     <button
                       key={tab.id}
                       onClick={() => setDonsSubTab(tab.id as any)}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                      className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                         donsSubTab === tab.id
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
-                      <span className="mr-2">{tab.icon}</span>
-                      {tab.label}
+                      <span className="text-base sm:text-lg">{tab.icon}</span>
+                      <span className="text-center leading-tight">{tab.label}</span>
                     </button>
                   ))}
                 </nav>

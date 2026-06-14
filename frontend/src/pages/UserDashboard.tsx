@@ -1,17 +1,13 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { isMasterAdmin, getPhotoUrl, getNumeroHForDisplay } from "../utils/auth";
-import { ActivityPageIcon } from "../components/icons/ActivityPageIcon";
 import { SalesIcon } from "../components/icons/SalesIcon";
 import NotificationBell from "../components/NotificationBell";
+import { FavorisDropdown, FavorisDropdownItem } from "../components/FavorisDropdown";
 import DefaultAvatar from "../assets/default-avatar.svg";
 
 // Onglets du dashboard — chargés uniquement quand l'onglet est actif
-const Activite = lazy(() => import("./Activite"));
-const Education = lazy(() => import("./Education"));
 const TerreAdam = lazy(() => import("./TerreAdam"));
-const HistoireHumanite = lazy(() => import("./HistoireHumanite"));
-const Science = lazy(() => import("./Science"));
 const EchangesProfessionnel = lazy(() => import("../components/EchangesProfessionnel").then(m => ({ default: m.EchangesProfessionnel })));
 
 const TabLoader = () => (
@@ -99,19 +95,18 @@ function setFavoritePage(numeroH: string, pageId: string) {
 }
 
 // Liste des ids pour initialiser l'onglet par défaut depuis la page favorite
-const TAB_IDS = ["terre-adam", "activite", "echanges", "histoire", "science", "education"];
+const TAB_IDS = ["terre-adam", "echanges"];
 
 function getInitialTab() {
   try {
     const s = localStorage.getItem("session_user");
-    if (!s) return "histoire";
+    if (!s) return "terre-adam";
     const u = (JSON.parse(s).userData || JSON.parse(s)) as { numeroH?: string };
-    if (!u?.numeroH) return "histoire";
+    if (!u?.numeroH) return "terre-adam";
     const fav = getFavoritePage(u.numeroH);
-    // Si l'utilisateur a une page favorite, on l'utilise ; sinon "histoire" (léger, sans carte)
-    return fav && TAB_IDS.includes(fav) ? fav : "histoire";
+    return fav && TAB_IDS.includes(fav) ? fav : "terre-adam";
   } catch {
-    return "histoire";
+    return "terre-adam";
   }
 }
 
@@ -187,18 +182,12 @@ export function UserDashboard() {
   };
 
   // Navigation unifiée : liens + onglets dans une seule barre
-  // Ordre : Famille → Terre Adam → Solidarité → Activité → Échanges → Temps → Santé → Sécurité → Science → Éducation
+  // Ordre : Famille → Terre Adam → Services → Échanges
   const navItems: NavItem[] = [
     { id: "famille", label: "Famille", icon: "👨‍👩‍👧‍👦", type: "link", path: "/famille" },
     { id: "terre-adam", label: "Terre ADAM", icon: "🌍", type: "tab" },
-    { id: "solidarite", label: "Solidarité", icon: "🤝", type: "link", path: "/solidarite" },
-    { id: "activite", label: "Activité", icon: "📊", type: "tab", useSvg: true, SvgIcon: ActivityPageIcon },
-    { id: "sante", label: "Santé", icon: "🏥", type: "link", path: "/sante" },
-    { id: "securite", label: "Sécurité", icon: "🛡️", type: "link", path: "/securite" },
+    { id: "services", label: "Services", icon: "💼", type: "link", path: "/services" },
     { id: "echanges", label: "Échanges", icon: "⚖️", type: "tab", useSvg: true, SvgIcon: SalesIcon },
-    { id: "histoire", label: "Temps", icon: "🧭", type: "tab" },
-    { id: "science", label: "Science", icon: "⚛️", type: "tab" },
-    { id: "education", label: "Éducation", icon: "🎓", type: "tab" },
   ];
 
   if (!userData) {
@@ -231,34 +220,50 @@ export function UserDashboard() {
 
   return (
     <div className="user-dashboard bg-gray-50 dark:bg-gray-900 min-h-screen overflow-x-hidden">
-      {/* Barre supérieure: Favoris, Notifications, Déconnexion */}
-      <div className="flex items-center justify-end px-3 xs:px-4 sm:px-6 pt-3 sm:pt-4 mb-3 sm:mb-4 gap-2">
-        {userData && (
-          <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-            <span className="whitespace-nowrap">⭐ Favoris</span>
-            <select
-              value={getFavoritePage(userData.numeroH) || "terre-adam"}
-              onChange={(e) => {
-                const id = e.target.value;
-                setFavoritePage(userData.numeroH, id);
-                const item = navItems.find((i) => i.id === id);
-                if (item?.type === "tab") {
-                  setActiveTab(id);
-                } else if (item?.type === "link" && item.path) {
-                  navigate(item.path);
-                }
-              }}
-              className="min-h-[36px] pl-2 pr-6 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              aria-label="Page d'accueil favorite"
+      {/* Barre supérieure: Gestion Pro, Favoris, Notifications, Déconnexion */}
+      <div className="flex items-center justify-end px-3 xs:px-4 sm:px-6 pt-3 sm:pt-4 mb-3 sm:mb-4 gap-2 flex-wrap">
+        <button
+          onClick={() => navigate("/gestion-interne")}
+          className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors whitespace-nowrap"
+        >
+          Gestion Pro
+        </button>
+        {userData && (() => {
+          const currentFavoriteId = getFavoritePage(userData.numeroH);
+
+          return (
+            <FavorisDropdown
+              headerLabel="Page d'accueil favorite"
+              ariaLabel="Page d'accueil favorite : choisissez la page affichée en premier à votre arrivée"
+              title="Page d'accueil favorite"
             >
-              {navItems.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.icon} {item.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+              {(close) => navItems.map((item) => {
+                const isSelected = currentFavoriteId === item.id;
+                return (
+                  <FavorisDropdownItem
+                    key={item.id}
+                    icon={item.useSvg && item.SvgIcon ? (
+                      <item.SvgIcon className="w-4 h-4" size={16} />
+                    ) : (
+                      <span className="text-base leading-none">{item.icon}</span>
+                    )}
+                    label={item.label}
+                    selected={isSelected}
+                    onClick={() => {
+                      setFavoritePage(userData.numeroH, item.id);
+                      close();
+                      if (item.type === "tab") {
+                        setActiveTab(item.id);
+                      } else if (item.type === "link" && item.path) {
+                        navigate(item.path);
+                      }
+                    }}
+                  />
+                );
+              })}
+            </FavorisDropdown>
+          );
+        })()}
         <NotificationBell />
         <button
           onClick={() => navigate("/")}
@@ -379,11 +384,11 @@ export function UserDashboard() {
       </div>
 
       {/* ─── Navigation principale ─────────────────────────────────────────
-          10 boutons toujours visibles sur UNE seule ligne, sans scroll.
-          grid-cols-10 sur tous les écrans → chaque bouton = 10% de la largeur
+          4 boutons toujours visibles sur UNE seule ligne, sans scroll.
+          grid-cols-8 sur tous les écrans → chaque bouton = 25% de la largeur
       ────────────────────────────────────────────────────────────────── */}
       <div className="dashboard-tabs px-1 xs:px-2 sm:px-4 lg:px-8 max-w-7xl mx-auto mt-3">
-        <div className="grid grid-cols-10 gap-0.5 xs:gap-1 sm:gap-1.5 lg:gap-2">
+        <div className="grid grid-cols-8 gap-0.5 xs:gap-1 sm:gap-1.5 lg:gap-2">
           {navItems.map((item) => {
             const isActive = item.type === "tab" && activeTab === item.id;
             const isLink = item.type === "link";
@@ -393,7 +398,7 @@ export function UserDashboard() {
                 key={item.id}
                 onClick={() => handleNavClick(item)}
                 className={`
-                  w-full border-none cursor-pointer transition-all duration-200 rounded-lg xs:rounded-xl
+                  col-span-2 w-full border-none cursor-pointer transition-all duration-200 rounded-lg xs:rounded-xl
                   flex flex-col items-center justify-center
                   gap-0 xs:gap-0.5
                   p-1 xs:p-1.5 sm:p-2 lg:p-3
@@ -456,20 +461,13 @@ function getLogoIcon(logo: string) {
   return logos[logo] || "⭐";
 }
 
+
 function renderTabContent(tab: string, userData: UserData) {
   switch (tab) {
     case "terre-adam":
       return <TerreAdam />;
-    case "activite":
-      return <Activite />;
     case "echanges":
       return <EchangesProfessionnel userData={userData as any} />;
-    case "histoire":
-      return <HistoireHumanite />;
-    case "science":
-      return <Science />;
-    case "education":
-      return <Education />;
     default:
       return <TerreAdam />;
   }

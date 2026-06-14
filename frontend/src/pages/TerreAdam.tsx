@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ProSection from '../components/ProSection';
 import {
   WORLD_GEOGRAPHY,
   findLocationByCode,
@@ -72,7 +71,7 @@ function formatShortNumeroH(numeroH?: string | null): string | null {
 
 export default function TerreAdam() {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'lieux' | 'region' | 'pays' | 'continent' | 'mondial' | 'journalistes'>('lieux');
+  const [activeTab, setActiveTab] = useState<'lieux' | 'region' | 'pays' | 'continent' | 'mondial'>('lieux');
   type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3' | 'sous-prefecture' | 'prefecture';
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
   const [loading, setLoading] = useState(true);
@@ -143,6 +142,48 @@ export default function TerreAdam() {
     userData?.quartierCode3 || userData?.lieu3 || userData?.lieuResidence3 || null
   ];
 
+  /** Une valeur de lieu est "réelle" si elle est renseignée et différente du placeholder par défaut */
+  const isRealLieu = (val: string | null | undefined): boolean => {
+    if (!val) return false;
+    const trimmed = String(val).trim().toLowerCase();
+    return trimmed !== '' && trimmed !== 'non spécifié' && trimmed !== 'non specifie';
+  };
+
+  // Applique les données utilisateur (session ou rafraîchies depuis le serveur) :
+  // met à jour le rôle, le label du quartier et l'onglet Résidence par défaut.
+  const applyUserData = (user: UserData) => {
+    setUserData(user);
+    const admin = user.role === 'admin' || user.role === 'super-admin' || user.numeroH === 'G0C0P0R0E0F0 0';
+    setIsAdmin(admin);
+    // ✅ Vérifier si l'utilisateur est journaliste
+    const journalist = user.role === 'journalist' || user.isJournalist || admin;
+    setIsJournalist(journalist);
+    if (admin) setFilterScope('all');
+
+    // ✅ Dynamiquement renommer le label du quartier (code géo ou saisie libre)
+    const quartierName = user.quartierCode
+      ? (findLocationByCode(user.quartierCode)?.name || user.lieu1 || user.quartier)
+      : (user.lieu1 || user.quartier || 'Quartier');
+    setTabLabels(quartierName || 'Quartier');
+
+    // ✅ Choisir automatiquement le bon onglet de résidence:
+    // - si seul le 1er quartier est renseigné → Résidence 1
+    // - sinon, utiliser le premier des quartiers renseignés (2 ou 3)
+    const slot1Code = user.quartierCode || user.lieu1 || user.lieuResidence1;
+    const slot2Code = user.quartierCode2 || user.lieu2 || user.lieuResidence2;
+    const slot3Code = user.quartierCode3 || user.lieu3 || user.lieuResidence3;
+    if (slot1Code) {
+      setActiveLieuTab('quartier-1');
+    } else if (slot2Code) {
+      setActiveLieuTab('quartier-2');
+    } else if (slot3Code) {
+      setActiveLieuTab('quartier-3');
+    } else {
+      // Aucun quartier configuré → basculer directement sur la sous-préfecture
+      setActiveLieuTab('sous-prefecture');
+    }
+  };
+
   useEffect(() => {
     const session = localStorage.getItem("session_user");
     if (!session) {
@@ -150,52 +191,24 @@ export default function TerreAdam() {
       return;
     }
 
+    let cachedUser: UserData | null = null;
     try {
       const parsed = JSON.parse(session);
-      const user = parsed.userData || parsed;
-      if (!user || !user.numeroH) {
+      cachedUser = parsed.userData || parsed;
+      if (!cachedUser || !cachedUser.numeroH) {
         navigate("/login");
         return;
       }
-      
+
       // ❌ Les défunts n'ont pas de compte et ne peuvent pas accéder à cette page
-      if (user.type === 'defunt' || user.isDeceased || user.numeroHD) {
+      if (cachedUser.type === 'defunt' || cachedUser.isDeceased || cachedUser.numeroHD) {
         alert("⚠️ Les défunts n'ont pas de compte. Leurs informations sont dans l'arbre généalogique.");
         navigate("/");
         return;
       }
-      
-      setUserData(user);
-      const admin = user.role === 'admin' || user.role === 'super-admin' || user.numeroH === 'G0C0P0R0E0F0 0';
-      setIsAdmin(admin);
-      // ✅ Vérifier si l'utilisateur est journaliste
-      const journalist = user.role === 'journalist' || user.isJournalist || admin;
-      setIsJournalist(journalist);
-      if (admin) setFilterScope('all');
-      
-      // ✅ Dynamiquement renommer le label du quartier (code géo ou saisie libre)
-      const quartierName = user.quartierCode
-        ? (findLocationByCode(user.quartierCode)?.name || user.lieu1 || user.quartier)
-        : (user.lieu1 || user.quartier || 'Quartier');
-      setTabLabels(quartierName || 'Quartier');
 
-      // ✅ Choisir automatiquement le bon onglet de résidence:
-      // - si seul le 1er quartier est renseigné → Résidence 1
-      // - sinon, utiliser le premier des quartiers renseignés (2 ou 3)
-      const slot1Code = user.quartierCode || user.lieu1 || user.lieuResidence1;
-      const slot2Code = user.quartierCode2 || user.lieu2 || user.lieuResidence2;
-      const slot3Code = user.quartierCode3 || user.lieu3 || user.lieuResidence3;
-      if (slot1Code) {
-        setActiveLieuTab('quartier-1');
-      } else if (slot2Code) {
-        setActiveLieuTab('quartier-2');
-      } else if (slot3Code) {
-        setActiveLieuTab('quartier-3');
-      } else {
-        // Aucun quartier configuré → basculer directement sur la sous-préfecture
-        setActiveLieuTab('sous-prefecture');
-      }
-      
+      applyUserData(cachedUser);
+
       if (activeTab === 'lieux' && (activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3')) {
         loadGroups();
       } else {
@@ -203,13 +216,48 @@ export default function TerreAdam() {
       }
     } catch {
       navigate("/login");
+      return;
+    }
+
+    // 🔄 Rafraîchir les infos géographiques (lieu1/2/3, sous-préfecture, préfecture…) depuis
+    // le serveur : la session locale peut être incomplète si elle a été créée avant l'ajout
+    // de ces champs (ex: connexions effectuées avant une mise à jour de l'app).
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch('http://localhost:5002/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => (res.ok ? res.json() : null))
+        .then(data => {
+          if (data?.success && data.user && cachedUser) {
+            const merged = { ...cachedUser, ...data.user };
+            applyUserData(merged);
+
+            try {
+              const rawSession = localStorage.getItem("session_user");
+              if (rawSession) {
+                const parsedSession = JSON.parse(rawSession);
+                if (parsedSession.userData) {
+                  parsedSession.userData = { ...parsedSession.userData, ...data.user };
+                } else {
+                  Object.assign(parsedSession, data.user);
+                }
+                localStorage.setItem("session_user", JSON.stringify(parsedSession));
+              }
+            } catch { /* ignore */ }
+          }
+        })
+        .catch(() => { /* hors-ligne : on garde les données en cache */ });
     }
   }, [navigate]);
 
   useEffect(() => {
-    if (activeTab === 'lieux' && (activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3') && userData) {
+    if (!userData) return;
+    if (activeTab === 'lieux' && (activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3')) {
       setSelectedGroup(null);
       loadGroups();
+    } else {
+      setLoading(false);
     }
   }, [activeTab, activeLieuTab, userData, filterScope]);
 
@@ -220,7 +268,10 @@ export default function TerreAdam() {
   }, [selectedGroup]);
 
   const loadGroups = async () => {
-    if (!userData) return;
+    if (!userData) {
+      setLoading(false);
+      return;
+    }
 
     const token = localStorage.getItem("token");
     try {
@@ -466,8 +517,7 @@ export default function TerreAdam() {
                   : '🌐',
                 customLabel: effectiveContinent ? `Mon Continent` : 'Continent'
               },
-              { id: 'mondial', label: 'Mondial', icon: '🌎' },
-              { id: 'journalistes', label: 'Journalistes', icon: '📰' }
+              { id: 'mondial', label: 'Mondial', icon: '🌎' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -501,46 +551,38 @@ export default function TerreAdam() {
               <div className="border-b border-gray-200 mb-3 sm:mb-4 md:mb-6 overflow-hidden">
                 <nav className="flex space-x-1 sm:space-x-2 md:space-x-4 overflow-x-auto">
                   {[
-                    // Afficher uniquement les résidences réellement configurées dans le profil
-                    ...(userQuartierCodes[0]
-                      ? [{
-                          id: 'quartier-1' as LieuTabId,
-                          label: (() => {
-                            const c = userQuartierCodes[0];
-                            const loc = c ? findLocationByCode(c) : null;
-                            if (loc?.name) return loc.name;
-                            const raw = typeof c === 'string' ? c.trim() : '';
-                            return raw || 'Résidence 1';
-                          })(),
-                          icon: '🏘️'
-                        }]
-                      : []),
-                    ...(userQuartierCodes[1]
-                      ? [{
-                          id: 'quartier-2' as LieuTabId,
-                          label: (() => {
-                            const c = userQuartierCodes[1];
-                            const loc = c ? findLocationByCode(c) : null;
-                            if (loc?.name) return loc.name;
-                            const raw = typeof c === 'string' ? c.trim() : '';
-                            return raw || 'Résidence 2';
-                          })(),
-                          icon: '🏘️'
-                        }]
-                      : []),
-                    ...(userQuartierCodes[2]
-                      ? [{
-                          id: 'quartier-3' as LieuTabId,
-                          label: (() => {
-                            const c = userQuartierCodes[2];
-                            const loc = c ? findLocationByCode(c) : null;
-                            if (loc?.name) return loc.name;
-                            const raw = typeof c === 'string' ? c.trim() : '';
-                            return raw || 'Résidence 3';
-                          })(),
-                          icon: '🏘️'
-                        }]
-                      : []),
+                    // Les 3 résidences sont toujours affichées, même non renseignées,
+                    // pour que l'utilisateur puisse voir/ajouter ses résidences 2 et 3 depuis son profil
+                    {
+                      id: 'quartier-1' as LieuTabId,
+                      label: (() => {
+                        const c = userQuartierCodes[0];
+                        const loc = c ? findLocationByCode(c) : null;
+                        if (loc?.name) return loc.name;
+                        return isRealLieu(c) ? String(c).trim() : 'Résidence 1';
+                      })(),
+                      icon: '🏘️'
+                    },
+                    {
+                      id: 'quartier-2' as LieuTabId,
+                      label: (() => {
+                        const c = userQuartierCodes[1];
+                        const loc = c ? findLocationByCode(c) : null;
+                        if (loc?.name) return loc.name;
+                        return isRealLieu(c) ? String(c).trim() : 'Résidence 2';
+                      })(),
+                      icon: '🏘️'
+                    },
+                    {
+                      id: 'quartier-3' as LieuTabId,
+                      label: (() => {
+                        const c = userQuartierCodes[2];
+                        const loc = c ? findLocationByCode(c) : null;
+                        if (loc?.name) return loc.name;
+                        return isRealLieu(c) ? String(c).trim() : 'Résidence 3';
+                      })(),
+                      icon: '🏘️'
+                    },
                     { id: 'sous-prefecture' as LieuTabId, label: userSousPrefecture?.name || userData.sousPrefecture || 'Sous-préfecture', icon: '🏛️' },
                     { id: 'prefecture' as LieuTabId, label: userPrefecture?.name || userData.prefecture || 'Préfecture', icon: '🏢' }
                   ].map((tab) => (
@@ -567,14 +609,9 @@ export default function TerreAdam() {
                     <div className="space-y-3 sm:space-y-4">
                       {(() => {
                         const slotNum = activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3;
-                        const codes = [
-                          userData?.quartierCode || userData?.lieu1 || userData?.lieuResidence1,
-                          userData?.quartierCode2 || userData?.lieu2 || userData?.lieuResidence2,
-                          userData?.quartierCode3 || userData?.lieu3 || userData?.lieuResidence3
-                        ];
-                        const code = codes[slotNum - 1] || null;
+                        const code = userQuartierCodes[slotNum - 1];
                         const loc = code ? findLocationByCode(code) : null;
-                        const name = loc?.name || code || null;
+                        const name = loc?.name || (isRealLieu(code) ? code : null);
 
                         return (
                           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4 sm:p-5 overflow-hidden">
@@ -1184,30 +1221,6 @@ export default function TerreAdam() {
           </div>
         )}
 
-        {/* 6. Journalistes – Espace dédié dans Terre ADAM */}
-        {activeTab === 'journalistes' && (
-          <div className="space-y-3 sm:space-y-4 md:space-y-6 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 overflow-hidden">
-              <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-1.5 sm:gap-2 md:gap-3">
-                <span className="text-base sm:text-lg md:text-xl">📰</span>
-                <span className="text-[11px] sm:text-xs md:text-sm">Journalistes de Terre ADAM</span>
-              </h2>
-              <p className="text-[11px] sm:text-xs md:text-sm text-gray-600 mb-3 sm:mb-4">
-                Retrouvez ici les <strong>journalistes approuvés</strong> de Terre ADAM. Utilisez la barre de
-                recherche pour filtrer par <strong>ville</strong>, <strong>quartier</strong> ou <strong>pays</strong>,
-                puis cliquez sur <strong>« Prendre rendez-vous »</strong> pour les contacter.
-              </p>
-              <ProSection
-                type="journalist"
-                title="Journalistes"
-                icon="📰"
-                description=""
-                hideEmptyMessage
-              />
-              <DevelopmentBlock scope="Journalistes" />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

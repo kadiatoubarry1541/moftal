@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
-import { sortAnyByProximity, getUserGeoContext } from '../utils/proximity';
+import { sortAnyByProximity, anyProximityLabel, getUserGeoContext, requestGPS, matchesCountryFilter, type UserGeoContext } from '../utils/proximity';
+import CountryFilter from '../components/CountryFilter';
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
@@ -53,8 +54,19 @@ interface Supplier {
 
 export default function EchangeMedicament() {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [products, setProducts] = useState<ExchangeProduct[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
+  const [rawSuppliers, setRawSuppliers] = useState<Supplier[]>([]);
+  const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
+  const [gpsActive, setGpsActive] = useState(false);
+  const [filterPays, setFilterPays] = useState('');
+  const products = useMemo(
+    () => sortAnyByProximity(rawProducts, userGeo).filter(p => matchesCountryFilter(p, filterPays)),
+    [rawProducts, userGeo, filterPays]
+  );
+  const suppliers = useMemo(
+    () => sortAnyByProximity(rawSuppliers, userGeo).filter(s => matchesCountryFilter(s, filterPays)),
+    [rawSuppliers, userGeo, filterPays]
+  );
   const [loading, setLoading] = useState(true);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
@@ -117,6 +129,12 @@ export default function EchangeMedicament() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    requestGPS().then(coords => {
+      if (coords) { setUserGeo(prev => ({ ...prev, coords })); setGpsActive(true); }
+    });
+  }, []);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -134,9 +152,9 @@ export default function EchangeMedicament() {
       
       if (productsResponse.ok) {
         const productsData = await productsResponse.json();
-        setProducts(sortAnyByProximity(productsData.products || [], getUserGeoContext()));
+        setRawProducts(productsData.products || []);
       } else {
-        setProducts([]);
+        setRawProducts([]);
       }
 
       // Charger les fournisseurs
@@ -150,15 +168,15 @@ export default function EchangeMedicament() {
 
       if (suppliersResponse.ok) {
         const suppliersData = await suppliersResponse.json();
-        setSuppliers(sortAnyByProximity(suppliersData.suppliers || [], getUserGeoContext()));
+        setRawSuppliers(suppliersData.suppliers || []);
       } else {
-        setSuppliers([]);
+        setRawSuppliers([]);
       }
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
-      setProducts([]);
-      setSuppliers([]);
+      setRawProducts([]);
+      setRawSuppliers([]);
     } finally {
       setLoading(false);
     }
@@ -375,6 +393,19 @@ export default function EchangeMedicament() {
       >
         ← Retour
       </button>
+
+      {/* Bannière proximité */}
+      {(userGeo.city || userGeo.country || gpsActive) && (
+        <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mb-4">
+          <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
+          <span>{gpsActive ? "Annonces triées par distance GPS — les plus proches apparaissent en premier" : `Annonces de ${userGeo.city || userGeo.country} apparaissent en premier`}</span>
+        </div>
+      )}
+
+      {/* Filtre manuel par pays */}
+      <div className="flex items-center justify-end mb-4">
+        <CountryFilter value={filterPays} onChange={setFilterPays} />
+      </div>
 
       {/* Boutons seulement */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">

@@ -55,6 +55,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [recommendations, setRecommendations] = useState<string[]>([])
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0)
   const [spouseTreeModal, setSpouseTreeModal] = useState<{ open: boolean; data: any | null; loading: boolean }>({ open: false, data: null, loading: false })
+  const [familyDocs, setFamilyDocs] = useState<Record<string, Array<{type: string; description: string; annee?: string}>>>({})
+  const [newDoc, setNewDoc] = useState({ type: 'naissance', description: '', annee: '' })
+  const [showAddDoc, setShowAddDoc] = useState(false)
   const navigate = useNavigate()
 
   const handleViewSpouseTree = async (spouseNumeroH: string) => {
@@ -86,6 +89,32 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     const pending = receivedInvitations.filter((inv) => inv.status === 'pending').length
     setPendingInvitationCount(pending)
   }, [userData])
+
+  useEffect(() => {
+    const key = `family_docs_${userData.numeroH}`
+    try {
+      const stored = JSON.parse(localStorage.getItem(key) || '{}')
+      setFamilyDocs(stored)
+    } catch { /* ignore */ }
+  }, [userData.numeroH])
+
+  const addDocToMember = (memberNumeroH: string) => {
+    if (!newDoc.description.trim()) return
+    const existing = familyDocs[memberNumeroH] || []
+    const updated = { ...familyDocs, [memberNumeroH]: [...existing, { type: newDoc.type, description: newDoc.description.trim(), annee: newDoc.annee.trim() || undefined }] }
+    localStorage.setItem(`family_docs_${userData.numeroH}`, JSON.stringify(updated))
+    setFamilyDocs(updated)
+    setNewDoc({ type: 'naissance', description: '', annee: '' })
+    setShowAddDoc(false)
+  }
+
+  const deleteDocFromMember = (memberNumeroH: string, index: number) => {
+    const existing = [...(familyDocs[memberNumeroH] || [])]
+    existing.splice(index, 1)
+    const updated = { ...familyDocs, [memberNumeroH]: existing }
+    localStorage.setItem(`family_docs_${userData.numeroH}`, JSON.stringify(updated))
+    setFamilyDocs(updated)
+  }
 
   const getGenerationMembers = (generation: string) => {
     if (generation === 'all') return familyMembers
@@ -261,6 +290,66 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     )
   }
 
+  // Couleur par genre — bleu pour homme, rose pour femme (style MyHeritage)
+  const getGenreColor = (genre?: string) =>
+    genre?.toUpperCase() === 'FEMME' ? '#be185d' : genre?.toUpperCase() === 'HOMME' ? '#1d4ed8' : '#374151'
+
+  // Ouvre le formulaire d'ajout avec la relation pré-remplie
+  const openAddForm = (relation: string) => {
+    setShowAddMemberForm(true)
+    setAddMemberType('vivant')
+    setNewMember(prev => ({ ...prev, relation: relation as any }))
+  }
+
+  // Petit badge "+" dans le coin inférieur droit des cartes vides — n'efface pas la carte existante
+  const renderPlusButton = (cx: number, cy: number, label: string, relation: string) => (
+    <g style={{ cursor: 'pointer' }} onClick={() => openAddForm(relation)}>
+      <title>{label}</title>
+      <circle cx={cx + 55} cy={cy + 20} r={13} fill="#10b981" stroke="white" strokeWidth="2"/>
+      <text x={cx + 55} y={cy + 25} textAnchor="middle" fontSize="16" fill="white" fontWeight="bold">+</text>
+    </g>
+  )
+
+  // Nœud complet avec photo + nom + numéroH + dates + couleur genre
+  const renderSVGNode = (
+    genre: 'HOMME' | 'FEMME' | 'AUTRE',
+    x: number, y: number,
+    prenom: string,
+    numeroH: string,
+    label: string,
+    photo: string | undefined,
+    dateNaissance: string | undefined,
+    dateDeces: string | undefined,
+    clipId: string,
+    onClick?: () => void
+  ) => {
+    const color = getGenreColor(genre)
+    const w = 160, h = 70
+    const cx = x + 26, cy = y + h / 2
+    const displayName = (prenom || '—').length > 13 ? (prenom || '—').substring(0, 12) + '…' : (prenom || '—')
+    const displayNum = (numeroH || '').length > 13 ? (numeroH || '').substring(0, 12) : (numeroH || '')
+    return (
+      <g style={{ cursor: onClick ? 'pointer' : undefined }} onClick={onClick}>
+        {renderNodeShape(genre, x, y, w, h, color, 3, 'white')}
+        <defs><clipPath id={clipId}><circle cx={cx} cy={cy} r={16}/></clipPath></defs>
+        {photo
+          ? <image href={photo} x={cx - 16} y={cy - 16} width={32} height={32} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice"/>
+          : <circle cx={cx} cy={cy} r={16} fill={color} opacity={0.2}/>
+        }
+        <text x={x + 58} y={y + 17} fontSize={10} fontWeight="bold" fill={color}>{label}</text>
+        <text x={x + 58} y={y + 30} fontSize={11} fill="#374151" fontWeight="500">{displayName}</text>
+        <text x={x + 58} y={y + 44} fontSize={10} fill={color} fontWeight="bold">{displayNum}</text>
+        {(dateNaissance || dateDeces) && (
+          <text x={x + 58} y={y + 59} fontSize={9} fill="#9ca3af">
+            {dateDeces
+              ? `† ${dateDeces.substring(0, 4)}`
+              : dateNaissance ? `né·e ${dateNaissance.substring(0, 4)}` : ''}
+          </text>
+        )}
+      </g>
+    )
+  }
+
   // Personnes masquées de ma visibilité (je ne les vois plus dans l'arbre)
   const hiddenSet = new Set((treeHidden || []).map(s => String(s).trim()))
   const isHidden = (numeroH: string) => hiddenSet.has(String(numeroH || '').trim())
@@ -272,6 +361,24 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
   // Invitations en attente (chargées en direct)
   const pendingInvitations = InvitationManager.getReceivedInvitations(userData.numeroH).filter(inv => inv.status === 'pending')
+
+  // Variables pour le rendu SVG (MyHeritage-style)
+  const pereMember = familyMembers.find(m => m.relation === 'pere')
+  const mereMember = familyMembers.find(m => m.relation === 'mere')
+  const hasPere = !!(pereMember?.isVisible)
+  const hasMere = !!(mereMember?.isVisible)
+  const hasConjoint = !!(userData.conjointNumeroH && userData.conjointPrenom)
+  const frereLinked = familyMembers.find(m => m.relation === 'frere' && m.isVisible)
+  const soeurLinked = familyMembers.find(m => m.relation === 'soeur' && m.isVisible)
+  const g1Mbrs = familyMembers.filter(m => m.generation === 'G-1')
+  const gpp = g1Mbrs.filter(m => m.relation === 'grand-pere')[0]
+  const gmp = g1Mbrs.filter(m => m.relation === 'grand-mere')[0]
+  const gpm = g1Mbrs.filter(m => m.relation === 'grand-pere')[1]
+  const gmm = g1Mbrs.filter(m => m.relation === 'grand-mere')[1]
+  const hasRealGPP = !!(gpp?.isVisible && gpp?.numeroH !== 'N/A')
+  const hasRealGMP = !!(gmp?.isVisible && gmp?.numeroH !== 'N/A')
+  const hasRealGPM = !!(gpm?.isVisible && gpm?.numeroH !== 'N/A')
+  const hasRealGMM = !!(gmm?.isVisible && gmm?.numeroH !== 'N/A')
 
   return (
     <div className="arbre-genealogique">
@@ -393,13 +500,13 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 setAddMemberType(null)
               }}
             >
-              ➕ Ajouter un membre
+              ➕ Ajouter
             </button>
             <button
               className={`view-btn ${showStats ? 'active' : ''}`}
               onClick={() => setShowStats(!showStats)}
             >
-              📊 Statistiques
+              📊 Stats
             </button>
             <button
               className={`view-btn ${showLegend ? 'active' : ''}`}
@@ -409,9 +516,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             </button>
             <button
               className="view-btn"
-              onClick={() => navigate('/probleme')}
+              onClick={() => navigate('/famille/noyau')}
             >
-              🚨 Mes problèmes (santé, finances…)
+              🧬 Mon Noyau
             </button>
           </div>
 
@@ -525,27 +632,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         </div>
       )}
 
-      {/* Vue arbre généalogique */}
+      {/* Vue arbre généalogique — style MyHeritage : couleurs par genre, dates, boutons "+" */}
       <div className="tree-view-horizontal">
         <svg className="tree-svg" width="100%" height="750" viewBox="0 0 1350 750">
-
-          {/*
-           * ══════════════════════════════════════════════════════════
-           *  RÈGLES DE DESSIN :
-           *  • Toutes les boîtes : rect 160×70, rx=6 — taille identique
-           *  • Lignes uniquement horizontales ou verticales
-           *  • Aucune ligne ne pénètre une boîte
-           *  • Espacement minimum 40px entre chaque boîte
-           *
-           *  COORDONNÉES (boîte = [x, x+160]×[y, y+70]) :
-           *  G-1  y=40   GGP-pat x=190  GGM-pat x=390  GGP-mat x=630  GGM-mat x=830
-           *  G0   y=190  Pere    x=290                  Mere    x=730
-           *  G1   y=350  Frere   x=310  Soeur   x=510  VOUS    x=710  Conjoint x=910
-           *  G2   y=490  Mari    x=510  Fille   x=710  Garçon  x=910  Femme    x=1110
-           *  G3   y=630  P-fille x=610                 P-garçon x=1010
-           * ══════════════════════════════════════════════════════════
-           */}
-
           {/* ── G-1 : Grands-parents (affiché seulement si présents) ── */}
           {familyMembers.filter(m => m.generation === 'G-1').length > 0 && (() => {
             const gpp = familyMembers.filter(m => m.relation === 'grand-pere' && m.generation === 'G-1')[0]
@@ -809,6 +898,31 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             {renderPersonNode({ genre: 'HOMME', prenom: '', nomFamille: userData.nomFamille, numeroH: '' }, 1010, 630, 160, 70, { label: 'Petit-garçon' })}
           </g>
 
+          {/* ── Badges "+" sur TOUS les nœuds (ajout MyHeritage-style) ── */}
+          {/* G-1 : sur chaque carte grand-parent quand la section est visible */}
+          {familyMembers.some(m => m.generation === 'G-1') && (<>
+            {renderPlusButton(270, 75, 'G-père paternel', 'grand-pere')}
+            {renderPlusButton(470, 75, 'G-mère paternelle', 'grand-mere')}
+            {renderPlusButton(710, 75, 'G-père maternel', 'grand-pere')}
+            {renderPlusButton(910, 75, 'G-mère maternelle', 'grand-mere')}
+          </>)}
+          {/* G0 : Père et Mère */}
+          {renderPlusButton(370, 225, 'Lier père', 'pere')}
+          {renderPlusButton(810, 225, 'Lier mère', 'mere')}
+          {/* G1 : Frère, Sœur, VOUS, Conjoint */}
+          {renderPlusButton(390, 385, 'Ajouter frère', 'frere')}
+          {renderPlusButton(590, 385, 'Ajouter sœur', 'soeur')}
+          {renderPlusButton(790, 385, 'Ajouter un enfant', 'enfant')}
+          {hasConjoint && renderPlusButton(990, 385, 'Lier conjoint(e)', 'conjoint')}
+          {/* G2 : enfants et leurs conjoints */}
+          {renderPlusButton(590, 525, 'Mari de la fille', 'conjoint')}
+          {renderPlusButton(790, 525, 'Ajouter fille', 'enfant')}
+          {renderPlusButton(990, 525, 'Ajouter garçon', 'enfant')}
+          {renderPlusButton(1190, 525, 'Femme du garçon', 'conjoint')}
+          {/* G3 : petits-enfants */}
+          {renderPlusButton(690, 665, 'Petite-fille', 'enfant')}
+          {renderPlusButton(1090, 665, 'Petit-garçon', 'enfant')}
+
         </svg>
       </div>
 
@@ -924,6 +1038,85 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                       </>
                     )}
                   </div>
+
+                  {/* ── Documents historiques (équivalent Record Matches MyHeritage) ── */}
+                  {selectedMember.numeroH && selectedMember.numeroH !== 'N/A' && (
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-bold text-gray-800">📄 Documents historiques</h4>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddDoc(v => !v)}
+                          className="text-xs px-2 py-1 bg-blue-600 text-white rounded-lg font-medium"
+                        >
+                          {showAddDoc ? 'Annuler' : '+ Ajouter'}
+                        </button>
+                      </div>
+
+                      {/* Liste des documents */}
+                      {(familyDocs[selectedMember.numeroH] || []).length === 0 && !showAddDoc && (
+                        <p className="text-xs text-gray-400 italic">Aucun document. Actes de naissance, de mariage, photos anciennes…</p>
+                      )}
+                      {(familyDocs[selectedMember.numeroH] || []).map((doc, i) => (
+                        <div key={i} className="flex items-start gap-2 bg-gray-50 rounded-lg px-3 py-2 mb-1 border border-gray-100">
+                          <span className="text-base flex-shrink-0">
+                            {doc.type === 'naissance' ? '🟢' : doc.type === 'mariage' ? '💍' : doc.type === 'deces' ? '🕯️' : doc.type === 'militaire' ? '🎖️' : doc.type === 'recensement' ? '📋' : doc.type === 'photo' ? '📷' : '📄'}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-gray-800 truncate">{doc.description}</p>
+                            {doc.annee && <p className="text-[10px] text-gray-400">{doc.annee}</p>}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => deleteDocFromMember(selectedMember.numeroH, i)}
+                            className="text-gray-300 hover:text-red-500 text-xs flex-shrink-0"
+                          >✕</button>
+                        </div>
+                      ))}
+
+                      {/* Formulaire d'ajout */}
+                      {showAddDoc && (
+                        <div className="space-y-2 mt-2 bg-blue-50 rounded-xl p-3 border border-blue-100">
+                          <select
+                            value={newDoc.type}
+                            onChange={e => setNewDoc(v => ({ ...v, type: e.target.value }))}
+                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none focus:border-blue-400"
+                          >
+                            <option value="naissance">🟢 Acte de naissance</option>
+                            <option value="mariage">💍 Acte de mariage</option>
+                            <option value="deces">🕯️ Acte de décès</option>
+                            <option value="militaire">🎖️ Dossier militaire</option>
+                            <option value="recensement">📋 Recensement</option>
+                            <option value="photo">📷 Photo ancienne</option>
+                            <option value="autre">📄 Autre document</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={newDoc.description}
+                            onChange={e => setNewDoc(v => ({ ...v, description: e.target.value }))}
+                            placeholder="Description (ex: Archives de Conakry, 1952)"
+                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none focus:border-blue-400"
+                          />
+                          <input
+                            type="text"
+                            value={newDoc.annee}
+                            onChange={e => setNewDoc(v => ({ ...v, annee: e.target.value }))}
+                            placeholder="Année (optionnel)"
+                            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs outline-none focus:border-blue-400"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => addDocToMember(selectedMember.numeroH)}
+                            disabled={!newDoc.description.trim()}
+                            className="w-full py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold disabled:opacity-50"
+                          >
+                            Enregistrer le document
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>

@@ -1,8 +1,10 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { isAdmin } from '../../utils/auth'
+import { FavorisDropdown, FavorisDropdownItem } from '../../components/FavorisDropdown'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
+const FAV_KEY = 'famille_favorite'
 
 interface UserData {
   numeroH: string
@@ -13,6 +15,9 @@ interface UserData {
   date_naissance?: string
   role?: string
   isAdmin?: boolean
+  lieuResidence2?: string
+  lieuResidence3?: string
+  ville?: string
 }
 
 interface NavCard {
@@ -21,22 +26,33 @@ interface NavCard {
   label: string
 }
 
-// Carte compacte cliquable
 function Card({ to, emoji, label }: NavCard) {
   return (
     <Link
       to={to}
-      className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-3 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md active:scale-95 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/30"
+      className="w-full flex flex-col items-center justify-center gap-0.5 py-3 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-emerald-50 hover:border-emerald-200 active:scale-95"
     >
       <span className="text-2xl leading-none">{emoji}</span>
-      <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 text-center leading-tight">{label}</span>
+      <span className="text-[10px] font-medium text-gray-600 text-center leading-tight">{label}</span>
     </Link>
   )
 }
 
+const FAMILLE_PAGES = [
+  { id: 'amitie',     emoji: '💕', label: 'Amitié',        to: '/famille/mes-amours' },
+  { id: 'histoire',   emoji: '📜', label: 'Reci Humanité', to: '/famille/histoire'   },
+  { id: 'solidarite', emoji: '🤝', label: 'Solidarité',    to: '/solidarite'         },
+]
+
+function getFav(numeroH: string) {
+  return localStorage.getItem(`${FAV_KEY}_${numeroH}`) || ''
+}
+function saveFav(numeroH: string, id: string) {
+  localStorage.setItem(`${FAV_KEY}_${numeroH}`, id)
+}
 
 export default function Famille() {
-  const [user, setUser] = useState<UserData | null>(null)
+  const [user, setUser]         = useState<UserData | null>(null)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -46,36 +62,46 @@ export default function Famille() {
     if (u?.numeroH) setUser(u)
   }, [])
 
-  // Redirection : parent → Mes Enfants, enfant → Mes Parents
   useEffect(() => {
     if (location.pathname !== '/famille' || !user?.numeroH) return
     if ((location.state as { returnToHub?: boolean })?.returnToHub) return
     if (isAdmin(user)) return
+
+    const applyFavorite = () => {
+      const fav = getFav(user.numeroH)
+      if (fav) {
+        const page = FAMILLE_PAGES.find(p => p.id === fav)
+        if (page?.to) { navigate(page.to, { replace: true }); return }
+      }
+    }
+
     const token = localStorage.getItem('token')
-    if (!token) return
+    if (!token) { applyFavorite(); return }
+
     let cancelled = false
     const run = async () => {
       try {
         const [resChildren, resParents] = await Promise.all([
           fetch(`${API_BASE}/api/parent-child/my-children`, { headers: { Authorization: `Bearer ${token}` } }),
-          fetch(`${API_BASE}/api/parent-child/my-parents`, { headers: { Authorization: `Bearer ${token}` } })
+          fetch(`${API_BASE}/api/parent-child/my-parents`,  { headers: { Authorization: `Bearer ${token}` } })
         ])
         if (cancelled) return
         const dataChildren = resChildren.ok ? await resChildren.json() : { children: [] }
-        const dataParents = resParents.ok ? await resParents.json() : { parents: [] }
+        const dataParents  = resParents.ok  ? await resParents.json()  : { parents:  [] }
         if ((dataChildren.children || []).length > 0) { navigate('/famille/enfants', { replace: true }); return }
-        if ((dataParents.parents || []).length > 0) { navigate('/famille/parents', { replace: true }) }
-      } catch { /* pas de redirection en cas d'erreur */ }
+        if ((dataParents.parents   || []).length > 0) { navigate('/famille/parents', { replace: true }); return }
+        if (!cancelled) applyFavorite()
+      } catch { if (!cancelled) applyFavorite() }
     }
     run()
     return () => { cancelled = true }
   }, [location.pathname, user?.numeroH, navigate])
 
   const effectiveUser: UserData = user || { numeroH: '', prenom: 'Invité', nomFamille: '', genre: 'HOMME' }
-  const userIsAdmin = isAdmin(effectiveUser)
-  const isOnSubPage = location.pathname !== '/famille'
+  const userIsAdmin  = isAdmin(effectiveUser)
+  const isOnSubPage  = location.pathname !== '/famille'
 
-  // --- Sous-page : afficher le contenu avec bouton retour ---
+  // ── Sous-page : layout avec bouton retour ──
   if (isOnSubPage) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -93,7 +119,7 @@ export default function Famille() {
     )
   }
 
-  // --- Hub principal ---
+  // ── Hub principal ──
   return (
     <div className="max-w-md mx-auto px-4 py-4">
 
@@ -106,8 +132,8 @@ export default function Famille() {
         ← Retour
       </button>
 
-      {/* Header compact */}
-      <div className="mb-5 flex items-center gap-3 rounded-2xl bg-emerald-600 px-4 py-3 text-white shadow-md">
+      {/* Header */}
+      <div className="mb-4 flex items-center gap-3 rounded-2xl bg-emerald-600 px-4 py-3 text-white shadow-md">
         <span className="text-3xl leading-none">👨‍👩‍👧</span>
         <div>
           <h1 className="text-base font-bold leading-tight">Ma Famille</h1>
@@ -123,15 +149,40 @@ export default function Famille() {
         )}
       </div>
 
-      {/* ── Toutes les pages famille — même taille ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card to="/famille/parents"    emoji="👨‍👩‍👦" label="Parents"    />
-        <Card to="/famille/enfants"    emoji="👶"    label="Enfants"    />
-        <Card to="/famille/femmes"     emoji="👰"    label="Ma femme"   />
-        <Card to="/famille/mari"       emoji="🤵"    label="Mon homme"  />
-        <Card to="/famille/mes-amours" emoji="💕"    label="Amitié"     />
-        <Card to="/famille/moi/arbre"  emoji="🌳"    label="Mon arbre"  />
-        <Card to="/famille/racines"    emoji="🌿"    label="Racines"    />
+      {/* Sélecteur page favorite */}
+      {user?.numeroH && (
+        <div className="mb-4 flex items-center justify-end">
+          <FavorisDropdown
+            headerLabel="Page d'accueil favorite"
+            ariaLabel="Page famille favorite : choisissez la page affichée en premier à votre arrivée"
+            title="Page famille favorite"
+          >
+            {(close) => FAMILLE_PAGES.map(p => {
+              const isSelected = getFav(user.numeroH) === p.id
+              return (
+                <FavorisDropdownItem
+                  key={p.id}
+                  icon={<span className="text-base leading-none">{p.emoji}</span>}
+                  label={p.label}
+                  selected={isSelected}
+                  onClick={() => {
+                    saveFav(user.numeroH, p.id)
+                    close()
+                    if (p.to) navigate(p.to)
+                  }}
+                />
+              )
+            })}
+          </FavorisDropdown>
+        </div>
+      )}
+
+      {/* ── 4 boutons pleine largeur — comme le nav dashboard ── */}
+      <div className="grid grid-cols-4 gap-1.5">
+        <Card to="/famille/moi/arbre" emoji="🌳" label="Héritage" />
+        <Card to="/famille/mes-amours" emoji="💕" label="Amitié"       />
+        <Card to="/famille/histoire"   emoji="📜" label="Reci Humanité"/>
+        <Card to="/solidarite"         emoji="🤝" label="Solidarité"   />
       </div>
 
     </div>

@@ -46,11 +46,11 @@ export function AdminWalletPro({ token, apiBase }: Props) {
   async function charger() {
     setLoading(true);
     try {
-      const r = await fetch(`${apiBase}/api/moftal-pay/admin/wallets`, {
+      const r = await fetch(`${apiBase}/api/moftal-pay/admin/comptes-pro`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const d = await r.json();
-      if (d.success) { setWallets(d.wallets); setTotaux(d.totaux); }
+      if (d.success) { setWallets(d.comptes); setTotaux(d.totaux); }
     } finally { setLoading(false); }
   }
 

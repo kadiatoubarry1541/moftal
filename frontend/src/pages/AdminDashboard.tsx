@@ -28,6 +28,8 @@ interface ProfessionalAccount {
   /** Statut d'abonnement côté paiement */
   subscriptionStatus?: "never_paid" | "active" | "overdue" | "blocked";
   subscriptionValidUntil?: string | null;
+  /** true = encore en période d'essai gratuit 3 mois ; false = compte payant */
+  isTrial?: boolean;
 }
 
 interface UserData {
@@ -485,10 +487,12 @@ export default function AdminDashboard() {
     { id: "points", label: "Points Galerie", icon: "🪙" },
     { id: "tools", label: "Outils", icon: "🔧" },
     ...(isSuperAdmin7(userData) ? [
-      { id: "services",       label: "Espaces RDV",     icon: "📅" },
-      { id: "gestion-interne", label: "Gestion Interne", icon: "🔧" },
-      { id: "sector-admins",  label: "Admins secteurs", icon: "🏛️" },
-      { id: "moftal-pay",     label: "Moftal Pay",      icon: "💰" },
+      { id: "arbres-activation", label: "Arbres Familiaux", icon: "🩸" },
+      { id: "narrateurs-reci",   label: "Narrateurs Reci",  icon: "📜" },
+      { id: "services",          label: "Espaces RDV",      icon: "📅" },
+      { id: "gestion-interne",   label: "Gestion Interne",  icon: "🔧" },
+      { id: "sector-admins",     label: "Admins secteurs",  icon: "🏛️" },
+      { id: "moftal-pay",        label: "Moftal Pay",       icon: "💰" },
     ] : []),
   ];
   const G0_TABS = ["overview", "families", "couples", "parent-child", "users", "points", "tools"];
@@ -1054,6 +1058,60 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* ── Section essais expirés — À facturer ── */}
+              {(() => {
+                const expiredTrials = allPros.filter(p => p.subscriptionStatus === "overdue" && p.isTrial);
+                if (expiredTrials.length === 0) return null;
+                return (
+                  <div className="mb-5 rounded-xl border-2 border-red-400 bg-red-50 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xl">💰</span>
+                      <h3 className="font-bold text-red-800 text-base">
+                        Essais expirés — À facturer
+                        <span className="ml-2 inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-600 rounded-full">{expiredTrials.length}</span>
+                      </h3>
+                      <span className="ml-auto text-xs text-red-600 font-medium">Ces comptes ne sont plus visibles publiquement</span>
+                    </div>
+                    <div className="space-y-2">
+                      {expiredTrials.map(pro => {
+                        const expiry = pro.subscriptionValidUntil ? new Date(pro.subscriptionValidUntil) : null;
+                        return (
+                          <div key={pro.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-white rounded-lg border border-red-200 px-4 py-3">
+                            <div className="text-2xl">{typeLabels[pro.type]?.icon || "📄"}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-gray-900 text-sm">{pro.name}</div>
+                              <div className="text-xs text-gray-500">{typeLabels[pro.type]?.label || pro.type} • {pro.city || "?"}</div>
+                              <div className="text-xs text-red-600 font-medium mt-0.5">
+                                Propriétaire : {pro.ownerNumeroH}
+                                {expiry && <span className="ml-2">· Expiré le {expiry.toLocaleDateString("fr-FR")}</span>}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => updateSubscriptionStatus(pro.id, "active", false)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg"
+                              >
+                                ✅ Confirmer paiement
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Suspendre définitivement "${pro.name}" pour impayé ?`)) {
+                                    updateSubscriptionStatus(pro.id, "blocked");
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg"
+                              >
+                                ⛔ Suspendre
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {(proFilter === "pending" ? pendingPros : allPros).length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   {proFilter === "pending" ? "Aucune demande en attente" : "Aucun compte trouvé"}
@@ -1085,9 +1143,9 @@ export default function AdminDashboard() {
                                 : "text-gray-600"
                               }>
                                 {pro.subscriptionStatus === "active"
-                                  ? expiringSoon ? `⚠️ Actif – expire dans ${daysLeft}j` : "✅ Actif"
+                                  ? expiringSoon ? `⚠️ ${pro.isTrial ? "Essai" : "Actif"} – expire dans ${daysLeft}j` : pro.isTrial ? "🎁 Essai gratuit" : "✅ Actif"
                                   : pro.subscriptionStatus === "blocked" ? "⛔ Suspendu (impayé)"
-                                  : pro.subscriptionStatus === "overdue" ? "⚠️ En retard de paiement"
+                                  : pro.subscriptionStatus === "overdue" ? (pro.isTrial ? "💰 Essai expiré — À facturer" : "⚠️ En retard de paiement")
                                   : "🧾 Jamais payé"}
                               </strong>
                               {expiry && (
@@ -1814,6 +1872,16 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+          {/* ========== ARBRES FAMILIAUX — ACTIVATION (G7 uniquement) ========== */}
+          {adminSection === "arbres-activation" && isSuperAdmin7(userData) && (
+            <ArbresActivationSection token={localStorage.getItem('token') || ''} apiBase={API_BASE} />
+          )}
+
+          {/* ========== NARRATEURS RECI (G7 uniquement) ========== */}
+          {adminSection === "narrateurs-reci" && isSuperAdmin7(userData) && (
+            <NarateursReciSection token={localStorage.getItem('token') || ''} apiBase={API_BASE} />
+          )}
+
           {/* ========== MOFTAL PAY (G7 uniquement) ========== */}
           {adminSection === "moftal-pay" && isSuperAdmin7(userData) && (
             <MoftalPayAdminSection token={localStorage.getItem('token') || ''} apiBase={API_BASE} />
@@ -1825,7 +1893,7 @@ export default function AdminDashboard() {
   );
 }
 
-// ─── Sous-section Moftal Pay : deux onglets (Comptes Famille / Wallets Pro) ───
+// ─── Sous-section Moftal Pay : deux onglets (Comptes Famille / Moftal Pay Pro) ───
 function MoftalPayAdminSection({ token, apiBase }: { token: string; apiBase: string }) {
   const [sousOnglet, setSousOnglet] = useState<'famille' | 'pro'>('famille');
   return (
@@ -1840,7 +1908,7 @@ function MoftalPayAdminSection({ token, apiBase }: { token: string; apiBase: str
       <div className="flex rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-sm">
         {([
           { key: 'famille' as const, label: 'Comptes Famille', icon: '🏠' },
-          { key: 'pro'     as const, label: 'Wallets Pro',     icon: '💼' },
+          { key: 'pro'     as const, label: 'Moftal Pay Pro',  icon: '💼' },
         ]).map(t => (
           <button
             key={t.key}
@@ -1863,6 +1931,216 @@ function MoftalPayAdminSection({ token, apiBase }: { token: string; apiBase: str
       )}
       {sousOnglet === 'pro' && (
         <AdminWalletPro token={token} apiBase={apiBase} />
+      )}
+    </div>
+  );
+}
+
+// ─── Section Narrateurs Reci ─────────────────────────────────────────────────
+function NarateursReciSection({ token, apiBase }: { token: string; apiBase: string }) {
+  const [narrateurs, setNarrateurs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  const h = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    fetch(`${apiBase}/api/admin/narrateurs-reci`, { headers: h })
+      .then(r => r.json())
+      .then(d => { if (d.success) setNarrateurs(d.narrateurs || []); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtrés = narrateurs.filter(n =>
+    !search || (n.nom || '').toLowerCase().includes(search.toLowerCase()) ||
+    (n.contact || '').includes(search)
+  );
+
+  const avecContact    = narrateurs.filter(n => n.contact);
+  const sansContact    = narrateurs.filter(n => !n.contact);
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-gray-800">📜 Narrateurs Reci — Paiements annuels</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Personnes ayant publié un récit. Vous pouvez les payer annuellement via leur numéro Orange Money.
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Total narrateurs', val: narrateurs.length, cls: 'bg-indigo-50 border-indigo-200 text-indigo-700' },
+          { label: 'Avec numéro ✅', val: avecContact.length, cls: 'bg-green-50 border-green-200 text-green-700' },
+          { label: 'Sans numéro ⏳', val: sansContact.length, cls: 'bg-amber-50 border-amber-200 text-amber-700' },
+        ].map(s => (
+          <div key={s.label} className={`rounded-xl border p-3 text-center ${s.cls}`}>
+            <p className="font-black text-2xl">{s.val}</p>
+            <p className="text-xs font-semibold">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <input value={search} onChange={e => setSearch(e.target.value)}
+        placeholder="Chercher un narrateur ou numéro..."
+        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm outline-none focus:border-indigo-400" />
+
+      {loading ? (
+        <div className="text-center py-10 text-gray-400">Chargement...</div>
+      ) : filtrés.length === 0 ? (
+        <div className="text-center py-10 text-gray-400">Aucun narrateur trouvé</div>
+      ) : (
+        <div className="space-y-2">
+          {filtrés.map(n => (
+            <div key={n.numeroH} className={`rounded-2xl border p-4 flex items-center gap-4 ${n.contact ? 'border-green-200 bg-green-50' : 'border-amber-100 bg-white'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${n.contact ? 'bg-green-100' : 'bg-amber-100'}`}>
+                {n.contact ? '✅' : '📜'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-gray-900">{n.nom || '—'}</p>
+                <p className="text-xs text-gray-400">{n.nbRecits} récit{n.nbRecits > 1 ? 's' : ''} · {n.pays || 'Pays non renseigné'}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                {n.contact ? (
+                  <div>
+                    <p className="font-mono font-black text-green-800 text-sm">{n.contact}</p>
+                    <p className="text-xs text-green-600">Orange Money</p>
+                  </div>
+                ) : (
+                  <span className="text-xs text-amber-600 italic">Numéro non renseigné</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Section Arbres Familiaux — Activation ───────────────────────────────────
+function ArbresActivationSection({ token, apiBase }: { token: string; apiBase: string }) {
+  const [arbres, setArbres] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filtre, setFiltre] = useState<'tous' | 'actives' | 'inactifs'>('tous');
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [msg, setMsg] = useState('');
+
+  const h = { Authorization: `Bearer ${token}` };
+
+  async function charger() {
+    setLoading(true);
+    try {
+      const r = await fetch(`${apiBase}/api/admin/arbres-activation`, { headers: h });
+      const d = await r.json();
+      if (d.success) { setArbres(d.arbres); setStats(d); }
+    } finally { setLoading(false); }
+  }
+
+  useEffect(() => { charger(); }, []);
+
+  async function activer(treeId: string, activer: boolean) {
+    setActionId(treeId);
+    setMsg('');
+    const endpoint = activer ? 'activer-arbre' : 'desactiver-arbre';
+    try {
+      const r = await fetch(`${apiBase}/api/admin/${endpoint}/${treeId}`, { method: 'POST', headers: h });
+      const d = await r.json();
+      setMsg(d.message || (activer ? 'Activé ✓' : 'Désactivé'));
+      if (d.success) charger();
+    } finally { setActionId(null); }
+  }
+
+  const fmt = (n: number) => new Date(n).toLocaleDateString('fr-FR');
+
+  const filtrés = arbres
+    .filter(a => filtre === 'tous' || (filtre === 'actives' ? a.arbreActive : (!a.arbreActive && a.memberCount >= 5)))
+    .filter(a => !search || (a.familyName || '').toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-gray-800">🩸 Arbres Familiaux — Activations</h2>
+        <p className="text-sm text-gray-500 mt-1">Familles qui ont payé pour activer leur arbre généalogique</p>
+      </div>
+
+      {/* Stats */}
+      {stats && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Arbres activés', val: stats.nbActives, color: 'bg-green-50 border-green-200 text-green-700' },
+            { label: 'En attente (≥5 membres)', val: stats.nbInactives, color: 'bg-amber-50 border-amber-200 text-amber-700' },
+            { label: 'Pas encore prêts (<5)', val: stats.nbEnAttente, color: 'bg-gray-50 border-gray-200 text-gray-500' },
+          ].map(s => (
+            <div key={s.label} className={`rounded-xl border p-3 text-center ${s.color}`}>
+              <p className="font-black text-2xl">{s.val}</p>
+              <p className="text-xs font-semibold">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {msg && <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700 font-semibold">{msg}</div>}
+
+      {/* Filtres */}
+      <div className="flex gap-2 flex-wrap">
+        {(['tous', 'actives', 'inactifs'] as const).map(f => (
+          <button key={f} onClick={() => setFiltre(f)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filtre === f ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {f === 'tous' ? 'Tous' : f === 'actives' ? '✅ Activés' : '⏳ En attente (≥5 membres)'}
+          </button>
+        ))}
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Chercher une famille..."
+          className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-indigo-400 flex-1 min-w-[160px]" />
+      </div>
+
+      {/* Liste */}
+      {loading ? (
+        <div className="text-center py-10 text-gray-400">Chargement...</div>
+      ) : filtrés.length === 0 ? (
+        <div className="text-center py-10 text-gray-400">Aucune famille trouvée</div>
+      ) : (
+        <div className="space-y-3">
+          {filtrés.map(a => (
+            <div key={a.id} className={`rounded-2xl border p-4 flex items-center gap-4 ${a.arbreActive ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${a.arbreActive ? 'bg-green-100' : 'bg-amber-100'}`}>
+                {a.arbreActive ? '✅' : '🔒'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-black text-gray-900">Famille {a.familyName}</p>
+                  {a.familyCode && (
+                    <span className="font-mono text-sm font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">🩸 {a.familyCode}</span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {a.memberCount} membre{a.memberCount > 1 ? 's' : ''} · Créé le {fmt(a.createdAt)}
+                  {a.activationRef && <span className="ml-2 text-green-600">· Ref: {a.activationRef}</span>}
+                </p>
+                {a.memberCount < 5 && !a.arbreActive && (
+                  <p className="text-xs text-orange-500 mt-0.5">⚠️ Pas encore éligible (moins de 5 membres)</p>
+                )}
+              </div>
+              <div className="flex-shrink-0">
+                {a.arbreActive ? (
+                  <button onClick={() => activer(a.id, false)} disabled={actionId === a.id}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 text-red-600 hover:bg-red-200 disabled:opacity-50">
+                    {actionId === a.id ? '...' : 'Désactiver'}
+                  </button>
+                ) : (
+                  <button onClick={() => activer(a.id, true)} disabled={actionId === a.id}
+                    className="px-3 py-2 rounded-xl text-sm font-black bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
+                    {actionId === a.id ? '...' : '✅ Activer'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
