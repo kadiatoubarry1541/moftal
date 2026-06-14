@@ -68,6 +68,31 @@ function sanitizeAccountForPublic(account) {
   return rest;
 }
 
+// ============ VÉRIFICATION NOM DISPONIBLE ============
+
+// GET /api/professionals/verifier-nom?nom=... — vérifie si un nom est déjà pris
+router.get('/verifier-nom', authenticate, async (req, res) => {
+  try {
+    const { nom } = req.query;
+    if (!nom || !nom.trim()) {
+      return res.json({ success: true, disponible: false, message: 'Nom vide.' });
+    }
+    const existant = await ProfessionalAccount.findOne({
+      where: { name: { [Op.iLike]: nom.trim() } }
+    });
+    if (existant) {
+      return res.json({
+        success: true,
+        disponible: false,
+        message: `Ce nom est déjà utilisé. Choisissez un autre nom.`
+      });
+    }
+    res.json({ success: true, disponible: true, message: 'Nom disponible.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ============ INSCRIPTION PROFESSIONNELLE ============
 
 // POST /api/professionals/register - Inscription d'un compte professionnel
@@ -91,6 +116,19 @@ router.post('/register', authenticate, async (req, res) => {
     const echangesTypes = ['vendor', 'supplier', 'producer'];
     if (echangesTypes.includes(type) && !['primaire', 'secondaire', 'tertiaire'].includes(subSector)) {
       return res.status(400).json({ success: false, message: 'Veuillez choisir le niveau d\'échanges (primaire, secondaire ou tertiaire).' });
+    }
+
+    // ── Vérification : le nom doit être unique (insensible à la casse) ──────────
+    const nomNettoye = name.trim();
+    const nomExistant = await ProfessionalAccount.findOne({
+      where: { name: { [Op.iLike]: nomNettoye } }
+    });
+    if (nomExistant) {
+      return res.status(409).json({
+        success: false,
+        message: `Le nom "${nomNettoye}" est déjà utilisé par une autre entreprise. Veuillez en choisir un autre.`,
+        champ: 'name'
+      });
     }
 
     const account = await ProfessionalAccount.create({
@@ -369,11 +407,18 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       );
     }
 
+    // Calculer la fin de l'essai gratuit (3 mois à partir d'aujourd'hui)
+    const finEssai = new Date();
+    finEssai.setMonth(finEssai.getMonth() + 3);
+
     await account.update({
       status: 'approved',
       approvedAt: new Date(),
       approvedBy: req.userId,
-      subscriptionStatus: account.subscriptionStatus || 'never_paid',
+      // ── Essai gratuit 3 mois activé automatiquement à l'approbation ──
+      subscriptionStatus: 'active',
+      subscriptionValidUntil: finEssai,
+      isTrial: true,
       ...(tenantCode ? { tenant_code: tenantCode } : {})
     });
 
@@ -394,7 +439,7 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       recipientNumeroH: account.ownerNumeroH,
       type: 'account_approved',
       title: 'Compte approuvé !',
-      message: `Votre compte ${typeLabels[account.type]} "${account.name}" a été approuvé. Vous avez maintenant accès à votre espace de travail.`,
+      message: `Votre compte ${typeLabels[account.type] || account.type} "${account.name}" a été approuvé ! Vous bénéficiez de 3 mois d'essai gratuit. Profitez-en pour explorer votre espace professionnel, recevoir des rendez-vous et gérer votre activité.`,
       relatedId: account.id
     });
 
@@ -440,7 +485,9 @@ router.post('/admin/subscription/:id', authenticate, requireAdmin, async (req, r
 
     await account.update({
       subscriptionStatus: status,
-      subscriptionValidUntil: newValidUntil
+      subscriptionValidUntil: newValidUntil,
+      // Dès qu'un admin confirme un paiement (activation manuelle), ce n'est plus un essai
+      ...(status === 'active' ? { isTrial: false } : {})
     });
 
     // Créer le tenant_code et l'entrée management si manquant lors d'une activation
@@ -496,15 +543,32 @@ router.post('/admin/check-expired', authenticate, requireAdmin, async (req, res)
       }
     });
 
+    const ADMIN_NUMERO_H = 'G7C7P7R7E7F7 7';
+
     for (const account of expired) {
       await account.update({ subscriptionStatus: 'overdue' });
+
+      // Notifier le professionnel
       await Notification.createNotification({
         recipientNumeroH: account.ownerNumeroH,
         type: 'subscription_expired',
-        title: 'Abonnement expiré',
-        message: `Votre abonnement pour "${account.name}" a expiré. Veuillez contacter l'administrateur pour renouveler et conserver l'accès à votre dashboard.`,
+        title: account.isTrial ? 'Essai gratuit terminé' : 'Abonnement expiré',
+        message: account.isTrial
+          ? `Votre essai gratuit de 3 mois pour "${account.name}" est terminé. Votre profil n'est plus visible publiquement. Contactez l'administrateur pour activer votre abonnement et continuer.`
+          : `Votre abonnement pour "${account.name}" a expiré. Veuillez contacter l'administrateur pour renouveler et conserver l'accès à votre dashboard.`,
         relatedId: account.id
       });
+
+      // Notifier l'admin pour les comptes en essai expiré → à facturer
+      if (account.isTrial) {
+        await Notification.createNotification({
+          recipientNumeroH: ADMIN_NUMERO_H,
+          type: 'trial_expired',
+          title: '💰 Essai expiré — À facturer',
+          message: `L'essai gratuit de "${account.name}" (${account.type}) est terminé. Propriétaire : ${account.ownerNumeroH}. Contactez-le pour l'abonnement.`,
+          relatedId: account.id
+        });
+      }
     }
 
     return res.json({ success: true, updated: expired.length, message: `${expired.length} abonnement(s) passé(s) en retard.` });

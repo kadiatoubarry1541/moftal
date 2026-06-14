@@ -6,6 +6,11 @@ import User from '../models/User.js';
 import { FamilyTree } from '../models/additional.js';
 import { Op } from 'sequelize';
 
+const FEDAPAY_SECRET = process.env.FEDAPAY_SECRET_KEY || '';
+const FEDAPAY_API = process.env.FEDAPAY_ENV === 'production'
+  ? 'https://api.fedapay.com/v1'
+  : 'https://sandbox-api.fedapay.com/v1';
+
 // Vérifie si l'utilisateur est l'un des 3 admins du fonds (gérant1, gérant2 ou conseiller)
 function estAdmin(fund, numeroH) {
   return fund.gerant1NumeroH === numeroH
@@ -86,7 +91,7 @@ router.get('/mon-compte', async (req, res) => {
     if (!fund) {
       const nbMembres = await compterMembresArbre(nomFamille);
       // Auto-création si l'arbre atteint 10 membres
-      if (nbMembres >= 10) {
+      if (nbMembres >= 5) {
         fund = await FamilyFund.create({
           nomFamille: nomFamille.trim(),
           gerant1NumeroH: req.user.numeroH
@@ -97,7 +102,7 @@ router.get('/mon-compte', async (req, res) => {
           success: true,
           existe: false,
           nbMembres,
-          message: `Votre arbre a ${nbMembres} membre(s). Le Moftal Pay familial s'active automatiquement à 10 membres.`
+          message: `Votre arbre a ${nbMembres} membre(s). Le Moftal Pay familial s'active automatiquement à 5 membres.`
         });
       }
     }
@@ -133,7 +138,7 @@ router.get('/mon-compte', async (req, res) => {
         where: { familyName: { [Op.iLike]: nomFamille.trim() } },
         attributes: ['familyCode', 'bloodNumber']
       });
-      if (tree && nbMembres >= 10) {
+      if (tree && nbMembres >= 5) {
         familyCode = tree.familyCode || null;
         bloodNumber = tree.bloodNumber || null;
       }
@@ -208,12 +213,12 @@ router.post('/creer', async (req, res) => {
 
     // Vérification : l'arbre doit avoir au moins 10 membres
     const nbMembres = await compterMembresArbre(nomFamille);
-    if (nbMembres < 10) {
+    if (nbMembres < 5) {
       return res.status(403).json({
         success: false,
-        message: `Votre arbre familial n'a que ${nbMembres} membre${nbMembres > 1 ? 's' : ''}. Le Moftal Pay familial s'ouvre à partir de 10 membres.`,
+        message: `Votre arbre familial n'a que ${nbMembres} membre${nbMembres > 1 ? 's' : ''}. Le Moftal Pay familial s'ouvre à partir de 5 membres.`,
         nbMembres,
-        requis: 10
+        requis: 5
       });
     }
 
@@ -248,6 +253,57 @@ router.post('/deposer', async (req, res) => {
 
     if (!montant || montant <= 0) {
       return res.status(400).json({ success: false, message: 'Montant invalide.' });
+    }
+
+    // Référence FedaPay obligatoire — les dépôts doivent venir d'un vrai paiement
+    if (!fedapayRef) {
+      return res.status(400).json({
+        success: false,
+        message: 'Référence de paiement FedaPay manquante. Utilisez le bouton "Déposer" officiel pour initier un paiement.'
+      });
+    }
+
+    // Idempotence : refuser si ce paiement FedaPay a déjà été traité
+    const dejaTraite = await FamilyFundTransaction.findOne({
+      where: { fedapayRef: String(fedapayRef) }
+    });
+    if (dejaTraite) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce paiement a déjà été enregistré sur votre compte famille.'
+      });
+    }
+
+    // Vérifier auprès de FedaPay que ce paiement est réel et approuvé
+    if (FEDAPAY_SECRET) {
+      try {
+        const fedaRes = await fetch(`${FEDAPAY_API}/transactions/${fedapayRef}`, {
+          headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET}` }
+        });
+        const fedaData = await fedaRes.json();
+        const tx = fedaData?.v1?.transaction;
+
+        if (!tx || tx.status !== 'approved') {
+          return res.status(400).json({
+            success: false,
+            message: 'Paiement FedaPay non approuvé. Veuillez réessayer ou contacter le support.'
+          });
+        }
+
+        // Vérifier que le montant déclaré correspond au montant réel
+        if (Math.abs(Number(tx.amount) - Number(montant)) > 1) {
+          return res.status(400).json({
+            success: false,
+            message: `Montant incorrect : FedaPay indique ${tx.amount} GNF, pas ${montant} GNF.`
+          });
+        }
+      } catch (fedaErr) {
+        console.error('Vérification FedaPay /deposer:', fedaErr.message);
+        return res.status(503).json({
+          success: false,
+          message: 'Impossible de vérifier le paiement auprès de FedaPay. Réessayez dans quelques instants.'
+        });
+      }
     }
 
     const fund = await FamilyFund.findOne({

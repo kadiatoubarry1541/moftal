@@ -37,6 +37,7 @@ export { default as ParentChildLink } from './ParentChildLink.js';
 export { default as ParentChildActivity } from './ParentChildActivity.js';
 export { default as ParentChildRating } from './ParentChildRating.js';
 export { default as CoupleLink } from './CoupleLink.js';
+export { default as FamilyCoreEntry } from './FamilyCoreEntry.js';
 export { default as PartnerRating } from './PartnerRating.js';
 export { default as CoupleActivity } from './CoupleActivity.js';
 export { default as DeceasedMember } from './DeceasedMember.js';

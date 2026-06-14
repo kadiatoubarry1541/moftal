@@ -12,7 +12,7 @@ import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
 import { authenticate } from '../middleware/auth.js';
-import { sendPasswordResetEmail, sendPasswordOtpEmail, maskEmail } from '../services/emailService.js';
+import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 
 const router = Router();
 
@@ -400,6 +400,10 @@ router.post('/register', validateUser, async (req, res) => {
           handleParentConfirmations(newUser).catch(err => console.error('handleParentConfirmations:', err.message));
         }
         createActivityGroupsForUser(newUser).catch(err => console.error('createActivityGroupsForUser:', err.message));
+        if (newUser.email) {
+          sendWelcomeEmail({ to: newUser.email, toName: newUser.prenom || '', numeroH: newUser.numeroH })
+            .catch(err => console.error('sendWelcomeEmail:', err.message));
+        }
       });
       })();
 
@@ -761,14 +765,21 @@ router.get('/last-numero', async (req, res) => {
 });
 
 // @route   GET /api/auth/me
-// @desc    Obtenir les informations de l'utilisateur connecté
+// @desc    Obtenir les informations complètes de l'utilisateur connecté (rafraîchit la session)
 // @access  Private
-router.get('/me', (req, res) => {
-  // Middleware d'authentification à implémenter
-  res.json({
-    success: true,
-    message: 'Endpoint d\'authentification fonctionnel'
-  });
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const user = await User.findByNumeroH(req.user.numeroH);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+    const userWithoutPassword = { ...user.dataValues };
+    delete userWithoutPassword.password;
+    res.json({ success: true, user: userWithoutPassword });
+  } catch (error) {
+    console.error('Erreur GET /auth/me:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
 });
 
 // @route   POST /api/auth/logout
@@ -809,7 +820,9 @@ router.put('/profile', async (req, res) => {
       'prenom', 'nomFamille', 'email', 'telephone', 'tel1', 'genre',
       'dateNaissance', 'age', 'generation', 'ethnie', 'region', 'pays',
       'nationalite', 'prenomPere', 'nomFamillePere', 'numeroHPere',
-      'prenomMere', 'nomFamilleMere', 'numeroHMere', 'treeVisibility'
+      'prenomMere', 'nomFamilleMere', 'numeroHMere', 'treeVisibility',
+      'activite1', 'activite2', 'activite3', 'specialite', 'statutMatrimonial',
+      'lieu1', 'lieu2', 'lieu3'
     ];
     
     const updates = {};

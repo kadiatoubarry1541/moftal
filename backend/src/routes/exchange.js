@@ -11,6 +11,8 @@ import Order from '../models/Order.js';
 import PlatformCommission from '../models/PlatformCommission.js';
 import User from '../models/User.js';
 import PageAdmin from '../models/PageAdmin.js';
+import FamilyFund from '../models/FamilyFund.js';
+import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { isGlobalAdmin, getManagedSectorsForUser } from '../utils/sectorAdmin.js';
 
@@ -106,29 +108,24 @@ router.get('/products', async (req, res) => {
   }
 });
 
+// Produits primaires réservés à Moftal — aucun autre vendeur autorisé
+const MOFTAL_EXCLUSIFS = ['riz', 'huile', 'rice', 'oil', 'huile alimentaire', 'huile de palme'];
+
 // @route   GET /api/exchange/primaire/products
-// @desc    Récupérer tous les produits primaires
+// @desc    Récupérer tous les produits primaires (Moftal en premier)
 // @access  Authentifié
 router.get('/primaire/products', async (req, res) => {
   try {
     const products = await ExchangeProduct.findAll({
-      where: {
-        isActive: true,
-        category: 'primaire'
-      },
-      order: [['created_at', 'DESC']]
+      where: { isActive: true, category: 'primaire' },
+      // Moftal exclusifs d'abord, puis par date
+      order: [['is_moftal_exclusive', 'DESC'], ['created_at', 'DESC']]
     });
 
-    res.json({
-      success: true,
-      products
-    });
+    res.json({ success: true, products });
   } catch (error) {
     console.error('Erreur lors de la récupération des produits primaires:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la récupération des produits primaires'
-    });
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la récupération des produits primaires' });
   }
 });
 
@@ -239,8 +236,13 @@ router.post('/products', upload.array('images', 10), async (req, res) => {
 router.post('/primaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
-    
     const user = req.user;
+    const estAdmin = isGlobalAdmin(user);
+    const sousCategorieNormalisee = (category || '').toLowerCase().trim();
+
+    // Si c'est du riz ou de l'huile publié par l'admin → marqué Moftal (apparaît en 1er)
+    // Les autres vendeurs peuvent aussi vendre du riz/huile, sans restriction
+    const estProduitMoftal = estAdmin && MOFTAL_EXCLUSIFS.some(mot => sousCategorieNormalisee.includes(mot));
 
     const imageUrls = (req.files || [])
       .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
@@ -269,12 +271,16 @@ router.post('/primaire/products', upload.any(), async (req, res) => {
       numeroH: user.numeroH,
       createdBy: user.numeroH,
       isActive: true,
-      isAvailable: true
+      isAvailable: true,
+      isMoftalExclusive: estProduitMoftal,
+      moftalVendeur: estProduitMoftal ? user.numeroH : null
     });
 
     res.status(201).json({
       success: true,
-      message: 'Produit primaire créé avec succès',
+      message: estProduitMoftal
+        ? 'Produit Moftal publié en tête de liste'
+        : 'Produit primaire créé avec succès',
       product
     });
   } catch (error) {
@@ -633,9 +639,63 @@ router.post('/products/:id/purchase', async (req, res) => {
     const commissionAmount = (totalAmount * commissionRate) / 100;
     const sellerAmount = totalAmount - commissionAmount;
 
-    // Vérifier le solde de l'acheteur (si vous utilisez un système de wallet)
-    // Pour l'instant, on suppose que le paiement est externe
-    // Vous pouvez ajouter une vérification ici si nécessaire
+    // ── Paiement avec solde famille : uniquement chez Moftal ─────────────────
+    if (paymentMethod === 'famille') {
+      if (!product.isMoftalExclusive) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: 'Le paiement avec le solde famille est réservé aux produits Moftal. Pour les autres vendeurs, utilisez un paiement externe.'
+        });
+      }
+
+      const fund = await FamilyFund.findOne({
+        where: { nomFamille: { [Op.iLike]: buyer.nomFamille?.trim() }, isActive: true },
+        transaction
+      });
+
+      if (!fund) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          message: 'Compte famille introuvable. Votre famille doit d\'abord créer un compte Moftal Pay.'
+        });
+      }
+
+      if (fund.gerant1NumeroH !== buyer.numeroH && fund.gerant2NumeroH !== buyer.numeroH) {
+        await transaction.rollback();
+        return res.status(403).json({
+          success: false,
+          message: 'Seuls les gérants du compte famille peuvent payer avec le solde famille.'
+        });
+      }
+
+      const soldeNourr = Number(fund.solde_nourriture);
+      if (soldeNourr < totalAmount) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `Solde nourriture insuffisant. Disponible : ${soldeNourr.toLocaleString()} GNF, nécessaire : ${totalAmount.toLocaleString()} GNF.`
+        });
+      }
+
+      // Débiter le compartiment nourriture
+      await fund.update({
+        solde_nourriture: soldeNourr - totalAmount,
+        total_depense: Number(fund.total_depense) + totalAmount
+      }, { transaction });
+
+      await FamilyFundTransaction.create({
+        fundId:        fund.id,
+        acteurNumeroH: buyer.numeroH,
+        acteurNom:     `${buyer.prenom || ''} ${buyer.nomFamille || ''}`.trim(),
+        type:          'paiement_nourriture',
+        montant:       totalAmount,
+        beneficiaireNom: 'Moftal — Échange Primaire',
+        description:   `Achat "${product.title}" (x${qty}) — Échange Primaire Moftal Pay`,
+        statut:        'confirme'
+      }, { transaction });
+    }
 
     // Créer la commande
     const order = await Order.create({

@@ -48,6 +48,7 @@ ProfessionalAccount.init({
   type: {
     type: DataTypes.ENUM(
       'clinic',
+      'health_worker', // médecin / agent de santé individuel
       'security_agency',
       'journalist',
       'enterprise',
@@ -66,7 +67,8 @@ ProfessionalAccount.init({
       'transport',   // taxi, moto, livraison à domicile
       'beauty',      // salon de beauté, coiffeur, spa
       'artisan',     // plombier, électricien, menuisier, soudeur
-      'mairie'       // mairie / état civil : mariages, naissances, décès, résidences
+      'mairie',      // mairie / état civil : mariages, naissances, décès, résidences
+      'reseau'       // association / réseau communautaire : membres, projets, cotisations
     ),
     allowNull: false
   },
@@ -180,6 +182,12 @@ ProfessionalAccount.init({
     allowNull: true,
     field: 'subscription_valid_until'
   },
+  gestionInterneValidUntil: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'gestion_interne_valid_until',
+    comment: 'Date jusqu\'à laquelle la Gestion Interne est active (inclut la visibilité)'
+  },
   // Coordonnées de paiement fournies par le professionnel (Orange Money / compte bancaire)
   billingInfo: {
     type: DataTypes.JSON,
@@ -199,6 +207,13 @@ ProfessionalAccount.init({
     defaultValue: false,
     field: 'granted_to_sub_admin',
     comment: 'Si true, le petit admin (G0) peut voir ce compte même hors du quota 50%'
+  },
+  // Indique si le compte est encore en période d'essai gratuit (3 mois)
+  isTrial: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'is_trial',
+    comment: 'true = essai gratuit en cours ; false = compte payant'
   }
 }, {
   sequelize,

@@ -123,6 +123,12 @@ User.init({
   pays: {
     type: DataTypes.STRING
   },
+  narrateurContact: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'narrateur_contact',
+    comment: 'Numéro Orange Money du narrateur Reci — pour paiement annuel par l\'admin'
+  },
   origine: {
     type: DataTypes.STRING
   },

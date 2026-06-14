@@ -32,10 +32,13 @@ async function ensureQuotaTables() {
         "numero_h"           VARCHAR(255) NOT NULL UNIQUE,
         "points_disponibles" INTEGER      NOT NULL DEFAULT 0 CHECK (points_disponibles >= 0),
         "total_achete"       INTEGER      NOT NULL DEFAULT 0,
+        "expires_at"         TIMESTAMPTZ,
         "created_at"         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
         "updated_at"         TIMESTAMPTZ  NOT NULL DEFAULT NOW()
       );
     `);
+    // Ajouter expires_at si la table existait déjà sans cette colonne
+    await sequelize.query(`ALTER TABLE "gallery_points" ADD COLUMN IF NOT EXISTS "expires_at" TIMESTAMPTZ;`).catch(() => {});
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "points_transactions" (
         "id"             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -78,7 +81,7 @@ export async function getOrCreateQuota(contextType, contextKey, defaultFreePhoto
 // affectées. Impossible de tricher avec des appels simultanés.
 //
 export async function checkAndConsumeQuota(contextType, contextKey, isVideoUpload, uploaderNumeroH, defaultFreePhotos, defaultFreeVideos, costOverride) {
-  const costPoints = costOverride ?? (isVideoUpload ? 5 : 1);
+  const costPoints = costOverride ?? (isVideoUpload ? 3 : 1);
 
   // ── Étape 1 : s'assurer que la ligne quota existe ──
   await sequelize.query(`
@@ -109,12 +112,13 @@ export async function checkAndConsumeQuota(contextType, contextKey, isVideoUploa
   `, { replacements: { numeroH: uploaderNumeroH } });
 
   // ── Étape 4 : déduire les points ATOMIQUEMENT (impossible de passer en dessous de 0) ──
-  // La contrainte WHERE points_disponibles >= :cost empêche toute fraude simultanée.
+  // Vérification en même temps : points suffisants ET pas expirés.
   const [, ptsMeta] = await sequelize.query(`
     UPDATE gallery_points
     SET points_disponibles = points_disponibles - :cost, updated_at = NOW()
     WHERE numero_h = :numeroH
       AND points_disponibles >= :cost
+      AND (expires_at IS NULL OR expires_at >= NOW())
   `, { replacements: { numeroH: uploaderNumeroH, cost: costPoints } });
 
   const ptsUsed = (ptsMeta?.rowCount ?? ptsMeta?.affectedRows ?? 0) > 0;
@@ -133,14 +137,19 @@ export async function checkAndConsumeQuota(contextType, contextKey, isVideoUploa
 
 router.use(authenticate);
 
-// GET /api/quotas/my-points → solde de points de l'utilisateur connecté
+// GET /api/quotas/my-points → solde de points + date d'expiration
 router.get('/my-points', async (req, res) => {
   try {
     const pts = await GalleryPoints.findOne({ where: { numeroH: req.user.numeroH } });
+    const maintenant = new Date();
+    const expiresAt = pts?.expires_at || pts?.expiresAt || null;
+    const estExpire = expiresAt ? new Date(expiresAt) < maintenant : false;
     res.json({
       success: true,
-      pointsDisponibles: pts?.pointsDisponibles || 0,
-      totalAchete: pts?.totalAchete || 0
+      pointsDisponibles: (estExpire ? 0 : pts?.pointsDisponibles) || 0,
+      totalAchete:       pts?.totalAchete || 0,
+      expiresAt,
+      estExpire,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -312,13 +321,20 @@ router.post('/admin/assign', requireAdmin, async (req, res) => {
     const pointsInt = parseInt(points);
 
     // UPSERT atomique — crée la ligne si absente, puis incrémente
+    // L'expiration est toujours repoussée à 1 mois depuis maintenant (achat frais)
     await sequelize.query(`
-      INSERT INTO gallery_points (id, numero_h, points_disponibles, total_achete, created_at, updated_at)
-      VALUES (gen_random_uuid(), :numeroH, :pts, :pts, NOW(), NOW())
+      INSERT INTO gallery_points (id, numero_h, points_disponibles, total_achete, expires_at, created_at, updated_at)
+      VALUES (gen_random_uuid(), :numeroH, :pts, :pts, NOW() + INTERVAL '1 month', NOW(), NOW())
       ON CONFLICT (numero_h) DO UPDATE
-        SET points_disponibles = gallery_points.points_disponibles + :pts,
-            total_achete       = gallery_points.total_achete + :pts,
-            updated_at         = NOW()
+        SET points_disponibles =
+              CASE
+                WHEN gallery_points.expires_at IS NOT NULL AND gallery_points.expires_at < NOW()
+                THEN :pts
+                ELSE gallery_points.points_disponibles + :pts
+              END,
+            total_achete = gallery_points.total_achete + :pts,
+            expires_at   = NOW() + INTERVAL '1 month',
+            updated_at   = NOW()
     `, { replacements: { numeroH, pts: pointsInt } });
 
     // Enregistrer la transaction

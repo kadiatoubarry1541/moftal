@@ -167,6 +167,16 @@ export const FamilyTree = sequelize.define('FamilyTree', {
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
+  },
+  arbreActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    comment: 'true après paiement d\'activation au propriétaire du site'
+  },
+  activationPaiementRef: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Référence du paiement d\'activation (txRef FedaPay)'
   }
 }, {
   tableName: 'family_trees',

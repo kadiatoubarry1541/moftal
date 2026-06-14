@@ -708,4 +708,40 @@ router.get('/mes-amours/feed', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/user-stories/mon-contact-narrateur
+// Récupère le numéro Orange Money du narrateur connecté
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/mon-contact-narrateur', authenticate, async (req, res) => {
+  try {
+    const user = await User.findOne({
+      where: { numeroH: req.userId },
+      attributes: ['narrateurContact']
+    });
+    res.json({ success: true, contact: user?.narrateurContact || null });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/user-stories/mon-contact-narrateur
+// Met à jour le numéro Orange Money du narrateur (modifiable à tout moment)
+// ─────────────────────────────────────────────────────────────────────────────
+router.put('/mon-contact-narrateur', authenticate, async (req, res) => {
+  try {
+    const { contact } = req.body;
+    if (!contact || !contact.trim()) {
+      return res.status(400).json({ success: false, message: 'Numéro requis.' });
+    }
+    await User.update(
+      { narrateurContact: contact.trim() },
+      { where: { numeroH: req.userId } }
+    );
+    res.json({ success: true, message: 'Numéro de contact narrateur mis à jour.' });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 export default router;

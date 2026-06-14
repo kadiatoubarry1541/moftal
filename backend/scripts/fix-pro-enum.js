@@ -78,6 +78,7 @@ async function fixProEnum() {
     /* ── 4. Valeurs attendues ── */
     const expected = [
       'clinic',
+      'health_worker',
       'security_agency',
       'journalist',
       'enterprise',
@@ -96,6 +97,7 @@ async function fixProEnum() {
       'beauty',
       'artisan',
       'mairie',
+      'reseau',
     ];
 
     /* ── 5. Ajouter les valeurs manquantes ── */

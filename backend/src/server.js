@@ -36,12 +36,14 @@ import familyRoutes from './routes/family.js';
 import familyTreeRoutes from './routes/familyTree.js';
 import parentChildRoutes from './routes/parentChild.js';
 import coupleRoutes from './routes/couple.js';
+import familyCoreRoutes from './routes/familyCore.js';
 import scienceRoutes from './routes/science.js';
 import realityRoutes from './routes/reality.js';
 import stateMessagesRoutes from './routes/stateMessages.js';
 import stateProductsRoutes from './routes/stateProducts.js';
 import userStoriesRoutes from './routes/userStories.js';
 import professionalRoutes from './routes/professionals.js';
+import proMembersRoutes from './routes/pro-members.js';
 import clinicMgmtRoutes from './routes/clinic-management.js';
 import mairieMgmtRoutes  from './routes/mairie-management.js';
 import mairePublicRoutes  from './routes/mairie-public.js';
@@ -60,6 +62,9 @@ import scientistMgmtRoutes   from './routes/scientist-management.js';
 import supplierMgmtRoutes  from './routes/supplier-management.js';
 import securityMgmtRoutes  from './routes/security-management.js';
 import retailerMgmtRoutes  from './routes/retailer-management.js';
+import beautyMgmtRoutes    from './routes/beauty-management.js';
+import artisanMgmtRoutes   from './routes/artisan-management.js';
+import producerMgmtRoutes  from './routes/producer-management.js';
 import reseauMgmtRoutes      from './routes/reseau-management.js';
 import immoMgmtRoutes        from './routes/immo-management.js';
 import restaurantMgmtRoutes  from './routes/restaurant-management.js';
@@ -76,6 +81,8 @@ import familyFundRoutes from './routes/familyFund.js';
 import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
 import moftalPayRoutes from './routes/MoftalPay.js';
 import racinesRoutes from './routes/racines.js';
+import zakatRoutes from './routes/zakat.js';
+import formationsRoutes from './routes/formations.js';
 import Payment from './models/Payment.js';
 import { handleUploadError } from './middleware/upload.js';
 import { config } from '../config.js';
@@ -465,6 +472,57 @@ async function initAllTables() {
         `CREATE INDEX IF NOT EXISTS idx_pw_owner ON "professional_wallets" ("owner_numero_h");`
       ],
       alters: []
+    },
+    {
+      name: 'platform_commissions',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "platform_commissions" (
+          "id"              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "source_type"     VARCHAR(50)  NOT NULL,
+          "source_ref"      VARCHAR(255) NOT NULL,
+          "montant_brut"    BIGINT       NOT NULL,
+          "taux"            DECIMAL(5,2) NOT NULL DEFAULT 1.00,
+          "commission"      BIGINT       NOT NULL,
+          "payeur_numero_h" VARCHAR(255),
+          "created_at"      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_pc_source_ref  ON "platform_commissions" ("source_ref");`,
+        `CREATE INDEX IF NOT EXISTS idx_pc_source_type ON "platform_commissions" ("source_type");`,
+        `CREATE INDEX IF NOT EXISTS idx_pc_created_at  ON "platform_commissions" ("created_at");`
+      ],
+      alters: [
+        `ALTER TABLE "exchange_products" ADD COLUMN IF NOT EXISTS "is_moftal_exclusive" BOOLEAN NOT NULL DEFAULT false;`,
+        `ALTER TABLE "exchange_products" ADD COLUMN IF NOT EXISTS "moftal_vendeur" VARCHAR(255);`
+      ]
+    },
+    {
+      name: 'activity_groups',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "activity_groups" (
+          "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "name"        VARCHAR(255) NOT NULL,
+          "description" TEXT,
+          "activity"    VARCHAR(255) NOT NULL,
+          "members"     JSON         DEFAULT '[]',
+          "posts"       JSON         DEFAULT '[]',
+          "is_active"   BOOLEAN      DEFAULT true,
+          "created_by"  VARCHAR(255) NOT NULL,
+          "pays"        VARCHAR(255) DEFAULT '',
+          "region"      VARCHAR(255) DEFAULT '',
+          "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_ag_activity  ON "activity_groups" ("activity");`,
+        `CREATE INDEX IF NOT EXISTS idx_ag_is_active ON "activity_groups" ("is_active");`,
+        `CREATE INDEX IF NOT EXISTS idx_ag_pays      ON "activity_groups" ("pays");`
+      ],
+      // Table existante : ajouter les nouvelles colonnes "pays"/"region" si absentes
+      alters: [
+        `ALTER TABLE "activity_groups" ADD COLUMN IF NOT EXISTS "pays" VARCHAR(255) DEFAULT '';`,
+        `ALTER TABLE "activity_groups" ADD COLUMN IF NOT EXISTS "region" VARCHAR(255) DEFAULT '';`
+      ]
     }
   ];
 
@@ -736,6 +794,19 @@ async function initAllTables() {
         "created_at"        TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(tenant_code, numero_h)
       );
+      -- Carnet d'accès générique : personnes liées à un compte pro (tous types)
+      CREATE TABLE IF NOT EXISTS "professional_account_members" (
+        "id"                       SERIAL PRIMARY KEY,
+        "professional_account_id" UUID NOT NULL,
+        "numero_h"                 VARCHAR(50) NOT NULL,
+        "role"                     VARCHAR(50) NOT NULL DEFAULT 'client',
+        "nom_display"              VARCHAR(255),
+        "added_by"                 VARCHAR(50),
+        "is_active"                BOOLEAN DEFAULT true,
+        "created_at"               TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE("professional_account_id", "numero_h")
+      );
+      CREATE INDEX IF NOT EXISTS idx_pam_numero_h ON "professional_account_members"("numero_h");
       -- Bulletins de notes
       CREATE TABLE IF NOT EXISTS "school_bulletins" (
         "id"               SERIAL PRIMARY KEY,
@@ -1398,6 +1469,7 @@ async function initAllTables() {
     `);
     // Colonnes supplémentaires (idempotentes)
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "tenant_code" VARCHAR(50) UNIQUE;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "gestion_interne_valid_until" TIMESTAMPTZ;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "numero_h" VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "parent_numero_h" VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "address"      TEXT;`).catch(() => {});
@@ -1611,6 +1683,189 @@ async function initAllTables() {
     `).catch(() => {});
 
     console.log('✅ Tables gestion interne (cliniques + écoles + mosquées + madrasa + commerce + vendeurs) prêtes');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [gestion-interne]:', err.message);
+  }
+
+  // ── Beauté & Bien-être ─────────────────────────────────────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "beauty_services" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"         VARCHAR(200) NOT NULL,
+        "categorie"   VARCHAR(100) DEFAULT 'Général',
+        "prix"        INTEGER NOT NULL DEFAULT 0,
+        "duree_min"   INTEGER DEFAULT 30,
+        "description" TEXT DEFAULT '',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "beauty_staff" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"         VARCHAR(100) NOT NULL,
+        "prenom"      VARCHAR(100) DEFAULT '',
+        "poste"       VARCHAR(100) DEFAULT 'Coiffeur/se',
+        "telephone"   VARCHAR(50) DEFAULT '',
+        "specialite"  VARCHAR(200) DEFAULT '',
+        "salaire"     INTEGER DEFAULT 0,
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "beauty_bookings" (
+        "id"                SERIAL PRIMARY KEY,
+        "tenant_code"       VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "client_nom"        VARCHAR(200) NOT NULL,
+        "client_telephone"  VARCHAR(50) DEFAULT '',
+        "service_id"        INTEGER REFERENCES "beauty_services"("id") ON DELETE SET NULL,
+        "staff_id"          INTEGER REFERENCES "beauty_staff"("id") ON DELETE SET NULL,
+        "date_rdv"          DATE NOT NULL,
+        "heure_rdv"         VARCHAR(10) DEFAULT '',
+        "statut"            VARCHAR(30) DEFAULT 'en_attente',
+        "notes"             TEXT DEFAULT '',
+        "created_at"        TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "beauty_clients" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"         VARCHAR(200) NOT NULL,
+        "telephone"   VARCHAR(50) DEFAULT '',
+        "email"       VARCHAR(200) DEFAULT '',
+        "notes"       TEXT DEFAULT '',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMP DEFAULT NOW(),
+        UNIQUE("tenant_code", "nom")
+      );
+      CREATE TABLE IF NOT EXISTS "beauty_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "titre"       VARCHAR(300) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+    `).catch(() => {});
+    console.log('✅ Tables beauté prêtes');
+  } catch (err) { console.warn('⚠️ initAllTables [beauty]:', err.message); }
+
+  // ── Artisanat & Services ───────────────────────────────────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "artisan_services" (
+        "id"                SERIAL PRIMARY KEY,
+        "tenant_code"       VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"               VARCHAR(200) NOT NULL,
+        "categorie"         VARCHAR(100) DEFAULT 'Général',
+        "prix_base"         INTEGER DEFAULT 0,
+        "description"       TEXT DEFAULT '',
+        "zone_intervention" VARCHAR(200) DEFAULT '',
+        "is_active"         BOOLEAN DEFAULT true,
+        "created_at"        TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "artisan_clients" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"         VARCHAR(200) NOT NULL,
+        "telephone"   VARCHAR(50) DEFAULT '',
+        "adresse"     VARCHAR(200) DEFAULT '',
+        "email"       VARCHAR(200) DEFAULT '',
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMP DEFAULT NOW(),
+        UNIQUE("tenant_code", "nom")
+      );
+      CREATE TABLE IF NOT EXISTS "artisan_interventions" (
+        "id"           SERIAL PRIMARY KEY,
+        "tenant_code"  VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "client_id"    INTEGER REFERENCES "artisan_clients"("id") ON DELETE SET NULL,
+        "service_id"   INTEGER REFERENCES "artisan_services"("id") ON DELETE SET NULL,
+        "titre"        VARCHAR(300) NOT NULL,
+        "description"  TEXT DEFAULT '',
+        "adresse"      VARCHAR(300) DEFAULT '',
+        "date_debut"   TIMESTAMP DEFAULT NOW(),
+        "date_fin"     TIMESTAMP,
+        "statut"       VARCHAR(30) DEFAULT 'en_attente',
+        "priorite"     VARCHAR(30) DEFAULT 'normale',
+        "cout_estime"  INTEGER DEFAULT 0,
+        "cout_reel"    INTEGER DEFAULT 0,
+        "notes"        TEXT DEFAULT '',
+        "created_at"   TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "artisan_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "titre"       VARCHAR(300) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+    `).catch(() => {});
+    console.log('✅ Tables artisan prêtes');
+  } catch (err) { console.warn('⚠️ initAllTables [artisan]:', err.message); }
+
+  // ── Entreprise de Production ───────────────────────────────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "producer_products" (
+        "id"            SERIAL PRIMARY KEY,
+        "tenant_code"   VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"           VARCHAR(200) NOT NULL,
+        "categorie"     VARCHAR(100) DEFAULT 'Général',
+        "unite"         VARCHAR(30) DEFAULT 'kg',
+        "prix_unitaire" INTEGER DEFAULT 0,
+        "stock"         INTEGER DEFAULT 0,
+        "description"   TEXT DEFAULT '',
+        "is_active"     BOOLEAN DEFAULT true,
+        "created_at"    TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "producer_lots" (
+        "id"                SERIAL PRIMARY KEY,
+        "tenant_code"       VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "product_id"        INTEGER REFERENCES "producer_products"("id") ON DELETE SET NULL,
+        "quantite_prevue"   NUMERIC(12,2) NOT NULL DEFAULT 0,
+        "quantite_produite" NUMERIC(12,2) DEFAULT 0,
+        "date_debut"        TIMESTAMP DEFAULT NOW(),
+        "date_fin_prevue"   TIMESTAMP,
+        "date_fin_reelle"   TIMESTAMP,
+        "statut"            VARCHAR(30) DEFAULT 'en_attente',
+        "notes"             TEXT DEFAULT '',
+        "created_at"        TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "producer_orders" (
+        "id"                     SERIAL PRIMARY KEY,
+        "tenant_code"            VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "client_nom"             VARCHAR(200) NOT NULL,
+        "client_telephone"       VARCHAR(50) DEFAULT '',
+        "product_id"             INTEGER REFERENCES "producer_products"("id") ON DELETE SET NULL,
+        "quantite"               NUMERIC(12,2) NOT NULL DEFAULT 1,
+        "montant_total"          INTEGER DEFAULT 0,
+        "statut"                 VARCHAR(30) DEFAULT 'en_attente',
+        "date_livraison_prevue"  DATE,
+        "date_livraison"         TIMESTAMP,
+        "notes"                  TEXT DEFAULT '',
+        "created_at"             TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "producer_staff" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "nom"         VARCHAR(100) NOT NULL,
+        "prenom"      VARCHAR(100) DEFAULT '',
+        "poste"       VARCHAR(100) DEFAULT 'Ouvrier',
+        "telephone"   VARCHAR(50) DEFAULT '',
+        "salaire"     INTEGER DEFAULT 0,
+        "is_active"   BOOLEAN DEFAULT true,
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS "producer_announcements" (
+        "id"          SERIAL PRIMARY KEY,
+        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "titre"       VARCHAR(300) NOT NULL,
+        "contenu"     TEXT NOT NULL,
+        "type"        VARCHAR(50) DEFAULT 'general',
+        "created_at"  TIMESTAMP DEFAULT NOW()
+      );
+    `).catch(() => {});
+    console.log('✅ Tables producteur prêtes');
   } catch (err) {
     console.warn('⚠️ initAllTables [gestion-interne]:', err.message);
   }
@@ -2120,12 +2375,14 @@ app.use('/api/family', familyRoutes);
 app.use('/api/family-tree', familyTreeRoutes);
 app.use('/api/parent-child', parentChildRoutes);
 app.use('/api/couple', coupleRoutes);
+app.use('/api/family-core', familyCoreRoutes);
 app.use('/api/science', scienceRoutes);
 app.use('/api/reality', realityRoutes);
 app.use('/api/state-messages', stateMessagesRoutes);
 app.use('/api/state-products', stateProductsRoutes);
 app.use('/api/user-stories', userStoriesRoutes);
 app.use('/api/professionals', professionalRoutes);
+app.use('/api/pro-members',   proMembersRoutes);
 app.use('/api/clinic-mgmt',   clinicMgmtRoutes);
 app.use('/api/mairie-mgmt',   mairieMgmtRoutes);
 app.use('/api/mairie-public', mairePublicRoutes);
@@ -2144,6 +2401,9 @@ app.use('/api/scientist-mgmt',  scientistMgmtRoutes);
 app.use('/api/supplier-mgmt',  supplierMgmtRoutes);
 app.use('/api/security-mgmt',  securityMgmtRoutes);
 app.use('/api/retailer-mgmt',  retailerMgmtRoutes);
+app.use('/api/beauty-mgmt',    beautyMgmtRoutes);
+app.use('/api/artisan-mgmt',   artisanMgmtRoutes);
+app.use('/api/producer-mgmt',  producerMgmtRoutes);
 app.use('/api/reseau-mgmt',      reseauMgmtRoutes);
 app.use('/api/immo-mgmt',        immoMgmtRoutes);
 app.use('/api/restaurant-mgmt',  restaurantMgmtRoutes);
@@ -2160,6 +2420,8 @@ app.use('/api/family-fund', familyFundRoutes);
 app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);
 app.use('/api/moftal-pay', moftalPayRoutes);
 app.use('/api/racines', racinesRoutes);
+app.use('/api/zakat', zakatRoutes);
+app.use('/api/formations', formationsRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test

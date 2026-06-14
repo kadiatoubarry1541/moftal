@@ -110,3 +110,14 @@ backend/.dev.vars
 backend/.wrangler/
 backend/wrangler.toml
 
+# Outils locaux Claude Code
+.claude/
+
+# Anciens projets séparés (PHP/InfinityFree, sandbox node_modules) - hors périmètre
+ProjetClinique/
+clinique/
+edication/
+
+# Logs locaux
+backend-log.txt
+

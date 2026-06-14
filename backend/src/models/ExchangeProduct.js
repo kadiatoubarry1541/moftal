@@ -141,6 +141,18 @@ ExchangeProduct.init({
     type: DataTypes.STRING,
     allowNull: false,
     comment: 'NumeroH de l\'administrateur qui a créé le produit'
+  },
+  isMoftalExclusive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'is_moftal_exclusive',
+    comment: 'Produit vendu UNIQUEMENT par Moftal (riz, huile…) — aucun autre vendeur autorisé'
+  },
+  moftalVendeur: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'moftal_vendeur',
+    comment: 'NumeroH du gérant Moftal qui a publié ce produit exclusif'
   }
 }, {
   sequelize,

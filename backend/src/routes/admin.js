@@ -1,6 +1,7 @@
 import express from 'express';
 import { Op } from 'sequelize';
 import User from '../models/User.js';
+import { sequelize } from '../config/database.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -412,6 +413,128 @@ router.get('/search', async (req, res) => {
       success: false,
       message: 'Erreur serveur lors de la recherche'
     });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// GET /api/admin/narrateurs-reci
+// Liste tous les narrateurs ayant publié au moins un récit,
+// avec leur numéro de contact pour paiement
+// ─────────────────────────────────────────────────────────────────
+router.get('/narrateurs-reci', async (req, res) => {
+  try {
+    // Tous les auteurs uniques ayant publié
+    const stories = await sequelize.query(
+      `SELECT DISTINCT ON (ps.numero_h)
+         ps.numero_h, ps.author_name, COUNT(*) OVER (PARTITION BY ps.numero_h) as nb_recits,
+         MAX(ps.published_at) OVER (PARTITION BY ps.numero_h) as derniere_publication,
+         u.narrateur_contact, u.pays
+       FROM published_stories ps
+       LEFT JOIN users u ON u.numero_h = ps.numero_h
+       WHERE ps.is_published = true
+       ORDER BY ps.numero_h, ps.published_at DESC`,
+      { type: sequelize.QueryTypes.SELECT }
+    ).catch(() => []);
+
+    res.json({
+      success: true,
+      total: stories.length,
+      narrateurs: stories.map(s => ({
+        numeroH: s.numero_h,
+        nom: s.author_name,
+        nbRecits: Number(s.nb_recits),
+        dernierRecit: s.derniere_publication,
+        contact: s.narrateur_contact || null,
+        pays: s.pays || null,
+      }))
+    });
+  } catch (e) {
+    console.error('narrateurs-reci:', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// GET /api/admin/arbres-activation
+// Liste tous les arbres avec statut d'activation (payé ou non)
+// ─────────────────────────────────────────────────────────────────
+import { FamilyTree } from '../models/additional.js';
+
+router.get('/arbres-activation', async (req, res) => {
+  try {
+    const trees = await FamilyTree.findAll({
+      where: { isActive: true },
+      order: [['createdAt', 'DESC']]
+    });
+
+    const result = trees.map(t => {
+      const nb = Array.isArray(t.members) ? t.members.length : 0;
+      return {
+        id: t.id,
+        familyName: t.familyName || '—',
+        memberCount: nb,
+        arbreActive: !!t.arbreActive,
+        familyCode: t.familyCode || null,
+        bloodNumber: t.bloodNumber || null,
+        activationRef: t.activationPaiementRef || null,
+        createdAt: t.createdAt,
+      };
+    });
+
+    const actives   = result.filter(t => t.arbreActive);
+    const inactives = result.filter(t => !t.arbreActive && t.memberCount >= 5);
+    const enAttente = result.filter(t => !t.arbreActive && t.memberCount < 5);
+
+    res.json({
+      success: true,
+      total: result.length,
+      nbActives: actives.length,
+      nbInactives: inactives.length,
+      nbEnAttente: enAttente.length,
+      arbres: result,
+    });
+  } catch (e) {
+    console.error('arbres-activation:', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /api/admin/activer-arbre/:treeId
+// Activation manuelle d'un arbre par l'admin (après réception du paiement)
+// ─────────────────────────────────────────────────────────────────
+router.post('/activer-arbre/:treeId', async (req, res) => {
+  try {
+    const tree = await FamilyTree.findByPk(req.params.treeId);
+    if (!tree) return res.status(404).json({ success: false, message: 'Arbre introuvable.' });
+
+    await tree.update({
+      arbreActive: true,
+      activationPaiementRef: `ADMIN-MANUEL-${req.user.numeroH}-${Date.now()}`,
+    });
+
+    res.json({
+      success: true,
+      message: `✅ Arbre de la famille "${tree.familyName}" activé manuellement.`,
+    });
+  } catch (e) {
+    console.error('activer-arbre:', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /api/admin/desactiver-arbre/:treeId
+// Désactivation manuelle (en cas d'erreur ou de remboursement)
+// ─────────────────────────────────────────────────────────────────
+router.post('/desactiver-arbre/:treeId', async (req, res) => {
+  try {
+    const tree = await FamilyTree.findByPk(req.params.treeId);
+    if (!tree) return res.status(404).json({ success: false, message: 'Arbre introuvable.' });
+    await tree.update({ arbreActive: false, activationPaiementRef: null });
+    res.json({ success: true, message: `Arbre "${tree.familyName}" désactivé.` });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
   }
 });
 

@@ -2,7 +2,25 @@ import express from 'express';
 import { Op } from 'sequelize';
 import IaKnowledge from '../models/IaKnowledge.js';
 import IaConversation from '../models/IaConversation.js';
+import Payment from '../models/Payment.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+
+/** Vérifie si l'utilisateur a un abonnement Professeur IA actif */
+async function verifierAbonnementIA(numeroH) {
+  const maintenant = new Date();
+  const unMoisAvant = new Date(maintenant); unMoisAvant.setMonth(unMoisAvant.getMonth() - 1);
+  const unAnAvant   = new Date(maintenant); unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
+
+  const passMois = await Payment.findOne({
+    where: { payerNumeroH: numeroH, purpose: 'subscription_ia_mois', status: 'completed', createdAt: { [Op.gte]: unMoisAvant } }
+  });
+  if (passMois) return true;
+
+  const passAn = await Payment.findOne({
+    where: { payerNumeroH: numeroH, purpose: 'subscription_ia_an', status: 'completed', createdAt: { [Op.gte]: unAnAvant } }
+  });
+  return !!passAn;
+}
 
 const router = express.Router();
 
@@ -987,6 +1005,18 @@ router.get('/history', authenticate, async function(req, res) {
 
 router.post('/chat', authenticate, async function(req, res) {
   try {
+    // Vérifier l'abonnement Professeur IA avant de répondre
+    const aAbonnement = await verifierAbonnementIA(req.user.numeroH);
+    if (!aAbonnement) {
+      return res.status(403).json({
+        success: false,
+        code: 'ABONNEMENT_REQUIS',
+        message: 'L\'accès au Professeur IA nécessite un abonnement actif.',
+        prix: { afrique: { mois: 5000, an: 50000 }, horsAfrique: { mois: 10000, an: 100000 } },
+        lienPaiement: '/ia-education'
+      });
+    }
+
     var body = req.body || {};
     var message = body.message;
     var lastExercice = body.lastExercice || null;

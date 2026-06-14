@@ -69,6 +69,9 @@ router.get('/tree', async (req, res) => {
     const members = await getTreeMembers(tree);
     const deceasedMembers = await getTreeDeceasedMembers(tree);
 
+    // Le code de sang n'est révélé qu'après le paiement d'activation au propriétaire du site
+    const arbreActive = !!tree.arbreActive;
+
     res.json({
       success: true,
       tree: {
@@ -79,10 +82,12 @@ router.get('/tree', async (req, res) => {
         members,
         deceasedMembers,
         memberCount: members.length,
-        familyCode: members.length >= 10 ? (tree.familyCode || null) : null,
-        bloodNumber: members.length >= 10 ? (tree.bloodNumber || null) : null,
+        familyCode: arbreActive ? (tree.familyCode || null) : null,
+        bloodNumber: arbreActive ? (tree.bloodNumber || null) : null,
         familyName: tree.familyName || null,
-        codeUnlocked: members.length >= 10
+        codeUnlocked: members.length >= 5,
+        arbreActive,
+        codePaiementRequis: members.length >= 5 && !arbreActive
       }
     });
   } catch (error) {
@@ -860,7 +865,7 @@ async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
     if (!members.includes(numeroH)) {
       members.push(numeroH);
       await tree.update({ members });
-      // Attribuer le code F+S dès 10 membres
+      // Attribuer le code F+S dès 5 membres
       await assignFamilyCodeIfNeeded(tree, members);
     }
   } else {
@@ -881,7 +886,7 @@ async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
 }
 
 /**
- * Attribue automatiquement le code F[x]S[y] quand l'arbre atteint 10 membres.
+ * Attribue automatiquement le code F[x]S[y] quand l'arbre atteint 5 membres.
  *
  * F = index séquentiel global du nom de famille (F1, F2, F3…)
  *     Chaque nom de famille unique reçoit le prochain F disponible.
@@ -890,11 +895,11 @@ async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
  * S = index séquentiel global tous noms de famille confondus (S1, S2, S3…)
  *     C'est le prochain S disponible parmi TOUS les arbres certifiés.
  *
- * Exemple : Barry (3ème famille à s'inscrire) atteint 10 membres → F3S5
+ * Exemple : Barry (3ème famille à s'inscrire) atteint 5 membres → F3S5
  */
 async function assignFamilyCodeIfNeeded(tree, members) {
   if (tree.familyCode) return; // déjà attribué
-  if (members.length < 10) return;
+  if (members.length < 5) return;
 
   // Récupérer le nom de famille depuis le membre racine si pas encore défini
   let familyName = tree.familyName;
@@ -1117,9 +1122,9 @@ router.get('/spouse-tree/:spouseNumeroH', async (req, res) => {
         members,
         deceasedMembers,
         memberCount: members.length,
-        familyCode: members.length >= 10 ? (spouseTree.familyCode || null) : null,
+        familyCode: members.length >= 5 ? (spouseTree.familyCode || null) : null,
         familyName: spouseTree.familyName || null,
-        codeUnlocked: members.length >= 10
+        codeUnlocked: members.length >= 5
       }
     });
   } catch (error) {
