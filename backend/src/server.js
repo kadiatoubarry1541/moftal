@@ -2496,9 +2496,10 @@ function servePrecompressed(assetsDir) {
   };
 }
 
-// Servir le frontend React (build Vite) — en production ET en mode preview local
+// Servir le frontend React (build Vite) — uniquement si le dossier dist existe
+// (sur Render le frontend n'est pas buildé ici, il est hébergé séparément sur Cloudflare Pages)
 const frontendDist = path.join(__dirname, '../../frontend/dist');
-if (process.env.NODE_ENV === 'production' || fs.existsSync(frontendDist)) {
+if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
   const assetsDir = path.join(frontendDist, 'assets');
 
   // 1. Servir d'abord les fichiers pré-compressés (brotli > gzip > non-compressé)
