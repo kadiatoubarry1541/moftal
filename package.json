@@ -15,12 +15,17 @@
     "start:edication:backend": "npm run dev --prefix edication/backend",
     "start:clinique": "npm run start:both --prefix clinique",
     "start:clinique:frontend": "npm run dev --prefix clinique/frontend",
-    "start:clinique:backend": "npm run dev --prefix clinique/backend"
+    "start:clinique:backend": "npm run dev --prefix clinique/backend",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
   },
   "dependencies": {
     "compression": "^1.8.1",
     "concurrently": "^8.2.0",
     "pptxgenjs": "^4.0.1",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "wrangler": "^4.100.0"
   }
 }
