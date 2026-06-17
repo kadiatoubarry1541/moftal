@@ -35,7 +35,7 @@ class User extends Model {
       }
       return user || null;
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') console.error('findByNumeroH:', error.message);
+      console.error('findByNumeroH ERROR:', error.message);
       return null;
     }
   }
