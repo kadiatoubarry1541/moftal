@@ -183,31 +183,9 @@ export default defineConfig(({ mode }) => {
           // → bundle initial plus petit → moins de JS à parser → TBT réduit
           manualChunks(id) {
             if (!id.includes("node_modules")) return undefined;
-            // React DOM dans le même chunk que vendor pour éviter les conflits de scheduler
-            if (id.includes("/react-dom/")) return "vendor";
-            // Router
-            if (id.includes("/react-router") || id.includes("/react-router-dom/")) return "router";
-            // Leaflet (cartes) — seulement sur les pages qui l'utilisent
-            if (id.includes("/leaflet") || id.includes("/react-leaflet/")) return "map";
-            // Markdown — seulement sur les pages qui l'utilisent
-            if (
-              id.includes("/react-markdown/") ||
-              id.includes("/remark-") ||
-              id.includes("/rehype-") ||
-              id.includes("/unified/") ||
-              id.includes("/vfile") ||
-              id.includes("/mdast") ||
-              id.includes("/micromark")
-            ) return "markdown";
-            // React Query
-            if (id.includes("/@tanstack/")) return "query";
-            // QR Code
-            if (id.includes("/qrcode") || id.includes("/jsqr")) return "qr";
-            // Toast
-            if (id.includes("/react-hot-toast/")) return "toast";
-            // socket.io — utilisé seulement dans Arbre.tsx (lazy), ne pas mettre dans vendor
+            // socket.io est lourd et uniquement utilisé dans Arbre.tsx (lazy)
             if (id.includes("/socket.io") || id.includes("/engine.io")) return "socketio";
-            // Tout le reste dans vendor (React core, etc.)
+            // Tout le reste dans vendor pour éviter les conflits d'initialisation entre chunks
             return "vendor";
           },
         },
