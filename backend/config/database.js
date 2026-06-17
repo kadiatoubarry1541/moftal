@@ -80,9 +80,8 @@ const connectDB = async () => {
           await sequelize.sync({ alter: true });
           console.log('Modeles synchronises avec la base de donnees (dev)');
         } else {
-          // En production : sync sans alter → crée uniquement les tables manquantes,
-          // ne modifie pas les tables existantes
-          await sequelize.sync({ force: false });
+          // alter:true pour ajouter les colonnes manquantes dans Neon
+          await sequelize.sync({ alter: true });
           console.log('Modeles synchronises avec la base de donnees (production)');
         }
       } catch (syncError) {
