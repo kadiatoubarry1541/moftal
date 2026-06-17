@@ -163,24 +163,30 @@ const startIaServer = () => {
 
 // Créer ou mettre à jour les comptes admin au démarrage
 async function ensureAdmin() {
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Alphabobomodizakoolo2025@amourpur';
   const saltRounds = config.BCRYPT_ROUNDS || 12;
-  const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
   const admins = [
-    { numeroH: (process.env.ADMIN_NUMERO_H || 'G0C0P0R0E0F0 0').trim().replace(/\s+/g, ' '), generation: 'G0', prenom: 'Administrateur', nom: 'Principal' },
-    { numeroH: 'G7C7P7R7E7F7 7', generation: 'G7', prenom: 'Super', nom: 'Admin' },
+    {
+      numeroH: (process.env.ADMIN_NUMERO_H || 'G0C0P0R0E0F0 0').trim().replace(/\s+/g, ' '),
+      password: process.env.ADMIN_PASSWORD || 'Neneyaya1',
+      generation: 'G0', prenom: 'Administrateur', nom: 'Principal'
+    },
+    {
+      numeroH: 'G7C7P7R7E7F7 7',
+      password: process.env.SUPER_ADMIN_PASSWORD || 'Alphabobomodizakoolo2025@amourpur',
+      generation: 'G7', prenom: 'Super', nom: 'Admin'
+    },
   ];
 
-  for (const { numeroH, generation, prenom, nom } of admins) {
+  for (const { numeroH, password, generation, prenom, nom } of admins) {
     try {
-      // Utiliser SQL brut pour éviter les problèmes de colonnes manquantes dans Sequelize
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
       const [rows] = await User.sequelize.query(
         'SELECT numero_h, password FROM users WHERE LOWER(numero_h) = LOWER(:n) LIMIT 1',
         { replacements: { n: numeroH } }
       );
       if (rows && rows.length > 0) {
-        const valid = await bcrypt.compare(adminPassword, rows[0].password);
+        const valid = await bcrypt.compare(password, rows[0].password);
         if (!valid) {
           await User.sequelize.query(
             'UPDATE users SET password=:p, role=\'super-admin\', is_active=true WHERE LOWER(numero_h)=LOWER(:n)',
