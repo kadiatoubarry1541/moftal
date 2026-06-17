@@ -2310,6 +2310,8 @@ app.use(helmet({
 const rawOrigins = [
   config.FRONTEND_URL,
   ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : []),
+  'https://moftal.com',
+  'https://www.moftal.com',
   'http://localhost:3000',
   'http://localhost:5173',
 ].filter(Boolean);
@@ -2319,9 +2321,10 @@ app.use(cors({
     if (!origin) return callback(null, true); // appels server-to-server, Postman
     // Dev : tout accepter
     if (process.env.NODE_ENV === 'development') return callback(null, true);
-    // Prod : accepter les origines configurées + Cloudflare Pages (*.pages.dev)
+    // Prod : accepter les origines configurées + Cloudflare Pages (*.pages.dev) + *.moftal.com
     if (rawOrigins.includes(origin)) return callback(null, true);
     if (/^https:\/\/[a-z0-9-]+\.pages\.dev$/.test(origin)) return callback(null, true);
+    if (/^https:\/\/([a-z0-9-]+\.)?moftal\.com$/.test(origin)) return callback(null, true);
     return callback(new Error(`CORS: origine non autorisée — ${origin}`));
   },
   credentials: true
