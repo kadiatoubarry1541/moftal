@@ -183,8 +183,8 @@ export default defineConfig(({ mode }) => {
           // → bundle initial plus petit → moins de JS à parser → TBT réduit
           manualChunks(id) {
             if (!id.includes("node_modules")) return undefined;
-            // React DOM séparé de React (les deux sont toujours chargés ensemble mais splitté pour cache)
-            if (id.includes("/react-dom/")) return "react-dom";
+            // React DOM dans le même chunk que vendor pour éviter les conflits de scheduler
+            if (id.includes("/react-dom/")) return "vendor";
             // Router
             if (id.includes("/react-router") || id.includes("/react-router-dom/")) return "router";
             // Leaflet (cartes) — seulement sur les pages qui l'utilisent
