@@ -466,6 +466,31 @@ router.post('/login', [
         user = await User.findByNumeroH(originalTrimmed);
       }
 
+      // Fallback SQL brut si Sequelize ne trouve pas (problème modèle/colonne)
+      if (!user) {
+        try {
+          const [rows] = await User.sequelize.query(
+            'SELECT * FROM users WHERE LOWER(numero_h) = LOWER(:n) LIMIT 1',
+            { replacements: { n: normalizedNumeroH }, type: 'SELECT' }
+          );
+          if (rows && rows.length > 0) {
+            const r = rows[0];
+            user = {
+              numeroH: r.numero_h, password: r.password, role: r.role,
+              type: r.type, isActive: r.is_active, isVerified: r.is_verified,
+              prenom: r.prenom, nomFamille: r.nom_famille, genre: r.genre,
+              generation: r.generation, photo: r.photo,
+              update: (data) => User.sequelize.query(
+                'UPDATE users SET last_login=NOW() WHERE numero_h=:n',
+                { replacements: { n: r.numero_h } }
+              ).catch(() => {})
+            };
+          }
+        } catch(sqlErr) {
+          console.error('Login SQL fallback error:', sqlErr.message);
+        }
+      }
+
       if (!user) {
         return res.status(401).json({
           success: false,
