@@ -163,8 +163,7 @@ const startIaServer = () => {
 
 // Créer ou mettre à jour les comptes admin au démarrage
 async function ensureAdmin() {
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) return;
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Alphabobomodizakoolo2025@amourpur';
   const saltRounds = config.BCRYPT_ROUNDS || 12;
   const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
@@ -175,19 +174,29 @@ async function ensureAdmin() {
 
   for (const { numeroH, generation, prenom, nom } of admins) {
     try {
-      let admin = await User.findByNumeroH(numeroH);
-      if (admin) {
-        const valid = await bcrypt.compare(adminPassword, admin.password);
+      // Utiliser SQL brut pour éviter les problèmes de colonnes manquantes dans Sequelize
+      const [rows] = await User.sequelize.query(
+        'SELECT numero_h, password FROM users WHERE LOWER(numero_h) = LOWER(:n) LIMIT 1',
+        { replacements: { n: numeroH } }
+      );
+      if (rows && rows.length > 0) {
+        const valid = await bcrypt.compare(adminPassword, rows[0].password);
         if (!valid) {
-          await admin.update({ password: hashedPassword, role: 'super-admin', isActive: true });
+          await User.sequelize.query(
+            'UPDATE users SET password=:p, role=\'super-admin\', is_active=true WHERE LOWER(numero_h)=LOWER(:n)',
+            { replacements: { p: hashedPassword, n: numeroH } }
+          );
           console.log(`✅ Compte ${numeroH} mis à jour`);
+        } else {
+          console.log(`✅ Compte ${numeroH} déjà OK`);
         }
       } else {
-        await User.create({
-          numeroH, prenom, nomFamille: nom, password: hashedPassword,
-          role: 'super-admin', isActive: true, isVerified: true,
-          type: 'vivant', genre: 'AUTRE', generation
-        });
+        await User.sequelize.query(
+          `INSERT INTO users (numero_h, password, role, prenom, nom_famille, genre, generation, type, is_active, is_verified, created_at, updated_at)
+           VALUES (:n, :p, 'super-admin', :prenom, :nom, 'AUTRE', :gen, 'vivant', true, true, NOW(), NOW())
+           ON CONFLICT (numero_h) DO UPDATE SET password=:p, role='super-admin', is_active=true`,
+          { replacements: { n: numeroH, p: hashedPassword, prenom, nom, gen: generation } }
+        );
         console.log(`✅ Compte ${numeroH} créé`);
       }
     } catch (e) {
