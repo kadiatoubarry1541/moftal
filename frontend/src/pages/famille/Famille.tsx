@@ -24,24 +24,28 @@ interface NavCard {
   to: string
   emoji: string
   label: string
+  state?: Record<string, unknown>
 }
 
-function Card({ to, emoji, label }: NavCard) {
+function Card({ to, emoji, label, state }: NavCard) {
   return (
     <Link
       to={to}
-      className="w-full flex flex-col items-center justify-center gap-0.5 py-3 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-emerald-50 hover:border-emerald-200 active:scale-95"
+      state={state}
+      className="w-full flex flex-col items-center justify-center gap-0.5 py-2 px-0.5 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-emerald-50 hover:border-emerald-200 active:scale-95"
     >
-      <span className="text-2xl leading-none">{emoji}</span>
-      <span className="text-[10px] font-medium text-gray-600 text-center leading-tight">{label}</span>
+      <span className="text-xl leading-none">{emoji}</span>
+      <span className="text-[9px] font-medium text-gray-600 text-center leading-tight">{label}</span>
     </Link>
   )
 }
 
 const FAMILLE_PAGES = [
-  { id: 'amitie',     emoji: '💕', label: 'Amitié',        to: '/famille/mes-amours' },
-  { id: 'histoire',   emoji: '📜', label: 'Reci Humanité', to: '/famille/histoire'   },
-  { id: 'solidarite', emoji: '🤝', label: 'Solidarité',    to: '/solidarite'         },
+  { id: 'arbre',      emoji: '🌳', label: 'Mon Arbre',  to: '/famille/moi/arbre'  },
+  { id: 'foyer',      emoji: '🏠', label: 'Foyer',      to: '/famille/foyer'      },
+  { id: 'amitie',     emoji: '💕', label: 'Amitié',     to: '/famille/mes-amours' },
+  { id: 'histoire',   emoji: '📜', label: 'Récit',      to: '/famille/histoire'   },
+  { id: 'solidarite', emoji: '🤝', label: 'Solidarité', to: '/solidarite'         },
 ]
 
 function getFav(numeroH: string) {
@@ -177,12 +181,15 @@ export default function Famille() {
         </div>
       )}
 
-      {/* ── 4 boutons pleine largeur — comme le nav dashboard ── */}
-      <div className="grid grid-cols-4 gap-1.5">
-        <Card to="/famille/moi/arbre" emoji="🌳" label="Héritage" />
-        <Card to="/famille/mes-amours" emoji="💕" label="Amitié"       />
-        <Card to="/famille/histoire"   emoji="📜" label="Reci Humanité"/>
-        <Card to="/solidarite"         emoji="🤝" label="Solidarité"   />
+      {/* ── 7 boutons sur une seule ligne ── */}
+      <div className="grid grid-cols-7 gap-1">
+        <Card to="/famille/moi/arbre" emoji="🌳" label="Mon Arbre" />
+        <Card to="/famille/foyer"     emoji="🏠" label="Foyer" />
+        <Card to="/famille/moi/arbre" emoji="💬" label="Messages"  state={{ tab: 'echanges' }} />
+        <Card to="/famille/moi/arbre" emoji="📷" label="Galerie"   state={{ openGallery: true }} />
+        <Card to="/famille/mes-amours" emoji="💕" label="Amitié" />
+        <Card to="/famille/histoire"   emoji="📜" label="Récit" />
+        <Card to="/solidarite"         emoji="🤝" label="Solidarité" />
       </div>
 
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { hideIncrement } from '../../utils/formatNumeroH'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
@@ -286,6 +286,15 @@ export default function Arbre() {
   const [newConseiller, setNewConseiller] = useState('')
   const [savingChefs, setSavingChefs] = useState(false)
   const [msgChefs, setMsgChefs] = useState('')
+
+  const location = useLocation()
+
+  // Onglet ou galerie auto-sélectionné depuis le hub Famille (navigation state)
+  useEffect(() => {
+    const st = location.state as { tab?: string; openGallery?: boolean } | null
+    if (st?.tab === 'echanges') setActiveTab('echanges')
+    if (st?.openGallery) setShowGallery(true)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const effectiveUser = useMemo<UserData>(() => user ?? {
     numeroH: '',
@@ -945,46 +954,36 @@ const enhancedUser: UserData = useMemo(() => {
       </div>
 
       <div className="card">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           Choisissez une zone :
         </p>
         <div
-          className={`grid gap-1 mb-2 ${partner ? 'grid-cols-4' : 'grid-cols-3'}`}
+          className={`grid gap-1 mb-4 ${partner ? 'grid-cols-6' : 'grid-cols-5'}`}
           role="tablist"
-          aria-label="Arbre, messages et galerie"
+          aria-label="Zones de la page"
         >
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === 'echanges'}
             onClick={() => setActiveTab('echanges')}
-            className={`min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
+            className={`rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
               activeTab === 'echanges'
-                ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg scale-[1.02]'
+                ? 'border-emerald-600 bg-emerald-600 text-white shadow-md scale-[1.02]'
                 : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100'
             }`}
           >
-            <span className="text-lg leading-none" aria-hidden>
-              💬
-            </span>
-            <span className="text-[8px] font-bold leading-tight truncate w-full">Messages famille</span>
-            <span
-              className={`text-[7px] truncate w-full font-medium ${activeTab === 'echanges' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}
-            >
-              Parler à la famille
-            </span>
+            <span className="text-base leading-none" aria-hidden>💬</span>
+            <span className="text-[8px] font-bold leading-tight truncate w-full">Messages</span>
           </button>
 
           <button
             type="button"
             onClick={openGallery}
-            className="min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100"
+            className="rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100"
           >
-            <span className="text-lg leading-none" aria-hidden>
-              📷
-            </span>
-            <span className="text-[8px] font-bold leading-tight truncate w-full">Galerie famille</span>
-            <span className="text-[7px] font-medium text-gray-500 dark:text-gray-400 truncate w-full">Photos et vidéos</span>
+            <span className="text-base leading-none" aria-hidden>📷</span>
+            <span className="text-[8px] font-bold leading-tight truncate w-full">Galerie</span>
           </button>
 
           <button
@@ -992,53 +991,16 @@ const enhancedUser: UserData = useMemo(() => {
             role="tab"
             aria-selected={activeTab === 'arbre'}
             onClick={() => setActiveTab('arbre')}
-            className={`min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400 ${
+            className={`rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
               activeTab === 'arbre'
-                ? 'border-emerald-600 bg-emerald-600 text-white shadow-lg scale-[1.02]'
+                ? 'border-emerald-600 bg-emerald-600 text-white shadow-md scale-[1.02]'
                 : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100'
             }`}
           >
-            <span className="text-lg leading-none" aria-hidden>🌳</span>
+            <span className="text-base leading-none" aria-hidden>🌳</span>
             <span className="text-[8px] font-bold leading-tight truncate w-full">Mon arbre</span>
-            <span className={`text-[7px] truncate w-full font-medium ${activeTab === 'arbre' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}`}>
-              Voir mes liens
-            </span>
           </button>
 
-          {/* Bouton arbre du conjoint — visible seulement si conjoint lié */}
-          {partner && (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'arbre-conjoint'}
-              onClick={() => setActiveTab('arbre-conjoint')}
-              className={`min-h-[60px] rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-center transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-pink-400 ${
-                activeTab === 'arbre-conjoint'
-                  ? 'border-pink-500 bg-pink-500 text-white shadow-lg scale-[1.02]'
-                  : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-pink-400 text-gray-800 dark:text-gray-100'
-              }`}
-            >
-              {partner.photo ? (
-                <img
-                  src={partner.photo}
-                  alt={partner.prenom}
-                  className="w-6 h-6 rounded-full object-cover border-2 border-white shadow"
-                />
-              ) : (
-                <span className="text-lg leading-none" aria-hidden>💑</span>
-              )}
-              <span className="text-[8px] font-bold leading-tight truncate w-full">
-                Arbre de {partner.prenom}
-              </span>
-              <span className={`text-[7px] truncate w-full font-medium ${activeTab === 'arbre-conjoint' ? 'text-pink-100' : 'text-gray-500 dark:text-gray-400'}`}>
-                Voir ses liens
-              </span>
-            </button>
-          )}
-        </div>
-
-        {/* ─── Accès rapides — quittent cette page ─── */}
-        <div className="flex gap-2 mb-4">
           <button
             type="button"
             onClick={() => {
@@ -1049,17 +1011,42 @@ const enhancedUser: UserData = useMemo(() => {
               if (sousPrefecture) params.set('city', sousPrefecture)
               navigate(`/liste-professionnels?${params.toString()}`)
             }}
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 transition-all hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400"
+            className="rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-amber-400 text-gray-800 dark:text-gray-100"
           >
-            <span aria-hidden>🏛️</span> Mairie <span className="text-gray-400" aria-hidden>↗</span>
+            <span className="text-base leading-none" aria-hidden>🏛️</span>
+            <span className="text-[8px] font-bold leading-tight truncate w-full">Mairie ↗</span>
           </button>
+
           <button
             type="button"
             onClick={() => navigate('/probleme')}
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 transition-all hover:border-emerald-400 hover:text-emerald-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400"
+            className="rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-amber-400 text-gray-800 dark:text-gray-100"
           >
-            <span aria-hidden>🚨</span> Mes problèmes <span className="text-gray-400" aria-hidden>↗</span>
+            <span className="text-base leading-none" aria-hidden>🚨</span>
+            <span className="text-[8px] font-bold leading-tight truncate w-full">Problèmes ↗</span>
           </button>
+
+          {/* Bouton arbre du conjoint — visible seulement si conjoint lié */}
+          {partner && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'arbre-conjoint'}
+              onClick={() => setActiveTab('arbre-conjoint')}
+              className={`rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+                activeTab === 'arbre-conjoint'
+                  ? 'border-pink-500 bg-pink-500 text-white shadow-md scale-[1.02]'
+                  : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-pink-400 text-gray-800 dark:text-gray-100'
+              }`}
+            >
+              {partner.photo ? (
+                <img src={partner.photo} alt={partner.prenom} className="w-5 h-5 rounded-full object-cover border border-white shadow" />
+              ) : (
+                <span className="text-base leading-none" aria-hidden>💑</span>
+              )}
+              <span className="text-[8px] font-bold leading-tight truncate w-full">{partner.prenom}</span>
+            </button>
+          )}
         </div>
 
         {/* ─── Numéro de sang familial ─── */}
