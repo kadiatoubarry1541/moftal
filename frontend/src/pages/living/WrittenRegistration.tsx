@@ -124,8 +124,7 @@ export function WrittenRegistration() {
     [data.regionCode, data.paysCode, data.continentCode]
   )
 
-  // Sous-préfecture optionnelle (n'existe pas dans tous les pays)
-  const paysComplete = !!(data.paysCode && data.region?.trim() && data.prefecture?.trim() && data.quartier?.trim())
+  const paysComplete = !!(data.paysCode && data.region?.trim() && data.prefecture?.trim() && data.sousPrefecture?.trim() && data.quartier?.trim())
   const paysSummary = paysComplete
     ? [countries.find((c) => c.code === data.paysCode && c.continentCode === data.continentCode)?.name || data.pays, data.region?.trim(), data.prefecture?.trim(), data.sousPrefecture?.trim(), data.quartier?.trim()].filter(Boolean).join(' › ')
     : ''
@@ -161,7 +160,7 @@ export function WrittenRegistration() {
     if (!data.paysCode) errors.add('paysCode')
     if (!(data.region && data.region.trim())) errors.add('region')
     if (!(data.prefecture && data.prefecture.trim())) errors.add('prefecture')
-    // sousPrefecture est optionnelle (concept qui n'existe pas dans tous les pays)
+    if (!(data.sousPrefecture && data.sousPrefecture.trim())) errors.add('sousPrefecture')
     if (!(data.quartier && data.quartier.trim())) errors.add('quartier')
     if (!hasEthnie) errors.add('ethnie')
     if (!hasFamille) errors.add('famille')
@@ -426,7 +425,7 @@ export function WrittenRegistration() {
   // Calcul indicateur d'étapes
   const totalSteps = 4
   const step1Done = !!data.dateNaissance
-  const step2Done = step1Done && !!data.paysCode && !!(data.region?.trim()) && !!(data.prefecture?.trim()) && !!(data.quartier?.trim())
+  const step2Done = step1Done && !!data.paysCode && !!(data.region?.trim()) && !!(data.prefecture?.trim()) && !!(data.sousPrefecture?.trim()) && !!(data.quartier?.trim())
   const step3Done = step2Done && identiteOK && coordonneesOK
   const step4Done = step3Done && !!data.email && !!data.password && data.password === data.confirmPassword && data.password.length >= 6
   const currentStep = step4Done ? 4 : step3Done ? 3 : step2Done ? 2 : 1
@@ -436,7 +435,7 @@ export function WrittenRegistration() {
   if (!data.paysCode) missingFields.push('Pays')
   if (!(data.region && data.region.trim())) missingFields.push('Région')
   if (!(data.prefecture && data.prefecture.trim())) missingFields.push('Préfecture')
-  // Sous-préfecture est optionnelle
+  if (!(data.sousPrefecture && data.sousPrefecture.trim())) missingFields.push('Ville / Commune')
   if (!(data.quartier && data.quartier.trim())) missingFields.push('Quartier')
   if (!ethnieFilled) missingFields.push('Ethnie')
   if (!familleFilled) missingFields.push('Nom de famille')
@@ -691,15 +690,16 @@ export function WrittenRegistration() {
                         </datalist>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Commune / Ville <span className="text-gray-400 font-normal">(optionnel)</span></label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Ville / Commune *</label>
                         <input
                           type="text"
                           value={data.sousPrefecture}
                           onChange={(e) => {
                             const v = e.target.value
                             setData((prev) => ({ ...prev, sousPrefecture: v }))
+                            if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('sousPrefecture'); return n })
                           }}
-                          placeholder="Commune, ville ou sous-préfecture"
+                          placeholder="Ex: Kaloum, Paris, New York, Londres…"
                           className={getFieldClassName('sousPrefecture', !!(data.sousPrefecture?.trim()))}
                         />
                       </div>
