@@ -210,7 +210,8 @@ function App() {
   const isHome = pathname === "/";
   const showFullHeader = !isLoggedIn || isHome;
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden">
+    <div className={!isFullscreenPage ? "bg-gray-300 dark:bg-gray-950 min-h-screen" : ""}>
+    <div className={`min-h-screen flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl' : ''}`}>
       {!isFullscreenPage && showFullHeader && <Banner />}
 
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine */}
@@ -551,6 +552,7 @@ function App() {
           className: "dark:bg-gray-800 dark:text-gray-100",
         }}
       />
+    </div>
     </div>
   );
 }

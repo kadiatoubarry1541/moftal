@@ -579,7 +579,7 @@ export default function Solidarite() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
+          <nav className="flex flex-nowrap gap-1 py-2">
             {[
               { id: 'dons', label: 'Dons', icon: '🤝' },
               // Onglet Zaka uniquement pour les musulmans (ou admin)
@@ -593,13 +593,13 @@ export default function Solidarite() {
               <button
                 key={tab.id}
                 onClick={() => tab.id === 'zaka' ? navigate('/zaka') : setActiveTab(tab.id as any)}
-                className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-lg font-medium text-[10px] transition-all ${
                   activeTab === tab.id
                     ? 'bg-green-500 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <span className="text-base sm:text-lg">{tab.icon}</span>
+                <span className="text-sm">{tab.icon}</span>
                 <span className="text-center leading-tight">{tab.label}</span>
               </button>
             ))}

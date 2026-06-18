@@ -11,24 +11,20 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    // Vérifier localStorage d'abord
-    const savedTheme = localStorage.getItem("theme") as Theme;
-    if (savedTheme) {
-      return savedTheme;
-    }
-    // Sinon, vérifier la préférence système
-    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      return "dark";
-    }
-    return "light";
-  });
+  const [theme, setThemeState] = useState<Theme>("light");
+
+  useEffect(() => {
+    // Forcer le mode clair au démarrage sur tous les appareils
+    localStorage.setItem("theme", "light");
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add("light");
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
-    localStorage.setItem("theme", theme);
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
