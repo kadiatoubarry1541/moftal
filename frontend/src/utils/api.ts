@@ -32,7 +32,7 @@ export const api = {
   // Enregistrer un utilisateur vivant (vidéo + photo → payload lourd, timeout long)
   async registerLiving(userData: User) {
     const controller = new AbortController()
-    const timeoutMs = 90000 // 90 s pour permettre l'upload vidéo + photo en base64
+    const timeoutMs = 30000 // 30 s max (photo compressée → payload léger)
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
     try {

@@ -12,7 +12,7 @@ const API_BASE_URL = config.API_BASE_URL
  */
 export async function findLastNumeroForPrefix(prefix: string): Promise<number> {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 2500) // ne pas bloquer longtemps si le backend est lent
+  const timeoutId = setTimeout(() => controller.abort(), 1000) // 1 s max pour ne pas bloquer l'inscription
 
   try {
     // Essayer de récupérer depuis le backend

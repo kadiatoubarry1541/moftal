@@ -193,19 +193,26 @@ export function WrittenRegistration() {
         alert('Veuillez sélectionner un fichier image valide.')
         return
       }
-      if (file.size > 5 * 1024 * 1024) {
-        alert('La photo doit faire moins de 5MB.')
+      if (file.size > 10 * 1024 * 1024) {
+        alert('La photo doit faire moins de 10MB.')
         return
       }
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setData((prev) => ({
-          ...prev,
-          photo: file,
-          photoPreview: e.target?.result as string
-        }))
+      // Compresser la photo côté client avant l'envoi (max 350px, JPEG 70%)
+      const objectUrl = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl)
+        const MAX = 350
+        let w = img.width, h = img.height
+        if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX } }
+        else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX } }
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+        const compressed = canvas.toDataURL('image/jpeg', 0.7)
+        setData((prev) => ({ ...prev, photo: file, photoPreview: compressed }))
       }
-      reader.readAsDataURL(file)
+      img.src = objectUrl
     }
   }
 
@@ -316,19 +323,10 @@ export function WrittenRegistration() {
 
     setData((prev) => ({ ...prev, numeroH }))
 
-    const fileToBase64 = (file: File): Promise<string> =>
-      new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-    const activitePreuveBase64 = normalizedForm.activitePreuve
-      ? await fileToBase64(normalizedForm.activitePreuve)
-      : null
-    const activiteDocBase64 = normalizedForm.activiteDoc
-      ? await fileToBase64(normalizedForm.activiteDoc)
-      : null
+    // Les fichiers activitePreuve/activiteDoc sont volumineux et facultatifs
+    // → on ne les envoie pas lors de l'inscription pour ne pas alourdir le payload
+    const activitePreuveBase64 = null
+    const activiteDocBase64 = null
 
     const { activitePreuve: _p, activiteDoc: _d, photo, ...restForm } = normalizedForm
     const completeData = {
