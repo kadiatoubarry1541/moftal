@@ -433,10 +433,10 @@ export function WrittenRegistration() {
   const missingFields: string[] = []
   if (!data.dateNaissance) missingFields.push('Date de naissance')
   if (!data.paysCode) missingFields.push('Pays')
-  if (!(data.region && data.region.trim())) missingFields.push('État / Province / Région')
-  if (!(data.prefecture && data.prefecture.trim())) missingFields.push('Département / Comté / Préfecture')
-  // Ville/Commune est optionnel
-  if (!(data.quartier && data.quartier.trim())) missingFields.push('Quartier / Arrondissement')
+  if (!(data.region && data.region.trim())) missingFields.push('Zone / Région')
+  if (!(data.prefecture && data.prefecture.trim())) missingFields.push('Ville principale')
+  // Commune / Secteur est optionnel
+  if (!(data.quartier && data.quartier.trim())) missingFields.push('Quartier')
   if (!ethnieFilled) missingFields.push('Ethnie')
   if (!familleFilled) missingFields.push('Nom de famille')
   if (!activiteFilled) missingFields.push('Activité principale')
@@ -650,8 +650,9 @@ export function WrittenRegistration() {
                 </div>
                 {data.paysCode && (
                   <>
+                    {/* Niveau 1 : grande zone */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">État / Province / Région *</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Zone / Région *</label>
                       <input
                         type="text"
                         value={data.region}
@@ -667,45 +668,47 @@ export function WrittenRegistration() {
                       />
                       <datalist id="region-list">{regions.map((r) => <option key={r.code} value={r.name} />)}</datalist>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Département / Comté / Préfecture *</label>
-                        <input
-                          type="text"
-                          value={data.prefecture}
-                          onChange={(e) => {
-                            const v = e.target.value
-                            const matched = prefectures.find((p) => p.name.toLowerCase() === v.trim().toLowerCase())
-                            setData((prev) => ({ ...prev, prefecture: v, prefectureCode: matched?.code || '' }))
-                            if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('prefecture'); return n })
-                          }}
-                          list="prefecture-list"
-                          placeholder="Ex: Conakry, Los Angeles County, Paris…"
-                          className={getFieldClassName('prefecture', !!(data.prefecture?.trim()))}
-                        />
-                        <datalist id="prefecture-list">
-                          {prefectures.map((p) => (
-                            <option key={p.code} value={p.name} />
-                          ))}
-                        </datalist>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Ville / Commune <span className="text-gray-400 font-normal">(si différente du département)</span></label>
-                        <input
-                          type="text"
-                          value={data.sousPrefecture}
-                          onChange={(e) => {
-                            const v = e.target.value
-                            setData((prev) => ({ ...prev, sousPrefecture: v }))
-                            if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('sousPrefecture'); return n })
-                          }}
-                          placeholder="Ex: Kaloum, Paris, New York, Londres…"
-                          className={getFieldClassName('sousPrefecture', !!(data.sousPrefecture?.trim()))}
-                        />
-                      </div>
-                    </div>
+                    {/* Niveau 2 : ville principale */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Quartier / Arrondissement *</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Ville principale *</label>
+                      <input
+                        type="text"
+                        value={data.prefecture}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          const matched = prefectures.find((p) => p.name.toLowerCase() === v.trim().toLowerCase())
+                          setData((prev) => ({ ...prev, prefecture: v, prefectureCode: matched?.code || '' }))
+                          if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('prefecture'); return n })
+                        }}
+                        list="prefecture-list"
+                        placeholder="Ex: Conakry, Los Angeles, Paris, Londres…"
+                        className={getFieldClassName('prefecture', !!(data.prefecture?.trim()))}
+                      />
+                      <datalist id="prefecture-list">
+                        {prefectures.map((p) => (
+                          <option key={p.code} value={p.name} />
+                        ))}
+                      </datalist>
+                    </div>
+                    {/* Niveau 3 : commune / secteur (optionnel) */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Commune / Secteur <span className="text-gray-400 font-normal">(optionnel — si votre ville a des districts)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={data.sousPrefecture}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setData((prev) => ({ ...prev, sousPrefecture: v }))
+                        }}
+                        placeholder="Ex: Kaloum, Hollywood, 11ème arrondissement…"
+                        className={getFieldClassName('sousPrefecture', !!(data.sousPrefecture?.trim()))}
+                      />
+                    </div>
+                    {/* Niveau 4 : quartier */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Quartier *</label>
                       <input
                         type="text"
                         value={data.quartier}
@@ -714,7 +717,7 @@ export function WrittenRegistration() {
                           setData((prev) => ({ ...prev, quartier: v }))
                           if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('quartier'); return n })
                         }}
-                        placeholder="Ex: Kaloum, Brooklyn, Belleville…"
+                        placeholder="Ex: Almamya, Bambeto, Beverly Hills, Bastille…"
                         className={getFieldClassName('quartier', !!(data.quartier?.trim()))}
                       />
                     </div>
