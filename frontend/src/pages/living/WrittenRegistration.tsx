@@ -433,10 +433,10 @@ export function WrittenRegistration() {
   const missingFields: string[] = []
   if (!data.dateNaissance) missingFields.push('Date de naissance')
   if (!data.paysCode) missingFields.push('Pays')
-  if (!(data.region && data.region.trim())) missingFields.push('Région')
-  if (!(data.prefecture && data.prefecture.trim())) missingFields.push('Préfecture')
+  if (!(data.region && data.region.trim())) missingFields.push('État / Province / Région')
+  if (!(data.prefecture && data.prefecture.trim())) missingFields.push('Département / Comté / Préfecture')
   if (!(data.sousPrefecture && data.sousPrefecture.trim())) missingFields.push('Ville / Commune')
-  if (!(data.quartier && data.quartier.trim())) missingFields.push('Quartier')
+  if (!(data.quartier && data.quartier.trim())) missingFields.push('Quartier / Arrondissement')
   if (!ethnieFilled) missingFields.push('Ethnie')
   if (!familleFilled) missingFields.push('Nom de famille')
   if (!activiteFilled) missingFields.push('Activité principale')
@@ -651,7 +651,7 @@ export function WrittenRegistration() {
                 {data.paysCode && (
                   <>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Région *</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">État / Province / Région *</label>
                       <input
                         type="text"
                         value={data.region}
@@ -662,14 +662,14 @@ export function WrittenRegistration() {
                           if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('region'); return n })
                         }}
                         list="region-list"
-                        placeholder="Région"
+                        placeholder="Ex: Basse-Guinée, California, Île-de-France…"
                         className={getFieldClassName('region', !!(data.region?.trim()))}
                       />
                       <datalist id="region-list">{regions.map((r) => <option key={r.code} value={r.name} />)}</datalist>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Préfecture / Département *</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Département / Comté / Préfecture *</label>
                         <input
                           type="text"
                           value={data.prefecture}
@@ -680,7 +680,7 @@ export function WrittenRegistration() {
                             if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('prefecture'); return n })
                           }}
                           list="prefecture-list"
-                          placeholder="Préfecture / Département"
+                          placeholder="Ex: Conakry, Los Angeles County, Paris…"
                           className={getFieldClassName('prefecture', !!(data.prefecture?.trim()))}
                         />
                         <datalist id="prefecture-list">
@@ -705,7 +705,7 @@ export function WrittenRegistration() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Quartier *</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Quartier / Arrondissement *</label>
                       <input
                         type="text"
                         value={data.quartier}
@@ -714,7 +714,7 @@ export function WrittenRegistration() {
                           setData((prev) => ({ ...prev, quartier: v }))
                           if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('quartier'); return n })
                         }}
-                        placeholder="Quartier"
+                        placeholder="Ex: Kaloum, Brooklyn, Belleville…"
                         className={getFieldClassName('quartier', !!(data.quartier?.trim()))}
                       />
                     </div>
