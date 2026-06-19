@@ -3,53 +3,62 @@ import { useI18n } from '../i18n/useI18n'
 
 export function Home() {
   const { t } = useI18n()
-  
+
   return (
-    <div className="max-w-4xl mx-auto w-full px-2 xs:px-0">
-      {/* Logo du site - responsive */}
-      <div className="text-center mb-8 xs:mb-10 sm:mb-12">
-        <picture>
-          <source srcSet="/logo.webp" type="image/webp" />
-          <img
-            src="/logo.png"
-            alt="Logo du site"
-            width="256"
-            height="256"
-            fetchPriority="high"
-            className="mx-auto h-32 xs:h-40 sm:h-48 md:h-64 w-auto max-w-[90vw] object-contain"
-            style={{ display: 'block' }}
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = 'none';
-            }}
-          />
-        </picture>
+    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-10">
+
+      {/* Logo + slogan */}
+      <div className="text-center mb-10">
+        <h1 style={{
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontWeight: 900,
+          fontSize: 'clamp(48px, 10vw, 80px)',
+          color: '#16a34a',
+          letterSpacing: '2px',
+          lineHeight: 1,
+          margin: 0,
+        }}>
+          Moftal
+        </h1>
+        <p className="mt-4 text-gray-500 text-sm sm:text-base max-w-xs sm:max-w-sm mx-auto leading-relaxed">
+          La plateforme qui connecte les familles, les professionnels et les services — en un seul endroit.
+        </p>
       </div>
-      
-      {/* Boutons tactiles, pleine largeur sur très petit écran */}
-      <div className="flex flex-col gap-3 sm:gap-4 max-w-xs xs:max-w-sm mx-auto">
-        <Link 
-          to="/vivant"
-          className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 xs:px-8 py-3.5 sm:py-4 bg-gradient-to-r from-emerald-600 to-sky-500 text-white text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all w-full sm:w-auto"
-        >
-          ✨ {t('home.register')}
-        </Link>
-        <Link 
-          to="/login" 
-          className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 xs:px-8 py-3.5 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-base sm:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl active:scale-[0.98] transition-all w-full sm:w-auto"
+
+      {/* Carte centrale (comme Facebook) */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-sm flex flex-col gap-4">
+
+        <Link
+          to="/login"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-bold text-base sm:text-lg transition-all shadow-md"
         >
           🔐 {t('home.login')}
         </Link>
+
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-gray-400 text-xs font-medium">ou</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        <Link
+          to="/vivant"
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-700 font-bold text-base border border-emerald-200 transition-all"
+        >
+          ✨ Créer un compte
+        </Link>
       </div>
 
-      {/* Lien Conditions d'utilisation */}
+      {/* Lien conditions */}
       <div className="mt-6 text-center">
         <Link
           to="/conditions-utilisation"
-          className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+          className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
         >
           ⚖️ Conditions Générales d'Utilisation
         </Link>
       </div>
+
     </div>
   )
 }

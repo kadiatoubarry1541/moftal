@@ -44,7 +44,7 @@ export default function DynamicAppManifest({
     if (!link) return;
     const originalHref = link.getAttribute("href");
 
-    const icon = iconUrl || "/logo.png";
+    const icon = iconUrl || "/logo-moftal.svg";
     const manifest = {
       id: startUrl,
       name,

@@ -9,6 +9,7 @@ import {
   getPrefecturesByRegion,
   WORLD_GEOGRAPHY,
 } from '../../utils/worldGeography'
+import { getCountryGeoLabels } from '../../utils/countryGeoStructure'
 import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
 
 interface VideoData {
@@ -123,6 +124,12 @@ export function VideoRegistration() {
     () => (videoData.paysCode ? getRegionsByCountry(videoData.paysCode) : []),
     [videoData.paysCode]
   )
+  const geoLabels = useMemo(() => {
+    const countryName = countries.find(
+      (c) => c.code === videoData.paysCode && c.continentCode === videoData.continentCode
+    )?.name || ''
+    return getCountryGeoLabels(countryName)
+  }, [videoData.paysCode, videoData.continentCode, countries])
 
   // ── Bloc Pays : résumé et fermeture au blur ────────────────────────────────
   const paysComplete = !!(
@@ -408,10 +415,10 @@ export function VideoRegistration() {
     const missingFields: string[] = []
     if (!videoData.dateNaissance) missingFields.push('Date de naissance')
     if (!videoData.paysCode) missingFields.push('Pays')
-    if (!(videoData.region?.trim())) missingFields.push('Région')
-    if (!(videoData.prefecture?.trim())) missingFields.push('Préfecture')
-    if (!(videoData.sousPrefecture?.trim())) missingFields.push('Sous-préfecture')
-    if (!(videoData.quartier?.trim())) missingFields.push('Quartier')
+    if (!(videoData.region?.trim())) missingFields.push(geoLabels.level1.label)
+    if (!(videoData.prefecture?.trim())) missingFields.push(geoLabels.level2.label)
+    if (!(videoData.sousPrefecture?.trim())) missingFields.push(geoLabels.level3.label)
+    if (!(videoData.quartier?.trim())) missingFields.push(geoLabels.level4.label)
     if (!ethnieFilled) missingFields.push('Ethnie')
     if (!familleFilled) missingFields.push('Nom de famille')
     if (!activiteFilled) missingFields.push('Activité principale')
@@ -511,7 +518,7 @@ export function VideoRegistration() {
                   {videoData.paysCode && (
                     <>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Région *</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{geoLabels.level1.label} *</label>
                         <input
                           type="text"
                           value={videoData.region}
@@ -522,14 +529,14 @@ export function VideoRegistration() {
                             if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('region'); return n })
                           }}
                           list="region-list-video"
-                          placeholder="Région"
+                          placeholder={geoLabels.level1.placeholder}
                           className={getFieldClassName('region', !!(videoData.region?.trim()))}
                         />
                         <datalist id="region-list-video">{regions.map((r) => <option key={r.code} value={r.name} />)}</datalist>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Préfecture *</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">{geoLabels.level2.label} *</label>
                           <input
                             type="text"
                             value={videoData.prefecture}
@@ -543,7 +550,7 @@ export function VideoRegistration() {
                               if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('prefecture'); return n })
                             }}
                             list="prefecture-list-video"
-                            placeholder="Préfecture"
+                            placeholder={geoLabels.level2.placeholder}
                             className={getFieldClassName('prefecture', !!(videoData.prefecture?.trim()))}
                           />
                           <datalist id="prefecture-list-video">
@@ -554,7 +561,7 @@ export function VideoRegistration() {
                           </datalist>
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Sous-préfecture *</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">{geoLabels.level3.label} *</label>
                           <input
                             type="text"
                             value={videoData.sousPrefecture}
@@ -563,13 +570,13 @@ export function VideoRegistration() {
                               setVideoData((prev) => ({ ...prev, sousPrefecture: v }))
                               if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('sousPrefecture'); return n })
                             }}
-                            placeholder="Sous-préfecture"
+                            placeholder={geoLabels.level3.placeholder}
                             className={getFieldClassName('sousPrefecture', !!(videoData.sousPrefecture?.trim()))}
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Quartier *</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{geoLabels.level4.label} *</label>
                         <input
                           type="text"
                           value={videoData.quartier}
@@ -578,7 +585,7 @@ export function VideoRegistration() {
                             setVideoData((prev) => ({ ...prev, quartier: v }))
                             if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('quartier'); return n })
                           }}
-                          placeholder="Quartier"
+                          placeholder={geoLabels.level4.placeholder}
                           className={getFieldClassName('quartier', !!(videoData.quartier?.trim()))}
                         />
                       </div>

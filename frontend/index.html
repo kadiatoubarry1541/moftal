@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     <meta name="robots" content="index, follow" />
 
     <!-- Favicon SVG (2.6KB) — priorité au SVG pour éviter de charger le PNG 227KB comme favicon -->
@@ -26,12 +26,12 @@
     <link rel="preconnect" href="https://enfants-adam-backend.onrender.com" crossorigin />
     <link rel="dns-prefetch" href="https://enfants-adam-backend.onrender.com" />
 
-    <!-- Script inline minimal pour bloquer le flash mode sombre avant le premier paint -->
+    <!-- Forcer le mode clair toujours -->
     <script>
-      (function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.replace('light','dark');}}catch(e){}})();
+      (function(){try{document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');localStorage.setItem('theme','light');}catch(e){}})();
     </script>
 
-    <title>Les Enfants d'Adam - Plateforme Guinéenne</title>
+    <title>Moftal</title>
   </head>
   <body>
     <div id="root"></div>

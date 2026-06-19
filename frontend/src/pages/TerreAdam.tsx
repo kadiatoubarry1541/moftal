@@ -8,6 +8,7 @@ import {
   type GeographicLocation
 } from '../utils/worldGeography';
 import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countryFlags';
+import { getCountryGeoLabels } from '../utils/countryGeoStructure';
 import { AudioRecorder } from '../components/AudioRecorder';
 
 interface UserData {
@@ -46,19 +47,6 @@ interface ResidenceMessage {
   numeroH: string;
 }
 
-function DevelopmentBlock({ scope }: { scope: string }) {
-  return (
-    <div className="bg-white rounded-lg shadow-sm border border-dashed border-emerald-300 p-3 sm:p-4 md:p-5 mt-3 sm:mt-4 md:mt-6">
-      <h3 className="text-sm sm:text-base md:text-lg font-bold text-emerald-700 mb-1.5 sm:mb-2">
-        🌱 Développement – {scope}
-      </h3>
-      <p className="text-[11px] sm:text-xs md:text-sm text-slate-600">
-        Espace pour échanger et organiser le <strong>développement</strong> local : projets, améliorations,
-        actions à venir. Les gens du même quartier se retrouvent ici pour en parler ensemble.
-      </p>
-    </div>
-  );
-}
 
 // Affiche seulement la partie "GxCxPxRxExF" du NumeroH (sans le suffixe après l'espace)
 function formatShortNumeroH(numeroH?: string | null): string | null {
@@ -464,9 +452,6 @@ export default function TerreAdam() {
                 <h1 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-900 break-words">
                   Terre ADAM {effectiveContinent?.name ? `- ${effectiveContinent.name}` : ''}
                 </h1>
-                <p className="mt-0.5 sm:mt-1 md:mt-2 text-[10px] sm:text-xs md:text-sm text-gray-600 break-words">
-                  Page d'information : les gens du même quartier se retrouvent ici pour échanger sur le développement local (projets, actions, vie du quartier).
-                </p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -546,7 +531,6 @@ export default function TerreAdam() {
                 <span className="text-base sm:text-lg md:text-xl lg:text-2xl">🏠</span>
                 <span className="text-[11px] sm:text-xs md:text-sm lg:text-base">Résidence</span>
               </h2>
-              <DevelopmentBlock scope="Résidence" />
               {/* Sous-onglets : chaque quartier (Résidence 1, 2, 3) à part, puis Sous-préfecture et Préfecture */}
               <div className="border-b border-gray-200 mb-3 sm:mb-4 md:mb-6 overflow-hidden">
                 <nav className="flex space-x-1 sm:space-x-2 md:space-x-4 overflow-x-auto">
@@ -583,8 +567,8 @@ export default function TerreAdam() {
                       })(),
                       icon: '🏘️'
                     },
-                    { id: 'sous-prefecture' as LieuTabId, label: userSousPrefecture?.name || userData.sousPrefecture || 'Sous-préfecture', icon: '🏛️' },
-                    { id: 'prefecture' as LieuTabId, label: userPrefecture?.name || userData.prefecture || 'Préfecture', icon: '🏢' }
+                    { id: 'sous-prefecture' as LieuTabId, label: userSousPrefecture?.name || userData.sousPrefecture || getCountryGeoLabels(userData.pays || '').level3.label, icon: '🏛️' },
+                    { id: 'prefecture' as LieuTabId, label: userPrefecture?.name || userData.prefecture || getCountryGeoLabels(userData.pays || '').level2.label, icon: '🏢' }
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -1007,18 +991,17 @@ export default function TerreAdam() {
                     </div>
                   )}
 
-                  {/* Page Sous-préfecture */}
+                  {/* Page niveau 3 (Sous-préfecture / Commune / Ward...) */}
                   {activeLieuTab === 'sous-prefecture' && (
                     <div className="text-[11px] sm:text-xs md:text-sm text-gray-600">
-                      {/* Ici, seul le nom dans l'onglet et le haut de page sert d'information. */}
-                      {userSousPrefecture?.name || userData.sousPrefecture || 'Sous-préfecture non définie'}
+                      {userSousPrefecture?.name || userData.sousPrefecture || getCountryGeoLabels(userData.pays || '').level3.label}
                     </div>
                   )}
 
-                  {/* Page Préfecture */}
+                  {/* Page niveau 2 (Préfecture / Département / County...) */}
                   {activeLieuTab === 'prefecture' && (
                     <div className="text-[11px] sm:text-xs md:text-sm text-gray-600">
-                      {userPrefecture?.name || userData.prefecture || 'Préfecture non définie'}
+                      {userPrefecture?.name || userData.prefecture || getCountryGeoLabels(userData.pays || '').level2.label}
                     </div>
                   )}
 
@@ -1051,7 +1034,6 @@ export default function TerreAdam() {
                   {userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'}
                 </span>
               </h2>
-              <DevelopmentBlock scope="Région" />
 
               {userData?.regionCode ? (
                 <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
@@ -1061,19 +1043,6 @@ export default function TerreAdam() {
                       <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 mb-1.5 sm:mb-2 break-words">
                         {userRegion?.name || userData.region || userData.regionOrigine || 'Non défini'}
                       </h3>
-                      {userData.regionCode && (
-                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 mb-2 sm:mb-3">
-                          Code : <span className="font-mono font-semibold">{userData.regionCode}</span>
-                        </p>
-                      )}
-                      <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-green-300">
-                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-700 font-medium break-words">
-                          <strong>Pays :</strong> {userCountry?.name || userData.pays || 'Non défini'} {getCountryFlag(userData.paysCode, userCountry?.name)}
-                        </p>
-                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-700 font-medium break-words">
-                          <strong>Continent :</strong> {userContinent?.name || userData.continent || 'Non défini'} {getContinentIcon(userData.continentCode, userContinent?.name)}
-                        </p>
-                      </div>
                     </div>
                   </div>
 
@@ -1106,7 +1075,6 @@ export default function TerreAdam() {
                   {effectiveCountry?.name || userData?.pays || 'Pays'}
                 </span>
               </h2>
-              <DevelopmentBlock scope="Pays" />
 
               {effectiveCountry ? (
                 <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
@@ -1153,7 +1121,6 @@ export default function TerreAdam() {
                   {effectiveContinent?.name || userData?.continent || 'Continent'}
                 </span>
               </h2>
-              <DevelopmentBlock scope="Continent" />
 
               {effectiveContinent ? (
                 <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
@@ -1168,23 +1135,6 @@ export default function TerreAdam() {
                       <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 mb-1.5 sm:mb-2 break-words">
                         {effectiveContinent?.name || userData?.continent || 'Non défini'}
                       </h3>
-                      {userData?.continentCode && (
-                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 mb-2 sm:mb-3">
-                          Code : <span className="font-mono font-semibold">{userData.continentCode}</span>
-                        </p>
-                      )}
-                      <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-orange-300">
-                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 break-words">
-                          <strong>Pays :</strong>{' '}
-                          {effectiveCountry?.name || userData?.pays || 'Non défini'}{' '}
-                          {effectiveCountry
-                            ? getCountryFlag(
-                                userData?.paysCode || effectiveCountry.code,
-                                effectiveCountry.name
-                              )
-                            : getCountryFlag(undefined, undefined)}
-                        </p>
-                      </div>
                     </div>
                   </div>
 
@@ -1216,7 +1166,6 @@ export default function TerreAdam() {
                 <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">🌎</div>
                 {/* Pas de bouton d'accès séparé : l'espace est déjà cette page */}
               </div>
-              <DevelopmentBlock scope="Monde" />
             </div>
           </div>
         )}

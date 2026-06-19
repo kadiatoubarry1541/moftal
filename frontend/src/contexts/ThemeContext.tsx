@@ -27,12 +27,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.add(theme);
   }, [theme]);
 
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
+  const setTheme = (_newTheme: Theme) => {
+    setThemeState("light");
   };
 
   const toggleTheme = () => {
-    setThemeState((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
+    setThemeState("light");
   };
 
   return (

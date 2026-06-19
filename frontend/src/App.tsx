@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation, Link, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Banner } from "./components/Banner";
-import { ThemeToggleCompact } from "./components/ThemeToggle";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
 import { getSessionUser, isAdmin } from "./utils/auth";
@@ -220,24 +219,16 @@ function App() {
           <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
             {/* Logo */}
             <Link to="/" className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0" aria-label="Accueil">
-              <picture>
-                <source srcSet="/logo.webp" type="image/webp" />
-                <img
-                  src="/logo.png"
-                  alt="Logo"
-                  width="48"
-                  height="48"
-                  decoding="async"
-                  className="h-9 w-9 xs:h-10 xs:w-10 sm:h-10 sm:w-10 md:h-12 md:w-12 object-contain"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </picture>
+              <img
+                src="/icon-moftal.svg"
+                alt="Moftal"
+                width="72"
+                height="72"
+                className="h-16 w-16 sm:h-18 sm:w-18"
+              />
             </Link>
             
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end min-h-[44px]">
-              <ThemeToggleCompact />
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <label className="text-xs xs:text-sm text-gray-600 dark:text-gray-300 hidden xs:inline">Lang</label>
                 <select
@@ -266,10 +257,7 @@ function App() {
           <div style={{ maxWidth: 980, margin: "0 auto", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             {/* Logo + nom de l'app */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
-              <picture>
-                <source srcSet="/logo.webp" type="image/webp" />
-                <img src="/logo.png" alt="Logo" style={{ height: 34, width: 34, borderRadius: 8, objectFit: "contain" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-              </picture>
+              <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 34, width: 34, objectFit: "contain" }} />
               <div>
                 <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>Professionnel</div>
                 <div style={{ color: "#475569", fontSize: 11, fontWeight: 500 }}>Moftal</div>

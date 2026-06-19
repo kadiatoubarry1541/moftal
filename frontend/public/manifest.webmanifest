@@ -1,0 +1,16 @@
+{
+  "name": "Moftal",
+  "short_name": "Moftal",
+  "description": "Moftal",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "fr",
+  "background_color": "#ffffff",
+  "theme_color": "#065f46",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.webp", "sizes": "192x192", "type": "image/webp", "purpose": "any" }
+  ]
+}

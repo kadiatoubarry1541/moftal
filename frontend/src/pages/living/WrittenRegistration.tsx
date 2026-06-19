@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../../utils/api'
 import { getAllCountries, getRegionsByCountry, getContinentAndRegionByCountry, getPrefecturesByRegion, WORLD_GEOGRAPHY } from '../../utils/worldGeography'
 import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
+import { getCountryGeoLabels } from '../../utils/countryGeoStructure'
 
 interface WrittenData {
   numeroHPere: string
@@ -124,7 +125,15 @@ export function WrittenRegistration() {
     [data.regionCode, data.paysCode, data.continentCode]
   )
 
-  const paysComplete = !!(data.paysCode && data.region?.trim() && data.prefecture?.trim() && data.quartier?.trim())
+  // Labels géographiques dynamiques selon le pays sélectionné
+  const geoLabels = useMemo(() => {
+    const countryName = countries.find(
+      (c) => c.code === data.paysCode && c.continentCode === data.continentCode
+    )?.name || ''
+    return getCountryGeoLabels(countryName)
+  }, [data.paysCode, data.continentCode, countries])
+
+  const paysComplete = !!(data.paysCode && data.region?.trim() && data.prefecture?.trim() && data.sousPrefecture?.trim() && data.quartier?.trim())
   const paysSummary = paysComplete
     ? [countries.find((c) => c.code === data.paysCode && c.continentCode === data.continentCode)?.name || data.pays, data.region?.trim(), data.prefecture?.trim(), data.sousPrefecture?.trim(), data.quartier?.trim()].filter(Boolean).join(' › ')
     : ''
@@ -160,7 +169,7 @@ export function WrittenRegistration() {
     if (!data.paysCode) errors.add('paysCode')
     if (!(data.region && data.region.trim())) errors.add('region')
     if (!(data.prefecture && data.prefecture.trim())) errors.add('prefecture')
-    // Ville/Commune optionnel : dans certains pays le département = la ville (ex: Monaco, Berlin)
+    if (!(data.sousPrefecture && data.sousPrefecture.trim())) errors.add('sousPrefecture')
     if (!(data.quartier && data.quartier.trim())) errors.add('quartier')
     if (!hasEthnie) errors.add('ethnie')
     if (!hasFamille) errors.add('famille')
@@ -425,7 +434,7 @@ export function WrittenRegistration() {
   // Calcul indicateur d'étapes
   const totalSteps = 4
   const step1Done = !!data.dateNaissance
-  const step2Done = step1Done && !!data.paysCode && !!(data.region?.trim()) && !!(data.prefecture?.trim()) && !!(data.quartier?.trim())
+  const step2Done = step1Done && !!data.paysCode && !!(data.region?.trim()) && !!(data.prefecture?.trim()) && !!(data.sousPrefecture?.trim()) && !!(data.quartier?.trim())
   const step3Done = step2Done && identiteOK && coordonneesOK
   const step4Done = step3Done && !!data.email && !!data.password && data.password === data.confirmPassword && data.password.length >= 6
   const currentStep = step4Done ? 4 : step3Done ? 3 : step2Done ? 2 : 1
@@ -433,10 +442,10 @@ export function WrittenRegistration() {
   const missingFields: string[] = []
   if (!data.dateNaissance) missingFields.push('Date de naissance')
   if (!data.paysCode) missingFields.push('Pays')
-  if (!(data.region && data.region.trim())) missingFields.push('Zone / Région')
-  if (!(data.prefecture && data.prefecture.trim())) missingFields.push('Ville principale')
-  // Commune / Secteur est optionnel
-  if (!(data.quartier && data.quartier.trim())) missingFields.push('Quartier')
+  if (!(data.region && data.region.trim())) missingFields.push(geoLabels.level1.label)
+  if (!(data.prefecture && data.prefecture.trim())) missingFields.push(geoLabels.level2.label)
+  if (!(data.sousPrefecture && data.sousPrefecture.trim())) missingFields.push(geoLabels.level3.label)
+  if (!(data.quartier && data.quartier.trim())) missingFields.push(geoLabels.level4.label)
   if (!ethnieFilled) missingFields.push('Ethnie')
   if (!familleFilled) missingFields.push('Nom de famille')
   if (!activiteFilled) missingFields.push('Activité principale')
@@ -650,9 +659,9 @@ export function WrittenRegistration() {
                 </div>
                 {data.paysCode && (
                   <>
-                    {/* Niveau 1 : grande zone */}
+                    {/* Niveau 1 : grande zone (label selon le pays) */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Zone / Région *</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{geoLabels.level1.label} *</label>
                       <input
                         type="text"
                         value={data.region}
@@ -663,14 +672,14 @@ export function WrittenRegistration() {
                           if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('region'); return n })
                         }}
                         list="region-list"
-                        placeholder="Ex: Basse-Guinée, California, Île-de-France…"
+                        placeholder={geoLabels.level1.placeholder}
                         className={getFieldClassName('region', !!(data.region?.trim()))}
                       />
                       <datalist id="region-list">{regions.map((r) => <option key={r.code} value={r.name} />)}</datalist>
                     </div>
-                    {/* Niveau 2 : ville principale */}
+                    {/* Niveau 2 : zone intermédiaire (label selon le pays) */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Ville principale *</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{geoLabels.level2.label} *</label>
                       <input
                         type="text"
                         value={data.prefecture}
@@ -681,7 +690,7 @@ export function WrittenRegistration() {
                           if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('prefecture'); return n })
                         }}
                         list="prefecture-list"
-                        placeholder="Ex: Conakry, Los Angeles, Paris, Londres…"
+                        placeholder={geoLabels.level2.placeholder}
                         className={getFieldClassName('prefecture', !!(data.prefecture?.trim()))}
                       />
                       <datalist id="prefecture-list">
@@ -690,25 +699,24 @@ export function WrittenRegistration() {
                         ))}
                       </datalist>
                     </div>
-                    {/* Niveau 3 : commune / secteur (optionnel) */}
+                    {/* Niveau 3 : commune / ville (label selon le pays) */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Commune / Secteur <span className="text-gray-400 font-normal">(optionnel — si votre ville a des districts)</span>
-                      </label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{geoLabels.level3.label} *</label>
                       <input
                         type="text"
                         value={data.sousPrefecture}
                         onChange={(e) => {
                           const v = e.target.value
                           setData((prev) => ({ ...prev, sousPrefecture: v }))
+                          if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('sousPrefecture'); return n })
                         }}
-                        placeholder="Ex: Kaloum, Hollywood, 11ème arrondissement…"
+                        placeholder={geoLabels.level3.placeholder}
                         className={getFieldClassName('sousPrefecture', !!(data.sousPrefecture?.trim()))}
                       />
                     </div>
-                    {/* Niveau 4 : quartier */}
+                    {/* Niveau 4 : quartier / village (label selon le pays) */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Quartier *</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{geoLabels.level4.label} *</label>
                       <input
                         type="text"
                         value={data.quartier}
@@ -717,7 +725,7 @@ export function WrittenRegistration() {
                           setData((prev) => ({ ...prev, quartier: v }))
                           if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('quartier'); return n })
                         }}
-                        placeholder="Ex: Almamya, Bambeto, Beverly Hills, Bastille…"
+                        placeholder={geoLabels.level4.placeholder}
                         className={getFieldClassName('quartier', !!(data.quartier?.trim()))}
                       />
                     </div>
