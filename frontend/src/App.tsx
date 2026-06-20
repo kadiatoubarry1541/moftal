@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation, Link, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { Banner } from "./components/Banner";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
 import { getSessionUser, isAdmin } from "./utils/auth";
@@ -211,24 +210,17 @@ function App() {
   return (
     <div className={!isFullscreenPage ? "bg-gray-300 dark:bg-gray-950 min-h-screen" : ""}>
     <div className={`min-h-screen flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl' : ''}`}>
-      {!isFullscreenPage && showFullHeader && <Banner />}
-
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine */}
-      {!isFullscreenPage && <header className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 safe-area-inset-top">
-        <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
-            {/* Logo */}
-            <Link to="/" className="flex items-center hover:opacity-80 transition-opacity flex-shrink-0" aria-label="Accueil">
-              <img
-                src="/icon-moftal.svg"
-                alt="Moftal"
-                width="72"
-                height="72"
-                className="h-16 w-16 sm:h-18 sm:w-18"
-              />
-            </Link>
-            
-            <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end min-h-[44px]">
+      {!isFullscreenPage && <header className="bg-white dark:bg-gray-900 sticky top-0 z-50 safe-area-inset-top">
+        <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 py-1">
+          <div className="flex items-center justify-between gap-2">
+            {/* Logo visible partout une fois connecté */}
+            {isLoggedIn && !isHome && (
+              <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
+                <img src="/logo-moftal.svg" alt="Moftal" width="96" height="96" style={{ width: 96, height: 96 }}/>
+              </Link>
+            )}
+            <div className="flex items-center gap-2 flex-wrap justify-end min-h-[44px]">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <label className="text-xs xs:text-sm text-gray-600 dark:text-gray-300 hidden xs:inline">Lang</label>
                 <select
@@ -257,7 +249,7 @@ function App() {
           <div style={{ maxWidth: 980, margin: "0 auto", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             {/* Logo + nom de l'app */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
-              <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 34, width: 34, objectFit: "contain" }} />
+              <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 40, width: 40, objectFit: "contain" }} />
               <div>
                 <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>Professionnel</div>
                 <div style={{ color: "#475569", fontSize: 11, fontWeight: 500 }}>Moftal</div>
@@ -486,7 +478,7 @@ function App() {
       {!isGestionMode && <footer className="bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black text-white py-4 sm:py-6 mt-auto safe-area-inset-bottom">
         <div className="max-w-7xl mx-auto px-3 xs:px-4 text-center">
           <p className="text-gray-300 dark:text-gray-400 text-xs xs:text-sm sm:text-base">
-            2025 Moftal et Eve - Système d'enregistrement généalogique
+            © 2025 Moftal · Ensemble pour les enfants d'Adam · Système d'enregistrement généalogique
           </p>
           <div className="flex items-center justify-center gap-4 mt-1 flex-wrap">
             <Link
@@ -494,13 +486,6 @@ function App() {
               className="text-gray-400 hover:text-gray-200 text-xs underline transition-colors"
             >
               Conditions d'Utilisation
-            </Link>
-            <span className="text-gray-600 text-xs">·</span>
-            <Link
-              to="/politique-confidentialite"
-              className="text-gray-400 hover:text-gray-200 text-xs underline transition-colors"
-            >
-              Politique de Confidentialité
             </Link>
           </div>
         </div>

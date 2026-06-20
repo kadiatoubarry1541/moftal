@@ -49,6 +49,7 @@ interface UserLogo {
   id: string;
   logoId: string;
   numeroH: string;
+  note?: string;
   assignedAt: string;
   logo: {
     id: string;
@@ -114,6 +115,7 @@ export function UserDashboard() {
   const [activeTab, setActiveTab] = useState(getInitialTab);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [userLogos, setUserLogos] = useState<UserLogo[]>([]);
+  const [selectedLogo, setSelectedLogo] = useState<UserLogo | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -221,7 +223,7 @@ export function UserDashboard() {
   return (
     <div className="user-dashboard bg-gray-50 dark:bg-gray-900 min-h-screen overflow-x-hidden">
       {/* Barre supérieure: Gestion Pro, Favoris, Notifications, Déconnexion */}
-      <div className="flex items-center justify-end px-3 xs:px-4 sm:px-6 pt-3 sm:pt-4 mb-3 sm:mb-4 gap-2 flex-wrap">
+      <div className="flex items-center justify-end px-3 xs:px-4 sm:px-6 pt-1 mb-2 gap-2 flex-wrap">
         <button
           onClick={() => navigate("/gestion-interne")}
           className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors whitespace-nowrap"
@@ -276,7 +278,7 @@ export function UserDashboard() {
       </div>
 
       {/* En-tête profil – pleine largeur sur mobile, compact sur desktop */}
-      <div className="dashboard-header px-3 xs:px-4 sm:px-6 lg:px-8">
+      <div className="dashboard-header px-3 xs:px-4 sm:px-6 lg:px-8 mb-4 mt-[-3.5rem]">
         <div className="max-w-7xl mx-auto">
           <div className="profile-card w-full sm:w-fit max-w-full bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-row items-center gap-4 flex-wrap">
             <div className="user-avatar relative flex-shrink-0">
@@ -319,29 +321,6 @@ export function UserDashboard() {
                   {getLogoIcon(userData.logo)}
                 </div>
               )}
-              {userLogos.slice(0, 2).map((userLogo, index) => {
-                if (!userLogo?.logo) return null;
-                const angle = (index * 90) - 45;
-                const radius = 22;
-                const x = Math.cos((angle * Math.PI) / 180) * radius;
-                const y = Math.sin((angle * Math.PI) / 180) * radius;
-                return (
-                  <div
-                    key={userLogo.id}
-                    className="absolute w-5 h-5 rounded-full bg-white border border-white shadow flex items-center justify-center text-xs"
-                    title={userLogo.logo.name}
-                    style={{
-                      borderColor: userLogo.logo.color || '#10B981',
-                      bottom: `${8 + y}px`,
-                      right: `${8 - x}px`,
-                      zIndex: 10,
-                      color: userLogo.logo.color || '#10B981'
-                    }}
-                  >
-                    {userLogo.logo.icon}
-                  </div>
-                );
-              })}
             </div>
             <div className="user-details flex flex-col gap-2">
               <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">
@@ -368,6 +347,25 @@ export function UserDashboard() {
                 >
                   Mon profil
                 </button>
+                {userLogos.map((userLogo) => {
+                  if (!userLogo?.logo) return null;
+                  return (
+                    <button
+                      key={userLogo.id}
+                      onClick={() => setSelectedLogo(userLogo)}
+                      className="min-h-[36px] w-10 flex items-center justify-center rounded-lg shadow-sm transition-all hover:scale-110 active:scale-95 border-2"
+                      style={{
+                        backgroundColor: `${userLogo.logo.color}20`,
+                        borderColor: userLogo.logo.color || '#10B981',
+                        color: userLogo.logo.color || '#10B981',
+                        fontSize: '20px'
+                      }}
+                      title={userLogo.logo.name}
+                    >
+                      {userLogo.logo.icon}
+                    </button>
+                  );
+                })}
                 {isMasterAdmin(userData) && (
                   <button
                     onClick={() => navigate("/admin")}
@@ -378,6 +376,48 @@ export function UserDashboard() {
                   </button>
                 )}
               </div>
+
+              {/* Modal badge de valeur */}
+              {selectedLogo && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                  onClick={() => setSelectedLogo(null)}
+                >
+                  <div
+                    className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div
+                      className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4"
+                      style={{
+                        backgroundColor: `${selectedLogo.logo.color}20`,
+                        borderColor: selectedLogo.logo.color || '#10B981'
+                      }}
+                    >
+                      {selectedLogo.logo.icon}
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      {selectedLogo.logo.name}
+                    </h3>
+                    {selectedLogo.note ? (
+                      <p className="text-gray-800 font-medium text-sm leading-relaxed">
+                        {selectedLogo.note}
+                      </p>
+                    ) : (
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        {selectedLogo.logo.description}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => setSelectedLogo(null)}
+                      className="mt-5 px-6 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                      style={{ backgroundColor: selectedLogo.logo.color || '#10B981' }}
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

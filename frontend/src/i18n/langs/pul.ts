@@ -1,6 +1,6 @@
 const pul: Record<string, string> = {
-  'app.title': "AADAMA, HAWAA E IYIƊE",
-  'banner.message': "NDE EN NJOGOODI KOƊƊUƊE TOƊƊI NO JOGII KEƊI E NDIƊI HAWA (HOLLIRU NOŊƊU).",
+  'app.title': "IYIƊE AADAMA",
+  'banner.message': "MOFTAL — Jokku mawɓe maa, yah golle, cellal e jannde.",
   'nav.home': 'Jaɓɓorgol',
   'nav.vivant': 'Nguurndu',
   'nav.defunt': 'Maayɗo',

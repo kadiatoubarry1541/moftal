@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Force le dark mode à n'être activé QUE par la classe .dark sur l'élément racine.
+   Sans cette ligne, Tailwind v4 réagit automatiquement à prefers-color-scheme:dark (OS).
+   Le ThemeContext ne met jamais la classe "dark", donc le site reste toujours en clair. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ===== Performance : rendu optimisé ===== */
 /* content-visibility: auto → le navigateur skip le rendu des éléments hors écran */
 /* Appliqué aux sections lourdes pour réduire le Layout cost */
@@ -200,6 +205,8 @@ header {
   .user-avatar {
     position: relative;
     flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: -0.25rem;
   }
 
   .user-avatar .profile-photo {
@@ -207,18 +214,18 @@ header {
   }
 
   .profile-photo--compact {
-    width: 2.75rem;
-    height: 2.75rem;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
+    width: 5.75rem;
+    height: 5.75rem;
+    min-width: 5.75rem;
+    min-height: 5.75rem;
   }
 
   .profile-card .user-avatar .avatar-placeholder {
-    width: 2.75rem;
-    height: 2.75rem;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    font-size: 1rem;
+    width: 5.75rem;
+    height: 5.75rem;
+    min-width: 5.75rem;
+    min-height: 5.75rem;
+    font-size: 1.75rem;
   }
 }
 

@@ -580,6 +580,7 @@ async function initAllTables() {
         "updated_at"  TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+    await sequelize.query(`ALTER TABLE "user_logos" ADD COLUMN IF NOT EXISTS "note" TEXT;`).catch(() => {});
     console.log('✅ Tables logos + user_logos prêtes');
   } catch (err) {
     console.warn('⚠️ initAllTables [logos]:', err.message);

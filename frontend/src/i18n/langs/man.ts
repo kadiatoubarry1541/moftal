@@ -1,6 +1,6 @@
 const man: Record<string, string> = {
-  'app.title': "ADAMA, EBA NI DENW",
-  'banner.message': "MOGO LU KA DÔN KÀ JATEW KA TAARA KAN JÔ, A KA JÔNYE KÔRÔ (A LAFENW KÀ JUGUYA FÈN KILI).",
+  'app.title': "ADAMA DENW",
+  'banner.message': "MOFTAL — I ka soo kɛ, i ka famille ni baara minɛ.",
   'nav.home': 'Soto',
   'nav.vivant': 'Kèla',
   'nav.defunt': 'Kuru',

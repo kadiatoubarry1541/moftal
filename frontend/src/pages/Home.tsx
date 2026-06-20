@@ -7,32 +7,26 @@ export function Home() {
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-10">
 
-      {/* Logo + slogan */}
-      <div className="text-center mb-10">
-        <h1 style={{
-          fontFamily: 'Arial, Helvetica, sans-serif',
-          fontWeight: 900,
-          fontSize: 'clamp(48px, 10vw, 80px)',
-          color: '#16a34a',
-          letterSpacing: '2px',
-          lineHeight: 1,
-          margin: 0,
-        }}>
-          Moftal
-        </h1>
-        <p className="mt-4 text-gray-500 text-sm sm:text-base max-w-xs sm:max-w-sm mx-auto leading-relaxed">
-          La plateforme qui connecte les familles, les professionnels et les services — en un seul endroit.
-        </p>
+      {/* Logo */}
+      <div className="text-center mb-6">
+        <img
+          src="/logo-moftal.svg"
+          alt="Moftal"
+          style={{ width: 220, height: 220, display: 'block', margin: '0 auto' }}
+        />
       </div>
 
-      {/* Carte centrale (comme Facebook) */}
+      {/* Carte centrale */}
       <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-sm flex flex-col gap-4">
 
         <Link
           to="/login"
           className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-bold text-base sm:text-lg transition-all shadow-md"
         >
-          🔐 {t('home.login')}
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          {t('home.login')}
         </Link>
 
         <div className="flex items-center gap-3">
@@ -45,18 +39,12 @@ export function Home() {
           to="/vivant"
           className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] text-emerald-700 font-bold text-base border border-emerald-200 transition-all"
         >
-          ✨ Créer un compte
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+          Créer un compte
         </Link>
-      </div>
 
-      {/* Lien conditions */}
-      <div className="mt-6 text-center">
-        <Link
-          to="/conditions-utilisation"
-          className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
-        >
-          ⚖️ Conditions Générales d'Utilisation
-        </Link>
       </div>
 
     </div>

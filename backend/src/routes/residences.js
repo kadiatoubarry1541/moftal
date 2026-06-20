@@ -10,6 +10,22 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Normalise un nom de lieu : minuscule + sans accents → "TÉLIKO" = "teliko" = "Teliko"
+function normalizeLoc(str) {
+  if (!str) return '';
+  return str.trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Formate joliment pour l'affichage : "teliko" → "Teliko"
+function formatDisplayName(str) {
+  if (!str) return '';
+  return str.trim()
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
 // Configuration multer pour l'upload des médias
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -46,17 +62,34 @@ router.use(authenticate);
 router.get('/groups', async (req, res) => {
   try {
     const { location } = req.query;
-    
+
+    // Normaliser : minuscule + sans accents → "TÉLIKO" = "teliko" = "Téliko" → même groupe
+    const normalizedLocation = location ? normalizeLoc(location) : null;
+
     const where = { isActive: true };
-    if (location) {
-      where.location = location;
+    if (normalizedLocation) {
+      where.location = normalizedLocation;
     }
-    
-    const groups = await ResidenceGroup.findAll({
+
+    let groups = await ResidenceGroup.findAll({
       where,
       order: [['created_at', 'DESC']]
     });
-    
+
+    // Créer automatiquement un groupe si le quartier n'existe pas encore
+    if (normalizedLocation && groups.length === 0) {
+      const displayName = formatDisplayName(location);
+      const newGroup = await ResidenceGroup.create({
+        location: normalizedLocation,
+        title: displayName,
+        description: '',
+        admin: req.user.numeroH,
+        members: [],
+        createdBy: req.user.numeroH
+      });
+      groups = [newGroup];
+    }
+
     res.json({
       success: true,
       groups
@@ -76,9 +109,10 @@ router.get('/groups', async (req, res) => {
 router.post('/groups', requireAdmin, async (req, res) => {
   try {
     const { location, title, description, settings } = req.body;
-    
+    const normalizedLocation = location ? normalizeLoc(location) : location;
+
     const group = await ResidenceGroup.create({
-      location,
+      location: normalizedLocation,
       title,
       description,
       admin: req.user.numeroH,

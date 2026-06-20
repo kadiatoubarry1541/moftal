@@ -48,6 +48,12 @@ interface ResidenceMessage {
 }
 
 
+// Normalise un nom de lieu : minuscule + sans accents → "TÉLIKO" = "teliko" = "Téliko"
+function normalizeLoc(str: string): string {
+  return str.trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 // Affiche seulement la partie "GxCxPxRxExF" du NumeroH (sans le suffixe après l'espace)
 function formatShortNumeroH(numeroH?: string | null): string | null {
   if (!numeroH) return null;
@@ -291,7 +297,8 @@ export default function TerreAdam() {
       const allGroups: any[] = [];
       const seenIds = new Set<string>();
       for (const loc of quartiersToLoad) {
-        const response = await fetch(`http://localhost:5002/api/residences/groups?location=${encodeURIComponent(loc)}`, {
+        const normalizedLoc = normalizeLoc(loc);
+        const response = await fetch(`http://localhost:5002/api/residences/groups?location=${encodeURIComponent(normalizedLoc)}`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
         const data = await response.json();
@@ -372,7 +379,9 @@ export default function TerreAdam() {
     }
 
     // Vérifier si l'utilisateur est admin ou si le groupe correspond au quartier de l'onglet actif
-    const canPublishInGroup = isAdmin || (isQuartierTab && userQuartierCodes.length > 0 && userQuartierCodes.includes(selectedGroup.location));
+    const normalizedGroupLocation = selectedGroup.location ? normalizeLoc(selectedGroup.location) : '';
+    const normalizedUserCodes = userQuartierCodes.map(c => c ? normalizeLoc(c) : null);
+    const canPublishInGroup = isAdmin || (isQuartierTab && normalizedUserCodes.length > 0 && normalizedUserCodes.includes(normalizedGroupLocation));
     if (!canPublishInGroup) {
       alert('Vous ne pouvez publier que dans l\'un de vos quartiers (résidence 1, 2 ou 3). Contactez un administrateur pour obtenir des droits dans d\'autres quartiers.');
       return;
@@ -439,86 +448,68 @@ export default function TerreAdam() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b overflow-hidden">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-3 sm:py-4 md:py-6 overflow-hidden">
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 overflow-hidden flex-1 min-w-0">
-              <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl flex-shrink-0">
+      <div className="bg-gradient-to-r from-emerald-800 to-green-700 shadow-md">
+        <div className="px-3 sm:px-6 max-w-7xl mx-auto">
+          <div className="flex justify-between items-center py-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-2xl flex-shrink-0">
                 {effectiveContinent
                   ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name)
                   : '🌍'}
-              </div>
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <h1 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-900 break-words">
-                  Terre ADAM {effectiveContinent?.name ? `- ${effectiveContinent.name}` : ''}
-                </h1>
+              </span>
+              <div className="min-w-0">
+                <h1 className="text-base font-bold text-white truncate">Terre ADAM</h1>
+                {effectiveContinent?.name && (
+                  <p className="text-xs text-emerald-200 truncate">{effectiveContinent.name}</p>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <button
-                onClick={() => navigate('/moi')}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-1.5 sm:px-2 md:px-3 lg:px-4 py-1 sm:py-1.5 md:py-2 text-[10px] sm:text-xs md:text-sm rounded-lg transition-colors whitespace-nowrap"
-              >
-                ← Retour
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/moi')}
+              className="flex-shrink-0 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+            >
+              ← Retour
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b overflow-hidden">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
-          <nav className="flex flex-wrap justify-center gap-x-2 sm:gap-x-4 md:gap-x-6 lg:gap-x-8 overflow-x-auto">
-            {[
-              { 
-                id: 'lieux', 
-                label: 'Résidence', 
-                icon: '🏠',
-                customLabel: userQuartier ? `Mon Quartier` : 'Résidence'
-              },
-              { 
-                id: 'region', 
-                label: 'Région', 
-                icon: getRegionIcon(
-                  userData?.regionCode,
-                  userRegion?.name || userData?.region || userData?.regionOrigine
-                ),
-                customLabel: userRegion || userData?.region || userData?.regionOrigine ? `Ma Région` : 'Région'
-              },
-              { 
-                id: 'pays', 
-                label: 'Pays', 
-                icon: effectiveCountry
-                  ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name)
-                  : '🏳️',
-                customLabel: effectiveCountry || userData?.pays ? `Mon Pays` : 'Pays'
-              },
-              { 
-                id: 'continent', 
-                label: 'Continent', 
-                icon: effectiveContinent
-                  ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name)
-                  : '🌐',
-                customLabel: effectiveContinent ? `Mon Continent` : 'Continent'
-              },
-              { id: 'mondial', label: 'Mondial', icon: '🌎' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`py-1.5 sm:py-2 md:py-3 px-0.5 sm:px-1 md:px-2 border-b-2 font-medium text-[10px] sm:text-xs md:text-sm flex items-center gap-0.5 sm:gap-1 ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <span className="text-xs sm:text-sm md:text-base">{tab.icon}</span>
-                <span className="text-[10px] sm:text-xs md:text-sm leading-tight">{tab.customLabel || tab.label}</span>
-              </button>
-            ))}
-          </nav>
-        </div>
+      {/* Navigation Tabs - une seule ligne sur tous les appareils */}
+      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
+        <nav className="flex">
+          {[
+            { id: 'lieux', icon: '🏠', label: 'Résidence' },
+            {
+              id: 'region',
+              icon: getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine),
+              label: userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'
+            },
+            {
+              id: 'pays',
+              icon: effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️',
+              label: effectiveCountry?.name || userData?.pays || 'Pays'
+            },
+            {
+              id: 'continent',
+              icon: effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : '🌐',
+              label: effectiveContinent?.name || userData?.continent || 'Continent'
+            },
+            { id: 'mondial', icon: '🌎', label: 'Mondial' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <span className="text-lg leading-none">{tab.icon}</span>
+              <span className="text-[9px] font-medium leading-tight w-full truncate text-center px-0.5">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
 
       {/* Content */}
@@ -527,16 +518,14 @@ export default function TerreAdam() {
         {activeTab === 'lieux' && (
           <div className="space-y-3 sm:space-y-4 md:space-y-6 overflow-hidden">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 overflow-hidden">
-              <h2 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-1.5 sm:gap-2 md:gap-3">
-                <span className="text-base sm:text-lg md:text-xl lg:text-2xl">🏠</span>
-                <span className="text-[11px] sm:text-xs md:text-sm lg:text-base">Résidence</span>
+              <h2 className="text-base font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                <span className="text-xl">🏠</span>
+                <span>Résidence</span>
               </h2>
               {/* Sous-onglets : chaque quartier (Résidence 1, 2, 3) à part, puis Sous-préfecture et Préfecture */}
-              <div className="border-b border-gray-200 mb-3 sm:mb-4 md:mb-6 overflow-hidden">
-                <nav className="flex space-x-1 sm:space-x-2 md:space-x-4 overflow-x-auto">
+              <div className="border-b border-gray-200 mb-4">
+                <nav className="flex">
                   {[
-                    // Les 3 résidences sont toujours affichées, même non renseignées,
-                    // pour que l'utilisateur puisse voir/ajouter ses résidences 2 et 3 depuis son profil
                     {
                       id: 'quartier-1' as LieuTabId,
                       label: (() => {
@@ -573,14 +562,14 @@ export default function TerreAdam() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveLieuTab(tab.id)}
-                      className={`py-1.5 sm:py-2 px-0.5 sm:px-1 md:px-2 border-b-2 font-medium text-[10px] sm:text-xs flex items-center gap-0.5 sm:gap-1 ${
+                      className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
                         activeLieuTab === tab.id
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-xs sm:text-sm md:text-base">{tab.icon}</span>
-                      <span className="text-[10px] sm:text-xs leading-tight break-words">{tab.label}</span>
+                      <span className="text-sm leading-none">{tab.icon}</span>
+                      <span className="text-[9px] font-medium leading-tight w-full truncate text-center px-0.5">{tab.label}</span>
                     </button>
                   ))}
                 </nav>

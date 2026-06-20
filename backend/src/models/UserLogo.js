@@ -28,6 +28,10 @@ const UserLogo = sequelize.define('UserLogo', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  note: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
   assignedAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

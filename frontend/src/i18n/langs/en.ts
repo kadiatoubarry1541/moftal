@@ -1,6 +1,6 @@
 const en: Record<string, string> = {
-  'app.title': "ADAM, EVE AND THEIR CHILDREN",
-  'banner.message': "REGISTRATION OF HUMANS WHO HAD THE CHANCE TO BE BORN ALIVE AND BREATHE AIR (SHOW SIGNS OF LIFE).",
+  'app.title': "ADAM'S CHILDREN",
+  'banner.message': "MOFTAL — Connect your family, access health, education and solidarity services.",
   'nav.home': 'Home',
   'nav.vivant': 'Living',
   'nav.defunt': 'Deceased',

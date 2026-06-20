@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: "autoUpdate",
         // Seuls les assets réellement utiles pour l'app shell PWA
-        includeAssets: ["logo.webp", "logo.svg"],
+        includeAssets: ["logo.svg", "logo-moftal.svg"],
         manifest: {
           name: "Moftal",
           short_name: "Moftal",
@@ -59,15 +59,15 @@ export default defineConfig(({ mode }) => {
           lang: "fr",
           icons: [
             {
-              src: "/logo.png",
+              src: "/logo-moftal.svg",
               sizes: "192x192",
-              type: "image/png",
+              type: "image/svg+xml",
               purpose: "any maskable",
             },
             {
-              src: "/logo.png",
+              src: "/logo-moftal.svg",
               sizes: "512x512",
-              type: "image/png",
+              type: "image/svg+xml",
               purpose: "any maskable",
             },
           ],
@@ -76,19 +76,19 @@ export default defineConfig(({ mode }) => {
             {
               name: "Accueil",
               url: "/",
-              icons: [{ src: "/logo.png", sizes: "96x96" }],
+              icons: [{ src: "/logo-moftal.svg", sizes: "96x96" }],
             },
             {
               name: "Mon Profil",
               url: "/profil",
-              icons: [{ src: "/logo.png", sizes: "96x96" }],
+              icons: [{ src: "/logo-moftal.svg", sizes: "96x96" }],
             },
             {
               name: "Espace Gestion",
               short_name: "Gestion",
               description: "Accès direct à vos espaces de gestion professionnelle",
               url: "/gestion-interne",
-              icons: [{ src: "/logo.png", sizes: "96x96" }],
+              icons: [{ src: "/logo-moftal.svg", sizes: "96x96" }],
             },
           ],
         },
@@ -131,15 +131,15 @@ export default defineConfig(({ mode }) => {
                 },
               },
             },
-            // SVG et PNG servis localement : cache long
+            // Images locales : StaleWhileRevalidate pour toujours avoir la version la plus récente
             {
-              urlPattern: /\.(svg|png)$/i,
-              handler: "CacheFirst",
+              urlPattern: /\.(svg|png|webp|ico)$/i,
+              handler: "StaleWhileRevalidate",
               options: {
                 cacheName: "images-cache",
                 expiration: {
                   maxEntries: 30,
-                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                  maxAgeSeconds: 60 * 60 * 24 * 7,
                 },
               },
             },

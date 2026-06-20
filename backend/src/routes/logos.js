@@ -195,8 +195,8 @@ router.delete('/:id', async (req, res) => {
 router.post('/:id/assign', async (req, res) => {
   try {
     const { id } = req.params;
-    const { numeroH } = req.body;
-    
+    const { numeroH, note } = req.body;
+
     if (!numeroH) {
       return res.status(400).json({
         success: false,
@@ -251,6 +251,7 @@ router.post('/:id/assign', async (req, res) => {
       numeroH,
       logoId: id,
       assignedBy: req.user.numeroH,
+      note: note || null,
       assignedAt: new Date()
     });
 
