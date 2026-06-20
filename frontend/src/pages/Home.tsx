@@ -7,13 +7,16 @@ export function Home() {
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-10">
 
-      {/* Logo */}
+      {/* Logo + slogan */}
       <div className="text-center mb-6">
         <img
           src="/logo-moftal.svg"
           alt="Moftal"
           style={{ width: 220, height: 220, display: 'block', margin: '0 auto' }}
         />
+        <p className="mt-3 text-gray-900 font-semibold text-sm sm:text-base max-w-xs sm:max-w-sm mx-auto leading-relaxed">
+          Gérez votre famille, accédez à vos services et restez connecté à votre communauté — partout dans le monde.
+        </p>
       </div>
 
       {/* Carte centrale */}
