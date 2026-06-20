@@ -5,7 +5,7 @@ export function Home() {
   const { t } = useI18n()
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-10">
+    <div className="flex flex-col items-center justify-center px-4 pt-8 pb-2">
 
       {/* Logo + slogan */}
       <div className="text-center mb-6">

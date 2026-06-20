@@ -208,8 +208,8 @@ function App() {
   const isHome = pathname === "/";
   const showFullHeader = !isLoggedIn || isHome;
   return (
-    <div className={!isFullscreenPage ? "bg-gray-300 dark:bg-gray-950 min-h-screen" : ""}>
-    <div className={`min-h-screen flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl' : ''}`}>
+    <div className={!isFullscreenPage ? "bg-gray-900 min-h-screen" : ""}>
+    <div className={`flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl' : ''}`}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine */}
       {!isFullscreenPage && <header className="bg-white dark:bg-gray-900 sticky top-0 z-50 safe-area-inset-top">
         <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 py-1">
@@ -285,7 +285,7 @@ function App() {
       )}
 
       {/* Main content - plein écran, chaque page gère son propre container */}
-      <main className="flex-1 w-full overflow-x-hidden">
+      <main className="w-full overflow-x-hidden">
         <Suspense fallback={<LoadingBar />}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -475,16 +475,17 @@ function App() {
       )}
 
       {/* Footer site principal — masqué en mode Espace Gestion */}
-      {!isGestionMode && <footer className="bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-900 dark:to-black text-white py-4 sm:py-6 mt-auto safe-area-inset-bottom">
-        <div className="max-w-7xl mx-auto px-3 xs:px-4 text-center">
-          <p className="text-gray-300 dark:text-gray-400 text-xs xs:text-sm sm:text-base">
-            © 2025 Moftal · Ensemble pour les enfants d'Adam · Système d'enregistrement généalogique
+      {!isGestionMode && <footer className="bg-gray-900 text-white py-10 safe-area-inset-bottom">
+        <div className="mx-auto px-6 text-center">
+          <p className="text-gray-300 text-sm mb-5">
+            <span style={{ color: "#22a722" }} className="font-bold">© 2025 Moftal</span>
+            {" · "}Ensemble pour les enfants d'Adam{" · "}Système d'enregistrement généalogique
           </p>
-          <div className="flex items-center justify-center gap-4 mt-1 flex-wrap">
-            <Link
-              to="/conditions-utilisation"
-              className="text-gray-400 hover:text-gray-200 text-xs underline transition-colors"
-            >
+          <div className="flex items-center justify-center gap-5 flex-wrap">
+            <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-sm underline transition-colors inline-flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
               Conditions d'Utilisation
             </Link>
           </div>

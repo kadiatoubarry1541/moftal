@@ -223,7 +223,7 @@ export function FloatingGuideIA() {
         onClick={() => setOpen(o => !o)}
         className="fixed z-[60] flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 select-none"
         style={{
-          bottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px))',
+          bottom: 'max(5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem))',
           right: 'max(1.5rem, env(safe-area-inset-right, 0px))',
           width: 60, height: 60,
           background: 'linear-gradient(135deg,#16a34a 0%,#15803d 50%,#166534 100%)',
@@ -232,7 +232,9 @@ export function FloatingGuideIA() {
             : '0 8px 32px rgba(22,163,74,0.45)',
         }}
       >
-        <span style={{ fontSize: 26, lineHeight: 1 }}>🌳</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
       </button>
 
       {/* ── Tooltip ── */}
@@ -240,7 +242,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
-            bottom: 'calc(max(1.5rem, env(safe-area-inset-bottom, 0px)) + 68px)',
+            bottom: 'calc(max(5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem)) + 68px)',
             right: 'max(1.5rem, env(safe-area-inset-right, 0px))',
             background: 'linear-gradient(135deg,#16a34a,#15803d)',
             whiteSpace: 'nowrap',
@@ -256,7 +258,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] flex flex-col rounded-2xl overflow-hidden"
           style={{
-            bottom: 'calc(max(1.5rem, env(safe-area-inset-bottom, 0px)) + 72px)',
+            bottom: 'calc(max(5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem)) + 72px)',
             right: 'max(1.5rem, env(safe-area-inset-right, 0px))',
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',
