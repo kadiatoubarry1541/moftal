@@ -6,6 +6,7 @@ import { LANG_LABELS } from "./i18n/strings";
 import { getSessionUser, isAdmin } from "./utils/auth";
 import NotificationBell from "./components/NotificationBell";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
+import { SalesIcon } from "./components/icons/SalesIcon";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
@@ -361,11 +362,11 @@ function App() {
           <div className="border-t border-gray-100 dark:border-gray-800">
             <div className="flex">
               {([
-                { id: "terre-adam", label: t('nav.terre_adam') || "Terre Adam", icon: "🌍",       path: "/compte"   },
+                { id: "terre-adam", label: t('nav.terre_adam') || "Terre Adam", icon: "🌍",  path: "/compte"   },
                 { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille"  },
-                { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: "⚖️",       path: "/echange"  },
-                { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",       path: "/services" },
-              ] as { id: string; label: string; icon: string; path: string }[]).map((item) => {
+                { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: null,  path: "/echange"  },
+                { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",  path: "/services" },
+              ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => {
                 const isActive =
                   item.path === "/compte"
                     ? pathname === "/compte"
@@ -380,7 +381,10 @@ function App() {
                         : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50"
                     }`}
                   >
-                    <span className="text-xl leading-none">{item.icon}</span>
+                    {item.id === "echanges"
+                      ? <SalesIcon size={22} className={isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"} />
+                      : <span className="text-xl leading-none">{item.icon}</span>
+                    }
                     <span className="text-[9px] font-medium">{item.label}</span>
                     {isActive && <span className="w-4 h-0.5 rounded-full bg-blue-600 dark:bg-blue-400" />}
                   </button>
