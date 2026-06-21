@@ -54,18 +54,18 @@ export default function Foyer() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`relative flex flex-col items-center py-2.5 gap-0.5 transition-all ${
                   isActive
-                    ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
+                    ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800'
                     : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 {/* Barre active en haut */}
                 {isActive && (
-                  <span className="absolute top-0 left-2 right-2 h-[3px] rounded-b-full bg-emerald-600 dark:bg-emerald-400" />
+                  <span className="absolute top-0 left-2 right-2 h-[3px] rounded-b-full bg-gray-900 dark:bg-white" />
                 )}
                 <span className={`text-xl leading-none ${isActive ? '' : 'opacity-50'}`}>
                   {tab.emoji}
                 </span>
-                <span className={`text-[10px] font-semibold ${isActive ? 'font-bold' : ''}`}>
+                <span className={`text-[10px] ${isActive ? 'font-black' : 'font-semibold'}`}>
                   {tab.label}
                 </span>
               </button>
@@ -74,7 +74,7 @@ export default function Foyer() {
         </div>
 
         {/* Bandeau indiquant la section ouverte */}
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-600 text-white text-xs font-semibold">
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-900 dark:bg-gray-950 text-white text-xs font-semibold">
           <span>{active.emoji}</span>
           <span>{active.label}</span>
           <span className="ml-auto opacity-70">section ouverte</span>
