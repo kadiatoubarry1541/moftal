@@ -47,6 +47,66 @@ interface ResidenceMessage {
   numeroH: string;
 }
 
+interface CanalItem {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+  description: string;
+}
+
+const CANAL_SECTIONS: { id: string; label: string; icon: string; canaux: CanalItem[] }[] = [
+  {
+    id: 'alerte',
+    label: 'ALERTES & INFOS',
+    icon: '📌',
+    canaux: [
+      { id: 'securite',    label: 'Urgences',       icon: '🚨', color: 'red',    description: 'Alertes et urgences du quartier' },
+      { id: 'annonce',     label: 'Annonces',        icon: '📢', color: 'orange', description: 'Annonces importantes à partager' },
+      { id: 'information', label: 'Informations',    icon: 'ℹ️', color: 'blue',   description: 'Informations générales du quartier' },
+    ]
+  },
+  {
+    id: 'famille',
+    label: 'VIE FAMILIALE',
+    icon: '👨‍👩‍👧',
+    canaux: [
+      { id: 'deces',     label: 'Décès / Condoléances', icon: '🕯️', color: 'stone',  description: 'Annonces de décès et condoléances' },
+      { id: 'mariage',   label: 'Mariages',              icon: '💒', color: 'pink',   description: 'Annonces et félicitations de mariage' },
+      { id: 'bapteme',   label: 'Baptêmes',              icon: '⛪', color: 'purple', description: 'Annonces de baptême' },
+      { id: 'naissance', label: 'Naissances',            icon: '👶', color: 'yellow', description: 'Annonces et vœux de naissance' },
+    ]
+  },
+  {
+    id: 'communaute',
+    label: 'VIE COMMUNAUTAIRE',
+    icon: '🤝',
+    canaux: [
+      { id: 'solidarite', label: 'Solidarité / Entraide', icon: '🤲', color: 'green',  description: 'Entraide et soutien communautaire' },
+      { id: 'fete',       label: 'Fêtes & Événements',    icon: '🎉', color: 'amber',  description: 'Célébrations et événements du quartier' },
+      { id: 'reunion',    label: 'Réunions',              icon: '👥', color: 'indigo', description: 'Réunions et assemblées de quartier' },
+      { id: 'rencontre',  label: 'Rencontres',            icon: '🤝', color: 'teal',   description: 'Rencontres et activités sociales' },
+    ]
+  }
+];
+
+function getCanalColors(color: string) {
+  const map: Record<string, { bg: string; border: string; text: string; header: string; ring: string }> = {
+    red:    { bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-700',    header: 'bg-red-600',    ring: 'focus:ring-red-300' },
+    orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', header: 'bg-orange-500', ring: 'focus:ring-orange-300' },
+    blue:   { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700',   header: 'bg-blue-600',   ring: 'focus:ring-blue-300' },
+    stone:  { bg: 'bg-stone-50',  border: 'border-stone-300',  text: 'text-stone-700',  header: 'bg-stone-600',  ring: 'focus:ring-stone-300' },
+    pink:   { bg: 'bg-pink-50',   border: 'border-pink-200',   text: 'text-pink-700',   header: 'bg-pink-500',   ring: 'focus:ring-pink-300' },
+    purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', header: 'bg-purple-600', ring: 'focus:ring-purple-300' },
+    yellow: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', header: 'bg-yellow-500', ring: 'focus:ring-yellow-300' },
+    green:  { bg: 'bg-green-50',  border: 'border-green-200',  text: 'text-green-700',  header: 'bg-green-600',  ring: 'focus:ring-green-300' },
+    amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700',  header: 'bg-amber-500',  ring: 'focus:ring-amber-300' },
+    indigo: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', header: 'bg-indigo-600', ring: 'focus:ring-indigo-300' },
+    teal:   { bg: 'bg-teal-50',   border: 'border-teal-200',   text: 'text-teal-700',   header: 'bg-teal-600',   ring: 'focus:ring-teal-300' },
+  };
+  return map[color] || map.blue;
+}
+
 
 // Normalise un nom de lieu : minuscule + sans accents → "TÉLIKO" = "teliko" = "Téliko"
 function normalizeLoc(str: string): string {
@@ -90,8 +150,8 @@ export default function TerreAdam() {
   const [isJournalist, setIsJournalist] = useState(false);
   const [filterScope, setFilterScope] = useState<'all' | 'quartier'>('quartier');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  // Filtre du fil quartier : tout ou par besoin (décès, mariage, baptême, etc.)
   const [feedFilter, setFeedFilter] = useState<string>('all');
+  const [activeCanal, setActiveCanal] = useState<CanalItem | null>(null);
 
   // Niveau actuel : quartier (Résidence 1/2/3) ou plus large (sous-préfecture, région, pays, continent)
   const isQuartierLevel =
@@ -258,6 +318,7 @@ export default function TerreAdam() {
   useEffect(() => {
     if (selectedGroup) {
       loadMessages();
+      setActiveCanal(null);
     }
   }, [selectedGroup]);
 
@@ -430,6 +491,53 @@ export default function TerreAdam() {
       }
     } catch (error: any) {
       console.error('Erreur lors de l\'envoi du message:', error);
+      alert(error.message || 'Erreur lors de l\'envoi du message');
+    }
+  };
+
+  const sendMessageInCanal = async () => {
+    if (!selectedGroup || !activeCanal) return;
+
+    const isQuartierTab = activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3';
+    if (!isQuartierTab && !isJournalist) {
+      alert('❌ Seuls les journalistes approuvés peuvent publier à ce niveau.');
+      return;
+    }
+
+    const normalizedGroupLocation = selectedGroup.location ? normalizeLoc(selectedGroup.location) : '';
+    const normalizedUserCodes = userQuartierCodes.map(c => c ? normalizeLoc(c) : null);
+    const canPublishInGroup = isAdmin || (isQuartierTab && normalizedUserCodes.includes(normalizedGroupLocation));
+    if (!canPublishInGroup) {
+      alert('Vous ne pouvez publier que dans l\'un de vos quartiers.');
+      return;
+    }
+
+    if (newMessage.messageType === 'text' && !newMessage.content.trim()) return;
+    if (newMessage.messageType !== 'text' && !newMessage.mediaFile) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('content', newMessage.content);
+      formData.append('messageType', newMessage.messageType);
+      formData.append('category', activeCanal.id);
+      if (newMessage.mediaFile) formData.append('media', newMessage.mediaFile);
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:5002/api/residences/groups/${selectedGroup.id}/messages`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (response.ok) {
+        setNewMessage({ content: '', messageType: 'text', category: activeCanal.id, mediaFile: null });
+        await loadMessages();
+        setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 100);
+      } else {
+        const error = await response.json().catch(() => ({ message: 'Erreur lors de l\'envoi' }));
+        alert(error.message || 'Erreur lors de l\'envoi du message');
+      }
+    } catch (error: any) {
       alert(error.message || 'Erreur lors de l\'envoi du message');
     }
   };
@@ -695,285 +803,235 @@ export default function TerreAdam() {
                             )}
                           </div>
                         ) : (
-                        /* Interface même système que page Activité : blocs besoins + filtre + messages */
-                        <div className="mt-4 space-y-4">
-                          {/* Liste des membres du quartier (comme un groupe WhatsApp) */}
-                          {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-sm sm:text-base font-semibold text-gray-900">
-                                  👥 Membres du quartier
-                                </h4>
-                                <span className="text-xs text-gray-500">
-                                  {selectedGroup.members.length} membre{selectedGroup.members.length > 1 ? 's' : ''}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                                {selectedGroup.members.map((member: any, index: number) => {
+                        /* ── Style Discord / Slack : canaux thématiques ── */
+                        <div className="mt-4">
+                          {/* Membres (compact, uniquement sur la liste de canaux) */}
+                          {!activeCanal && Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-3 flex items-center gap-3 flex-wrap">
+                              <span className="text-xs font-semibold text-gray-500 flex-shrink-0">👥 Membres :</span>
+                              <div className="flex -space-x-2">
+                                {selectedGroup.members.slice(0, 10).map((member: any, index: number) => {
                                   const isObject = member && typeof member === 'object';
-                                  const rawNumeroH = isObject ? (member.numeroH as string | undefined) : typeof member === 'string' ? member as string : undefined;
-                                  const shortNumeroH = formatShortNumeroH(rawNumeroH);
                                   const prenom = isObject ? (member.prenom as string | undefined) : undefined;
-                                  const nomFamille = isObject ? (member.nomFamille as string | undefined) : undefined;
-                                  const fullName = [prenom, nomFamille].filter(Boolean).join(' ').trim() || (isObject && rawNumeroH) || `Membre ${index + 1}`;
                                   const photo = isObject ? (member.photo as string | undefined) : undefined;
+                                  const initiale = (prenom || '?').charAt(0).toUpperCase();
                                   return (
-                                    <div
-                                      key={index}
-                                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-gray-200 bg-gray-50"
-                                    >
-                                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm overflow-hidden">
-                                        {photo ? (
-                                          <img src={photo} alt={fullName} className="w-full h-full object-cover" />
-                                        ) : (
-                                          <span>{(prenom || fullName || '?').charAt(0)}</span>
-                                        )}
-                                      </div>
-                                      <div className="min-w-0">
-                                        <p className="text-xs font-semibold text-gray-900 truncate max-w-[120px]">
-                                          {fullName}
-                                        </p>
-                                        {shortNumeroH && (
-                                          <p className="text-[10px] text-gray-500 font-mono">
-                                            {shortNumeroH}
-                                          </p>
-                                        )}
-                                      </div>
+                                    <div key={index} title={prenom || `Membre ${index + 1}`} className="w-7 h-7 rounded-full bg-emerald-100 border-2 border-white overflow-hidden flex items-center justify-center text-[10px] font-bold text-emerald-700 flex-shrink-0">
+                                      {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
                                     </div>
                                   );
                                 })}
+                                {selectedGroup.members.length > 10 && (
+                                  <div className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-gray-600 flex-shrink-0">
+                                    +{selectedGroup.members.length - 10}
+                                  </div>
+                                )}
                               </div>
+                              <span className="text-xs text-gray-400">{selectedGroup.members.length} membre{selectedGroup.members.length > 1 ? 's' : ''}</span>
                             </div>
                           )}
-                          {/* Blocs besoins du quartier (Décès, Mariage, Baptême, etc.) */}
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
-                            {QUARTIER_CATEGORIES.filter((c) => ['deces', 'mariage', 'bapteme', 'naissance', 'solidarite', 'fete', 'securite', 'annonce'].includes(c.id)).map((cat) => {
-                              const count = messages.filter((m: ResidenceMessage) => (m.category || 'information') === cat.id).length;
-                              return (
-                                <div
-                                  key={cat.id}
-                                  onClick={() => setFeedFilter(feedFilter === cat.id ? 'all' : cat.id)}
-                                  className={`bg-white rounded-xl shadow-sm border-2 p-3 cursor-pointer transition-all ${
-                                    feedFilter === cat.id ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'
-                                  }`}
+
+                          {!activeCanal ? (
+                            /* ── Liste des canaux ── */
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                              {/* En-tête du groupe */}
+                              <div className="px-4 py-3 bg-gray-800 text-white flex items-center justify-between">
+                                <div className="min-w-0">
+                                  <h3 className="font-bold text-sm truncate">📍 {selectedGroup.title || selectedGroup.name}</h3>
+                                  <p className="text-xs text-gray-400 mt-0.5">Choisissez un canal pour publier ou consulter</p>
+                                </div>
+                                <button
+                                  onClick={() => setSelectedGroup(null)}
+                                  className="flex-shrink-0 ml-3 text-gray-400 hover:text-white text-xs px-2.5 py-1 rounded border border-gray-600 hover:border-gray-400 transition-colors"
                                 >
-                                  <span className="text-xl sm:text-2xl">{cat.icon}</span>
-                                  <p className="text-xs sm:text-sm font-semibold text-gray-900 mt-1 truncate">{cat.label}</p>
-                                  <p className="text-[10px] text-gray-500">{count} partage(s)</p>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Filtre du fil */}
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setFeedFilter('all')}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                                feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
-                            >
-                              Tout le fil
-                            </button>
-                            {QUARTIER_CATEGORIES.map((cat) => (
-                              <button
-                                key={cat.id}
-                                type="button"
-                                onClick={() => setFeedFilter(feedFilter === cat.id ? 'all' : cat.id)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
-                                  feedFilter === cat.id ? 'bg-green-600 text-white' : 'bg-green-50 text-green-800 hover:bg-green-100'
-                                }`}
-                              >
-                                {cat.icon} {cat.label}
-                              </button>
-                            ))}
-                          </div>
-
-                        <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ minHeight: '280px', maxHeight: '65vh', display: 'flex', flexDirection: 'column' }}>
-                          {/* Header */}
-                          <div className="bg-green-600 text-white px-4 py-3 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => setSelectedGroup(null)}
-                                className="text-white hover:bg-green-700 rounded-full p-2 transition-colors"
-                              >
-                                ←
-                              </button>
-                              <div>
-                                <h3 className="font-semibold">{selectedGroup.title || selectedGroup.name}</h3>
-                                <p className="text-xs text-green-100 opacity-90">{selectedGroup.members?.length ?? 0} membre(s)</p>
+                                  ← Retour
+                                </button>
                               </div>
-                            </div>
-                          </div>
-                          
-                          {/* Zone de messages */}
-                          <div className="flex-1 overflow-y-auto bg-gray-100 p-3 sm:p-4" style={{ minHeight: '150px', maxHeight: 'calc(65vh - 140px)', backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23e5e7eb\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
-                            {(() => {
-                              const filtered = feedFilter === 'all' ? messages : messages.filter((m: ResidenceMessage) => (m.category || 'information') === feedFilter);
-                              const emptyMsg = feedFilter === 'all' ? 'Aucun message pour le moment.' : `Aucun message « ${getCategoryName(feedFilter)} ». Soyez le premier !`;
-                              return filtered.length === 0 ? (
-                              <div className="text-center text-gray-500 py-8">
-                                <p>{emptyMsg}</p>
-                                <p className="text-sm mt-1">Soyez le premier à envoyer un message !</p>
-                              </div>
-                            ) : (
-                              filtered.map((msg: ResidenceMessage) => {
-                                const isMyMessage = msg.numeroH === userData?.numeroH;
-                                return (
-                                  <div
-                                    key={msg.id}
-                                    className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
-                                  >
-                                    <div
-                                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                        isMyMessage
-                                          ? 'bg-green-500 text-white'
-                                          : 'bg-white text-gray-900'
-                                      }`}
-                                    >
-                                      {!isMyMessage && (
-                                        <p className="text-xs font-semibold mb-1 opacity-75">{msg.authorName}</p>
-                                      )}
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-sm">{getCategoryLogo(msg.category || 'information')}</span>
-                                        <span className={`text-xs font-medium ${isMyMessage ? 'text-green-100' : 'text-gray-600'}`}>
-                                          {getCategoryName(msg.category || 'information')}
+
+                              {/* Sections de canaux */}
+                              {CANAL_SECTIONS.map((section, sectionIndex) => (
+                                <div key={section.id} className={sectionIndex > 0 ? 'border-t border-gray-100' : ''}>
+                                  <div className="px-4 py-2 bg-gray-50 flex items-center gap-2">
+                                    <span className="text-sm">{section.icon}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{section.label}</span>
+                                  </div>
+                                  {section.canaux.map((canal) => {
+                                    const count = messages.filter((m: ResidenceMessage) => (m.category || 'information') === canal.id).length;
+                                    const colors = getCanalColors(canal.color);
+                                    return (
+                                      <button
+                                        key={canal.id}
+                                        onClick={() => setActiveCanal(canal)}
+                                        className="w-full flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left group"
+                                      >
+                                        <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${colors.bg} border ${colors.border}`}>
+                                          {canal.icon}
                                         </span>
-                                      </div>
-                                      {(msg.type === 'text' || msg.messageType === 'text') && msg.content && (
-                                        <p className="text-sm">{msg.content}</p>
-                                      )}
-                                      {(msg.type === 'image' || msg.messageType === 'image') && msg.mediaUrl && (
-                                        <img
-                                          src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
-                                          alt="Image"
-                                          className="max-w-full h-auto rounded-lg mb-1"
-                                        />
-                                      )}
-                                      {(msg.type === 'video' || msg.messageType === 'video') && msg.mediaUrl && (
-                                        <video
-                                          src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
-                                          controls
-                                          className="max-w-full h-auto rounded-lg mb-1"
-                                        />
-                                      )}
-                                      {(msg.type === 'audio' || msg.messageType === 'audio') && msg.mediaUrl && (
-                                        <audio
-                                          src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
-                                          controls
-                                          className="w-full mb-1"
-                                        />
-                                      )}
-                                      <p className={`text-xs mt-1 ${isMyMessage ? 'text-green-100' : 'text-gray-500'}`}>
-                                        {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            );
-                            })()}
-                            <div ref={messagesEndRef} />
-                          </div>
-                          
-                          {/* Zone de saisie (même système que page Activité) – catégories besoins du quartier */}
-                          {canPublishHere ? (
-                            <div className="bg-gray-200 px-4 py-2 border-t">
-                              <div className="space-y-2">
-                                <div className="flex gap-2 flex-wrap">
-                                  <select
-                                    value={newMessage.category}
-                                    onChange={(e) => setNewMessage({...newMessage, category: e.target.value})}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
-                                  >
-                                    {QUARTIER_CATEGORIES.map((cat) => (
-                                      <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
-                                    ))}
-                                  </select>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-semibold text-gray-900 truncate"># {canal.label}</p>
+                                          <p className="text-xs text-gray-400 truncate">{canal.description}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                          {count > 0 ? (
+                                            <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${colors.header}`}>
+                                              {count > 99 ? '99+' : count}
+                                            </span>
+                                          ) : (
+                                            <span className="text-[10px] text-gray-300">0</span>
+                                          )}
+                                          <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                          </svg>
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
-                                <div className="flex gap-2">
-                                  <div className="flex gap-2 flex-1">
-                                    <select
-                                      value={newMessage.messageType}
-                                      onChange={(e) => {
-                                        setNewMessage({...newMessage, messageType: e.target.value as any, mediaFile: null});
-                                      }}
-                                      className="px-2 py-2 border border-gray-300 rounded-lg bg-white text-sm"
-                                    >
-                                      <option value="text">📝</option>
-                                      <option value="image">🖼️</option>
-                                      <option value="video">🎥</option>
-                                      <option value="audio">🎵</option>
-                                    </select>
-                                    {newMessage.messageType === 'text' ? (
-                                      <input
-                                        type="text"
-                                        value={newMessage.content}
-                                        onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
-                                        onKeyPress={(e) => {
-                                          if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            sendMessage();
-                                          }
-                                        }}
-                                        placeholder="Tapez un message..."
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
-                                      />
-                                    ) : newMessage.messageType === 'audio' ? (
-                                      <div className="flex gap-2 flex-1 items-center">
-                                        {newMessage.mediaFile ? (
-                                          <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg flex-1">
-                                            <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
-                                            <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 hover:text-red-700 text-xs font-medium">✕ Annuler</button>
-                                          </div>
-                                        ) : (
-                                          <div className="flex-1">
-                                            <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
-                                              const file = new File([blob], 'vocal.webm', { type: blob.type });
-                                              setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
-                                            }} />
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <input
-                                        type="file"
-                                        accept={newMessage.messageType === 'image' ? 'image/*' : 'video/*'}
-                                        onChange={(e) => {
-                                          const file = e.target.files?.[0] || null;
-                                          if (file) {
-                                            let detectedType = newMessage.messageType;
-                                            if (file.type.startsWith('image/')) detectedType = 'image';
-                                            else if (file.type.startsWith('video/')) detectedType = 'video';
-                                            else if (file.type.startsWith('audio/')) detectedType = 'audio';
-                                            setNewMessage({...newMessage, messageType: detectedType, mediaFile: file});
-                                          } else setNewMessage({...newMessage, mediaFile: null});
-                                        }}
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm"
-                                      />
-                                    )}
-                                  </div>
-                                  <button
-                                    onClick={sendMessage}
-                                    disabled={newMessage.messageType === 'text' ? !newMessage.content.trim() : !newMessage.mediaFile}
-                                    className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    ▶
-                                  </button>
-                                </div>
-                              </div>
+                              ))}
                             </div>
                           ) : (
-                            <div className="bg-gray-100 px-4 py-2 border-t border-gray-200 text-xs sm:text-sm text-gray-600">
-                              <p>
-                                Seuls les <strong>journalistes approuvés</strong> peuvent publier au niveau
-                                Sous-préfecture, Préfecture, Région, Pays ou Continent. Vous pouvez publier
-                                librement dans votre <strong>quartier</strong>.
-                              </p>
-                            </div>
+                            /* ── Vue canal (chat) ── */
+                            (() => {
+                              const colors = getCanalColors(activeCanal.color);
+                              const canalMessages = messages.filter((m: ResidenceMessage) => (m.category || 'information') === activeCanal.id);
+                              return (
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" style={{ minHeight: '420px', maxHeight: '75vh' }}>
+                                  {/* En-tête du canal */}
+                                  <div className={`${colors.header} text-white px-4 py-3 flex items-center gap-3 flex-shrink-0`}>
+                                    <button
+                                      onClick={() => setActiveCanal(null)}
+                                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors text-lg leading-none flex-shrink-0"
+                                    >
+                                      ←
+                                    </button>
+                                    <span className="text-2xl flex-shrink-0">{activeCanal.icon}</span>
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className="font-bold text-sm truncate"># {activeCanal.label}</h3>
+                                      <p className="text-[11px] text-white/80 truncate">{activeCanal.description}</p>
+                                    </div>
+                                    <span className="text-xs text-white/70 flex-shrink-0 bg-white/20 px-2 py-0.5 rounded-full">
+                                      {canalMessages.length} msg
+                                    </span>
+                                  </div>
+
+                                  {/* Zone des messages */}
+                                  <div className="flex-1 overflow-y-auto p-3 bg-gray-50" style={{ minHeight: '220px' }}>
+                                    {canalMessages.length === 0 ? (
+                                      <div className="flex flex-col items-center justify-center py-16 text-center">
+                                        <span className="text-6xl mb-4">{activeCanal.icon}</span>
+                                        <p className="font-bold text-gray-800 text-base"># {activeCanal.label}</p>
+                                        <p className="text-gray-500 text-sm mt-1 max-w-xs">{activeCanal.description}</p>
+                                        <p className="text-gray-400 text-xs mt-4 italic">Aucun message pour le moment.<br/>Soyez le premier à publier !</p>
+                                      </div>
+                                    ) : (
+                                      canalMessages.map((msg: ResidenceMessage) => {
+                                        const isMyMessage = msg.numeroH === userData?.numeroH;
+                                        return (
+                                          <div key={msg.id} className={`mb-3 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl shadow-sm ${
+                                              isMyMessage
+                                                ? `${colors.header} text-white rounded-br-sm`
+                                                : 'bg-white text-gray-900 border border-gray-100 rounded-bl-sm'
+                                            }`}>
+                                              {!isMyMessage && (
+                                                <p className={`text-[10px] font-bold mb-1 ${colors.text}`}>{msg.authorName}</p>
+                                              )}
+                                              {(msg.type === 'text' || msg.messageType === 'text') && msg.content && (
+                                                <p className="text-sm leading-relaxed">{msg.content}</p>
+                                              )}
+                                              {(msg.type === 'image' || msg.messageType === 'image') && msg.mediaUrl && (
+                                                <img src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg" />
+                                              )}
+                                              {(msg.type === 'video' || msg.messageType === 'video') && msg.mediaUrl && (
+                                                <video src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg" />
+                                              )}
+                                              {(msg.type === 'audio' || msg.messageType === 'audio') && msg.mediaUrl && (
+                                                <audio src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`} controls className="w-full" />
+                                              )}
+                                              <p className={`text-[10px] mt-1.5 ${isMyMessage ? 'text-white/70' : 'text-gray-400'}`}>
+                                                {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        );
+                                      })
+                                    )}
+                                    <div ref={messagesEndRef} />
+                                  </div>
+
+                                  {/* Zone de saisie — catégorie fixée automatiquement au canal */}
+                                  {canPublishHere ? (
+                                    <div className="border-t border-gray-200 px-3 py-3 bg-white flex-shrink-0">
+                                      <div className="flex gap-2 items-center">
+                                        <select
+                                          value={newMessage.messageType}
+                                          onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as any, mediaFile: null})}
+                                          className="px-2 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm flex-shrink-0"
+                                        >
+                                          <option value="text">📝</option>
+                                          <option value="image">🖼️</option>
+                                          <option value="video">🎥</option>
+                                          <option value="audio">🎵</option>
+                                        </select>
+                                        {newMessage.messageType === 'text' ? (
+                                          <input
+                                            type="text"
+                                            value={newMessage.content}
+                                            onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
+                                            onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessageInCanal(); } }}
+                                            placeholder={`Publier dans #${activeCanal.label}...`}
+                                            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-green-300 text-sm bg-gray-50"
+                                          />
+                                        ) : newMessage.messageType === 'audio' ? (
+                                          <div className="flex-1">
+                                            {newMessage.mediaFile ? (
+                                              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
+                                                <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
+                                                <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 text-xs font-medium">✕</button>
+                                              </div>
+                                            ) : (
+                                              <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
+                                                const file = new File([blob], 'vocal.webm', { type: blob.type });
+                                                setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
+                                              }} />
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <input
+                                            type="file"
+                                            accept={newMessage.messageType === 'image' ? 'image/*' : 'video/*'}
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0] || null;
+                                              if (file) {
+                                                let detectedType = newMessage.messageType;
+                                                if (file.type.startsWith('image/')) detectedType = 'image';
+                                                else if (file.type.startsWith('video/')) detectedType = 'video';
+                                                setNewMessage({...newMessage, messageType: detectedType, mediaFile: file});
+                                              } else setNewMessage({...newMessage, mediaFile: null});
+                                            }}
+                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm"
+                                          />
+                                        )}
+                                        <button
+                                          onClick={sendMessageInCanal}
+                                          disabled={newMessage.messageType === 'text' ? !newMessage.content.trim() : !newMessage.mediaFile}
+                                          className={`${colors.header} text-white px-5 py-2.5 rounded-full hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex-shrink-0 font-medium text-sm`}
+                                        >
+                                          ▶
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex-shrink-0 text-center">
+                                      <p className="text-xs text-gray-500">
+                                        Seuls les <strong>journalistes approuvés</strong> peuvent publier ici.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()
                           )}
-                        </div>
                         </div>
                       )}
                       </div>

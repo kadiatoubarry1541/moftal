@@ -495,7 +495,8 @@ export default function AdminDashboard() {
       { id: "moftal-pay",        label: "Moftal Pay",       icon: "💰" },
     ] : []),
   ];
-  const G0_TABS = ["overview", "families", "couples", "parent-child", "users", "points", "tools"];
+  // G0 voit tous les services (pros, outils, familles...) mais PAS les données financières (points, moftal-pay)
+  const G0_TABS = ["overview", "families", "couples", "parent-child", "pros", "users", "tools"];
   const adminTabs = sectorAdminOnly
     ? allAdminTabs.filter((t) => t.id === "pros")
     : isSubAdmin0(userData)
@@ -583,8 +584,8 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Statistiques en temps réel (masquées pour admin secteur uniquement) */}
-      {!sectorAdminOnly && stats && (
+      {/* Statistiques en temps réel (masquées pour admin secteur et G0 — données sensibles réservées G7) */}
+      {!sectorAdminOnly && !isSubAdmin0(userData) && stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
           {[
             { val: stats.totalUsers, label: "Utilisateurs", from: "from-blue-500", to: "to-blue-600" },
@@ -691,6 +692,13 @@ export default function AdminDashboard() {
 
               {/* Aperçu rapide */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {isSubAdmin0(userData) ? (
+                  <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 flex flex-col items-center justify-center text-center gap-2">
+                    <span className="text-3xl">🔒</span>
+                    <p className="text-sm font-semibold text-gray-700">Statistiques réservées</p>
+                    <p className="text-xs text-gray-500">Les données chiffrées (abonnés, familles, vivants…) sont visibles uniquement avec l'autorisation du compte G7.</p>
+                  </div>
+                ) : (
                 <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                   <h3 className="font-semibold text-gray-800 mb-3">📊 Statistiques</h3>
                   {statsLoading ? <p className="text-sm text-gray-500">Chargement...</p> : stats ? (
@@ -703,6 +711,7 @@ export default function AdminDashboard() {
                   ) : <p className="text-sm text-gray-500">Aucune donnée</p>}
                   <button onClick={loadStats} className="mt-3 w-full px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors">Actualiser</button>
                 </div>
+                )}
                 <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                   <h3 className="font-semibold text-gray-800 mb-3">👥 Utilisateurs récents</h3>
                   {recentUsers.length > 0 ? (
@@ -947,7 +956,7 @@ export default function AdminDashboard() {
           )}
 
           {/* ========== PROFESSIONNELS ========== */}
-          {adminSection === "pros" && !isSubAdmin0(userData) && (
+          {adminSection === "pros" && (
             <div className="space-y-4">
 
               {/* ── PANORAMA DES TYPES DE COMPTES ── */}
@@ -1862,13 +1871,11 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-yellow-900">Sécurité</div>
                   <div className="text-xs text-yellow-700">Agences de sécurité, agents</div>
                 </button>
-                {!isSubAdmin0(userData) && (
-                  <button onClick={() => { setAdminSection("pros"); loadAllPros("pending"); }} className="bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl p-5 text-left transition-colors">
-                    <div className="text-2xl mb-2">📋</div>
-                    <div className="font-semibold text-orange-900">Comptes Pro</div>
-                    <div className="text-xs text-orange-700">Approuver et gérer les professionnels</div>
-                  </button>
-                )}
+                <button onClick={() => { setAdminSection("pros"); loadAllPros("pending"); }} className="bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl p-5 text-left transition-colors">
+                  <div className="text-2xl mb-2">📋</div>
+                  <div className="font-semibold text-orange-900">Comptes Pro</div>
+                  <div className="text-xs text-orange-700">Approuver et gérer les professionnels</div>
+                </button>
               </div>
             </div>
           )}

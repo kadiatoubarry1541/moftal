@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../utils/api'
+import { LangButton } from '../../components/LangButton'
 import { getAllCountries, getRegionsByCountry, getContinentAndRegionByCountry, getPrefecturesByRegion, WORLD_GEOGRAPHY } from '../../utils/worldGeography'
 import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
 import { getCountryGeoLabels } from '../../utils/countryGeoStructure'
@@ -467,6 +468,13 @@ export function WrittenRegistration() {
 
   return (
     <div className="stack">
+      <LangButton />
+      <button onClick={() => navigate('/vivant')} className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors text-sm font-medium w-fit bg-transparent border-none cursor-pointer p-0">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Retour
+      </button>
       <h2>Inscription par écrit</h2>
 
       {/* ── Barre de progression ── */}

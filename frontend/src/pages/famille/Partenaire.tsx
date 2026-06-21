@@ -59,7 +59,7 @@ function getToken() {
 
 type SessionId = 'avant' | 'paradis' | 'objectif'
 
-export default function Partenaire() {
+export default function Partenaire({ inline }: { inline?: boolean } = {}) {
   const navigate = useNavigate()
   const location = useLocation()
   const [user, setUser] = useState<UserData | null>(null)
@@ -87,7 +87,7 @@ export default function Partenaire() {
   const [submitting, setSubmitting] = useState(false)
   const [noteAnnee, setNoteAnnee] = useState(() => new Date().getFullYear())
   const [noteRating, setNoteRating] = useState(0)
-  const [activeTab, setActiveTab] = useState<'souvenir' | 'message'>('souvenir')
+  const [activeTab, setActiveTab] = useState<'souvenir' | 'message'>('message')
   const [openSection, setOpenSection] = useState<SessionId | 'notes'>('avant')
   const [mediaBySession, setMediaBySession] = useState<Record<SessionId, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>>>({
     avant: [],
@@ -389,15 +389,17 @@ export default function Partenaire() {
     if (u?.numeroH) {
       const isUserAdmin = isAdmin(u)
 
-      // ── Garde genre / route (sauf admin général qui peut tout voir) ──────────
-      const path = location.pathname
-      if (!isUserAdmin && u.genre === 'HOMME' && path.includes('/mari')) {
-        navigate('/famille', { replace: true })
-        return
-      }
-      if (!isUserAdmin && u.genre === 'FEMME' && path.includes('/femmes')) {
-        navigate('/famille', { replace: true })
-        return
+      // ── Garde genre / route (sauf admin ou mode inline) ──────────
+      if (!inline) {
+        const path = location.pathname
+        if (!isUserAdmin && u.genre === 'HOMME' && path.includes('/mari')) {
+          navigate('/famille', { replace: true })
+          return
+        }
+        if (!isUserAdmin && u.genre === 'FEMME' && path.includes('/femmes')) {
+          navigate('/famille', { replace: true })
+          return
+        }
       }
 
       setLoading(false)
@@ -591,13 +593,15 @@ export default function Partenaire() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      <Link
-        to="/famille"
-        state={{ returnToHub: true }}
-        className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
-      >
-        ← Retour à Famille
-      </Link>
+      {!inline && (
+        <Link
+          to="/famille"
+          state={{ returnToHub: true }}
+          className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
+        >
+          ← Retour à Famille
+        </Link>
+      )}
 
       {/* ── BANNIÈRE : L'AUTRE PERSONNE A ROMPU ─────────────────────── */}
       {brokenByOther.length > 0 && (
@@ -632,7 +636,7 @@ export default function Partenaire() {
       {/* ── BANNIÈRE COMPACTE avec bouton Vérifier ─────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-bold text-slate-800">{titleIcon} {title}</h2>
+          <h2 className="text-lg font-bold text-slate-800">{titleIcon} {title}</h2>
           <Link to="/famille/inspir" className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-medium rounded-lg transition-colors border border-yellow-300">
             🤝 Inspir
           </Link>
@@ -648,10 +652,7 @@ export default function Partenaire() {
 
       {/* ── SECTION VÉRIFIER (collapsible) ──────────────────────────── */}
       {showVerifSection && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-          <p className="text-slate-600 text-sm mb-4">
-            Partagez vos moments et recevez les notes de {partnerLabel}.
-          </p>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4">
           <div className="flex flex-wrap justify-end gap-3">
             {/* HOMME : peut ajouter jusqu'à 4 épouses */}
             {isHomme && wives.length < 4 && (
@@ -900,9 +901,8 @@ export default function Partenaire() {
       )}
 
       {pendingInvitations.length > 0 && (
-        <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 mb-6">
-          <h3 className="text-lg font-bold text-amber-800 mb-4">📩 Invitations reçues (à confirmer)</h3>
-          <p className="text-slate-600 mb-4">Votre partenaire souhaite vous lier. Confirmez pour accepter ou supprimez pour refuser.</p>
+        <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 mb-4">
+          <h3 className="text-sm font-bold text-amber-800 mb-3">📩 Invitations reçues</h3>
           <div className="space-y-3">
             {pendingInvitations.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between bg-white rounded-lg p-4 border border-amber-200">
@@ -968,24 +968,22 @@ export default function Partenaire() {
               </div>
             </div>
           ) : userIsAdmin ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6">
-              <p className="text-amber-900 font-medium mb-2">👑 Mode administrateur</p>
-              <p className="text-slate-700 text-sm mb-4">
-                Aucun partenaire lié. En tant qu&apos;administrateur, toutes les sections ci-dessous sont visibles. Liez un partenaire pour utiliser les activités et notes partagées.
-              </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+              <span className="text-lg">👑</span>
+              <span className="text-amber-900 text-sm font-medium">Mode admin — aperçu de la page</span>
               <button
                 onClick={() => setShowLinkForm(true)}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg"
+                className="ml-auto px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg"
               >
-                💍 Lier mon partenaire
+                💍 Lier
               </button>
             </div>
           ) : null}
 
           {/* Bannière */}
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl shadow-lg p-6 text-white mb-4">
-            <h3 className="text-2xl font-semibold mb-1">❤️ Nos souvenirs d&apos;ensemble</h3>
-            <p className="text-emerald-100 text-sm">Moments précieux partagés avec {partnerLabel}</p>
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl px-5 py-3 text-white mb-4 flex items-center gap-3">
+            <span className="text-xl">{titleIcon}</span>
+            <span className="font-bold text-base">{partner ? `${partner.prenom} ${partner.nomFamille}` : partnerLabel}</span>
           </div>
 
           {/* Carte principale avec onglets */}
@@ -993,8 +991,8 @@ export default function Partenaire() {
             {/* Onglets Souvenir / Message */}
             <div className="flex border-b border-slate-200">
               {([
-                { key: 'souvenir' as const, icon: '📸', label: 'Souvenir' },
-                { key: 'message' as const, icon: '💬', label: 'Message' }
+                { key: 'message' as const, icon: '💬', label: 'Message' },
+                { key: 'souvenir' as const, icon: '📸', label: 'Souvenir' }
               ] as const).map((tab) => (
                 <button
                   key={tab.key}

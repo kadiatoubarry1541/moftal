@@ -2,6 +2,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { FavorisDropdown, FavorisDropdownItem } from '../components/FavorisDropdown'
 
+interface ServicesProps {
+  onClose?: () => void
+}
+
 interface ServiceItem {
   to: string
   emoji: string
@@ -42,7 +46,7 @@ function ServiceIcon({ to, emoji, label, bg, isFavorite }: ServiceItem & { isFav
   )
 }
 
-export default function Services() {
+export default function Services({ onClose }: ServicesProps = {}) {
   const navigate = useNavigate()
   const [numeroH, setNumeroH] = useState('')
   const [favoriteIds, setFavoriteIds] = useState<string[]>([])
@@ -61,20 +65,27 @@ export default function Services() {
   }, [numeroH, favoriteIds])
 
   const services: ServiceItem[] = [
-    { to: '/sante',                                emoji: '🏥', label: 'Santé',        bg: 'bg-red-100'    },
-    { to: '/securite',                             emoji: '🛡️', label: 'Sécurité',     bg: 'bg-slate-100'  },
-    { to: '/immobilier',                           emoji: '🏠', label: 'Immobilier',   bg: 'bg-amber-100'  },
-    { to: '/education',                            emoji: '🎓', label: 'Éducation',    bg: 'bg-amber-100'  },
-    { to: '/madrasa',                              emoji: '📖', label: 'Madrasa',      bg: 'bg-teal-100'   },
-    { to: '/liste-professionnels?type=commerce',   emoji: '🏪', label: 'Commerce',     bg: 'bg-yellow-100' },
-    { to: '/liste-professionnels?type=enterprise', emoji: '🏢', label: 'Entreprise',   bg: 'bg-violet-100' },
-    { to: '/journalistes',                         emoji: '📰', label: 'Journalistes', bg: 'bg-orange-100' },
-    { to: '/science',                              emoji: '🔬', label: 'Science',      bg: 'bg-indigo-100' },
-    { to: '/liste-professionnels?type=supplier',   emoji: '🚚', label: 'Fournisseurs', bg: 'bg-cyan-100'   },
-    { to: '/restaurants',                          emoji: '🍽️', label: 'Restaurant',   bg: 'bg-orange-100' },
-    { to: '/transport',                            emoji: '🚌', label: 'Transport',    bg: 'bg-blue-100'   },
-    { to: '/beaute',                               emoji: '💈', label: 'Beauté',       bg: 'bg-pink-100'   },
-    { to: '/artisans',                             emoji: '🔧', label: 'Artisanat',    bg: 'bg-stone-100'  },
+    { to: '/sante',                                    emoji: '🏥', label: 'Santé',        bg: 'bg-red-100'    },
+    { to: '/securite',                                 emoji: '🛡️', label: 'Sécurité',     bg: 'bg-slate-100'  },
+    { to: '/immobilier',                               emoji: '🏠', label: 'Immobilier',   bg: 'bg-amber-100'  },
+    { to: '/education',                                emoji: '🎓', label: 'Éducation',    bg: 'bg-amber-100'  },
+    { to: '/madrasa',                                  emoji: '📖', label: 'Madrasa',      bg: 'bg-teal-100'   },
+    { to: '/liste-professionnels?type=commerce',       emoji: '🏪', label: 'Commerce',     bg: 'bg-yellow-100' },
+    { to: '/liste-professionnels?type=enterprise',     emoji: '🏢', label: 'Entreprise',   bg: 'bg-violet-100' },
+    { to: '/journalistes',                             emoji: '📰', label: 'Journalistes', bg: 'bg-orange-100' },
+    { to: '/science',                                  emoji: '🔬', label: 'Science',      bg: 'bg-indigo-100' },
+    { to: '/liste-professionnels?type=supplier',       emoji: '🚚', label: 'Fournisseurs', bg: 'bg-cyan-100'   },
+    { to: '/restaurants',                              emoji: '🍽️', label: 'Restaurant',   bg: 'bg-orange-100' },
+    { to: '/transport',                                emoji: '🚌', label: 'Transport',    bg: 'bg-blue-100'   },
+    { to: '/beaute',                                   emoji: '💈', label: 'Beauté',       bg: 'bg-pink-100'   },
+    { to: '/artisans',                                 emoji: '🔧', label: 'Artisanat',    bg: 'bg-stone-100'  },
+    { to: '/mosquee',                                  emoji: '🕌', label: 'Mosquée',      bg: 'bg-emerald-100'},
+    { to: '/reseau-imam',                              emoji: '🧕', label: 'Imam',         bg: 'bg-green-100'  },
+    { to: '/liste-professionnels?type=mairie',         emoji: '🏛️', label: 'Mairie',       bg: 'bg-gray-100'   },
+    { to: '/liste-professionnels?type=reseau',         emoji: '🔗', label: 'Réseau',       bg: 'bg-purple-100' },
+    { to: '/solidarite',                               emoji: '🤝', label: 'ONG',          bg: 'bg-rose-100'   },
+    { to: '/liste-professionnels?type=vendor',         emoji: '🛍️', label: 'Vendeurs',     bg: 'bg-sky-100'    },
+    { to: '/liste-professionnels?type=producer',       emoji: '🌾', label: 'Producteurs',  bg: 'bg-lime-100'   },
   ]
 
   const toggleFavorite = (to: string) => {
@@ -94,15 +105,9 @@ export default function Services() {
   return (
     <div className="max-w-md mx-auto px-4 py-4">
 
-      {/* Bouton retour + Favoris */}
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => navigate('/compte')}
-          className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg transition-colors text-sm border border-gray-200 dark:border-gray-600"
-        >
-          ← Retour
-        </button>
+      {/* Favoris */}
+      <div className="mb-4 flex items-center justify-end gap-2">
+        <div />
 
         {numeroH && (
           <FavorisDropdown

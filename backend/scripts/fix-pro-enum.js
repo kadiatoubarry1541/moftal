@@ -78,7 +78,7 @@ async function fixProEnum() {
     /* ── 4. Valeurs attendues ── */
     const expected = [
       'clinic',
-      'health_worker',
+      'immobilier',
       'security_agency',
       'journalist',
       'enterprise',
@@ -91,7 +91,7 @@ async function fixProEnum() {
       'commerce',
       'vendor',
       'producer',
-      'broker',
+      'imam',
       'restaurant',
       'transport',
       'beauty',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getNumeroHForDisplay } from '../../utils/auth'
+import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { CommunicationHub } from '../../components/CommunicationHub'
 
@@ -68,7 +68,7 @@ interface PendingInvitation {
   parent?: { numeroH: string; prenom: string; nomFamille: string }
 }
 
-export default function Parents() {
+export default function Parents({ inline }: { inline?: boolean } = {}) {
   const [user, setUser] = useState<UserData | null>(null)
   const [parents, setParents] = useState<ParentLink[]>([])
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
@@ -80,7 +80,7 @@ export default function Parents() {
   const [submitting, setSubmitting] = useState(false)
   type ChapterKey = 'enfance' | 'paradis' | 'objectif'
   type MediaItem = { id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }
-  const [activeTab, setActiveTab] = useState<'souvenir' | 'message'>('souvenir')
+  const [activeTab, setActiveTab] = useState<'souvenir' | 'message'>('message')
   const [openSection, setOpenSection] = useState<ChapterKey | 'notes'>('enfance')
   const [mediaByChapter, setMediaByChapter] = useState<Record<ChapterKey, MediaItem[]>>({ enfance: [], paradis: [], objectif: [] })
   const [uploaderChapter, setUploaderChapter] = useState<ChapterKey | null>(null)
@@ -369,30 +369,41 @@ export default function Parents() {
     )
   }
 
+  const userIsAdmin = isAdmin(user)
+  const adminDemoParent: ParentLink | null = (userIsAdmin && parents.length === 0 && pendingInvitations.length === 0)
+    ? {
+        id: 'admin-demo',
+        parentNumeroH: 'DEMO',
+        childNumeroH: user?.numeroH || '',
+        codeLiaison: '',
+        parentType: 'pere',
+        parent: { numeroH: 'DEMO', prenom: 'Aperçu', nomFamille: 'Démo Admin' }
+      }
+    : null
+  const activeParent = selectedParent || adminDemoParent
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      <Link
-        to="/famille"
-        state={{ returnToHub: true }}
-        className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
-      >
-        ← Retour à Famille
-      </Link>
+      {!inline && (
+        <Link
+          to="/famille"
+          state={{ returnToHub: true }}
+          className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
+        >
+          ← Retour à Famille
+        </Link>
+      )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-slate-800">👨‍👩‍👦 Mes Parents</h2>
-          <Link to="/famille/inspir" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300">
-            🤝 Inspir
-          </Link>
-        </div>
-        <p className="mt-3 text-slate-600 text-sm">Partagez vos souvenirs et recevez les notes de vos parents.</p>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-slate-800">👨‍👩‍👦 Mes Parents</h2>
+        <Link to="/famille/inspir" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300">
+          🤝 Inspir
+        </Link>
       </div>
 
       {pendingInvitations.length > 0 && (
-        <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 mb-6">
-          <h3 className="text-lg font-bold text-amber-800 mb-4">📩 Invitations reçues (à confirmer)</h3>
-          <p className="text-slate-600 mb-4">Un parent souhaite vous lier. Confirmez pour accepter ou supprimez pour refuser.</p>
+        <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 mb-4">
+          <h3 className="text-sm font-bold text-amber-800 mb-3">📩 Invitations reçues</h3>
           <div className="space-y-3">
             {pendingInvitations.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between bg-white rounded-lg p-4 border border-amber-200">
@@ -427,7 +438,7 @@ export default function Parents() {
         </div>
       )}
 
-      {parents.length === 0 && pendingInvitations.length === 0 ? (
+      {parents.length === 0 && pendingInvitations.length === 0 && !userIsAdmin ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
           <p className="text-slate-500 mb-4">
             Aucun parent lié pour le moment. Vos parents doivent vous ajouter depuis leur page « Mes Enfants » avec leur code de liaison, votre NumeroH et votre numéro maternité.
@@ -441,6 +452,16 @@ export default function Parents() {
           </Link>
         </div>
       ) : (
+        <>
+        {adminDemoParent && (
+          <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+            <span className="text-2xl leading-none">👑</span>
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">Mode administrateur — aperçu de la page</p>
+              <p className="text-xs text-amber-700 mt-1">Aucun parent lié. Vous voyez l'interface telle que vos clients la verront une fois liés à leurs parents.</p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1 space-y-3">
             {parents.map((link) => (
@@ -489,33 +510,21 @@ export default function Parents() {
           </div>
 
           <div className="lg:col-span-2">
-            {selectedParent ? (
+            {(selectedParent || adminDemoParent) ? (
               <div className="space-y-5">
 
                 {/* ═══ HERO BANNER ═══ */}
-                <div className="relative overflow-hidden rounded-2xl shadow-xl">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-700 via-green-600 to-teal-500" />
-                  <div className="absolute -bottom-10 -right-10 w-52 h-52 rounded-full bg-white/10" />
-                  <div className="absolute -top-8 -left-8 w-36 h-36 rounded-full bg-white/10" />
-                  <div className="relative p-7 flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold text-emerald-100 tracking-widest uppercase mb-2">Lien familial précieux</p>
-                      <h3 className="text-2xl font-extrabold text-white tracking-tight">❤️ Nos souvenirs d&apos;ensemble</h3>
-                      <p className="text-emerald-100 text-sm mt-1.5">
-                        Moments partagés avec{' '}
-                        <span className="text-white font-semibold">
-                          {selectedParent.parent ? `${selectedParent.parent.prenom} ${selectedParent.parent.nomFamille}` : selectedParent.parentNumeroH}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl border border-white/30 shadow-inner flex-shrink-0">
-                      {selectedParent.parent?.photo ? (
-                        <img src={selectedParent.parent.photo.startsWith('http') ? selectedParent.parent.photo : (selectedParent.parent.photo.startsWith('/') ? selectedParent.parent.photo : '/' + selectedParent.parent.photo)} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        selectedParent.parentType === 'mere' ? '👩' : '👨'
-                      )}
-                    </div>
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl px-5 py-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-white/20 flex items-center justify-center text-xl flex-shrink-0">
+                    {activeParent!.parent?.photo ? (
+                      <img src={activeParent!.parent.photo.startsWith('http') ? activeParent!.parent.photo : '/' + activeParent!.parent.photo} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      activeParent!.parentType === 'mere' ? '👩' : '👨'
+                    )}
                   </div>
+                  <span className="text-white font-bold text-base">
+                    {activeParent!.parent ? `${activeParent!.parent.prenom} ${activeParent!.parent.nomFamille}` : activeParent!.parentNumeroH}
+                  </span>
                 </div>
 
                 {/* ═══ CARTE PRINCIPALE ═══ */}
@@ -523,17 +532,6 @@ export default function Parents() {
 
                   {/* Deux onglets principaux */}
                   <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('souvenir')}
-                      className={`flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-sm transition-all ${
-                        activeTab === 'souvenir'
-                          ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md shadow-green-200'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50'
-                      }`}
-                    >
-                      📸 Souvenir
-                    </button>
                     <button
                       type="button"
                       onClick={() => setActiveTab('message')}
@@ -544,6 +542,17 @@ export default function Parents() {
                       }`}
                     >
                       💬 Message
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('souvenir')}
+                      className={`flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-sm transition-all ${
+                        activeTab === 'souvenir'
+                          ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md shadow-green-200'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50'
+                      }`}
+                    >
+                      📸 Souvenir
                     </button>
                   </div>
 
@@ -787,6 +796,7 @@ export default function Parents() {
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   )

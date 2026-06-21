@@ -6,6 +6,8 @@ import EditProfileModal from "../components/EditProfileModal";
 import { AdminPanel } from "../components/AdminPanel";
 import { config } from "../config/api";
 import { getPhotoUrl, isMasterAdmin, getNumeroHForDisplay } from "../utils/auth";
+import { useI18n } from "../i18n/useI18n";
+import { LANG_LABELS } from "../i18n/strings";
 
 const MEMBERSHIP_ROLE_LABELS: Record<string, string> = {
   eleve: "🎓 Élève",
@@ -36,6 +38,7 @@ interface UserLogo {
 }
 
 export default function MonProfil() {
+  const { t, lang, setLang } = useI18n();
   const [userData, setUserData] = useState<{
     prenom?: string;
     nomFamille?: string;
@@ -56,9 +59,7 @@ export default function MonProfil() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showActions, setShowActions] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [emailConfirm, setEmailConfirm] = useState('');
-  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [showLang, setShowLang] = useState(false);
   const navigate = useNavigate();
 
   const loadUserData = () => {
@@ -124,7 +125,7 @@ export default function MonProfil() {
   };
 
   const quitterEtablissement = async (membership: any) => {
-    if (!window.confirm(`Quitter "${membership.name}" ?`)) return;
+    if (!window.confirm(`${t('toast.leave_confirm')} "${membership.name}" ?`)) return;
     try {
       const token = localStorage.getItem("token");
       const API_BASE = config.API_BASE_URL || 'http://localhost:5002/api';
@@ -138,38 +139,6 @@ export default function MonProfil() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (!emailConfirm.trim()) {
-      toast.error('Veuillez saisir votre adresse email pour confirmer');
-      return;
-    }
-    setDeletingAccount(true);
-    try {
-      const session = localStorage.getItem("session_user");
-      const token = session ? JSON.parse(session).token : null;
-      const API_BASE = config.API_BASE_URL || 'http://localhost:5002/api';
-      const response = await fetch(`${API_BASE}/auth/account`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ email: emailConfirm.trim() })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        localStorage.removeItem('session_user');
-        localStorage.removeItem('token');
-        navigate('/login', { state: { message: 'Votre compte a été supprimé avec succès.' } });
-      } else {
-        toast.error(data.message || 'Erreur lors de la suppression du compte');
-      }
-    } catch {
-      toast.error('Erreur de connexion au serveur');
-    } finally {
-      setDeletingAccount(false);
-    }
-  };
 
   if (!userData) return null;
 
@@ -182,8 +151,21 @@ export default function MonProfil() {
         onClick={() => navigate(-1)}
         className="mb-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
       >
-        ← Retour
+        {t('btn.back_arrow')}
       </button>
+
+      {/* Changer la page favorite */}
+      {userData?.numeroH && (
+        <button
+          onClick={() => {
+            localStorage.removeItem(`moftal_favori_${userData.numeroH}`);
+            window.dispatchEvent(new CustomEvent('open-favori-modal'));
+          }}
+          className="mb-6 ml-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 text-sm font-medium transition-colors"
+        >
+          ⭐ Changer ma page d'accueil
+        </button>
+      )}
 
       {/* Header Principal */}
       <div
@@ -252,22 +234,22 @@ export default function MonProfil() {
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   {userData.role === "admin" || userData.isAdmin
-                    ? "👑 Administrateur"
-                    : "👤 Utilisateur"}
+                    ? t('profile.role.admin')
+                    : t('profile.role.user')}
                 </span>
               </div>
 
               <div className="text-slate-600">
-                <span className="font-medium">NuméroH:</span>{" "}
+                <span className="font-medium">{t('profile.numeroh')}:</span>{" "}
                 <span className="text-blue-600 font-semibold">
                   {getNumeroHForDisplay(userData.numeroH, true, false)}
                 </span>
               </div>
               {userData.handicap && (
                 <div className="text-slate-600">
-                  <span className="font-medium">Situation de handicap:</span>{" "}
+                  <span className="font-medium">{t('profile.handicap')}:</span>{" "}
                   <span className="text-emerald-700 font-semibold">
-                    {userData.handicap === "OUI" ? "Oui" : "Non"}
+                    {userData.handicap === "OUI" ? t('profile.handicap.yes') : t('profile.handicap.no')}
                   </span>
                 </div>
               )}
@@ -280,30 +262,24 @@ export default function MonProfil() {
               onClick={() => setOpen(true)}
               className="flex-1 sm:flex-none min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors duration-200 text-sm sm:text-base"
             >
-              ✨ Identité
+              {t('profile.btn.identity')}
             </button>
             {canSeeAdminPanel && (
               <button
                 onClick={() => setShowAdmin(!showAdmin)}
                 className="flex-1 sm:flex-none min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 text-sm sm:text-base"
               >
-                ⚙️ Admin
+                {t('profile.btn.admin')}
               </button>
             )}
             <button
               onClick={() => setShowActions(!showActions)}
               className="flex-1 sm:flex-none min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 text-sm sm:text-base"
             >
-              💼 Services
+              {t('profile.btn.services')}
               <span className="text-xs bg-white/20 rounded px-1">
                 {showActions ? '▲' : '▼'}
               </span>
-            </button>
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="flex-1 sm:flex-none min-w-[100px] sm:min-w-[140px] px-3 sm:px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-semibold rounded-lg transition-colors duration-200 text-sm sm:text-base border border-red-200"
-            >
-              🗑️ Supprimer mon compte
             </button>
           </div>
         </div>
@@ -316,10 +292,10 @@ export default function MonProfil() {
           style={{ borderLeftWidth: "4px", borderLeftColor: "#6366f1" }}
         >
           <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-            🏅 Mes Services
+            {t('profile.my_services')}
           </h3>
           <p className="text-xs text-slate-400 mb-4">
-            Logos attribués par les administrateurs de chaque service — ils reflètent vos activités sur la plateforme
+            {t('profile.logos_desc')}
           </p>
           <div className="flex flex-wrap gap-4">
             {userLogos.map((userLogo) => {
@@ -361,7 +337,7 @@ export default function MonProfil() {
             })}
           </div>
           <p className="text-xs text-slate-400 mt-4 italic">
-            Ces logos ne sont pas attribués automatiquement — ils sont accordés par l'administrateur ou le chef de chaque service.
+            {t('profile.logos_note')}
           </p>
         </div>
       )}
@@ -373,10 +349,10 @@ export default function MonProfil() {
           style={{ borderLeftWidth: "4px", borderLeftColor: "#3b82f6" }}
         >
           <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-            🎥 Ma vidéo d'inscription
+            {t('profile.my_video')}
           </h3>
           <p className="text-sm text-slate-500 mb-3">
-            Vidéo enregistrée lors de votre inscription. Elle sert à confirmer votre identité.
+            {t('profile.video_desc')}
           </p>
           <video
             src={userData.video as string}
@@ -394,10 +370,10 @@ export default function MonProfil() {
           style={{ borderLeftWidth: "4px", borderLeftColor: "#0d9488" }}
         >
           <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-            🏫 Mes établissements liés
+            {t('profile.my_institutions')}
           </h3>
           <p className="text-xs text-slate-400 mb-4">
-            Établissements qui vous ont donné accès à leur espace. Vous pouvez quitter à tout moment.
+            {t('profile.institutions_desc')}
           </p>
           <div className="space-y-2">
             {memberships.map((m) => (
@@ -419,7 +395,7 @@ export default function MonProfil() {
                   onClick={() => quitterEtablissement(m)}
                   className="flex-shrink-0 text-xs text-red-500 hover:text-red-700 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
                 >
-                  Quitter
+                  {t('profile.leave')}
                 </button>
               </div>
             ))}
@@ -454,7 +430,7 @@ export default function MonProfil() {
           style={{ borderLeftWidth: "4px", borderLeftColor: "#3b82f6" }}
         >
           <h3 className="text-xl font-semibold text-slate-700 mb-6 flex items-center gap-2">
-            ⚙️ Panneau d'Administration
+            {t('profile.admin_panel')}
           </h3>
           <AdminPanel userData={userData} />
         </div>
@@ -469,17 +445,16 @@ export default function MonProfil() {
           <div className="flex items-center justify-between mb-2">
             <div>
               <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                💼 Proposer un Service
+                {t('profile.offer_service')}
               </h3>
               <p className="text-sm text-slate-500 mt-1">
-                Créez un compte professionnel pour proposer vos services à la communauté.
-                Sélectionnez le type qui correspond à votre service.
+                {t('profile.offer_service_desc')}
               </p>
             </div>
             <button
               onClick={() => setShowActions(false)}
               className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
-              title="Fermer"
+              title={t('btn.close')}
             >
               ×
             </button>
@@ -489,14 +464,14 @@ export default function MonProfil() {
           <div className="mt-4 flex items-center gap-3 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 px-4 py-3">
             <span className="text-2xl flex-shrink-0">🎁</span>
             <div>
-              <div className="font-bold text-orange-700 text-sm">3 mois gratuits d'essai</div>
-              <div className="text-xs text-orange-600 mt-0.5">Aucune carte requise — activez votre compte et commencez immédiatement.</div>
+              <div className="font-bold text-orange-700 text-sm">{t('profile.free_trial')}</div>
+              <div className="text-xs text-orange-600 mt-0.5">{t('profile.free_trial_desc')}</div>
             </div>
           </div>
 
           {/* Types disponibles — aperçu visuel */}
           <div className="mt-5">
-            <p className="text-xs text-slate-500 mb-3 font-medium uppercase tracking-wide">Types de comptes disponibles</p>
+            <p className="text-xs text-slate-500 mb-3 font-medium uppercase tracking-wide">{t('profile.available_types')}</p>
             <div className="flex flex-wrap gap-2">
               {[
                 { icon: '🏥', label: 'Clinique' },
@@ -517,9 +492,9 @@ export default function MonProfil() {
                 { icon: '🌾', label: 'Producteur' },
                 { icon: '🏛️', label: 'Mairie' },
                 { icon: '💇', label: 'Vendeur' },
-              ].map(t => (
-                <span key={t.label} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs text-slate-600 shadow-sm">
-                  {t.icon} {t.label}
+              ].map(item => (
+                <span key={item.label} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs text-slate-600 shadow-sm">
+                  {item.icon} {item.label}
                 </span>
               ))}
             </div>
@@ -531,75 +506,66 @@ export default function MonProfil() {
               onClick={() => navigate('/inscription-pro')}
               className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-base rounded-xl shadow-md transition-colors duration-200"
             >
-              ➕ Créer mon compte professionnel
+              {t('profile.create_pro')}
             </button>
-            <p className="text-center text-xs text-slate-400 mt-2">Choisissez votre type de compte sur la page suivante</p>
+            <p className="text-center text-xs text-slate-400 mt-2">{t('profile.create_pro_hint')}</p>
           </div>
 
         </div>
       )}
 
-      {/* ── Modale suppression de compte ── */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            {/* Header rouge */}
-            <div className="bg-red-600 p-5">
-              <h2 className="text-xl font-bold text-white">🗑️ Supprimer mon compte</h2>
-              <p className="text-red-100 text-sm mt-1">Cette action est irréversible</p>
-            </div>
+      {/* ── Langue + Se déconnecter + Supprimer ── */}
+      <div className="mt-6 mb-4 flex flex-col gap-3">
 
-            {/* Corps */}
-            <div className="p-6 space-y-4">
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">
-                <p className="font-bold mb-1">⚠️ Attention — Action définitive</p>
-                <p>En supprimant votre compte, vous perdrez :</p>
-                <ul className="list-disc ml-4 mt-1 space-y-0.5">
-                  <li>Votre profil et toutes vos informations</li>
-                  <li>Votre arbre familial</li>
-                  <li>Vos histoires publiées</li>
-                  <li>Vos comptes professionnels</li>
-                </ul>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Saisissez votre adresse email pour confirmer
-                </label>
-                <input
-                  type="email"
-                  value={emailConfirm}
-                  onChange={(e) => setEmailConfirm(e.target.value)}
-                  placeholder="votre@email.com"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
-                  onKeyDown={(e) => e.key === 'Enter' && handleDeleteAccount()}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Votre email enregistré : <strong>{userData.email || 'non renseigné'}</strong>
-                </p>
-              </div>
+        {/* Langue collapsible */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowLang(!showLang)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <span className="flex items-center gap-2">🌐 {t('header.language')}</span>
+            <span className="text-xs text-gray-400">{showLang ? '▲' : '▼'}</span>
+          </button>
+          {showLang && (
+            <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 gap-2 border-t border-slate-100 pt-3">
+              {Object.entries(LANG_LABELS).map(([code, label]) => {
+                const isSelected = lang === code;
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => setLang(code as "fr" | "en" | "ar" | "man" | "pul")}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
+                      isSelected
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
+                    }`}
+                  >
+                    <span className="flex-1 text-left">{label}</span>
+                    {isSelected && <span className="text-emerald-600">✓</span>}
+                  </button>
+                );
+              })}
             </div>
-
-            {/* Boutons */}
-            <div className="flex gap-3 px-6 pb-6">
-              <button
-                onClick={() => { setShowDeleteModal(false); setEmailConfirm(''); }}
-                disabled={deletingAccount}
-                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors text-sm"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={deletingAccount || !emailConfirm.trim()}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 text-sm"
-              >
-                {deletingAccount ? '⏳ Suppression...' : '🗑️ Confirmer la suppression'}
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
+
+        {/* Se déconnecter */}
+        <button
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('session_user');
+            navigate('/login');
+          }}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold rounded-xl border border-orange-200 transition-colors"
+        >
+          <span>⏻</span>
+          {t('btn.logout')}
+        </button>
+
+      </div>
+
     </div>
   );
 }

@@ -98,7 +98,7 @@ header {
   }
 
   .btn.secondary {
-    @apply bg-sky-600 shadow-md hover:bg-sky-700 hover:shadow-lg;
+    @apply bg-slate-700 shadow-md hover:bg-slate-800 hover:shadow-lg;
   }
 
   .btn.outline {
@@ -597,6 +597,11 @@ header {
 @keyframes fadeInDown {
   from { opacity: 0; transform: translateY(-10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
 
 .message-input input[type="text"] {

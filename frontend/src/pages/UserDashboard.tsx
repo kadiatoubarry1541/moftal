@@ -1,6 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { isMasterAdmin, getPhotoUrl, getNumeroHForDisplay } from "../utils/auth";
+import { useI18n } from "../i18n/useI18n";
 import { SalesIcon } from "../components/icons/SalesIcon";
 import NotificationBell from "../components/NotificationBell";
 import { FavorisDropdown, FavorisDropdownItem } from "../components/FavorisDropdown";
@@ -8,7 +9,9 @@ import DefaultAvatar from "../assets/default-avatar.svg";
 
 // Onglets du dashboard — chargés uniquement quand l'onglet est actif
 const TerreAdam = lazy(() => import("./TerreAdam"));
+const FamilleTab = lazy(() => import("./famille/Famille"));
 const EchangesProfessionnel = lazy(() => import("../components/EchangesProfessionnel").then(m => ({ default: m.EchangesProfessionnel })));
+const Services = lazy(() => import("./Services"));
 
 const TabLoader = () => (
   <div className="flex items-center justify-center py-16">
@@ -70,7 +73,7 @@ interface NavItem {
   id: string;
   label: string;
   icon: string;
-  type: "link" | "tab";
+  type: "link" | "tab" | "drawer";
   path?: string;
   useSvg?: boolean;
   SvgIcon?: React.ComponentType<TabIcon>;
@@ -96,7 +99,7 @@ function setFavoritePage(numeroH: string, pageId: string) {
 }
 
 // Liste des ids pour initialiser l'onglet par défaut depuis la page favorite
-const TAB_IDS = ["terre-adam", "echanges"];
+const TAB_IDS = ["famille", "terre-adam", "echanges"];
 
 function getInitialTab() {
   try {
@@ -112,6 +115,7 @@ function getInitialTab() {
 }
 
 export function UserDashboard() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState(getInitialTab);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [userLogos, setUserLogos] = useState<UserLogo[]>([]);
@@ -184,12 +188,12 @@ export function UserDashboard() {
   };
 
   // Navigation unifiée : liens + onglets dans une seule barre
-  // Ordre : Famille → Terre Adam → Services → Échanges
+  // Ordre : Famille → Terre Adam → Échanges → Services
   const navItems: NavItem[] = [
-    { id: "famille", label: "Famille", icon: "👨‍👩‍👧‍👦", type: "link", path: "/famille" },
-    { id: "terre-adam", label: "Terre ADAM", icon: "🌍", type: "tab" },
-    { id: "services", label: "Services", icon: "💼", type: "link", path: "/services" },
-    { id: "echanges", label: "Échanges", icon: "⚖️", type: "tab", useSvg: true, SvgIcon: SalesIcon },
+    { id: "famille",    label: t('nav.famille'),    icon: "👨‍👩‍👧‍👦", type: "tab" },
+    { id: "terre-adam", label: t('nav.terre_adam'), icon: "🌍",       type: "tab" },
+    { id: "echanges",   label: t('nav.echanges'),   icon: "⚖️",       type: "tab", useSvg: true, SvgIcon: SalesIcon },
+    { id: "services",   label: t('nav.services'),   icon: "💼",       type: "tab" },
   ];
 
   if (!userData) {
@@ -222,63 +226,9 @@ export function UserDashboard() {
 
   return (
     <div className="user-dashboard bg-gray-50 dark:bg-gray-900 min-h-screen overflow-x-hidden">
-      {/* Barre supérieure: Gestion Pro, Favoris, Notifications, Déconnexion */}
-      <div className="flex items-center justify-end px-3 xs:px-4 sm:px-6 pt-1 mb-2 gap-2 flex-wrap">
-        <button
-          onClick={() => navigate("/gestion-interne")}
-          className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 transition-colors whitespace-nowrap"
-        >
-          Gestion Pro
-        </button>
-        {userData && (() => {
-          const currentFavoriteId = getFavoritePage(userData.numeroH);
-
-          return (
-            <FavorisDropdown
-              headerLabel="Page d'accueil favorite"
-              ariaLabel="Page d'accueil favorite : choisissez la page affichée en premier à votre arrivée"
-              title="Page d'accueil favorite"
-            >
-              {(close) => navItems.map((item) => {
-                const isSelected = currentFavoriteId === item.id;
-                return (
-                  <FavorisDropdownItem
-                    key={item.id}
-                    icon={item.useSvg && item.SvgIcon ? (
-                      <item.SvgIcon className="w-4 h-4" size={16} />
-                    ) : (
-                      <span className="text-base leading-none">{item.icon}</span>
-                    )}
-                    label={item.label}
-                    selected={isSelected}
-                    onClick={() => {
-                      setFavoritePage(userData.numeroH, item.id);
-                      close();
-                      if (item.type === "tab") {
-                        setActiveTab(item.id);
-                      } else if (item.type === "link" && item.path) {
-                        navigate(item.path);
-                      }
-                    }}
-                  />
-                );
-              })}
-            </FavorisDropdown>
-          );
-        })()}
-        <NotificationBell />
-        <button
-          onClick={() => navigate("/")}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors shadow-sm border-none cursor-pointer"
-        >
-          <span>↩</span>
-          <span className="hidden xs:inline">Déconnexion</span>
-          <span className="xs:hidden">Quitter</span>
-        </button>
-      </div>
 
       {/* En-tête profil – pleine largeur sur mobile, compact sur desktop */}
-      <div className="dashboard-header px-3 xs:px-4 sm:px-6 lg:px-8 mb-4 mt-[-3.5rem]">
+      <div className="dashboard-header px-3 xs:px-4 sm:px-6 lg:px-8 mb-4 mt-4">
         <div className="max-w-7xl mx-auto">
           <div className="profile-card w-full sm:w-fit max-w-full bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-row items-center gap-4 flex-wrap">
             <div className="user-avatar relative flex-shrink-0">
@@ -334,19 +284,13 @@ export function UserDashboard() {
                       : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                   }`}
                 >
-                  {userData.role === "admin" || userData.isAdmin ? "Administrateur" : "Utilisateur"}
+                  {userData.role === "admin" || userData.isAdmin ? t('profile.role.admin').replace('👑 ', '') : t('profile.role.user').replace('👤 ', '')}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                   NuméroH: {getNumeroHForDisplay(userData.numeroH, true, false)}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2 pt-0.5 items-center">
-                <button
-                  onClick={() => navigate("/moi/profil")}
-                  className="min-h-[36px] px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
-                >
-                  Mon profil
-                </button>
                 {userLogos.map((userLogo) => {
                   if (!userLogo?.logo) return null;
                   return (
@@ -413,7 +357,7 @@ export function UserDashboard() {
                       className="mt-5 px-6 py-2 rounded-lg text-sm font-medium text-white transition-colors"
                       style={{ backgroundColor: selectedLogo.logo.color || '#10B981' }}
                     >
-                      Fermer
+                      {t('btn.close')}
                     </button>
                   </div>
                 </div>
@@ -427,7 +371,7 @@ export function UserDashboard() {
           4 boutons toujours visibles sur UNE seule ligne, sans scroll.
           grid-cols-8 sur tous les écrans → chaque bouton = 25% de la largeur
       ────────────────────────────────────────────────────────────────── */}
-      <div className="dashboard-tabs px-1 xs:px-2 sm:px-4 lg:px-8 max-w-7xl mx-auto mt-3">
+      <div className="dashboard-tabs px-1 xs:px-2 sm:px-4 lg:px-8 max-w-7xl mx-auto mt-3 sticky top-14 z-30 bg-gray-50 dark:bg-gray-900 pb-1">
         <div className="grid grid-cols-8 gap-0.5 xs:gap-1 sm:gap-1.5 lg:gap-2">
           {navItems.map((item) => {
             const isActive = item.type === "tab" && activeTab === item.id;
@@ -485,6 +429,7 @@ export function UserDashboard() {
           {renderTabContent(activeTab, userData)}
         </Suspense>
       </div>
+
     </div>
   );
 }
@@ -504,8 +449,12 @@ function getLogoIcon(logo: string) {
 
 function renderTabContent(tab: string, userData: UserData) {
   switch (tab) {
+    case "famille":
+      return <FamilleTab />;
     case "terre-adam":
       return <TerreAdam />;
+    case "services":
+      return <Services />;
     case "echanges":
       return <EchangesProfessionnel userData={userData as any} />;
     default:

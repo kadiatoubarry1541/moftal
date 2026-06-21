@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getNumeroHForDisplay } from '../../utils/auth'
+import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { CommunicationHub } from '../../components/CommunicationHub'
 import { AddPersonModal } from '../../components/AddPersonModal'
@@ -59,7 +59,7 @@ function getToken() {
 
 type SessionKey = 'avant' | 'paradis' | 'objectif'
 
-export default function Enfants() {
+export default function Enfants({ inline }: { inline?: boolean } = {}) {
   const [user, setUser] = useState<UserData | null>(null)
   const [children, setChildren] = useState<ChildLink[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,7 +79,7 @@ export default function Enfants() {
   const [noteAnnee, setNoteAnnee] = useState(() => new Date().getFullYear())
   const [noteRating, setNoteRating] = useState(0)
   const [childRatings, setChildRatings] = useState<Array<{ id: string; annee: number; note: number }>>([])
-  const [activeTab, setActiveTab] = useState<'souvenir' | 'message'>('souvenir')
+  const [activeTab, setActiveTab] = useState<'souvenir' | 'message'>('message')
   const [openSection, setOpenSection] = useState<SessionKey | 'notes'>('avant')
   const [mediaByChapter, setMediaByChapter] = useState<Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>>>({
     avant: [],
@@ -417,34 +417,44 @@ export default function Enfants() {
     )
   }
 
+  const userIsAdmin = isAdmin(user)
+  const adminDemoChild: ChildLink | null = (userIsAdmin && children.length === 0)
+    ? {
+        id: 'admin-demo',
+        parentNumeroH: user?.numeroH || '',
+        childNumeroH: 'DEMO',
+        codeLiaison: '',
+        parentType: 'pere',
+        child: { numeroH: 'DEMO', prenom: 'Aperçu', nomFamille: 'Démo Admin', genre: 'HOMME' }
+      }
+    : null
+  const activeChild = selectedChild || adminDemoChild
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      <Link
-        to="/famille"
-        state={{ returnToHub: true }}
-        className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
-      >
-        ← Retour à Famille
-      </Link>
+      {!inline && (
+        <Link
+          to="/famille"
+          state={{ returnToHub: true }}
+          className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
+        >
+          ← Retour à Famille
+        </Link>
+      )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <h2 className="text-3xl font-bold text-slate-800">👶 Mes Enfants</h2>
-            <Link to="/famille/inspir" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300">
-              🤝 Inspir
-            </Link>
-          </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-          >
-            {showAddForm ? '✕ Annuler' : '+ Ajouter un enfant'}
-          </button>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-slate-800">👶 Mes Enfants</h2>
+          <Link to="/famille/inspir" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300">
+            🤝 Inspir
+          </Link>
         </div>
-        <p className="mt-3 text-slate-600 text-sm">
-          Partagez vos moments et recevez les notes de vos enfants.
-        </p>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors text-sm"
+        >
+          {showAddForm ? '✕ Annuler' : '+ Ajouter'}
+        </button>
       </div>
 
       {showPersonModal && (
@@ -541,9 +551,8 @@ export default function Enfants() {
       )}
 
       {pendingSent.length > 0 && (
-        <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 mb-6">
-          <h3 className="text-lg font-bold text-amber-800 mb-4">📤 Demandes envoyées</h3>
-          <p className="text-slate-600 mb-4">L&apos;enfant peut accepter ou refuser. S&apos;il refuse, vous verrez « Refusé - Désolé ».</p>
+        <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 mb-4">
+          <h3 className="text-sm font-bold text-amber-800 mb-3">📤 Demandes envoyées</h3>
           <div className="space-y-3">
             {pendingSent.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between bg-white rounded-lg p-4 border border-amber-200">
@@ -584,7 +593,7 @@ export default function Enfants() {
         </div>
       )}
 
-      {children.length === 0 && !showAddForm ? (
+      {children.length === 0 && !showAddForm && !userIsAdmin ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
           <p className="text-slate-500 mb-4">Aucun enfant lié. Ajoutez un enfant avec votre code de liaison, son NumeroH et son numéro maternité.</p>
           <button
@@ -595,6 +604,16 @@ export default function Enfants() {
           </button>
         </div>
       ) : (
+        <>
+        {adminDemoChild && (
+          <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 flex items-start gap-3">
+            <span className="text-2xl leading-none">👑</span>
+            <div>
+              <p className="font-semibold text-amber-800 text-sm">Mode administrateur — aperçu de la page</p>
+              <p className="text-xs text-amber-700 mt-1">Aucun enfant lié. Vous voyez l'interface telle que vos clients la verront une fois liés à leurs enfants.</p>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Liste des enfants */}
           <div className="lg:col-span-1 space-y-3">
@@ -641,18 +660,18 @@ export default function Enfants() {
 
           {/* Détail enfant sélectionné */}
           <div className="lg:col-span-2">
-            {selectedChild ? (
+            {(selectedChild || adminDemoChild) ? (
               <>
                 {(() => {
-                  const childName = selectedChild.child
-                    ? `${selectedChild.child.prenom} ${selectedChild.child.nomFamille}`
-                    : selectedChild.childNumeroH
+                  const childName = activeChild!.child
+                    ? `${activeChild!.child.prenom} ${activeChild!.child.nomFamille}`
+                    : activeChild!.childNumeroH
                   return (
                     <>
                       {/* Bannière */}
-                      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-6 text-white mb-4">
-                        <h3 className="text-2xl font-semibold mb-1">❤️ Nos souvenirs d&apos;ensemble</h3>
-                        <p className="text-green-100 text-sm">Moments précieux partagés avec {childName}</p>
+                      <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl px-5 py-3 text-white mb-4 flex items-center gap-3">
+                        <span className="text-xl">👶</span>
+                        <span className="font-bold text-base">{childName}</span>
                       </div>
 
                       {/* Carte principale avec onglets */}
@@ -660,8 +679,8 @@ export default function Enfants() {
                         {/* Onglets Souvenir / Message */}
                         <div className="flex border-b border-slate-200">
                           {([
-                            { key: 'souvenir' as const, icon: '📸', label: 'Souvenir' },
-                            { key: 'message' as const, icon: '💬', label: 'Message' }
+                            { key: 'message' as const, icon: '💬', label: 'Message' },
+                            { key: 'souvenir' as const, icon: '📸', label: 'Souvenir' }
                           ] as const).map((tab) => (
                             <button
                               key={tab.key}
@@ -936,6 +955,7 @@ export default function Enfants() {
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   )

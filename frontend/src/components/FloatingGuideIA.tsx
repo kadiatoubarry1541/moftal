@@ -223,8 +223,8 @@ export function FloatingGuideIA() {
         onClick={() => setOpen(o => !o)}
         className="fixed z-[60] flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 select-none"
         style={{
-          bottom: 'max(5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem))',
-          right: 'max(1.5rem, env(safe-area-inset-right, 0px))',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)',
+          right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
           width: 60, height: 60,
           background: 'linear-gradient(135deg,#16a34a 0%,#15803d 50%,#166534 100%)',
           boxShadow: open
@@ -242,8 +242,8 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
-            bottom: 'calc(max(5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem)) + 68px)',
-            right: 'max(1.5rem, env(safe-area-inset-right, 0px))',
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 68px)',
+            right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
             background: 'linear-gradient(135deg,#16a34a,#15803d)',
             whiteSpace: 'nowrap',
             opacity: 0.9,
@@ -258,8 +258,8 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] flex flex-col rounded-2xl overflow-hidden"
           style={{
-            bottom: 'calc(max(5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem)) + 72px)',
-            right: 'max(1.5rem, env(safe-area-inset-right, 0px))',
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 72px)',
+            right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',
             background: '#fff',

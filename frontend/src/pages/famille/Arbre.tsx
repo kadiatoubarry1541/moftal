@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { hideIncrement } from '../../utils/formatNumeroH'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
@@ -6,6 +6,10 @@ import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/Famil
 import { useI18n } from '../../i18n/useI18n'
 import { getSocket, disconnectSocket } from '../../services/socket'
 import CallModal from '../../components/CallModal'
+
+const ParentsInline    = lazy(() => import('./Parents'))
+const EnfantsInline    = lazy(() => import('./Enfants'))
+const PartenaireInline = lazy(() => import('./Partenaire'))
 
 interface UserData {
   numeroH: string
@@ -202,25 +206,14 @@ function ActivationArbreCard({ treeId, apiBase }: { treeId: string; apiBase: str
   );
 }
 
-function FoyerCard({ to, emoji, label }: { to: string; emoji: string; label: string }) {
-  return (
-    <Link
-      to={to}
-      className="w-full flex flex-col items-center justify-center gap-0.5 py-3 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-emerald-50 hover:border-emerald-200 active:scale-95"
-    >
-      <span className="text-2xl leading-none">{emoji}</span>
-      <span className="text-[10px] font-medium text-gray-600 text-center leading-tight">{label}</span>
-    </Link>
-  )
-}
 
 export default function Arbre() {
   const navigate = useNavigate()
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges'>('arbre')
-  const [foyerOpen, setFoyerOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges' | 'foyer'>('arbre')
+  const [foyerSection, setFoyerSection] = useState<'parents' | 'enfants' | 'femme' | 'homme' | null>(null)
   const { t } = useI18n()
 
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -904,15 +897,6 @@ const enhancedUser: UserData = useMemo(() => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-4">
-        <button
-          type="button"
-          onClick={() => navigate('/famille')}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors"
-        >
-          ← Ma famille
-        </button>
-      </div>
 
       {/* En-tête */}
       <div className="mb-4 flex items-center gap-3 rounded-2xl bg-emerald-600 px-4 py-3 text-white shadow-md">
@@ -923,86 +907,63 @@ const enhancedUser: UserData = useMemo(() => {
         </div>
       </div>
 
-      {/* ── Cercle familial — accès rapide ── */}
-      <div className="mb-4">
-        <button
-          type="button"
-          onClick={() => setFoyerOpen(o => !o)}
-          className={`w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl border shadow-sm transition active:scale-[0.99] ${
-            foyerOpen
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-              : 'bg-white border-gray-100 hover:bg-emerald-50 hover:border-emerald-200 text-gray-600'
-          }`}
-        >
-          <span className="flex items-center gap-2 font-bold text-sm">
-            <span className="text-2xl leading-none">👥</span>
-            Cercle familial
-          </span>
-          <span className="text-emerald-600 font-bold text-sm">{foyerOpen ? '▲' : '▼'}</span>
-        </button>
+      {/* ── Navigation style TerreAdam ── */}
+      <div className="bg-white border-b border-gray-200 shadow-sm mb-4 rounded-xl overflow-hidden">
+        <nav className="flex" role="tablist">
 
-        {foyerOpen && (
-          <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20 p-3">
-            <div className="grid grid-cols-4 gap-1.5">
-              <FoyerCard to="/famille/parents"   emoji="👨‍👩‍👦" label="Parents"   />
-              <FoyerCard to="/famille/enfants"   emoji="👶"    label="Enfants"   />
-              <FoyerCard to="/famille/femmes"    emoji="👰"    label="Ma femme"  />
-              <FoyerCard to="/famille/mari"      emoji="🤵"    label="Mon homme" />
-            </div>
-          </div>
-        )}
-      </div>
+          <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
+            onClick={() => setActiveTab('foyer')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
+              activeTab === 'foyer'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <span className="text-lg leading-none">🏠</span>
+            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Foyer</span>
+          </button>
 
-      <div className="card">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-          Choisissez une zone :
-        </p>
-        <div
-          className={`grid gap-1 mb-4 ${partner ? 'grid-cols-6' : 'grid-cols-5'}`}
-          role="tablist"
-          aria-label="Zones de la page"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'echanges'}
+          <button type="button" role="tab" aria-selected={activeTab === 'echanges'}
             onClick={() => setActiveTab('echanges')}
-            className={`rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
               activeTab === 'echanges'
-                ? 'border-emerald-600 bg-emerald-600 text-white shadow-md scale-[1.02]'
-                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            <span className="text-base leading-none" aria-hidden>💬</span>
-            <span className="text-[8px] font-bold leading-tight truncate w-full">Messages</span>
+            <span className="text-lg leading-none">💬</span>
+            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Messages</span>
           </button>
 
-          <button
-            type="button"
+          <button type="button"
             onClick={openGallery}
-            className="rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100"
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            <span className="text-base leading-none" aria-hidden>📷</span>
-            <span className="text-[8px] font-bold leading-tight truncate w-full">Galerie</span>
+            <span className="text-lg leading-none">📷</span>
+            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Galerie</span>
           </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'arbre'}
+          <button type="button"
+            onClick={() => navigate('/probleme')}
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <span className="text-lg leading-none">🚨</span>
+            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Problèmes ↗</span>
+          </button>
+
+          <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
             onClick={() => setActiveTab('arbre')}
-            className={`rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
               activeTab === 'arbre'
-                ? 'border-emerald-600 bg-emerald-600 text-white shadow-md scale-[1.02]'
-                : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-emerald-400 text-gray-800 dark:text-gray-100'
+                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            <span className="text-base leading-none" aria-hidden>🌳</span>
-            <span className="text-[8px] font-bold leading-tight truncate w-full">Mon arbre</span>
+            <span className="text-lg leading-none">🌳</span>
+            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Arbre</span>
           </button>
 
-          <button
-            type="button"
+          <button type="button"
             onClick={() => {
               const session = JSON.parse(localStorage.getItem('session_user') || '{}')
               const u = session.userData || session
@@ -1011,201 +972,31 @@ const enhancedUser: UserData = useMemo(() => {
               if (sousPrefecture) params.set('city', sousPrefecture)
               navigate(`/liste-professionnels?${params.toString()}`)
             }}
-            className="rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-amber-400 text-gray-800 dark:text-gray-100"
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
           >
-            <span className="text-base leading-none" aria-hidden>🏛️</span>
-            <span className="text-[8px] font-bold leading-tight truncate w-full">Mairie ↗</span>
+            <span className="text-lg leading-none">🏛️</span>
+            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Mairie ↗</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => navigate('/probleme')}
-            className="rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-amber-400 text-gray-800 dark:text-gray-100"
-          >
-            <span className="text-base leading-none" aria-hidden>🚨</span>
-            <span className="text-[8px] font-bold leading-tight truncate w-full">Problèmes ↗</span>
-          </button>
-
-          {/* Bouton arbre du conjoint — visible seulement si conjoint lié */}
           {partner && (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'arbre-conjoint'}
+            <button type="button" role="tab" aria-selected={activeTab === 'arbre-conjoint'}
               onClick={() => setActiveTab('arbre-conjoint')}
-              className={`rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 py-2.5 px-0.5 text-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-400 ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
                 activeTab === 'arbre-conjoint'
-                  ? 'border-pink-500 bg-pink-500 text-white shadow-md scale-[1.02]'
-                  : 'border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-pink-400 text-gray-800 dark:text-gray-100'
+                  ? 'border-pink-500 text-pink-700 bg-pink-50'
+                  : 'border-transparent text-gray-500 hover:text-pink-600 hover:bg-pink-50'
               }`}
             >
-              {partner.photo ? (
-                <img src={partner.photo} alt={partner.prenom} className="w-5 h-5 rounded-full object-cover border border-white shadow" />
-              ) : (
-                <span className="text-base leading-none" aria-hidden>💑</span>
-              )}
-              <span className="text-[8px] font-bold leading-tight truncate w-full">{partner.prenom}</span>
+              {partner.photo
+                ? <img src={partner.photo} alt={partner.prenom} className="w-5 h-5 rounded-full object-cover" />
+                : <span className="text-lg leading-none">💑</span>
+              }
+              <span className="text-[9px] font-medium leading-tight truncate w-full text-center">{partner.prenom}</span>
             </button>
           )}
-        </div>
 
-        {/* ─── Numéro de sang familial ─── */}
-        {treeInfo?.familyCode ? (
-          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 mb-4 flex items-center gap-3">
-            <span className="text-2xl">🩸</span>
-            <div className="flex-1">
-              <p className="font-black text-sm text-indigo-900">Numéro de sang familial</p>
-              <p className="text-xs text-indigo-600 mt-0.5">Identifiant unique de votre lignée — jamais répété</p>
-            </div>
-            <div className="text-right">
-              <span className="font-black text-xl text-indigo-800 tracking-widest">{treeInfo.familyCode}</span>
-              {treeInfo.bloodNumber && (
-                <p className="text-xs text-indigo-500">Sang n°{treeInfo.bloodNumber}</p>
-              )}
-            </div>
-          </div>
-        ) : treeInfo?.codePaiementRequis ? (
-          <ActivationArbreCard treeId={treeInfo.id} apiBase={API_BASE} />
-        ) : null}
-
-        {/* ─── Désignation des chefs de l'arbre ─── */}
-        {fund && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4">
-            <button
-              type="button"
-              onClick={() => { setShowDesignerChefs(v => !v); setMsgChefs('') }}
-              className="w-full flex items-center justify-between"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">👑</span>
-                <div className="text-left">
-                  <p className="font-black text-sm text-amber-900">Chefs de l'arbre familial</p>
-                  <p className="text-xs text-amber-700">Désignez le Patriarche, le Porte-parole et le Délégué</p>
-                </div>
-              </div>
-              <span className="text-amber-600 font-bold text-sm">{showDesignerChefs ? '▲' : '▼'}</span>
-            </button>
-
-            {/* Chefs actuels */}
-            {(() => {
-              // Supprime le compteur final du numeroH (ex: "G7C7P7R7 3" → "G7C7P7R7")
-              const stripIncrement = (n?: string) => n ? n.replace(/\s+\d+$/, '') : null
-              const chefs = [
-                {
-                  label: '🦁 Patriarche',
-                  nom: fund.conseillerNom,
-                  photo: fund.conseillerPhoto,
-                  numeroH: stripIncrement(fund.conseiller),
-                  color: '#92400e',
-                  bg: '#fef3c7'
-                },
-                {
-                  label: '🎙️ Porte-parole',
-                  nom: fund.gerant1Nom,
-                  photo: fund.gerant1Photo,
-                  numeroH: stripIncrement(fund.gerant1),
-                  color: '#1e40af',
-                  bg: '#eff6ff'
-                },
-                {
-                  label: '🤲 Délégué',
-                  nom: fund.gerant2Nom,
-                  photo: fund.gerant2Photo,
-                  numeroH: stripIncrement(fund.gerant2),
-                  color: '#374151',
-                  bg: '#f9fafb'
-                },
-              ]
-              return (
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {chefs.map(chef => (
-                    <div key={chef.label} className="rounded-xl p-2 text-center border border-amber-100 flex flex-col items-center gap-1" style={{ background: chef.bg }}>
-                      <p className="text-[10px] text-gray-500 font-semibold">{chef.label}</p>
-                      {chef.nom ? (
-                        <>
-                          {chef.photo
-                            ? <img src={chef.photo} alt={chef.nom} className="w-9 h-9 rounded-full object-cover border-2 border-white shadow" />
-                            : <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-base font-bold" style={{ color: chef.color }}>{chef.nom.charAt(0)}</div>
-                          }
-                          <p className="text-[10px] font-bold leading-tight truncate w-full" style={{ color: chef.color }}>{chef.nom}</p>
-                          <p className="text-[9px] text-gray-400 truncate w-full">#{chef.numeroH}</p>
-                        </>
-                      ) : (
-                        <p className="text-xs font-bold mt-1" style={{ color: chef.color }}>—</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )
-            })()}
-
-            {/* Formulaire de désignation */}
-            {showDesignerChefs && (
-              <div className="mt-4 space-y-3 border-t border-amber-200 pt-4">
-                {(fund.estAdmin || !fund.gerant1) && (
-                  <>
-                    <p className="text-xs text-amber-800 font-semibold">
-                      Entrez le numéro H du membre à désigner. Laissez vide pour conserver l'actuel.
-                    </p>
-                    {/* Patriarche en premier — le plus important */}
-                    {fund.estAdmin && (
-                      <div>
-                        <label className="text-xs font-bold text-amber-800 block mb-1">🦁 Patriarche — Chef à vie (actuel : {fund.conseillerNom || 'aucun'})</label>
-                        <input
-                          type="text"
-                          value={newConseiller}
-                          onChange={e => setNewConseiller(e.target.value)}
-                          placeholder="Numéro H du Patriarche (le plus âgé)"
-                          className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white"
-                        />
-                      </div>
-                    )}
-                    <div>
-                      <label className="text-xs font-bold text-gray-700 block mb-1">🎙️ Porte-parole (actuel : {fund.gerant1 ? `#${fund.gerant1}` : 'aucun'})</label>
-                      <input
-                        type="text"
-                        value={newGerant1}
-                        onChange={e => setNewGerant1(e.target.value)}
-                        placeholder="Numéro H du nouveau Porte-parole"
-                        className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-gray-700 block mb-1">🤲 Délégué (actuel : {fund.gerant2 ? `#${fund.gerant2}` : 'aucun'})</label>
-                      <input
-                        type="text"
-                        value={newGerant2}
-                        onChange={e => setNewGerant2(e.target.value)}
-                        placeholder="Numéro H du nouveau Délégué"
-                        className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white"
-                      />
-                    </div>
-
-                    {msgChefs && (
-                      <p className={`text-xs font-semibold text-center rounded-lg px-3 py-2 ${msgChefs.includes('✅') ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>
-                        {msgChefs}
-                      </p>
-                    )}
-
-                    <button
-                      onClick={sauvegarderChefs}
-                      disabled={savingChefs || (!newGerant1 && !newGerant2 && !newConseiller)}
-                      className="w-full py-2.5 rounded-xl text-white font-bold text-sm disabled:opacity-50"
-                      style={{ background: 'linear-gradient(135deg,#d97706,#b45309)' }}
-                    >
-                      {savingChefs ? 'Enregistrement...' : '👑 Confirmer la désignation'}
-                    </button>
-                  </>
-                )}
-                {!fund.estAdmin && fund.gerant1 && (
-                  <p className="text-xs text-amber-700 text-center">
-                    Seuls les administrateurs actuels peuvent changer les chefs.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        </nav>
+      </div>
 
         {activeTab === 'arbre-conjoint' && partner && (
           <>
@@ -1238,7 +1029,107 @@ const enhancedUser: UserData = useMemo(() => {
 
         {activeTab === 'arbre' && (
           <>
-            <h2 className="text-2xl font-bold mb-4">🌳 Mon arbre généalogique</h2>
+            <h2 className="text-2xl font-bold mb-4">🌳 Héritage</h2>
+
+            {/* ─── Numéro de sang familial ─── */}
+            {treeInfo?.familyCode ? (
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 mb-4 flex items-center gap-3">
+                <span className="text-2xl">🩸</span>
+                <div className="flex-1">
+                  <p className="font-black text-sm text-indigo-900">Numéro de sang familial</p>
+                  <p className="text-xs text-indigo-600 mt-0.5">Identifiant unique de votre lignée — jamais répété</p>
+                </div>
+                <div className="text-right">
+                  <span className="font-black text-xl text-indigo-800 tracking-widest">{treeInfo.familyCode}</span>
+                  {treeInfo.bloodNumber && (
+                    <p className="text-xs text-indigo-500">Sang n°{treeInfo.bloodNumber}</p>
+                  )}
+                </div>
+              </div>
+            ) : treeInfo?.codePaiementRequis ? (
+              <ActivationArbreCard treeId={treeInfo.id} apiBase={API_BASE} />
+            ) : null}
+
+            {/* ─── Chefs de l'arbre familial ─── */}
+            {fund && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowDesignerChefs(v => !v); setMsgChefs('') }}
+                  className="w-full flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">👑</span>
+                    <div className="text-left">
+                      <p className="font-black text-sm text-amber-900">Chefs de l'arbre familial</p>
+                      <p className="text-xs text-amber-700">Désignez le Patriarche, le Porte-parole et le Délégué</p>
+                    </div>
+                  </div>
+                  <span className="text-amber-600 font-bold text-sm">{showDesignerChefs ? '▲' : '▼'}</span>
+                </button>
+                {(() => {
+                  const stripIncrement = (n?: string) => n ? n.replace(/\s+\d+$/, '') : null
+                  const chefs = [
+                    { label: '🦁 Patriarche',   nom: fund.conseillerNom, photo: fund.conseillerPhoto, numeroH: stripIncrement(fund.conseiller), color: '#92400e', bg: '#fef3c7' },
+                    { label: '🎙️ Porte-parole', nom: fund.gerant1Nom,    photo: fund.gerant1Photo,    numeroH: stripIncrement(fund.gerant1),    color: '#1e40af', bg: '#eff6ff' },
+                    { label: '🤲 Délégué',       nom: fund.gerant2Nom,    photo: fund.gerant2Photo,    numeroH: stripIncrement(fund.gerant2),    color: '#374151', bg: '#f9fafb' },
+                  ]
+                  return (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {chefs.map(chef => (
+                        <div key={chef.label} className="rounded-xl p-2 text-center border border-amber-100 flex flex-col items-center gap-1" style={{ background: chef.bg }}>
+                          <p className="text-[10px] text-gray-500 font-semibold">{chef.label}</p>
+                          {chef.nom ? (
+                            <>
+                              {chef.photo
+                                ? <img src={chef.photo} alt={chef.nom} className="w-9 h-9 rounded-full object-cover border-2 border-white shadow" />
+                                : <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-base font-bold" style={{ color: chef.color }}>{chef.nom.charAt(0)}</div>
+                              }
+                              <p className="text-[10px] font-bold leading-tight truncate w-full" style={{ color: chef.color }}>{chef.nom}</p>
+                              <p className="text-[9px] text-gray-400 truncate w-full">#{chef.numeroH}</p>
+                            </>
+                          ) : (
+                            <p className="text-xs font-bold mt-1" style={{ color: chef.color }}>—</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+                {showDesignerChefs && (
+                  <div className="mt-4 space-y-3 border-t border-amber-200 pt-4">
+                    {(fund.estAdmin || !fund.gerant1) && (
+                      <>
+                        <p className="text-xs text-amber-800 font-semibold">Entrez le numéro H du membre à désigner. Laissez vide pour conserver l'actuel.</p>
+                        {fund.estAdmin && (
+                          <div>
+                            <label className="text-xs font-bold text-amber-800 block mb-1">🦁 Patriarche — Chef à vie (actuel : {fund.conseillerNom || 'aucun'})</label>
+                            <input type="text" value={newConseiller} onChange={e => setNewConseiller(e.target.value)} placeholder="Numéro H du Patriarche (le plus âgé)" className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white" />
+                          </div>
+                        )}
+                        <div>
+                          <label className="text-xs font-bold text-gray-700 block mb-1">🎙️ Porte-parole (actuel : {fund.gerant1 ? `#${fund.gerant1}` : 'aucun'})</label>
+                          <input type="text" value={newGerant1} onChange={e => setNewGerant1(e.target.value)} placeholder="Numéro H du nouveau Porte-parole" className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-gray-700 block mb-1">🤲 Délégué (actuel : {fund.gerant2 ? `#${fund.gerant2}` : 'aucun'})</label>
+                          <input type="text" value={newGerant2} onChange={e => setNewGerant2(e.target.value)} placeholder="Numéro H du nouveau Délégué" className="w-full rounded-xl border border-amber-200 px-3 py-2 text-sm outline-none focus:border-amber-400 bg-white" />
+                        </div>
+                        {msgChefs && (
+                          <p className={`text-xs font-semibold text-center rounded-lg px-3 py-2 ${msgChefs.includes('✅') ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>{msgChefs}</p>
+                        )}
+                        <button onClick={sauvegarderChefs} disabled={savingChefs || (!newGerant1 && !newGerant2 && !newConseiller)} className="w-full py-2.5 rounded-xl text-white font-bold text-sm disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#d97706,#b45309)' }}>
+                          {savingChefs ? 'Enregistrement...' : '👑 Confirmer la désignation'}
+                        </button>
+                      </>
+                    )}
+                    {!fund.estAdmin && fund.gerant1 && (
+                      <p className="text-xs text-amber-700 text-center">Seuls les administrateurs actuels peuvent changer les chefs.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ─── Filtre vivants / décédés ─── */}
             {treeInfo && (
@@ -1583,7 +1474,43 @@ const enhancedUser: UserData = useMemo(() => {
           </div>
         )}
 
-      </div>
+        {activeTab === 'foyer' && (
+          <div>
+            {/* Nav 4 boutons Foyer */}
+            <div className="bg-white border-b border-gray-200 shadow-sm rounded-xl overflow-hidden mt-2">
+              <nav className="flex">
+                {([
+                  { id: 'parents', emoji: '👨‍👩‍👦', label: 'Parents'   },
+                  { id: 'enfants', emoji: '👶',    label: 'Enfants'   },
+                  { id: 'femme',   emoji: '👰',    label: 'Ma femme'  },
+                  { id: 'homme',   emoji: '🤵',    label: 'Mon homme' },
+                ] as const).map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setFoyerSection(foyerSection === item.id ? null : item.id)}
+                    className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
+                      foyerSection === item.id
+                        ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                        : 'border-transparent text-gray-500 hover:text-emerald-700 hover:bg-emerald-50'
+                    }`}
+                  >
+                    <span className="text-2xl leading-none">{item.emoji}</span>
+                    <span className="text-[9px] font-medium leading-tight truncate w-full text-center">{item.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* Contenu inline — s'ouvre sans navigation */}
+            <Suspense fallback={<div className="flex justify-center py-10"><div className="h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>}>
+              {foyerSection === 'parents' && <ParentsInline inline />}
+              {foyerSection === 'enfants' && <EnfantsInline inline />}
+              {foyerSection === 'femme'   && <PartenaireInline inline />}
+              {foyerSection === 'homme'   && <PartenaireInline inline />}
+            </Suspense>
+          </div>
+        )}
 
       {/* ── MODAL DÉTAIL DÉFUNT ── */}
       {showDefuntDetail && defuntDetail && (

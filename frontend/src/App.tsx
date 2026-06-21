@@ -1,9 +1,11 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, useLocation, Link, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
 import { getSessionUser, isAdmin } from "./utils/auth";
+import NotificationBell from "./components/NotificationBell";
+import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
@@ -101,6 +103,10 @@ const GestionJournaliste  = lazy(() => import("./pages/GestionJournaliste"));
 const GestionScientifique = lazy(() => import("./pages/GestionScientifique"));
 const GestionFournisseur  = lazy(() => import("./pages/GestionFournisseur"));
 const FournisseurVitrine  = lazy(() => import("./pages/FournisseurVitrine"));
+const VendeurVitrine      = lazy(() => import("./pages/VendeurVitrine"));
+const BeauteVitrine       = lazy(() => import("./pages/BeauteVitrine"));
+const ArtisanVitrine      = lazy(() => import("./pages/ArtisanVitrine"));
+const ProducteurVitrine   = lazy(() => import("./pages/ProducteurVitrine"));
 const GestionSecurite     = lazy(() => import("./pages/GestionSecurite"));
 const GestionImmobilier   = lazy(() => import("./pages/GestionImmobilier"));
 const GestionRestaurant   = lazy(() => import("./pages/GestionRestaurant"));
@@ -172,20 +178,68 @@ function ZakaMuslimOnly() {
   return <Zaka />;
 }
 
+const FAVORI_PAGES = [
+  { id: "famille",    label: "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
+  { id: "terre-adam", label: "Terre Adam", icon: "🌍",       path: "/compte" },
+  { id: "services",   label: "Services",   icon: "💼",       path: "/services" },
+  { id: "echanges",   label: "Échanges",   icon: "🛒",       path: "/echange" },
+];
+
+function getFavoriKey(numeroH: string) { return `moftal_favori_${numeroH}`; }
+
 function App() {
-  const { lang, setLang } = useI18n();
-  const { pathname } = useLocation();
+  const { lang, setLang, t } = useI18n();
+  const location = useLocation();
+  const { pathname } = location;
   const [guideReady, setGuideReady] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+  const [showFavoriModal, setShowFavoriModal] = useState(false);
+
+  useEffect(() => {
+    if (!langOpen) return;
+    const handle = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+    };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [langOpen]);
 
   // Différer le FloatingGuideIA après le premier rendu pour réduire le TBT initial
   useEffect(() => {
-    const t = setTimeout(() => setGuideReady(true), 1500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setGuideReady(true), 1500);
+    return () => clearTimeout(timer);
   }, []);
 
   const navigate = useNavigate();
   const currentUser = getSessionUser();
   const isLoggedIn = currentUser !== null;
+
+  // Afficher le choix du favori à la première connexion
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser?.numeroH) return;
+    const favori = localStorage.getItem(getFavoriKey(currentUser.numeroH));
+    if (!favori) setShowFavoriModal(true);
+  }, [isLoggedIn]);
+
+  // Écouter l'événement "ouvrir la modal favori" depuis n'importe quelle page
+  useEffect(() => {
+    const handler = () => setShowFavoriModal(true);
+    window.addEventListener('open-favori-modal', handler);
+    return () => window.removeEventListener('open-favori-modal', handler);
+  }, []);
+
+  // Rediriger vers la page favorite après connexion
+  useEffect(() => {
+    if (!currentUser?.numeroH) return;
+    const state = location.state as { fromLogin?: boolean } | null;
+    if (pathname === '/compte' && state?.fromLogin) {
+      const favori = localStorage.getItem(getFavoriKey(currentUser.numeroH));
+      if (favori && favori !== '/compte') {
+        navigate(favori, { replace: true });
+      }
+    }
+  }, [pathname]);
   const isGestionMode = pathname.startsWith("/gestion");
   const isVitrineMode =
     pathname.startsWith("/clinique/") ||
@@ -203,41 +257,101 @@ function App() {
     pathname.startsWith("/restaurant/") ||
     pathname.startsWith("/transport/") ||
     pathname.startsWith("/reseau-vitrine/") ||
-    pathname.startsWith("/mairie/");
+    pathname.startsWith("/mairie/") ||
+    pathname.startsWith("/vendeur/") ||
+    pathname.startsWith("/beaute-vitrine/") ||
+    pathname.startsWith("/artisan/") ||
+    pathname.startsWith("/producteur/");
   const isFullscreenPage = isGestionMode || isVitrineMode;
   const isHome = pathname === "/";
+  const isPublicPage = isHome ||
+    pathname === "/login" ||
+    pathname === "/login-membre" ||
+    pathname.startsWith("/vivant") ||
+    pathname === "/choix" ||
+    pathname === "/inscription" ||
+    pathname === "/mot-de-passe-oublie";
   const showFullHeader = !isLoggedIn || isHome;
   return (
     <div className={!isFullscreenPage ? "bg-gray-900 min-h-screen" : ""}>
-    <div className={`flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl' : ''}`}>
+    <div className={`flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-screen' : ''}${isHome ? ' h-screen overflow-hidden' : ''}`}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine */}
       {!isFullscreenPage && <header className="bg-white dark:bg-gray-900 sticky top-0 z-50 safe-area-inset-top">
         <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 py-1">
           <div className="flex items-center justify-between gap-2">
-            {/* Logo visible partout une fois connecté */}
-            {isLoggedIn && !isHome && (
-              <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
-                <img src="/logo-moftal.svg" alt="Moftal" width="96" height="96" style={{ width: 96, height: 96 }}/>
-              </Link>
-            )}
-            <div className="flex items-center gap-2 flex-wrap justify-end min-h-[44px]">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <label className="text-xs xs:text-sm text-gray-600 dark:text-gray-300 hidden xs:inline">Lang</label>
-                <select
-                  className="min-h-[44px] px-2 py-2 sm:py-1 border rounded-lg text-sm bg-white dark:bg-gray-800 dark:border-gray-700 text-gray-900 dark:text-gray-100 cursor-pointer"
-                  value={lang}
-                  onChange={(e) =>
-                    setLang(e.target.value as "fr" | "en" | "ar" | "man" | "pul")
-                  }
-                  aria-label="Choisir la langue"
+            {/* Gauche : Logo */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {isLoggedIn && !isPublicPage && (
+                <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
+                  <img src="/logo-moftal.svg" alt="Moftal" width="96" height="96" style={{ width: 96, height: 96 }}/>
+                </Link>
+              )}
+            </div>
+
+            {/* Droite : Gestion Pro + Cloche + Langue */}
+            <div className="flex items-center gap-2 justify-end min-h-[44px]">
+              {isLoggedIn && !isPublicPage && (
+                <button
+                  onClick={() => navigate("/gestion-interne")}
+                  className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 transition-colors whitespace-nowrap"
                 >
-                  {Object.entries(LANG_LABELS).map(([code, label]) => (
-                    <option key={code} value={code}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {t('header.manage_pro')}
+                </button>
+              )}
+              {isLoggedIn && !isPublicPage && <NotificationBell />}
+              {/* Langue : toujours sur accueil, sinon seulement si non connecté */}
+              {(!isLoggedIn || isHome) && (
+                <div ref={langRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setLangOpen((o) => !o)}
+                    className="min-h-[36px] flex items-center px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors whitespace-nowrap"
+                    aria-label={t('header.language')}
+                    aria-haspopup="listbox"
+                    aria-expanded={langOpen}
+                  >
+                    <span>{t('header.language')}</span>
+                  </button>
+                  {langOpen && (
+                    <div
+                      role="listbox"
+                      className="absolute right-0 top-11 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-2xl ring-1 ring-gray-200 dark:ring-gray-700 z-50 overflow-hidden py-1"
+                    >
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                        {t('header.language')}
+                      </div>
+                      <div className="max-h-60 overflow-y-auto">
+                        {Object.entries(LANG_LABELS).map(([code, label]) => (
+                          <button
+                            key={code}
+                            type="button"
+                            role="option"
+                            aria-selected={lang === code}
+                            onClick={() => { setLang(code as "fr" | "en" | "ar" | "man" | "pul"); setLangOpen(false); }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                              lang === code
+                                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold"
+                                : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                            }`}
+                          >
+                            <span className="flex-1">{label}</span>
+                            {lang === code && <span className="text-blue-600 dark:text-blue-400">✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Mon Profil : à la place de Langue quand connecté */}
+              {isLoggedIn && !isPublicPage && (
+                <button
+                  onClick={() => navigate("/moi/profil")}
+                  className="min-h-[36px] flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors whitespace-nowrap"
+                >
+                  {t('dashboard.my_profile')}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -251,7 +365,7 @@ function App() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
               <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 40, width: 40, objectFit: "contain" }} />
               <div>
-                <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>Professionnel</div>
+                <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>{t('header.pro_mode')}</div>
                 <div style={{ color: "#475569", fontSize: 11, fontWeight: 500 }}>Moftal</div>
               </div>
             </div>
@@ -270,14 +384,14 @@ function App() {
                 style={{ background: "rgba(255,255,255,0.07)", color: "#94a3b8", border: "1px solid #1e293b", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "background 0.15s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.12)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"; }}>
-                🏠 <span style={{ display: "none" }}>Mes espaces</span>
+                🏠 <span style={{ display: "none" }}>{t('header.my_spaces')}</span>
               </button>
               <button onClick={() => { localStorage.removeItem("token"); navigate("/login"); }}
-                title="Se déconnecter"
+                title={t('btn.logout')}
                 style={{ background: "rgba(220,38,38,0.15)", color: "#f87171", border: "1px solid rgba(220,38,38,0.3)", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "background 0.15s" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.25)"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.15)"; }}>
-                ⏻ Quitter
+                ⏻ {t('header.quit')}
               </button>
             </div>
           </div>
@@ -285,7 +399,7 @@ function App() {
       )}
 
       {/* Main content - plein écran, chaque page gère son propre container */}
-      <main className="w-full overflow-x-hidden">
+      <main className="w-full overflow-x-hidden flex-1">
         <Suspense fallback={<LoadingBar />}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -415,6 +529,10 @@ function App() {
           <Route path="/gestion-scientifique/:tenantCode" element={<GestionScientifique />} />
           <Route path="/gestion-fournisseur/:tenantCode"  element={<GestionFournisseur />} />
           <Route path="/fournisseur/:tenantCode"         element={<FournisseurVitrine />} />
+          <Route path="/vendeur/:tenantCode"            element={<VendeurVitrine />} />
+          <Route path="/beaute-vitrine/:tenantCode"     element={<BeauteVitrine />} />
+          <Route path="/artisan/:tenantCode"            element={<ArtisanVitrine />} />
+          <Route path="/producteur/:tenantCode"         element={<ProducteurVitrine />} />
           <Route path="/gestion-securite/:tenantCode"     element={<GestionSecurite />} />
           <Route path="/gestion-immobilier/:tenantCode"  element={<GestionImmobilier />} />
           <Route path="/gestion-restaurant/:tenantCode"  element={<GestionRestaurant />} />
@@ -470,23 +588,23 @@ function App() {
       {/* Footer minimal Espace Gestion */}
       {isGestionMode && (
         <div style={{ textAlign: "center", padding: "12px 16px", fontSize: 11, color: "#94a3b8", borderTop: "1px solid #f1f5f9", background: "white" }}>
-          Moftal · Espace Professionnel
+          {t('footer.pro_space')}
         </div>
       )}
 
       {/* Footer site principal — masqué en mode Espace Gestion */}
-      {!isGestionMode && <footer className="bg-gray-900 text-white py-10 safe-area-inset-bottom">
+      {!isGestionMode && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
         <div className="mx-auto px-6 text-center">
-          <p className="text-gray-300 text-sm mb-5">
-            <span style={{ color: "#22a722" }} className="font-bold">© 2025 Moftal</span>
-            {" · "}Ensemble pour les enfants d'Adam{" · "}Système d'enregistrement généalogique
+          <p className="text-gray-300 text-sm mb-2">
+            <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
+            {" · "}{t('footer.tagline')}{" · "}{t('footer.system')}
           </p>
           <div className="flex items-center justify-center gap-5 flex-wrap">
             <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-sm underline transition-colors inline-flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Conditions d'Utilisation
+              {t('footer.conditions')}
             </Link>
           </div>
         </div>
@@ -526,6 +644,41 @@ function App() {
           className: "dark:bg-gray-800 dark:text-gray-100",
         }}
       />
+
+      {/* Modal choix page favorite — première connexion */}
+      {showFavoriModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-3">⭐</div>
+              <h2 className="text-xl font-bold text-gray-900">Votre page d'accueil</h2>
+              <p className="text-sm text-gray-500 mt-1">Quelle page voulez-vous voir en premier quand vous vous connectez ?</p>
+            </div>
+            <div className="flex flex-col gap-3">
+              {FAVORI_PAGES.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    if (currentUser?.numeroH) {
+                      localStorage.setItem(getFavoriKey(currentUser.numeroH), item.path);
+                    }
+                    setShowFavoriModal(false);
+                    navigate(item.path);
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border-2 border-gray-100 hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
+                >
+                  <span className="text-2xl">{item.icon}</span>
+                  <span className="font-semibold text-gray-800">{item.label}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
     </div>
   );
