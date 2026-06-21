@@ -355,6 +355,40 @@ function App() {
             </div>
           </div>
         </div>
+
+        {/* ── Barre de navigation principale — toujours visible quand connecté ── */}
+        {isLoggedIn && !isPublicPage && (
+          <div className="border-t border-gray-100 dark:border-gray-800">
+            <div className="flex">
+              {([
+                { id: "terre-adam", label: t('nav.terre_adam') || "Terre Adam", icon: "🌍",       path: "/compte"   },
+                { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille"  },
+                { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: "⚖️",       path: "/echange"  },
+                { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",       path: "/services" },
+              ] as { id: string; label: string; icon: string; path: string }[]).map((item) => {
+                const isActive =
+                  item.path === "/compte"
+                    ? pathname === "/compte"
+                    : pathname === item.path || pathname.startsWith(item.path + "/");
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(item.path)}
+                    className={`flex-1 flex flex-col items-center py-1.5 gap-0.5 transition-colors ${
+                      isActive
+                        ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span className="text-xl leading-none">{item.icon}</span>
+                    <span className="text-[9px] font-medium">{item.label}</span>
+                    {isActive && <span className="w-4 h-0.5 rounded-full bg-blue-600 dark:bg-blue-400" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </header>}
 
       {/* ── Barre Espace Gestion (comme Messenger est séparé de Facebook) ── */}
