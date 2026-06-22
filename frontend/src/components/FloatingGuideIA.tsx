@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 
@@ -226,10 +226,10 @@ export function FloatingGuideIA() {
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)',
           right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
           width: 60, height: 60,
-          background: 'linear-gradient(135deg,#16a34a 0%,#15803d 50%,#166534 100%)',
+          background: 'linear-gradient(135deg,#1a8f1a 0%,#156315 50%,#0f4b0f 100%)',
           boxShadow: open
-            ? '0 8px 32px rgba(22,163,74,0.7)'
-            : '0 8px 32px rgba(22,163,74,0.45)',
+            ? '0 8px 32px rgba(34,167,34,0.7)'
+            : '0 8px 32px rgba(34,167,34,0.45)',
         }}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}>
@@ -244,7 +244,7 @@ export function FloatingGuideIA() {
           style={{
             bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 68px)',
             right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
-            background: 'linear-gradient(135deg,#16a34a,#15803d)',
+            background: 'linear-gradient(135deg,#1a8f1a,#156315)',
             whiteSpace: 'nowrap',
             opacity: 0.9,
           }}
@@ -263,13 +263,13 @@ export function FloatingGuideIA() {
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',
             background: '#fff',
-            border: '1.5px solid rgba(22,163,74,0.25)',
-            boxShadow: '0 24px 64px rgba(22,163,74,0.2)',
+            border: '1.5px solid rgba(34,167,34,0.25)',
+            boxShadow: '0 24px 64px rgba(34,167,34,0.2)',
           }}
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg,#16a34a 0%,#15803d 100%)' }}>
+            style={{ background: 'linear-gradient(135deg,#1a8f1a 0%,#156315 100%)' }}>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'rgba(255,255,255,0.2)', fontSize: 20 }}>🌳</div>
             <div className="flex-1 min-w-0">
@@ -305,14 +305,14 @@ export function FloatingGuideIA() {
           {/* Zone messages */}
           <div
             className="flex-1 overflow-y-auto px-3 py-3 space-y-3"
-            style={{ background: 'linear-gradient(180deg,#f0fdf4 0%,#f7fef9 100%)' }}
+            style={{ background: 'linear-gradient(180deg,#f0fdf0 0%,#f7fef9 100%)' }}
           >
             {messages.map(msg => (
               <div key={msg.id} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
                 {!msg.isUser && (
                   <div
                     className="w-7 h-7 rounded-full flex items-center justify-center mr-2 flex-shrink-0 mt-0.5"
-                    style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', fontSize: 13 }}
+                    style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)', fontSize: 13 }}
                   >🌿</div>
                 )}
                 <div className="max-w-[85%] space-y-2">
@@ -322,8 +322,8 @@ export function FloatingGuideIA() {
                       msg.isUser ? 'text-white rounded-tr-sm' : 'text-gray-800 rounded-tl-sm shadow-sm'
                     }`}
                     style={msg.isUser
-                      ? { background: 'linear-gradient(135deg,#16a34a,#15803d)' }
-                      : { background: '#fff', border: '1px solid rgba(22,163,74,0.15)' }
+                      ? { background: 'linear-gradient(135deg,#1a8f1a,#156315)' }
+                      : { background: '#fff', border: '1px solid rgba(34,167,34,0.15)' }
                     }
                   >
                     <RenderText text={msg.text} />
@@ -338,9 +338,9 @@ export function FloatingGuideIA() {
                           onClick={() => goTo(lnk.path)}
                           className="px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all hover:shadow-md active:scale-95"
                           style={{
-                            background: 'linear-gradient(135deg,#dcfce7,#bbf7d0)',
+                            background: 'linear-gradient(135deg,#dcfcdc,#bbf7bb)',
                             borderColor: '#86efac',
-                            color: '#15803d',
+                            color: '#156315',
                           }}
                         >
                           {lnk.label} →
@@ -361,18 +361,18 @@ export function FloatingGuideIA() {
               <div className="flex justify-start">
                 <div
                   className="w-7 h-7 rounded-full flex items-center justify-center mr-2 flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', fontSize: 13 }}
+                  style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)', fontSize: 13 }}
                 >🌿</div>
                 <div
                   className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm"
-                  style={{ border: '1px solid rgba(22,163,74,0.15)' }}
+                  style={{ border: '1px solid rgba(34,167,34,0.15)' }}
                 >
                   <div className="flex gap-1 items-center">
                     {[0, 150, 300].map(d => (
                       <div
                         key={d}
                         className="w-2 h-2 rounded-full animate-bounce"
-                        style={{ background: '#16a34a', animationDelay: `${d}ms` }}
+                        style={{ background: '#1a8f1a', animationDelay: `${d}ms` }}
                       />
                     ))}
                   </div>
@@ -386,9 +386,9 @@ export function FloatingGuideIA() {
           {showSuggestions && (
             <div
               className="px-3 py-2 flex-shrink-0 border-t"
-              style={{ borderColor: 'rgba(22,163,74,0.15)', background: '#f0fdf4' }}
+              style={{ borderColor: 'rgba(34,167,34,0.15)', background: '#f0fdf0' }}
             >
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#16a34a' }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#1a8f1a' }}>
                 Questions fréquentes
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -397,7 +397,7 @@ export function FloatingGuideIA() {
                     key={i}
                     onClick={() => handleSend(q.question)}
                     className="px-2.5 py-1.5 text-[11px] font-medium rounded-xl border transition-all hover:shadow-sm active:scale-95"
-                    style={{ background: '#fff', borderColor: '#bbf7d0', color: '#15803d' }}
+                    style={{ background: '#fff', borderColor: '#bbf7bb', color: '#156315' }}
                   >
                     {q.label}
                   </button>
@@ -409,7 +409,7 @@ export function FloatingGuideIA() {
           {/* Zone de saisie */}
           <div
             className="px-3 py-3 border-t flex-shrink-0 bg-white"
-            style={{ borderColor: 'rgba(22,163,74,0.15)' }}
+            style={{ borderColor: 'rgba(34,167,34,0.15)' }}
           >
             <div className="flex gap-2 items-center">
               <input
@@ -422,15 +422,15 @@ export function FloatingGuideIA() {
                 disabled={loading}
                 className="flex-1 px-4 py-2.5 text-sm rounded-xl border-2 focus:outline-none transition-colors disabled:opacity-50"
                 style={{
-                  borderColor: input ? '#16a34a' : '#bbf7d0',
-                  background: '#f0fdf4',
+                  borderColor: input ? '#1a8f1a' : '#bbf7bb',
+                  background: '#f0fdf0',
                 }}
               />
               <button
                 onClick={() => handleSend()}
                 disabled={loading || !input.trim()}
                 className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40 hover:scale-105 active:scale-95"
-                style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)' }}
+                style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                   <line x1="22" y1="2" x2="11" y2="13"/>

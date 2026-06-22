@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 
 interface DynamicAppManifestProps {
   /** Nom affiché sous l'icône installée (ex: nom de l'établissement) */
@@ -36,7 +36,7 @@ export default function DynamicAppManifest({
   description,
   iconUrl,
   startUrl,
-  themeColor = "#065f46",
+  themeColor = "#0f4b0f",
   backgroundColor = "#ffffff",
 }: DynamicAppManifestProps) {
   useEffect(() => {

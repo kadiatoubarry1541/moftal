@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -12,11 +12,11 @@ const MODES = {
     apiPrefix: "mosque-mgmt",
     label: "Gestion Mosquée",
     icon: "🕌",
-    gradient: "linear-gradient(135deg,#065f46,#059669)",
-    color: "#059669",
-    colorBg: "#ecfdf5",
-    colorBorder: "#a7f3d0",
-    spinBorder: "#bbf7d0",
+    gradient: "linear-gradient(135deg,#0f4b0f,#1a8f1a)",
+    color: "#1a8f1a",
+    colorBg: "#f0fdf0",
+    colorBorder: "#bbf7bb",
+    spinBorder: "#bbf7bb",
     tabs: ["dashboard","imams","members","donations","quran","announcements"] as const,
     tabLabels: { dashboard:"Dashboard", imams:"Imams", members:"Fidèles", donations:"Dons", quran:"Coran", announcements:"Annonces" },
     tabIcons:  { dashboard:"📊", imams:"🕌", members:"👥", donations:"💚", quran:"📖", announcements:"📣" },
@@ -242,7 +242,7 @@ export default function GestionIslamique({ mode }: Props) {
               { label:"Fidèles", value:dash.totalMembers, icon:"👥", color:"#3b82f6" },
               ...(mode==="imam" ? [{ label:"Prédications / mois", value:dash.predsMois, icon:"📢", color:"#8b5cf6" }] : []),
               ...(mode==="mosque" ? [{ label:"Élèves Coran", value:dash.quranStudents, icon:"📖", color:"#d97706" }] : []),
-              { label:"Dons ce mois", value:fmtMoney(dash.donsMois), icon:"💚", color:"#059669", small:true },
+              { label:"Dons ce mois", value:fmtMoney(dash.donsMois), icon:"💚", color:"#1a8f1a", small:true },
               ...(mode==="imam" ? [{ label:"Mosquées", value:dash.totalMosques, icon:"🕌", color:"#0891b2" }] : [{ label:"Élèves Coran", value:dash.quranStudents, icon:"📖", color:"#d97706" }]),
             ].filter((_, i, arr) => arr.findIndex(a => a.label === arr[i].label) === i).slice(0,5).map((s, i) => (
               <div key={i} style={{ background:"white", borderRadius:12, padding:"16px 14px", border:"1px solid #f1f5f9", boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>

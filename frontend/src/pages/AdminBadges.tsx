@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { config } from '../config/api';
 import { getSessionUser, isAdmin } from '../utils/auth';
@@ -70,8 +70,8 @@ const PROFESSIONAL_LOGOS = [
 
   // Technologie & Informatique
   { name: 'Développeur', description: 'Programmeur informatique', icon: '💻', color: '#10B981', category: 'technologie' },
-  { name: 'Ingénieur informatique', description: 'Spécialiste en systèmes informatiques', icon: '🔧', color: '#059669', category: 'technologie' },
-  { name: 'Designer UX/UI', description: 'Designer d\'interfaces utilisateur', icon: '🎨', color: '#047857', category: 'technologie' },
+  { name: 'Ingénieur informatique', description: 'Spécialiste en systèmes informatiques', icon: '🔧', color: '#1a8f1a', category: 'technologie' },
+  { name: 'Designer UX/UI', description: 'Designer d\'interfaces utilisateur', icon: '🎨', color: '#156315', category: 'technologie' },
   { name: 'Technicien informatique', description: 'Réparateur et mainteneur d\'ordinateurs', icon: '🖥️', color: '#065F46', category: 'technologie' },
   { name: 'Data Scientist', description: 'Analyste de données', icon: '📊', color: '#064E3B', category: 'technologie' },
   { name: 'Cybersécurité', description: 'Expert en sécurité informatique', icon: '🔒', color: '#022C22', category: 'technologie' },
@@ -116,7 +116,7 @@ const PROFESSIONAL_LOGOS = [
   { name: 'Éleveur', description: 'Éleveur d\'animaux', icon: '🐄', color: '#4ADE80', category: 'agriculture' },
   { name: 'Agronome', description: 'Expert en agriculture', icon: '🌾', color: '#16A34A', category: 'agriculture' },
   { name: 'Ingénieur agronome', description: 'Spécialiste des sciences agricoles', icon: '🌱', color: '#15803D', category: 'agriculture' },
-  { name: 'Jardinier', description: 'Spécialiste des jardins', icon: '🌿', color: '#166534', category: 'agriculture' },
+  { name: 'Jardinier', description: 'Spécialiste des jardins', icon: '🌿', color: '#0f4b0f', category: 'agriculture' },
 
   // Droit & Justice
   { name: 'Avocat', description: 'Juriste et défenseur', icon: '⚖️', color: '#6B7280', category: 'droit' },

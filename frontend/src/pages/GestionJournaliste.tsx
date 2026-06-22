@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -18,7 +18,7 @@ const RED_BORDER = "#fecaca";
 const STATUT_ARTICLE: Record<string, { bg: string; color: string; label: string }> = {
   brouillon: { bg: "#f8fafc", color: "#64748b", label: "Brouillon" },
   revision:  { bg: "#fffbeb", color: "#b45309", label: "En révision" },
-  publie:    { bg: "#f0fdf4", color: "#15803d", label: "Publié" },
+  publie:    { bg: "#f0fdf0", color: "#156315", label: "Publié" },
   archive:   { bg: "#f1f5f9", color: "#475569", label: "Archivé" },
 };
 

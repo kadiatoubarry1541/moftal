@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 
@@ -22,7 +22,7 @@ function Avatar({ member }: { member: Member }) {
       <img
         src={member.photo}
         alt={member.prenom}
-        style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: "2px solid #d1fae5" }}
+        style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: "2px solid #dcfcdc" }}
         onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
       />
     );
@@ -30,7 +30,7 @@ function Avatar({ member }: { member: Member }) {
   return (
     <div style={{
       width: 56, height: 56, borderRadius: "50%",
-      background: "linear-gradient(135deg, #10b981, #059669)",
+      background: "linear-gradient(135deg, #22a722, #1a8f1a)",
       display: "flex", alignItems: "center", justifyContent: "center",
       color: "#fff", fontWeight: 700, fontSize: 20, letterSpacing: 1
     }}>
@@ -44,7 +44,7 @@ function MemberCard({ member, isMe }: { member: Member; isMe: boolean }) {
   return (
     <div style={{
       background: "#fff",
-      border: isMe ? "2px solid #10b981" : "1px solid #e2e8f0",
+      border: isMe ? "2px solid #22a722" : "1px solid #e2e8f0",
       borderRadius: 14,
       padding: "16px 14px",
       display: "flex",
@@ -58,7 +58,7 @@ function MemberCard({ member, isMe }: { member: Member; isMe: boolean }) {
         <div style={{ fontWeight: 700, fontSize: 15, color: "#1e293b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {member.prenom} {member.nomFamille}
           {isMe && (
-            <span style={{ marginLeft: 8, fontSize: 11, background: "#d1fae5", color: "#065f46", padding: "1px 8px", borderRadius: 20, fontWeight: 600 }}>
+            <span style={{ marginLeft: 8, fontSize: 11, background: "#dcfcdc", color: "#0f4b0f", padding: "1px 8px", borderRadius: 20, fontWeight: 600 }}>
               Moi
             </span>
           )}
@@ -125,7 +125,7 @@ export default function Racines() {
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
-      <div style={{ width: 32, height: 32, border: "3px solid #e2e8f0", borderTopColor: "#10b981", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, border: "3px solid #e2e8f0", borderTopColor: "#22a722", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -135,11 +135,11 @@ export default function Racines() {
     <div style={{ maxWidth: 480, margin: "60px auto", padding: "0 24px", textAlign: "center" }}>
       <div style={{
         width: 80, height: 80, borderRadius: "50%",
-        background: "linear-gradient(135deg, #d1fae5, #a7f3d0)",
+        background: "linear-gradient(135deg, #dcfcdc, #bbf7bb)",
         display: "flex", alignItems: "center", justifyContent: "center",
         margin: "0 auto 24px"
       }}>
-        <svg width="36" height="36" fill="none" stroke="#059669" strokeWidth={1.8} viewBox="0 0 24 24">
+        <svg width="36" height="36" fill="none" stroke="#1a8f1a" strokeWidth={1.8} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5z" />
           <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -153,7 +153,7 @@ export default function Racines() {
       <button
         onClick={() => navigate("/moi/profil")}
         style={{
-          background: "linear-gradient(135deg, #10b981, #059669)",
+          background: "linear-gradient(135deg, #22a722, #1a8f1a)",
           color: "#fff", border: "none", borderRadius: 12,
           padding: "12px 28px", fontSize: 15, fontWeight: 600,
           cursor: "pointer"
@@ -214,7 +214,7 @@ export default function Racines() {
 
       {/* Header */}
       <div style={{
-        background: "linear-gradient(135deg, #065f46, #059669, #10b981)",
+        background: "linear-gradient(135deg, #0f4b0f, #1a8f1a, #22a722)",
         borderRadius: 20,
         padding: "28px 28px 24px",
         marginBottom: 24,

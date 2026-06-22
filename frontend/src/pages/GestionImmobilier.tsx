@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -17,14 +17,14 @@ const AMBER_BORDER = "#fde68a";
 
 const STATUT_PROP: Record<string, { bg: string; color: string; label: string }> = {
   vacant:    { bg: "#fef2f2", color: "#dc2626", label: "Vacant" },
-  occupe:    { bg: "#f0fdf4", color: "#16a34a", label: "Occupé" },
+  occupe:    { bg: "#f0fdf0", color: "#1a8f1a", label: "Occupé" },
   travaux:   { bg: "#fff7ed", color: "#ea580c", label: "Travaux" },
   reserve:   { bg: "#eff6ff", color: "#2563eb", label: "Réservé" },
 };
 const PRIORITE: Record<string, { bg: string; color: string }> = {
   urgente: { bg: "#fef2f2", color: "#dc2626" },
   haute:   { bg: "#fff7ed", color: "#ea580c" },
-  normale: { bg: "#f0fdf4", color: "#16a34a" },
+  normale: { bg: "#f0fdf0", color: "#1a8f1a" },
   basse:   { bg: "#f8fafc", color: "#64748b" },
 };
 
@@ -160,7 +160,7 @@ export default function GestionImmobilier() {
             {[
               { label: "Biens au total", value: dash.totalProperties ?? 0, color: "#b45309", bg: "#fffbeb",
                 icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-              { label: "Biens occupés", value: dash.loyersOccupes ?? 0, color: "#16a34a", bg: "#f0fdf4",
+              { label: "Biens occupés", value: dash.loyersOccupes ?? 0, color: "#1a8f1a", bg: "#f0fdf0",
                 icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> },
               { label: "Biens vacants", value: dash.propertiesVacantes ?? 0, color: "#dc2626", bg: "#fef2f2",
                 icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg> },
@@ -224,7 +224,7 @@ export default function GestionImmobilier() {
                     <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(p.date_paiement)}</div>
                   </div>
                 </div>
-                <div style={{ fontWeight: 700, color: "#16a34a", fontSize: 13 }}>{fmtMoney(p.montant)}</div>
+                <div style={{ fontWeight: 700, color: "#1a8f1a", fontSize: 13 }}>{fmtMoney(p.montant)}</div>
               </div>
             ))}
           </div>
@@ -384,8 +384,8 @@ export default function GestionImmobilier() {
                     <div style={{ fontSize: 12, color: "#64748b" }}>{p.property_nom || ""} · {p.mois_concerne || fmtDate(p.date_paiement)}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#16a34a" }}>{fmtMoney(p.montant)}</div>
-                    <span style={{ fontSize: 10, fontWeight: 600, background: p.statut === "paye" ? "#f0fdf4" : "#fffbeb", color: p.statut === "paye" ? "#16a34a" : "#b45309", padding: "2px 8px", borderRadius: 6 }}>{p.statut}</span>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1a8f1a" }}>{fmtMoney(p.montant)}</div>
+                    <span style={{ fontSize: 10, fontWeight: 600, background: p.statut === "paye" ? "#f0fdf0" : "#fffbeb", color: p.statut === "paye" ? "#1a8f1a" : "#b45309", padding: "2px 8px", borderRadius: 6 }}>{p.statut}</span>
                   </div>
                 </div>
               ))}

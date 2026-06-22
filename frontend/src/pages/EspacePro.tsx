@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
 import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
@@ -298,7 +298,7 @@ const SERVICE_CONFIG: Record<string, ServiceCfg> = {
    COULEUR DE THÈME PAR SERVICE (icône PWA installée)
    ============================================= */
 const SERVICE_MANIFEST_COLOR: Record<string, string> = {
-  sante: "#0d9488",
+  sante: "#1a8f1a",
   activite: "#f59e0b",
   science: "#4f46e5",
   solidarite: "#f43f5e",
@@ -1005,7 +1005,7 @@ export default function EspacePro() {
         description={`Gestion ${typeInfo.label} — ${account.name}`}
         iconUrl={getPhotoUrl(account.photo)}
         startUrl={`/espace-pro/${account.id}`}
-        themeColor={SERVICE_MANIFEST_COLOR[serviceKey] || "#0d9488"}
+        themeColor={SERVICE_MANIFEST_COLOR[serviceKey] || "#1a8f1a"}
       />
       <div className="max-w-5xl mx-auto px-4 pt-3">
         <InstallAppButton />
@@ -1850,7 +1850,7 @@ export default function EspacePro() {
                   <button
                     onClick={() => navigate("/moftal-pay-pro")}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-bold"
-                    style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}
+                    style={{ background: 'linear-gradient(135deg,#1a8f1a,#0891b2)' }}
                   >
                     💰 Accéder à Moftal Pay
                   </button>

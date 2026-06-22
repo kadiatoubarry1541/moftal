@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 interface ExchangeIconProps {
   className?: string;
@@ -56,8 +56,8 @@ export function ExchangeIcon({ className = "", size = 24 }: ExchangeIconProps) {
       />
       
       {/* Produits frais et colorés bien visibles */}
-      <circle cx="7.5" cy="11.5" r="1.8" fill="#22c55e" stroke="#16a34a" strokeWidth="0.5" />
-      <circle cx="7.8" cy="12.2" r="1.3" fill="#16a34a" />
+      <circle cx="7.5" cy="11.5" r="1.8" fill="#22c55e" stroke="#1a8f1a" strokeWidth="0.5" />
+      <circle cx="7.8" cy="12.2" r="1.3" fill="#1a8f1a" />
       
       {/* Produit orange au centre */}
       <circle cx="12" cy="11.5" r="1.8" fill="#f59e0b" stroke="#d97706" strokeWidth="0.5" />

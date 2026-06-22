@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -36,8 +36,8 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
     peerLabel: "Imams",
   },
   mosque: {
-    label: "Réseau Islamique", emoji: "🕌", color: "#059669", bg: "#ecfdf5",
-    gradient: "linear-gradient(135deg,#065f46,#059669)",
+    label: "Réseau Islamique", emoji: "🕌", color: "#1a8f1a", bg: "#f0fdf0",
+    gradient: "linear-gradient(135deg,#0f4b0f,#1a8f1a)",
     structureLabel: "Mosquée", structurePlaceholder: "Ex: Mosquée Al-Fatiha",
     communityLabel: "Fidèles", communityIcon: "👥",
     announcementLabel: "Annonce", announcementIcon: "📢",
@@ -45,8 +45,8 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
     peerLabel: "Mosquées",
   },
   clinic: {
-    label: "Réseau Médical", emoji: "⚕️", color: "#0d9488", bg: "#f0fdfa",
-    gradient: "linear-gradient(135deg,#134e4a,#0d9488)",
+    label: "Réseau Médical", emoji: "⚕️", color: "#1a8f1a", bg: "#f0fdfa",
+    gradient: "linear-gradient(135deg,#093809,#1a8f1a)",
     structureLabel: "Établissement de santé", structurePlaceholder: "Ex: Clinique Espoir",
     communityLabel: "Patients", communityIcon: "🏥",
     announcementLabel: "Bulletin de santé", announcementIcon: "💊",
@@ -54,8 +54,8 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
     peerLabel: "Médecins / Cliniques",
   },
   school: {
-    label: "Réseau Éducatif", emoji: "🏫", color: "#16a34a", bg: "#f0fdf4",
-    gradient: "linear-gradient(135deg,#14532d,#16a34a)",
+    label: "Réseau Éducatif", emoji: "🏫", color: "#1a8f1a", bg: "#f0fdf0",
+    gradient: "linear-gradient(135deg,#14532d,#1a8f1a)",
     structureLabel: "École / Université", structurePlaceholder: "Ex: École Primaire Les Enfants",
     communityLabel: "Élèves", communityIcon: "🎓",
     announcementLabel: "Annonce scolaire", announcementIcon: "📚",
@@ -349,7 +349,7 @@ export default function ReseauPro() {
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{c.prenom} {c.nom_famille}</div>
                     <div style={{ fontSize: 12, color: "#64748b" }}>{c.nom_structure} · {c.ville}</div>
                   </div>
-                  <button onClick={() => acceptConn(c.from_numero_h)} style={{ padding: "6px 14px", background: "#dcfce7", color: "#16a34a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>Accepter</button>
+                  <button onClick={() => acceptConn(c.from_numero_h)} style={{ padding: "6px 14px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>Accepter</button>
                 </div>
               ))}
             </div>

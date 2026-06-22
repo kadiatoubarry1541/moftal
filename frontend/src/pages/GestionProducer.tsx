@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -18,15 +18,15 @@ const GRADIENT  = "linear-gradient(135deg,#7c3aed,#8b5cf6)";
 
 const STATUT_LOT: Record<string, { bg: string; color: string; label: string }> = {
   en_cours:   { bg: "#fffbeb", color: "#b45309",  label: "En cours" },
-  termine:    { bg: "#f0fdf4", color: "#15803d",  label: "Terminé" },
+  termine:    { bg: "#f0fdf0", color: "#156315",  label: "Terminé" },
   annule:     { bg: "#fef2f2", color: "#dc2626",  label: "Annulé" },
   en_attente: { bg: "#f5f3ff", color: "#7c3aed",  label: "En attente" },
 };
 const STATUT_ORDER: Record<string, { bg: string; color: string; label: string }> = {
   en_attente:    { bg: "#fffbeb", color: "#b45309",  label: "En attente" },
   en_production: { bg: "#eff6ff", color: "#2563eb",  label: "En production" },
-  pret:          { bg: "#f0fdf4", color: "#16a34a",  label: "Prêt" },
-  livre:         { bg: "#f0fdf4", color: "#15803d",  label: "Livré" },
+  pret:          { bg: "#f0fdf0", color: "#1a8f1a",  label: "Prêt" },
+  livre:         { bg: "#f0fdf0", color: "#156315",  label: "Livré" },
   annule:        { bg: "#fef2f2", color: "#dc2626",  label: "Annulé" },
 };
 
@@ -302,7 +302,7 @@ export default function GestionProducer() {
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
                   <button onClick={() => adjustStock(p.id, -1)} style={btn("#fef2f2", "#dc2626")}>−1</button>
-                  <button onClick={() => adjustStock(p.id, 1)} style={btn("#f0fdf4", "#16a34a")}>+1</button>
+                  <button onClick={() => adjustStock(p.id, 1)} style={btn("#f0fdf0", "#1a8f1a")}>+1</button>
                   <button onClick={() => { const n = prompt(`Ajuster le stock (+/−) :`, "10"); if (n) adjustStock(p.id, +n); }} style={btn(COLOR_BG, COLOR)}>±N</button>
                 </div>
               </div>
@@ -416,7 +416,7 @@ export default function GestionProducer() {
                 {ord.statut !== "livre" && ord.statut !== "annule" && (
                   <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                     {ord.statut === "en_attente"    && <button onClick={() => patchOrder(ord.id, "en_production")} style={btn("#eff6ff", "#2563eb")}>En production</button>}
-                    {ord.statut === "en_production" && <button onClick={() => patchOrder(ord.id, "pret")}          style={btn("#f0fdf4", "#16a34a")}>Prêt</button>}
+                    {ord.statut === "en_production" && <button onClick={() => patchOrder(ord.id, "pret")}          style={btn("#f0fdf0", "#1a8f1a")}>Prêt</button>}
                     {ord.statut === "pret"          && <button onClick={() => patchOrder(ord.id, "livre")}         style={btn(COLOR)}>Livré ✓</button>}
                     <button onClick={() => patchOrder(ord.id, "annule")} style={btn("#fef2f2", "#dc2626")}>Annuler</button>
                   </div>

@@ -1,4 +1,4 @@
-/* Styles globaux professionnels pour l'application - Responsive tous écrans */
+﻿/* Styles globaux professionnels pour l'application - Responsive tous écrans */
 
 /* Safe-area pour encoches et barres système (iPhone, Android) */
 html {
@@ -54,14 +54,14 @@ iframe {
     /* Couleurs principales */
     --color-primary: #3b82f6;
     --color-primary-dark: #1d4ed8;
-    --color-success: #10b981;
+    --color-success: #22a722;
     --color-warning: #f59e0b;
     --color-accent: #8b5cf6;
     --color-neutral: #64748b;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, #3b82f6, #1d4ed8);
-    --gradient-success: linear-gradient(135deg, #10b981, #059669);
+    --gradient-success: linear-gradient(135deg, #22a722, #1a8f1a);
     --gradient-warning: linear-gradient(135deg, #f59e0b, #d97706);
     --gradient-accent: linear-gradient(135deg, #8b5cf6, #7c3aed);
 

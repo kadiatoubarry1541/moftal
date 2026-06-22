@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:7777/api";
 
-const TEAL = "#0d9488";
-const TEAL_DARK = "#0f766e";
+const TEAL = "#1a8f1a";
+const TEAL_DARK = "#156315";
 const TEAL_LIGHT = "#14b8a6";
 
 const SERVICES_ICONS: Record<string, string> = {

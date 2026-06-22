@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNumeroHForDisplay } from '../utils/auth'
 import './ArbreGenealogique.css'
@@ -253,7 +253,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   ) => {
     const fullName = `${person.prenom ?? ''} ${person.nomFamille ?? ''}`.trim() || opts?.label || '—'
     const numero = person.numeroH || '—'
-    const stroke = '#059669' // emerald-600
+    const stroke = '#1a8f1a' // emerald-600
     const textDark = '#0f172a' // slate-900
     const textMuted = '#475569' // slate-600
 
@@ -279,7 +279,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <image href={person.photo} x={photoX} y={photoY - 16} width={32} height={32} clipPath={`url(#clip-${x}-${y})`} preserveAspectRatio="xMidYMid slice" />
           </>
         ) : (
-          <circle cx={photoX + 16} cy={photoY} r={16} fill="#10b981" opacity={0.2} />
+          <circle cx={photoX + 16} cy={photoY} r={16} fill="#22a722" opacity={0.2} />
         )}
 
         {/* Textes */}
@@ -305,7 +305,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const renderPlusButton = (cx: number, cy: number, label: string, relation: string) => (
     <g style={{ cursor: 'pointer' }} onClick={() => openAddForm(relation)}>
       <title>{label}</title>
-      <circle cx={cx + 55} cy={cy + 20} r={13} fill="#10b981" stroke="white" strokeWidth="2"/>
+      <circle cx={cx + 55} cy={cy + 20} r={13} fill="#22a722" stroke="white" strokeWidth="2"/>
       <text x={cx + 55} y={cy + 25} textAnchor="middle" fontSize="16" fill="white" fontWeight="bold">+</text>
     </g>
   )
@@ -413,7 +413,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 {/* Avatar de l'invitant */}
                 <div style={{
                   width: 48, height: 48, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  background: 'linear-gradient(135deg, #22a722, #1a8f1a)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: 'white', fontWeight: 'bold', fontSize: 18, flexShrink: 0
                 }}>
@@ -425,7 +425,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     {inv.fromName}
                   </div>
                   <div style={{ fontSize: 12, color: '#6b7280' }}>
-                    NuméroH : <span style={{ fontWeight: 600, color: '#059669' }}>{inv.fromNumeroH}</span>
+                    NuméroH : <span style={{ fontWeight: 600, color: '#1a8f1a' }}>{inv.fromNumeroH}</span>
                   </div>
                   <div style={{ fontSize: 13, color: '#374151', marginTop: 2 }}>
                     Vous invite en tant que <span style={{ fontWeight: 700, color: '#d97706' }}>{inv.relation}</span>
@@ -445,7 +445,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                       window.location.reload()
                     }}
                     style={{
-                      background: '#10b981', color: 'white', border: 'none',
+                      background: '#22a722', color: 'white', border: 'none',
                       borderRadius: 8, padding: '7px 14px', fontWeight: 700,
                       cursor: 'pointer', fontSize: 13
                     }}
@@ -844,21 +844,21 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 {/* Vertical du milieu du connecteur (x=890, dans le gap 870..910) vers barre G2
                     y=385→420 : x=890 dans le gap — aucune boîte traversée
                     y=420→460 : espace libre entre G1 et G2 */}
-                <line x1="890" y1="385" x2="890" y2="460" stroke="#059669" strokeWidth="2"/>
+                <line x1="890" y1="385" x2="890" y2="460" stroke="#1a8f1a" strokeWidth="2"/>
               </>
             ) : (
               /* Sans conjoint : vertical depuis le bas de la boîte VOUS (y=420)
                  y=420 = bord inférieur de VOUS — aucune boîte traversée */
-              <line x1="790" y1="420" x2="790" y2="460" stroke="#059669" strokeWidth="2"/>
+              <line x1="790" y1="420" x2="790" y2="460" stroke="#1a8f1a" strokeWidth="2"/>
             )}
           </g>
 
           {/* ── Barre horizontale G2 (y=460) + branches ──
                Barre de x=790 à x=990 ; branches à x=790 et x=990
                y=460 est entre G1 (finit y=420) et G2 (commence y=490) */}
-          <line x1="790" y1="460" x2="990" y2="460" stroke="#059669" strokeWidth="2"/>
-          <line x1="790" y1="460" x2="790" y2="490" stroke="#059669" strokeWidth="2"/>
-          <line x1="990" y1="460" x2="990" y2="490" stroke="#059669" strokeWidth="2"/>
+          <line x1="790" y1="460" x2="990" y2="460" stroke="#1a8f1a" strokeWidth="2"/>
+          <line x1="790" y1="460" x2="790" y2="490" stroke="#1a8f1a" strokeWidth="2"/>
+          <line x1="990" y1="460" x2="990" y2="490" stroke="#1a8f1a" strokeWidth="2"/>
 
           {/* ── G2 : Enfants + leurs conjoints ── */}
           <g className="generation-g2">
@@ -867,27 +867,27 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             {renderPersonNode({ genre: 'HOMME', prenom: '', nomFamille: '', numeroH: '' }, 510, 490, 160, 70, { label: 'Mari' })}
 
             {/* Connecteur Mari ↔ Fille — dans le gap x=670..710 */}
-            <line x1="670" y1="525" x2="710" y2="525" stroke="#059669" strokeWidth="2"/>
+            <line x1="670" y1="525" x2="710" y2="525" stroke="#1a8f1a" strokeWidth="2"/>
 
             {/* Fille  [x=710..870, cx=790] */}
             {renderPersonNode({ genre: 'FEMME', prenom: '', nomFamille: userData.nomFamille, numeroH: '' }, 710, 490, 160, 70, { label: 'Fille' })}
 
             {/* Vertical couple Mari-Fille → Petite-fille
                 x=690 dans le gap 670..710 ; y=525→560 dans la zone G2 (gap) ; y=560→630 espace libre */}
-            <line x1="690" y1="525" x2="690" y2="630" stroke="#059669" strokeWidth="2"/>
+            <line x1="690" y1="525" x2="690" y2="630" stroke="#1a8f1a" strokeWidth="2"/>
 
             {/* Garçon  [x=910..1070, cx=990] */}
             {renderPersonNode({ genre: 'HOMME', prenom: '', nomFamille: userData.nomFamille, numeroH: '' }, 910, 490, 160, 70, { label: 'Garçon' })}
 
             {/* Connecteur Garçon ↔ Femme — dans le gap x=1070..1110 */}
-            <line x1="1070" y1="525" x2="1110" y2="525" stroke="#059669" strokeWidth="2"/>
+            <line x1="1070" y1="525" x2="1110" y2="525" stroke="#1a8f1a" strokeWidth="2"/>
 
             {/* Femme du Garçon  [x=1110..1270] */}
             {renderPersonNode({ genre: 'FEMME', prenom: '', nomFamille: '', numeroH: '' }, 1110, 490, 160, 70, { label: 'Femme' })}
 
             {/* Vertical couple Garçon-Femme → Petit-garçon
                 x=1090 dans le gap 1070..1110 */}
-            <line x1="1090" y1="525" x2="1090" y2="630" stroke="#059669" strokeWidth="2"/>
+            <line x1="1090" y1="525" x2="1090" y2="630" stroke="#1a8f1a" strokeWidth="2"/>
           </g>
 
           {/* ── G3 : Petits-enfants ── */}
@@ -1416,7 +1416,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                   </div>
                 )}
                 {spouseTreeModal.data.accessLevel === 'full' && (
-                  <div style={{ background: '#d1fae5', border: '1px solid #10b981', borderRadius: 8, padding: 10, marginBottom: 14, fontSize: 13, color: '#065f46' }}>
+                  <div style={{ background: '#dcfcdc', border: '1px solid #22a722', borderRadius: 8, padding: 10, marginBottom: 14, fontSize: 13, color: '#0f4b0f' }}>
                     Accès complet — union de {spouseTreeModal.data.unionDays} jour(s).
                     {spouseTreeModal.data.tree?.familyCode && <> Code : <strong>{spouseTreeModal.data.tree.familyCode}</strong></>}
                   </div>

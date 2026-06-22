@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 
 const API = (import.meta as any).env?.VITE_API_URL || "http://localhost:5002";
@@ -140,12 +140,12 @@ export default function GestionTransport() {
   const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
     prevu:          { bg: BLUE_LIGHT,  color: BLUE },
     en_cours:       { bg: "#fef9c3",   color: "#854d0e" },
-    termine:        { bg: "#dcfce7",   color: "#15803d" },
+    termine:        { bg: "#dcfcdc",   color: "#156315" },
     annule:         { bg: "#fee2e2",   color: "#b91c1c" },
     en_attente:     { bg: "#fef3c7",   color: "#92400e" },
-    confirme:       { bg: "#dcfce7",   color: "#15803d" },
+    confirme:       { bg: "#dcfcdc",   color: "#156315" },
     en_livraison:   { bg: "#e0f2fe",   color: "#0369a1" },
-    livre:          { bg: "#dcfce7",   color: "#15803d" },
+    livre:          { bg: "#dcfcdc",   color: "#156315" },
   };
   const badge = (s: string) => {
     const c = STATUT_COLORS[s] || { bg: "#f1f5f9", color: "#475569" };
@@ -164,7 +164,7 @@ export default function GestionTransport() {
       </div>
 
       {msg && (
-        <div style={{ background: msg.startsWith("Erreur") ? "#fee2e2" : "#dcfce7", color: msg.startsWith("Erreur") ? "#b91c1c" : "#15803d", padding: "10px 24px", fontWeight: 600, fontSize: 14, textAlign: "center" }}>
+        <div style={{ background: msg.startsWith("Erreur") ? "#fee2e2" : "#dcfcdc", color: msg.startsWith("Erreur") ? "#b91c1c" : "#156315", padding: "10px 24px", fontWeight: 600, fontSize: 14, textAlign: "center" }}>
           {msg}
         </div>
       )}
@@ -441,7 +441,7 @@ export default function GestionTransport() {
               {[
                 { label: "En attente",   count: deliveries.filter(d => d.statut === "en_attente").length,   color: "#92400e", bg: "#fef3c7" },
                 { label: "En livraison", count: deliveries.filter(d => d.statut === "en_livraison").length, color: "#0369a1", bg: "#e0f2fe" },
-                { label: "Livrées",      count: deliveries.filter(d => d.statut === "livre").length,         color: "#15803d", bg: "#dcfce7" },
+                { label: "Livrées",      count: deliveries.filter(d => d.statut === "livre").length,         color: "#156315", bg: "#dcfcdc" },
                 { label: "Annulées",     count: deliveries.filter(d => d.statut === "annule").length,        color: "#b91c1c", bg: "#fee2e2" },
               ].map(s => (
                 <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.bg}`, borderRadius: 10, padding: "12px 16px", textAlign: "center" }}>

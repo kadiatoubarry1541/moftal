@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
-const GREEN       = "#16a34a";
-const GREEN_DARK  = "#15803d";
+const GREEN       = "#1a8f1a";
+const GREEN_DARK  = "#156315";
 const GREEN_LIGHT = "#22c55e";
-const GREEN_BG    = "#f0fdf4";
+const GREEN_BG    = "#f0fdf0";
 
 function fmtDate(d: string) {
   return d ? new Date(d).toLocaleDateString("fr-FR") : "";
@@ -43,7 +43,7 @@ export default function EcoleVitrine() {
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: GREEN_BG }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, border: `3px solid #bbf7d0`, borderTopColor: GREEN, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+        <div style={{ width: 48, height: 48, border: `3px solid #bbf7bb`, borderTopColor: GREEN, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
         <p style={{ color: GREEN_DARK, fontSize: 14, fontWeight: 600 }}>Chargement en cours...</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>

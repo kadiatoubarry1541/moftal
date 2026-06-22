@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
@@ -160,7 +160,7 @@ export default function NgoVitrine() {
             <div className="proj-g" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               {projects.map((p: any, i: number) => (
                 <div key={i} className="proj-card" style={{ background: "white", borderRadius: 16, padding: "24px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <div style={{ display: "inline-block", background: p.statut === "en_cours" ? "#dcfce7" : "#f1f5f9", color: p.statut === "en_cours" ? "#16a34a" : "#64748b", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <div style={{ display: "inline-block", background: p.statut === "en_cours" ? "#dcfcdc" : "#f1f5f9", color: p.statut === "en_cours" ? "#1a8f1a" : "#64748b", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {p.statut || "En cours"}
                   </div>
                   <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", margin: "0 0 8px", lineHeight: 1.3 }}>{p.nom}</h3>

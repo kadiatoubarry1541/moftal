@@ -9,16 +9,16 @@ export const SECTOR_PAGE_PATHS = {
   sante: '/sante',
   education: '/education',
   echange: '/echange',
-  // Sous-secteurs spécifiques pour la page Échanges
   echange_primaire: '/echange/primaire',
   echange_secondaire: '/echange/secondaire',
   echange_tertiaire: '/echange/tertiaire',
-  // Sous-secteur tertiaire dédié aux démarcheurs de maisons
   echange_tertiaire_demarcheurs: '/echange/tertiaire/demarcheurs',
   securite: '/securite',
   journalisme: '/journalisme',
   science: '/science',
-  solidarite: '/solidarite'
+  solidarite: '/solidarite',
+  islamique: '/islamique',
+  activite: '/activite'
 };
 
 export const SECTOR_NAMES = {
@@ -32,30 +32,27 @@ export const SECTOR_NAMES = {
   securite: 'Sécurité',
   journalisme: 'Journalisme',
   science: 'Science',
-  solidarite: 'Solidarité'
+  solidarite: 'Solidarité',
+  islamique: 'Islamique',
+  activite: 'Activité'
 };
 
 /** Types de comptes pro qui appartiennent à chaque secteur (pour filtre et permission). */
 export const SECTOR_PRO_TYPES = {
-  sante: ['clinic'],
+  sante: ['clinic', 'health_worker'],
   education: ['school'],
   // Secteur Échanges : plusieurs profils pro
-  // - vendor    : vendeurs / détaillants
-  // - supplier  : fournisseurs / grossistes
-  // - producer  : entreprises de production
-  // - broker    : démarcheurs (ex. location de maisons)
-  echange: ['vendor', 'supplier', 'producer', 'broker'],
-  // Les trois niveaux d'échanges partagent ces mêmes types pro,
-  // mais chaque niveau peut avoir ses propres admins de page.
-  echange_primaire: ['vendor', 'supplier', 'producer'],
-  echange_secondaire: ['vendor', 'supplier', 'producer'],
-  echange_tertiaire: ['vendor', 'supplier', 'producer'],
-  // Sous-secteur tertiaire pour les démarcheurs de maisons uniquement
+  echange: ['vendor', 'supplier', 'producer', 'broker', 'commerce', 'restaurant', 'transport', 'beauty', 'artisan'],
+  echange_primaire: ['vendor', 'supplier', 'producer', 'commerce'],
+  echange_secondaire: ['vendor', 'supplier', 'producer', 'commerce'],
+  echange_tertiaire: ['vendor', 'supplier', 'producer', 'commerce', 'restaurant', 'transport', 'beauty', 'artisan'],
   echange_tertiaire_demarcheurs: ['broker'],
   securite: ['security_agency'],
   journalisme: ['journalist'],
   science: ['scientist'],
-  solidarite: ['ngo']
+  solidarite: ['ngo'],
+  islamique: ['mosque', 'madrasa'],
+  activite: ['enterprise', 'reseau', 'mairie']
 };
 
 /**
@@ -73,16 +70,18 @@ export function getSectorForProType(professionalType, subSector = null) {
   if (SECTOR_PRO_TYPES.journalisme.includes(t)) return 'journalisme';
   if (SECTOR_PRO_TYPES.science.includes(t)) return 'science';
   if (SECTOR_PRO_TYPES.solidarite.includes(t)) return 'solidarite';
+  if (SECTOR_PRO_TYPES.islamique.includes(t)) return 'islamique';
+  if (SECTOR_PRO_TYPES.activite.includes(t)) return 'activite';
 
   // Secteur Échanges : on utilise subSector pour trouver le bon admin
   if (SECTOR_PRO_TYPES.echange.includes(t)) {
-    // broker va toujours en tertiaire
     if (t === 'broker') return 'echange_tertiaire_demarcheurs';
-    // Pour vendor, supplier, producer : on suit le subSector déclaré à l'inscription
+    // Types toujours en tertiaire
+    if (['restaurant', 'transport', 'beauty', 'artisan'].includes(t)) return 'echange_tertiaire';
+    // Pour vendor, supplier, producer, commerce : on suit le subSector déclaré
     if (subSector === 'primaire')   return 'echange_primaire';
     if (subSector === 'secondaire') return 'echange_secondaire';
     if (subSector === 'tertiaire')  return 'echange_tertiaire';
-    // Fallback si pas de subSector : secteur général Échanges
     return 'echange';
   }
   return null;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -19,11 +19,11 @@ const ORANGE_BORDER = "#fed7aa";
 const ORDER_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   en_preparation: { bg: "#fffbeb", color: "#b45309", label: "En préparation" },
   pret:           { bg: "#eff6ff", color: "#2563eb", label: "Prêt" },
-  servi:          { bg: "#f0fdf4", color: "#16a34a", label: "Servi" },
+  servi:          { bg: "#f0fdf0", color: "#1a8f1a", label: "Servi" },
   annule:         { bg: "#fef2f2", color: "#dc2626", label: "Annulé" },
 };
 const TABLE_STATUS: Record<string, { bg: string; color: string; label: string }> = {
-  libre:    { bg: "#f0fdf4", color: "#16a34a", label: "Libre" },
+  libre:    { bg: "#f0fdf0", color: "#1a8f1a", label: "Libre" },
   occupee:  { bg: "#fef2f2", color: "#dc2626", label: "Occupée" },
   reservee: { bg: "#eff6ff", color: "#2563eb", label: "Réservée" },
 };
@@ -287,7 +287,7 @@ export default function GestionRestaurant() {
                         <div style={{ fontSize: 13, fontWeight: 700, color: ORANGE, marginTop: 4 }}>{fmtMoney(d.prix)}</div>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, background: d.disponible ? "#f0fdf4" : "#f1f5f9", color: d.disponible ? "#16a34a" : "#94a3b8", padding: "3px 10px", borderRadius: 20, cursor: "pointer" }}
+                        <span style={{ fontSize: 11, fontWeight: 700, background: d.disponible ? "#f0fdf0" : "#f1f5f9", color: d.disponible ? "#1a8f1a" : "#94a3b8", padding: "3px 10px", borderRadius: 20, cursor: "pointer" }}
                           onClick={async () => { await patch(`${BASE(tenantCode!)}/dishes/${d.id}`, { disponible: !d.disponible }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || [])); }}>
                           {d.disponible ? "✓ Disponible" : "Indisponible"}
                         </span>

@@ -77,6 +77,222 @@ interface ResidenceComment {
   createdAt: string;
 }
 
+const isoToFlagEmoji = (code: string): string =>
+  code.toUpperCase().split('').map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
+
+const COUNTRY_ISO: Record<string, string> = {
+  // Afrique de l'Ouest
+  'guinée': 'GN', 'guinee': 'GN', 'guinea': 'GN',
+  'sénégal': 'SN', 'senegal': 'SN',
+  'mali': 'ML',
+  "côte d'ivoire": 'CI', "cote d'ivoire": 'CI', 'côte d ivoire': 'CI',
+  'burkina faso': 'BF',
+  'niger': 'NE',
+  'nigeria': 'NG',
+  'ghana': 'GH',
+  'togo': 'TG',
+  'bénin': 'BJ', 'benin': 'BJ',
+  'sierra leone': 'SL',
+  'liberia': 'LR',
+  'gambie': 'GM',
+  'guinée-bissau': 'GW', 'guinee-bissau': 'GW',
+  'mauritanie': 'MR',
+  'cap-vert': 'CV', 'cabo verde': 'CV',
+  // Afrique Centrale
+  'cameroun': 'CM',
+  'congo': 'CG',
+  'république démocratique du congo': 'CD', 'rdc': 'CD', 'congo (rdc)': 'CD',
+  'centrafrique': 'CF', 'république centrafricaine': 'CF',
+  'gabon': 'GA',
+  'guinée équatoriale': 'GQ', 'guinee equatoriale': 'GQ',
+  'sao tomé-et-principe': 'ST', 'sao tome': 'ST',
+  'tchad': 'TD',
+  // Afrique de l'Est
+  'éthiopie': 'ET', 'ethiopie': 'ET',
+  'kenya': 'KE',
+  'tanzanie': 'TZ',
+  'ouganda': 'UG',
+  'rwanda': 'RW',
+  'burundi': 'BI',
+  'somalie': 'SO',
+  'djibouti': 'DJ',
+  'érythrée': 'ER', 'erythree': 'ER',
+  'soudan': 'SD',
+  'soudan du sud': 'SS',
+  'madagascar': 'MG',
+  'comores': 'KM',
+  'seychelles': 'SC',
+  'maurice': 'MU',
+  // Afrique du Nord
+  'maroc': 'MA',
+  'algérie': 'DZ', 'algerie': 'DZ',
+  'tunisie': 'TN',
+  'libye': 'LY',
+  'égypte': 'EG', 'egypte': 'EG',
+  // Afrique Australe
+  'afrique du sud': 'ZA',
+  'zimbabwe': 'ZW',
+  'zambie': 'ZM',
+  'mozambique': 'MZ',
+  'botswana': 'BW',
+  'namibie': 'NA',
+  'angola': 'AO',
+  'malawi': 'MW',
+  'lesotho': 'LS',
+  'eswatini': 'SZ', 'swaziland': 'SZ',
+  // Europe
+  'france': 'FR',
+  'belgique': 'BE',
+  'suisse': 'CH',
+  'allemagne': 'DE',
+  'espagne': 'ES',
+  'portugal': 'PT',
+  'italie': 'IT',
+  'royaume-uni': 'GB', 'angleterre': 'GB',
+  'pays-bas': 'NL', 'hollande': 'NL',
+  'suède': 'SE', 'suede': 'SE',
+  'norvège': 'NO', 'norvege': 'NO',
+  'danemark': 'DK',
+  'finlande': 'FI',
+  'pologne': 'PL',
+  'autriche': 'AT',
+  'grèce': 'GR', 'grece': 'GR',
+  'roumanie': 'RO',
+  'hongrie': 'HU',
+  'bulgarie': 'BG',
+  'serbie': 'RS',
+  'croatie': 'HR',
+  'ukraine': 'UA',
+  'russie': 'RU',
+  'irlande': 'IE',
+  'islande': 'IS',
+  'luxembourg': 'LU',
+  'monaco': 'MC',
+  'andorre': 'AD',
+  'liechtenstein': 'LI',
+  'saint-marin': 'SM',
+  'vatican': 'VA',
+  'malte': 'MT',
+  'chypre': 'CY',
+  'slovaquie': 'SK',
+  'slovénie': 'SI', 'slovenie': 'SI',
+  'tchéquie': 'CZ', 'tcheque': 'CZ',
+  'estonie': 'EE',
+  'lettonie': 'LV',
+  'lituanie': 'LT',
+  'moldavie': 'MD',
+  'albanie': 'AL',
+  'macédoine': 'MK', 'macedoine': 'MK',
+  'bosnie-herzégovine': 'BA', 'bosnie': 'BA',
+  'monténégro': 'ME', 'montenegro': 'ME',
+  'kosovo': 'XK',
+  'géorgie': 'GE', 'georgie': 'GE',
+  'arménie': 'AM', 'armenie': 'AM',
+  'azerbaïdjan': 'AZ', 'azerbaidjan': 'AZ',
+  'bélarus': 'BY', 'belarus': 'BY',
+  // Amériques
+  'états-unis': 'US', 'etats-unis': 'US', 'usa': 'US',
+  'canada': 'CA',
+  'mexique': 'MX',
+  'brésil': 'BR', 'bresil': 'BR',
+  'argentine': 'AR',
+  'colombie': 'CO',
+  'venezuela': 'VE',
+  'pérou': 'PE', 'perou': 'PE',
+  'chili': 'CL',
+  'équateur': 'EC', 'equateur': 'EC',
+  'bolivie': 'BO',
+  'paraguay': 'PY',
+  'uruguay': 'UY',
+  'cuba': 'CU',
+  'haïti': 'HT', 'haiti': 'HT',
+  'jamaïque': 'JM', 'jamaique': 'JM',
+  'panama': 'PA',
+  'costa rica': 'CR',
+  'guatemala': 'GT',
+  'honduras': 'HN',
+  'nicaragua': 'NI',
+  'salvador': 'SV',
+  'dominique': 'DM',
+  'trinidad-et-tobago': 'TT',
+  'guyana': 'GY',
+  'suriname': 'SR',
+  // Asie
+  'chine': 'CN',
+  'japon': 'JP',
+  'corée du sud': 'KR',
+  'corée du nord': 'KP',
+  'inde': 'IN',
+  'pakistan': 'PK',
+  'bangladesh': 'BD',
+  'afghanistan': 'AF',
+  'iran': 'IR',
+  'irak': 'IQ',
+  'syrie': 'SY',
+  'turquie': 'TR',
+  'arabie saoudite': 'SA',
+  'émirats arabes unis': 'AE', 'emirats arabes unis': 'AE',
+  'qatar': 'QA',
+  'koweït': 'KW', 'koweit': 'KW',
+  'oman': 'OM',
+  'yémen': 'YE', 'yemen': 'YE',
+  'jordanie': 'JO',
+  'liban': 'LB',
+  'israël': 'IL', 'israel': 'IL',
+  'palestine': 'PS',
+  'bahreïn': 'BH', 'bahrein': 'BH',
+  'vietnam': 'VN',
+  'thaïlande': 'TH', 'thailande': 'TH',
+  'philippines': 'PH',
+  'indonésie': 'ID', 'indonesie': 'ID',
+  'malaisie': 'MY',
+  'singapour': 'SG',
+  'cambodge': 'KH',
+  'laos': 'LA',
+  'myanmar': 'MM', 'birmanie': 'MM',
+  'népal': 'NP', 'nepal': 'NP',
+  'sri lanka': 'LK',
+  'maldives': 'MV',
+  'mongolie': 'MN',
+  'kazakhstan': 'KZ',
+  'ouzbékistan': 'UZ', 'ouzbekistan': 'UZ',
+  'tadjikistan': 'TJ',
+  'kirghizistan': 'KG',
+  'turkménistan': 'TM', 'turkmenistan': 'TM',
+  // Océanie
+  'australie': 'AU',
+  'nouvelle-zélande': 'NZ', 'nouvelle-zelande': 'NZ',
+  'papouasie-nouvelle-guinée': 'PG',
+  'fidji': 'FJ',
+  'vanuatu': 'VU',
+  'samoa': 'WS',
+  'tonga': 'TO',
+};
+
+const normalizeStr = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+const getCountryFlag = (pays: string): { emoji: string; label: string } | null => {
+  if (!pays) return null;
+  const key = normalizeStr(pays);
+  // 1. Correspondance exacte (normalisé sans accents)
+  let iso = COUNTRY_ISO[key];
+  // 2. Correspondance exacte (minuscule brut)
+  if (!iso) iso = COUNTRY_ISO[pays.toLowerCase().trim()];
+  // 3. Correspondance partielle — ex: "Guinée Conakry" → "guinée"
+  if (!iso) {
+    for (const [countryKey, countryIso] of Object.entries(COUNTRY_ISO)) {
+      const normKey = normalizeStr(countryKey);
+      if (key.includes(normKey) || normKey.includes(key)) {
+        iso = countryIso;
+        break;
+      }
+    }
+  }
+  if (!iso) return null;
+  return { emoji: isoToFlagEmoji(iso), label: pays };
+};
+
 export default function Pays() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'residence' | 'Communauté'>('residence');
@@ -153,9 +369,24 @@ export default function Pays() {
         navigate("/login");
         return;
       }
-      
+
       setUserData(user);
       loadData();
+
+      // Récupère les données fraîches du profil pour avoir le champ pays à jour
+      const token = localStorage.getItem("token") || user.token;
+      if (token) {
+        fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data?.success && data.user) {
+              setUserData(prev => prev ? { ...prev, ...data.user } : data.user);
+            }
+          })
+          .catch(() => {});
+      }
     } catch {
       navigate("/login");
     }
@@ -777,6 +1008,26 @@ export default function Pays() {
           </nav>
         </div>
       </div>
+
+      {/* Bandeau pays — drapeau automatique selon le pays du compte */}
+      {userData?.pays && (() => {
+        const flag = getCountryFlag(userData.pays);
+        return (
+          <div className="bg-white border-b shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <div className="flex items-center gap-4">
+                <span style={{ fontSize: 56, lineHeight: 1 }}>
+                  {flag ? flag.emoji : '🌍'}
+                </span>
+                <div>
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">Pays</p>
+                  <p className="text-xl font-bold text-gray-900">{userData.pays}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-6">

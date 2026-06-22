@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -12,8 +12,8 @@ type Tab = "dashboard" | "imams" | "members" | "predications" | "partenaires" | 
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 
-const GREEN = "#059669";
-const GREEN_BG = "#ecfdf5";
+const GREEN = "#1a8f1a";
+const GREEN_BG = "#f0fdf0";
 
 export default function GestionMosquee() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
@@ -217,7 +217,7 @@ export default function GestionMosquee() {
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300 }}>
-      <div style={{ width: 32, height: 32, border: "3px solid #bbf7d0", borderTopColor: GREEN, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <div style={{ width: 32, height: 32, border: "3px solid #bbf7bb", borderTopColor: GREEN, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -250,7 +250,7 @@ export default function GestionMosquee() {
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`}</style>
 
       {/* Header */}
-      <div style={{ background: "linear-gradient(135deg, #065f46, #059669)", borderRadius: 14, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ background: "linear-gradient(135deg, #0f4b0f, #1a8f1a)", borderRadius: 14, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>🕌</div>
           <div>
@@ -280,7 +280,7 @@ export default function GestionMosquee() {
           {/* KPI Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14, marginBottom: 20 }}>
             {[
-              { label: "Membres", value: dash.totalMembers ?? 0, color: "#059669", bg: "#ecfdf5",
+              { label: "Membres", value: dash.totalMembers ?? 0, color: "#1a8f1a", bg: "#f0fdf0",
                 icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
               { label: "Élèves Coran", value: dash.quranStudents ?? 0, color: "#d97706", bg: "#fffbeb",
                 icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> },
@@ -297,7 +297,7 @@ export default function GestionMosquee() {
             ))}
           </div>
           {/* Dons Banner */}
-          <div style={{ background: "linear-gradient(135deg,#064e3b,#059669)", borderRadius: 14, padding: "20px 24px", marginBottom: 20, display: "flex", alignItems: "center", gap: 20, color: "white" }}>
+          <div style={{ background: "linear-gradient(135deg,#093809,#1a8f1a)", borderRadius: 14, padding: "20px 24px", marginBottom: 20, display: "flex", alignItems: "center", gap: 20, color: "white" }}>
             <div style={{ width: 52, height: 52, borderRadius: 12, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </div>
@@ -321,9 +321,9 @@ export default function GestionMosquee() {
               { label: "Annonce",        icon: "📢", tab: "announcements" as Tab },
             ].map(a => (
               <button key={a.label} onClick={() => setTab(a.tab)}
-                style={{ background: "white", border: "1px solid #a7f3d0", borderRadius: 10, padding: "12px 8px", cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}
+                style={{ background: "white", border: "1px solid #bbf7bb", borderRadius: 10, padding: "12px 8px", cursor: "pointer", textAlign: "center", transition: "all 0.15s" }}
                 onMouseOver={e => (e.currentTarget.style.borderColor = GREEN)}
-                onMouseOut={e => (e.currentTarget.style.borderColor = "#a7f3d0")}>
+                onMouseOut={e => (e.currentTarget.style.borderColor = "#bbf7bb")}>
                 <div style={{ fontSize: 22, marginBottom: 4 }}>{a.icon}</div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>{a.label}</div>
               </button>
@@ -360,18 +360,18 @@ export default function GestionMosquee() {
           </div>
 
           {showAddMember && (
-            <div style={{ background: GREEN_BG, border: "1px solid #a7f3d0", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouveau membre</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[["Nom *", "nom"], ["Prénom", "prenom"], ["Téléphone", "telephone"], ["NuméroH (si membre)", "numero_h"]].map(([label, key]) => (
                   <div key={key}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>{label}</div>
-                    <input value={(mForm as any)[key]} onChange={e => setMForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>{label}</div>
+                    <input value={(mForm as any)[key]} onChange={e => setMForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Rôle</div>
-                  <select value={mForm.role} onChange={e => setMForm(f => ({ ...f, role: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Rôle</div>
+                  <select value={mForm.role} onChange={e => setMForm(f => ({ ...f, role: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
                     {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
@@ -410,19 +410,19 @@ export default function GestionMosquee() {
           </div>
 
           {showAddAnn && (
-            <div style={{ background: GREEN_BG, border: "1px solid #a7f3d0", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouvelle annonce</div>
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Titre *</div>
-                <input value={aForm.titre} onChange={e => setAForm(f => ({ ...f, titre: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Titre *</div>
+                <input value={aForm.titre} onChange={e => setAForm(f => ({ ...f, titre: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
               </div>
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Contenu *</div>
-                <textarea value={aForm.contenu} onChange={e => setAForm(f => ({ ...f, contenu: e.target.value }))} rows={3} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Contenu *</div>
+                <textarea value={aForm.contenu} onChange={e => setAForm(f => ({ ...f, contenu: e.target.value }))} rows={3} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
               </div>
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Type</div>
-                <select value={aForm.type} onChange={e => setAForm(f => ({ ...f, type: e.target.value }))} style={{ border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Type</div>
+                <select value={aForm.type} onChange={e => setAForm(f => ({ ...f, type: e.target.value }))} style={{ border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
                   {["general", "priere", "evenement", "urgence"].map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
@@ -461,20 +461,20 @@ export default function GestionMosquee() {
           </div>
 
           {showAddDon && (
-            <div style={{ background: GREEN_BG, border: "1px solid #a7f3d0", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouveau don</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Donateur</div>
-                  <input value={dForm.donateur_nom} onChange={e => setDForm(f => ({ ...f, donateur_nom: e.target.value }))} placeholder="Anonyme" style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Donateur</div>
+                  <input value={dForm.donateur_nom} onChange={e => setDForm(f => ({ ...f, donateur_nom: e.target.value }))} placeholder="Anonyme" style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Montant (GNF) *</div>
-                  <input value={dForm.montant} onChange={e => setDForm(f => ({ ...f, montant: e.target.value }))} type="number" style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Montant (GNF) *</div>
+                  <input value={dForm.montant} onChange={e => setDForm(f => ({ ...f, montant: e.target.value }))} type="number" style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Type</div>
-                  <select value={dForm.type_don} onChange={e => setDForm(f => ({ ...f, type_don: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Type</div>
+                  <select value={dForm.type_don} onChange={e => setDForm(f => ({ ...f, type_don: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
                     {DON_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
@@ -510,24 +510,24 @@ export default function GestionMosquee() {
           </div>
 
           {showAddStudent && (
-            <div style={{ background: GREEN_BG, border: "1px solid #a7f3d0", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouvel élève</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[["Nom *", "nom"], ["Prénom", "prenom"], ["Tél. parent", "telephone_parent"]].map(([label, key]) => (
                   <div key={key}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>{label}</div>
-                    <input value={(qForm as any)[key]} onChange={e => setQForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>{label}</div>
+                    <input value={(qForm as any)[key]} onChange={e => setQForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Niveau</div>
-                  <select value={qForm.niveau_coran} onChange={e => setQForm(f => ({ ...f, niveau_coran: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Niveau</div>
+                  <select value={qForm.niveau_coran} onChange={e => setQForm(f => ({ ...f, niveau_coran: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
                     {NIVEAUX.map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Enseignant (ID membre)</div>
-                  <input value={qForm.enseignant_id} onChange={e => setQForm(f => ({ ...f, enseignant_id: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Enseignant (ID membre)</div>
+                  <input value={qForm.enseignant_id} onChange={e => setQForm(f => ({ ...f, enseignant_id: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -566,7 +566,7 @@ export default function GestionMosquee() {
           </div>
 
           {/* Info important */}
-          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "#166534" }}>
+          <div style={{ background: "#f0fdf0", border: "1px solid #bbf7bb", borderRadius: 12, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "#0f4b0f" }}>
             <strong>Accès gestionnaire :</strong> Chaque imam enregistré avec son <strong>Numéro H</strong> pourra se connecter et gérer cette mosquée directement depuis son compte.
           </div>
 
@@ -575,8 +575,8 @@ export default function GestionMosquee() {
             {[1, 2, 3].map(rang => {
               const imam = imams.find((i: any) => i.rang === rang);
               const labels = ["", "Cheikh Imam Principal", "Cheikh Imam 2", "Cheikh Imam 3"];
-              const colors = ["", "#059669", "#0891b2", "#7c3aed"];
-              const bgs = ["", "#ecfdf5", "#ecfeff", "#f5f3ff"];
+              const colors = ["", "#1a8f1a", "#0891b2", "#7c3aed"];
+              const bgs = ["", "#f0fdf0", "#ecfeff", "#f5f3ff"];
               return (
                 <div key={rang} style={{ background: imam ? bgs[rang] : "#f8fafc", border: `1.5px solid ${imam ? colors[rang] + "44" : "#e2e8f0"}`, borderRadius: 14, padding: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: imam ? 12 : 0 }}>
@@ -611,7 +611,7 @@ export default function GestionMosquee() {
                         <div style={{ gridColumn: "1/-1" }}>
                           <span style={{ color: "#94a3b8" }}>Numéro H : </span>
                           <span style={{ fontFamily: "monospace", background: bgs[rang], padding: "2px 8px", borderRadius: 6, color: colors[rang], fontWeight: 700 }}>{imam.numero_h}</span>
-                          <span style={{ marginLeft: 6, fontSize: 11, color: "#059669" }}>✓ Accès gestionnaire activé</span>
+                          <span style={{ marginLeft: 6, fontSize: 11, color: "#1a8f1a" }}>✓ Accès gestionnaire activé</span>
                         </div>
                       )}
                     </div>
@@ -627,7 +627,7 @@ export default function GestionMosquee() {
               <div style={{ background: "white", borderRadius: 16, width: "100%", maxWidth: 420, overflow: "hidden" }}>
                 <div style={{ background: GREEN, padding: "16px 20px" }}>
                   <div style={{ color: "white", fontWeight: 700, fontSize: 16 }}>🕌 {editingRang === 1 ? "Cheikh Imam Principal" : `Cheikh Imam ${editingRang}`}</div>
-                  <div style={{ color: "#bbf7d0", fontSize: 12, marginTop: 2 }}>Nommer ou modifier cet imam</div>
+                  <div style={{ color: "#bbf7bb", fontSize: 12, marginTop: 2 }}>Nommer ou modifier cet imam</div>
                 </div>
                 <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
                   <div>
@@ -670,30 +670,30 @@ export default function GestionMosquee() {
           </div>
 
           {showAddPred && (
-            <div style={{ background: GREEN_BG, border: "1px solid #a7f3d0", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouvelle prédication</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div style={{ gridColumn: "1/-1" }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Titre *</div>
-                  <input value={predForm.titre} onChange={e => setPredForm(f => ({ ...f, titre: e.target.value }))} placeholder="Ex : Khutba du vendredi - La patience" style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Titre *</div>
+                  <input value={predForm.titre} onChange={e => setPredForm(f => ({ ...f, titre: e.target.value }))} placeholder="Ex : Khutba du vendredi - La patience" style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Type</div>
-                  <select value={predForm.type} onChange={e => setPredForm(f => ({ ...f, type: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Type</div>
+                  <select value={predForm.type} onChange={e => setPredForm(f => ({ ...f, type: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none" }}>
                     {["khutba", "cours", "conférence", "tarawih", "dars", "autre"].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Date</div>
-                  <input type="date" value={predForm.date_pred} onChange={e => setPredForm(f => ({ ...f, date_pred: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Date</div>
+                  <input type="date" value={predForm.date_pred} onChange={e => setPredForm(f => ({ ...f, date_pred: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Sourate (optionnel)</div>
-                  <input value={predForm.sourate} onChange={e => setPredForm(f => ({ ...f, sourate: e.target.value }))} placeholder="Ex : Al-Baqara v.2" style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Sourate (optionnel)</div>
+                  <input value={predForm.sourate} onChange={e => setPredForm(f => ({ ...f, sourate: e.target.value }))} placeholder="Ex : Al-Baqara v.2" style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                 </div>
                 <div style={{ gridColumn: "1/-1" }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>Contenu / Résumé</div>
-                  <textarea value={predForm.contenu} onChange={e => setPredForm(f => ({ ...f, contenu: e.target.value }))} rows={3} placeholder="Résumé de la prédication..." style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Contenu / Résumé</div>
+                  <textarea value={predForm.contenu} onChange={e => setPredForm(f => ({ ...f, contenu: e.target.value }))} rows={3} placeholder="Résumé de la prédication..." style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -743,13 +743,13 @@ export default function GestionMosquee() {
           </div>
 
           {showAddPart && (
-            <div style={{ background: GREEN_BG, border: "1px solid #a7f3d0", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            <div style={{ background: GREEN_BG, border: "1px solid #bbf7bb", borderRadius: 12, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouvelle mosquée partenaire</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[["Nom de la mosquée *", "nom_mosquee"], ["Ville / Quartier", "ville"], ["Nom de l'imam", "imam_nom"], ["Téléphone", "telephone"]].map(([label, key]) => (
                   <div key={key}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "#064e3b", marginBottom: 4 }}>{label}</div>
-                    <input value={(partForm as any)[key]} onChange={e => setPartForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #a7f3d0", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>{label}</div>
+                    <input value={(partForm as any)[key]} onChange={e => setPartForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                   </div>
                 ))}
               </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getDeviseUtilisateur, formaterMontant, type DeviseInfo } from '../utils/currency';
 import { ReçuTransaction } from '../components/ReçuTransaction';
@@ -7,7 +7,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
 const CATEGORIES = [
   { key: 'reserve',    label: 'Réserve bloquée',  pct: 50, color: '#1e3a5f', icon: '🔒' },
-  { key: 'sante',      label: 'Santé',             pct: 30, color: '#059669', icon: '🏥' },
+  { key: 'sante',      label: 'Santé',             pct: 30, color: '#1a8f1a', icon: '🏥' },
   { key: 'nourriture', label: 'Nourriture',        pct: 10, color: '#d97706', icon: '🌾' },
   { key: 'urgence',    label: 'Urgence',           pct: 5,  color: '#dc2626', icon: '🚨' },
   { key: 'projet',     label: 'Projet collectif',  pct: 5,  color: '#7c3aed', icon: '🤝' },
@@ -526,7 +526,7 @@ export default function CompteFamille() {
                 />
                 <button onClick={deposer} disabled={loadingDepot}
                   className="px-5 py-2.5 rounded-xl text-white font-bold text-sm disabled:opacity-50"
-                  style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}>
+                  style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
                   {loadingDepot ? '...' : 'Déposer'}
                 </button>
               </div>
@@ -537,7 +537,7 @@ export default function CompteFamille() {
               <>
                 <button onClick={() => setShowPaiement(!showPaiement)}
                   className="w-full py-3 rounded-2xl text-white font-bold text-sm"
-                  style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}>
+                  style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
                   {showPaiement ? '✕ Annuler' : '💸 Effectuer un paiement'}
                 </button>
 
@@ -574,7 +574,7 @@ export default function CompteFamille() {
 
                     <button onClick={payer} disabled={loadingPaiement}
                       className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50"
-                      style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}>
+                      style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
                       {loadingPaiement ? 'Traitement...' : 'Confirmer le paiement'}
                     </button>
                   </div>

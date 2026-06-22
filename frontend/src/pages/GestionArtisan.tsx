@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -19,14 +19,14 @@ const GRADIENT  = "linear-gradient(135deg,#d97706,#f59e0b)";
 const STATUT_INT: Record<string, { bg: string; color: string; label: string }> = {
   en_attente:   { bg: "#fffbeb", color: "#b45309",  label: "En attente" },
   confirmee:    { bg: "#eff6ff", color: "#2563eb",  label: "Confirmée" },
-  en_cours:     { bg: "#f0fdf4", color: "#16a34a",  label: "En cours" },
-  terminee:     { bg: "#f0fdf4", color: "#15803d",  label: "Terminée" },
+  en_cours:     { bg: "#f0fdf0", color: "#1a8f1a",  label: "En cours" },
+  terminee:     { bg: "#f0fdf0", color: "#156315",  label: "Terminée" },
   annulee:      { bg: "#fef2f2", color: "#dc2626",  label: "Annulée" },
 };
 const PRIORITE: Record<string, { color: string; label: string }> = {
   urgente: { color: "#dc2626", label: "🔴 Urgente" },
   haute:   { color: "#ea580c", label: "🟠 Haute" },
-  normale: { color: "#16a34a", label: "🟢 Normale" },
+  normale: { color: "#1a8f1a", label: "🟢 Normale" },
   basse:   { color: "#64748b", label: "⚪ Basse" },
 };
 
@@ -312,7 +312,7 @@ export default function GestionArtisan() {
                 {(int.statut === "en_attente" || int.statut === "confirmee" || int.statut === "en_cours") && (
                   <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                     {int.statut === "en_attente" && <button onClick={() => patchIntervention(int.id, "confirmee")} style={btn("#eff6ff", "#2563eb")}>Confirmer</button>}
-                    {(int.statut === "en_attente" || int.statut === "confirmee") && <button onClick={() => patchIntervention(int.id, "en_cours")} style={btn("#f0fdf4", "#16a34a")}>Démarrer</button>}
+                    {(int.statut === "en_attente" || int.statut === "confirmee") && <button onClick={() => patchIntervention(int.id, "en_cours")} style={btn("#f0fdf0", "#1a8f1a")}>Démarrer</button>}
                     {int.statut === "en_cours" && <button onClick={() => terminerIntervention(int.id)} style={btn(COLOR)}>Terminer ✓</button>}
                     <button onClick={() => patchIntervention(int.id, "annulee")} style={btn("#fef2f2", "#dc2626")}>Annuler</button>
                   </div>

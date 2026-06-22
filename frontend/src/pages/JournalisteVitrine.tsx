@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
@@ -13,8 +13,8 @@ function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR
 
 const CAT_COLORS: Record<string, string> = {
   "Politique": "#ef4444", "Économie": "#f59e0b", "Société": "#8b5cf6",
-  "Sport": "#10b981", "Culture": "#ec4899", "International": "#3b82f6",
-  "Technologie": "#06b6d4", "Santé": "#059669",
+  "Sport": "#22a722", "Culture": "#ec4899", "International": "#3b82f6",
+  "Technologie": "#06b6d4", "Santé": "#1a8f1a",
 };
 
 export default function JournalisteVitrine() {

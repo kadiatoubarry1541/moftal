@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 
 interface Props {
   token: string;
@@ -127,7 +127,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
                     <p className="text-blue-400 text-xs">Solde</p>
                     <p className="text-blue-700 font-black text-sm">{fmt(w.solde)}</p>
                   </div>
-                  <div className="rounded-xl p-2 text-center" style={{ background: '#f0fdf4' }}>
+                  <div className="rounded-xl p-2 text-center" style={{ background: '#f0fdf0' }}>
                     <p className="text-green-400 text-xs">Total reçu</p>
                     <p className="text-green-700 font-bold text-sm">{fmt(w.totalRecu)}</p>
                   </div>

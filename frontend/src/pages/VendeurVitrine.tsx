@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
@@ -147,7 +147,7 @@ export default function VendeurVitrine() {
                     </div>
                     <div style={{ padding:"12px 16px" }}>
                       <div style={{ fontWeight:800, fontSize:16, color: COLOR }}>{(p.prix_detail || p.prix_gros || 0).toLocaleString("fr-FR")} GNF</div>
-                      <div style={{ fontSize:12, color: p.stock > 0 ? "#15803d" : "#be123c", fontWeight:600, marginTop:4 }}>
+                      <div style={{ fontSize:12, color: p.stock > 0 ? "#156315" : "#be123c", fontWeight:600, marginTop:4 }}>
                         {p.stock > 0 ? `✅ En stock (${p.stock})` : "❌ Rupture"}
                       </div>
                     </div>

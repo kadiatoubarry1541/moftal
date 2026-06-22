@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
@@ -182,7 +182,7 @@ export default function TransportVitrine() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: 16, fontWeight: 800, color: SKY }}>{fmtMoney(t.prix)}</span>
                       {t.places_disponibles !== null && t.places_disponibles !== undefined && (
-                        <span style={{ fontSize: 11, color: t.places_disponibles > 0 ? "#16a34a" : "#dc2626", fontWeight: 700 }}>
+                        <span style={{ fontSize: 11, color: t.places_disponibles > 0 ? "#1a8f1a" : "#dc2626", fontWeight: 700 }}>
                           {t.places_disponibles > 0 ? `${t.places_disponibles} places` : "Complet"}
                         </span>
                       )}

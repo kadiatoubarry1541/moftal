@@ -1,4 +1,4 @@
-/* Styles spécifiques pour la page Sécurité */
+﻿/* Styles spécifiques pour la page Sécurité */
 
 /* Carte mondiale (Leaflet) */
 .securite-worldmap-block {
@@ -107,9 +107,9 @@
 }
 
 .securite-alert-success {
-  background-color: #d1fae5;
-  border: 1px solid #6ee7b7;
-  color: #065f46;
+  background-color: #dcfcdc;
+  border: 1px solid #86ef86;
+  color: #0f4b0f;
 }
 
 .securite-alert-warning {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -16,10 +16,10 @@ const INDIGO_BORDER = "#c7d2fe";
 
 const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   en_cours:  { bg: "#eff6ff", color: "#1d4ed8", label: "En cours" },
-  publie:    { bg: "#f0fdf4", color: "#15803d", label: "Publié" },
+  publie:    { bg: "#f0fdf0", color: "#156315", label: "Publié" },
   soumis:    { bg: "#fffbeb", color: "#b45309", label: "Soumis" },
   rejete:    { bg: "#fff1f2", color: "#be123c", label: "Rejeté" },
-  termine:   { bg: "#f0fdf4", color: "#15803d", label: "Terminé" },
+  termine:   { bg: "#f0fdf0", color: "#156315", label: "Terminé" },
   planifie:  { bg: "#f5f3ff", color: "#7c3aed", label: "Planifié" },
   suspendu:  { bg: "#f8fafc", color: "#475569", label: "Suspendu" },
 };

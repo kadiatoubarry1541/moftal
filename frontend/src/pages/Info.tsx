@@ -1,17 +1,17 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSessionUser } from "../utils/auth";
 
 const CATEGORIES = [
   { id: "actualites",    label: "Actualités",      emoji: "📰",  color: "#0891b2", bg: "#ecfeff",  unread: 0 },
-  { id: "opportunites",  label: "Opportunités",    emoji: "💼",  color: "#16a34a", bg: "#f0fdf4",  unread: 0 },
-  { id: "sante",         label: "Santé & Bien-être", emoji: "🏥", color: "#0d9488", bg: "#f0fdfa",  unread: 0 },
+  { id: "opportunites",  label: "Opportunités",    emoji: "💼",  color: "#1a8f1a", bg: "#f0fdf0",  unread: 0 },
+  { id: "sante",         label: "Santé & Bien-être", emoji: "🏥", color: "#1a8f1a", bg: "#f0fdfa",  unread: 0 },
   { id: "education",     label: "Éducation",       emoji: "🎓",  color: "#7c3aed", bg: "#f5f3ff",  unread: 0 },
-  { id: "religion",      label: "Religion & Foi",  emoji: "☪️",  color: "#059669", bg: "#ecfdf5",  unread: 0 },
+  { id: "religion",      label: "Religion & Foi",  emoji: "☪️",  color: "#1a8f1a", bg: "#f0fdf0",  unread: 0 },
   { id: "economie",      label: "Économie",        emoji: "📊",  color: "#d97706", bg: "#fffbeb",  unread: 0 },
   { id: "culture",       label: "Culture & Arts",  emoji: "🎭",  color: "#db2777", bg: "#fdf2f8",  unread: 0 },
   { id: "technologie",   label: "Technologie",     emoji: "💡",  color: "#6366f1", bg: "#eef2ff",  unread: 0 },
-  { id: "environnement", label: "Environnement",   emoji: "🌿",  color: "#15803d", bg: "#f0fdf4",  unread: 0 },
+  { id: "environnement", label: "Environnement",   emoji: "🌿",  color: "#156315", bg: "#f0fdf0",  unread: 0 },
   { id: "sport",         label: "Sport",           emoji: "⚽",  color: "#ea580c", bg: "#fff7ed",  unread: 0 },
   { id: "securite",      label: "Sécurité",        emoji: "🛡️",  color: "#dc2626", bg: "#fef2f2",  unread: 0 },
   { id: "international", label: "International",   emoji: "🌍",  color: "#64748b", bg: "#f8fafc",  unread: 0 },

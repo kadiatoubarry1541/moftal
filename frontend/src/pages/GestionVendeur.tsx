@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -275,11 +275,11 @@ export default function GestionVendeur() {
                 </div>
                 <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between" }}>
                   <span style={{ fontWeight: 700, color: COLOR }}>{fmtMoney(p.prix_vente)}</span>
-                  <span style={{ fontSize: 13, color: p.stock <= p.stock_min ? "#dc2626" : "#16a34a", fontWeight: 600 }}>Stock: {p.stock} {p.unite}</span>
+                  <span style={{ fontSize: 13, color: p.stock <= p.stock_min ? "#dc2626" : "#1a8f1a", fontWeight: 600 }}>Stock: {p.stock} {p.unite}</span>
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
                   <button onClick={() => adjustStock(p.id, -1)} style={btn("#fef2f2", "#dc2626")}>−1</button>
-                  <button onClick={() => adjustStock(p.id, 1)} style={btn("#f0fdf4", "#16a34a")}>+1</button>
+                  <button onClick={() => adjustStock(p.id, 1)} style={btn("#f0fdf0", "#1a8f1a")}>+1</button>
                   <button onClick={() => { const n = prompt("Ajouter au stock :", "10"); if (n) adjustStock(p.id, +n); }} style={btn(COLOR_BG, COLOR)}>+N</button>
                 </div>
               </div>
@@ -385,7 +385,7 @@ export default function GestionVendeur() {
                 {c.credit_total > 0 && (
                   <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ color: "#dc2626", fontWeight: 700 }}>Crédit : {fmtMoney(c.credit_total)}</span>
-                    <button onClick={() => payCredit(c.id, c.credit_total)} style={btn("#f0fdf4", "#16a34a")}>Encaisser</button>
+                    <button onClick={() => payCredit(c.id, c.credit_total)} style={btn("#f0fdf0", "#1a8f1a")}>Encaisser</button>
                   </div>
                 )}
               </div>

@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
-const COLOR     = "#15803d";
-const COLOR_BG  = "#f0fdf4";
+const COLOR     = "#156315";
+const COLOR_BG  = "#f0fdf0";
 const COLOR_BDR = "#86efac";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : ""; }
@@ -60,7 +60,7 @@ export default function ProducteurVitrine() {
   const categories = Array.from(new Set(products.map((p: any) => p.categorie).filter(Boolean)));
 
   return (
-    <div style={{ fontFamily:"system-ui,sans-serif", minHeight:"100vh", background:"#f0fdf4" }}>
+    <div style={{ fontFamily:"system-ui,sans-serif", minHeight:"100vh", background:"#f0fdf0" }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}`}</style>
 
       <div style={{ background:`linear-gradient(135deg,#14532d,${COLOR})`, padding:"32px 24px 28px", position:"relative", overflow:"hidden" }}>
@@ -147,7 +147,7 @@ export default function ProducteurVitrine() {
                     </div>
                     <div style={{ padding:"12px 16px" }}>
                       <div style={{ fontWeight:800, fontSize:16, color: COLOR }}>{(p.prix_gros || p.prix_detail || 0).toLocaleString("fr-FR")} GNF</div>
-                      <div style={{ fontSize:12, color: p.stock > 0 ? "#15803d" : "#be123c", fontWeight:600, marginTop:4 }}>
+                      <div style={{ fontSize:12, color: p.stock > 0 ? "#156315" : "#be123c", fontWeight:600, marginTop:4 }}>
                         {p.stock > 0 ? `✅ Disponible (${p.stock} ${p.unite || "kg"})` : "❌ Indisponible"}
                       </div>
                     </div>

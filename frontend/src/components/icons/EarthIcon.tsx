@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 interface EarthIconProps {
   className?: string;
@@ -27,22 +27,22 @@ export function EarthIcon({ className = "", size = 24 }: EarthIconProps) {
       {/* Continents stylisés en vert */}
       <path
         d="M8 9C8 9 9 8 10 8C11 8 12 9 12 10C12 11 11 12 10 12C9 12 8 11 8 10C8 9.5 8 9 8 9Z"
-        fill="#16a34a"
+        fill="#1a8f1a"
         opacity="0.9"
       />
       <path
         d="M14 11C14 11 15 10 16 10C17 10 18 11 18 12C18 13 17 14 16 14C15 14 14 13 14 12C14 11.5 14 11 14 11Z"
-        fill="#16a34a"
+        fill="#1a8f1a"
         opacity="0.9"
       />
       <path
         d="M6 14C6 14 7 13 8 13C9 13 10 14 10 15C10 16 9 17 8 17C7 17 6 16 6 15C6 14.5 6 14 6 14Z"
-        fill="#16a34a"
+        fill="#1a8f1a"
         opacity="0.9"
       />
       <path
         d="M16 15C16 15 17 14 18 14C19 14 20 15 20 16C20 17 19 18 18 18C17 18 16 17 16 16C16 15.5 16 15 16 15Z"
-        fill="#16a34a"
+        fill="#1a8f1a"
         opacity="0.9"
       />
       {/* Lignes de latitude/longitude en bleu clair */}

@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
-const EMERALD      = "#059669";
-const EMERALD_DARK = "#047857";
-const EMERALD_LIGHT= "#10b981";
+const EMERALD      = "#1a8f1a";
+const EMERALD_DARK = "#156315";
+const EMERALD_LIGHT= "#22a722";
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -39,9 +39,9 @@ export default function MosqueeVitrine() {
   }, [tenantCode, apiType]);
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#ecfdf5" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f0fdf0" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, border: `3px solid #a7f3d0`, borderTopColor: EMERALD, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+        <div style={{ width: 48, height: 48, border: `3px solid #bbf7bb`, borderTopColor: EMERALD, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
         <p style={{ color: EMERALD_DARK, fontSize: 14, fontWeight: 600 }}>Chargement en cours...</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>

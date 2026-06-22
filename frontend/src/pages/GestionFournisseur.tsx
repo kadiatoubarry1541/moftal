@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -17,7 +17,7 @@ const CYAN_BORDER = "#a5f3fc";
 const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   en_attente:  { bg: "#fffbeb", color: "#b45309", label: "En attente" },
   en_cours:    { bg: "#eff6ff", color: "#1d4ed8", label: "En cours" },
-  livree:      { bg: "#f0fdf4", color: "#15803d", label: "Livrée" },
+  livree:      { bg: "#f0fdf0", color: "#156315", label: "Livrée" },
   annulee:     { bg: "#fff1f2", color: "#be123c", label: "Annulée" },
 };
 
@@ -287,7 +287,7 @@ export default function GestionFournisseur() {
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.categorie || "—"}</td>
                       <td style={{ padding: "10px 12px", color: "#0f172a" }}>{(p.prix_gros || 0).toLocaleString("fr-FR")} GNF</td>
                       <td style={{ padding: "10px 12px", color: "#0f172a" }}>{(p.prix_detail || 0).toLocaleString("fr-FR")} GNF</td>
-                      <td style={{ padding: "10px 12px", fontWeight: 700, color: p.stock > 0 ? "#15803d" : "#be123c" }}>{p.stock}</td>
+                      <td style={{ padding: "10px 12px", fontWeight: 700, color: p.stock > 0 ? "#156315" : "#be123c" }}>{p.stock}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.unite || "—"}</td>
                       <td style={{ padding: "10px 12px" }}>
                         <button onClick={async () => { await del(`${BASE(tenantCode!)}/products/${p.id}`); setProducts(ps => ps.filter(x => x.id !== p.id)); }}

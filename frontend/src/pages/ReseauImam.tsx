@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -141,7 +141,7 @@ export default function ReseauImam() {
               {pending.map((c: any) => (
                 <div key={c.imam_numero_h} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #fef3c7" }}>
                   <div><div style={{ fontWeight: 600, fontSize: 14 }}>{c.prenom} {c.nom_famille}</div><div style={{ fontSize: 12, color: "#64748b" }}>{c.nom_mosquee} · {c.ville}</div></div>
-                  <button onClick={() => acceptConn(c.imam_numero_h)} style={{ padding: "6px 14px", background: "#dcfce7", color: "#16a34a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>Accepter</button>
+                  <button onClick={() => acceptConn(c.imam_numero_h)} style={{ padding: "6px 14px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>Accepter</button>
                 </div>
               ))}
             </div>

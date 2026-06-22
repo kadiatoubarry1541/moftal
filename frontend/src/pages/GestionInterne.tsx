@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { config } from "../config/api";
@@ -9,9 +9,9 @@ const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://loca
 
 // Tous les services de la plateforme — référence unique de l'admin
 const ADMIN_SERVICES = [
-  { type: "clinic",          demoCode: "DEMO-REF-CLIN",  label: "Clinique / Hôpital",       emoji: "🏥", color: "#0d9488", bg: "#f0fdfa", path: "gestion-clinique",      vitrinePath: "clinique",        reseauPath: "reseau/clinic",          desc: "Patients, personnel médical, consultations, dossiers" },
-  { type: "school",          demoCode: "DEMO-REF-ECO",   label: "École / Université",        emoji: "🏫", color: "#16a34a", bg: "#f0fdf4", path: "gestion-ecole",         vitrinePath: "ecole",           reseauPath: "reseau/school",          desc: "Élèves, cours, présences, notes, enseignants" },
-  { type: "mosque",          demoCode: "DEMO-REF-MSQ",   label: "Réseau Imam",               emoji: "🕌", color: "#059669", bg: "#ecfdf5", path: "gestion-mosquee",       vitrinePath: "mosquee",         reseauPath: "reseau/mosque",          desc: "Imams, fidèles, prédications, mosquées partenaires, dons, Coran" },
+  { type: "clinic",          demoCode: "DEMO-REF-CLIN",  label: "Clinique / Hôpital",       emoji: "🏥", color: "#1a8f1a", bg: "#f0fdfa", path: "gestion-clinique",      vitrinePath: "clinique",        reseauPath: "reseau/clinic",          desc: "Patients, personnel médical, consultations, dossiers" },
+  { type: "school",          demoCode: "DEMO-REF-ECO",   label: "École / Université",        emoji: "🏫", color: "#1a8f1a", bg: "#f0fdf0", path: "gestion-ecole",         vitrinePath: "ecole",           reseauPath: "reseau/school",          desc: "Élèves, cours, présences, notes, enseignants" },
+  { type: "mosque",          demoCode: "DEMO-REF-MSQ",   label: "Réseau Imam",               emoji: "🕌", color: "#1a8f1a", bg: "#f0fdf0", path: "gestion-mosquee",       vitrinePath: "mosquee",         reseauPath: "reseau/mosque",          desc: "Imams, fidèles, prédications, mosquées partenaires, dons, Coran" },
   { type: "reseau",          demoCode: "DEMO-REF-RESEAU",label: "Association / Réseau",      emoji: "🌐", color: "#2563eb", bg: "#eff6ff", path: "gestion-reseau",        vitrinePath: "reseau-vitrine",  reseauPath: "reseau/reseau",          desc: "Membres, projets, cotisations, annonces — pour associations et groupes organisés" },
   { type: "madrasa",         demoCode: "DEMO-REF-MDS",   label: "Madrasa / Daroul",          emoji: "📖", color: "#0891b2", bg: "#ecfeff", path: "gestion-madrasa",       vitrinePath: "madrasa",         reseauPath: "reseau/madrasa",         desc: "Élèves, enseignants, cours religieux, certificats" },
   { type: "commerce",        demoCode: "DEMO-REF-COM",   label: "Boutique / Commerce",       emoji: "🏪", color: "#d97706", bg: "#fffbeb", path: "gestion-commerce",      vitrinePath: "commerce",        reseauPath: "reseau/commerce",        desc: "Stock, ventes, clients, caisse, crédits" },
@@ -29,7 +29,7 @@ const ADMIN_SERVICES = [
   { type: "producer",        demoCode: "DEMO-REF-PROD",  label: "Entreprise de Production",  emoji: "🏭", color: "#7c3aed", bg: "#f5f3ff", path: "gestion-producer",      vitrinePath: "",                reseauPath: "reseau/producer",        desc: "Produits fabriqués, lots, commandes, personnel" },
   { type: "beauty",          demoCode: "DEMO-REF-BEAU",  label: "Beauté & Bien-être",        emoji: "💈", color: "#db2777", bg: "#fdf2f8", path: "gestion-beauty",        vitrinePath: "",                reseauPath: "reseau/beauty",          desc: "Services, rendez-vous, personnel, clients" },
   { type: "artisan",         demoCode: "DEMO-REF-ARTI",  label: "Artisanat & Services",      emoji: "🔧", color: "#d97706", bg: "#fffbeb", path: "gestion-artisan",       vitrinePath: "",                reseauPath: "reseau/artisan",         desc: "Interventions, services, clients, annonces" },
-  { type: "health_worker",   demoCode: "DEMO-REF-HLTH",  label: "Médecin / Agent de santé",  emoji: "👨‍⚕️", color: "#0d9488", bg: "#f0fdfa", path: "gestion-clinique",      vitrinePath: "clinique",        reseauPath: "reseau/clinic",          desc: "Consultations, patients, rendez-vous (dashboard clinique)" },
+  { type: "health_worker",   demoCode: "DEMO-REF-HLTH",  label: "Médecin / Agent de santé",  emoji: "👨‍⚕️", color: "#1a8f1a", bg: "#f0fdfa", path: "gestion-clinique",      vitrinePath: "clinique",        reseauPath: "reseau/clinic",          desc: "Consultations, patients, rendez-vous (dashboard clinique)" },
 ];
 
 function getTypeInfo(type: string) {
@@ -152,7 +152,7 @@ export default function GestionInterne() {
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", minHeight:300 }}>
-      <div style={{ width:32, height:32, border:"3px solid #e2e8f0", borderTopColor:"#16a34a", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+      <div style={{ width:32, height:32, border:"3px solid #e2e8f0", borderTopColor:"#1a8f1a", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -161,9 +161,9 @@ export default function GestionInterne() {
   const BandeauAcces = () => {
     if (userIsAdmin || !accesGI?.aAcces) return null;
     if (accesGI.mode === 'vie') return (
-      <div style={{ background:"#f0fdf4", border:"1px solid #86efac", borderRadius:10, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
+      <div style={{ background:"#f0fdf0", border:"1px solid #86efac", borderRadius:10, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
         <span style={{ fontSize:20 }}>♾️</span>
-        <p style={{ margin:0, fontSize:13, color:"#166534", fontWeight:700 }}>Accès à vie — Espace Professionnel débloqué définitivement.</p>
+        <p style={{ margin:0, fontSize:13, color:"#0f4b0f", fontWeight:700 }}>Accès à vie — Espace Professionnel débloqué définitivement.</p>
       </div>
     );
     if (accesGI.mode === 'essai') return (
@@ -221,10 +221,10 @@ export default function GestionInterne() {
   // Deux espaces toujours visibles : Activité / Espace Pro (Activité en premier : tout le monde en a une, pas forcément un compte pro)
   const TabButtons = ({ proLabel, onProClick }: { proLabel: string; onProClick: () => void }) => (
     <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-      <button onClick={() => setTabOverride('activite')} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'activite' ? "#16a34a" : "#f1f5f9", color: tab === 'activite' ? "white" : "#475569" }}>
+      <button onClick={() => setTabOverride('activite')} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'activite' ? "#1a8f1a" : "#f1f5f9", color: tab === 'activite' ? "white" : "#475569" }}>
         Activité
       </button>
-      <button onClick={onProClick} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'pro' ? "#16a34a" : "#f1f5f9", color: tab === 'pro' ? "white" : "#475569" }}>
+      <button onClick={onProClick} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'pro' ? "#1a8f1a" : "#f1f5f9", color: tab === 'pro' ? "white" : "#475569" }}>
         {proLabel}
       </button>
     </div>
@@ -242,9 +242,9 @@ export default function GestionInterne() {
 
     // 6 services avec module Gestion Interne complet
     const GESTION_SERVICES = [
-      { type: "clinic",     label: "Clinique / Hôpital",   emoji: "🏥", gradient: "linear-gradient(135deg,#059669,#0d9488)", border: "#a7f3d0", bgLight: "#f0fdfa", textColor: "#065f46", features: "Patients · Personnel · RDV · Ordonnances · Dossiers · Paiements",          demoCode: "DEMO-REF-CLIN", path: "gestion-clinique",  btn: "#059669", btnH: "#047857" },
+      { type: "clinic",     label: "Clinique / Hôpital",   emoji: "🏥", gradient: "linear-gradient(135deg,#1a8f1a,#1a8f1a)", border: "#bbf7bb", bgLight: "#f0fdfa", textColor: "#0f4b0f", features: "Patients · Personnel · RDV · Ordonnances · Dossiers · Paiements",          demoCode: "DEMO-REF-CLIN", path: "gestion-clinique",  btn: "#1a8f1a", btnH: "#156315" },
       { type: "school",     label: "École / Université",    emoji: "🎓", gradient: "linear-gradient(135deg,#f59e0b,#f97316)", border: "#fde68a", bgLight: "#fffbeb", textColor: "#92400e", features: "Élèves · Personnel · Classes · Présences · Notes · Frais scolaires",      demoCode: "DEMO-REF-ECO",  path: "gestion-ecole",    btn: "#f59e0b", btnH: "#d97706" },
-      { type: "mosque",     label: "Réseau Imam",           emoji: "🕌", gradient: "linear-gradient(135deg,#15803d,#059669)", border: "#bbf7d0", bgLight: "#f0fdf4", textColor: "#14532d", features: "Imams · Fidèles · Prédications · Mosquées partenaires · Dons · Coran",  demoCode: "DEMO-REF-MSQ", path: "gestion-mosquee",  btn: "#15803d", btnH: "#166534" },
+      { type: "mosque",     label: "Réseau Imam",           emoji: "🕌", gradient: "linear-gradient(135deg,#156315,#1a8f1a)", border: "#bbf7bb", bgLight: "#f0fdf0", textColor: "#14532d", features: "Imams · Fidèles · Prédications · Mosquées partenaires · Dons · Coran",  demoCode: "DEMO-REF-MSQ", path: "gestion-mosquee",  btn: "#156315", btnH: "#0f4b0f" },
       { type: "reseau",     label: "Réseau",  emoji: "🌐", gradient: "linear-gradient(135deg,#1d4ed8,#2563eb)", border: "#bfdbfe", bgLight: "#eff6ff", textColor: "#1e3a8a", features: "Membres · Projets · Cotisations · Annonces · Événements",                demoCode: "DEMO-REF-RESEAU", path: "gestion-reseau", btn: "#2563eb", btnH: "#1d4ed8" },
       { type: "madrasa",    label: "Madrasa / Daroul",      emoji: "📖", gradient: "linear-gradient(135deg,#0891b2,#2563eb)", border: "#a5f3fc", bgLight: "#ecfeff", textColor: "#164e63", features: "Élèves · Enseignants · Cours religieux · Présences · Certificats",       demoCode: "DEMO-REF-MDS",  path: "gestion-madrasa",  btn: "#0891b2", btnH: "#0e7490" },
       { type: "commerce",   label: "Boutique / Commerce",   emoji: "🏪", gradient: "linear-gradient(135deg,#ea580c,#eab308)", border: "#fed7aa", bgLight: "#fff7ed", textColor: "#7c2d12", features: "Stock · Ventes · Clients · Caisse · Crédits · Fournisseurs",            demoCode: "DEMO-REF-COM",  path: "gestion-commerce", btn: "#ea580c", btnH: "#c2410c" },
@@ -290,7 +290,7 @@ export default function GestionInterne() {
         {/* ── SECTION 1 : Gestion Interne ── */}
         <div style={{ marginBottom:40 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-            <div style={{ width:4, height:24, background:"#16a34a", borderRadius:2 }} />
+            <div style={{ width:4, height:24, background:"#1a8f1a", borderRadius:2 }} />
             <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:"#0f172a" }}>Professionnel — {GESTION_SERVICES.length} espaces de référence</h2>
           </div>
           <p style={{ margin:"0 0 20px 14px", fontSize:13, color:"#64748b" }}>
@@ -392,7 +392,7 @@ export default function GestionInterne() {
                       <div style={{ display:"flex", gap:8, alignItems:"center", flexShrink:0 }}>
                         {info.vitrinePath && (
                           <span onClick={e => { e.stopPropagation(); navigate(`/${info.vitrinePath}/${t.tenant_code}`); }}
-                            style={{ padding:"4px 10px", background:"#f0fdf4", color:"#16a34a", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"1px solid #bbf7d0" }}>
+                            style={{ padding:"4px 10px", background:"#f0fdf0", color:"#1a8f1a", borderRadius:6, fontSize:11, fontWeight:700, cursor:"pointer", border:"1px solid #bbf7bb" }}>
                             🌐 Vitrine
                           </span>
                         )}
@@ -468,7 +468,7 @@ export default function GestionInterne() {
 
         {tab === 'pro' && <>
         {/* Bandeau Espace Pro adaptatif */}
-        <div style={{ background:"linear-gradient(135deg,#16a34a,#15803d)", borderRadius:14, padding:"18px 22px", marginBottom:12, display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", justifyContent:"space-between" }}>
+        <div style={{ background:"linear-gradient(135deg,#1a8f1a,#156315)", borderRadius:14, padding:"18px 22px", marginBottom:12, display:"flex", alignItems:"center", gap:16, flexWrap:"wrap", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
             <div style={{ fontSize:32 }}>{espacePro.emoji}</div>
             <div>
@@ -476,7 +476,7 @@ export default function GestionInterne() {
               <div style={{ color:"rgba(255,255,255,0.85)", fontSize:13, marginTop:2 }}>{espacePro.desc}</div>
             </div>
           </div>
-          <button onClick={espacePro.onClick} style={{ padding:"10px 18px", background:"white", color:"#15803d", border:"none", borderRadius:10, cursor:"pointer", fontSize:13, fontWeight:800, whiteSpace:"nowrap" }}>
+          <button onClick={espacePro.onClick} style={{ padding:"10px 18px", background:"white", color:"#156315", border:"none", borderRadius:10, cursor:"pointer", fontSize:13, fontWeight:800, whiteSpace:"nowrap" }}>
             {espacePro.label}
           </button>
         </div>

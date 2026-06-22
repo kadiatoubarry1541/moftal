@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Etat } from "../components/Etat";
 import { ReçuTransaction } from "../components/ReçuTransaction";
@@ -364,7 +364,7 @@ export default function Probleme() {
         </div>
 
         {/* ─── Moftal Pay — Paiement santé depuis problème familial ─── */}
-        <div className="rounded-xl shadow-sm p-4 sm:p-5 border border-emerald-200" style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)' }}>
+        <div className="rounded-xl shadow-sm p-4 sm:p-5 border border-emerald-200" style={{ background: 'linear-gradient(135deg,#f0fdf0,#dcfcdc)' }}>
           <div className="flex items-center gap-3 mb-3">
             <span className="text-3xl">💰</span>
             <div>
@@ -381,7 +381,7 @@ export default function Probleme() {
           <button
             onClick={() => navigate('/compte-famille')}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-bold text-sm mb-3"
-            style={{ background: 'linear-gradient(135deg,#0d9488,#0891b2)' }}
+            style={{ background: 'linear-gradient(135deg,#1a8f1a,#0891b2)' }}
           >
             💰 Compte Famille Moftal Pay
           </button>
@@ -399,7 +399,7 @@ export default function Probleme() {
                   <button
                     onClick={() => setShowMoftalPay(v => !v)}
                     className="w-full py-2.5 rounded-xl text-white font-bold text-sm mb-3"
-                    style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}
+                    style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}
                   >
                     {showMoftalPay ? '✕ Annuler' : '🏥 Payer une clinique ou médecin'}
                   </button>
@@ -422,7 +422,7 @@ export default function Probleme() {
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none resize-none" />
                       <button onClick={payerSante} disabled={moftalLoading}
                         className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50"
-                        style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}>
+                        style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
                         {moftalLoading ? 'Traitement...' : '✅ Confirmer le paiement santé'}
                       </button>
                     </div>

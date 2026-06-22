@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════════════════════════
+﻿// ═══════════════════════════════════════════════════════════════
 //  Système de tri par proximité géographique — Moftal
 //  Principe : ce qui est près de toi apparaît EN PREMIER
 //  Niveau 1 : même quartier/ville → Niveau 2 : même région
@@ -223,7 +223,7 @@ export function proximityLabel(
   user: UserGeoContext
 ): { text: string; color: string } | null {
   const score = proximityScore(item, user);
-  if (score <= 1)   return { text: "📍 Près de vous",      color: "#16a34a" };
+  if (score <= 1)   return { text: "📍 Près de vous",      color: "#1a8f1a" };
   if (score <= 10)  return { text: "🗺️ Dans votre région", color: "#2563eb" };
   if (score <= 150) return { text: "🌍 Même pays",         color: "#d97706" };
   return null;

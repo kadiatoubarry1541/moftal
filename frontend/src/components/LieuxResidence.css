@@ -1,4 +1,4 @@
-.lieux-residence-page {
+﻿.lieux-residence-page {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
@@ -211,7 +211,7 @@
 }
 
 .residence-card.current {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid #22a722;
 }
 
 .residence-card.previous {
@@ -244,8 +244,8 @@
 }
 
 .type-badge.current {
-  background: #d1fae5;
-  color: #065f46;
+  background: #dcfcdc;
+  color: #0f4b0f;
 }
 
 .type-badge.previous {
@@ -375,7 +375,7 @@
 }
 
 .legend-dot.current {
-  background: #10b981;
+  background: #22a722;
 }
 
 .legend-dot.previous {

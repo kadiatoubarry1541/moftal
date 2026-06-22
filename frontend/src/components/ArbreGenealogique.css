@@ -1,4 +1,4 @@
-/* Styles pour l'Arbre Généalogique */
+﻿/* Styles pour l'Arbre Généalogique */
 .arbre-genealogique {
   padding: 20px;
   max-width: 1200px;
@@ -832,7 +832,7 @@ body {
   height: 10px;
   border-radius: 999px;
   background: #22c55e;
-  border: 2px solid #16a34a;
+  border: 2px solid #1a8f1a;
   flex-shrink: 0;
 }
 

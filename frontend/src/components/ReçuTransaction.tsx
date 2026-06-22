@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+﻿import { useRef } from 'react';
 
 interface ReçuProps {
   id: string;
@@ -60,7 +60,7 @@ export function ReçuTransaction({
         .row .lbl { color: #777; flex-shrink: 0; margin-right: 12px; }
         .row .val { font-weight: bold; text-align: right; }
         .repartition { background: #f0f9f4; border-radius: 8px; padding: 10px; margin-top: 12px; }
-        .repartition-title { font-size: 10px; font-weight: bold; color: #059669; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .repartition-title { font-size: 10px; font-weight: bold; color: #1a8f1a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
         .repartition-row { display: flex; justify-content: space-between; font-size: 11px; color: #333; margin-bottom: 3px; }
         .footer { background: #f8fafc; padding: 14px; text-align: center; border-top: 1px dashed #ccc; }
         .footer p { font-size: 10px; color: #888; line-height: 1.6; }
@@ -123,7 +123,7 @@ export function ReçuTransaction({
               {/* Répartition dépôt */}
               {repartition && Object.keys(repartition).length > 0 && (
                 <div style={{ background: '#f0f9f4', borderRadius: 8, padding: 10, marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 'bold', color: '#059669', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Répartition automatique</div>
+                  <div style={{ fontSize: 10, fontWeight: 'bold', color: '#1a8f1a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Répartition automatique</div>
                   {Object.entries(repartition).map(([k, v]) => Number(v) > 0 && (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#333', marginBottom: 3 }}>
                       <span style={{ textTransform: 'capitalize' }}>{k}</span>

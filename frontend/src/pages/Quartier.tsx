@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 
@@ -6,9 +6,9 @@ const SECTIONS = [
   { id: "voisinage",   label: "Voisinage",     emoji: "🏘️",  color: "#0891b2", bg: "#ecfeff",  desc: "Vos voisins, échanges de services, entraide locale" },
   { id: "securite",    label: "Sécurité",      emoji: "🛡️",  color: "#dc2626", bg: "#fef2f2",  desc: "Signalements, alertes sécurité du quartier" },
   { id: "commerce",    label: "Commerces",     emoji: "🏪",  color: "#d97706", bg: "#fffbeb",  desc: "Boutiques, marchés et artisans de votre zone" },
-  { id: "sante",       label: "Santé",         emoji: "🏥",  color: "#0d9488", bg: "#f0fdfa",  desc: "Cliniques, pharmacies et urgences proches" },
-  { id: "education",   label: "Éducation",     emoji: "🏫",  color: "#16a34a", bg: "#f0fdf4",  desc: "Écoles, centres de formation, bibliothèques" },
-  { id: "mosquee",     label: "Mosquées",      emoji: "🕌",  color: "#059669", bg: "#ecfdf5",  desc: "Mosquées, madrasas et horaires de prière" },
+  { id: "sante",       label: "Santé",         emoji: "🏥",  color: "#1a8f1a", bg: "#f0fdfa",  desc: "Cliniques, pharmacies et urgences proches" },
+  { id: "education",   label: "Éducation",     emoji: "🏫",  color: "#1a8f1a", bg: "#f0fdf0",  desc: "Écoles, centres de formation, bibliothèques" },
+  { id: "mosquee",     label: "Mosquées",      emoji: "🕌",  color: "#1a8f1a", bg: "#f0fdf0",  desc: "Mosquées, madrasas et horaires de prière" },
   { id: "evenements",  label: "Événements",    emoji: "📅",  color: "#7c3aed", bg: "#f5f3ff",  desc: "Fêtes, réunions communautaires, activités locales" },
   { id: "travaux",     label: "Travaux & Infra", emoji: "🔧", color: "#64748b", bg: "#f8fafc",  desc: "Routes, eau, électricité, déchets — signalements" },
 ];

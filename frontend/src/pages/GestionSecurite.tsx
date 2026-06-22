@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -16,7 +16,7 @@ const SLATE_BORDER = "#cbd5e1";
 
 const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   en_cours:  { bg: "#eff6ff", color: "#1d4ed8", label: "En cours" },
-  terminee:  { bg: "#f0fdf4", color: "#15803d", label: "Terminée" },
+  terminee:  { bg: "#f0fdf0", color: "#156315", label: "Terminée" },
   annulee:   { bg: "#fff1f2", color: "#be123c", label: "Annulée" },
   planifiee: { bg: "#f5f3ff", color: "#7c3aed", label: "Planifiée" },
 };

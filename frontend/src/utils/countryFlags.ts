@@ -162,17 +162,29 @@ export const COUNTRY_NAME_FLAGS: Record<string, string> = {
   'Nouvelle Zelande': '🇳🇿',
 };
 
+// Convertit un code ISO 2 lettres en emoji drapeau : "GN" → 🇬🇳, "FR" → 🇫🇷, etc.
+function isoToFlagEmoji(code: string): string {
+  return code.toUpperCase().split('').map(c => String.fromCodePoint(c.charCodeAt(0) + 127397)).join('');
+}
+
 // Fonction pour obtenir le drapeau d'un pays
 export function getCountryFlag(countryCode?: string, countryName?: string): string {
-  if (countryCode && COUNTRY_FLAGS[countryCode]) {
-    return COUNTRY_FLAGS[countryCode];
+  if (countryCode) {
+    // Code interne (P1, P2...)
+    if (COUNTRY_FLAGS[countryCode]) {
+      return COUNTRY_FLAGS[countryCode];
+    }
+    // Code ISO 2 lettres (GN, SN, FR, US...) → emoji automatique pour TOUS les pays du monde
+    if (/^[A-Za-z]{2}$/.test(countryCode)) {
+      return isoToFlagEmoji(countryCode);
+    }
   }
   if (countryName) {
     // Essayer avec le nom exact
     if (COUNTRY_NAME_FLAGS[countryName]) {
       return COUNTRY_NAME_FLAGS[countryName];
     }
-    // Essayer avec différentes variations
+    // Essayer sans tenir compte de la casse
     const normalizedName = countryName.trim();
     for (const [name, flag] of Object.entries(COUNTRY_NAME_FLAGS)) {
       if (name.toLowerCase() === normalizedName.toLowerCase()) {

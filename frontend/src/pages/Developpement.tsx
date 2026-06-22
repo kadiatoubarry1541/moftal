@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 
 const DOMAINES = [
-  { id: "agriculture",    label: "Agriculture",           emoji: "🌾", color: "#15803d", bg: "#f0fdf4", desc: "Production locale, irrigation, coopératives agricoles" },
+  { id: "agriculture",    label: "Agriculture",           emoji: "🌾", color: "#156315", bg: "#f0fdf0", desc: "Production locale, irrigation, coopératives agricoles" },
   { id: "habitat",        label: "Habitat & Logement",    emoji: "🏗️", color: "#0891b2", bg: "#ecfeff", desc: "Construction, matériaux locaux, planification urbaine" },
   { id: "energie",        label: "Énergie",               emoji: "⚡", color: "#d97706", bg: "#fffbeb", desc: "Solaire, eau, électrification des zones rurales" },
   { id: "education",      label: "Éducation",             emoji: "📚", color: "#7c3aed", bg: "#f5f3ff", desc: "Scolarisation, alphabétisation, formation professionnelle" },
-  { id: "sante",          label: "Santé",                 emoji: "🏥", color: "#0d9488", bg: "#f0fdfa", desc: "Centres de santé, médicaments, nutrition" },
+  { id: "sante",          label: "Santé",                 emoji: "🏥", color: "#1a8f1a", bg: "#f0fdfa", desc: "Centres de santé, médicaments, nutrition" },
   { id: "numerique",      label: "Numérique",             emoji: "💻", color: "#6366f1", bg: "#eef2ff", desc: "Internet, smartphones, compétences digitales" },
-  { id: "commerce",       label: "Commerce & PME",        emoji: "📈", color: "#16a34a", bg: "#f0fdf4", desc: "Marchés, microcrédit, incubateurs d'entreprises" },
+  { id: "commerce",       label: "Commerce & PME",        emoji: "📈", color: "#1a8f1a", bg: "#f0fdf0", desc: "Marchés, microcrédit, incubateurs d'entreprises" },
   { id: "infrastructure", label: "Infrastructures",       emoji: "🛣️", color: "#64748b", bg: "#f8fafc", desc: "Routes, ponts, eau potable, assainissement" },
-  { id: "environnement",  label: "Environnement",         emoji: "🌿", color: "#059669", bg: "#ecfdf5", desc: "Reboisement, gestion des déchets, changement climatique" },
+  { id: "environnement",  label: "Environnement",         emoji: "🌿", color: "#1a8f1a", bg: "#f0fdf0", desc: "Reboisement, gestion des déchets, changement climatique" },
   { id: "femmes",         label: "Autonomisation femmes", emoji: "👩", color: "#db2777", bg: "#fdf2f8", desc: "Entrepreneuriat féminin, droits, leadership" },
   { id: "jeunesse",       label: "Jeunesse & Emploi",     emoji: "🎯", color: "#ea580c", bg: "#fff7ed", desc: "Stages, formation, insertion professionnelle" },
   { id: "gouvernance",    label: "Gouvernance",           emoji: "🏛️", color: "#1d4ed8", bg: "#eff6ff", desc: "Démocratie locale, transparence, participation citoyenne" },

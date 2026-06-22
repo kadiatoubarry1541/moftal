@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -16,7 +16,7 @@ const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
   en_attente:    { bg: "#fef9c3", color: "#a16207" },
   en_traitement: { bg: "#dbeafe", color: "#1d4ed8" },
   valide_chef:   { bg: "#fef3c7", color: "#92400e" },
-  valide:        { bg: "#dcfce7", color: "#166534" },
+  valide:        { bg: "#dcfcdc", color: "#0f4b0f" },
   rejete:        { bg: "#fee2e2", color: "#991b1b" },
 };
 
@@ -467,7 +467,7 @@ export default function GestionMairie() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 16, marginBottom: 28 }}>
         <StatCard label="Mariages ce mois" value={stats.mariagesMois || 0} sub={`${stats.mariagesAujourdhui || 0} aujourd'hui`} color={BLUE} />
         <StatCard label="En attente" value={stats.mariagesEnAttente || 0} sub="Dossiers à traiter" color="#f59e0b" />
-        <StatCard label="Naissances ce mois" value={stats.naissancesMois || 0} sub={`${stats.naissancesAujourdhui || 0} aujourd'hui`} color="#10b981" />
+        <StatCard label="Naissances ce mois" value={stats.naissancesMois || 0} sub={`${stats.naissancesAujourdhui || 0} aujourd'hui`} color="#22a722" />
         <StatCard label="Décès ce mois" value={stats.decesMois || 0} sub="Déclarations reçues" color="#6366f1" />
         <StatCard label="Agents actifs" value={stats.agents || 0} sub="Personnel en service" color="#ec4899" />
       </div>
@@ -557,7 +557,7 @@ export default function GestionMairie() {
             <Field label="Date de naissance"><input type="date" className={inp} style={inpStyle} value={mariageForm.epoux_ddn || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epoux_ddn: e.target.value }))} /></Field>
             <Field label="N° Moftal (optionnel)"><input className={inp} style={inpStyle} value={mariageForm.epoux_numero_h || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epoux_numero_h: e.target.value }))} placeholder="Ex: H-12345" /></Field>
           </FieldRow>
-          <div style={{ fontWeight: 700, color: "#10b981", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Épouse</div>
+          <div style={{ fontWeight: 700, color: "#22a722", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Épouse</div>
           <FieldRow>
             <Field label="Nom *"><input className={inp} style={inpStyle} value={mariageForm.epouse_nom || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epouse_nom: e.target.value }))} placeholder="Nom de l'épouse" /></Field>
             <Field label="Prénom *"><input className={inp} style={inpStyle} value={mariageForm.epouse_prenom || ""} onChange={e => setMariageForm((f: any) => ({ ...f, epouse_prenom: e.target.value }))} placeholder="Prénom" /></Field>
@@ -589,7 +589,7 @@ export default function GestionMairie() {
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0f172a" }}>Déclarations de naissance</h2>
           <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>{naissances.length} déclaration(s)</p>
         </div>
-        <button onClick={() => openNaissanceForm()} style={{ background: "#10b981", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+        <button onClick={() => openNaissanceForm()} style={{ background: "#22a722", color: "#fff", border: "none", borderRadius: 10, padding: "10px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
           + Nouvelle déclaration
         </button>
       </div>
@@ -638,7 +638,7 @@ export default function GestionMairie() {
 
       {showNaissanceForm && (
         <FormModal title={editingNaissance ? "Modifier la déclaration" : "Nouvelle déclaration de naissance"} onClose={() => setShowNaissanceForm(false)} onSave={saveNaissance}>
-          <div style={{ fontWeight: 700, color: "#10b981", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Enfant</div>
+          <div style={{ fontWeight: 700, color: "#22a722", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>Enfant</div>
           <FieldRow>
             <Field label="Nom *"><input className={inp} style={inpStyle} value={naissanceForm.enfant_nom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, enfant_nom: e.target.value }))} placeholder="Nom de l'enfant" /></Field>
             <Field label="Prénom *"><input className={inp} style={inpStyle} value={naissanceForm.enfant_prenom || ""} onChange={e => setNaissanceForm((f: any) => ({ ...f, enfant_prenom: e.target.value }))} placeholder="Prénom" /></Field>
@@ -791,7 +791,7 @@ export default function GestionMairie() {
                 {r.depuis_quand && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>Réside depuis : {r.depuis_quand}</div>}
                 {r.chef_quartier_nom ? (
                   <div style={{ fontSize: 11, marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ color: r.chef_quartier_valide ? "#166534" : "#92400e", background: r.chef_quartier_valide ? "#dcfce7" : "#fef9c3", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
+                    <span style={{ color: r.chef_quartier_valide ? "#0f4b0f" : "#92400e", background: r.chef_quartier_valide ? "#dcfcdc" : "#fef9c3", padding: "2px 8px", borderRadius: 12, fontWeight: 700 }}>
                       {r.chef_quartier_valide ? "✓" : "⏳"} Chef : {r.chef_quartier_nom}
                     </span>
                     {r.chef_quartier_valide && r.chef_quartier_date && (
@@ -992,7 +992,7 @@ export default function GestionMairie() {
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{a.prenom} {a.nom}</div>
                   <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{a.role}</div>
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: a.is_active ? "#dcfce7" : "#f1f5f9", color: a.is_active ? "#166534" : "#94a3b8" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: a.is_active ? "#dcfcdc" : "#f1f5f9", color: a.is_active ? "#0f4b0f" : "#94a3b8" }}>
                   {a.is_active ? "Actif" : "Inactif"}
                 </span>
               </div>
@@ -1112,7 +1112,7 @@ export default function GestionMairie() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, background: toast.ok ? "#166534" : "#dc2626", color: "#fff", padding: "12px 20px", borderRadius: 10, fontWeight: 600, fontSize: 13, zIndex: 9999, boxShadow: "0 4px 16px rgba(0,0,0,0.2)", animation: "fadeIn 0.2s ease" }}>
+        <div style={{ position: "fixed", bottom: 24, right: 24, background: toast.ok ? "#0f4b0f" : "#dc2626", color: "#fff", padding: "12px 20px", borderRadius: 10, fontWeight: 600, fontSize: 13, zIndex: 9999, boxShadow: "0 4px 16px rgba(0,0,0,0.2)", animation: "fadeIn 0.2s ease" }}>
           {toast.ok ? "✓" : "✗"} {toast.msg}
         </div>
       )}

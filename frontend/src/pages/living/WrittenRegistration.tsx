@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+﻿import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../utils/api'
 import { LangButton } from '../../components/LangButton'
@@ -796,7 +796,7 @@ export function WrittenRegistration() {
 
                 {/* ── Spécialité : apparaît dès qu'une activité est choisie ── */}
                 {data.activite1 && data.activite1 !== 'Autre' && (
-                  <div className="mt-3" style={{ animation: 'fadeInDown 0.25s ease', borderLeft: '3px solid #10b981', paddingLeft: '0.75rem' }}>
+                  <div className="mt-3" style={{ animation: 'fadeInDown 0.25s ease', borderLeft: '3px solid #22a722', paddingLeft: '0.75rem' }}>
                     <label className="block text-xs font-semibold text-emerald-700 mb-1">
                       🎯 Votre spécialité dans « {data.activite1} » *
                     </label>

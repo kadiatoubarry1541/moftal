@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -19,14 +19,14 @@ const PAYMENT_LABELS: Record<string, string> = { especes: "Espèces", orange_mon
 
 const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
   "Admin":        { bg: "#eff6ff", color: "#1d4ed8" },
-  "Médecin":      { bg: "#f0fdfa", color: "#0f766e" },
-  "Spécialiste":  { bg: "#f0fdfa", color: "#0f766e" },
+  "Médecin":      { bg: "#f0fdfa", color: "#156315" },
+  "Spécialiste":  { bg: "#f0fdfa", color: "#156315" },
   "Infirmier(e)": { bg: "#fdf4ff", color: "#7e22ce" },
   "Sage-femme":   { bg: "#fdf4ff", color: "#7e22ce" },
   "Laborantin":   { bg: "#fff7ed", color: "#c2410c" },
   "Radiologue":   { bg: "#fff7ed", color: "#c2410c" },
   "Secrétaire":   { bg: "#f1f5f9", color: "#334155" },
-  "Comptable":    { bg: "#f0fdf4", color: "#166534" },
+  "Comptable":    { bg: "#f0fdf0", color: "#0f4b0f" },
   "Autre":        { bg: "#f1f5f9", color: "#475569" },
 };
 
@@ -53,9 +53,9 @@ const NAV_ITEMS: { id: Section; label: string; icon: string }[] = [
 const inp = "w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent";
 const inpStyle = { borderColor: "#e2e8f0", color: "#0f172a" };
 const labelStyle = { fontSize: 11, fontWeight: 600 as const, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.04em" };
-const TEAL = "#0d9488";
+const TEAL = "#1a8f1a";
 const TEAL_LIGHT = "#14b8a6";
-const TEAL_DARK = "#0f766e";
+const TEAL_DARK = "#156315";
 
 // ── PRINT FUNCTIONS ──────────────────────────────────────────────────────────
 
@@ -63,7 +63,7 @@ function printPrescription(p: any, clinicName: string) {
   const meds: any[] = Array.isArray(p.medicaments) ? p.medicaments : [];
   const date = p.date_prescription || p.created_at;
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Ordonnance ${p.numero_ordo}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0d9488;padding-bottom:20px;margin-bottom:24px}.clinic-title{font-size:22px;font-weight:700;color:#0d9488}.ordo-num{background:#f0fdfa;border:1px solid #99f6e4;padding:5px 14px;border-radius:20px;font-family:monospace;font-size:13px;color:#0f766e}.s-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;margin-top:20px}.pat-box{background:#f8fafc;border-radius:8px;padding:14px;border-left:4px solid #0d9488}.pat-name{font-size:17px;font-weight:700}.diag{background:#fffbeb;border-radius:6px;padding:12px;border-left:3px solid #fbbf24;font-size:13px;color:#475569}.med-item{display:flex;align-items:center;padding:9px 14px;background:#f8fafc;border-radius:6px;margin-bottom:7px;border-left:3px solid #0d9488;font-size:13px}.footer{margin-top:60px;display:flex;justify-content:flex-end}.sig{width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;font-size:12px;color:#64748b;text-align:center}@media print{@page{margin:20px}}</style></head><body>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1a8f1a;padding-bottom:20px;margin-bottom:24px}.clinic-title{font-size:22px;font-weight:700;color:#1a8f1a}.ordo-num{background:#f0fdfa;border:1px solid #99f6e4;padding:5px 14px;border-radius:20px;font-family:monospace;font-size:13px;color:#156315}.s-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;margin-top:20px}.pat-box{background:#f8fafc;border-radius:8px;padding:14px;border-left:4px solid #1a8f1a}.pat-name{font-size:17px;font-weight:700}.diag{background:#fffbeb;border-radius:6px;padding:12px;border-left:3px solid #fbbf24;font-size:13px;color:#475569}.med-item{display:flex;align-items:center;padding:9px 14px;background:#f8fafc;border-radius:6px;margin-bottom:7px;border-left:3px solid #1a8f1a;font-size:13px}.footer{margin-top:60px;display:flex;justify-content:flex-end}.sig{width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;font-size:12px;color:#64748b;text-align:center}@media print{@page{margin:20px}}</style></head><body>
 <div class="header"><div><div class="clinic-title">✚ ${clinicName}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Espace médical · Soins &amp; Consultations</div></div><div style="text-align:right"><div class="ordo-num">N° ${p.numero_ordo}</div><div style="font-size:12px;color:#64748b;margin-top:6px">Le ${new Date(date).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div></div></div>
 <div class="s-label" style="margin-top:0">Patient</div><div class="pat-box"><div class="pat-name">${p.p_prenom||""} ${p.p_nom||""}</div></div>
 ${p.diagnostic?`<div class="s-label">Diagnostic</div><div class="diag">${p.diagnostic}</div>`:""}
@@ -81,14 +81,14 @@ function printInvoice(f: any, clinicName: string) {
   const lignes: any[] = Array.isArray(f.lignes) ? f.lignes : [];
   const isPaid = f.statut === "paye";
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Facture ${f.numero_facture}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}.clinic-title{font-size:22px;font-weight:700;color:#0d9488}table{width:100%;border-collapse:collapse;margin:20px 0}thead tr{background:#0d9488;color:white}th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}tbody tr:nth-child(even){background:#f8fafc}td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f1f5f9}.tr-total{background:#f0fdfa!important;font-weight:700}.pat-box{background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:20px}.badge{display:inline-block;padding:5px 14px;border-radius:20px;font-weight:700;font-size:12px;background:${isPaid?"#f0fdf4":"#fffbeb"};color:${isPaid?"#16a34a":"#d97706"}}@media print{@page{margin:20px}}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}.clinic-title{font-size:22px;font-weight:700;color:#1a8f1a}table{width:100%;border-collapse:collapse;margin:20px 0}thead tr{background:#1a8f1a;color:white}th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}tbody tr:nth-child(even){background:#f8fafc}td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f1f5f9}.tr-total{background:#f0fdfa!important;font-weight:700}.pat-box{background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:20px}.badge{display:inline-block;padding:5px 14px;border-radius:20px;font-weight:700;font-size:12px;background:${isPaid?"#f0fdf0":"#fffbeb"};color:${isPaid?"#1a8f1a":"#d97706"}}@media print{@page{margin:20px}}</style>
 </head><body>
-<div class="header"><div><div class="clinic-title">✚ ${clinicName}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Espace médical · Facturation</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;color:#0f172a">FACTURE</div><div style="font-family:monospace;font-size:15px;color:#0f766e;margin:4px 0">${f.numero_facture}</div><div style="font-size:12px;color:#64748b">Le ${new Date(f.date_facture||f.created_at).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div><div style="margin-top:8px"><span class="badge">${isPaid?"✓ Payé":"⏳ En attente"}</span></div></div></div>
+<div class="header"><div><div class="clinic-title">✚ ${clinicName}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Espace médical · Facturation</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;color:#0f172a">FACTURE</div><div style="font-family:monospace;font-size:15px;color:#156315;margin:4px 0">${f.numero_facture}</div><div style="font-size:12px;color:#64748b">Le ${new Date(f.date_facture||f.created_at).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div><div style="margin-top:8px"><span class="badge">${isPaid?"✓ Payé":"⏳ En attente"}</span></div></div></div>
 <div class="pat-box"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Facturé à</div><div style="font-size:17px;font-weight:700">${f.p_prenom||""} ${f.p_nom||"Patient anonyme"}</div>${f.s_nom?`<div style="font-size:12px;color:#64748b;margin-top:2px">Médecin : Dr. ${f.s_prenom||""} ${f.s_nom}</div>`:""}</div>
 <table><thead><tr><th style="width:50%">Description</th><th style="text-align:center">Qté</th><th style="text-align:right">Prix unit.</th><th style="text-align:right">Sous-total</th></tr></thead><tbody>
 ${lignes.map((l:any)=>`<tr><td>${l.description}</td><td style="text-align:center">${l.quantite}</td><td style="text-align:right">${(+l.prix_unitaire||0).toLocaleString("fr-FR")} GNF</td><td style="text-align:right;font-weight:600">${((+l.prix_unitaire||0)*(+l.quantite||1)).toLocaleString("fr-FR")} GNF</td></tr>`).join("")}
 ${+f.remise>0?`<tr><td colspan="3" style="text-align:right;color:#64748b">Remise</td><td style="text-align:right;color:#ef4444">- ${(+f.remise).toLocaleString("fr-FR")} GNF</td></tr>`:""}
-<tr class="tr-total"><td colspan="3" style="text-align:right;font-size:14px">TOTAL</td><td style="text-align:right;font-size:18px;color:#0d9488">${(+f.total||0).toLocaleString("fr-FR")} GNF</td></tr></tbody></table>
+<tr class="tr-total"><td colspan="3" style="text-align:right;font-size:14px">TOTAL</td><td style="text-align:right;font-size:18px;color:#1a8f1a">${(+f.total||0).toLocaleString("fr-FR")} GNF</td></tr></tbody></table>
 ${f.mode_paiement&&isPaid?`<p style="font-size:12px;color:#64748b;margin-top:8px">Mode de paiement : <strong>${PAYMENT_LABELS[f.mode_paiement]||f.mode_paiement}</strong></p>`:""}
 ${f.notes?`<p style="font-size:12px;color:#64748b;margin-top:8px;font-style:italic">Notes : ${f.notes}</p>`:""}
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature &amp; Cachet</div></div>
@@ -450,7 +450,7 @@ export default function GestionClinique() {
             </button>
             <button
               onClick={() => navigate("/moftal-pay-pro")}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#0d9488,#0891b2)", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#1a8f1a,#0891b2)", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
               title="Moftal Pay"
             >
               💰 Moftal Pay
@@ -552,11 +552,11 @@ export default function GestionClinique() {
 
               {/* Revenue cards */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                <div style={{ background: "linear-gradient(135deg,#0f766e,#0d9488)", borderRadius: 12, padding: "18px 20px", color: "white", boxShadow: "0 4px 16px rgba(13,148,136,0.3)" }}>
+                <div style={{ background: "linear-gradient(135deg,#156315,#1a8f1a)", borderRadius: 12, padding: "18px 20px", color: "white", boxShadow: "0 4px 16px rgba(13,148,136,0.3)" }}>
                   <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.8, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Revenus ce mois</div>
                   <div style={{ fontSize: 24, fontWeight: 700 }}>{fmtMoney(stats?.revenueMonth)}</div>
                 </div>
-                <div style={{ background: "linear-gradient(135deg,#166534,#16a34a)", borderRadius: 12, padding: "18px 20px", color: "white", boxShadow: "0 4px 16px rgba(22,163,74,0.3)" }}>
+                <div style={{ background: "linear-gradient(135deg,#0f4b0f,#1a8f1a)", borderRadius: 12, padding: "18px 20px", color: "white", boxShadow: "0 4px 16px rgba(34,167,34,0.3)" }}>
                   <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.8, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Revenus aujourd'hui</div>
                   <div style={{ fontSize: 24, fontWeight: 700 }}>{fmtMoney(stats?.revenueToday)}</div>
                 </div>
@@ -682,7 +682,7 @@ export default function GestionClinique() {
                     <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun rendez-vous</td></tr>
                   ) : appointments.map(a => {
                     const statusMap: Record<string, { bg: string; color: string; label: string }> = {
-                      confirmed: { bg: "#f0fdf4", color: "#16a34a", label: "Confirmé" },
+                      confirmed: { bg: "#f0fdf0", color: "#1a8f1a", label: "Confirmé" },
                       done:      { bg: "#eff6ff", color: "#0369a1", label: "Terminé" },
                       cancelled: { bg: "#fef2f2", color: "#ef4444", label: "Annulé" },
                       pending:   { bg: "#fffbeb", color: "#d97706", label: "En attente" },
@@ -707,7 +707,7 @@ export default function GestionClinique() {
                         <td style={{ padding: "11px 16px" }}>
                           <div style={{ display: "flex", gap: 4 }}>
                             {a.statut !== "confirmed" && a.statut !== "done" && (
-                              <button onClick={async () => { await put(`/appointments/${a.id}`, { statut: "confirmed" }); setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "confirmed" } : x)); showToast("RDV confirmé"); }} style={{ padding: "4px 8px", background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Confirmer</button>
+                              <button onClick={async () => { await put(`/appointments/${a.id}`, { statut: "confirmed" }); setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "confirmed" } : x)); showToast("RDV confirmé"); }} style={{ padding: "4px 8px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Confirmer</button>
                             )}
                             {a.statut === "confirmed" && (
                               <button onClick={async () => { await put(`/appointments/${a.id}`, { statut: "done" }); setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "done" } : x)); showToast("RDV terminé"); }} style={{ padding: "4px 8px", background: "#eff6ff", color: "#0369a1", border: "1px solid #bfdbfe", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Terminé</button>
@@ -840,7 +840,7 @@ export default function GestionClinique() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
                 {[
                   { label: "Total facturé",    val: fmtMoney(invoices.reduce((s, f) => s + +f.total, 0)),                         color: TEAL,      bg: "#f0fdfa" },
-                  { label: "Payées",           val: invoices.filter(f => f.statut === "paye").length,                             color: "#16a34a", bg: "#f0fdf4" },
+                  { label: "Payées",           val: invoices.filter(f => f.statut === "paye").length,                             color: "#1a8f1a", bg: "#f0fdf0" },
                   { label: "En attente",       val: invoices.filter(f => f.statut !== "paye").length,                             color: "#d97706", bg: "#fffbeb" },
                 ].map((c, i) => (
                   <div key={i} style={{ background: "white", borderRadius: 10, border: "1px solid #e2e8f0", padding: "14px 16px", borderLeft: `3px solid ${c.color}` }}>
@@ -872,7 +872,7 @@ export default function GestionClinique() {
                           <td style={{ padding: "11px 16px", color: "#475569" }}>{f.s_nom ? `Dr. ${f.s_prenom || ""} ${f.s_nom}` : "—"}</td>
                           <td style={{ padding: "11px 16px", fontWeight: 700, color: TEAL_DARK, fontSize: 14 }}>{fmtMoney(f.total)}</td>
                           <td style={{ padding: "11px 16px" }}>
-                            <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: isPaid ? "#f0fdf4" : "#fffbeb", color: isPaid ? "#16a34a" : "#d97706" }}>{isPaid ? "✓ Payée" : "⏳ En attente"}</span>
+                            <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: isPaid ? "#f0fdf0" : "#fffbeb", color: isPaid ? "#1a8f1a" : "#d97706" }}>{isPaid ? "✓ Payée" : "⏳ En attente"}</span>
                           </td>
                           <td style={{ padding: "11px 16px", color: "#64748b" }}>{fmtDate(f.date_facture || f.created_at)}</td>
                           <td style={{ padding: "11px 16px" }}>
@@ -885,7 +885,7 @@ export default function GestionClinique() {
                                 <button onClick={async () => {
                                   const d = await put(`/invoices/${f.id}`, { statut: "paye", mode_paiement: f.mode_paiement || "especes" });
                                   if (d.success) { setInvoices(inv => inv.map(x => x.id === f.id ? { ...x, statut: "paye" } : x)); showToast("Facture marquée payée"); }
-                                }} style={{ padding: "4px 10px", background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
+                                }} style={{ padding: "4px 10px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                                   Marquer payée
                                 </button>
                               )}
@@ -1043,7 +1043,7 @@ export default function GestionClinique() {
                         </div>
                         <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
                           <div style={{ background: "#f0fdfa", borderRadius: 10, padding: "12px 14px" }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#0f766e", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Médicaments à dispenser</div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#156315", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Médicaments à dispenser</div>
                             {(Array.isArray(dispensingMed.medicaments) ? dispensingMed.medicaments : []).map((m: any, i: number) => (
                               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < dispensingMed.medicaments.length-1 ? "1px solid #ccfbf1" : "none" }}>
                                 <span style={{ color: TEAL }}>💊</span>
@@ -1239,7 +1239,7 @@ export default function GestionClinique() {
                 <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 10, padding: "12px 14px" }}>
                   <label style={{ ...labelStyle, color: TEAL_DARK }}>Numéro Moftal (optionnel)</label>
                   <input className={inp} style={{ ...inpStyle, marginTop: 6, fontFamily: "monospace" }} placeholder="Ex: H-12345 — permet l'accès à l'espace patient en ligne" value={form.numero_h || ""} onChange={e => setForm((f: any) => ({ ...f, numero_h: e.target.value }))} />
-                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#0f766e" }}>Si le patient a un compte Moftal, entrez son numéro H pour lui donner accès à son espace patient numérique.</p>
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#156315" }}>Si le patient a un compte Moftal, entrez son numéro H pour lui donner accès à son espace patient numérique.</p>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div><label style={labelStyle}>Nom *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.nom || ""} onChange={e => setForm((f: any) => ({ ...f, nom: e.target.value }))} /></div>

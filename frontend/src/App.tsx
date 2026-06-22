@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+﻿import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, useLocation, Link, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useI18n } from "./i18n/useI18n";
@@ -672,7 +672,7 @@ function App() {
           },
           success: {
             iconTheme: {
-              primary: "#10b981",
+              primary: "#22a722",
               secondary: "#fff",
             },
           },

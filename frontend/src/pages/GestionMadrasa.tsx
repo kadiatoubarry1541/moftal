@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -203,11 +203,11 @@ export default function GestionMadrasa() {
   });
 
   const nivColor = (n: string) => {
-    const map: Record<string, string> = { "Iqra": "#0891b2", "Qa'idah": "#0369a1", "Débutant": "#7c3aed", "Juz' Amma": "#059669", "Hizb": "#d97706", "Hafiz": "#dc2626" };
+    const map: Record<string, string> = { "Iqra": "#0891b2", "Qa'idah": "#0369a1", "Débutant": "#7c3aed", "Juz' Amma": "#1a8f1a", "Hizb": "#d97706", "Hafiz": "#dc2626" };
     return map[n] || "#64748b";
   };
   const nivBg = (n: string) => {
-    const map: Record<string, string> = { "Iqra": "#ecfeff", "Qa'idah": "#eff6ff", "Débutant": "#f5f3ff", "Juz' Amma": "#f0fdf4", "Hizb": "#fffbeb", "Hafiz": "#fef2f2" };
+    const map: Record<string, string> = { "Iqra": "#ecfeff", "Qa'idah": "#eff6ff", "Débutant": "#f5f3ff", "Juz' Amma": "#f0fdf0", "Hizb": "#fffbeb", "Hafiz": "#fef2f2" };
     return map[n] || "#f8fafc";
   };
 
@@ -503,8 +503,8 @@ export default function GestionMadrasa() {
                   { label: "Apprenants",        val: stats?.totalStudents   ?? "—", color: TEAL,      bg: "#ecfeff",  icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
                   { label: "Enseignants",        val: stats?.totalStaff     ?? "—", color: "#0369a1", bg: "#eff6ff",  icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
                   { label: "Halaqas",            val: stats?.totalHalaqas   ?? "—", color: "#7c3aed", bg: "#f5f3ff",  icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
-                  { label: "Présents aujourd'hui", val: stats?.presentToday  ?? "—", color: "#059669", bg: "#f0fdf4",  icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
-                  { label: "Frais collectés (mois)", val: fmtMoney(stats?.feesCollected), color: "#16a34a", bg: "#f0fdf4", icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
+                  { label: "Présents aujourd'hui", val: stats?.presentToday  ?? "—", color: "#1a8f1a", bg: "#f0fdf0",  icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+                  { label: "Frais collectés (mois)", val: fmtMoney(stats?.feesCollected), color: "#1a8f1a", bg: "#f0fdf0", icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
                   { label: "Frais impayés",      val: stats?.unpaidFees     ?? "—", color: "#dc2626", bg: "#fef2f2",  icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
                 ].map((s, i) => (
                   <div key={i} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "18px 20px", borderLeft: `3px solid ${s.color}`, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
@@ -527,7 +527,7 @@ export default function GestionMadrasa() {
                     { label: "Faire l'appel", section: "presences" as Section, emoji: "📋", color: TEAL },
                     { label: "Ajouter apprenant", section: "apprenants" as Section, emoji: "👤", color: "#0369a1" },
                     { label: "Saisir des notes", section: "progression" as Section, emoji: "📝", color: "#7c3aed" },
-                    { label: "Gérer les frais", section: "frais" as Section, emoji: "💰", color: "#059669" },
+                    { label: "Gérer les frais", section: "frais" as Section, emoji: "💰", color: "#1a8f1a" },
                   ].map(q => (
                     <button key={q.section} onClick={() => loadSection(q.section)}
                       style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "14px 8px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, cursor: "pointer", transition: "all 0.15s" }}
@@ -615,7 +615,7 @@ export default function GestionMadrasa() {
                       </div>
                       {s.specialite && (
                         <div style={{ marginBottom: 10 }}>
-                          <span style={{ padding: "2px 8px", background: "#f0fdf4", color: "#16a34a", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>📚 {s.specialite}</span>
+                          <span style={{ padding: "2px 8px", background: "#f0fdf0", color: "#1a8f1a", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>📚 {s.specialite}</span>
                         </div>
                       )}
                       <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.8 }}>
@@ -741,7 +741,7 @@ export default function GestionMadrasa() {
                       <tr><td colSpan={7} style={{ padding: "40px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucune note enregistrée</td></tr>
                     ) : grades.map(g => {
                       const pct = (+g.note / +g.note_max) * 100;
-                      const noteColor = pct >= 70 ? "#16a34a" : pct >= 50 ? "#d97706" : "#ef4444";
+                      const noteColor = pct >= 70 ? "#1a8f1a" : pct >= 50 ? "#d97706" : "#ef4444";
                       return (
                         <tr key={g.id} style={{ borderBottom: "1px solid #f8fafc" }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#fafafa"} onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                           <td style={{ padding: "11px 16px", fontWeight: 600, color: "#0f172a" }}>{g.student_prenom} {g.student_nom}</td>
@@ -768,7 +768,7 @@ export default function GestionMadrasa() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
                 {[
                   { label: "Total facturé",   val: fmtMoney(fees.reduce((s, f) => s + +f.montant, 0)),             color: "#0369a1", bg: "#eff6ff" },
-                  { label: "Total encaissé",  val: fmtMoney(fees.filter(f => f.est_paye).reduce((s, f) => s + +f.montant, 0)), color: "#16a34a", bg: "#f0fdf4" },
+                  { label: "Total encaissé",  val: fmtMoney(fees.filter(f => f.est_paye).reduce((s, f) => s + +f.montant, 0)), color: "#1a8f1a", bg: "#f0fdf0" },
                   { label: "Reste à payer",   val: fmtMoney(fees.filter(f => !f.est_paye).reduce((s, f) => s + +f.montant, 0)), color: "#dc2626", bg: "#fef2f2" },
                 ].map((c, i) => (
                   <div key={i} style={{ background: "white", borderRadius: 10, border: "1px solid #e2e8f0", padding: "14px 16px", borderLeft: `3px solid ${c.color}` }}>
@@ -797,7 +797,7 @@ export default function GestionMadrasa() {
                         <td style={{ padding: "11px 14px", fontWeight: 700, color: "#0f172a" }}>{fmtMoney(f.montant)}</td>
                         <td style={{ padding: "11px 14px", color: "#64748b" }}>{f.echeance ? fmtDate(f.echeance) : "—"}</td>
                         <td style={{ padding: "11px 14px" }}>
-                          <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: f.est_paye ? "#f0fdf4" : "#fef2f2", color: f.est_paye ? "#16a34a" : "#dc2626" }}>
+                          <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: f.est_paye ? "#f0fdf0" : "#fef2f2", color: f.est_paye ? "#1a8f1a" : "#dc2626" }}>
                             {f.est_paye ? "✓ Payé" : "Impayé"}
                           </span>
                         </td>
@@ -833,7 +833,7 @@ export default function GestionMadrasa() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 16 }}>
                   {bulletins.map(b => {
                     const mention = b.mention || "—";
-                    const mColor = mention.includes("Excellent") ? "#16a34a" : mention.includes("Très") ? "#0891b2" : mention.includes("Bien") ? "#7c3aed" : "#d97706";
+                    const mColor = mention.includes("Excellent") ? "#1a8f1a" : mention.includes("Très") ? "#0891b2" : mention.includes("Bien") ? "#7c3aed" : "#d97706";
                     return (
                       <div key={b.id} style={{ background: "white", borderRadius: 12, border: `1px solid ${b.is_published ? "#a5f3fc" : "#e2e8f0"}`, padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>

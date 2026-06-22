@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
@@ -198,7 +198,7 @@ export default function ImmobilierVitrine() {
                     {(p.quartier || p.ville) && <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>📍 {[p.quartier, p.ville].filter(Boolean).join(", ")}</div>}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
                       <span style={{ fontSize: 16, fontWeight: 800, color: ORANGE }}>{fmtMoney(p.prix)}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: p.statut === "vacant" ? "#dcfce7" : "#f1f5f9", color: p.statut === "vacant" ? "#16a34a" : "#64748b" }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: p.statut === "vacant" ? "#dcfcdc" : "#f1f5f9", color: p.statut === "vacant" ? "#1a8f1a" : "#64748b" }}>
                         {p.statut || "Disponible"}
                       </span>
                     </div>

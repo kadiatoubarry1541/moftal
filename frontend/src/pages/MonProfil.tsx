@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import IdentiteModal from "../components/IdentiteModal";
@@ -367,7 +367,7 @@ export default function MonProfil() {
       {memberships.length > 0 && (
         <div
           className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mt-6"
-          style={{ borderLeftWidth: "4px", borderLeftColor: "#0d9488" }}
+          style={{ borderLeftWidth: "4px", borderLeftColor: "#1a8f1a" }}
         >
           <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
             {t('profile.my_institutions')}

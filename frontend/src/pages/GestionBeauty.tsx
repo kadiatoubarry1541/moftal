@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -19,8 +19,8 @@ const GRADIENT  = "linear-gradient(135deg,#db2777,#ec4899)";
 const BOOKING_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   en_attente:  { bg: "#fffbeb", color: "#b45309", label: "En attente" },
   confirme:    { bg: "#eff6ff", color: "#2563eb", label: "Confirmé" },
-  en_cours:    { bg: "#f0fdf4", color: "#16a34a", label: "En cours" },
-  termine:     { bg: "#f0fdf4", color: "#15803d", label: "Terminé" },
+  en_cours:    { bg: "#f0fdf0", color: "#1a8f1a", label: "En cours" },
+  termine:     { bg: "#f0fdf0", color: "#156315", label: "Terminé" },
   annule:      { bg: "#fef2f2", color: "#dc2626", label: "Annulé" },
 };
 
@@ -333,13 +333,13 @@ export default function GestionBeauty() {
                   {bk.statut === "en_attente" && (
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                       <button onClick={() => patchBooking(bk.id, "confirme")}  style={btn("#eff6ff", "#2563eb")}>Confirmer</button>
-                      <button onClick={() => patchBooking(bk.id, "en_cours")}  style={btn("#f0fdf4", "#16a34a")}>Démarrer</button>
+                      <button onClick={() => patchBooking(bk.id, "en_cours")}  style={btn("#f0fdf0", "#1a8f1a")}>Démarrer</button>
                       <button onClick={() => patchBooking(bk.id, "annule")}    style={btn("#fef2f2", "#dc2626")}>Annuler</button>
                     </div>
                   )}
                   {bk.statut === "confirme" && (
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                      <button onClick={() => patchBooking(bk.id, "en_cours")}  style={btn("#f0fdf4", "#16a34a")}>Démarrer</button>
+                      <button onClick={() => patchBooking(bk.id, "en_cours")}  style={btn("#f0fdf0", "#1a8f1a")}>Démarrer</button>
                       <button onClick={() => patchBooking(bk.id, "annule")}    style={btn("#fef2f2", "#dc2626")}>Annuler</button>
                     </div>
                   )}

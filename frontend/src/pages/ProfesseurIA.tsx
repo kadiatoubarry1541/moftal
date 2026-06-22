@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -426,7 +426,7 @@ export default function ProfesseurIA() {
             {exerciceQuestion && !exerciceLoading && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 {/* Question */}
-                <div className="px-6 py-5 border-b border-gray-50" style={{ background: 'linear-gradient(135deg,#f0fdf4,#ecfdf5)' }}>
+                <div className="px-6 py-5 border-b border-gray-50" style={{ background: 'linear-gradient(135deg,#f0fdf0,#f0fdf0)' }}>
                   <div className="flex items-start gap-3">
                     <span className="text-3xl flex-shrink-0">❓</span>
                     <div>
@@ -481,7 +481,7 @@ export default function ProfesseurIA() {
                         onClick={submitAnswer}
                         disabled={exerciceLoading || !exerciceAnswer.trim()}
                         className="px-5 py-3 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{ background: 'linear-gradient(135deg,#10b981,#059669)' }}
+                        style={{ background: 'linear-gradient(135deg,#22a722,#1a8f1a)' }}
                       >
                         {exerciceLoading ? '...' : 'Valider ✓'}
                       </button>
@@ -624,7 +624,7 @@ export default function ProfesseurIA() {
                   "Explique le passé composé" · "C'est quoi un homophone ?" · "Donne-moi un synonyme de beau" · "Figures de style dans une fable"
                 </p>
               </div>
-              <div className="rounded-2xl p-4 border border-green-100" style={{ background: 'linear-gradient(135deg,#f0fdf4,#ecfdf5)' }}>
+              <div className="rounded-2xl p-4 border border-green-100" style={{ background: 'linear-gradient(135deg,#f0fdf0,#f0fdf0)' }}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="w-7 h-7 rounded-lg bg-green-600 flex items-center justify-center text-sm">📐</span>
                   <p className="font-bold text-green-900 text-sm">Maths — exemples</p>

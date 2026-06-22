@@ -207,7 +207,12 @@ export default function TerreAdam() {
   // met à jour le rôle, le label du quartier et l'onglet Résidence par défaut.
   const applyUserData = (user: UserData) => {
     setUserData(user);
-    const admin = user.role === 'admin' || user.role === 'super-admin' || user.numeroH === 'G0C0P0R0E0F0 0';
+    const admin =
+      user.role === 'admin' ||
+      user.role === 'super-admin' ||
+      user.isAdmin === true ||
+      user.numeroH === 'G0C0P0R0E0F0 0' ||
+      user.numeroH === 'G7C7P7R7E7F7 7';
     setIsAdmin(admin);
     // ✅ Vérifier si l'utilisateur est journaliste
     const journalist = user.role === 'journalist' || user.isJournalist || admin;
@@ -1082,18 +1087,16 @@ export default function TerreAdam() {
                 </span>
               </h2>
 
-              {userData?.regionCode ? (
+              {(userData?.regionCode || isAdmin) ? (
                 <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
                   <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden">
                     <div className="text-center overflow-hidden">
-                      <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">{getRegionIcon(userData.regionCode, userRegion?.name || userData.region || userData.regionOrigine)}</div>
+                      <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">{getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine)}</div>
                       <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 mb-1.5 sm:mb-2 break-words">
-                        {userRegion?.name || userData.region || userData.regionOrigine || 'Non défini'}
+                        {userRegion?.name || userData?.region || userData?.regionOrigine || (isAdmin ? '(Toutes les régions)' : 'Non défini')}
                       </h3>
                     </div>
                   </div>
-
-                  {/* Pas de bouton d'accès séparé : l'espace est déjà cette page */}
                 </div>
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
@@ -1123,20 +1126,20 @@ export default function TerreAdam() {
                 </span>
               </h2>
 
-              {effectiveCountry ? (
+              {(effectiveCountry || isAdmin) ? (
                 <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
                   <div className="bg-white border-2 border-gray-200 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden">
                     <div className="text-center overflow-hidden">
                       <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">
-                        {getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name)}
+                        {effectiveCountry
+                          ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name)
+                          : '🌍'}
                       </div>
                       <p className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-purple-600 mb-2 sm:mb-3 break-words">
-                        {effectiveCountry.name}
+                        {effectiveCountry?.name || userData?.pays || (isAdmin ? '(Tous les pays)' : 'Non défini')}
                       </p>
                     </div>
                   </div>
-
-                  {/* Pas de bouton d'accès séparé : l'espace est déjà cette page */}
                 </div>
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
@@ -1169,23 +1172,20 @@ export default function TerreAdam() {
                 </span>
               </h2>
 
-              {effectiveContinent ? (
+              {(effectiveContinent || isAdmin) ? (
                 <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
                   <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden">
                     <div className="text-center overflow-hidden">
                       <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">
-                        {getContinentIcon(
-                          userData?.continentCode || effectiveContinent.code,
-                          effectiveContinent.name
-                        )}
+                        {effectiveContinent
+                          ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name)
+                          : '🌍'}
                       </div>
                       <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 mb-1.5 sm:mb-2 break-words">
-                        {effectiveContinent?.name || userData?.continent || 'Non défini'}
+                        {effectiveContinent?.name || userData?.continent || (isAdmin ? '(Tous les continents)' : 'Non défini')}
                       </h3>
                     </div>
                   </div>
-
-                  {/* Pas de bouton d'accès séparé : l'espace est déjà cette page */}
                 </div>
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">

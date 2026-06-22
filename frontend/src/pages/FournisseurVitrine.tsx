@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
@@ -187,7 +187,7 @@ export default function FournisseurVitrine() {
                       )}
                     </div>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontSize:12, color: p.stock > 0 ? "#15803d" : "#be123c", fontWeight:600 }}>
+                      <span style={{ fontSize:12, color: p.stock > 0 ? "#156315" : "#be123c", fontWeight:600 }}>
                         {p.stock > 0 ? `✅ En stock (${p.stock} ${p.unite||"unité"})` : "❌ Rupture de stock"}
                       </span>
                     </div>

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+﻿import { useState, useRef, useCallback, useEffect } from "react";
 
 type CardType =
   | "mariage" | "bapteme" | "deces" | "reunion_physique" | "reunion_ligne" | "sante"
@@ -488,7 +488,7 @@ function CarreauReunionLigne({ card, setCard }: { card: CardState; setCard: Reac
 
 function CarreauSante({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
   return (
-    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#14532d,#16a34a,#166534)" }}>
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#14532d,#1a8f1a,#0f4b0f)" }}>
       <CardHeader title="Sante" emoji="🏥" subtitle="Information de sante" />
       <div className="px-4 py-3 border-b border-white/15">
         <Section icon="🎬" label="Video d'information (max 30s)" />
@@ -613,7 +613,7 @@ function CarreauCommemoration({ card, setCard }: { card: CardState; setCard: Rea
 
 function CarreauConference({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
   return (
-    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#134e4a,#0f766e,#115e59)" }}>
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#093809,#156315,#0f4b0f)" }}>
       <CardHeader title="Conference" emoji="🎙️" subtitle="Invitation a une conference" />
       <div className="px-4 py-3 border-b border-white/15">
         <Section icon="📌" label="Titre de la conference" />
@@ -790,7 +790,7 @@ function CarreauFete({ card, setCard }: { card: CardState; setCard: React.Dispat
   const types = ["🎉 Soiree", "🏆 Victoire sportive", "🎓 Diplome", "🏠 Inauguration maison", "✈️ Depart voyage", "🎊 Succes professionnel", "👔 Promotion", "🙏 Action de grace", "💼 Creation d'entreprise", "🎁 Occasion speciale"];
   const msgs = ["Venez nombreux feter avec nous !", "Soyez les bienvenus", "C'est la fete, rejoignez-nous", "Ensemble pour celebrer ce beau moment", "Votre presence nous ferait honneur"];
   return (
-    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#064e3b,#059669,#065f46)" }}>
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#093809,#1a8f1a,#0f4b0f)" }}>
       <CardHeader title="Fete & Celebration" emoji="🎉" subtitle="Invitation a la fete" />
 
       <div className="px-4 py-3 border-b border-white/15">
@@ -1065,15 +1065,15 @@ const CARD_BG: Record<CardType, string> = {
   bapteme:          "linear-gradient(135deg,#1e3a5f,#1d4ed8,#1e3a5f)",
   naissance:        "linear-gradient(135deg,#78350f,#d97706,#92400e)",
   anniversaire:     "linear-gradient(135deg,#4c1d95,#7c3aed,#4c1d95)",
-  fete:             "linear-gradient(135deg,#14532d,#16a34a,#166534)",
+  fete:             "linear-gradient(135deg,#14532d,#1a8f1a,#0f4b0f)",
   priere:           "linear-gradient(135deg,#172554,#1d4ed8,#1e3a8a)",
   deces:            "linear-gradient(135deg,#1c1917,#44403c,#292524)",
   commemoration:    "linear-gradient(135deg,#1e1b4b,#4338ca,#1e1b4b)",
   reunion_physique: "linear-gradient(135deg,#78350f,#ea580c,#9a3412)",
-  conference:       "linear-gradient(135deg,#134e4a,#0d9488,#115e59)",
+  conference:       "linear-gradient(135deg,#093809,#1a8f1a,#0f4b0f)",
   reunion_ligne:    "linear-gradient(135deg,#4c1d95,#7c3aed,#5b21b6)",
   webinaire:        "linear-gradient(135deg,#1e3a8a,#3b82f6,#1d4ed8)",
-  sante:            "linear-gradient(135deg,#14532d,#16a34a,#166534)",
+  sante:            "linear-gradient(135deg,#14532d,#1a8f1a,#0f4b0f)",
   urgence:          "linear-gradient(135deg,#450a0a,#dc2626,#7f1d1d)",
   aide:             "linear-gradient(135deg,#7c2d12,#ea580c,#9a3412)",
   emploi:           "linear-gradient(135deg,#0c4a6e,#0284c7,#075985)",
@@ -1698,7 +1698,7 @@ export default function InfoWallou() {
         </div>
         <button onClick={handleSaveCard}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all"
-          style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}>
+          style={{ background: "linear-gradient(135deg, #1a8f1a, #22a722)" }}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/>
           </svg>
@@ -1718,7 +1718,7 @@ export default function InfoWallou() {
           {/* Bouton principal Sauvegarder */}
           <button onClick={handleSaveCard}
             className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl text-sm font-bold text-white transition-all active:scale-98"
-            style={{ background: "linear-gradient(135deg, #059669, #10b981)", boxShadow: "0 8px 32px rgba(16,185,129,0.35)" }}>
+            style={{ background: "linear-gradient(135deg, #1a8f1a, #22a722)", boxShadow: "0 8px 32px rgba(16,185,129,0.35)" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
             </svg>

@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
-const TEAL = "#0d9488";
-const TEAL_DARK = "#0f766e";
+const TEAL = "#1a8f1a";
+const TEAL_DARK = "#156315";
 const TEAL_LIGHT = "#14b8a6";
 
 type Tab = "appointments" | "prescriptions" | "records" | "rdv";
@@ -18,7 +18,7 @@ function fmtDate(d: string) {
 
 function StatusBadge({ statut }: { statut: string }) {
   const map: Record<string, { bg: string; color: string; label: string }> = {
-    confirmed: { bg: "#f0fdf4", color: "#16a34a", label: "Confirmé" },
+    confirmed: { bg: "#f0fdf0", color: "#1a8f1a", label: "Confirmé" },
     done:      { bg: "#eff6ff", color: "#0369a1", label: "Terminé" },
     cancelled: { bg: "#fef2f2", color: "#ef4444", label: "Annulé" },
     pending:   { bg: "#fffbeb", color: "#d97706", label: "En attente" },
@@ -321,7 +321,7 @@ export default function EspacePatientClinique() {
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                       {p.pharma_statut === "dispense"
-                        ? <span style={{ background: "#f0fdf4", color: "#16a34a", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>✓ Dispensée</span>
+                        ? <span style={{ background: "#f0fdf0", color: "#1a8f1a", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>✓ Dispensée</span>
                         : <span style={{ background: "#fffbeb", color: "#d97706", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>⏳ En attente pharmacie</span>
                       }
                       <span style={{ background: "#f0fdfa", color: TEAL_DARK, padding: "3px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, fontFamily: "monospace" }}>N° {p.numero_ordo}</span>
@@ -380,8 +380,8 @@ export default function EspacePatientClinique() {
                   </div>
                 )}
                 {r.traitement && (
-                  <div style={{ background: "#f0fdfa", borderRadius: 8, padding: "10px 14px", fontSize: 13, borderLeft: "3px solid #34d399" }}>
-                    <strong style={{ color: "#065f46" }}>Traitement : </strong>{r.traitement}
+                  <div style={{ background: "#f0fdfa", borderRadius: 8, padding: "10px 14px", fontSize: 13, borderLeft: "3px solid #4ade4a" }}>
+                    <strong style={{ color: "#0f4b0f" }}>Traitement : </strong>{r.traitement}
                   </div>
                 )}
               </div>
@@ -399,7 +399,7 @@ export default function EspacePatientClinique() {
               {rdvSuccess ? (
                 <div style={{ textAlign: "center", padding: "32px 0" }}>
                   <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: "#16a34a", marginBottom: 8 }}>Demande envoyée !</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "#1a8f1a", marginBottom: 8 }}>Demande envoyée !</div>
                   <div style={{ fontSize: 13, color: "#64748b" }}>Le personnel de la clinique va traiter votre demande.</div>
                 </div>
               ) : (

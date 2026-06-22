@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -181,7 +181,7 @@ export default function GestionEcole() {
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 40, height: 40, border: "3px solid #e2e8f0", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
+        <div style={{ width: 40, height: 40, border: "3px solid #e2e8f0", borderTopColor: "#1a8f1a", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 12px" }} />
         <p style={{ color: "#64748b", fontSize: 14 }}>Chargement de l'espace école...</p>
       </div>
     </div>
@@ -196,7 +196,7 @@ export default function GestionEcole() {
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Espace école inaccessible</h2>
         <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error || "Erreur inconnue"}</p>
         <p style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace", marginBottom: 16 }}>Code : {tenantCode}</p>
-        <button onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 20px", background: "#16a34a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+        <button onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 20px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
           ← Retour à la liste
         </button>
       </div>
@@ -222,7 +222,7 @@ export default function GestionEcole() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? "#16a34a" : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "fadeIn 0.2s ease" }}>
+        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? "#1a8f1a" : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "fadeIn 0.2s ease" }}>
           {toast.ok ? "✓ " : "⚠ "}{toast.msg}
         </div>
       )}
@@ -231,7 +231,7 @@ export default function GestionEcole() {
       <aside style={{ display: "flex", flexDirection: "column", width: sideW, flexShrink: 0, transition: "width 0.25s ease", background: "linear-gradient(180deg, #052e16 0%, #0d3320 50%, #134a28 100%)", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #16a34a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #1a8f1a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
             {(settingsForm.logo_url || tenant?.logo_url)
               ? <img src={settingsForm.logo_url || tenant.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               : <svg width="18" height="18" fill="none" stroke="white" strokeWidth={2.2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
@@ -251,7 +251,7 @@ export default function GestionEcole() {
             const active = section === n.id;
             return (
               <button key={n.id} onClick={() => loadSection(n.id)} title={collapsed ? n.label : undefined}
-                style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 11px", borderRadius: 8, marginBottom: 2, border: "none", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 500, transition: "all 0.15s", justifyContent: collapsed ? "center" : "flex-start", background: active ? "rgba(22,163,74,0.22)" : "transparent", color: active ? "white" : "rgba(187,247,208,0.65)", boxShadow: active ? "inset 2px 0 0 #16a34a" : "none" }}>
+                style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 11px", borderRadius: 8, marginBottom: 2, border: "none", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 500, transition: "all 0.15s", justifyContent: collapsed ? "center" : "flex-start", background: active ? "rgba(34,167,34,0.22)" : "transparent", color: active ? "white" : "rgba(187,247,208,0.65)", boxShadow: active ? "inset 2px 0 0 #1a8f1a" : "none" }}>
                 <svg width="16" height="16" fill="none" stroke={active ? "#4ade80" : "rgba(187,247,208,0.5)"} strokeWidth={active ? 2.2 : 1.8} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={n.icon} />
                 </svg>
@@ -271,7 +271,7 @@ export default function GestionEcole() {
             {!collapsed && "Retour plateforme"}
           </button>
           <button onClick={() => setCollapsed(!collapsed)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "5px 0", border: "none", background: "transparent", color: "rgba(22,163,74,0.4)", cursor: "pointer", fontSize: 11, marginTop: 4 }}>
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "5px 0", border: "none", background: "transparent", color: "rgba(34,167,34,0.4)", cursor: "pointer", fontSize: 11, marginTop: 4 }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d={collapsed ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
             </svg>
@@ -297,31 +297,31 @@ export default function GestionEcole() {
             <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</p>
           </div>
           {section === "students" && (
-            <button onClick={() => { setModal("add-student"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            <button onClick={() => { setModal("add-student"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
               Nouvel élève
             </button>
           )}
           {section === "staff" && (
-            <button onClick={() => { setModal("add-staff"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            <button onClick={() => { setModal("add-staff"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
               Ajouter personnel
             </button>
           )}
           {section === "classrooms" && (
-            <button onClick={() => { setModal("add-classroom"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            <button onClick={() => { setModal("add-classroom"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
               Créer une classe
             </button>
           )}
           {section === "grades" && (
-            <button onClick={() => { setModal("add-grade"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            <button onClick={() => { setModal("add-grade"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
               Ajouter une note
             </button>
           )}
           {section === "fees" && (
-            <button onClick={() => { setModal("add-fee"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            <button onClick={() => { setModal("add-fee"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
               <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
               Ajouter frais
             </button>
@@ -337,7 +337,7 @@ export default function GestionEcole() {
               {/* Stats */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
                 {[
-                  { label: "Élèves actifs", val: stats?.students ?? "—", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z", color: "#16a34a", bg: "#f0fdf4" },
+                  { label: "Élèves actifs", val: stats?.students ?? "—", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z", color: "#1a8f1a", bg: "#f0fdf0" },
                   { label: "Personnel",     val: stats?.staff ?? "—",    icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z", color: "#0369a1", bg: "#eff6ff" },
                   { label: "Classes",       val: stats?.classrooms ?? "—",icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4", color: "#7c3aed", bg: "#f5f3ff" },
                   { label: "Frais impayés", val: fmtMoney(stats?.feesPending), icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z", color: "#dc2626", bg: "#fef2f2" },
@@ -358,7 +358,7 @@ export default function GestionEcole() {
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#0f172a" }}>Élèves récemment inscrits</h3>
-                  <button onClick={() => loadSection("students")} style={{ fontSize: 12, color: "#16a34a", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir tous →</button>
+                  <button onClick={() => loadSection("students")} style={{ fontSize: 12, color: "#1a8f1a", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>Voir tous →</button>
                 </div>
                 {recentStudents.length === 0 ? (
                   <div style={{ padding: "32px 20px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun élève enregistré pour le moment</div>
@@ -366,7 +366,7 @@ export default function GestionEcole() {
                   <div>
                     {recentStudents.map(s => (
                       <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid #f8fafc" }}>
-                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #16a34a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{s.prenom?.charAt(0)}</div>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #1a8f1a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{s.prenom?.charAt(0)}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{s.prenom} {s.nom}</div>
                           <div style={{ fontSize: 11, color: "#94a3b8" }}>{s.numero_matricule} · {s.nom_parent || "—"}</div>
@@ -410,12 +410,12 @@ export default function GestionEcole() {
                         <td style={{ padding: "11px 16px", fontFamily: "monospace", fontSize: 11, color: "#94a3b8" }}>{s.numero_matricule}</td>
                         <td style={{ padding: "11px 16px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #16a34a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{s.prenom?.charAt(0)}</div>
+                            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #1a8f1a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{s.prenom?.charAt(0)}</div>
                             <span style={{ fontWeight: 600, color: "#0f172a" }}>{s.prenom} {s.nom}</span>
                           </div>
                         </td>
                         <td style={{ padding: "11px 16px" }}>
-                          {s.classe ? <span style={{ padding: "2px 8px", background: "#f0fdf4", color: "#16a34a", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{s.classe}</span> : <span style={{ color: "#94a3b8" }}>—</span>}
+                          {s.classe ? <span style={{ padding: "2px 8px", background: "#f0fdf0", color: "#1a8f1a", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{s.classe}</span> : <span style={{ color: "#94a3b8" }}>—</span>}
                         </td>
                         <td style={{ padding: "11px 16px", color: "#64748b" }}>{s.date_naissance ? fmtDate(s.date_naissance) : "—"}</td>
                         <td style={{ padding: "11px 16px", color: "#475569" }}>{s.nom_parent || "—"}</td>
@@ -454,7 +454,7 @@ export default function GestionEcole() {
                       </div>
                       {s.matieres?.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
-                          {s.matieres.map((m: string, i: number) => <span key={i} style={{ padding: "2px 7px", background: "#f0fdf4", color: "#16a34a", borderRadius: 4, fontSize: 11, fontWeight: 500 }}>{m}</span>)}
+                          {s.matieres.map((m: string, i: number) => <span key={i} style={{ padding: "2px 7px", background: "#f0fdf0", color: "#1a8f1a", borderRadius: 4, fontSize: 11, fontWeight: 500 }}>{m}</span>)}
                         </div>
                       )}
                       <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.8 }}>
@@ -480,20 +480,20 @@ export default function GestionEcole() {
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
                   {classrooms.map(c => (
-                    <div key={c.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", borderTop: "3px solid #16a34a" }}>
+                    <div key={c.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", borderTop: "3px solid #1a8f1a" }}>
                       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
                         <div>
                           <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>{c.nom}</div>
                           {c.niveau && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{c.niveau}</div>}
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: 26, fontWeight: 800, color: "#16a34a" }}>{c.nb_eleves || 0}</div>
+                          <div style={{ fontSize: 26, fontWeight: 800, color: "#1a8f1a" }}>{c.nb_eleves || 0}</div>
                           <div style={{ fontSize: 11, color: "#94a3b8" }}>/ {c.capacite} élèves</div>
                         </div>
                       </div>
                       {/* Barre de taux de remplissage */}
                       <div style={{ height: 4, background: "#f1f5f9", borderRadius: 2, marginBottom: 12, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${Math.min(100, ((c.nb_eleves || 0) / (c.capacite || 1)) * 100)}%`, background: "#16a34a", borderRadius: 2, transition: "width 0.4s ease" }} />
+                        <div style={{ height: "100%", width: `${Math.min(100, ((c.nb_eleves || 0) / (c.capacite || 1)) * 100)}%`, background: "#1a8f1a", borderRadius: 2, transition: "width 0.4s ease" }} />
                       </div>
                       {c.prof_nom && <div style={{ fontSize: 12, color: "#475569", marginBottom: 10 }}>👨‍🏫 {c.prof_prenom} {c.prof_nom}</div>}
                       <button onClick={async () => { if (confirm(`Supprimer la classe ${c.nom} ?`)) { await del(`/classrooms/${c.id}`); setClassrooms(cs => cs.filter(x => x.id !== c.id)); showToast("Classe supprimée"); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
@@ -530,7 +530,7 @@ export default function GestionEcole() {
                         {attendance.filter(r => r.est_present !== false).length} présents · {attendance.filter(r => r.est_present === false).length} absents
                       </div>
                     </div>
-                    <button onClick={() => setModal("save-attendance")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                    <button onClick={() => setModal("save-attendance")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                       <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                       Enregistrer
                     </button>
@@ -541,11 +541,11 @@ export default function GestionEcole() {
                     <div>
                       {attendance.map((r: any, i: number) => (
                         <div key={r.student_id || i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid #f8fafc" }}>
-                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: r.est_present !== false ? "#f0fdf4" : "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: r.est_present !== false ? "#16a34a" : "#ef4444", flexShrink: 0 }}>{r.prenom?.charAt(0)}</div>
+                          <div style={{ width: 32, height: 32, borderRadius: "50%", background: r.est_present !== false ? "#f0fdf0" : "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: r.est_present !== false ? "#1a8f1a" : "#ef4444", flexShrink: 0 }}>{r.prenom?.charAt(0)}</div>
                           <div style={{ flex: 1, fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{r.prenom} {r.nom}</div>
                           <div style={{ display: "flex", gap: 6 }}>
                             <button onClick={() => setAttendance(at => at.map((x: any, j: number) => j === i ? { ...x, est_present: true } : x))}
-                              style={{ padding: "5px 12px", borderRadius: 6, border: "1.5px solid", fontSize: 12, fontWeight: 600, cursor: "pointer", borderColor: r.est_present !== false ? "#16a34a" : "#e2e8f0", background: r.est_present !== false ? "#16a34a" : "white", color: r.est_present !== false ? "white" : "#94a3b8", transition: "all 0.15s" }}>
+                              style={{ padding: "5px 12px", borderRadius: 6, border: "1.5px solid", fontSize: 12, fontWeight: 600, cursor: "pointer", borderColor: r.est_present !== false ? "#1a8f1a" : "#e2e8f0", background: r.est_present !== false ? "#1a8f1a" : "white", color: r.est_present !== false ? "white" : "#94a3b8", transition: "all 0.15s" }}>
                               Présent
                             </button>
                             <button onClick={() => setAttendance(at => at.map((x: any, j: number) => j === i ? { ...x, est_present: false } : x))}
@@ -589,7 +589,7 @@ export default function GestionEcole() {
                       <tr><td colSpan={8} style={{ padding: "40px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucune note enregistrée</td></tr>
                     ) : grades.map(g => {
                       const pct = (+g.note / +g.note_max) * 100;
-                      const noteColor = pct >= 50 ? "#16a34a" : pct >= 30 ? "#d97706" : "#ef4444";
+                      const noteColor = pct >= 50 ? "#1a8f1a" : pct >= 30 ? "#d97706" : "#ef4444";
                       return (
                         <tr key={g.id} style={{ borderBottom: "1px solid #f8fafc" }} onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#fafafa"} onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                           <td style={{ padding: "11px 16px", fontWeight: 600, color: "#0f172a" }}>{g.prenom} {g.nom}</td>
@@ -618,7 +618,7 @@ export default function GestionEcole() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
                 {[
                   { label: "Total facturé", val: fmtMoney(fees.reduce((s, f) => s + +f.montant, 0)), color: "#0369a1", bg: "#eff6ff" },
-                  { label: "Total encaissé", val: fmtMoney(fees.reduce((s, f) => s + +(f.montant_paye || 0), 0)), color: "#16a34a", bg: "#f0fdf4" },
+                  { label: "Total encaissé", val: fmtMoney(fees.reduce((s, f) => s + +(f.montant_paye || 0), 0)), color: "#1a8f1a", bg: "#f0fdf0" },
                   { label: "Reste à payer", val: fmtMoney(fees.reduce((s, f) => s + Math.max(0, +f.montant - +(f.montant_paye || 0)), 0)), color: "#dc2626", bg: "#fef2f2" },
                 ].map((c, i) => (
                   <div key={i} style={{ background: "white", borderRadius: 10, border: "1px solid #e2e8f0", padding: "14px 16px", borderLeft: `3px solid ${c.color}` }}>
@@ -646,11 +646,11 @@ export default function GestionEcole() {
                         <td style={{ padding: "11px 14px", fontFamily: "monospace", fontSize: 11, color: "#94a3b8" }}>{f.numero_matricule}</td>
                         <td style={{ padding: "11px 14px", color: "#475569" }}>{f.type_frais}</td>
                         <td style={{ padding: "11px 14px", fontWeight: 600, color: "#0f172a" }}>{fmtMoney(f.montant)}</td>
-                        <td style={{ padding: "11px 14px", color: "#16a34a", fontWeight: 600 }}>{fmtMoney(f.montant_paye || 0)}</td>
+                        <td style={{ padding: "11px 14px", color: "#1a8f1a", fontWeight: 600 }}>{fmtMoney(f.montant_paye || 0)}</td>
                         <td style={{ padding: "11px 14px", color: "#ef4444", fontWeight: 600 }}>{fmtMoney(f.montant - (f.montant_paye || 0))}</td>
                         <td style={{ padding: "11px 14px", color: "#64748b" }}>{f.periode || "—"}</td>
                         <td style={{ padding: "11px 14px" }}>
-                          <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: f.est_paye ? "#f0fdf4" : "#fef2f2", color: f.est_paye ? "#16a34a" : "#dc2626" }}>
+                          <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: f.est_paye ? "#f0fdf0" : "#fef2f2", color: f.est_paye ? "#1a8f1a" : "#dc2626" }}>
                             {f.est_paye ? "Payé" : "Impayé"}
                           </span>
                         </td>
@@ -666,7 +666,7 @@ export default function GestionEcole() {
                                   showToast("Paiement enregistré");
                                 }
                               }
-                            }} style={{ padding: "5px 10px", background: "#16a34a", color: "white", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
+                            }} style={{ padding: "5px 10px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                               Encaisser
                             </button>
                           )}
@@ -686,21 +686,21 @@ export default function GestionEcole() {
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "24px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Logo de l'école</h3>
                 <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                  <div style={{ width: 80, height: 80, borderRadius: 14, border: "2px solid #16a34a44", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 14, border: "2px solid #1a8f1a44", background: "#f0fdf0", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
                     {(settingsForm.logo_url || tenant?.logo_url)
                       ? <img src={settingsForm.logo_url || tenant.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <svg width="32" height="32" fill="none" stroke="#16a34a" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                      : <svg width="32" height="32" fill="none" stroke="#1a8f1a" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
                     }
                   </div>
                   <div>
-                    <label htmlFor="logo-upload-school" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "#16a34a", color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                    <label htmlFor="logo-upload-school" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: "#1a8f1a", color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                       <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                       Choisir un logo
                     </label>
                     <input id="logo-upload-school" type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} />
                     <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG, SVG · Max 2 Mo</p>
                     {settingsForm.logo_url && settingsForm.logo_url !== tenant?.logo_url && (
-                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "#16a34a", fontWeight: 600 }}>✓ Nouveau logo sélectionné — enregistrez pour l'appliquer</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 11, color: "#1a8f1a", fontWeight: 600 }}>✓ Nouveau logo sélectionné — enregistrez pour l'appliquer</p>
                     )}
                   </div>
                 </div>
@@ -753,7 +753,7 @@ export default function GestionEcole() {
                 </div>
               </div>
 
-              <button onClick={handleSettingsSave} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? "#16a34a88" : "#16a34a", color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
+              <button onClick={handleSettingsSave} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? "#1a8f1a88" : "#1a8f1a", color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
                 {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
               </button>
             </div>
@@ -767,7 +767,7 @@ export default function GestionEcole() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16, backdropFilter: "blur(2px)" }} onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
           <div style={{ background: "white", borderRadius: 16, width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
             {/* Green accent top bar */}
-            <div style={{ height: 3, background: "linear-gradient(90deg, #16a34a, #22c55e)", flexShrink: 0 }} />
+            <div style={{ height: 3, background: "linear-gradient(90deg, #1a8f1a, #22c55e)", flexShrink: 0 }} />
             <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
                 {modal === "add-student" && "Inscrire un élève"}
@@ -835,7 +835,7 @@ export default function GestionEcole() {
             </div>
             <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", gap: 10, flexShrink: 0 }}>
               <button onClick={() => setModal(null)} style={{ flex: 1, padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-              <button onClick={submit} disabled={saving} style={{ flex: 2, padding: "9px 16px", background: saving ? "#86efac" : "#16a34a", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
+              <button onClick={submit} disabled={saving} style={{ flex: 2, padding: "9px 16px", background: saving ? "#86efac" : "#1a8f1a", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
                 {saving ? "Enregistrement..." : "Enregistrer"}
               </button>
             </div>
@@ -846,17 +846,17 @@ export default function GestionEcole() {
       {modal === "save-attendance" && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(2px)" }}>
           <div style={{ background: "white", borderRadius: 16, width: 360, padding: "28px 24px", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <svg width="24" height="24" fill="none" stroke="#16a34a" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#f0fdf0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <svg width="24" height="24" fill="none" stroke="#1a8f1a" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
             </div>
             <h3 style={{ margin: "0 0 8px", fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Enregistrer les présences ?</h3>
             <p style={{ margin: "0 0 20px", fontSize: 13, color: "#64748b" }}>
               Les présences du {new Date(attendDate + "T12:00:00").toLocaleDateString("fr-FR")} seront sauvegardées.
-              <br /><strong style={{ color: "#16a34a" }}>{attendance.filter(r => r.est_present !== false).length} présents</strong> · <strong style={{ color: "#ef4444" }}>{attendance.filter(r => r.est_present === false).length} absents</strong>
+              <br /><strong style={{ color: "#1a8f1a" }}>{attendance.filter(r => r.est_present !== false).length} présents</strong> · <strong style={{ color: "#ef4444" }}>{attendance.filter(r => r.est_present === false).length} absents</strong>
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setModal(null)} style={{ flex: 1, padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-              <button onClick={submit} disabled={saving} style={{ flex: 1, padding: "9px 16px", background: "#16a34a", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Confirmer</button>
+              <button onClick={submit} disabled={saving} style={{ flex: 1, padding: "9px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Confirmer</button>
             </div>
           </div>
         </div>

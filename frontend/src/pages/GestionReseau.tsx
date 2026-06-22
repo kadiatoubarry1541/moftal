@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -18,7 +18,7 @@ const BLUE_BG = "#eff6ff";
 const ROLES = ["président", "vice-président", "secrétaire", "trésorier", "responsable", "membre", "observateur"];
 const STATUTS = ["en_cours", "terminé", "suspendu", "planifié"];
 const STATUT_LABELS: Record<string, string> = { en_cours: "En cours", terminé: "Terminé", suspendu: "Suspendu", planifié: "Planifié" };
-const STATUT_COLORS: Record<string, string> = { en_cours: "#2563eb", terminé: "#16a34a", suspendu: "#dc2626", planifié: "#d97706" };
+const STATUT_COLORS: Record<string, string> = { en_cours: "#2563eb", terminé: "#1a8f1a", suspendu: "#dc2626", planifié: "#d97706" };
 const COT_TYPES = ["mensuelle", "trimestrielle", "annuelle", "ponctuelle"];
 
 export default function GestionReseau() {
@@ -211,7 +211,7 @@ export default function GestionReseau() {
             {[
               { label: "Membres",         value: dash.totalMembers,       icon: "👥", color: BLUE },
               { label: "Projets en cours",value: dash.projetsEnCours,     icon: "📋", color: "#7c3aed" },
-              { label: "Cotisations (an)",value: fmtMoney(dash.cotisationsAnnee), icon: "💰", color: "#16a34a", small: true },
+              { label: "Cotisations (an)",value: fmtMoney(dash.cotisationsAnnee), icon: "💰", color: "#1a8f1a", small: true },
               { label: "Annonces actives",value: dash.totalAnnouncements, icon: "📢", color: "#d97706" },
             ].map((s, i) => (
               <div key={i} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
@@ -410,7 +410,7 @@ export default function GestionReseau() {
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{c.membre_nom || "Anonyme"}</div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>{c.type_cot}{c.periode ? ` · ${c.periode}` : ""} · {fmtDate(c.date_paiement)}</div>
                 </div>
-                <div style={{ fontWeight: 700, color: "#16a34a", fontSize: 15 }}>{fmtMoney(c.montant)}</div>
+                <div style={{ fontWeight: 700, color: "#1a8f1a", fontSize: 15 }}>{fmtMoney(c.montant)}</div>
               </div>
             ))}
             {cotisations.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune cotisation enregistrée.</div>}

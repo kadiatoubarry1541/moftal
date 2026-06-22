@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAdmin } from '../utils/auth';
 
@@ -1093,7 +1093,7 @@ export default function Zaka() {
         {activeTab === 'mon-compte' && (
           <div className="space-y-6">
             {/* Solde du compte Zakat */}
-            <div className="rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg,#065f46,#059669)' }}>
+            <div className="rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg,#0f4b0f,#1a8f1a)' }}>
               <p className="text-green-200 text-xs font-bold uppercase tracking-wider mb-1">Mon Compte Zakat</p>
               <p className="text-white font-black text-3xl mb-1">
                 {(monCompteZakat?.solde || 0).toLocaleString('fr-GN')} GNF

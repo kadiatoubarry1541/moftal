@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -216,7 +216,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
             {[
               { label: "Articles / Produits", value: dash.totalProducts, icon: "📦", color: "#3b82f6" },
               { label: "Stock faible", value: dash.alertesStock, icon: "⚠️", color: "#ef4444" },
-              { label: "Ventes aujourd'hui", value: dash.ventesAujourdhui, icon: "🧾", color: "#10b981" },
+              { label: "Ventes aujourd'hui", value: dash.ventesAujourdhui, icon: "🧾", color: "#22a722" },
               { label: "Recette aujourd'hui", value: fmtMoney(dash.caAujourdhui), icon: "💰", color: COLOR, small: true },
               { label: "Recette ce mois", value: fmtMoney(dash.caMois), icon: "📈", color: "#8b5cf6", small: true },
               { label: "Crédits clients", value: fmtMoney(dash.totalCredits), icon: "🤝", color: "#f97316", small: true },
@@ -239,7 +239,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{s.client_nom || "Client"}</div>
                     <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(s.date_vente)} · {s.type_paiement}</div>
                   </div>
-                  <div style={{ fontWeight: 700, color: s.est_credit ? "#ef4444" : "#10b981", fontSize: 14 }}>{fmtMoney(s.total)}</div>
+                  <div style={{ fontWeight: 700, color: s.est_credit ? "#ef4444" : "#22a722", fontSize: 14 }}>{fmtMoney(s.total)}</div>
                 </div>
               ))}
             </div>
@@ -299,12 +299,12 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                 <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{p.nom}</div>
                 {p.categorie && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>{p.categorie}</div>}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
-                  <span>Vente : <b style={{ color: "#10b981" }}>{fmtMoney(p.prix_vente)}</b></span>
+                  <span>Vente : <b style={{ color: "#22a722" }}>{fmtMoney(p.prix_vente)}</b></span>
                   <span style={{ color: p.stock <= p.stock_min ? "#ef4444" : "#64748b" }}>Stock : <b>{p.stock} {p.unite}</b></span>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => updateStock(p.id, -1)} style={{ flex: 1, padding: "4px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}>−1</button>
-                  <button onClick={() => updateStock(p.id, 1)} style={{ flex: 1, padding: "4px", background: "#dcfce7", color: "#16a34a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}>+1</button>
+                  <button onClick={() => updateStock(p.id, 1)} style={{ flex: 1, padding: "4px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}>+1</button>
                   <button onClick={() => { setEditProduct(p); setPForm({ nom: p.nom, categorie: p.categorie || "", prix_vente: p.prix_vente, prix_achat: p.prix_achat || "", stock: p.stock, stock_min: p.stock_min || "5", unite: p.unite || "pièce" }); setShowAddProduct(true); }}
                     style={{ padding: "4px 8px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>✏️</button>
                 </div>
@@ -379,7 +379,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(s.date_vente)} · {s.type_paiement}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: s.est_credit ? "#ef4444" : "#10b981" }}>{fmtMoney(s.total)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: s.est_credit ? "#ef4444" : "#22a722" }}>{fmtMoney(s.total)}</div>
                   {s.est_credit && <div style={{ fontSize: 11, color: "#ef4444" }}>Crédit</div>}
                 </div>
               </div>
@@ -427,7 +427,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                   {c.credit_total > 0 ? (
                     <>
                       <div style={{ fontWeight: 700, color: "#ef4444" }}>Crédit : {fmtMoney(c.credit_total)}</div>
-                      <button onClick={() => payCredit(c.id)} style={{ padding: "6px 12px", background: "#dcfce7", color: "#16a34a", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Rembourser</button>
+                      <button onClick={() => payCredit(c.id)} style={{ padding: "6px 12px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Rembourser</button>
                     </>
                   ) : (
                     <div style={{ fontSize: 12, color: "#94a3b8" }}>Pas de crédit</div>

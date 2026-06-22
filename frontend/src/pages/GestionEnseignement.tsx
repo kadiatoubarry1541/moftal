@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -40,8 +40,8 @@ export default function GestionEnseignement({ mode }: Props) {
     fraisTypes: ["Inscription", "Frais mensuels", "Frais annuels", "Examen", "Tenue islamique", "Autre"],
     sourate: true,
   } : {
-    color: "#16a34a", colorDark: "#15803d",
-    emoji: "🏫", gradient: "linear-gradient(180deg,#052e16 0%,#14532d 50%,#166534 100%)",
+    color: "#1a8f1a", colorDark: "#156315",
+    emoji: "🏫", gradient: "linear-gradient(180deg,#052e16 0%,#14532d 50%,#0f4b0f 100%)",
     apprenants: "Élèves", apprenant: "Élève",
     groupes: "Classes", groupe: "Classe",
     staffLabel: "Personnel", staffSingular: "Professeur",
@@ -222,13 +222,13 @@ export default function GestionEnseignement({ mode }: Props) {
   });
 
   const niveauColor = (n: string) => {
-    if (!isMadrasa) return "#16a34a";
-    const map: Record<string, string> = { "Iqra": "#0891b2", "Qa'idah": "#0369a1", "Débutant": "#7c3aed", "Juz' Amma": "#059669", "Hizb": "#d97706", "Hafiz": "#dc2626" };
+    if (!isMadrasa) return "#1a8f1a";
+    const map: Record<string, string> = { "Iqra": "#0891b2", "Qa'idah": "#0369a1", "Débutant": "#7c3aed", "Juz' Amma": "#1a8f1a", "Hizb": "#d97706", "Hafiz": "#dc2626" };
     return map[n] || "#64748b";
   };
   const niveauBg = (n: string) => {
-    if (!isMadrasa) return "#f0fdf4";
-    const map: Record<string, string> = { "Iqra": "#ecfeff", "Qa'idah": "#eff6ff", "Débutant": "#f5f3ff", "Juz' Amma": "#f0fdf4", "Hizb": "#fffbeb", "Hafiz": "#fef2f2" };
+    if (!isMadrasa) return "#f0fdf0";
+    const map: Record<string, string> = { "Iqra": "#ecfeff", "Qa'idah": "#eff6ff", "Débutant": "#f5f3ff", "Juz' Amma": "#f0fdf0", "Hizb": "#fffbeb", "Hafiz": "#fef2f2" };
     return map[n] || "#f8fafc";
   };
 
@@ -389,7 +389,7 @@ export default function GestionEnseignement({ mode }: Props) {
 
         {modal === "save-presence" && (<>
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>Confirmer les présences</h3>
-          <div style={{ background: "#f0fdf4", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: V.colorDark }}>
+          <div style={{ background: "#f0fdf0", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: V.colorDark }}>
             {attendance.filter(r=>r.statut==="present").length} présents · {attendance.filter(r=>r.statut!=="present").length} absents
           </div>
         </>)}
@@ -506,15 +506,15 @@ export default function GestionEnseignement({ mode }: Props) {
               {/* KPI Cards */}
               <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14 }}>
                 {[
-                  { label: V.apprenants, val: stats?.totalStudents??0, color: V.color, bg: isMadrasa?"#ecfeff":"#f0fdf4",
+                  { label: V.apprenants, val: stats?.totalStudents??0, color: V.color, bg: isMadrasa?"#ecfeff":"#f0fdf0",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
                   { label: V.staffLabel, val: stats?.totalStaff??0, color: "#0369a1", bg: "#eff6ff",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
                   { label: V.groupes, val: stats?.totalHalaqas??stats?.totalClassrooms??0, color: "#7c3aed", bg: "#f5f3ff",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
-                  { label: "Présents aujourd'hui", val: stats?.presentToday??0, color: "#059669", bg: "#f0fdf4",
+                  { label: "Présents aujourd'hui", val: stats?.presentToday??0, color: "#1a8f1a", bg: "#f0fdf0",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> },
-                  { label: "Frais collectés (mois)", val: fmtMoney(stats?.feesCollected), color: "#16a34a", bg: "#f0fdf4",
+                  { label: "Frais collectés (mois)", val: fmtMoney(stats?.feesCollected), color: "#1a8f1a", bg: "#f0fdf0",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
                   { label: "Frais impayés", val: stats?.unpaidFees??0, color: "#dc2626", bg: "#fef2f2",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> },
@@ -529,7 +529,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 ))}
               </div>
               {/* Financial Banner */}
-              <div style={{ background:`linear-gradient(135deg,${isMadrasa?"#0c4a6e,#0e7490":"#14532d,#15803d"})`,borderRadius:14,padding:"18px 24px",display:"flex",alignItems:"center",gap:20,color:"white" }}>
+              <div style={{ background:`linear-gradient(135deg,${isMadrasa?"#0c4a6e,#0e7490":"#14532d,#156315"})`,borderRadius:14,padding:"18px 24px",display:"flex",alignItems:"center",gap:20,color:"white" }}>
                 <div style={{ width:48,height:48,borderRadius:11,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                 </div>
@@ -626,10 +626,10 @@ export default function GestionEnseignement({ mode }: Props) {
                         <div style={{ width:42,height:42,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:700,fontSize:15 }}>{s.prenom?.charAt(0)}</div>
                         <div>
                           <div style={{ fontWeight:700,color:"#0f172a",fontSize:14 }}>{s.prenom} {s.nom}</div>
-                          <span style={{ padding:"2px 8px",background:isMadrasa?"#ecfeff":"#f0fdf4",color:V.color,borderRadius:20,fontSize:11,fontWeight:600 }}>{s.role}</span>
+                          <span style={{ padding:"2px 8px",background:isMadrasa?"#ecfeff":"#f0fdf0",color:V.color,borderRadius:20,fontSize:11,fontWeight:600 }}>{s.role}</span>
                         </div>
                       </div>
-                      {s.specialite && <div style={{ marginBottom:10 }}><span style={{ padding:"2px 8px",background:"#f0fdf4",color:"#16a34a",borderRadius:4,fontSize:11,fontWeight:600 }}>📚 {s.specialite}</span></div>}
+                      {s.specialite && <div style={{ marginBottom:10 }}><span style={{ padding:"2px 8px",background:"#f0fdf0",color:"#1a8f1a",borderRadius:4,fontSize:11,fontWeight:600 }}>📚 {s.specialite}</span></div>}
                       <div style={{ fontSize:12,color:"#64748b",lineHeight:1.8 }}>
                         {s.telephone && <div>📞 {s.telephone}</div>}
                         {s.numero_h && <div style={{ fontFamily:"monospace",color:"#94a3b8",fontSize:11 }}>H: {s.numero_h}</div>}
@@ -705,7 +705,7 @@ export default function GestionEnseignement({ mode }: Props) {
                     <div style={{ padding:"40px 20px",textAlign:"center",color:"#94a3b8",fontSize:13 }}>Aucun(e) {V.apprenant.toLowerCase()} dans ce groupe</div>
                   ) : attendance.map((r:any,i:number)=>(
                     <div key={r.student_id} style={{ display:"flex",alignItems:"center",gap:12,padding:"12px 20px",borderBottom:"1px solid #f8fafc" }}>
-                      <div style={{ width:32,height:32,borderRadius:"50%",background:r.statut==="present"?isMadrasa?"#ecfeff":"#f0fdf4":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:r.statut==="present"?V.color:"#ef4444",flexShrink:0 }}>{r.prenom?.charAt(0)}</div>
+                      <div style={{ width:32,height:32,borderRadius:"50%",background:r.statut==="present"?isMadrasa?"#ecfeff":"#f0fdf0":"#fef2f2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:r.statut==="present"?V.color:"#ef4444",flexShrink:0 }}>{r.prenom?.charAt(0)}</div>
                       <div style={{ flex:1,fontWeight:600,color:"#0f172a",fontSize:13 }}>{r.prenom} {r.nom}</div>
                       <div style={{ display:"flex",gap:6 }}>
                         {["present","absent","retard"].map(s=>(
@@ -740,12 +740,12 @@ export default function GestionEnseignement({ mode }: Props) {
                       <tr><td colSpan={7} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>Aucune note enregistrée</td></tr>
                     ) : grades.map(g=>{
                       const pct=(+g.note/+g.note_max)*100;
-                      const nc=pct>=70?"#16a34a":pct>=50?"#d97706":"#ef4444";
+                      const nc=pct>=70?"#1a8f1a":pct>=50?"#d97706":"#ef4444";
                       return (
                         <tr key={g.id} style={{ borderBottom:"1px solid #f8fafc" }}
                           onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#fafafa"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
                           <td style={{ padding:"11px 16px",fontWeight:600,color:"#0f172a" }}>{g.student_prenom} {g.student_nom}</td>
-                          <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:isMadrasa?"#ecfeff":"#f0fdf4",color:V.color,borderRadius:4,fontSize:11,fontWeight:600 }}>{g.matiere}</span></td>
+                          <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:isMadrasa?"#ecfeff":"#f0fdf0",color:V.color,borderRadius:4,fontSize:11,fontWeight:600 }}>{g.matiere}</span></td>
                           <td style={{ padding:"11px 16px" }}><span style={{ fontSize:16,fontWeight:800,color:nc }}>{g.note}</span><span style={{ fontSize:11,color:"#94a3b8" }}>/{g.note_max}</span></td>
                           <td style={{ padding:"11px 16px",color:"#7c3aed",fontSize:12 }}>{g.sourate||"—"}</td>
                           <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:"#f1f5f9",color:"#475569",borderRadius:20,fontSize:11 }}>{g.periode||"—"}</span></td>
@@ -768,7 +768,7 @@ export default function GestionEnseignement({ mode }: Props) {
               <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
                 {[
                   { label:"Total facturé",  val:fmtMoney(fees.reduce((s,f)=>s+ +f.montant,0)),                             color:"#0369a1", bg:"#eff6ff" },
-                  { label:"Total encaissé", val:fmtMoney(fees.filter(f=>f.est_paye).reduce((s,f)=>s+ +f.montant,0)),       color:"#16a34a", bg:"#f0fdf4" },
+                  { label:"Total encaissé", val:fmtMoney(fees.filter(f=>f.est_paye).reduce((s,f)=>s+ +f.montant,0)),       color:"#1a8f1a", bg:"#f0fdf0" },
                   { label:"Reste à payer",  val:fmtMoney(fees.filter(f=>!f.est_paye).reduce((s,f)=>s+ +f.montant,0)),     color:"#dc2626", bg:"#fef2f2" },
                 ].map((c,i)=>(
                   <div key={i} style={{ background:"white",borderRadius:10,border:"1px solid #e2e8f0",padding:"14px 16px",borderLeft:`3px solid ${c.color}` }}>
@@ -794,7 +794,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 14px",color:"#475569" }}>{f.type_frais}</td>
                         <td style={{ padding:"11px 14px",fontWeight:700,color:"#0f172a" }}>{fmtMoney(f.montant)}</td>
                         <td style={{ padding:"11px 14px",color:"#64748b" }}>{f.echeance?fmtDate(f.echeance):"—"}</td>
-                        <td style={{ padding:"11px 14px" }}><span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:f.est_paye?"#f0fdf4":"#fef2f2",color:f.est_paye?"#16a34a":"#dc2626" }}>{f.est_paye?"✓ Payé":"Impayé"}</span></td>
+                        <td style={{ padding:"11px 14px" }}><span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:f.est_paye?"#f0fdf0":"#fef2f2",color:f.est_paye?"#1a8f1a":"#dc2626" }}>{f.est_paye?"✓ Payé":"Impayé"}</span></td>
                         <td style={{ padding:"11px 14px" }}>
                           {!f.est_paye && (
                             <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
@@ -828,7 +828,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16 }}>
                   {bulletins.map(b=>{
                     const mention=b.mention||"—";
-                    const mc=mention.includes("Excellent")?"#16a34a":mention.includes("Très")?"#0891b2":mention.includes("Bien")?"#7c3aed":"#d97706";
+                    const mc=mention.includes("Excellent")?"#1a8f1a":mention.includes("Très")?"#0891b2":mention.includes("Bien")?"#7c3aed":"#d97706";
                     return (
                       <div key={b.id} style={{ background:"white",borderRadius:12,border:`1px solid ${b.is_published?"#a5f3fc":"#e2e8f0"}`,padding:20,boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12 }}>
