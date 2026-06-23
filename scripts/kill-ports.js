@@ -15,4 +15,4 @@ function killPort(port) {
   } catch (_) {}
 }
 
-[7777, 3000, 3001, 3002, 3003, 3004, 3005].forEach(killPort)
+[5002, 3000, 3001, 3002, 3003, 3004, 3005].forEach(killPort)
