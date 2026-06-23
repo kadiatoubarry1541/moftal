@@ -3,6 +3,7 @@ import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 import { authenticate as verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -35,8 +36,12 @@ async function handleUpload(req, res) {
     let url;
     if (mimetype.startsWith('image/')) {
       url = await uploadToImageKit(buffer, originalname, folder);
+      // backup sur IDrive e2
+      uploadToIDrive(buffer, originalname, mimetype, folder).catch(() => {});
     } else {
       url = await uploadToR2(buffer, originalname, mimetype, folder);
+      // backup sur IDrive e2
+      uploadToIDrive(buffer, originalname, mimetype, folder).catch(() => {});
     }
     res.json({ success: true, url });
   } catch (err) {
