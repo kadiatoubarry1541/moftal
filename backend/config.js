@@ -1,6 +1,3 @@
-if (!process.env.JWT_SECRET) {
-  console.warn('⚠️  ATTENTION : JWT_SECRET non défini dans config.env — utilisez une clé secrète forte en production !');
-}
 
 const config = {
   PORT: process.env.PORT || 5002,

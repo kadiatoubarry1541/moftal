@@ -134,10 +134,12 @@ const startIaServer = () => {
     console.log(`🔄 Tentative de démarrage du Professeur IA avec "${cmd}"...`);
 
     try {
-      iaProcess = spawn(cmd, ['app.py'], {
+      const safeCmd = (process.platform === 'win32' && cmd.includes(' ')) ? `"${cmd}"` : cmd;
+      iaProcess = spawn(safeCmd, ['app.py'], {
         cwd: iaDir,
         stdio: 'inherit',
-        shell: process.platform === 'win32'
+        shell: process.platform === 'win32',
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
       });
 
       iaProcess.on('error', (err) => {
@@ -545,8 +547,8 @@ async function initAllTables() {
   for (const table of tables) {
     try {
       await sequelize.query(table.sql);
-      for (const idx of table.indexes) await sequelize.query(idx).catch(() => {});
-      for (const alt of table.alters) await sequelize.query(alt).catch(() => {});
+      for (const idx of (table.indexes || [])) await sequelize.query(idx).catch(() => {});
+      for (const alt of (table.alters  || [])) await sequelize.query(alt).catch(() => {});
       console.log(`✅ Table prête : ${table.name}`);
     } catch (err) {
       console.warn(`⚠️ initAllTables [${table.name}]:`, err.message);
@@ -1352,7 +1354,7 @@ async function initAllTables() {
       CREATE TABLE IF NOT EXISTS "security_missions" (
         "id"           SERIAL PRIMARY KEY,
         "tenant_code"  VARCHAR(50) NOT NULL,
-        "agent_id"     INTEGER REFERENCES "security_agents"("id") ON DELETE SET NULL,
+        "agent_id"     INTEGER,
         "agent_nom"    VARCHAR(255),
         "titre"        VARCHAR(255) NOT NULL,
         "client_nom"   VARCHAR(255),
