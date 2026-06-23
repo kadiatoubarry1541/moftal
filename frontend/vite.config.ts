@@ -165,8 +165,8 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       open: false,
       proxy: {
-        "/api": { target: "http://localhost:7777", changeOrigin: true },
-        "/uploads": { target: "http://localhost:7777", changeOrigin: true },
+        "/api": { target: "http://localhost:5002", changeOrigin: true },
+        "/uploads": { target: "http://localhost:5002", changeOrigin: true },
       },
       hmr: { overlay: true },
       watch: { usePolling: true },
