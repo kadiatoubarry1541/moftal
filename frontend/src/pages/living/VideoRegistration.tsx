@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { VideoRecorder } from '../../components/VideoRecorder'
 import { api } from '../../utils/api'
+import { uploadForRegistration } from '../../utils/uploadMedia'
 import { LangButton } from '../../components/LangButton'
 import {
   getAllCountries,
@@ -352,13 +353,36 @@ export function VideoRegistration() {
         reader.readAsDataURL(file)
       })
 
-    const activitePreuveBase64 = normalizedData.activitePreuve
-      ? await fileToBase64(normalizedData.activitePreuve)
-      : null
-    const activiteDocBase64 = normalizedData.activiteDoc
-      ? await fileToBase64(normalizedData.activiteDoc)
-      : null
-    const videoBase64 = normalizedData.video ? await blobToBase64(normalizedData.video) : null
+    // Upload vers le cloud (ImageKit pour photos, R2 pour vidéos)
+    let photoUrl = normalizedData.photoPreview || null
+    let videoUrl = null
+    let activitePreuveUrl = null
+    let activiteDocUrl = null
+
+    try {
+      if (normalizedData.photo) {
+        photoUrl = await uploadForRegistration(normalizedData.photo, 'photos')
+      }
+      if (normalizedData.video) {
+        videoUrl = await uploadForRegistration(normalizedData.video, 'videos', 'video.mp4')
+      }
+      if (normalizedData.activitePreuve) {
+        activitePreuveUrl = await uploadForRegistration(normalizedData.activitePreuve, 'documents')
+      }
+      if (normalizedData.activiteDoc) {
+        activiteDocUrl = await uploadForRegistration(normalizedData.activiteDoc, 'documents')
+      }
+    } catch (uploadErr) {
+      console.warn('Upload cloud échoué, fallback base64:', uploadErr)
+      // Fallback base64 si upload échoue
+      if (normalizedData.video && !videoUrl) {
+        videoUrl = await blobToBase64(normalizedData.video)
+      }
+      if (normalizedData.photo && !photoUrl) {
+        const reader = new FileReader()
+        photoUrl = await new Promise(r => { reader.onload = () => r(reader.result as string); reader.readAsDataURL(normalizedData.photo!) })
+      }
+    }
 
     const { activitePreuve: _p, activiteDoc: _d, ...restData } = normalizedData
     const completeData = {
@@ -373,12 +397,12 @@ export function VideoRegistration() {
       religion: normalizedData.religion?.trim() || '',
       handicap: normalizedData.handicap || '',
       genre: normalizedData.genre,
-      photo: normalizedData.photoPreview,
-      photoPreview: normalizedData.photoPreview,
-      activitePreuve: activitePreuveBase64,
-      activiteDoc: activiteDocBase64,
+      photo: photoUrl,
+      photoPreview: photoUrl,
+      activitePreuve: activitePreuveUrl,
+      activiteDoc: activiteDocUrl,
       lieu1: normalizedData.quartier?.trim() || normalizedData.lieu1 || '',
-      video: videoBase64,
+      video: videoUrl,
     }
 
     try {

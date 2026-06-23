@@ -1,6 +1,7 @@
 ﻿import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../utils/api'
+import { uploadForRegistration } from '../../utils/uploadMedia'
 import { LangButton } from '../../components/LangButton'
 import { getAllCountries, getRegionsByCountry, getContinentAndRegionByCountry, getPrefecturesByRegion, WORLD_GEOGRAPHY } from '../../utils/worldGeography'
 import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
@@ -344,7 +345,17 @@ export function WrittenRegistration() {
     const activitePreuveBase64 = null
     const activiteDocBase64 = null
 
-    const { activitePreuve: _p, activiteDoc: _d, photo, ...restForm } = normalizedForm
+    // Upload photo vers ImageKit
+    let photoUrl = normalizedForm.photoPreview || null
+    try {
+      if (photo) {
+        photoUrl = await uploadForRegistration(photo, 'photos')
+      }
+    } catch (e) {
+      console.warn('Upload photo échoué, fallback base64:', e)
+    }
+
+    const { activitePreuve: _p, activiteDoc: _d, photo: _photo, ...restForm } = normalizedForm
     const completeData = {
       ...restForm,
       ...inferred,
@@ -357,8 +368,8 @@ export function WrittenRegistration() {
       religion: normalizedForm.religion?.trim() || '',
       handicap: normalizedForm.handicap || '',
       genre: normalizedForm.genre,
-      photo: normalizedForm.photoPreview,
-      photoPreview: normalizedForm.photoPreview,
+      photo: photoUrl,
+      photoPreview: photoUrl,
       activitePreuve: activitePreuveBase64,
       activiteDoc: activiteDocBase64,
       lieu1: (normalizedForm.quartier && normalizedForm.quartier.trim()) || normalizedForm.lieu1 || ''

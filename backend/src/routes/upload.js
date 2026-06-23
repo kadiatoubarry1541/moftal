@@ -1,8 +1,9 @@
 import express from 'express';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
-import { verifyToken } from '../middleware/auth.js';
+import { authenticate as verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -17,31 +18,38 @@ const upload = multer({
   },
 });
 
-// POST /api/upload — upload un fichier vers ImageKit (images) ou R2 (vidéos/docs)
-router.post('/', verifyToken, upload.single('file'), async (req, res) => {
+// Rate limit pour les uploads publics (inscription) : 10 uploads/IP/heure
+const registerUploadLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Trop de tentatives, réessayez dans 1 heure' },
+});
+
+async function handleUpload(req, res) {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Aucun fichier reçu' });
     }
-
     const { mimetype, buffer, originalname } = req.file;
     const folder = req.body.folder || detectFolder(mimetype);
     let url;
-
     if (mimetype.startsWith('image/')) {
-      // Images → ImageKit (optimisation automatique)
       url = await uploadToImageKit(buffer, originalname, folder);
     } else {
-      // Vidéos, audio, documents → R2
       url = await uploadToR2(buffer, originalname, mimetype, folder);
     }
-
     res.json({ success: true, url });
   } catch (err) {
     console.error('Upload error:', err.message);
     res.status(500).json({ success: false, message: 'Erreur upload: ' + err.message });
   }
-});
+}
+
+// POST /api/upload — upload pour utilisateurs connectés
+router.post('/', verifyToken, upload.single('file'), handleUpload);
+
+// POST /api/upload/register — upload pour inscription (sans token, limité)
+router.post('/register', registerUploadLimit, upload.single('file'), handleUpload);
 
 function detectFolder(mimetype) {
   if (mimetype.startsWith('image/')) return 'photos';
