@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: "autoUpdate",
         // Seuls les assets réellement utiles pour l'app shell PWA
-        includeAssets: ["logo.svg", "logo-moftal.svg"],
+        includeAssets: ["logo.svg", "logo-moftal.svg", "icon-192.png", "icon-512.png"],
         manifest: {
           name: "Moftal",
           short_name: "Moftal",
@@ -59,16 +59,22 @@ export default defineConfig(({ mode }) => {
           lang: "fr",
           icons: [
             {
-              src: "/logo-moftal.svg",
+              src: "/icon-192.png",
               sizes: "192x192",
-              type: "image/svg+xml",
-              purpose: "any maskable",
+              type: "image/png",
+              purpose: "any",
             },
             {
-              src: "/logo-moftal.svg",
+              src: "/icon-512.png",
               sizes: "512x512",
-              type: "image/svg+xml",
-              purpose: "any maskable",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "/icon-512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
             },
           ],
           categories: ["social", "health", "education", "business"],
@@ -76,19 +82,19 @@ export default defineConfig(({ mode }) => {
             {
               name: "Accueil",
               url: "/",
-              icons: [{ src: "/logo-moftal.svg", sizes: "96x96" }],
+              icons: [{ src: "/icon-192.png", sizes: "192x192" }],
             },
             {
               name: "Mon Profil",
               url: "/profil",
-              icons: [{ src: "/logo-moftal.svg", sizes: "96x96" }],
+              icons: [{ src: "/icon-192.png", sizes: "192x192" }],
             },
             {
               name: "Espace Gestion",
               short_name: "Gestion",
               description: "Accès direct à vos espaces de gestion professionnelle",
               url: "/gestion-interne",
-              icons: [{ src: "/logo-moftal.svg", sizes: "96x96" }],
+              icons: [{ src: "/icon-192.png", sizes: "192x192" }],
             },
           ],
         },
