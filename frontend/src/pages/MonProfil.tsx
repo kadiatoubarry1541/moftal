@@ -145,25 +145,25 @@ export default function MonProfil() {
   const canSeeAdminPanel = isMasterAdmin(userData);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-100">
 
       {/* Barre de navigation dédiée style Facebook */}
-      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
             aria-label="Retour"
           >
-            <svg className="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+            <h1 className="text-lg font-bold text-gray-900 leading-tight">
               {userData.prenom} {userData.nomFamille}
             </h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{t('dashboard.my_profile') || 'Mon profil'}</p>
+            <p className="text-xs text-gray-500 leading-tight">{t('dashboard.my_profile') || 'Mon profil'}</p>
           </div>
         </div>
       </header>

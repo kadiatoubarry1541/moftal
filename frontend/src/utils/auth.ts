@@ -139,10 +139,10 @@ export function getPhotoUrl(photo?: string | null): string | null {
   // URL absolue (déjà complète)
   if (photo.startsWith("http://") || photo.startsWith("https://")) return photo;
   // Chemin relatif du serveur (ex: /uploads/photo-123.jpg)
-  // En dev, le proxy Vite redirige /uploads vers le backend
-  // En prod, le chemin relatif fonctionne directement
-  if (photo.startsWith("/uploads/")) return photo;
-  if (photo.startsWith("uploads/")) return "/" + photo;
+  // On préfixe toujours avec l'URL du backend pour que ça marche en prod
+  const _backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+  if (photo.startsWith("/uploads/")) return `${_backendBase}${photo}`;
+  if (photo.startsWith("uploads/")) return `${_backendBase}/${photo}`;
   // Autre chemin relatif - construire l'URL complète
   const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
   return `${baseUrl}${photo.startsWith("/") ? photo : "/" + photo}`;

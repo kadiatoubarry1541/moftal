@@ -24,6 +24,16 @@ html, body, #root {
   overflow-x: hidden;
   margin: 0;
   padding: 0;
+  background-color: #ffffff;
+  color-scheme: light;
+}
+
+/* Bloquer le mode sombre du système — le site est toujours en clair */
+@media (prefers-color-scheme: dark) {
+  html, body, #root {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+  }
 }
 
 /* Styles personnalisés qui s'ajoutent à Tailwind */
