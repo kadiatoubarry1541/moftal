@@ -352,19 +352,19 @@ function App() {
 
       </header>}
 
-      {/* ── Repère de navigation — affiché sur toutes les pages SAUF /compte qui l'a déjà ── */}
-      {isLoggedIn && !isPublicPage && !isFullscreenPage && pathname !== '/compte' && (
-        <div className="sticky top-[53px] z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+      {/* ── Repère de navigation — ordre fixe : Famille / Terre ADAM / Échanges / Services ── */}
+      {isLoggedIn && !isPublicPage && !isFullscreenPage && pathname !== '/compte' && pathname !== '/terre-adam' && (
+        <div className="sticky top-[53px] z-40 bg-white border-b border-gray-200 shadow-sm">
           <div className="grid grid-cols-8 gap-0.5 px-1 py-1">
             {([
-              { id: "terre-adam", label: t('nav.terre_adam') || "Terre Adam", icon: "🌍",  path: "/compte"  },
               { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
+              { id: "terre-adam", label: t('nav.terre_adam') || "Terre ADAM", icon: "🌍",  path: "/compte"  },
               { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: null,  path: "/echange" },
               { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",  path: "/services"},
             ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => {
               const isActive =
-                item.path === "/compte"
-                  ? pathname === "/compte"
+                item.id === "terre-adam"
+                  ? pathname === "/compte" || pathname === "/terre-adam"
                   : pathname === item.path || pathname.startsWith(item.path + "/");
               return (
                 <button
@@ -372,18 +372,18 @@ function App() {
                   onClick={() => navigate(item.path)}
                   className={`col-span-2 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all ${
                     isActive
-                      ? "bg-blue-100 dark:bg-blue-900/50 ring-1 ring-blue-300 dark:ring-blue-700"
-                      : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+                      ? "bg-blue-100 ring-1 ring-blue-300"
+                      : "bg-white hover:bg-gray-50 shadow-sm"
                   }`}
                 >
                   {item.id === "echanges"
-                    ? <SalesIcon size={20} className={isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"} />
+                    ? <SalesIcon size={20} className={isActive ? "text-blue-600" : "text-gray-500"} />
                     : <span className="text-lg leading-none">{item.icon}</span>
                   }
-                  <span className={`text-[9px] font-medium ${isActive ? "text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-gray-400"}`}>
+                  <span className={`text-[9px] font-medium ${isActive ? "text-blue-700" : "text-gray-600"}`}>
                     {item.label}
                   </span>
-                  {isActive && <span className="w-3 h-0.5 rounded-full bg-blue-600 dark:bg-blue-400" />}
+                  {isActive && <span className="w-3 h-0.5 rounded-full bg-blue-600" />}
                 </button>
               );
             })}
