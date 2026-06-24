@@ -107,6 +107,9 @@ export function Login() {
       />
     )}
     <div className="stack max-w-lg mx-auto w-full px-4 xs:px-2 py-8 sm:py-12">
+      <div className="flex justify-center mb-4">
+        <img src="/logo-moftal.svg" alt="Moftal" style={{ width: 130, height: 130, display: 'block' }} />
+      </div>
       <h1 className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{t('login.title')}</h1>
       <div className="card stack">
         <div className="row">

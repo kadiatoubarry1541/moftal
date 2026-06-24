@@ -77,6 +77,9 @@ export function LoginMembre() {
     )}
     <div className="login-membre py-8 px-4">
       <div className="login-container">
+        <div className="flex justify-center mb-4">
+          <img src="/logo-moftal.svg" alt="Moftal" style={{ width: 130, height: 130, display: 'block' }} />
+        </div>
         <div className="login-header">
           <h1>{t('member.login.title')}</h1>
           <p>{t('member.login.subtitle')}</p>

@@ -286,7 +286,9 @@ function App() {
             <div className="flex items-center gap-2 flex-shrink-0">
               {isLoggedIn && !isPublicPage && (
                 <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
-                  <img src="/logo-moftal.svg" alt="Moftal" width="62" height="62" style={{ width: 62, height: 62 }}/>
+                  <div style={{ background: "white", borderRadius: 10, padding: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <img src="/logo-moftal.svg" alt="Moftal" width="56" height="56" style={{ width: 56, height: 56, display: "block" }}/>
+                  </div>
                 </Link>
               )}
             </div>
@@ -394,10 +396,12 @@ function App() {
       {/* ── Barre Espace Gestion (comme Messenger est séparé de Facebook) ── */}
       {isGestionMode && (
         <header style={{ background: "#0f172a", position: "sticky", top: 0, zIndex: 50, borderBottom: "2px solid #1e293b", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
-          <div style={{ maxWidth: 980, margin: "0 auto", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ width: "100%", padding: "6px 12px 6px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             {/* Logo + nom de l'app */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
-              <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 40, width: 40, objectFit: "contain" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
+              <div style={{ background: "white", borderRadius: 10, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 52, width: 52, objectFit: "contain", display: "block" }} />
+              </div>
               <div>
                 <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>{t('header.pro_mode')}</div>
                 <div style={{ color: "#475569", fontSize: 11, fontWeight: 500 }}>Moftal</div>
