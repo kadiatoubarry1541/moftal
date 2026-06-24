@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ParentsTab from './Parents'
 
-const ParentsTab    = lazy(() => import('./Parents'))
 const EnfantsTab    = lazy(() => import('./Enfants'))
 const PartenaireTab = lazy(() => import('./Partenaire'))
 

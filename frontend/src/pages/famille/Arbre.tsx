@@ -937,19 +937,11 @@ const enhancedUser: UserData = useMemo(() => {
           </button>
 
           <button type="button"
-            onClick={openGallery}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-lg leading-none">📷</span>
-            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Galerie</span>
-          </button>
-
-          <button type="button"
             onClick={() => navigate('/probleme')}
             className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <span className="text-lg leading-none">🚨</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Problèmes ↗</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Problèmes</span>
           </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
@@ -962,21 +954,6 @@ const enhancedUser: UserData = useMemo(() => {
           >
             <span className="text-lg leading-none">🌳</span>
             <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Arbre</span>
-          </button>
-
-          <button type="button"
-            onClick={() => {
-              const session = JSON.parse(localStorage.getItem('session_user') || '{}')
-              const u = session.userData || session
-              const sousPrefecture = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || ''
-              const params = new URLSearchParams({ type: 'mairie' })
-              if (sousPrefecture) params.set('city', sousPrefecture)
-              navigate(`/liste-professionnels?${params.toString()}`)
-            }}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-lg leading-none">🏛️</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Mairie ↗</span>
           </button>
 
           {partner && (
@@ -1051,52 +1028,42 @@ const enhancedUser: UserData = useMemo(() => {
               <ActivationArbreCard treeId={treeInfo.id} apiBase={API_BASE} />
             ) : null}
 
-            {/* ─── Chefs de l'arbre familial ─── */}
+            {/* ─── Chefs de lignée ─── */}
             {fund && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4">
+              <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 mb-3">
                 <button
                   type="button"
                   onClick={() => { setShowDesignerChefs(v => !v); setMsgChefs('') }}
-                  className="w-full flex items-center justify-between"
+                  className="w-full flex items-center justify-between gap-3"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">👑</span>
-                    <div className="text-left">
-                      <p className="font-black text-sm text-amber-900">Chefs de l'arbre familial</p>
-                      <p className="text-xs text-amber-700">Désignez le Patriarche, le Porte-parole et le Délégué</p>
-                    </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-base leading-none">👑</span>
+                    <p className="text-xs font-bold text-amber-900">Chefs de lignée</p>
                   </div>
-                  <span className="text-amber-600 font-bold text-sm">{showDesignerChefs ? '▲' : '▼'}</span>
+                  {(() => {
+                    const chefs = [
+                      { role: 'Patriarche',   nom: fund.conseillerNom, photo: fund.conseillerPhoto, color: '#92400e' },
+                      { role: 'Porte-parole', nom: fund.gerant1Nom,    photo: fund.gerant1Photo,    color: '#1e40af' },
+                      { role: 'Délégué',      nom: fund.gerant2Nom,    photo: fund.gerant2Photo,    color: '#374151' },
+                    ]
+                    return (
+                      <div className="flex items-center gap-4">
+                        {chefs.map(chef => (
+                          <div key={chef.role} className="flex flex-col items-center gap-0.5">
+                            {chef.photo
+                              ? <img src={chef.photo} alt={chef.nom || chef.role} className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" />
+                              : <div className="w-8 h-8 rounded-full bg-white border border-amber-200 flex items-center justify-center text-xs font-bold shadow-sm" style={{ color: chef.color }}>
+                                  {chef.nom ? chef.nom.charAt(0) : '—'}
+                                </div>
+                            }
+                            <span className="text-[8px] text-gray-500 leading-tight">{chef.role}</span>
+                          </div>
+                        ))}
+                        <span className="text-amber-600 text-xs">{showDesignerChefs ? '▲' : '▼'}</span>
+                      </div>
+                    )
+                  })()}
                 </button>
-                {(() => {
-                  const stripIncrement = (n?: string) => n ? n.replace(/\s+\d+$/, '') : null
-                  const chefs = [
-                    { label: '🦁 Patriarche',   nom: fund.conseillerNom, photo: fund.conseillerPhoto, numeroH: stripIncrement(fund.conseiller), color: '#92400e', bg: '#fef3c7' },
-                    { label: '🎙️ Porte-parole', nom: fund.gerant1Nom,    photo: fund.gerant1Photo,    numeroH: stripIncrement(fund.gerant1),    color: '#1e40af', bg: '#eff6ff' },
-                    { label: '🤲 Délégué',       nom: fund.gerant2Nom,    photo: fund.gerant2Photo,    numeroH: stripIncrement(fund.gerant2),    color: '#374151', bg: '#f9fafb' },
-                  ]
-                  return (
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      {chefs.map(chef => (
-                        <div key={chef.label} className="rounded-xl p-2 text-center border border-amber-100 flex flex-col items-center gap-1" style={{ background: chef.bg }}>
-                          <p className="text-[10px] text-gray-500 font-semibold">{chef.label}</p>
-                          {chef.nom ? (
-                            <>
-                              {chef.photo
-                                ? <img src={chef.photo} alt={chef.nom} className="w-9 h-9 rounded-full object-cover border-2 border-white shadow" />
-                                : <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-base font-bold" style={{ color: chef.color }}>{chef.nom.charAt(0)}</div>
-                              }
-                              <p className="text-[10px] font-bold leading-tight truncate w-full" style={{ color: chef.color }}>{chef.nom}</p>
-                              <p className="text-[9px] text-gray-400 truncate w-full">#{chef.numeroH}</p>
-                            </>
-                          ) : (
-                            <p className="text-xs font-bold mt-1" style={{ color: chef.color }}>—</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
                 {showDesignerChefs && (
                   <div className="mt-4 space-y-3 border-t border-amber-200 pt-4">
                     {(fund.estAdmin || !fund.gerant1) && (
@@ -1131,6 +1098,39 @@ const enhancedUser: UserData = useMemo(() => {
                 )}
               </div>
             )}
+
+            {/* ─── Galerie + Mairie côte à côte ─── */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <button
+                type="button"
+                onClick={openGallery}
+                className="flex flex-col items-start gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left shadow-sm"
+              >
+                <span className="text-2xl">📷</span>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Galerie</p>
+                  <p className="text-[11px] text-gray-500 leading-tight">Rencontre · Baptême<br />Mariage · Décès</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const session = JSON.parse(localStorage.getItem('session_user') || '{}')
+                  const u = session.userData || session
+                  const ville = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || ''
+                  const params = new URLSearchParams({ type: 'mairie' })
+                  if (ville) params.set('city', ville)
+                  navigate(`/liste-professionnels?${params.toString()}`)
+                }}
+                className="flex flex-col items-start gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left shadow-sm"
+              >
+                <span className="text-2xl">🏛️</span>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Mairie</p>
+                  <p className="text-[11px] text-gray-500 leading-tight">Déclarer une naissance,<br />un mariage, un décès</p>
+                </div>
+              </button>
+            </div>
 
             {/* ─── Filtre vivants / décédés ─── */}
             {treeInfo && (

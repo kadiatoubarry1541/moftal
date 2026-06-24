@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getSocket } from "../services/socket";
@@ -105,12 +105,30 @@ function showBrowserNotification(notif: Notification) {
   if (path) n.onclick = () => { window.focus(); n.close(); };
 }
 
+interface PanelPos { top: number; right: number; width: number; }
+
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [panelPos, setPanelPos] = useState<PanelPos>({ top: 60, right: 8, width: 380 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const computePos = useCallback(() => {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    const maxW = Math.min(window.innerWidth - 16, 400);
+    const rightOffset = Math.max(8, window.innerWidth - rect.right);
+    const leftEdge = window.innerWidth - rightOffset - maxW;
+    const finalRight = leftEdge < 8 ? 8 : rightOffset;
+    const maxH = window.innerHeight - rect.bottom - 12;
+    setPanelPos({ top: rect.bottom + 6, right: finalRight, width: maxW });
+    if (panelRef.current) {
+      panelRef.current.style.maxHeight = `${Math.max(200, maxH)}px`;
+    }
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -130,17 +148,17 @@ export default function NotificationBell() {
             const path = getNavigationPath(notif.type);
             if (path) navigate(path);
           }}>
-            <span className="text-xl flex-shrink-0">{TYPE_ICONS[notif.type] || "🔔"}</span>
+            <span className="text-2xl flex-shrink-0">{TYPE_ICONS[notif.type] || "🔔"}</span>
             <div>
-              <p className="font-semibold text-sm text-gray-900">{notif.title}</p>
-              <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{notif.message}</p>
+              <p className="font-bold text-sm text-gray-900">{notif.title}</p>
+              <p className="text-sm text-gray-700 mt-0.5 leading-relaxed">{notif.message}</p>
               {getNavigationPath(notif.type) && (
-                <p className="text-xs text-blue-500 font-medium mt-1">Appuyer pour voir →</p>
+                <p className="text-xs text-blue-600 font-semibold mt-1">Appuyer pour voir →</p>
               )}
             </div>
           </div>
         ),
-        { duration: 6000, style: { maxWidth: 380, padding: "12px 16px" } }
+        { duration: 6000, style: { maxWidth: 380, padding: "14px 16px", background: "#fff", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" } }
       );
     });
     return () => { clearInterval(interval); socket.off("new-notification"); };
@@ -148,11 +166,22 @@ export default function NotificationBell() {
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) setOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  const handleOpen = () => {
+    if (!open) {
+      computePos();
+      loadNotifications();
+    }
+    setOpen(v => !v);
+  };
 
   const loadNotifications = async () => {
     try {
@@ -213,68 +242,102 @@ export default function NotificationBell() {
   const oldNotifs = notifications.filter(n => n.isRead);
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <button
-        onClick={() => { setOpen(!open); if (!open) loadNotifications(); }}
-        className="relative min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        ref={btnRef}
+        onClick={handleOpen}
+        className="relative min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-full hover:bg-gray-100 transition-colors"
         aria-label="Notifications"
       >
-        <span className="text-xl">🔔</span>
+        {/* Icône cloche SVG nette */}
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-700">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full animate-pulse">
-            {unreadCount > 9 ? "9+" : unreadCount}
+          <span className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[20px] h-5 px-1 text-[11px] font-bold text-white bg-red-500 rounded-full leading-none">
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 w-[min(96vw,400px)] max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
-
-          {/* Header Facebook-style */}
-          <div className="flex items-center justify-between px-4 pt-5 pb-3 flex-shrink-0">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllRead}
-                  className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
-                >
-                  Tout lire
-                </button>
-              )}
-              <button className="w-9 h-9 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+        <div
+          ref={panelRef}
+          style={{
+            position: "fixed",
+            top: panelPos.top,
+            right: panelPos.right,
+            width: panelPos.width,
+            zIndex: 99999,
+            maxHeight: "80vh",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)",
+            border: "1px solid rgba(0,0,0,0.09)",
+            borderRadius: "16px",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            background: "#fff",
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-5 pb-3 bg-white border-b border-gray-100 flex-shrink-0">
+            <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">Notifications</h3>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllRead}
+                className="text-sm text-blue-600 hover:text-blue-700 font-semibold px-3 py-1.5 rounded-xl hover:bg-blue-50 transition-colors"
+              >
+                Tout marquer lu
               </button>
-            </div>
+            )}
           </div>
 
-          {/* Liste */}
-          <div className="overflow-y-auto flex-1 min-h-0 pb-3">
+          {/* Liste scrollable */}
+          <div className="overflow-y-auto flex-1 bg-white">
             {notifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
-                  <span className="text-3xl">🔔</span>
+              <div className="flex flex-col items-center justify-center py-16 px-4">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                  </svg>
                 </div>
-                <p className="text-base font-semibold text-gray-500">Aucune notification</p>
-                <p className="text-sm text-gray-400 mt-1">Vous êtes à jour !</p>
+                <p className="text-base font-bold text-gray-700">Aucune notification</p>
+                <p className="text-sm text-gray-400 mt-1 text-center">Vous êtes à jour !</p>
               </div>
             ) : (
               <>
                 {newNotifs.length > 0 && (
                   <div>
-                    <p className="px-4 pt-1 pb-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">Nouveau</p>
+                    <p className="px-5 pt-4 pb-1 text-[13px] font-bold text-gray-500 uppercase tracking-wider">Nouveaux</p>
                     {newNotifs.map(n => (
-                      <NotifItem key={n.id} notif={n} onNavigate={handleNotifClick} navigate={navigate} setOpen={setOpen} setNotifications={setNotifications} setUnreadCount={setUnreadCount} />
+                      <NotifItem
+                        key={n.id}
+                        notif={n}
+                        onNavigate={handleNotifClick}
+                        navigate={navigate}
+                        setOpen={setOpen}
+                        setNotifications={setNotifications}
+                        setUnreadCount={setUnreadCount}
+                      />
                     ))}
                   </div>
                 )}
                 {oldNotifs.length > 0 && (
                   <div>
-                    <p className="px-4 pt-3 pb-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">Plus tôt</p>
+                    <p className="px-5 pt-4 pb-1 text-[13px] font-bold text-gray-500 uppercase tracking-wider">Plus tôt</p>
                     {oldNotifs.map(n => (
-                      <NotifItem key={n.id} notif={n} onNavigate={handleNotifClick} navigate={navigate} setOpen={setOpen} setNotifications={setNotifications} setUnreadCount={setUnreadCount} />
+                      <NotifItem
+                        key={n.id}
+                        notif={n}
+                        onNavigate={handleNotifClick}
+                        navigate={navigate}
+                        setOpen={setOpen}
+                        setNotifications={setNotifications}
+                        setUnreadCount={setUnreadCount}
+                      />
                     ))}
                   </div>
                 )}
@@ -283,7 +346,7 @@ export default function NotificationBell() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -330,49 +393,54 @@ function NotifItem({ notif, onNavigate, navigate, setOpen, setNotifications, set
 
   return (
     <div
-      onClick={() => onNavigate(notif)}
-      className={`flex gap-3 px-3 py-2 mx-1 rounded-xl transition-colors ${
-        !notif.isRead ? "bg-blue-50 dark:bg-blue-900/20" : ""
-      } ${hasNav ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" : ""}`}
+      onClick={() => hasNav && onNavigate(notif)}
+      className={`flex gap-3 px-4 py-3 transition-colors ${
+        !notif.isRead ? "bg-blue-50" : "bg-white"
+      } ${hasNav ? "cursor-pointer hover:bg-gray-50" : ""}`}
     >
-      {/* Avatar rond avec icône */}
-      <div className="flex-shrink-0 relative">
-        <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl">
+      {/* Icône ronde */}
+      <div className="flex-shrink-0 relative mt-0.5">
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${!notif.isRead ? "bg-blue-100" : "bg-gray-100"}`}>
           {TYPE_ICONS[notif.type] || "🔔"}
         </div>
         {!notif.isRead && (
-          <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900" />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white" />
         )}
       </div>
 
-      {/* Contenu */}
-      <div className="flex-1 min-w-0 pt-1">
-        <p className="text-[14px] leading-snug text-gray-900 dark:text-gray-100">
-          <span className="font-semibold">{notif.title}</span>{" "}
-          <span className="font-normal text-gray-700 dark:text-gray-300">{notif.message}</span>
-        </p>
-        <p className={`text-xs mt-0.5 font-semibold ${notif.isRead ? "text-gray-400" : "text-blue-500"}`}>
+      {/* Contenu texte */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[14px] leading-snug font-bold text-gray-900">{notif.title}</p>
+        <p className="text-[13px] leading-relaxed text-gray-600 mt-0.5 break-words">{notif.message}</p>
+        <p className={`text-[12px] font-semibold mt-1 ${notif.isRead ? "text-gray-400" : "text-blue-500"}`}>
           {relativeTime(notif.created_at)}
         </p>
 
-        {/* Boutons d'action style Facebook */}
+        {/* Boutons action */}
         {hasAction && !notif.isRead && (
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-2.5">
             <button
               onClick={handleAccept}
-              className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-colors"
             >
               {notif.type === "friend_request" ? "Confirmer" : "Accepter"}
             </button>
             <button
               onClick={handleDismiss}
-              className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+              className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-bold rounded-xl transition-colors"
             >
               {notif.type === "friend_request" ? "Supprimer" : "Refuser"}
             </button>
           </div>
         )}
       </div>
+
+      {/* Point bleu à droite si non lu */}
+      {!notif.isRead && !hasAction && (
+        <div className="flex-shrink-0 flex items-center">
+          <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+        </div>
+      )}
     </div>
   );
 }
