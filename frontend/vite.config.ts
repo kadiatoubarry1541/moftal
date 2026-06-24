@@ -42,6 +42,9 @@ export default defineConfig(({ mode }) => {
       viteCompression({ algorithm: "gzip", ext: ".gz" }),
       viteCompression({ algorithm: "brotliCompress", ext: ".br" }),
       VitePWA({
+        strategies: "injectManifest",
+        srcDir: "src",
+        filename: "sw.ts",
         registerType: "autoUpdate",
         // Seuls les assets réellement utiles pour l'app shell PWA
         includeAssets: ["logo.svg", "logo-moftal.svg", "icon-192.png", "icon-512.png"],
@@ -98,58 +101,9 @@ export default defineConfig(({ mode }) => {
             },
           ],
         },
-        workbox: {
+        injectManifest: {
           // PNG exclus du précache : logo.png (227KB) + armoiries (325KB) = 552KB économisés
-          // Le logo.webp (38KB) est suffisant et déjà préchargé
           globPatterns: ["**/*.{js,css,html,ico,webp,woff2}"],
-          // Navigations SPA : toujours servir index.html
-          navigateFallback: "index.html",
-          navigateFallbackDenylist: [/\/api\//, /\/uploads\//],
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: "CacheFirst",
-              options: {
-                cacheName: "google-fonts-cache",
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-              },
-            },
-            {
-              urlPattern: /\/api\/.*/i,
-              handler: "NetworkFirst",
-              options: {
-                cacheName: "api-cache",
-                expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
-                networkTimeoutSeconds: 10,
-              },
-            },
-            {
-              urlPattern: /\/uploads\/.*/i,
-              handler: "CacheFirst",
-              options: {
-                cacheName: "uploads-cache",
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 60 * 60 * 24 * 30,
-                },
-              },
-            },
-            // Images locales : StaleWhileRevalidate pour toujours avoir la version la plus récente
-            {
-              urlPattern: /\.(svg|png|webp|ico)$/i,
-              handler: "StaleWhileRevalidate",
-              options: {
-                cacheName: "images-cache",
-                expiration: {
-                  maxEntries: 30,
-                  maxAgeSeconds: 60 * 60 * 24 * 7,
-                },
-              },
-            },
-          ],
         },
         devOptions: { enabled: false },
       }),

@@ -81,9 +81,11 @@ import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
 import moftalPayRoutes from './routes/MoftalPay.js';
+import pushRoutes from './routes/push.js';
 import racinesRoutes from './routes/racines.js';
 import zakatRoutes from './routes/zakat.js';
 import formationsRoutes from './routes/formations.js';
+import developpementRoutes from './routes/developpement.js';
 import Payment from './models/Payment.js';
 import { handleUploadError } from './middleware/upload.js';
 import { config } from '../config.js';
@@ -2434,6 +2436,7 @@ app.use('/api/imam-network',     imamNetworkRoutes);
 app.use('/api/pro-network',   proNetworkRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/push', pushRoutes);
 app.use('/api/ia', iaRoutes);
 app.use('/api/admin/moderation', moderationRoutes);
 app.use('/api/payment', paymentRoutes);
@@ -2445,6 +2448,7 @@ app.use('/api/moftal-pay', moftalPayRoutes);
 app.use('/api/racines', racinesRoutes);
 app.use('/api/zakat', zakatRoutes);
 app.use('/api/formations', formationsRoutes);
+app.use('/api/developpement', developpementRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test

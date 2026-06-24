@@ -215,7 +215,7 @@ export default function GestionInterne() {
   );
 
   // Sans compte pro (et non admin) : on ouvre directement Activité (page créée depuis l'inscription, déjà accessible)
-  const defaultTab: 'pro' | 'activite' = (!userIsAdmin && accounts.length === 0) ? 'activite' : 'pro';
+  const defaultTab: 'pro' | 'activite' = 'activite';
   const tab = tabOverride ?? defaultTab;
 
   // Deux espaces toujours visibles : Activité / Espace Pro (Activité en premier : tout le monde en a une, pas forcément un compte pro)
@@ -285,6 +285,34 @@ export default function GestionInterne() {
             <div style={{ fontSize:11, color:"rgba(255,255,255,0.8)" }}>actifs</div>
           </div>
           <button onClick={() => navigate(-1 as any)} style={{ background:"rgba(255,255,255,0.2)", color:"white", border:"1px solid rgba(255,255,255,0.3)", borderRadius:10, padding:"9px 16px", cursor:"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap" }}>← Retour</button>
+        </div>
+
+        {/* ── ACTIONS RAPIDES ADMIN ── */}
+        <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:28 }}>
+          <button
+            onClick={() => navigate("/admin/retraits")}
+            style={{ display:"flex", alignItems:"center", gap:10, padding:"13px 20px", background:"white", border:"2px solid #059669", borderRadius:14, cursor:"pointer", fontWeight:700, color:"#059669", fontSize:14, boxShadow:"0 2px 8px rgba(5,150,105,0.12)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#ecfdf5"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "white"; }}
+          >
+            <span style={{ fontSize:22 }}>💳</span>
+            <div style={{ textAlign:"left" }}>
+              <div>Retraits cliniques</div>
+              <div style={{ fontSize:11, color:"#64748b", fontWeight:500 }}>Approuver / refuser les demandes</div>
+            </div>
+          </button>
+          <button
+            onClick={() => navigate("/admin")}
+            style={{ display:"flex", alignItems:"center", gap:10, padding:"13px 20px", background:"white", border:"2px solid #6366f1", borderRadius:14, cursor:"pointer", fontWeight:700, color:"#6366f1", fontSize:14, boxShadow:"0 2px 8px rgba(99,102,241,0.12)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#eef2ff"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "white"; }}
+          >
+            <span style={{ fontSize:22 }}>🛡️</span>
+            <div style={{ textAlign:"left" }}>
+              <div>Tableau de bord</div>
+              <div style={{ fontSize:11, color:"#64748b", fontWeight:500 }}>Modération et paramètres</div>
+            </div>
+          </button>
         </div>
 
         {/* ── SECTION 1 : Gestion Interne ── */}

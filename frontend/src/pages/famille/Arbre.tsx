@@ -896,43 +896,44 @@ const enhancedUser: UserData = useMemo(() => {
   }, [sharedItems])
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 pb-6">
 
       {/* En-tête */}
-      <div className="mb-4 flex items-center gap-3 rounded-2xl bg-emerald-600 px-4 py-3 text-white shadow-md">
-        <span className="text-3xl leading-none">🌳</span>
-        <div>
-          <h1 className="text-base font-bold leading-tight">Héritage</h1>
-          <p className="text-xs text-emerald-100 mt-0.5">Votre arbre généalogique et votre univers familial</p>
-        </div>
+      <div className="flex items-center justify-between pt-3 pb-2">
+        <h1 className="text-2xl font-bold text-gray-900">Héritage</h1>
+        <button className="w-9 h-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
       </div>
 
-      {/* ── Navigation style TerreAdam ── */}
-      <div className="bg-white border-b border-gray-200 shadow-sm mb-4 rounded-xl overflow-hidden">
+      {/* Navigation — style Facebook plat */}
+      <div className="bg-white border-b border-gray-200 mb-4">
         <nav className="flex" role="tablist">
 
           <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
             onClick={() => setActiveTab('foyer')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
               activeTab === 'foyer'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
             <span className="text-lg leading-none">🏠</span>
-            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Foyer</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Foyer</span>
           </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'echanges'}
             onClick={() => setActiveTab('echanges')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
               activeTab === 'echanges'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
             <span className="text-lg leading-none">💬</span>
-            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Messages</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Messages</span>
           </button>
 
           <button type="button"
@@ -945,22 +946,22 @@ const enhancedUser: UserData = useMemo(() => {
 
           <button type="button"
             onClick={() => navigate('/probleme')}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <span className="text-lg leading-none">🚨</span>
-            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Problèmes ↗</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Problèmes ↗</span>
           </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
             onClick={() => setActiveTab('arbre')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
               activeTab === 'arbre'
-                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
             <span className="text-lg leading-none">🌳</span>
-            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Arbre</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Arbre</span>
           </button>
 
           <button type="button"
@@ -972,26 +973,26 @@ const enhancedUser: UserData = useMemo(() => {
               if (sousPrefecture) params.set('city', sousPrefecture)
               navigate(`/liste-professionnels?${params.toString()}`)
             }}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <span className="text-lg leading-none">🏛️</span>
-            <span className="text-[9px] font-medium leading-tight truncate w-full text-center">Mairie ↗</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Mairie ↗</span>
           </button>
 
           {partner && (
             <button type="button" role="tab" aria-selected={activeTab === 'arbre-conjoint'}
               onClick={() => setActiveTab('arbre-conjoint')}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
                 activeTab === 'arbre-conjoint'
-                  ? 'border-pink-500 text-pink-700 bg-pink-50'
-                  : 'border-transparent text-gray-500 hover:text-pink-600 hover:bg-pink-50'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
               {partner.photo
                 ? <img src={partner.photo} alt={partner.prenom} className="w-5 h-5 rounded-full object-cover" />
                 : <span className="text-lg leading-none">💑</span>
               }
-              <span className="text-[9px] font-medium leading-tight truncate w-full text-center">{partner.prenom}</span>
+              <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{partner.prenom}</span>
             </button>
           )}
 

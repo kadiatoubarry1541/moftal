@@ -3,6 +3,8 @@ import { authenticate } from '../middleware/auth.js';
 import Appointment from '../models/Appointment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+import { sendAppointmentAcceptedEmail, sendAppointmentRejectedEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -133,6 +135,20 @@ router.post('/accept/:id', authenticate, async (req, res) => {
       relatedId: appointment.id
     });
 
+    // Email au patient
+    const patient = await User.findByNumeroH(appointment.patientNumeroH);
+    if (patient?.email) {
+      sendAppointmentAcceptedEmail({
+        to: patient.email,
+        toName: appointment.patientName,
+        proName: proAccount.name,
+        appointmentDate: appointment.appointmentDate,
+        appointmentTime: appointment.appointmentTime,
+        service: appointment.service,
+        responseMessage: responseMessage || null
+      }).catch(() => {});
+    }
+
     res.json({ success: true, message: 'Rendez-vous accepté', appointment });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -166,6 +182,17 @@ router.post('/reject/:id', authenticate, async (req, res) => {
       message: `${proAccount.name} a refusé votre rendez-vous. ${responseMessage || ''}`,
       relatedId: appointment.id
     });
+
+    // Email au patient
+    const patient = await User.findByNumeroH(appointment.patientNumeroH);
+    if (patient?.email) {
+      sendAppointmentRejectedEmail({
+        to: patient.email,
+        toName: appointment.patientName,
+        proName: proAccount.name,
+        responseMessage: responseMessage || null
+      }).catch(() => {});
+    }
 
     res.json({ success: true, message: 'Rendez-vous refusé', appointment });
   } catch (error) {

@@ -228,10 +228,14 @@ export function UserDashboard() {
     <div className="user-dashboard bg-gray-50 dark:bg-gray-900 min-h-screen overflow-x-hidden">
 
       {/* En-tête profil – pleine largeur sur mobile, compact sur desktop */}
-      <div className="dashboard-header px-3 xs:px-4 sm:px-6 lg:px-8 mb-4 mt-4">
+      <div className="dashboard-header px-3 xs:px-4 sm:px-6 lg:px-8 pt-2 pb-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto">
           <div className="profile-card w-full sm:w-fit max-w-full bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-row items-center gap-4 flex-wrap">
-            <div className="user-avatar relative flex-shrink-0">
+            <button
+              className="user-avatar relative flex-shrink-0 cursor-pointer group"
+              onClick={() => navigate("/moi/profil")}
+              title="Voir mon profil"
+            >
               {(() => {
                 const rawPhoto =
                   userData.photo ||
@@ -246,7 +250,7 @@ export function UserDashboard() {
                     height="64"
                     loading="eager"
                     fetchPriority="high"
-                    className="profile-photo profile-photo--compact"
+                    className="profile-photo profile-photo--compact group-hover:opacity-90 transition-opacity"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       if (!target.src.includes("default-avatar")) {
@@ -271,7 +275,7 @@ export function UserDashboard() {
                   {getLogoIcon(userData.logo)}
                 </div>
               )}
-            </div>
+            </button>
             <div className="user-details flex flex-col gap-2">
               <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">
                 {userData.prenom} {userData.nomFamille}
@@ -367,53 +371,37 @@ export function UserDashboard() {
         </div>
       </div>
 
-      {/* ─── Navigation principale ─────────────────────────────────────────
-          4 boutons toujours visibles sur UNE seule ligne, sans scroll.
-          grid-cols-8 sur tous les écrans → chaque bouton = 25% de la largeur
-      ────────────────────────────────────────────────────────────────── */}
-      <div className="dashboard-tabs px-1 xs:px-2 sm:px-4 lg:px-8 max-w-7xl mx-auto mt-3 sticky top-14 z-30 bg-gray-50 dark:bg-gray-900 pb-1">
-        <div className="grid grid-cols-8 gap-0.5 xs:gap-1 sm:gap-1.5 lg:gap-2">
+      {/* Navigation principale — style Facebook : plat, trait bleu actif */}
+      <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto flex">
           {navItems.map((item) => {
             const isActive = item.type === "tab" && activeTab === item.id;
-            const isLink = item.type === "link";
-
             return (
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item)}
                 className={`
-                  col-span-2 w-full border-none cursor-pointer transition-all duration-200 rounded-lg xs:rounded-xl
-                  flex flex-col items-center justify-center
-                  gap-0 xs:gap-0.5
-                  p-1 xs:p-1.5 sm:p-2 lg:p-3
-                  min-h-[44px] xs:min-h-[52px] sm:min-h-[64px] lg:min-h-[68px]
+                  flex-1 flex flex-col items-center justify-center gap-0.5
+                  py-2 px-1 relative cursor-pointer border-b-[3px] transition-colors duration-150
+                  min-h-[52px]
                   ${isActive
-                    ? "bg-blue-100 dark:bg-blue-900/50 ring-1 ring-blue-300 dark:ring-blue-700"
-                    : isLink
-                    ? "bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-800/30 shadow-sm"
-                    : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+                    ? "border-blue-600 dark:border-blue-400"
+                    : "border-transparent hover:bg-gray-50 dark:hover:bg-gray-800"
                   }
                 `}
               >
-                {/* Icône */}
                 {item.useSvg && item.SvgIcon ? (
                   <item.SvgIcon
-                    className={`flex-shrink-0 w-4 h-4 xs:w-5 xs:h-5 sm:w-6 sm:h-6 ${
-                      isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300"
-                    }`}
-                    size={16}
+                    className={`w-6 h-6 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}
+                    size={24}
                   />
                 ) : (
-                  <span className="flex-shrink-0 text-base xs:text-lg sm:text-xl lg:text-2xl leading-none">
+                  <span className={`text-2xl leading-none ${isActive ? "" : "grayscale-[30%]"}`}>
                     {item.icon}
                   </span>
                 )}
-
-                {/* Label */}
-                <span className={`
-                  font-medium leading-tight text-center w-full truncate
-                  text-[7px] xs:text-[8px] sm:text-[10px] lg:text-xs
-                  ${isActive ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-200"}
+                <span className={`text-[9px] xs:text-[10px] font-semibold leading-tight truncate max-w-full
+                  ${isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}
                 `}>
                   {item.label}
                 </span>
@@ -424,7 +412,7 @@ export function UserDashboard() {
       </div>
 
       {/* Contenu des onglets — lazy chargés à la demande */}
-      <div className="dashboard-content px-3 xs:px-4 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-7xl mx-auto">
+      <div className="dashboard-content max-w-7xl mx-auto">
         <Suspense fallback={<TabLoader />}>
           {renderTabContent(activeTab, userData)}
         </Suspense>

@@ -107,8 +107,21 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
         <div className="text-center py-6 text-gray-500 text-sm">Chargement...</div>
       ) : filtered.length === 0 ? (
         hideEmptyMessage ? null : (
-          <div className="text-center py-6 text-gray-500 text-sm">
-            Aucun {title.toLowerCase()} disponible pour le moment.
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
+            <div className="text-6xl mb-4">{icon}</div>
+            <h3 className="text-base font-bold text-gray-700 mb-2">
+              Aucun {title.toLowerCase()} inscrit pour l'instant
+            </h3>
+            <p className="text-sm text-gray-500 mb-6 max-w-xs leading-relaxed">
+              Les professionnels rejoignent bientôt la plateforme dans votre région.
+              Vous proposez ce service ? Soyez parmi les premiers à vous inscrire !
+            </p>
+            <button
+              onClick={() => navigate('/inscription-pro')}
+              className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
+            >
+              ➕ Proposer votre service
+            </button>
           </div>
         )
       ) : (

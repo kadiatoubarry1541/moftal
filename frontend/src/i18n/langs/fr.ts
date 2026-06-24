@@ -143,7 +143,7 @@ const fr: Record<string, string> = {
   'member.footer.a': 'Contactez le propriétaire du site pour demander une invitation.',
 
   // Header / Navigation
-  'header.manage_pro': 'Gestion Pro',
+  'header.manage_pro': 'Activité',
   'header.language': 'Langue',
   'header.favorites': 'Favoris',
   'nav.famille': 'Famille',

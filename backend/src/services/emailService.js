@@ -391,6 +391,81 @@ export async function sendSubscriptionCutoffWarningEmail({ proEmail, proName = '
   await sendAutomatic({ to: proEmail, toName: proName, subject, htmlContent });
 }
 
+// ─── Rendez-vous accepté (Brevo → MailerSend secours) ────────────────────────
+
+export async function sendAppointmentAcceptedEmail({ to, toName = '', proName, appointmentDate, appointmentTime, service, responseMessage }) {
+  if (!to) return;
+  const dateInfo = appointmentDate && appointmentTime
+    ? `<p style="color:#374151;">📅 <strong>Date :</strong> ${appointmentDate} à ${appointmentTime}</p>`
+    : '';
+  const serviceInfo = service
+    ? `<p style="color:#374151;">🩺 <strong>Service :</strong> ${service}</p>`
+    : '';
+  const responseInfo = responseMessage
+    ? `<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;padding:14px 18px;margin:16px 0;">
+        <p style="color:#065f46;margin:0;font-weight:bold;">Message du professionnel :</p>
+        <p style="color:#374151;margin:8px 0 0;">${responseMessage}</p>
+       </div>`
+    : '';
+  const subject = `✅ Votre rendez-vous avec ${proName} a été accepté !`;
+  const htmlContent = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #a7f3d0;border-radius:8px;">
+      <div style="background:#065f46;border-radius:6px 6px 0 0;padding:16px 24px;margin:-24px -24px 24px;">
+        <h2 style="color:#ffffff;margin:0;">✅ Rendez-vous accepté</h2>
+      </div>
+      <p style="color:#374151;">Bonjour <strong>${toName}</strong>,</p>
+      <p style="color:#374151;">Votre demande de rendez-vous auprès de <strong>${proName}</strong> a été <strong style="color:#065f46;">acceptée</strong>.</p>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:16px 18px;margin:16px 0;">
+        ${dateInfo}
+        ${serviceInfo}
+      </div>
+      ${responseInfo}
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${FRONTEND_URL}/mes-rendez-vous"
+           style="background:#065f46;color:#ffffff;padding:14px 36px;border-radius:6px;
+                  text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">
+          Voir mes rendez-vous
+        </a>
+      </div>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+      <p style="color:#9ca3af;font-size:11px;text-align:center;">© Moftal — ${new Date().getFullYear()}</p>
+    </div>`;
+  await sendAutomatic({ to, toName, subject, htmlContent });
+}
+
+// ─── Rendez-vous refusé (Brevo → MailerSend secours) ─────────────────────────
+
+export async function sendAppointmentRejectedEmail({ to, toName = '', proName, responseMessage }) {
+  if (!to) return;
+  const responseInfo = responseMessage
+    ? `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:14px 18px;margin:16px 0;">
+        <p style="color:#9a3412;margin:0;font-weight:bold;">Message du professionnel :</p>
+        <p style="color:#374151;margin:8px 0 0;">${responseMessage}</p>
+       </div>`
+    : '';
+  const subject = `Votre rendez-vous avec ${proName} — mise à jour`;
+  const htmlContent = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;border:1px solid #fca5a5;border-radius:8px;">
+      <div style="background:#991b1b;border-radius:6px 6px 0 0;padding:16px 24px;margin:-24px -24px 24px;">
+        <h2 style="color:#ffffff;margin:0;">Rendez-vous non disponible</h2>
+      </div>
+      <p style="color:#374151;">Bonjour <strong>${toName}</strong>,</p>
+      <p style="color:#374151;">Nous vous informons que <strong>${proName}</strong> n'est pas en mesure d'honorer votre demande de rendez-vous pour le moment.</p>
+      ${responseInfo}
+      <p style="color:#374151;">Vous pouvez soumettre une nouvelle demande à une autre date ou consulter d'autres professionnels sur la plateforme.</p>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${FRONTEND_URL}/mes-rendez-vous"
+           style="background:#1e40af;color:#ffffff;padding:14px 36px;border-radius:6px;
+                  text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">
+          Voir mes rendez-vous
+        </a>
+      </div>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+      <p style="color:#9ca3af;font-size:11px;text-align:center;">© Moftal — ${new Date().getFullYear()}</p>
+    </div>`;
+  await sendAutomatic({ to, toName, subject, htmlContent });
+}
+
 // ─── Abonnement expiré (Brevo → MailerSend secours) ──────────────────────────
 
 export async function sendSubscriptionExpiredEmail({ proEmail, proName = '', expiredAt }) {

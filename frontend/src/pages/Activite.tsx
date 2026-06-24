@@ -82,6 +82,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
 
   const [groups, setGroups] = useState<ActivityGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ActivityGroup | null>(null);
+  const [isLoadingGroup, setIsLoadingGroup] = useState(false);
   const [activityMessages, setActivityMessages] = useState<any[]>([]);
   const messagesEndRefActivity = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -332,12 +333,10 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   };
 
   const loadActivityGroups = useCallback(async () => {
-    const activityName = getActivityName(activeTab);
-    if (!activityName) {
-      setGroups([]);
-      setSelectedGroup(null);
-      return;
-    }
+    setIsLoadingGroup(true);
+    // Utilise le nom réel de l'activité, ou un nom générique par défaut (ex : admin sans activités renseignées)
+    const activityName = getActivityName(activeTab)
+      || (activeTab === 'Activité1' ? 'Activité 1' : activeTab === 'Activité2' ? 'Activité 2' : 'Activité 3');
 
     try {
       const token = getToken();
@@ -405,6 +404,8 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
           setSelectedGroup(defaultGroups[0]);
         }
       }
+    } finally {
+      setIsLoadingGroup(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedPays, userData?.activite1, userData?.activite2, userData?.activite3]);
@@ -481,15 +482,14 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   const joinActivityGroup = async (groupId: string) => {
     try {
       const token = getToken();
-      const response = await fetch(`${API_BASE_URL}/activities/join-group`, {
+      const response = await fetch(`${API_BASE_URL}/activities/groups/${groupId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          groupId,
-          userId: userData?.numeroH
+          numeroH: userData?.numeroH
         })
       });
 
@@ -681,7 +681,8 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     loadActivityGroups();
   }, [activeTab, selectedPays, loadActivityGroups]);
 
-  const activeActivityName = getActivityName(activeTab);
+  const activeActivityName = getActivityName(activeTab)
+    || (activeTab === 'Activité1' ? 'Activité 1' : activeTab === 'Activité2' ? 'Activité 2' : 'Activité 3');
   const filteredGroups = groups.filter(group => group.activity === activeActivityName);
 
   return (
@@ -749,11 +750,12 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                 { id: 'Activité3' as const, defaultLabel: 'Activité 3', icon: '🤝' }
               ];
 
-              const tabs = isAdmin(userData)
+              const filteredTabs = isAdmin(userData)
                 ? allTabs
                 : allTabs.filter((tab) => !!getActivityName(tab.id));
 
-              if (tabs.length === 0) return null;
+              // Toujours afficher au moins l'onglet Activité 1
+              const tabs = filteredTabs.length > 0 ? filteredTabs : [allTabs[0]];
 
               return tabs.map((tab) => (
                 <button
@@ -777,133 +779,68 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-6">
-            {/* Liste des groupes - Affichée seulement si aucun groupe n'est sélectionné */}
-            {!selectedGroup && (
-              <div className="space-y-2 mb-6">
-                {filteredGroups.length > 0 ? (
-                  filteredGroups.map((group) => (
-                    <div
-                      key={group.id}
-                      onClick={async () => {
-                        if (!group.members.includes(userData?.numeroH || '')) {
-                          await joinActivityGroup(group.id);
-                        }
-                        setSelectedGroup(group);
-                      }}
-                      className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
-                    >
-                      <h3 className="font-semibold text-gray-900">{group.name}</h3>
+            {/* Interface TOUJOURS visible — le contenu s'affiche dès l'ouverture */}
+            <div className="space-y-4">
+              {/* Filtres */}
+              <div className="flex gap-2 flex-wrap">
+                <button type="button" onClick={() => setFeedFilter('all')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  💬 Messages
+                </button>
+                <button type="button" onClick={() => setFeedFilter('opportunite')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${feedFilter === 'opportunite' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}>
+                  🌟 Opportunités
+                </button>
+                <button type="button" onClick={() => setFeedFilter('outil')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${feedFilter === 'outil' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'}`}>
+                  🛠️ Outils
+                </button>
               </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-6xl mb-4">
-                      {activeTab === 'Activité1' && '🌐'}
-                      {activeTab === 'Activité2' && '👥'}
-                      {activeTab === 'Activité3' && '🤝'}
-            </div>
-                    <p className="text-gray-500 mb-4">Aucun groupe pour cette activité</p>
-                    <p className="text-sm text-gray-400">Les organisations sont créées automatiquement lors de l'enregistrement des utilisateurs. Les personnes ayant la même activité se retrouvent dans le même groupe.</p>
-              </div>
-                )}
-            </div>
-            )}
-
-            {/* Interface de publication - Affichée directement sans header */}
-            {selectedGroup && (
-              <div className="mt-4 space-y-4">
-                {/* Filtre du fil — Messagerie : Information, Réunion, Rencontre */}
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setFeedFilter('all')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                      feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    💬 Messages
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFeedFilter('opportunite')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                      feedFilter === 'opportunite' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
-                    }`}
-                  >
-                    🌟 Opportunités
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFeedFilter('outil')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                      feedFilter === 'outil' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
-                    }`}
-                  >
-                    🛠️ Outils
-                  </button>
-                </div>
 
               <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ minHeight: '500px', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
                 {/* Zone de messages */}
                 <div className="flex-1 overflow-y-auto bg-gray-100 p-4" style={{ minHeight: '300px', maxHeight: 'calc(70vh - 200px)' }}>
-                  {(() => {
+                  {isLoadingGroup ? (
+                    <div className="text-center py-12">
+                      <div className="w-9 h-9 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-3" />
+                      <p className="text-gray-400 text-sm">Connexion au groupe…</p>
+                    </div>
+                  ) : (() => {
                     const filtered = feedFilter === 'all'
                       ? activityMessages.filter((m: any) => !['opportunite', 'outil'].includes(m.category || 'information'))
                       : activityMessages.filter((m: any) => (m.category || 'information') === feedFilter);
 
-                    // Onglet Outils — outils fixes + cartes publiées par les membres
                     if (feedFilter === 'outil') {
                       return (
                         <>
-                          {/* Outils fixes de la plateforme */}
                           <div className="mb-4 flex justify-center">
-                            <Link
-                              to="/info-wallou"
-                              className="flex items-center gap-4 bg-gradient-to-r from-blue-700 to-slate-800 rounded-xl p-4 shadow-md border border-blue-500 hover:brightness-110 transition-all group max-w-xl w-full"
-                            >
+                            <Link to="/info-wallou" className="flex items-center gap-4 bg-gradient-to-r from-blue-700 to-slate-800 rounded-xl p-4 shadow-md border border-blue-500 hover:brightness-110 transition-all group max-w-xl w-full">
                               <span className="text-4xl group-hover:scale-110 transition-transform">📋</span>
                               <div className="flex-1">
                                 <h3 className="font-bold text-white text-base">Moftal Info</h3>
-                                <p className="text-sm text-blue-200">
-                                  Créez des carreaux d'information avec photo, vidéo et audio
-                                </p>
-                                <p className="text-xs text-blue-300 mt-1">
-                                  Mariage · Baptême · Réunion · Santé · Décès
-                                </p>
+                                <p className="text-sm text-blue-200">Créez des carreaux d'information avec photo, vidéo et audio</p>
+                                <p className="text-xs text-blue-300 mt-1">Mariage · Baptême · Réunion · Santé · Décès</p>
                               </div>
                               <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
                             </Link>
                           </div>
-
                           <div className="mb-4 flex justify-center">
-                            <Link
-                              to="/professeur-ia"
-                              className="flex items-center gap-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl p-4 shadow-md border border-cyan-400 hover:brightness-110 transition-all group max-w-xl w-full"
-                            >
+                            <Link to="/professeur-ia" className="flex items-center gap-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl p-4 shadow-md border border-cyan-400 hover:brightness-110 transition-all group max-w-xl w-full">
                               <span className="text-4xl group-hover:scale-110 transition-transform">🤖</span>
                               <div className="flex-1">
                                 <h3 className="font-bold text-white text-base">Assistant IA Français & Mathématiques</h3>
-                                <p className="text-sm text-cyan-100">
-                                  Posez vos questions en français et en math, l'IA vous aide pas à pas.
-                                </p>
+                                <p className="text-sm text-cyan-100">Posez vos questions en français et en math, l'IA vous aide pas à pas.</p>
                               </div>
                               <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
                             </Link>
                           </div>
-
-                          {/* Outils publiés par les membres */}
-                          {filtered.length === 0 ? (
-                            <div className="text-center text-gray-500 py-6">
-                              <p>Aucun outil partagé. Proposez une ressource !</p>
-                            </div>
-                          ) : (
-                            filtered.map((msg: any) => renderToolCard(msg))
-                          )}
+                          {filtered.length === 0
+                            ? <div className="text-center text-gray-500 py-6"><p>Aucun outil partagé. Proposez une ressource !</p></div>
+                            : filtered.map((msg: any) => renderToolCard(msg))}
                         </>
                       );
                     }
 
-                    // Cas "Opportunités" : bannière dédiée + messages
                     if (feedFilter === 'opportunite') {
                       return (
                         <>
@@ -913,27 +850,19 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                                 <span className="text-3xl">🌟</span>
                                 <div>
                                   <h3 className="font-bold text-amber-800 text-base mb-1">Opportunités professionnelles</h3>
-                                  <p className="text-sm text-amber-700">
-                                    Partagez des offres d'emploi, collaborations, projets ou appels d'offres avec votre réseau.
-                                  </p>
+                                  <p className="text-sm text-amber-700">Partagez des offres d'emploi, collaborations, projets ou appels d'offres avec votre réseau.</p>
                                   <p className="text-xs text-amber-600 mt-1">Publiez en sélectionnant la catégorie <strong>🌟 Opportunité</strong> ci-dessous.</p>
                                 </div>
                               </div>
                             </div>
                           </div>
-                          {filtered.length === 0 ? (
-                            <div className="text-center text-gray-500 py-6">
-                              <p className="text-lg mb-1">Aucune opportunité partagée pour le moment.</p>
-                              <p className="text-sm">Soyez le premier à partager une opportunité dans ce groupe !</p>
-                            </div>
-                          ) : (
-                            filtered.map((msg: any) => renderMessage(msg, 'bg-amber-500', 'bg-amber-500'))
-                          )}
+                          {filtered.length === 0
+                            ? <div className="text-center text-gray-500 py-6"><p className="text-lg mb-1">Aucune opportunité pour le moment.</p><p className="text-sm">Soyez le premier à en partager une !</p></div>
+                            : filtered.map((msg: any) => renderMessage(msg, 'bg-amber-500', 'bg-amber-500'))}
                         </>
                       );
                     }
 
-                    // Cas normal : Messages (all)
                     if (filtered.length === 0) {
                       return (
                         <div className="text-center text-gray-500 py-8">
@@ -942,137 +871,98 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                         </div>
                       );
                     }
-
                     return filtered.map((msg: any) => renderMessage(msg, 'bg-green-500', 'bg-indigo-600'));
                   })()}
                   <div ref={messagesEndRefActivity} />
-                      </div>
+                </div>
 
-                {/* Zone de saisie */}
-                <div className="bg-gray-200 px-4 py-2 border-t">
-                  {/* Formulaire dédié pour publier un outil (visible seulement dans l'onglet Outils) */}
-                  {feedFilter === 'outil' && (
-                    <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
-                      <p className="text-xs font-bold text-blue-800">🛠️ Partager un outil</p>
-                      <input
-                        type="text"
-                        value={toolForm.nom}
-                        onChange={(e) => setToolForm({ ...toolForm, nom: e.target.value })}
-                        placeholder="Lien (https://...) ou nom d'application (ex: WhatsApp, Canva...)"
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                      <input
-                        type="text"
-                        value={toolForm.description}
-                        onChange={(e) => setToolForm({ ...toolForm, description: e.target.value })}
-                        placeholder="Description (facultatif)"
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                      />
-                      <button
-                        onClick={sendTool}
-                        disabled={!toolForm.nom.trim()}
-                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        ✅ Partager l'outil
-                      </button>
-                    </div>
-                  )}
-                  {/* Formulaire message normal — masqué dans l'onglet Outils */}
-                  {feedFilter !== 'outil' && (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <select
-                        value={newActivityPost.category}
-                        onChange={(e) => setNewActivityPost({...newActivityPost, category: e.target.value as any})}
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
-                      >
-                        <option value="information">ℹ️ Information</option>
-                        <option value="reunion">👥 Réunion</option>
-                        <option value="rencontre">🤝 Rencontre</option>
-                        <option value="opportunite">🌟 Opportunité</option>
-                      </select>
-                    </div>
-                    {/* Zone de saisie */}
-                    <div className="flex gap-2">
-                      <div className="flex gap-2 flex-1">
-                        <select
-                          value={newActivityPost.type}
-                          onChange={(e) => {
-                            setNewActivityPost({...newActivityPost, type: e.target.value as any, mediaFile: null});
-                          }}
-                          className="px-2 py-2 border border-gray-300 rounded-lg bg-white text-sm"
-                        >
-                          <option value="text">📝</option>
-                          <option value="image">🖼️</option>
-                          <option value="video">🎥</option>
-                          <option value="audio">🎵</option>
-                        </select>
-                        {newActivityPost.type === 'text' ? (
-                          <input
-                            type="text"
-                            value={newActivityPost.content}
-                            onChange={(e) => setNewActivityPost({...newActivityPost, content: e.target.value})}
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                sendActivityMessage();
-                              }
-                            }}
-                            placeholder="Tapez un message..."
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
-                          />
-                        ) : newActivityPost.type === 'audio' ? (
-                          <div className="flex gap-2 flex-1 items-center">
-                            {newActivityPost.mediaFile ? (
-                              <div className="flex items-center gap-2 flex-1 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
-                                <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
-                                <button type="button" onClick={() => setNewActivityPost({...newActivityPost, mediaFile: null})} className="text-red-500 hover:text-red-700 text-xs font-medium">✕</button>
+                {/* Zone de saisie — disponible dès que le groupe est prêt */}
+                {!isLoadingGroup && (
+                  <div className="bg-gray-200 px-4 py-2 border-t">
+                    {feedFilter === 'outil' && (
+                      <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
+                        <p className="text-xs font-bold text-blue-800">🛠️ Partager un outil</p>
+                        <input type="text" value={toolForm.nom} onChange={(e) => setToolForm({ ...toolForm, nom: e.target.value })}
+                          placeholder="Lien (https://...) ou nom d'application (ex: WhatsApp, Canva...)"
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                        <input type="text" value={toolForm.description} onChange={(e) => setToolForm({ ...toolForm, description: e.target.value })}
+                          placeholder="Description (facultatif)"
+                          className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                        <button onClick={sendTool} disabled={!toolForm.nom.trim() || !selectedGroup}
+                          className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                          ✅ Partager l'outil
+                        </button>
+                      </div>
+                    )}
+                    {feedFilter !== 'outil' && selectedGroup && (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <select value={newActivityPost.category} onChange={(e) => setNewActivityPost({...newActivityPost, category: e.target.value as any})}
+                            className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm">
+                            <option value="information">ℹ️ Information</option>
+                            <option value="reunion">👥 Réunion</option>
+                            <option value="rencontre">🤝 Rencontre</option>
+                            <option value="opportunite">🌟 Opportunité</option>
+                          </select>
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex gap-2 flex-1">
+                            <select value={newActivityPost.type} onChange={(e) => { setNewActivityPost({...newActivityPost, type: e.target.value as any, mediaFile: null}); }}
+                              className="px-2 py-2 border border-gray-300 rounded-lg bg-white text-sm">
+                              <option value="text">📝</option>
+                              <option value="image">🖼️</option>
+                              <option value="video">🎥</option>
+                              <option value="audio">🎵</option>
+                            </select>
+                            {newActivityPost.type === 'text' ? (
+                              <input type="text" value={newActivityPost.content}
+                                onChange={(e) => setNewActivityPost({...newActivityPost, content: e.target.value})}
+                                onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendActivityMessage(); } }}
+                                placeholder="Tapez un message..."
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500" />
+                            ) : newActivityPost.type === 'audio' ? (
+                              <div className="flex gap-2 flex-1 items-center">
+                                {newActivityPost.mediaFile ? (
+                                  <div className="flex items-center gap-2 flex-1 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+                                    <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
+                                    <button type="button" onClick={() => setNewActivityPost({...newActivityPost, mediaFile: null})} className="text-red-500 hover:text-red-700 text-xs font-medium">✕</button>
+                                  </div>
+                                ) : (
+                                  <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
+                                    const file = new File([blob], 'vocal.webm', { type: blob.type });
+                                    setNewActivityPost({...newActivityPost, mediaFile: file});
+                                  }} />
+                                )}
                               </div>
                             ) : (
-                              <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
-                                const file = new File([blob], 'vocal.webm', { type: blob.type });
-                                setNewActivityPost({...newActivityPost, mediaFile: file});
-                              }} />
+                              <input type="file" accept={newActivityPost.type === 'image' ? 'image/*' : 'video/*'}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0] || null;
+                                  if (file) {
+                                    let detectedType = newActivityPost.type;
+                                    if (file.type.startsWith('image/')) detectedType = 'image';
+                                    else if (file.type.startsWith('video/')) detectedType = 'video';
+                                    else if (file.type.startsWith('audio/')) detectedType = 'audio';
+                                    setNewActivityPost({...newActivityPost, type: detectedType, mediaFile: file});
+                                  } else {
+                                    setNewActivityPost({...newActivityPost, mediaFile: null});
+                                  }
+                                }}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm" />
                             )}
                           </div>
-                        ) : (
-                          <input
-                            type="file"
-                            accept={newActivityPost.type === 'image' ? 'image/*' : 'video/*'}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0] || null;
-                              if (file) {
-                                let detectedType = newActivityPost.type;
-                                if (file.type.startsWith('image/')) {
-                                  detectedType = 'image';
-                                } else if (file.type.startsWith('video/')) {
-                                  detectedType = 'video';
-                                } else if (file.type.startsWith('audio/')) {
-                                  detectedType = 'audio';
-                                }
-                                setNewActivityPost({...newActivityPost, type: detectedType, mediaFile: file});
-                              } else {
-                                setNewActivityPost({...newActivityPost, mediaFile: null});
-                              }
-                            }}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm"
-                          />
-                        )}
+                          <button onClick={sendActivityMessage}
+                            disabled={newActivityPost.type === 'text' ? !newActivityPost.content.trim() : !newActivityPost.mediaFile}
+                            className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+                            ▶
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={sendActivityMessage}
-                        disabled={newActivityPost.type === 'text' ? !newActivityPost.content.trim() : !newActivityPost.mediaFile}
-                        className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                      >
-                        ▶
-                      </button>
-                      </div>
+                    )}
                   </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
-            )}
 
         {/* Section publiants validés */}
         <ProSection

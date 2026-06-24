@@ -143,7 +143,7 @@ const pul: Record<string, string> = {
   'member.footer.a': 'Jokkondir e jeynguɗo lowre ngam ɗaɓɓude jokkondiral.',
 
   // Header / Navigation
-  'header.manage_pro': 'Gollal Kawɗo',
+  'header.manage_pro': 'Activité',
   'header.language': 'Ɗemngal',
   'header.favorites': 'Ñalnde',
   'nav.famille': 'Galle',

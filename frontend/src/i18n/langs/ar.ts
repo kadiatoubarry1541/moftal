@@ -143,7 +143,7 @@ const ar: Record<string, string> = {
   'member.footer.a': 'تواصل مع مالك الموقع لطلب دعوة.',
 
   // رأس الصفحة / التنقل
-  'header.manage_pro': 'إدارة مهنية',
+  'header.manage_pro': 'نشاط',
   'header.language': 'اللغة',
   'header.favorites': 'المفضلة',
   'nav.famille': 'العائلة',

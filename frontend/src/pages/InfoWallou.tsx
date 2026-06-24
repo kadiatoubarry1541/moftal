@@ -3,7 +3,9 @@
 type CardType =
   | "mariage" | "bapteme" | "deces" | "reunion_physique" | "reunion_ligne" | "sante"
   | "fiancailles" | "naissance" | "commemoration" | "conference" | "webinaire" | "urgence"
-  | "anniversaire" | "fete" | "priere" | "aide" | "emploi";
+  | "anniversaire" | "fete" | "priere" | "aide" | "emploi"
+  | "condoleances" | "felicitations" | "remerciement" | "appel_communaute"
+  | "temoignage" | "communique" | "demande_pardon";
 
 interface CardState {
   type: CardType;
@@ -35,6 +37,7 @@ interface CardState {
   contact: string;
   posteEmploi: string;
   entreprise: string;
+  destinataireNumeroH: string;
 }
 
 const defaultCard = (type: CardType): CardState => ({
@@ -57,6 +60,7 @@ const defaultCard = (type: CardType): CardState => ({
   typeEvenement: "",
   typeAide: "", contact: "",
   posteEmploi: "", entreprise: "",
+  destinataireNumeroH: "",
 });
 
 // ─── Photo Slot ──────────────────────────────────────────────────────────────
@@ -979,11 +983,284 @@ function CarreauEmploi({ card, setCard }: { card: CardState; setCard: React.Disp
   );
 }
 
+// ─── Condoléances ────────────────────────────────────────────────────────────
+function CarreauCondoleances({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
+  const msgs = ["Nos pensées accompagnent votre famille 🙏", "Que son âme repose en paix", "Soyez forts, vous n'êtes pas seuls", "Toutes nos condoléances à toute la famille", "Que Dieu vous accorde patience et réconfort"];
+  return (
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#1e293b,#334155,#1e293b)" }}>
+      <CardHeader title="Condoléances" emoji="💙" subtitle="Message de soutien et compassion" />
+      <div className="px-4 py-3 flex items-center gap-4 border-b border-white/15">
+        <Photo value={card.photoDefunt} onChange={v => setCard(p => ({ ...p, photoDefunt: v }))} label="Photo" />
+        <div className="flex-1 space-y-2">
+          <Field value={card.nomDefunt} onChange={v => setCard(p => ({ ...p, nomDefunt: v }))} placeholder="Nom du défunt / de la personne endeuillée" className="font-bold text-base" />
+          <Field value={card.prenomBebe} onChange={v => setCard(p => ({ ...p, prenomBebe: v }))} placeholder="De la part de (nom, famille...)" />
+        </div>
+      </div>
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="💬" label="Message de soutien" />
+        <MessagePicker suggestions={msgs} value={card.message} onChange={v => setCard(p => ({ ...p, message: v }))} />
+      </div>
+      <div className="px-4 py-2">
+        <Mic card={card} setCard={setCard} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Félicitations ────────────────────────────────────────────────────────────
+function CarreauFelicitations({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
+  const occasions = ["🎓 Diplôme / Réussite scolaire", "💍 Mariage", "👶 Naissance", "📈 Promotion professionnelle", "🏆 Victoire / Prix", "🏠 Nouvelle maison", "✈️ Nouveau départ", "💼 Création d'entreprise", "🎂 Anniversaire important", "🌟 Autre bonne nouvelle"];
+  const msgs = ["Toutes nos félicitations ! 🎉", "Nous sommes si fiers de toi !", "Que ce succès soit le premier d'une longue série", "Bravo, tu le mérites vraiment !", "Que Dieu bénisse ce nouveau chapitre"];
+  return (
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#78350f,#d97706,#92400e)" }}>
+      <CardHeader title="Félicitations" emoji="🏆" subtitle="Partager une bonne nouvelle" />
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="🌟" label="Pour quelle occasion ?" />
+        <div className="flex flex-wrap gap-1.5">
+          {occasions.map(o => (
+            <button key={o} onClick={() => setCard(p => ({ ...p, typeEvenement: p.typeEvenement === o ? "" : o }))}
+              className={`px-2.5 py-1.5 rounded-lg text-xs border font-medium transition-all ${card.typeEvenement === o ? "bg-white/35 border-white/60 text-white" : "bg-white/10 border-white/25 text-white/65 hover:bg-white/20"}`}>
+              {o}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="px-4 py-3 flex items-center gap-4 border-b border-white/15">
+        <Photo value={card.photoBebe} onChange={v => setCard(p => ({ ...p, photoBebe: v }))} label="Photo" />
+        <div className="flex-1 space-y-2">
+          <Field value={card.prenomBebe} onChange={v => setCard(p => ({ ...p, prenomBebe: v }))} placeholder="Nom de la personne / famille félicitée" className="font-bold text-base" />
+        </div>
+      </div>
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="💬" label="Message" />
+        <MessagePicker suggestions={msgs} value={card.message} onChange={v => setCard(p => ({ ...p, message: v }))} />
+      </div>
+      <div className="px-4 py-2">
+        <Mic card={card} setCard={setCard} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Remerciement ────────────────────────────────────────────────────────────
+function CarreauRemerciement({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
+  const msgs = ["Merci du fond du cœur 🙏", "Votre soutien a tout changé pour nous", "Nous n'oublierons jamais ce que vous avez fait", "Que Dieu vous récompense au centuple", "Votre générosité est un exemple pour tous"];
+  return (
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#064e3b,#059669,#065f46)" }}>
+      <CardHeader title="Remerciement" emoji="🙌" subtitle="Exprimer votre gratitude" />
+      <div className="px-4 py-3 flex items-center gap-4 border-b border-white/15">
+        <Photo value={card.photoFF} onChange={v => setCard(p => ({ ...p, photoFF: v }))} label="Photo" />
+        <div className="flex-1 space-y-2">
+          <Field value={card.prenomBebe} onChange={v => setCard(p => ({ ...p, prenomBebe: v }))} placeholder="À qui ? (nom, famille, organisation...)" className="font-bold text-base" />
+          <Field value={card.titre} onChange={v => setCard(p => ({ ...p, titre: v }))} placeholder="Pour quoi ? (aide, soutien, service...)" />
+        </div>
+      </div>
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="💬" label="Message de remerciement" />
+        <MessagePicker suggestions={msgs} value={card.message} onChange={v => setCard(p => ({ ...p, message: v }))} />
+      </div>
+      <div className="px-4 py-2">
+        <Mic card={card} setCard={setCard} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Appel à la communauté ───────────────────────────────────────────────────
+function CarreauAppelCommunaute({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
+  const types = ["📢 Sensibilisation", "🤝 Mobilisation solidaire", "🏗️ Projet communautaire", "🗳️ Prise de décision collective", "📚 Initiative éducative", "🌿 Environnement", "🏥 Santé publique", "💰 Collecte de fonds"];
+  const msgs = ["Soyons solidaires, agissons ensemble !", "Votre participation compte énormément", "Ensemble, nous pouvons changer les choses", "Ne restez pas indifférents, rejoignez-nous", "Chaque geste compte pour notre communauté"];
+  return (
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#7c2d12,#ea580c,#9a3412)" }}>
+      <CardHeader title="Appel à la Communauté" emoji="📣" subtitle="Mobiliser et sensibiliser" />
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="🎯" label="Type d'appel" />
+        <div className="flex flex-wrap gap-1.5">
+          {types.map(t => (
+            <button key={t} onClick={() => setCard(p => ({ ...p, typeEvenement: p.typeEvenement === t ? "" : t }))}
+              className={`px-2.5 py-1.5 rounded-lg text-xs border font-medium transition-all ${card.typeEvenement === t ? "bg-white/35 border-white/60 text-white" : "bg-white/10 border-white/25 text-white/65 hover:bg-white/20"}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="📌" label="Titre de l'appel" />
+        <Field value={card.titre} onChange={v => setCard(p => ({ ...p, titre: v }))} placeholder="Ex: Collecte pour les sinistrés de Conakry" className="font-bold text-base mb-2" />
+      </div>
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="💬" label="Message" />
+        <MessagePicker suggestions={msgs} value={card.message} onChange={v => setCard(p => ({ ...p, message: v }))} />
+      </div>
+      <div className="px-4 py-2 border-b border-white/15">
+        <Mic card={card} setCard={setCard} />
+      </div>
+      <div className="px-4 py-3 space-y-2">
+        <Section icon="📍" label="Rendez-vous / Contact" />
+        <DateTimeRow value={card.dateReunion} onChange={v => setCard(p => ({ ...p, dateReunion: v }))} label="Date" />
+        <LieuRow value={card.lieuReunion} onChange={v => setCard(p => ({ ...p, lieuReunion: v }))} placeholder="Lieu de rassemblement" />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/15 border border-white/20">
+          <span className="text-sm">📞</span>
+          <input type="tel" value={card.contact} onChange={e => setCard(p => ({ ...p, contact: e.target.value }))}
+            placeholder="Contact" className="bg-transparent outline-none text-white placeholder-white/30 text-sm flex-1" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Témoignage ──────────────────────────────────────────────────────────────
+function CarreauTemoignage({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
+  const themes = ["🏥 Guérison / Santé", "💼 Réussite professionnelle", "🎓 Succès scolaire", "🤲 Foi et spiritualité", "💪 Résilience et courage", "🏠 Nouveau logement", "💑 Famille / Mariage", "🌍 Migration / Voyage"];
+  return (
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#3b0764,#7c3aed,#4c1d95)" }}>
+      <CardHeader title="Témoignage" emoji="💬" subtitle="Partagez votre expérience" />
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="🌟" label="Thème du témoignage" />
+        <div className="flex flex-wrap gap-1.5">
+          {themes.map(t => (
+            <button key={t} onClick={() => setCard(p => ({ ...p, typeEvenement: p.typeEvenement === t ? "" : t }))}
+              className={`px-2.5 py-1.5 rounded-lg text-xs border font-medium transition-all ${card.typeEvenement === t ? "bg-white/35 border-white/60 text-white" : "bg-white/10 border-white/25 text-white/65 hover:bg-white/20"}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="px-4 py-3 flex items-center gap-4 border-b border-white/15">
+        <Photo value={card.photoFF} onChange={v => setCard(p => ({ ...p, photoFF: v }))} label="Photo" />
+        <div className="flex-1 space-y-2">
+          <Field value={card.prenomBebe} onChange={v => setCard(p => ({ ...p, prenomBebe: v }))} placeholder="Votre nom (ou rester anonyme)" className="font-bold text-base" />
+          <Field value={card.titre} onChange={v => setCard(p => ({ ...p, titre: v }))} placeholder="Titre de votre témoignage" />
+        </div>
+      </div>
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="📝" label="Votre témoignage" />
+        <textarea value={card.message} onChange={e => setCard(p => ({ ...p, message: e.target.value }))}
+          placeholder="Racontez votre expérience, ce que vous avez vécu, ce que ça vous a appris..."
+          rows={4}
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 outline-none text-white placeholder-white/30 text-sm resize-none" />
+      </div>
+      <div className="px-4 py-2 border-b border-white/15">
+        <Mic card={card} setCard={setCard} />
+      </div>
+      <div className="px-4 py-3">
+        <Section icon="🎬" label="Vidéo témoignage (optionnel)" />
+        <VideoSlot value={card.videoSante} onChange={v => setCard(p => ({ ...p, videoSante: v }))} label="Ajouter une vidéo (max 30s)" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Communiqué officiel ──────────────────────────────────────────────────────
+function CarreauCommunique({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
+  const types = ["📜 Décision officielle", "📢 Annonce importante", "🔔 Information urgente", "📋 Compte-rendu", "🏛️ Communiqué politique", "🕌 Communiqué religieux", "🏥 Communiqué santé", "🎓 Communiqué éducatif"];
+  return (
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#0c1445,#1d4ed8,#1e3a8a)" }}>
+      <CardHeader title="Communiqué Officiel" emoji="📋" subtitle="Annonce formelle et institutionnelle" />
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="🏛️" label="Type de communiqué" />
+        <div className="flex flex-wrap gap-1.5">
+          {types.map(t => (
+            <button key={t} onClick={() => setCard(p => ({ ...p, typeEvenement: p.typeEvenement === t ? "" : t }))}
+              className={`px-2.5 py-1.5 rounded-lg text-xs border font-medium transition-all ${card.typeEvenement === t ? "bg-white/35 border-white/60 text-white" : "bg-white/10 border-white/25 text-white/65 hover:bg-white/20"}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="px-4 py-3 flex items-center gap-4 border-b border-white/15">
+        <Photo value={card.photoIntervenant} onChange={v => setCard(p => ({ ...p, photoIntervenant: v }))} label="Logo / Photo" />
+        <div className="flex-1 space-y-2">
+          <Field value={card.parents} onChange={v => setCard(p => ({ ...p, parents: v }))} placeholder="Organisation / Autorité émettrice" className="font-bold text-base" />
+          <Field value={card.titre} onChange={v => setCard(p => ({ ...p, titre: v }))} placeholder="Objet du communiqué" />
+        </div>
+      </div>
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="📝" label="Contenu du communiqué" />
+        <textarea value={card.message} onChange={e => setCard(p => ({ ...p, message: e.target.value }))}
+          placeholder="Rédigez ici le texte officiel du communiqué..."
+          rows={5}
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 outline-none text-white placeholder-white/30 text-sm resize-none" />
+      </div>
+      <div className="px-4 py-3 space-y-2">
+        <Section icon="📅" label="Date et contact" />
+        <DateRow value={card.dateMarriage} onChange={v => setCard(p => ({ ...p, dateMarriage: v }))} label="Date d'émission" />
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/15 border border-white/20">
+          <span className="text-sm">📞</span>
+          <input type="text" value={card.contact} onChange={e => setCard(p => ({ ...p, contact: e.target.value }))}
+            placeholder="Contact / Email officiel" className="bg-transparent outline-none text-white placeholder-white/30 text-sm flex-1" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Demande de pardon ────────────────────────────────────────────────────────
+function CarreauDemandePardon({ card, setCard }: { card: CardState; setCard: React.Dispatch<React.SetStateAction<CardState>> }) {
+  const msgs = ["Je vous demande sincèrement pardon 🙏", "Je regrette profondément mes actes", "Je reconnais mes torts et vous demande de me pardonner", "Que Dieu nous aide à nous réconcilier", "Je tends la main en signe de paix et de réconciliation", "Mon cœur est sincère, je désire réparer"];
+  return (
+    <div className="rounded-xl overflow-hidden shadow-2xl" style={{ background: "linear-gradient(135deg,#134e4a,#0f766e,#115e59)" }}>
+      <CardHeader title="Demande de Pardon" emoji="🤝" subtitle="Réconciliation et paix" />
+      <div className="px-4 py-3 flex items-center gap-4 border-b border-white/15">
+        <Photo value={card.photoFF} onChange={v => setCard(p => ({ ...p, photoFF: v }))} label="Photo" />
+        <div className="flex-1 space-y-2">
+          <Field value={card.prenomBebe} onChange={v => setCard(p => ({ ...p, prenomBebe: v }))} placeholder="De qui ? (votre nom)" className="font-bold text-base" />
+          <Field value={card.epoux} onChange={v => setCard(p => ({ ...p, epoux: v }))} placeholder="À qui ? (nom de la personne, famille, communauté...)" />
+        </div>
+      </div>
+      <div className="px-4 py-3 border-b border-white/15">
+        <Section icon="💬" label="Message de réconciliation" />
+        <MessagePicker suggestions={msgs} value={card.message} onChange={v => setCard(p => ({ ...p, message: v }))} />
+      </div>
+      <div className="px-4 py-2">
+        <Mic card={card} setCard={setCard} />
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PAGE PRINCIPALE
 // ═══════════════════════════════════════════════════════════════════════════════
 
 type TemplateGroup = { group: string; desc: string; items: { type: CardType; label: string; emoji: string; bg: string }[] };
+
+function generateShareText(card: CardState, type: CardType): string {
+  const fmtDate = (d: string) => {
+    if (!d) return '';
+    try { return new Date(d).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); } catch { return d; }
+  };
+  const lines: string[] = [];
+  switch (type) {
+    case 'mariage':     lines.push('💍 *MARIAGE*'); if (card.epouse && card.epoux) lines.push(`${card.epouse} & ${card.epoux}`); break;
+    case 'fiancailles': lines.push('💛 *FIANÇAILLES*'); if (card.epouse && card.epoux) lines.push(`${card.epouse} & ${card.epoux}`); break;
+    case 'bapteme':     lines.push('👶 *BAPTÊME*'); if (card.prenomBebe) lines.push(`Enfant : ${card.prenomBebe}`); if (card.parents) lines.push(`Parents : ${card.parents}`); if (card.dateBapteme) lines.push(`📅 ${fmtDate(card.dateBapteme)}`); if (card.lieuBapteme) lines.push(`📍 ${card.lieuBapteme}`); break;
+    case 'naissance':   lines.push('🌟 *NAISSANCE*'); if (card.prenomBebe) lines.push(`${card.prenomBebe}`); if (card.parents) lines.push(`Parents : ${card.parents}`); break;
+    case 'deces':       lines.push('🕯️ *DÉCÈS*'); if (card.nomDefunt) lines.push(card.nomDefunt); if (card.dateDeces) lines.push(`📅 Le ${fmtDate(card.dateDeces)}`); if (card.lieuDeces) lines.push(`📍 ${card.lieuDeces}`); if (card.dateEnterrement) lines.push(`⚰️ Enterrement : ${fmtDate(card.dateEnterrement)}`); if (card.lieuEnterrement) lines.push(`📍 ${card.lieuEnterrement}`); break;
+    case 'commemoration': lines.push('🕊️ *COMMÉMORATION*'); if (card.nomDefunt) lines.push(card.nomDefunt); if (card.dateReunion) lines.push(`📅 ${fmtDate(card.dateReunion)}`); if (card.lieuReunion) lines.push(`📍 ${card.lieuReunion}`); break;
+    case 'anniversaire': lines.push('🎂 *ANNIVERSAIRE*'); if (card.prenomBebe) lines.push(card.prenomBebe); if (card.age) lines.push(`${card.age} ans`); if (card.dateAnniversaire) lines.push(`📅 ${fmtDate(card.dateAnniversaire)}`); if (card.lieuReunion) lines.push(`📍 ${card.lieuReunion}`); break;
+    case 'fete':        lines.push('🎉 *FÊTE & CÉLÉBRATION*'); if (card.typeEvenement) lines.push(card.typeEvenement); if (card.prenomBebe) lines.push(card.prenomBebe); if (card.dateReunion) lines.push(`📅 ${fmtDate(card.dateReunion)}`); if (card.lieuReunion) lines.push(`📍 ${card.lieuReunion}`); break;
+    case 'priere':      lines.push('🙏 *PRIÈRE / CULTE*'); if (card.typeEvenement) lines.push(card.typeEvenement); if (card.titre) lines.push(card.titre); if (card.dateReunion) lines.push(`📅 ${fmtDate(card.dateReunion)}`); if (card.lieuReunion) lines.push(`📍 ${card.lieuReunion}`); break;
+    case 'reunion_physique': lines.push('🤝 *RÉUNION*'); if (card.but) lines.push(card.but); if (card.dateReunion) lines.push(`📅 ${fmtDate(card.dateReunion)}`); if (card.lieuReunion) lines.push(`📍 ${card.lieuReunion}`); break;
+    case 'conference':  lines.push('🎙️ *CONFÉRENCE*'); if (card.titre) lines.push(card.titre); if (card.dateReunion) lines.push(`📅 ${fmtDate(card.dateReunion)}`); if (card.lieuReunion) lines.push(`📍 ${card.lieuReunion}`); break;
+    case 'reunion_ligne': lines.push('💻 *RÉUNION EN LIGNE*'); if (card.but) lines.push(card.but); if (card.dateReunion) lines.push(`📅 ${fmtDate(card.dateReunion)}`); if (card.lienReunion) lines.push(`🔗 ${card.lienReunion}`); break;
+    case 'webinaire':   lines.push('📡 *WEBINAIRE*'); if (card.titre) lines.push(card.titre); if (card.dateReunion) lines.push(`📅 ${fmtDate(card.dateReunion)}`); if (card.lienReunion) lines.push(`🔗 ${card.lienReunion}`); break;
+    case 'sante':       lines.push('🏥 *INFORMATION SANTÉ*'); if (card.titre) lines.push(card.titre); break;
+    case 'urgence':     lines.push('🚨 *URGENCE MÉDICALE*'); if (card.typeUrgence) lines.push(card.typeUrgence); if (card.etablissement) lines.push(`🏥 ${card.etablissement}`); if (card.contact) lines.push(`📞 ${card.contact}`); break;
+    case 'aide':        lines.push('🤲 *AIDE COMMUNAUTAIRE*'); if (card.typeAide) lines.push(card.typeAide); if (card.typeEvenement) lines.push(card.typeEvenement); if (card.lieuDeces) lines.push(`📍 ${card.lieuDeces}`); if (card.contact) lines.push(`📞 ${card.contact}`); break;
+    case 'emploi':      lines.push('💼 *OFFRE D\'EMPLOI*'); if (card.posteEmploi) lines.push(card.posteEmploi); if (card.entreprise) lines.push(`🏢 ${card.entreprise}`); if (card.typeEvenement) lines.push(card.typeEvenement); if (card.contact) lines.push(`📞 ${card.contact}`); break;
+    case 'condoleances':   lines.push('💙 *CONDOLÉANCES*'); if (card.nomDefunt) lines.push(`Pour le décès de : ${card.nomDefunt}`); if (card.prenomBebe) lines.push(`De la part de : ${card.prenomBebe}`); break;
+    case 'felicitations':  lines.push('🏆 *FÉLICITATIONS*'); if (card.prenomBebe) lines.push(`À : ${card.prenomBebe}`); if (card.typeEvenement) lines.push(`Pour : ${card.typeEvenement}`); break;
+    case 'remerciement':   lines.push('🙌 *REMERCIEMENT*'); if (card.prenomBebe) lines.push(`À : ${card.prenomBebe}`); if (card.titre) lines.push(`Pour : ${card.titre}`); break;
+    case 'appel_communaute': lines.push('📣 *APPEL À LA COMMUNAUTÉ*'); if (card.titre) lines.push(card.titre); if (card.dateReunion) lines.push(`📅 ${fmtDate(card.dateReunion)}`); if (card.lieuReunion) lines.push(`📍 ${card.lieuReunion}`); if (card.contact) lines.push(`📞 ${card.contact}`); break;
+    case 'temoignage':     lines.push('💬 *TÉMOIGNAGE*'); if (card.prenomBebe) lines.push(`Par : ${card.prenomBebe}`); if (card.titre) lines.push(`Sujet : ${card.titre}`); break;
+    case 'communique':     lines.push('📋 *COMMUNIQUÉ OFFICIEL*'); if (card.parents) lines.push(`Émis par : ${card.parents}`); if (card.titre) lines.push(card.titre); if (card.contact) lines.push(`📞 ${card.contact}`); break;
+    case 'demande_pardon': lines.push('🤝 *DEMANDE DE PARDON*'); if (card.prenomBebe) lines.push(`De : ${card.prenomBebe}`); if (card.epoux) lines.push(`À : ${card.epoux}`); break;
+  }
+  if (card.message) lines.push(`\n${card.message}`);
+  lines.push(`\n_Moftal Info · ${new Date().toLocaleDateString('fr-FR')}_`);
+  return lines.join('\n');
+}
 
 const TEMPLATE_GROUPS: TemplateGroup[] = [
   {
@@ -1051,6 +1328,19 @@ const TEMPLATE_GROUPS: TemplateGroup[] = [
       { type: "emploi", label: "Offre d'emploi",     emoji: "💼", bg: "from-cyan-900 to-sky-700" },
     ],
   },
+  {
+    group: "Messages",
+    desc: "Condoléances, félicitations, témoignages et réconciliation",
+    items: [
+      { type: "condoleances",      label: "Condoléances",          emoji: "💙", bg: "from-slate-900 to-slate-700" },
+      { type: "felicitations",     label: "Félicitations",         emoji: "🏆", bg: "from-amber-900 to-yellow-700" },
+      { type: "remerciement",      label: "Remerciement",          emoji: "🙌", bg: "from-emerald-900 to-teal-700" },
+      { type: "appel_communaute",  label: "Appel Communauté",      emoji: "📣", bg: "from-orange-900 to-red-800" },
+      { type: "temoignage",        label: "Témoignage",            emoji: "💬", bg: "from-violet-900 to-purple-800" },
+      { type: "communique",        label: "Communiqué Officiel",   emoji: "📋", bg: "from-blue-950 to-blue-800" },
+      { type: "demande_pardon",    label: "Demande de Pardon",     emoji: "🤝", bg: "from-teal-900 to-teal-700" },
+    ],
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1077,6 +1367,13 @@ const CARD_BG: Record<CardType, string> = {
   urgence:          "linear-gradient(135deg,#450a0a,#dc2626,#7f1d1d)",
   aide:             "linear-gradient(135deg,#7c2d12,#ea580c,#9a3412)",
   emploi:           "linear-gradient(135deg,#0c4a6e,#0284c7,#075985)",
+  condoleances:     "linear-gradient(135deg,#1e293b,#334155,#1e293b)",
+  felicitations:    "linear-gradient(135deg,#78350f,#d97706,#92400e)",
+  remerciement:     "linear-gradient(135deg,#064e3b,#059669,#065f46)",
+  appel_communaute: "linear-gradient(135deg,#7c2d12,#ea580c,#9a3412)",
+  temoignage:       "linear-gradient(135deg,#3b0764,#7c3aed,#4c1d95)",
+  communique:       "linear-gradient(135deg,#0c1445,#1d4ed8,#1e3a8a)",
+  demande_pardon:   "linear-gradient(135deg,#134e4a,#0f766e,#115e59)",
 };
 
 function getCardTitle(type: CardType): string {
@@ -1087,6 +1384,9 @@ function getCardTitle(type: CardType): string {
     reunion_physique: "Réunion", conference: "Conférence",
     reunion_ligne: "Réunion en ligne", webinaire: "Webinaire",
     sante: "Santé", urgence: "Urgence", aide: "Aide", emploi: "Emploi",
+    condoleances: "Condoléances", felicitations: "Félicitations",
+    remerciement: "Remerciement", appel_communaute: "Appel Communauté",
+    temoignage: "Témoignage", communique: "Communiqué", demande_pardon: "Demande de Pardon",
   };
   return titles[type] || type;
 }
@@ -1096,6 +1396,8 @@ function getCardEmoji(type: CardType): string {
     fete:"🎉", priere:"🙏", deces:"🕯️", commemoration:"🕊️",
     reunion_physique:"🤝", conference:"🎙️", reunion_ligne:"💻", webinaire:"📡",
     sante:"🏥", urgence:"🚨", aide:"🤲", emploi:"💼",
+    condoleances:"💙", felicitations:"🏆", remerciement:"🙌",
+    appel_communaute:"📣", temoignage:"💬", communique:"📋", demande_pardon:"🤝",
   };
   return emojis[type] || "📋";
 }
@@ -1111,6 +1413,9 @@ function getCardSummary(type: CardType, card: CardState): string {
   if (type === "anniversaire") return card.prenomBebe || card.nomDefunt || "—";
   if (type === "fete") return card.titre || card.but || "—";
   if (type === "emploi") return card.posteEmploi || card.entreprise || "—";
+  if (type === "condoleances") return card.nomDefunt || card.prenomBebe || "—";
+  if (type === "felicitations" || type === "remerciement" || type === "demande_pardon") return card.prenomBebe || card.titre || "—";
+  if (type === "appel_communaute" || type === "temoignage" || type === "communique") return card.titre || card.parents || "—";
   return card.titre || card.but || "—";
 }
 
@@ -1376,6 +1681,10 @@ export default function InfoWallou() {
   const [pointsDisponibles, setPointsDisponibles] = useState<number | null>(null);
   const [userNumeroH, setUserNumeroH] = useState<string | null>(null);
   const [showAcheterPoints, setShowAcheterPoints] = useState(false);
+  const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
+  const [sendToNumeroH, setSendToNumeroH] = useState('');
+  const [sendStatus, setSendStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [sendError, setSendError] = useState('');
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -1471,7 +1780,29 @@ export default function InfoWallou() {
     setSavedCards(prev => prev.filter(s => s.id !== id));
   };
 
-  const handleSelect = (type: CardType) => { setSelected(type); setCard(defaultCard(type)); };
+  const copyToClipboard = async (text: string, format: string) => {
+    try { await navigator.clipboard.writeText(text); setCopiedFormat(format); setTimeout(() => setCopiedFormat(null), 2500); } catch { alert(text); }
+  };
+
+  const handleSendToMember = async () => {
+    if (!sendToNumeroH.trim()) return;
+    setSendStatus('loading'); setSendError('');
+    const token = localStorage.getItem('token');
+    if (!token) { setSendStatus('error'); setSendError('Connectez-vous pour envoyer.'); return; }
+    try {
+      const shareText = generateShareText(card, selected!);
+      const res = await fetch(`${API_BASE}/api/notifications/send-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ recipientNumeroH: sendToNumeroH.trim(), message: shareText, title: getCardTitle(selected!) })
+      });
+      const data = await res.json();
+      if (data.success) { setSendStatus('success'); setSendToNumeroH(''); setTimeout(() => setSendStatus('idle'), 3000); }
+      else { setSendStatus('error'); setSendError(data.message || 'Erreur lors de l\'envoi.'); }
+    } catch { setSendStatus('error'); setSendError('Erreur réseau.'); }
+  };
+
+  const handleSelect = (type: CardType) => { setSelected(type); setCard(defaultCard(type)); setSendStatus('idle'); setSendToNumeroH(''); };
 
   const downloadCard = () => {
     const el = document.getElementById("iw-card");
@@ -1505,6 +1836,13 @@ export default function InfoWallou() {
       case "priere":           return <CarreauPriere {...p} />;
       case "aide":             return <CarreauAide {...p} />;
       case "emploi":           return <CarreauEmploi {...p} />;
+      case "condoleances":     return <CarreauCondoleances {...p} />;
+      case "felicitations":    return <CarreauFelicitations {...p} />;
+      case "remerciement":     return <CarreauRemerciement {...p} />;
+      case "appel_communaute": return <CarreauAppelCommunaute {...p} />;
+      case "temoignage":       return <CarreauTemoignage {...p} />;
+      case "communique":       return <CarreauCommunique {...p} />;
+      case "demande_pardon":   return <CarreauDemandePardon {...p} />;
     }
   };
 
@@ -1742,6 +2080,65 @@ export default function InfoWallou() {
               </svg>
               Publier
             </button>
+          </div>
+
+          {/* ── Partager via messagerie ── */}
+          <div className="mt-5 rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="px-4 pt-4 pb-2">
+              <p className="text-white font-bold text-sm mb-1">📤 Formats de partage</p>
+              <p className="text-gray-500 text-[11px] mb-3">Copiez le texte dans le format de votre choix</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={() => copyToClipboard(generateShareText(card, selected!), 'whatsapp')}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-xl text-xs font-semibold transition-all"
+                  style={{ background: copiedFormat === 'whatsapp' ? "rgba(37,211,102,0.25)" : "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.25)", color: copiedFormat === 'whatsapp' ? "#4ade80" : "#22c55e" }}>
+                  <span className="text-xl">📱</span>
+                  {copiedFormat === 'whatsapp' ? '✅ Copié !' : 'WhatsApp'}
+                </button>
+                <button onClick={() => {
+                    const txt = generateShareText(card, selected!).replace(/\*/g, '').replace(/_/g, '');
+                    copyToClipboard(txt, 'sms');
+                  }}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-xl text-xs font-semibold transition-all"
+                  style={{ background: copiedFormat === 'sms' ? "rgba(99,102,241,0.25)" : "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", color: copiedFormat === 'sms' ? "#a5b4fc" : "#818cf8" }}>
+                  <span className="text-xl">💬</span>
+                  {copiedFormat === 'sms' ? '✅ Copié !' : 'SMS'}
+                </button>
+                <button onClick={() => {
+                    const txt = generateShareText(card, selected!).replace(/\*/g, '').replace(/_/g, '');
+                    const subject = encodeURIComponent(getCardTitle(selected!));
+                    const body = encodeURIComponent(txt);
+                    window.open(`mailto:?subject=${subject}&body=${body}`);
+                  }}
+                  className="flex flex-col items-center gap-1.5 py-3 rounded-xl text-xs font-semibold transition-all"
+                  style={{ background: "rgba(234,88,12,0.1)", border: "1px solid rgba(234,88,12,0.25)", color: "#fb923c" }}>
+                  <span className="text-xl">📧</span>
+                  Email
+                </button>
+              </div>
+            </div>
+
+            {/* ── Envoyer à un membre Moftal ── */}
+            <div className="px-4 pt-3 pb-4 border-t border-white/8 mt-3">
+              <p className="text-white font-bold text-sm mb-1">🔔 Envoyer à un membre Moftal</p>
+              <p className="text-gray-500 text-[11px] mb-3">Le destinataire recevra ce message dans ses notifications</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={sendToNumeroH}
+                  onChange={e => { setSendToNumeroH(e.target.value); setSendStatus('idle'); }}
+                  placeholder="NuméroH du destinataire..."
+                  className="flex-1 rounded-xl px-3 py-2.5 text-sm outline-none text-white placeholder-gray-600"
+                  style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}
+                />
+                <button onClick={handleSendToMember} disabled={sendStatus === 'loading' || !sendToNumeroH.trim()}
+                  className="px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-40"
+                  style={{ background: sendStatus === 'success' ? "rgba(16,185,129,0.7)" : "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                  {sendStatus === 'loading' ? '⏳' : sendStatus === 'success' ? '✅' : '→'}
+                </button>
+              </div>
+              {sendStatus === 'success' && <p className="mt-2 text-xs text-emerald-400">✅ Message envoyé avec succès !</p>}
+              {sendStatus === 'error' && <p className="mt-2 text-xs text-red-400">❌ {sendError}</p>}
+            </div>
           </div>
         </div>
       </div>

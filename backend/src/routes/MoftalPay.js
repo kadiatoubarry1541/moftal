@@ -299,9 +299,21 @@ router.get('/callback', async (req, res) => {
 
 // ─────────────────────────────────────────
 // POST /api/moftal-pay/retrait-pro
-// Professionnel retire son argent vers Orange Money
+// BLOQUÉ — les retraits passent obligatoirement par l'autorisation admin
+// Utiliser POST /api/withdrawal-requests à la place
 // ─────────────────────────────────────────
 router.post('/retrait-pro', authenticate, async (req, res) => {
+  return res.status(403).json({
+    success: false,
+    message: 'Les retraits nécessitent une autorisation admin. Soumettez une demande via /api/withdrawal-requests',
+    redirect: '/api/withdrawal-requests'
+  });
+});
+
+// ─────────────────────────────────────────
+// (ANCIEN CODE RETRAIT — conservé en référence, non utilisé)
+// ─────────────────────────────────────────
+async function _ancienRetraitPro(req, res) {
   try {
     const { montant, numeroOrangeMoney, description } = req.body;
     const { numeroH } = req.user;
@@ -419,7 +431,7 @@ router.post('/retrait-pro', authenticate, async (req, res) => {
     console.error('moftal-pay/retrait-pro:', err);
     res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
-});
+}
 
 // ─────────────────────────────────────────
 // POST /api/moftal-pay/paiement-interne

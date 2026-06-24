@@ -143,7 +143,7 @@ const man: Record<string, string> = {
   'member.footer.a': 'Kana kɔfɛ jɛman sɛbɛn inivite kɛ ka ban.',
 
   // Header / Navigation
-  'header.manage_pro': 'Baara Kɛcogo',
+  'header.manage_pro': 'Activité',
   'header.language': 'Kan',
   'header.favorites': 'Mɛnɛ',
   'nav.famille': 'Denbaya',

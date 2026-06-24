@@ -79,10 +79,9 @@ export default function Services({ onClose }: ServicesProps = {}) {
     { to: '/transport',                                emoji: '🚌', label: 'Transport',    bg: 'bg-blue-100'   },
     { to: '/beaute',                                   emoji: '💈', label: 'Beauté',       bg: 'bg-pink-100'   },
     { to: '/artisans',                                 emoji: '🔧', label: 'Artisanat',    bg: 'bg-stone-100'  },
-    { to: '/mosquee',                                  emoji: '🕌', label: 'Mosquée',      bg: 'bg-emerald-100'},
     { to: '/reseau-imam',                              emoji: '🧕', label: 'Imam',         bg: 'bg-green-100'  },
     { to: '/liste-professionnels?type=mairie',         emoji: '🏛️', label: 'Mairie',       bg: 'bg-gray-100'   },
-    { to: '/liste-professionnels?type=reseau',         emoji: '🔗', label: 'Réseau',       bg: 'bg-purple-100' },
+    { to: '/liste-professionnels',                      emoji: '🔗', label: 'Réseau',       bg: 'bg-purple-100' },
     { to: '/solidarite',                               emoji: '🤝', label: 'ONG',          bg: 'bg-rose-100'   },
     { to: '/liste-professionnels?type=vendor',         emoji: '🛍️', label: 'Vendeurs',     bg: 'bg-sky-100'    },
     { to: '/liste-professionnels?type=producer',       emoji: '🌾', label: 'Producteurs',  bg: 'bg-lime-100'   },
@@ -103,12 +102,11 @@ export default function Services({ onClose }: ServicesProps = {}) {
   ]
 
   return (
-    <div className="max-w-md mx-auto px-4 py-4">
+    <div className="max-w-md mx-auto px-4 pb-4">
 
-      {/* Favoris */}
-      <div className="mb-4 flex items-center justify-end gap-2">
-        <div />
-
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 pt-3">
+        <h1 className="text-2xl font-bold text-gray-900">Services</h1>
         {numeroH && (
           <FavorisDropdown
             headerLabel={`Services favoris (${favoriteIds.length}/${MAX_FAVORITES})`}
@@ -133,15 +131,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
             })}
           </FavorisDropdown>
         )}
-      </div>
-
-      {/* Header */}
-      <div className="mb-4 flex items-center gap-3 rounded-2xl bg-blue-700 px-4 py-3 text-white shadow-md">
-        <span className="text-3xl leading-none">💼</span>
-        <div>
-          <h1 className="text-base font-bold leading-tight">Services</h1>
-          <p className="text-xs text-blue-200 mt-0.5">Tous vos services professionnels</p>
-        </div>
       </div>
 
       {/* Bouton créer un compte pro */}

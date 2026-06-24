@@ -2,7 +2,30 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import ProWithdrawalRequest from '../models/ProWithdrawalRequest.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
+import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import { v4 as uuidv4 } from 'uuid';
+
+const FEDAPAY_SECRET = process.env.FEDAPAY_SECRET_KEY || '';
+const FEDAPAY_API    = process.env.FEDAPAY_ENV === 'production'
+  ? 'https://api.fedapay.com/v1'
+  : 'https://sandbox-api.fedapay.com/v1';
+
+async function fedapayRequest(method, endpoint, body = null) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const opts = {
+      method,
+      headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET}`, 'Content-Type': 'application/json' },
+      signal: controller.signal
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${FEDAPAY_API}${endpoint}`, opts);
+    return res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 const router = express.Router();
 router.use(authenticate);
@@ -16,25 +39,82 @@ router.post('/', async (req, res) => {
     const { proAccountId, montant, motif, coordonneesPaiement } = req.body;
     const { numeroH, prenom, nomFamille } = req.user;
 
-    if (!proAccountId || !montant || montant < 1000) {
-      return res.status(400).json({ success: false, message: 'proAccountId et montant (min 1 000 GNF) requis.' });
+    if (!proAccountId || !montant || montant < 1_000_000) {
+      return res.status(400).json({ success: false, message: 'Le montant minimum de retrait est de 1 000 000 GNF.' });
     }
 
     const pro = await ProfessionalAccount.findOne({
-      where: { id: proAccountId, ownerNumeroH: numeroH }
+      where: { id: proAccountId, ownerNumeroH: numeroH, status: 'approved' }
     });
     if (!pro) {
       return res.status(403).json({ success: false, message: 'Compte professionnel introuvable ou accès refusé.' });
     }
 
-    // Vérifier qu'il n'y a pas déjà une demande en attente pour ce compte
+    // ── RÈGLE 1 : Seules les cliniques peuvent faire des retraits ──────────────
+    if (pro.type !== 'clinic') {
+      return res.status(403).json({
+        success: false,
+        message: 'Les retraits sont réservés aux cliniques et hôpitaux uniquement.'
+      });
+    }
+
+    // ── RÈGLE 2 : La clinique doit avoir 1 an d'ancienneté sur la plateforme ──
+    const unAnAvant = new Date();
+    unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
+    if (new Date(pro.createdAt) > unAnAvant) {
+      const dateEligible = new Date(pro.createdAt);
+      dateEligible.setFullYear(dateEligible.getFullYear() + 1);
+      return res.status(403).json({
+        success: false,
+        message: `Retrait impossible. Votre clinique doit être active depuis au moins 1 an sur la plateforme. Vous serez éligible le ${dateEligible.toLocaleDateString('fr-FR')}.`
+      });
+    }
+
+    // ── RÈGLE 3 : Maximum 10 000 000 GNF par retrait ───────────────────────────
+    const MAX_RETRAIT = 10_000_000;
+    if (montant > MAX_RETRAIT) {
+      return res.status(400).json({
+        success: false,
+        message: `Le montant maximum par retrait est de ${MAX_RETRAIT.toLocaleString()} GNF.`
+      });
+    }
+
+    // ── RÈGLE 4 : 1 seul retrait validé par mois ──────────────────────────────
+    const debutMois = new Date();
+    debutMois.setDate(1);
+    debutMois.setHours(0, 0, 0, 0);
+    const { Op } = await import('sequelize');
+    const retraitCeMois = await ProWithdrawalRequest.findOne({
+      where: {
+        proAccountId,
+        statut: 'valide',
+        valide_at: { [Op.gte]: debutMois }
+      }
+    });
+    if (retraitCeMois) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vous avez déjà effectué un retrait ce mois-ci. Un seul retrait par mois est autorisé.'
+      });
+    }
+
+    // ── RÈGLE 5 : Solde suffisant ──────────────────────────────────────────────
+    const wallet = await ProfessionalWallet.findOne({ where: { proAccountId: pro.id } });
+    if (!wallet || Number(wallet.solde) < montant) {
+      return res.status(400).json({
+        success: false,
+        message: `Solde insuffisant. Disponible : ${Number(wallet?.solde || 0).toLocaleString()} GNF`
+      });
+    }
+
+    // ── RÈGLE 6 : Pas de demande déjà en attente ──────────────────────────────
     const demandeExistante = await ProWithdrawalRequest.findOne({
       where: { proAccountId, statut: 'en_attente' }
     });
     if (demandeExistante) {
       return res.status(400).json({
         success: false,
-        message: 'Une demande de retrait est déjà en attente pour ce compte. Attendez la validation de l\'administrateur.'
+        message: 'Une demande de retrait est déjà en attente. Attendez la décision de l\'administrateur.'
       });
     }
 
@@ -163,30 +243,61 @@ router.put('/admin/:id/valider', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cette demande a déjà été traitée.' });
     }
 
+    const montant = Number(demande.montant);
+    const commission = Math.round(montant * 0.01);
+    const montantNet = montant - commission;
+    const numOM = demande.coordonneesPaiement;
+
+    // Déclencher le payout FedaPay vers Orange Money
+    let payoutId = null;
+    if (FEDAPAY_SECRET && numOM) {
+      const payoutRes = await fedapayRequest('POST', '/payouts', {
+        amount:   montantNet,
+        currency: { iso: 'GNF' },
+        mode:     'om',
+        customer: {
+          email:        `${demande.ownerNumeroH}@moftal.app`,
+          phone_number: { number: numOM, country: 'GN' }
+        }
+      });
+      payoutId = payoutRes?.v1?.payout?.id || null;
+    }
+
+    // Débiter le wallet du professionnel
+    const wallet = await ProfessionalWallet.findOne({ where: { proAccountId: demande.proAccountId } });
+    if (wallet) {
+      await wallet.update({
+        solde:       Number(wallet.solde) - montant,
+        totalRetire: Number(wallet.totalRetire) + montant
+      });
+    }
+
     await demande.update({
-      statut: 'valide',
-      validePar: numeroH,
+      statut:       'valide',
+      validePar:    numeroH,
       valideParNom: `${prenom || ''} ${nomFamille || ''}`.trim(),
-      valideAt: new Date()
+      valideAt:     new Date()
     });
 
-    // Données du reçu pour le professionnel
     const reçuData = {
-      id:             demande.receiptRef,
-      type:           'retrait_pro',
-      montant:        Number(demande.montant),
-      date:           new Date().toISOString(),
-      acteurNom:      demande.ownerNom,
-      beneficiaireNom: demande.proAccountName,
-      beneficiaireContact: demande.coordonneesPaiement,
-      description:    demande.motif || 'Retrait professionnel validé',
-      proNom:         demande.proAccountName,
-      logoUrl:        demande.proLogoUrl,
+      id:                  demande.receiptRef,
+      type:                'retrait_pro',
+      montant,
+      montantNet,
+      commission,
+      date:                new Date().toISOString(),
+      acteurNom:           demande.ownerNom,
+      beneficiaireNom:     demande.proAccountName,
+      beneficiaireContact: numOM,
+      description:         demande.motif || 'Retrait professionnel validé',
+      proNom:              demande.proAccountName,
+      logoUrl:             demande.proLogoUrl,
+      payoutId
     };
 
     res.json({
       success: true,
-      message: `Retrait de ${Number(demande.montant).toLocaleString()} GNF validé pour ${demande.proAccountName}.`,
+      message: `Retrait de ${montantNet.toLocaleString()} GNF envoyé vers Orange Money ${numOM} pour ${demande.proAccountName}. (Commission 1% : ${commission.toLocaleString()} GNF)`,
       reçu: reçuData
     });
   } catch (err) {

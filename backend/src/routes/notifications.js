@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import Notification from '../models/Notification.js';
+import User from '../models/User.js';
 
 const router = express.Router();
 
@@ -36,6 +37,32 @@ router.post('/mark-read/:id', authenticate, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/notifications/send-message - Envoyer un message direct à un membre
+router.post('/send-message', authenticate, async (req, res) => {
+  try {
+    const { recipientNumeroH, title, message } = req.body;
+    if (!recipientNumeroH || !message) {
+      return res.status(400).json({ success: false, message: 'Destinataire et message requis.' });
+    }
+    const recipient = await User.findByNumeroH(recipientNumeroH);
+    if (!recipient) {
+      return res.status(404).json({ success: false, message: 'Aucun membre trouvé avec ce numéroH.' });
+    }
+    const sender = req.user;
+    const senderName = sender.prenom ? `${sender.prenom} ${sender.nomFamille || ''}`.trim() : sender.numeroH;
+    await Notification.createNotification({
+      recipientNumeroH,
+      type: 'direct_message',
+      title: title || `Message de ${senderName}`,
+      message,
+      relatedId: sender.numeroH
+    });
+    res.json({ success: true, message: 'Message envoyé.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 });
 

@@ -4,12 +4,13 @@ import {
   WORLD_GEOGRAPHY,
   findLocationByCode,
   getLocationGroupTitle,
-  getAllLocationsForGroups,
   type GeographicLocation
 } from '../utils/worldGeography';
 import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countryFlags';
 import { getCountryGeoLabels } from '../utils/countryGeoStructure';
 import { AudioRecorder } from '../components/AudioRecorder';
+import DeveloppementSection from '../components/DeveloppementSection';
+import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 
 interface UserData {
   numeroH: string;
@@ -152,6 +153,7 @@ export default function TerreAdam() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [feedFilter, setFeedFilter] = useState<string>('all');
   const [activeCanal, setActiveCanal] = useState<CanalItem | null>(null);
+  const [showCategoryGrid, setShowCategoryGrid] = useState(false);
 
   // Niveau actuel : quartier (Résidence 1/2/3) ou plus large (sous-préfecture, région, pays, continent)
   const isQuartierLevel =
@@ -313,7 +315,11 @@ export default function TerreAdam() {
   useEffect(() => {
     if (!userData) return;
     if (activeTab === 'lieux' && (activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3')) {
+      // Réinitialisation complète à chaque changement de résidence — elles sont indépendantes
       setSelectedGroup(null);
+      setActiveCanal(null);
+      setMessages([]);
+      setGroups([]);
       loadGroups();
     } else {
       setLoading(false);
@@ -346,6 +352,7 @@ export default function TerreAdam() {
           return { ...g, name: displayName, title: displayName, members: g.members || [] };
         });
         setGroups(mapped);
+        if (mapped.length > 0) setSelectedGroup(mapped[0]);
         setLoading(false);
         return;
       }
@@ -377,6 +384,7 @@ export default function TerreAdam() {
       }
 
       setGroups(allGroups);
+      if (allGroups.length > 0) setSelectedGroup(allGroups[0]);
     } catch (error) {
       console.error('Erreur lors du chargement des groupes:', error);
       setGroups([]);
@@ -561,30 +569,13 @@ export default function TerreAdam() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-800 to-green-700 shadow-md">
-        <div className="px-3 sm:px-6 max-w-7xl mx-auto">
-          <div className="flex justify-between items-center py-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-2xl flex-shrink-0">
-                {effectiveContinent
-                  ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name)
-                  : '🌍'}
-              </span>
-              <div className="min-w-0">
-                <h1 className="text-base font-bold text-white truncate">Terre ADAM</h1>
-                {effectiveContinent?.name && (
-                  <p className="text-xs text-emerald-200 truncate">{effectiveContinent.name}</p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/moi')}
-              className="flex-shrink-0 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-            >
-              ← Retour
-            </button>
-          </div>
-        </div>
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Terre ADAM</h1>
+        <button className="w-9 h-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
       </div>
 
       {/* Navigation Tabs - une seule ligne sur tous les appareils */}
@@ -699,343 +690,328 @@ export default function TerreAdam() {
                         const loc = code ? findLocationByCode(code) : null;
                         const name = loc?.name || (isRealLieu(code) ? code : null);
 
-                        return (
-                          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border-2 border-blue-200 dark:border-blue-800 rounded-xl p-4 sm:p-5 overflow-hidden">
-                            <div className="text-center">
-                              <div className="text-2xl sm:text-3xl mb-1">🏘️</div>
-                              <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
-                                {name || `Résidence ${slotNum}`}
-                              </h3>
-                            </div>
-                            {/* Aucun détail supplémentaire : le quartier choisi à l'inscription suffit */}
-                          </div>
-                        );
+                        return null;
                       })()}
 
-                      {/* Système de messagerie – après les 3 quartiers */}
-                      <div className="mt-8 sm:mt-10 space-y-4">
-                        {/* En-tête avec filtres */}
-                        <div className="flex flex-wrap justify-between items-center gap-2">
-                          <h3 className="text-lg font-bold text-gray-900">
-                            💬 Système de Messagerie – Groupes disponibles
-                            {!isAdmin && (
-                              <span className="block sm:inline mt-1 sm:mt-0 sm:ml-2 text-sm font-normal text-amber-700">
-                                (Résidence {activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3})
-                              </span>
-                            )}
-                            {isAdmin && (
-                              <span className="block sm:inline mt-1 sm:mt-0 sm:ml-2 text-sm font-normal text-emerald-700">
-                                ({filterScope === 'all' ? 'Tous les quartiers' : `Résidence ${activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3}`})
-                              </span>
-                            )}
-                          </h3>
+                      {/* Messagerie */}
+                      <div className="space-y-3">
+                        {/* En-tête compact + filtre admin en chips */}
+                        <div className="flex items-center justify-between px-0.5">
                           <div className="flex items-center gap-2">
-                            <div className="relative">
+                            <span className="text-sm">💬</span>
+                            <span className="font-bold text-gray-800 text-sm">Chats de résidence</span>
+                          </div>
+                          {isAdmin && (
+                            <div className="flex gap-1">
                               <button
                                 type="button"
-                                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 text-gray-700 text-sm font-medium transition-colors"
+                                onClick={() => { setFilterScope('all'); loadGroups(); }}
+                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filterScope === 'all' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                               >
-                                <span>🔽</span>
-                                Filtres
+                                🌍 Tout
                               </button>
-                              {showFilterDropdown && (
-                                <div className="absolute left-0 top-full mt-1 py-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                                  {isAdmin ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => { setFilterScope('all'); setShowFilterDropdown(false); loadGroups(); }}
-                                        className={`w-full text-left px-4 py-2 text-sm ${filterScope === 'all' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
-                                      >
-                                        🌍 Tout voir
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => { setFilterScope('quartier'); setShowFilterDropdown(false); loadGroups(); }}
-                                        className={`w-full text-left px-4 py-2 text-sm ${filterScope === 'quartier' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
-                                      >
-                                        🏘️ Résidence {activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3}
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => setShowFilterDropdown(false)}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-600"
-                                    >
-                                      🏘️ Résidence {activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3} (ce quartier)
-                                    </button>
+                              <button
+                                type="button"
+                                onClick={() => { setFilterScope('quartier'); loadGroups(); }}
+                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filterScope === 'quartier' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                              >
+                                🏘️ Ce quartier
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {!selectedGroup ? (
+                          /* État vide ou chargement — le groupe est normalement auto-sélectionné */
+                          <div className="bg-white rounded-2xl p-10 flex flex-col items-center text-center">
+                            {groups.length === 0 ? (
+                              <>
+                                <span className="text-4xl mb-2">💬</span>
+                                <p className="text-sm text-gray-500">Aucun groupe disponible</p>
+                                <p className="text-xs text-gray-400 mt-1">Les groupes sont créés automatiquement.</p>
+                              </>
+                            ) : (
+                              <div className="w-7 h-7 border-2 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
+                            )}
+                          </div>
+                        ) : (
+                        /* ── Feed unique avec filtres (une seule page, tout visible) ── */
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" style={{ minHeight: '480px', maxHeight: '82vh' }}>
+
+                          {/* En-tête : nom du quartier + membres + sélecteur admin */}
+                          <div className="bg-gray-800 text-white flex-shrink-0">
+                            <div className="px-4 py-3 flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
+                                {(selectedGroup.title || selectedGroup.name || '?').charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-sm truncate">{selectedGroup.title || selectedGroup.name}</h3>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {selectedGroup.members?.length ?? 0} membre{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}
+                                  {' · '}{messages.length} message{messages.length > 1 ? 's' : ''}
+                                </p>
+                              </div>
+                              {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
+                                <div className="flex -space-x-1.5 flex-shrink-0">
+                                  {selectedGroup.members.slice(0, 5).map((member: any, index: number) => {
+                                    const isObject = member && typeof member === 'object';
+                                    const prenom = isObject ? (member.prenom as string | undefined) : undefined;
+                                    const photo = isObject ? (member.photo as string | undefined) : undefined;
+                                    const initiale = (prenom || '?').charAt(0).toUpperCase();
+                                    return (
+                                      <div key={index} title={prenom || `Membre ${index + 1}`} className="w-6 h-6 rounded-full bg-emerald-200 border border-gray-700 overflow-hidden flex items-center justify-center text-[9px] font-bold text-emerald-800 flex-shrink-0">
+                                        {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
+                                      </div>
+                                    );
+                                  })}
+                                  {selectedGroup.members.length > 5 && (
+                                    <div className="w-6 h-6 rounded-full bg-gray-600 border border-gray-700 flex items-center justify-center text-[9px] font-bold text-gray-300 flex-shrink-0">
+                                      +{selectedGroup.members.length - 5}
+                                    </div>
                                   )}
                                 </div>
                               )}
                             </div>
-                          </div>
-                        </div>
-
-                        {!selectedGroup ? (
-                          /* Liste des groupes */
-                          <div className="space-y-2">
-                            {groups.length === 0 ? (
-                              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                                <p className="text-gray-600">Aucun groupe pour le moment.</p>
-                                <p className="text-sm text-gray-500 mt-2">Les groupes sont créés automatiquement par le système.</p>
-                              </div>
-                            ) : (
-                              groups.map((group) => (
-                                <div
-                                  key={group.id}
-                                  onClick={() => setSelectedGroup(group)}
-                                  className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow border border-gray-200 cursor-pointer flex items-center gap-4"
-                                >
-                                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
-                                    👥
-                                  </div>
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-gray-900">{group.title || group.name}</h4>
-                                    {group.description && (
-                                      <p className="text-sm text-gray-500 truncate">{group.description}</p>
-                                    )}
-                                    <p className="text-xs text-gray-400 mt-1">
-                                      {group.members?.length ?? 0} membre{(group.members?.length ?? 0) > 1 ? 's' : ''}
-                                    </p>
-                                  </div>
-                                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                  </svg>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        ) : (
-                        /* ── Style Discord / Slack : canaux thématiques ── */
-                        <div className="mt-4">
-                          {/* Membres (compact, uniquement sur la liste de canaux) */}
-                          {!activeCanal && Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-3 flex items-center gap-3 flex-wrap">
-                              <span className="text-xs font-semibold text-gray-500 flex-shrink-0">👥 Membres :</span>
-                              <div className="flex -space-x-2">
-                                {selectedGroup.members.slice(0, 10).map((member: any, index: number) => {
-                                  const isObject = member && typeof member === 'object';
-                                  const prenom = isObject ? (member.prenom as string | undefined) : undefined;
-                                  const photo = isObject ? (member.photo as string | undefined) : undefined;
-                                  const initiale = (prenom || '?').charAt(0).toUpperCase();
+                            {isAdmin && groups.length > 1 && (
+                              <div className="flex gap-2 overflow-x-auto px-3 pb-2">
+                                {groups.map((g, idx) => {
+                                  const avatarColors = ['bg-emerald-500','bg-blue-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-teal-500'];
+                                  const bg = avatarColors[idx % avatarColors.length];
                                   return (
-                                    <div key={index} title={prenom || `Membre ${index + 1}`} className="w-7 h-7 rounded-full bg-emerald-100 border-2 border-white overflow-hidden flex items-center justify-center text-[10px] font-bold text-emerald-700 flex-shrink-0">
-                                      {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
-                                    </div>
+                                    <button
+                                      key={g.id}
+                                      onClick={() => { setSelectedGroup(g); setActiveCanal(null); setMessages([]); }}
+                                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
+                                        selectedGroup?.id === g.id ? 'bg-white text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                      }`}
+                                    >
+                                      <span className={`w-4 h-4 rounded-full ${bg} flex items-center justify-center text-[9px] font-bold text-white`}>
+                                        {(g.title || g.name || '?').charAt(0).toUpperCase()}
+                                      </span>
+                                      {g.title || g.name}
+                                    </button>
                                   );
                                 })}
-                                {selectedGroup.members.length > 10 && (
-                                  <div className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-gray-600 flex-shrink-0">
-                                    +{selectedGroup.members.length - 10}
-                                  </div>
-                                )}
                               </div>
-                              <span className="text-xs text-gray-400">{selectedGroup.members.length} membre{selectedGroup.members.length > 1 ? 's' : ''}</span>
-                            </div>
-                          )}
+                            )}
+                          </div>
 
-                          {!activeCanal ? (
-                            /* ── Liste des canaux ── */
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                              {/* En-tête du groupe */}
-                              <div className="px-4 py-3 bg-gray-800 text-white flex items-center justify-between">
-                                <div className="min-w-0">
-                                  <h3 className="font-bold text-sm truncate">📍 {selectedGroup.title || selectedGroup.name}</h3>
-                                  <p className="text-xs text-gray-400 mt-0.5">Choisissez un canal pour publier ou consulter</p>
-                                </div>
-                                <button
-                                  onClick={() => setSelectedGroup(null)}
-                                  className="flex-shrink-0 ml-3 text-gray-400 hover:text-white text-xs px-2.5 py-1 rounded border border-gray-600 hover:border-gray-400 transition-colors"
-                                >
-                                  ← Retour
-                                </button>
-                              </div>
-
-                              {/* Sections de canaux */}
-                              {CANAL_SECTIONS.map((section, sectionIndex) => (
-                                <div key={section.id} className={sectionIndex > 0 ? 'border-t border-gray-100' : ''}>
-                                  <div className="px-4 py-2 bg-gray-50 flex items-center gap-2">
-                                    <span className="text-sm">{section.icon}</span>
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{section.label}</span>
-                                  </div>
-                                  {section.canaux.map((canal) => {
-                                    const count = messages.filter((m: ResidenceMessage) => (m.category || 'information') === canal.id).length;
-                                    const colors = getCanalColors(canal.color);
-                                    return (
-                                      <button
-                                        key={canal.id}
-                                        onClick={() => setActiveCanal(canal)}
-                                        className="w-full flex items-center gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left group"
-                                      >
-                                        <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${colors.bg} border ${colors.border}`}>
-                                          {canal.icon}
-                                        </span>
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-semibold text-gray-900 truncate"># {canal.label}</p>
-                                          <p className="text-xs text-gray-400 truncate">{canal.description}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                          {count > 0 ? (
-                                            <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${colors.header}`}>
-                                              {count > 99 ? '99+' : count}
-                                            </span>
-                                          ) : (
-                                            <span className="text-[10px] text-gray-300">0</span>
-                                          )}
-                                          <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                          </svg>
-                                        </div>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            /* ── Vue canal (chat) ── */
-                            (() => {
-                              const colors = getCanalColors(activeCanal.color);
-                              const canalMessages = messages.filter((m: ResidenceMessage) => (m.category || 'information') === activeCanal.id);
-                              return (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" style={{ minHeight: '420px', maxHeight: '75vh' }}>
-                                  {/* En-tête du canal */}
-                                  <div className={`${colors.header} text-white px-4 py-3 flex items-center gap-3 flex-shrink-0`}>
+                          {/* Filtres par catégorie — barre scrollable horizontale */}
+                          <div className="border-b border-gray-100 bg-white px-3 py-2 overflow-x-auto flex-shrink-0">
+                            <div className="flex gap-1.5 min-w-max">
+                              <button
+                                type="button"
+                                onClick={() => setFeedFilter('all')}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                              >
+                                💬 Tout ({messages.length})
+                              </button>
+                              {CANAL_SECTIONS.map(section =>
+                                section.canaux.map(canal => {
+                                  const count = messages.filter((m: ResidenceMessage) => (m.category || 'information') === canal.id).length;
+                                  const isActive = feedFilter === canal.id;
+                                  const colors = getCanalColors(canal.color);
+                                  return (
                                     <button
-                                      onClick={() => setActiveCanal(null)}
-                                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors text-lg leading-none flex-shrink-0"
+                                      key={canal.id}
+                                      type="button"
+                                      onClick={() => setFeedFilter(isActive ? 'all' : canal.id)}
+                                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${isActive ? colors.header + ' text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                     >
-                                      ←
+                                      {canal.icon} {canal.label}
+                                      {count > 0 && (
+                                        <span className={`px-1.5 rounded-full text-[9px] font-bold ${isActive ? 'bg-white/30 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                                          {count}
+                                        </span>
+                                      )}
                                     </button>
-                                    <span className="text-2xl flex-shrink-0">{activeCanal.icon}</span>
-                                    <div className="flex-1 min-w-0">
-                                      <h3 className="font-bold text-sm truncate"># {activeCanal.label}</h3>
-                                      <p className="text-[11px] text-white/80 truncate">{activeCanal.description}</p>
-                                    </div>
-                                    <span className="text-xs text-white/70 flex-shrink-0 bg-white/20 px-2 py-0.5 rounded-full">
-                                      {canalMessages.length} msg
-                                    </span>
-                                  </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
 
-                                  {/* Zone des messages */}
-                                  <div className="flex-1 overflow-y-auto p-3 bg-gray-50" style={{ minHeight: '220px' }}>
-                                    {canalMessages.length === 0 ? (
-                                      <div className="flex flex-col items-center justify-center py-16 text-center">
-                                        <span className="text-6xl mb-4">{activeCanal.icon}</span>
-                                        <p className="font-bold text-gray-800 text-base"># {activeCanal.label}</p>
-                                        <p className="text-gray-500 text-sm mt-1 max-w-xs">{activeCanal.description}</p>
-                                        <p className="text-gray-400 text-xs mt-4 italic">Aucun message pour le moment.<br/>Soyez le premier à publier !</p>
+                          {/* Zone des messages */}
+                          <div className="flex-1 overflow-y-auto p-3 bg-gray-50" style={{ minHeight: '220px' }}>
+                            {(() => {
+                              const filtered = feedFilter === 'all'
+                                ? messages
+                                : messages.filter((m: ResidenceMessage) => (m.category || 'information') === feedFilter);
+                              if (filtered.length === 0) {
+                                return (
+                                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                                    <span className="text-5xl mb-3">
+                                      {feedFilter === 'all' ? '💬' : (CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === feedFilter)?.icon || '💬')}
+                                    </span>
+                                    <p className="text-sm font-medium text-gray-500">
+                                      {feedFilter === 'all' ? 'Aucun message pour le moment.' : 'Aucun message dans cette catégorie.'}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1 italic">Soyez le premier à publier !</p>
+                                  </div>
+                                );
+                              }
+                              return filtered.map((msg: ResidenceMessage) => {
+                                const isMyMessage = msg.numeroH === userData?.numeroH;
+                                const canalData = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === (msg.category || 'information'));
+                                const categoryData = QUARTIER_CATEGORIES.find(c => c.id === (msg.category || 'information'));
+                                const colors = getCanalColors(canalData?.color || 'blue');
+                                const toMediaUrl = (url: string) => url.startsWith('http') ? url : `http://localhost:5002${url.startsWith('/') ? url : '/' + url}`;
+                                return (
+                                  <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[82%] rounded-2xl shadow-sm overflow-hidden border-2 bg-white ${
+                                      isMyMessage ? 'border-emerald-300' : 'border-gray-100'
+                                    }`}>
+                                      {/* Bannière colorée — grande icône + nom de catégorie visible sans lire */}
+                                      <div className={`${colors.header} px-4 py-2.5 flex items-center gap-3`}>
+                                        <span className="text-3xl leading-none">{canalData?.icon || categoryData?.icon || 'ℹ️'}</span>
+                                        <span className="text-white font-bold text-sm tracking-wide uppercase">
+                                          {canalData?.label || categoryData?.label || 'Information'}
+                                        </span>
+                                      </div>
+                                      {/* Contenu */}
+                                      <div className="px-4 py-3">
+                                        <p className={`text-[11px] font-bold mb-1.5 ${isMyMessage ? 'text-right text-emerald-600' : 'text-emerald-600'}`}>
+                                          {isMyMessage ? 'Moi' : msg.authorName}
+                                        </p>
+                                        {(msg.type === 'text' || msg.messageType === 'text') && msg.content && (
+                                          <p className="text-sm leading-relaxed text-gray-800">{msg.content}</p>
+                                        )}
+                                        {(msg.type === 'image' || msg.messageType === 'image') && msg.mediaUrl && (
+                                          <img src={toMediaUrl(msg.mediaUrl)} alt="Image" className="max-w-full h-auto rounded-lg" />
+                                        )}
+                                        {(msg.type === 'video' || msg.messageType === 'video') && msg.mediaUrl && (
+                                          <video src={toMediaUrl(msg.mediaUrl)} controls className="max-w-full h-auto rounded-lg" />
+                                        )}
+                                        {(msg.type === 'audio' || msg.messageType === 'audio') && msg.mediaUrl && (
+                                          <audio src={toMediaUrl(msg.mediaUrl)} controls className="w-full" />
+                                        )}
+                                        <p className={`text-[10px] mt-2 text-right ${isMyMessage ? 'text-emerald-500' : 'text-gray-400'}`}>
+                                          {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              });
+                            })()}
+                            <div ref={messagesEndRef} />
+                          </div>
+
+                          {/* Zone de publication */}
+                          {canPublishHere ? (
+                            <div className="border-t border-gray-200 bg-white flex-shrink-0">
+                              {/* Grille de catégories — s'ouvre uniquement quand on appuie sur l'icône */}
+                              {showCategoryGrid && (
+                                <div className="px-3 pt-3 pb-2 border-b border-gray-100">
+                                  <div className="grid grid-cols-3 gap-2">
+                                    {QUARTIER_CATEGORIES.map(cat => {
+                                      const cd = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === cat.id);
+                                      const cl = getCanalColors(cd?.color || 'blue');
+                                      const selected = newMessage.category === cat.id;
+                                      return (
+                                        <button
+                                          key={cat.id}
+                                          type="button"
+                                          onClick={() => {
+                                            setNewMessage({...newMessage, category: cat.id});
+                                            setShowCategoryGrid(false);
+                                          }}
+                                          className={`flex flex-col items-center gap-1 py-3 px-1 rounded-xl border-2 transition-all ${
+                                            selected ? `${cl.bg} ${cl.border} ${cl.text}` : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                                          }`}
+                                        >
+                                          <span className="text-2xl leading-none">{cat.icon}</span>
+                                          <span className="text-[10px] font-semibold text-center leading-tight">{cat.label}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                              {/* Barre de saisie compacte */}
+                              <div className="flex gap-2 items-center px-3 py-3">
+                                {/* Bouton catégorie — affiche l'icône choisie, ouvre/ferme la grille */}
+                                {(() => {
+                                  const cd = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === newMessage.category);
+                                  const cl = getCanalColors(cd?.color || 'blue');
+                                  const cat = QUARTIER_CATEGORIES.find(c => c.id === newMessage.category);
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowCategoryGrid(!showCategoryGrid)}
+                                      title="Choisir le type de publication"
+                                      className={`flex-shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center border-2 transition-all ${
+                                        showCategoryGrid ? `${cl.bg} ${cl.border}` : 'bg-gray-100 border-gray-200 hover:bg-gray-200'
+                                      }`}
+                                    >
+                                      <span className="text-xl leading-none">{cat?.icon || 'ℹ️'}</span>
+                                    </button>
+                                  );
+                                })()}
+                                <select
+                                  value={newMessage.messageType}
+                                  onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as any, mediaFile: null})}
+                                  className="px-2 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm flex-shrink-0"
+                                >
+                                  <option value="text">📝</option>
+                                  <option value="image">🖼️</option>
+                                  <option value="video">🎥</option>
+                                  <option value="audio">🎵</option>
+                                </select>
+                                {newMessage.messageType === 'text' ? (
+                                  <input
+                                    type="text"
+                                    value={newMessage.content}
+                                    onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
+                                    onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); setShowCategoryGrid(false); } }}
+                                    placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.icon || ''} ${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
+                                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
+                                  />
+                                ) : newMessage.messageType === 'audio' ? (
+                                  <div className="flex-1">
+                                    {newMessage.mediaFile ? (
+                                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
+                                        <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
+                                        <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 text-xs font-medium">✕</button>
                                       </div>
                                     ) : (
-                                      canalMessages.map((msg: ResidenceMessage) => {
-                                        const isMyMessage = msg.numeroH === userData?.numeroH;
-                                        return (
-                                          <div key={msg.id} className={`mb-3 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl shadow-sm ${
-                                              isMyMessage
-                                                ? `${colors.header} text-white rounded-br-sm`
-                                                : 'bg-white text-gray-900 border border-gray-100 rounded-bl-sm'
-                                            }`}>
-                                              {!isMyMessage && (
-                                                <p className={`text-[10px] font-bold mb-1 ${colors.text}`}>{msg.authorName}</p>
-                                              )}
-                                              {(msg.type === 'text' || msg.messageType === 'text') && msg.content && (
-                                                <p className="text-sm leading-relaxed">{msg.content}</p>
-                                              )}
-                                              {(msg.type === 'image' || msg.messageType === 'image') && msg.mediaUrl && (
-                                                <img src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg" />
-                                              )}
-                                              {(msg.type === 'video' || msg.messageType === 'video') && msg.mediaUrl && (
-                                                <video src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg" />
-                                              )}
-                                              {(msg.type === 'audio' || msg.messageType === 'audio') && msg.mediaUrl && (
-                                                <audio src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`} controls className="w-full" />
-                                              )}
-                                              <p className={`text-[10px] mt-1.5 ${isMyMessage ? 'text-white/70' : 'text-gray-400'}`}>
-                                                {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        );
-                                      })
+                                      <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
+                                        const file = new File([blob], 'vocal.webm', { type: blob.type });
+                                        setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
+                                      }} />
                                     )}
-                                    <div ref={messagesEndRef} />
                                   </div>
-
-                                  {/* Zone de saisie — catégorie fixée automatiquement au canal */}
-                                  {canPublishHere ? (
-                                    <div className="border-t border-gray-200 px-3 py-3 bg-white flex-shrink-0">
-                                      <div className="flex gap-2 items-center">
-                                        <select
-                                          value={newMessage.messageType}
-                                          onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as any, mediaFile: null})}
-                                          className="px-2 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm flex-shrink-0"
-                                        >
-                                          <option value="text">📝</option>
-                                          <option value="image">🖼️</option>
-                                          <option value="video">🎥</option>
-                                          <option value="audio">🎵</option>
-                                        </select>
-                                        {newMessage.messageType === 'text' ? (
-                                          <input
-                                            type="text"
-                                            value={newMessage.content}
-                                            onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
-                                            onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessageInCanal(); } }}
-                                            placeholder={`Publier dans #${activeCanal.label}...`}
-                                            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-green-300 text-sm bg-gray-50"
-                                          />
-                                        ) : newMessage.messageType === 'audio' ? (
-                                          <div className="flex-1">
-                                            {newMessage.mediaFile ? (
-                                              <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
-                                                <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
-                                                <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 text-xs font-medium">✕</button>
-                                              </div>
-                                            ) : (
-                                              <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
-                                                const file = new File([blob], 'vocal.webm', { type: blob.type });
-                                                setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
-                                              }} />
-                                            )}
-                                          </div>
-                                        ) : (
-                                          <input
-                                            type="file"
-                                            accept={newMessage.messageType === 'image' ? 'image/*' : 'video/*'}
-                                            onChange={(e) => {
-                                              const file = e.target.files?.[0] || null;
-                                              if (file) {
-                                                let detectedType = newMessage.messageType;
-                                                if (file.type.startsWith('image/')) detectedType = 'image';
-                                                else if (file.type.startsWith('video/')) detectedType = 'video';
-                                                setNewMessage({...newMessage, messageType: detectedType, mediaFile: file});
-                                              } else setNewMessage({...newMessage, mediaFile: null});
-                                            }}
-                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm"
-                                          />
-                                        )}
-                                        <button
-                                          onClick={sendMessageInCanal}
-                                          disabled={newMessage.messageType === 'text' ? !newMessage.content.trim() : !newMessage.mediaFile}
-                                          className={`${colors.header} text-white px-5 py-2.5 rounded-full hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex-shrink-0 font-medium text-sm`}
-                                        >
-                                          ▶
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex-shrink-0 text-center">
-                                      <p className="text-xs text-gray-500">
-                                        Seuls les <strong>journalistes approuvés</strong> peuvent publier ici.
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()
+                                ) : (
+                                  <input
+                                    type="file"
+                                    accept={newMessage.messageType === 'image' ? 'image/*' : 'video/*'}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0] || null;
+                                      if (file) {
+                                        let detectedType = newMessage.messageType;
+                                        if (file.type.startsWith('image/')) detectedType = 'image';
+                                        else if (file.type.startsWith('video/')) detectedType = 'video';
+                                        setNewMessage({...newMessage, messageType: detectedType, mediaFile: file});
+                                      } else setNewMessage({...newMessage, mediaFile: null});
+                                    }}
+                                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm"
+                                  />
+                                )}
+                                <button
+                                  onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
+                                  disabled={newMessage.messageType === 'text' ? !newMessage.content.trim() : !newMessage.mediaFile}
+                                  className="bg-emerald-600 text-white px-5 py-2.5 rounded-full hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex-shrink-0 font-medium text-sm"
+                                >
+                                  ▶
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex-shrink-0 text-center">
+                              <p className="text-xs text-gray-500">
+                                Seuls les <strong>journalistes approuvés</strong> peuvent publier ici.
+                              </p>
+                            </div>
                           )}
                         </div>
                       )}
@@ -1044,18 +1020,34 @@ export default function TerreAdam() {
                   )}
 
                   {/* Page niveau 3 (Sous-préfecture / Commune / Ward...) */}
-                  {activeLieuTab === 'sous-prefecture' && (
-                    <div className="text-[11px] sm:text-xs md:text-sm text-gray-600">
-                      {userSousPrefecture?.name || userData.sousPrefecture || getCountryGeoLabels(userData.pays || '').level3.label}
-                    </div>
-                  )}
+                  {activeLieuTab === 'sous-prefecture' && (() => {
+                    const name = userSousPrefecture?.name || userData.sousPrefecture || getCountryGeoLabels(userData.pays || '').level3.label || 'Sous-préfecture';
+                    const loc = userData.sousPrefectureCode || userData.sousPrefecture || name;
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">🏛️</span>
+                          <h3 className="font-bold text-gray-800 text-sm">{name}</h3>
+                        </div>
+                        <DeveloppementSection scope="sous-prefecture" location={loc} locationName={name} />
+                      </div>
+                    );
+                  })()}
 
                   {/* Page niveau 2 (Préfecture / Département / County...) */}
-                  {activeLieuTab === 'prefecture' && (
-                    <div className="text-[11px] sm:text-xs md:text-sm text-gray-600">
-                      {userPrefecture?.name || userData.prefecture || getCountryGeoLabels(userData.pays || '').level2.label}
-                    </div>
-                  )}
+                  {activeLieuTab === 'prefecture' && (() => {
+                    const name = userPrefecture?.name || userData.prefecture || getCountryGeoLabels(userData.pays || '').level2.label || 'Préfecture';
+                    const loc = userData.prefectureCode || userData.prefecture || name;
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">🏢</span>
+                          <h3 className="font-bold text-gray-800 text-sm">{name}</h3>
+                        </div>
+                        <DeveloppementGouvernemental scope="prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} />
+                      </div>
+                    );
+                  })()}
 
                 </div>
               ) : (
@@ -1073,36 +1065,24 @@ export default function TerreAdam() {
 
         {/* 2. Région */}
         {activeTab === 'region' && (
-          <div className="space-y-3 sm:space-y-4 md:space-y-6 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 overflow-hidden">
-              <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-wrap">
-                <span className="text-base sm:text-lg md:text-xl">
-                  {getRegionIcon(
-                    userData?.regionCode,
-                    userRegion?.name || userData?.region || userData?.regionOrigine
-                  )}
-                </span>
-                <span className="text-[11px] sm:text-xs md:text-sm break-words">
-                  {userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'}
-                </span>
+          <div className="space-y-3 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 overflow-hidden">
+              <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-xl">{getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine)}</span>
+                <span>{userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'}</span>
               </h2>
-
-              {(userData?.regionCode || isAdmin) ? (
-                <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
-                  <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden">
-                    <div className="text-center overflow-hidden">
-                      <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">{getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine)}</div>
-                      <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 mb-1.5 sm:mb-2 break-words">
-                        {userRegion?.name || userData?.region || userData?.regionOrigine || (isAdmin ? '(Toutes les régions)' : 'Non défini')}
-                      </h3>
-                    </div>
-                  </div>
-                </div>
+              {(userData?.regionCode || userData?.region || isAdmin) ? (
+                <DeveloppementGouvernemental
+                  scope="region"
+                  location={userData?.regionCode || userData?.region || userData?.regionOrigine || 'region'}
+                  locationName={userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'}
+                  isJournalist={isJournalist}
+                  isAdmin={isAdmin}
+                />
               ) : (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
-                  <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 break-words">
-                    <strong>⚠️ Aucune région enregistrée</strong>
-                    <br />
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                  <p className="text-xs text-yellow-800">
+                    <strong>⚠️ Aucune région enregistrée</strong><br />
                     Vous n'avez pas encore enregistré votre région lors de l'inscription.
                   </p>
                 </div>
@@ -1113,39 +1093,24 @@ export default function TerreAdam() {
 
         {/* 3. Pays */}
         {activeTab === 'pays' && (
-          <div className="space-y-3 sm:space-y-4 md:space-y-6 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 overflow-hidden">
-              <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-wrap">
-                <span className="text-base sm:text-lg md:text-xl lg:text-2xl">
-                  {effectiveCountry
-                    ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name)
-                    : '🏳️'}
-                </span>
-                <span className="text-[11px] sm:text-xs md:text-sm break-words">
-                  {effectiveCountry?.name || userData?.pays || 'Pays'}
-                </span>
+          <div className="space-y-3 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 overflow-hidden">
+              <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-xl">{effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️'}</span>
+                <span>{effectiveCountry?.name || userData?.pays || 'Pays'}</span>
               </h2>
-
-              {(effectiveCountry || isAdmin) ? (
-                <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
-                  <div className="bg-white border-2 border-gray-200 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden">
-                    <div className="text-center overflow-hidden">
-                      <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">
-                        {effectiveCountry
-                          ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name)
-                          : '🌍'}
-                      </div>
-                      <p className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-purple-600 mb-2 sm:mb-3 break-words">
-                        {effectiveCountry?.name || userData?.pays || (isAdmin ? '(Tous les pays)' : 'Non défini')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              {(effectiveCountry || userData?.pays || isAdmin) ? (
+                <DeveloppementGouvernemental
+                  scope="pays"
+                  location={userData?.paysCode || effectiveCountry?.code || userData?.pays || 'pays'}
+                  locationName={effectiveCountry?.name || userData?.pays || 'Pays'}
+                  isJournalist={isJournalist}
+                  isAdmin={isAdmin}
+                />
               ) : (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
-                  <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 break-words">
-                    <strong>⚠️ Aucun pays enregistré</strong>
-                    <br />
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                  <p className="text-xs text-yellow-800">
+                    <strong>⚠️ Aucun pays enregistré</strong><br />
                     Vous n'avez pas encore enregistré votre pays lors de l'inscription.
                   </p>
                 </div>
@@ -1156,42 +1121,24 @@ export default function TerreAdam() {
 
         {/* 4. Continent */}
         {activeTab === 'continent' && (
-          <div className="space-y-3 sm:space-y-4 md:space-y-6 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 overflow-hidden">
-              <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-wrap">
-                <span className="text-base sm:text-lg md:text-xl">
-                  {effectiveContinent
-                    ? getContinentIcon(
-                        userData?.continentCode || effectiveContinent.code,
-                        effectiveContinent.name
-                      )
-                    : getContinentIcon(undefined, undefined)}
-                </span>
-                <span className="text-[11px] sm:text-xs md:text-sm break-words">
-                  {effectiveContinent?.name || userData?.continent || 'Continent'}
-                </span>
+          <div className="space-y-3 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 overflow-hidden">
+              <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-xl">{effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : getContinentIcon(undefined, undefined)}</span>
+                <span>{effectiveContinent?.name || userData?.continent || 'Continent'}</span>
               </h2>
-
-              {(effectiveContinent || isAdmin) ? (
-                <div className="space-y-2 sm:space-y-3 md:space-y-4 overflow-hidden">
-                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden">
-                    <div className="text-center overflow-hidden">
-                      <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">
-                        {effectiveContinent
-                          ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name)
-                          : '🌍'}
-                      </div>
-                      <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 mb-1.5 sm:mb-2 break-words">
-                        {effectiveContinent?.name || userData?.continent || (isAdmin ? '(Tous les continents)' : 'Non défini')}
-                      </h3>
-                    </div>
-                  </div>
-                </div>
+              {(effectiveContinent || userData?.continent || isAdmin) ? (
+                <DeveloppementGouvernemental
+                  scope="continent"
+                  location={userData?.continentCode || effectiveContinent?.code || userData?.continent || 'continent'}
+                  locationName={effectiveContinent?.name || userData?.continent || 'Continent'}
+                  isJournalist={isJournalist}
+                  isAdmin={isAdmin}
+                />
               ) : (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
-                  <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 break-words">
-                    <strong>⚠️ Aucun continent enregistré</strong>
-                    <br />
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                  <p className="text-xs text-yellow-800">
+                    <strong>⚠️ Aucun continent enregistré</strong><br />
                     Vous n'avez pas encore enregistré votre continent lors de l'inscription.
                   </p>
                 </div>
@@ -1202,17 +1149,13 @@ export default function TerreAdam() {
 
         {/* 5. Mondial */}
         {activeTab === 'mondial' && (
-          <div className="space-y-3 sm:space-y-4 md:space-y-6 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 overflow-hidden">
-              <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 flex items-center gap-1.5 sm:gap-2 md:gap-3">
-                <span className="text-base sm:text-lg md:text-xl">🌎</span>
-                <span className="text-[11px] sm:text-xs md:text-sm">Mondial</span>
+          <div className="space-y-3 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 overflow-hidden">
+              <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-xl">🌎</span>
+                <span>Mondial</span>
               </h2>
-
-              <div className="text-center py-3 sm:py-4 md:py-6 lg:py-8 overflow-hidden">
-                <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3">🌎</div>
-                {/* Pas de bouton d'accès séparé : l'espace est déjà cette page */}
-              </div>
+              <DeveloppementGouvernemental scope="mondial" location="mondial" locationName="Monde" isJournalist={isJournalist} isAdmin={isAdmin} />
             </div>
           </div>
         )}

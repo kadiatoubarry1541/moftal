@@ -38,22 +38,26 @@ export default function Famille() {
     <div className="min-h-screen bg-gray-50">
 
       {/* ── Barre de navigation Famille ── */}
-      <div className="shadow-md">
+      <div>
 
-        {/* Header vert */}
-        <div className="flex items-center gap-3 bg-emerald-600 px-4 py-3 text-white">
-          <span className="text-2xl leading-none">👨‍👩‍👧</span>
-          <div className="flex-1">
-            <h1 className="text-base font-bold leading-tight">Ma Famille</h1>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <h1 className="text-2xl font-bold text-gray-900">Famille</h1>
+          <div className="flex items-center gap-2">
+            {user && isAdmin(user) && (
+              <Link
+                to="/famille/admin"
+                className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition"
+              >
+                👑 Admin
+              </Link>
+            )}
+            <button className="w-9 h-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
           </div>
-          {user && isAdmin(user) && (
-            <Link
-              to="/famille/admin"
-              className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition"
-            >
-              👑 Admin
-            </Link>
-          )}
         </div>
 
         {/* Onglets */}

@@ -145,14 +145,30 @@ export default function MonProfil() {
   const canSeeAdminPanel = isMasterAdmin(userData);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Bouton retour */}
-      <button
-        onClick={() => navigate(-1)}
-        className="mb-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
-      >
-        {t('btn.back_arrow')}
-      </button>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+
+      {/* Barre de navigation dédiée style Facebook */}
+      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors flex-shrink-0"
+            aria-label="Retour"
+          >
+            <svg className="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+              {userData.prenom} {userData.nomFamille}
+            </h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{t('dashboard.my_profile') || 'Mon profil'}</p>
+          </div>
+        </div>
+      </header>
+
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
 
       {/* Changer la page favorite */}
       {userData?.numeroH && (
@@ -161,7 +177,7 @@ export default function MonProfil() {
             localStorage.removeItem(`moftal_favori_${userData.numeroH}`);
             window.dispatchEvent(new CustomEvent('open-favori-modal'));
           }}
-          className="mb-6 ml-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 text-sm font-medium transition-colors"
+          className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 text-sm font-medium transition-colors"
         >
           ⭐ Changer ma page d'accueil
         </button>
@@ -566,6 +582,7 @@ export default function MonProfil() {
 
       </div>
 
+    </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, Link, useNavigate } from "react-r
 import { Toaster } from "react-hot-toast";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
-import { getSessionUser, isAdmin } from "./utils/auth";
+import { getSessionUser, isAdmin, getPhotoUrl } from "./utils/auth";
 import NotificationBell from "./components/NotificationBell";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
@@ -54,6 +54,7 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminBadges = lazy(() => import("./pages/AdminBadges"));
 const AdminModeration = lazy(() => import("./pages/AdminModeration"));
 const AdminPoints = lazy(() => import("./pages/AdminPoints"));
+const AdminRetraits = lazy(() => import("./pages/AdminRetraits"));
 const AcheterPoints = lazy(() => import("./pages/AcheterPoints"));
 const TerreAdam = lazy(() => import("./pages/TerreAdam"));
 const ARetenir = lazy(() => import("./pages/ARetenir"));
@@ -263,7 +264,8 @@ function App() {
     pathname.startsWith("/beaute-vitrine/") ||
     pathname.startsWith("/artisan/") ||
     pathname.startsWith("/producteur/");
-  const isFullscreenPage = isGestionMode || isVitrineMode;
+  const isProfilPage = pathname === '/moi/profil';
+  const isFullscreenPage = isGestionMode || isVitrineMode || isProfilPage;
   const isHome = pathname === "/";
   const isPublicPage = isHome ||
     pathname === "/login" ||
@@ -284,7 +286,7 @@ function App() {
             <div className="flex items-center gap-2 flex-shrink-0">
               {isLoggedIn && !isPublicPage && (
                 <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
-                  <img src="/logo-moftal.svg" alt="Moftal" width="96" height="96" style={{ width: 96, height: 96 }}/>
+                  <img src="/logo-moftal.svg" alt="Moftal" width="62" height="62" style={{ width: 62, height: 62 }}/>
                 </Link>
               )}
             </div>
@@ -343,15 +345,6 @@ function App() {
                     </div>
                   )}
                 </div>
-              )}
-              {/* Mon Profil : à la place de Langue quand connecté */}
-              {isLoggedIn && !isPublicPage && (
-                <button
-                  onClick={() => navigate("/moi/profil")}
-                  className="min-h-[36px] flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-700 hover:bg-emerald-800 text-white transition-colors whitespace-nowrap"
-                >
-                  {t('dashboard.my_profile')}
-                </button>
               )}
             </div>
           </div>
@@ -486,6 +479,7 @@ function App() {
           <Route path="/admin/logos" element={<Navigate to="/admin/badges?tab=logos" replace />} />
           <Route path="/admin/governments" element={<AdminGovernments />} />
           <Route path="/admin/points" element={<AdminPoints />} />
+          <Route path="/admin/retraits" element={<AdminRetraits />} />
           <Route path="/acheter-points" element={<AcheterPoints />} />
           <Route path="/famille" element={<Famille />} />
           <Route path="/famille/parents" element={<Parents />} />

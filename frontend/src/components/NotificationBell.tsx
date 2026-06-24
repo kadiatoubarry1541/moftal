@@ -1,12 +1,108 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { getSocket } from "../services/socket";
 
 interface Notification {
   id: string;
   type: string;
   title: string;
   message: string;
+  relatedId?: string;
   isRead: boolean;
   created_at: string;
+}
+
+const TYPE_ICONS: Record<string, string> = {
+  appointment_accepted: "✅",
+  appointment_rejected: "❌",
+  account_approved: "🎉",
+  account_rejected: "🚫",
+  new_appointment: "📅",
+  friend_request: "👥",
+  couple_request: "💑",
+  tree_request: "🌳",
+  parent_request: "👨‍👩‍👧",
+  email_error: "⚠️",
+  general: "🔔"
+};
+
+const ACTION_TYPES = ["friend_request", "couple_request", "tree_request", "parent_request"];
+
+function getNavigationPath(type: string): string | null {
+  switch (type) {
+    case "appointment_accepted":
+    case "appointment_rejected": return "/mes-rendez-vous";
+    case "new_appointment":
+    case "account_approved":
+    case "account_rejected": return "/mes-comptes-pro";
+    case "friend_request": return "/mes-amis";
+    case "couple_request": return "/couple";
+    case "tree_request":
+    case "parent_request": return "/arbre";
+    default: return null;
+  }
+}
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "À l'instant";
+  if (mins < 60) return `${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days} j`;
+  const weeks = Math.floor(days / 7);
+  return `${weeks} sem`;
+}
+
+async function setupPushNotifications() {
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+  let permission = Notification.permission;
+  if (permission === "default") permission = await Notification.requestPermission();
+  if (permission !== "granted") return;
+  const registration = await navigator.serviceWorker.ready;
+  if (!registration.pushManager) return;
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const res = await fetch("http://localhost:5002/api/push/vapid-key", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.success || !data.publicKey) return;
+    const applicationServerKey = urlBase64ToUint8Array(data.publicKey);
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+    }
+    await fetch("http://localhost:5002/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(subscription.toJSON())
+    });
+  } catch { /* silently fail */ }
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+function showBrowserNotification(notif: Notification) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const n = new window.Notification(notif.title, {
+    body: notif.message,
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: notif.id,
+    renotify: true
+  });
+  const path = getNavigationPath(notif.type);
+  if (path) n.onclick = () => { window.focus(); n.close(); };
 }
 
 export default function NotificationBell() {
@@ -14,15 +110,42 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
     loadNotifications();
-    // Polling toutes les 30 secondes
     const interval = setInterval(loadUnreadCount, 30000);
-    return () => clearInterval(interval);
+    setupPushNotifications();
+    const socket = getSocket();
+    socket.on("new-notification", (notif: Notification) => {
+      setNotifications(prev => [notif, ...prev]);
+      setUnreadCount(c => c + 1);
+      showBrowserNotification(notif);
+      toast(
+        (t) => (
+          <div className="flex gap-3 items-start cursor-pointer" onClick={() => {
+            toast.dismiss(t.id);
+            const path = getNavigationPath(notif.type);
+            if (path) navigate(path);
+          }}>
+            <span className="text-xl flex-shrink-0">{TYPE_ICONS[notif.type] || "🔔"}</span>
+            <div>
+              <p className="font-semibold text-sm text-gray-900">{notif.title}</p>
+              <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{notif.message}</p>
+              {getNavigationPath(notif.type) && (
+                <p className="text-xs text-blue-500 font-medium mt-1">Appuyer pour voir →</p>
+              )}
+            </div>
+          </div>
+        ),
+        { duration: 6000, style: { maxWidth: 380, padding: "12px 16px" } }
+      );
+    });
+    return () => { clearInterval(interval); socket.off("new-notification"); };
   }, []);
 
-  // Fermer si on clique en dehors
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -70,26 +193,24 @@ export default function NotificationBell() {
     } catch { /* silently fail */ }
   };
 
-  const markRead = async (id: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      await fetch(`http://localhost:5002/api/notifications/mark-read/${id}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setNotifications(n => n.map(notif => notif.id === id ? { ...notif, isRead: true } : notif));
-      setUnreadCount(c => Math.max(0, c - 1));
-    } catch { /* silently fail */ }
+  const handleNotifClick = async (notif: Notification) => {
+    if (!notif.isRead) {
+      try {
+        const token = localStorage.getItem("token");
+        await fetch(`http://localhost:5002/api/notifications/mark-read/${notif.id}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setNotifications(n => n.map(x => x.id === notif.id ? { ...x, isRead: true } : x));
+        setUnreadCount(c => Math.max(0, c - 1));
+      } catch { /* silently fail */ }
+    }
+    const path = getNavigationPath(notif.type);
+    if (path) { setOpen(false); navigate(path); }
   };
 
-  const typeIcons: Record<string, string> = {
-    appointment_accepted: "✅",
-    appointment_rejected: "❌",
-    account_approved: "🎉",
-    account_rejected: "🚫",
-    new_appointment: "📅",
-    general: "🔔"
-  };
+  const newNotifs = notifications.filter(n => !n.isRead);
+  const oldNotifs = notifications.filter(n => n.isRead);
 
   return (
     <div ref={ref} className="relative">
@@ -100,51 +221,158 @@ export default function NotificationBell() {
       >
         <span className="text-xl">🔔</span>
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full animate-pulse">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 w-[min(95vw,480px)] sm:w-[min(95vw,520px)] min-w-[320px] max-h-[85vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl ring-1 ring-gray-200 dark:ring-gray-700 z-50 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
-            {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Tout marquer comme lu
-              </button>
-            )}
-          </div>
-          <div className="overflow-y-auto flex-1 min-h-0 p-1">
-            {notifications.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 text-base">Aucune notification</div>
-            ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.id}
-                  onClick={() => !n.isRead && markRead(n.id)}
-                  className={`px-4 py-4 rounded-lg mx-2 my-1 border-b border-gray-100 dark:border-gray-700 last:border-0 cursor-pointer transition-colors ${
-                    n.isRead ? "bg-white dark:bg-gray-800" : "bg-blue-50 dark:bg-blue-900/20"
-                  } hover:bg-gray-50 dark:hover:bg-gray-700/50`}
+        <div className="absolute right-0 top-12 w-[min(96vw,400px)] max-h-[90vh] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
+
+          {/* Header Facebook-style */}
+          <div className="flex items-center justify-between px-4 pt-5 pb-3 flex-shrink-0">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Notifications</h3>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllRead}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
                 >
-                  <div className="flex gap-4">
-                    <span className="text-2xl flex-shrink-0">{typeIcons[n.type] || "🔔"}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-base text-gray-900 dark:text-gray-100">{n.title}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 leading-relaxed whitespace-pre-wrap">{n.message}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                        {new Date(n.created_at).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })} à {new Date(n.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                      </div>
-                    </div>
-                    {!n.isRead && <div className="w-2.5 h-2.5 bg-blue-500 rounded-full flex-shrink-0 mt-2" />}
-                  </div>
+                  Tout lire
+                </button>
+              )}
+              <button className="w-9 h-9 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Liste */}
+          <div className="overflow-y-auto flex-1 min-h-0 pb-3">
+            {notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3">
+                  <span className="text-3xl">🔔</span>
                 </div>
-              ))
+                <p className="text-base font-semibold text-gray-500">Aucune notification</p>
+                <p className="text-sm text-gray-400 mt-1">Vous êtes à jour !</p>
+              </div>
+            ) : (
+              <>
+                {newNotifs.length > 0 && (
+                  <div>
+                    <p className="px-4 pt-1 pb-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">Nouveau</p>
+                    {newNotifs.map(n => (
+                      <NotifItem key={n.id} notif={n} onNavigate={handleNotifClick} navigate={navigate} setOpen={setOpen} setNotifications={setNotifications} setUnreadCount={setUnreadCount} />
+                    ))}
+                  </div>
+                )}
+                {oldNotifs.length > 0 && (
+                  <div>
+                    <p className="px-4 pt-3 pb-2 text-[15px] font-bold text-gray-900 dark:text-gray-100">Plus tôt</p>
+                    {oldNotifs.map(n => (
+                      <NotifItem key={n.id} notif={n} onNavigate={handleNotifClick} navigate={navigate} setOpen={setOpen} setNotifications={setNotifications} setUnreadCount={setUnreadCount} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface NotifItemProps {
+  notif: Notification;
+  onNavigate: (n: Notification) => void;
+  navigate: ReturnType<typeof useNavigate>;
+  setOpen: (v: boolean) => void;
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  setUnreadCount: React.Dispatch<React.SetStateAction<number>>;
+}
+
+function NotifItem({ notif, onNavigate, navigate, setOpen, setNotifications, setUnreadCount }: NotifItemProps) {
+  const hasAction = ACTION_TYPES.includes(notif.type);
+  const hasNav = !!getNavigationPath(notif.type);
+
+  const handleAccept = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`http://localhost:5002/api/notifications/mark-read/${notif.id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(n => n.map(x => x.id === notif.id ? { ...x, isRead: true } : x));
+      setUnreadCount(c => Math.max(0, c - 1));
+    } catch { /* silently fail */ }
+    const path = getNavigationPath(notif.type);
+    if (path) { setOpen(false); navigate(path); }
+  };
+
+  const handleDismiss = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`http://localhost:5002/api/notifications/mark-read/${notif.id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(n => n.map(x => x.id === notif.id ? { ...x, isRead: true } : x));
+      setUnreadCount(c => Math.max(0, c - 1));
+    } catch { /* silently fail */ }
+  };
+
+  return (
+    <div
+      onClick={() => onNavigate(notif)}
+      className={`flex gap-3 px-3 py-2 mx-1 rounded-xl transition-colors ${
+        !notif.isRead ? "bg-blue-50 dark:bg-blue-900/20" : ""
+      } ${hasNav ? "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" : ""}`}
+    >
+      {/* Avatar rond avec icône */}
+      <div className="flex-shrink-0 relative">
+        <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl">
+          {TYPE_ICONS[notif.type] || "🔔"}
+        </div>
+        {!notif.isRead && (
+          <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-blue-500 rounded-full border-2 border-white dark:border-gray-900" />
+        )}
+      </div>
+
+      {/* Contenu */}
+      <div className="flex-1 min-w-0 pt-1">
+        <p className="text-[14px] leading-snug text-gray-900 dark:text-gray-100">
+          <span className="font-semibold">{notif.title}</span>{" "}
+          <span className="font-normal text-gray-700 dark:text-gray-300">{notif.message}</span>
+        </p>
+        <p className={`text-xs mt-0.5 font-semibold ${notif.isRead ? "text-gray-400" : "text-blue-500"}`}>
+          {relativeTime(notif.created_at)}
+        </p>
+
+        {/* Boutons d'action style Facebook */}
+        {hasAction && !notif.isRead && (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={handleAccept}
+              className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              {notif.type === "friend_request" ? "Confirmer" : "Accepter"}
+            </button>
+            <button
+              onClick={handleDismiss}
+              className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-sm font-semibold rounded-lg transition-colors"
+            >
+              {notif.type === "friend_request" ? "Supprimer" : "Refuser"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

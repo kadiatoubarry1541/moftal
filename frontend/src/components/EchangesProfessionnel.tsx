@@ -121,21 +121,15 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="flex items-center gap-2 mb-4">
-        <button
-          onClick={() => navigate('/activite')}
-          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2 text-sm"
-        >
-          ← Retour
-        </button>
-      </div>
-
-      <div className="text-center mb-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 pt-3">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Échanges</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Choisissez une catégorie et voyez un aperçu des produits avant d'entrer
-        </p>
+        <button className="w-9 h-9 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

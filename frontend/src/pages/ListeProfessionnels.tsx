@@ -25,6 +25,7 @@ const TYPES = [
   { id: "clinic", label: "Cliniques", icon: "🏥" },
   { id: "security_agency", label: "Sécurité", icon: "🛡️" },
   { id: "journalist", label: "Journalistes", icon: "📰" },
+  { id: "commerce", label: "Commerce", icon: "🏪" },
   { id: "enterprise", label: "Entreprises", icon: "🏢" },
   { id: "school", label: "Écoles", icon: "🎓" },
   { id: "supplier", label: "Fournisseurs", icon: "📦" },
@@ -218,9 +219,25 @@ export default function ListeProfessionnels() {
         {loading ? (
           <div className="text-center py-12 text-gray-500">Chargement...</div>
         ) : accounts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">📭</div>
-            <p className="text-gray-500">Aucun professionnel trouvé</p>
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <div className="text-6xl mb-4">
+              {filterType ? (TYPES.find(t => t.id === filterType)?.icon || "🏢") : "💼"}
+            </div>
+            <h3 className="text-base font-bold text-gray-700 mb-2">
+              Aucun professionnel inscrit pour l'instant
+            </h3>
+            <p className="text-sm text-gray-500 mb-6 max-w-xs leading-relaxed">
+              {filterType
+                ? `Aucun ${TYPES.find(t => t.id === filterType)?.label?.toLowerCase() || 'professionnel'} n'a encore rejoint la plateforme. Soyez le premier !`
+                : "Aucun professionnel n'a encore rejoint la plateforme. Proposez votre service dès aujourd'hui !"
+              }
+            </p>
+            <button
+              onClick={() => navigate('/inscription-pro')}
+              className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
+            >
+              ➕ Proposer votre service
+            </button>
           </div>
         ) : hasGeoContext ? (
           <>

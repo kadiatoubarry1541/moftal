@@ -1,6 +1,21 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 
+function getNotifUrl(type) {
+  switch (type) {
+    case 'appointment_accepted':
+    case 'appointment_rejected': return '/mes-rendez-vous';
+    case 'new_appointment':
+    case 'account_approved':
+    case 'account_rejected': return '/mes-comptes-pro';
+    case 'friend_request': return '/mes-amis';
+    case 'couple_request': return '/couple';
+    case 'tree_request':
+    case 'parent_request': return '/arbre';
+    default: return '/';
+  }
+}
+
 class Notification extends Model {
   static async getForUser(recipientNumeroH) {
     return await this.findAll({
@@ -24,13 +39,57 @@ class Notification extends Model {
   }
 
   static async createNotification({ recipientNumeroH, type, title, message, relatedId }) {
-    return await this.create({
+    const notif = await this.create({
       recipientNumeroH,
       type,
       title,
       message,
       relatedId
     });
+    const payload = {
+      id: notif.id,
+      type: notif.type,
+      title: notif.title,
+      message: notif.message,
+      relatedId: notif.relatedId,
+      isRead: false,
+      created_at: notif.created_at
+    };
+
+    // Push temps réel via Socket.IO
+    try {
+      const { getIO } = await import('../socket.js');
+      const io = getIO();
+      if (io) io.to(`user-${recipientNumeroH}`).emit('new-notification', payload);
+    } catch { /* Socket non disponible */ }
+
+    // Web Push — pour notifier même quand le navigateur est en arrière-plan
+    try {
+      const webpush = (await import('web-push')).default;
+      const { default: PushSubscription } = await import('./PushSubscription.js');
+      const subs = await PushSubscription.getForUser(recipientNumeroH);
+      const pushPayload = JSON.stringify({
+        title: notif.title,
+        message: notif.message,
+        type: notif.type,
+        id: notif.id,
+        url: getNotifUrl(notif.type)
+      });
+      await Promise.allSettled(subs.map(async sub => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            pushPayload
+          );
+        } catch (err) {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            await PushSubscription.removeExpired(sub.endpoint);
+          }
+        }
+      }));
+    } catch { /* Web push non configuré */ }
+
+    return notif;
   }
 }
 
