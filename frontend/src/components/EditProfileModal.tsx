@@ -54,10 +54,13 @@ export default function EditProfileModal({
   const [formData, setFormData] = useState<UserData | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const allLocations = useMemo(() => getAllLocationsForGroups(), []);
 
   const ACTIVITY_OPTIONS = [
@@ -94,6 +97,8 @@ export default function EditProfileModal({
       setFormData({ ...userData });
       setPhotoPreview(getPhotoUrl(userData.photo));
       setPhotoFile(null);
+      setVideoFile(null);
+      setVideoPreview(null);
       setError(null);
       setSuccess(false);
     }
@@ -111,6 +116,15 @@ export default function EditProfileModal({
       setPhotoFile(file);
       const url = URL.createObjectURL(file);
       setPhotoPreview(url);
+    }
+  };
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setVideoFile(file);
+      const url = URL.createObjectURL(file);
+      setVideoPreview(url);
     }
   };
 
@@ -144,7 +158,8 @@ export default function EditProfileModal({
         } catch { /* ignore */ }
       }
 
-      // Variable locale pour suivre la photo uploadée
+      // Variables locales pour suivre photo et vidéo uploadées
+      let uploadedVideoUrl: string | undefined = formData.video as string | undefined;
       let uploadedPhotoUrl: string | undefined = formData.photo;
 
       // 1. Mettre à jour la photo si une nouvelle a été choisie
@@ -168,7 +183,27 @@ export default function EditProfileModal({
         uploadedPhotoUrl = photoData.photoUrl || (photoData.user && photoData.user.photo) || uploadedPhotoUrl;
       }
 
-      // 2. Mettre à jour les informations textuelles
+      // 2. Uploader la nouvelle vidéo si sélectionnée
+      if (videoFile) {
+        const videoFormData = new FormData();
+        videoFormData.append("video", videoFile);
+        videoFormData.append("numeroH", formData.numeroH);
+        try {
+          const videoResponse = await apiFetch("/auth/profile/video", {
+            method: "POST",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: videoFormData,
+          });
+          if (videoResponse.ok) {
+            const videoData = await videoResponse.json();
+            uploadedVideoUrl = videoData.videoUrl || uploadedVideoUrl;
+          }
+        } catch {
+          // Si upload vidéo échoue, on garde l'ancienne URL
+        }
+      }
+
+      // 3. Mettre à jour les informations textuelles
       let serverUser: any = {};
       try {
         const response = await apiFetch("/auth/profile", {
@@ -203,6 +238,7 @@ export default function EditProfileModal({
             lieu3: formData.lieu3,
             numeroHPere: formData.numeroHPere,
             numeroHMere: formData.numeroHMere,
+            languesAutre: formData.languesAutre,
           }),
         });
 
@@ -216,12 +252,14 @@ export default function EditProfileModal({
         console.warn("Mise à jour du profil texte échouée, mais on continue avec la photo");
       }
 
-      // 3. Construire l'utilisateur final
+      // 4. Construire l'utilisateur final
       const finalPhoto = uploadedPhotoUrl || (serverUser as any).photo || formData.photo;
+      const finalVideo = uploadedVideoUrl || (serverUser as any).video || formData.video;
       const updatedUser: UserData = {
         ...formData,
         ...serverUser,
         photo: finalPhoto,
+        video: finalVideo,
       };
 
       console.log('✅ Profil mis à jour - photo:', finalPhoto);
@@ -327,6 +365,45 @@ export default function EditProfileModal({
                 📷 Choisir une photo
               </button>
             </div>
+          </div>
+
+          {/* Vidéo d'inscription */}
+          <div className="border border-purple-200 rounded-xl p-4 bg-purple-50">
+            <h4 className="text-base font-semibold text-purple-800 mb-2">🎥 Vidéo d'inscription</h4>
+            {(videoPreview || formData.video) ? (
+              <video
+                src={videoPreview || (formData.video as string)}
+                controls
+                className="w-full max-w-sm rounded-xl border border-purple-200 shadow-sm mb-2"
+                style={{ maxHeight: 200 }}
+              />
+            ) : (
+              <p className="text-sm text-gray-400 mb-2">Aucune vidéo enregistrée.</p>
+            )}
+            <div className="flex items-center gap-3 flex-wrap">
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleVideoChange}
+                style={{ display: "none" }}
+              />
+              <button
+                type="button"
+                onClick={() => videoInputRef.current?.click()}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm transition-colors"
+              >
+                {formData.video ? "🔄 Remplacer la vidéo" : "🎥 Ajouter une vidéo"}
+              </button>
+              {videoFile && (
+                <span className="text-sm text-green-700 font-medium">✓ Nouvelle vidéo prête</span>
+              )}
+            </div>
+            {formData.video && (
+              <p className="text-xs text-gray-400 mt-2">
+                La vidéo ne peut pas être supprimée — vous pouvez seulement la remplacer.
+              </p>
+            )}
           </div>
 
           {/* Informations personnelles */}
@@ -500,6 +577,19 @@ export default function EditProfileModal({
                 placeholder="Ex: Islam, Christianisme..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                🌐 Langues parlées
+              </label>
+              <input
+                type="text"
+                value={formData.languesAutre || ""}
+                onChange={(e) => handleInputChange("languesAutre", e.target.value)}
+                placeholder="Ex: Français ; Pulaar ; Soussou ; Malinké ; Anglais"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">Séparez chaque langue par un point-virgule ( ; )</p>
             </div>
           </div>
 

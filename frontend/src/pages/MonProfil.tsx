@@ -74,8 +74,29 @@ export default function MonProfil() {
       setUserData(u);
       loadUserLogos(u.numeroH);
       loadMemberships();
+      // Charger les données fraîches du serveur pour avoir la vidéo et toutes les infos à jour
+      fetchFreshUserData();
     } catch {
       navigate("/login");
+    }
+  };
+
+  const fetchFreshUserData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const API_BASE = config.API_BASE_URL || 'http://localhost:5002/api';
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setUserData(data.user);
+        }
+      }
+    } catch {
+      // Silencieux — on garde les données localStorage si le serveur est injoignable
     }
   };
 
@@ -261,6 +282,14 @@ export default function MonProfil() {
                   {getNumeroHForDisplay(userData.numeroH, true, false)}
                 </span>
               </div>
+              {userData.languesAutre && (
+                <div className="text-slate-600">
+                  <span className="font-medium">🌐 Langues :</span>{" "}
+                  <span className="text-slate-700">
+                    {(userData.languesAutre as string).split(";").map(l => l.trim()).filter(Boolean).join(" · ")}
+                  </span>
+                </div>
+              )}
               {userData.handicap && (
                 <div className="text-slate-600">
                   <span className="font-medium">{t('profile.handicap')}:</span>{" "}

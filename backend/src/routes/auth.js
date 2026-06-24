@@ -847,7 +847,7 @@ router.put('/profile', async (req, res) => {
       'nationalite', 'prenomPere', 'nomFamillePere', 'numeroHPere',
       'prenomMere', 'nomFamilleMere', 'numeroHMere', 'treeVisibility',
       'activite1', 'activite2', 'activite3', 'specialite', 'statutMatrimonial',
-      'lieu1', 'lieu2', 'lieu3'
+      'lieu1', 'lieu2', 'lieu3', 'languesAutre'
     ];
     
     const updates = {};
@@ -935,6 +935,36 @@ router.post('/profile/photo', (req, res) => {
         success: false,
         message: 'Erreur serveur lors de la mise à jour de la photo'
       });
+    }
+  });
+});
+
+// @route   POST /api/auth/profile/video
+// @desc    Remplacer la vidéo d'inscription (jamais supprimer, seulement remplacer)
+// @access  Private
+router.post('/profile/video', (req, res) => {
+  upload.single('video')(req, res, async (multerErr) => {
+    if (multerErr) {
+      return res.status(400).json({ success: false, message: multerErr.message || 'Erreur upload vidéo' });
+    }
+    try {
+      const { numeroH } = req.body;
+      if (!numeroH) return res.status(400).json({ success: false, message: 'NumeroH requis' });
+      if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
+
+      const user = await User.findByNumeroH(numeroH);
+      if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+
+      const videoUrl = `/uploads/${req.file.filename}`;
+      await user.update({ video: videoUrl });
+
+      const userWithoutPassword = { ...user.dataValues };
+      delete userWithoutPassword.password;
+
+      res.json({ success: true, message: 'Vidéo mise à jour avec succès', videoUrl, user: userWithoutPassword });
+    } catch (error) {
+      console.error('Erreur upload vidéo profil:', error);
+      res.status(500).json({ success: false, message: 'Erreur serveur lors de la mise à jour de la vidéo' });
     }
   });
 });
