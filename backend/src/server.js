@@ -544,6 +544,48 @@ async function initAllTables() {
         `ALTER TABLE "activity_groups" ADD COLUMN IF NOT EXISTS "pays" VARCHAR(255) DEFAULT '';`,
         `ALTER TABLE "activity_groups" ADD COLUMN IF NOT EXISTS "region" VARCHAR(255) DEFAULT '';`
       ]
+    },
+    {
+      name: 'friends',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "friends" (
+          "id"              UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "user_numero_h"   VARCHAR(255) NOT NULL,
+          "friend_numero_h" VARCHAR(255) NOT NULL,
+          "status"          VARCHAR(20)  NOT NULL DEFAULT 'accepted',
+          "requested_at"    TIMESTAMPTZ  DEFAULT NOW(),
+          "accepted_at"     TIMESTAMPTZ  DEFAULT NOW(),
+          "mutual_friends"  INTEGER      DEFAULT 0,
+          "common_interests" JSONB       DEFAULT '[]',
+          "created_at"      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_fr_user   ON "friends" ("user_numero_h");`,
+        `CREATE INDEX IF NOT EXISTS idx_fr_friend ON "friends" ("friend_numero_h");`,
+        `CREATE INDEX IF NOT EXISTS idx_fr_status ON "friends" ("status");`
+      ],
+      alters: []
+    },
+    {
+      name: 'friend_requests',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "friend_requests" (
+          "id"             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "from_user"      VARCHAR(255) NOT NULL,
+          "fromUserName"   VARCHAR(255),
+          "to_user"        VARCHAR(255) NOT NULL,
+          "message"        TEXT,
+          "status"         VARCHAR(20)  NOT NULL DEFAULT 'pending',
+          "created_at"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_freq_from   ON "friend_requests" ("from_user");`,
+        `CREATE INDEX IF NOT EXISTS idx_freq_to     ON "friend_requests" ("to_user");`,
+        `CREATE INDEX IF NOT EXISTS idx_freq_status ON "friend_requests" ("status");`
+      ],
+      alters: []
     }
   ];
 
