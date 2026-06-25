@@ -34,6 +34,7 @@ interface LieuxResidenceProps {
 
 export function LieuxResidence({ userData }: LieuxResidenceProps) {
   const [activeTab, setActiveTab] = useState("lieu1");
+  const [menuOpen, setMenuOpen] = useState(false);
   const [residences, setResidences] = useState<Residence[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingResidence, setEditingResidence] = useState<Residence | null>(
@@ -227,23 +228,55 @@ export function LieuxResidence({ userData }: LieuxResidenceProps) {
         </div>
       </div>
 
-      {/* Navigation par onglets */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg transition-colors duration-200 ${
-                activeTab === tab.id
-                  ? "bg-blue-600 text-white"
-                  : "border border-slate-300 text-slate-700 hover:bg-slate-50"
-              }`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
+      {/* Navigation — menu 3 points */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-3 mb-6 flex items-center justify-between">
+        {/* Section active */}
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{tabs.find(t => t.id === activeTab)?.icon}</span>
+          <span className="font-semibold text-slate-800 text-sm">
+            {tabs.find(t => t.id === activeTab)?.label}
+          </span>
+        </div>
+
+        {/* ⋮ Menu 3 points */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(v => !v)}
+            className="flex flex-col items-center justify-center gap-[4px] p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 transition"
+            aria-label="Menu"
+          >
+            <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
+            <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
+            <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
+          </button>
+
+          {menuOpen && (
+            <>
+              {/* Overlay pour fermer en cliquant dehors */}
+              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-12 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 min-w-[220px]">
+                {tabs.map((tab, i) => (
+                  <div key={tab.id}>
+                    {i === 3 && <div className="border-t border-gray-100 my-1" />}
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab(tab.id); setMenuOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition ${
+                        activeTab === tab.id
+                          ? 'text-blue-600 font-bold bg-blue-50'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-lg">{tab.icon}</span>
+                      <span className="flex-1 text-left">{tab.label}</span>
+                      {activeTab === tab.id && <span className="text-blue-500">✓</span>}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

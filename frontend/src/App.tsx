@@ -260,6 +260,7 @@ function App() {
     pathname.startsWith("/transport/") ||
     pathname.startsWith("/reseau-vitrine/") ||
     pathname.startsWith("/mairie/") ||
+    pathname.startsWith("/fournisseur/") ||
     pathname.startsWith("/vendeur/") ||
     pathname.startsWith("/beaute-vitrine/") ||
     pathname.startsWith("/artisan/") ||
@@ -522,6 +523,7 @@ function App() {
           <Route path="/professeur-ia" element={<ProfesseurIA />} />
           <Route path="/inscription-pro" element={<InscriptionPro />} />
           <Route path="/professionnels" element={<ListeProfessionnels />} />
+          <Route path="/liste-professionnels" element={<ListeProfessionnels />} />
           <Route path="/mes-comptes-pro" element={<MesComptesPro />} />
           <Route path="/espace-pro/:id" element={<EspacePro />} />
           <Route path="/mon-espace-pro" element={<MonEspacePro />} />

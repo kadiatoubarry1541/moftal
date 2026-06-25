@@ -1,5 +1,4 @@
 import { lazy, Suspense, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import ParentsTab from './Parents'
 
 const EnfantsTab    = lazy(() => import('./Enfants'))
@@ -15,7 +14,6 @@ const TABS: { id: TabId; label: string; emoji: string }[] = [
 ]
 
 export default function Foyer() {
-  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabId>('parents')
 
   const active = TABS.find(t => t.id === activeTab)!
@@ -23,16 +21,6 @@ export default function Foyer() {
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50 dark:bg-gray-900">
 
-      {/* Bouton retour */}
-      <div className="px-4 pt-4 pb-2">
-        <button
-          type="button"
-          onClick={() => navigate('/famille')}
-          className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-lg transition-colors text-sm border border-gray-200 dark:border-gray-600"
-        >
-          ← Famille
-        </button>
-      </div>
 
       {/* En-tête */}
       <div className="mx-4 mb-0 flex items-center gap-3 rounded-2xl bg-emerald-600 px-4 py-3 text-white shadow-md">

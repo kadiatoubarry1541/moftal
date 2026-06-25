@@ -463,7 +463,6 @@ export default function Noyau() {
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-900">
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-6 sm:px-6">
         <div className="max-w-3xl mx-auto">
-          <Link to="/famille" className="text-emerald-100 text-sm hover:underline">← Retour à Ma Famille</Link>
           <h1 className="text-2xl sm:text-3xl font-bold mt-1 flex items-center gap-2">🏠 Noyau Familial</h1>
           <p className="text-emerald-50 mt-1 text-sm">
             La famille restreinte : un fondateur, ses épouses, ses enfants — et le Livre qu'il laisse aux siens.

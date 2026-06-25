@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 
-const API_BASE = config.API_BASE_URL || "http://localhost:7777/api";
+const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
 const TEAL = "#1a8f1a";
 const TEAL_DARK = "#156315";
@@ -389,7 +389,7 @@ export default function CliniqueVitrine() {
                 style={{ background: TEAL, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
                 Se connecter
               </button>
-              <button onClick={() => navigate("/register")}
+              <button onClick={() => navigate("/vivant")}
                 style={{ background: "white", color: TEAL, border: `2px solid ${TEAL}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
                 S'inscrire sur Moftal
               </button>

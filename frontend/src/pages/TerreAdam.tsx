@@ -130,6 +130,7 @@ export default function TerreAdam() {
   type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3' | 'sous-prefecture' | 'prefecture';
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
@@ -578,43 +579,78 @@ export default function TerreAdam() {
         </button>
       </div>
 
-      {/* Navigation Tabs - une seule ligne sur tous les appareils */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <nav className="flex">
-          {[
-            { id: 'lieux', icon: '🏠', label: 'Résidence' },
-            {
-              id: 'region',
-              icon: getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine),
-              label: userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'
-            },
-            {
-              id: 'pays',
-              icon: effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️',
-              label: effectiveCountry?.name || userData?.pays || 'Pays'
-            },
-            {
-              id: 'continent',
-              icon: effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : '🌐',
-              label: effectiveContinent?.name || userData?.continent || 'Continent'
-            },
-            { id: 'mondial', icon: '🌎', label: 'Mondial' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <span className="text-lg leading-none">{tab.icon}</span>
-              <span className="text-[9px] font-medium leading-tight w-full truncate text-center px-0.5">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
+      {/* Navigation — menu 3 points */}
+      {(() => {
+        const navTabs = [
+          { id: 'lieux', icon: '🏠', label: 'Résidence' },
+          {
+            id: 'region',
+            icon: getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine),
+            label: userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'
+          },
+          {
+            id: 'pays',
+            icon: effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️',
+            label: effectiveCountry?.name || userData?.pays || 'Pays'
+          },
+          {
+            id: 'continent',
+            icon: effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : '🌐',
+            label: effectiveContinent?.name || userData?.continent || 'Continent'
+          },
+          { id: 'mondial', icon: '🌎', label: 'Mondial' }
+        ];
+        const current = navTabs.find(t => t.id === activeTab);
+        return (
+          <div className="bg-white border-b shadow-sm sticky top-0 z-10 flex items-center justify-between px-4 py-2">
+            {/* Section active */}
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{current?.icon}</span>
+              <span className="font-semibold text-gray-800 text-sm">{current?.label}</span>
+            </div>
+
+            {/* ⋮ Menu 3 points */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen(v => !v)}
+                className="flex flex-col items-center justify-center gap-[4px] p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 transition"
+                aria-label="Menu"
+              >
+                <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
+                <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
+                <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
+              </button>
+
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-12 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 min-w-[200px]">
+                    {navTabs.map((tab, i) => (
+                      <div key={tab.id}>
+                        {i === 1 && <div className="border-t border-gray-100 my-1" />}
+                        <button
+                          type="button"
+                          onClick={() => { setActiveTab(tab.id as any); setMenuOpen(false); }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition ${
+                            activeTab === tab.id
+                              ? 'text-emerald-600 font-bold bg-emerald-50'
+                              : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="text-lg">{tab.icon}</span>
+                          <span className="flex-1 text-left truncate">{tab.label}</span>
+                          {activeTab === tab.id && <span className="text-emerald-500">✓</span>}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-4 md:py-6 overflow-hidden">

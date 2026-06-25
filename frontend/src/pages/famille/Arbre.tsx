@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import PaymentModal from '../../components/PaymentModal'
 import { hideIncrement } from '../../utils/formatNumeroH'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
@@ -73,11 +74,11 @@ const DUREES = [
 ]
 
 function ActivationArbreCard({ treeId, apiBase }: { treeId: string; apiBase: string }) {
-  const [loading, setLoading] = useState(false);
-  const [erreur, setErreur] = useState('');
   const [prixBase, setPrixBase] = useState<number | null>(null);
   const [zone, setZone] = useState('');
-  const [dureeIdx, setDureeIdx] = useState(0); // 0 = 5 ans par défaut
+  const [dureeIdx, setDureeIdx] = useState(0);
+  const [showPaiement, setShowPaiement] = useState(false);
+  const [active, setActive] = useState(false);
 
   const dureeChoisie = DUREES[dureeIdx];
   const montantTotal = prixBase !== null ? prixBase * dureeChoisie.parts : null;
@@ -91,37 +92,6 @@ function ActivationArbreCard({ treeId, apiBase }: { treeId: string; apiBase: str
       .then(d => { if (d.success) { setPrixBase(d.prix); setZone(d.label); } })
       .catch(() => { setPrixBase(100000); setZone('Tarif Afrique'); });
   }, [apiBase]);
-
-  async function payer() {
-    if (!montantTotal) return;
-    setLoading(true);
-    setErreur('');
-    try {
-      const token = localStorage.getItem('token');
-      const r = await fetch(`${apiBase}/api/payment/initiate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: montantTotal,
-          currency: 'GNF',
-          purpose: 'activation_famille',
-          relatedId: treeId,
-          dureeAns: dureeChoisie.ans,
-          description: `Activation arbre familial Moftal — ${dureeChoisie.ans} ans — ${montantTotal.toLocaleString()} GNF`,
-        }),
-      });
-      const d = await r.json();
-      if (d.success && d.paymentUrl) {
-        window.location.href = d.paymentUrl;
-      } else {
-        setErreur(d.message || 'Impossible d\'initier le paiement. Réessayez.');
-      }
-    } catch {
-      setErreur('Erreur de connexion. Vérifiez votre internet.');
-    } finally {
-      setLoading(false);
-    }
-  }
 
   return (
     <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 px-4 py-4 mb-4">
@@ -185,23 +155,38 @@ function ActivationArbreCard({ treeId, apiBase }: { treeId: string; apiBase: str
         </div>
       )}
 
-      {erreur && (
-        <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-2">{erreur}</p>
+      {active && (
+        <p className="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 mb-2 font-semibold">
+          ✅ Arbre activé avec succès ! Rechargez la page pour voir votre code de sang.
+        </p>
       )}
 
       <button
-        onClick={payer}
-        disabled={loading || montantTotal === null}
+        onClick={() => { if (montantTotal) setShowPaiement(true); }}
+        disabled={montantTotal === null || active}
         className="w-full py-3 rounded-xl font-black text-sm text-white disabled:opacity-50 transition-all active:scale-95"
         style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}
       >
-        {loading
-          ? '⏳ Redirection vers le paiement...'
-          : montantTotal === null
-            ? 'Chargement du prix...'
-            : `🩸 Activer mon arbre — ${dureeChoisie.ans} ans — ${montantTotal.toLocaleString()} GNF`}
+        {montantTotal === null
+          ? 'Chargement du prix...'
+          : `🩸 Activer mon arbre — ${dureeChoisie.ans} ans — ${montantTotal.toLocaleString()} GNF`}
       </button>
-      <p className="text-xs text-center text-amber-600 mt-1.5">Paiement sécurisé via FedaPay · Orange Money / Carte</p>
+      <p className="text-xs text-center text-amber-600 mt-1.5">
+        Orange Money · MTN MoMo · Visa/Mastercard
+      </p>
+
+      {showPaiement && montantTotal && (
+        <PaymentModal
+          isOpen={showPaiement}
+          onClose={() => setShowPaiement(false)}
+          onSuccess={() => { setShowPaiement(false); setActive(true); }}
+          amount={montantTotal}
+          currency="GNF"
+          purpose="activation_famille"
+          relatedId={treeId}
+          description={`Activation arbre familial — ${dureeChoisie.ans} ans`}
+        />
+      )}
     </div>
   );
 }

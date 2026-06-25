@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 type CardType =
   | "mariage" | "bapteme" | "deces" | "reunion_physique" | "reunion_ligne" | "sante"
@@ -1669,6 +1670,7 @@ function CardViewModal({ saved, onClose }: { saved: SavedCard; onClose: () => vo
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
 export default function InfoWallou() {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<CardType | null>(null);
   const [card, setCard] = useState<CardState>(defaultCard("mariage"));
   const [showPublish, setShowPublish] = useState(false);
@@ -2002,7 +2004,7 @@ export default function InfoWallou() {
                   style={{ background: "rgba(255,255,255,0.06)" }}>
                   Annuler
                 </button>
-                <button onClick={() => { setShowAcheterPoints(false); window.location.href = "/acheter-points"; }}
+                <button onClick={() => { setShowAcheterPoints(false); navigate('/acheter-points'); }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
                   style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
                   Acheter des points
@@ -2194,7 +2196,7 @@ export default function InfoWallou() {
                   style={{ background: "rgba(255,255,255,0.06)" }}>
                   Annuler
                 </button>
-                <button onClick={() => { setShowAcheterPoints(false); window.location.href = "/acheter-points"; }}
+                <button onClick={() => { setShowAcheterPoints(false); navigate('/acheter-points'); }}
                   className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
                   style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
                   Acheter des points

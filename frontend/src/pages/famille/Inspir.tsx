@@ -340,10 +340,6 @@ export default function Inspir() {
       {/* ── Header ── */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button onClick={() => navigate(-1)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-sm text-gray-700 transition-colors">
-            ← Retour
-          </button>
           <div>
             <h1 className="text-xl font-black text-gray-900">🤝 Inspir</h1>
             <p className="text-gray-500 text-xs">

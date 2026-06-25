@@ -435,7 +435,7 @@ function SubscriptionPaymentWall({
           💳 Payer {price.toLocaleString('fr-FR')} GNF
         </button>
 
-        <p className="text-xs text-gray-400 mb-3">Orange Money • Wave • Visa • Mastercard</p>
+        <p className="text-xs text-gray-400 mb-3">Orange Money • MTN MoMo • Visa • Mastercard</p>
 
         <button
           onClick={() => navigate("/mes-comptes-pro")}
