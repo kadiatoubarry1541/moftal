@@ -227,153 +227,104 @@ export function UserDashboard() {
   return (
     <div className="user-dashboard bg-gray-50 dark:bg-gray-900 min-h-screen overflow-x-hidden">
 
-      {/* En-tête profil – pleine largeur sur mobile, compact sur desktop */}
-      <div className="dashboard-header px-3 xs:px-4 sm:px-6 lg:px-8 pt-2 pb-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto">
-          <div className="profile-card w-full sm:w-fit max-w-full bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-row items-center gap-4 flex-wrap">
-            <button
-              className="user-avatar relative flex-shrink-0 cursor-pointer group"
-              onClick={() => navigate("/moi/profil")}
-              title="Voir mon profil"
-            >
-              {(() => {
-                const rawPhoto =
-                  userData.photo ||
-                  (userData as any).manPhoto ||
-                  (userData as any).familyPhoto;
-                const photoUrl = getPhotoUrl(rawPhoto);
-                return (
-                  <img
-                    src={photoUrl || DefaultAvatar}
-                    alt="Photo de profil"
-                    width="64"
-                    height="64"
-                    loading="eager"
-                    fetchPriority="high"
-                    className="profile-photo profile-photo--compact group-hover:opacity-90 transition-opacity"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      if (!target.src.includes("default-avatar")) {
-                        target.src = DefaultAvatar;
-                        return;
-                      }
-                      target.style.display = "none";
-                      const parent = target.parentElement;
-                      if (parent && !parent.querySelector(".avatar-placeholder")) {
-                        const placeholder = document.createElement("div");
-                        placeholder.className = "avatar-placeholder";
-                        placeholder.textContent =
-                          userData.prenom?.charAt(0) || "👤";
-                        parent.appendChild(placeholder);
-                      }
-                    }}
-                  />
-                );
-              })()}
-              {userData.logo && (
-                <div className={`status-logo ${userData.logo}`}>
-                  {getLogoIcon(userData.logo)}
-                </div>
-              )}
-            </button>
-            <div className="user-details flex flex-col gap-2">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">
-                {userData.prenom} {userData.nomFamille}
-              </h2>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span
-                  className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
-                    userData.role === "admin" || userData.isAdmin
-                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200"
-                      : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  {userData.role === "admin" || userData.isAdmin ? t('profile.role.admin').replace('👑 ', '') : t('profile.role.user').replace('👤 ', '')}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                  NuméroH: {getNumeroHForDisplay(userData.numeroH, true, false)}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2 pt-0.5 items-center">
-                {userLogos.map((userLogo) => {
-                  if (!userLogo?.logo) return null;
-                  return (
-                    <button
-                      key={userLogo.id}
-                      onClick={() => setSelectedLogo(userLogo)}
-                      className="min-h-[36px] w-10 flex items-center justify-center rounded-lg shadow-sm transition-all hover:scale-110 active:scale-95 border-2"
-                      style={{
-                        backgroundColor: `${userLogo.logo.color}20`,
-                        borderColor: userLogo.logo.color || '#10B981',
-                        color: userLogo.logo.color || '#10B981',
-                        fontSize: '20px'
-                      }}
-                      title={userLogo.logo.name}
-                    >
-                      {userLogo.logo.icon}
-                    </button>
-                  );
-                })}
-                {isMasterAdmin(userData) && (
-                  <button
-                    onClick={() => navigate("/admin")}
-                    className="min-h-[36px] w-10 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-sm transition-colors"
-                    aria-label="Administration"
-                  >
-                    👑
-                  </button>
-                )}
-              </div>
+      {/* ── Header sticky : carte profil compacte + navigation ── */}
+      <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
 
-              {/* Modal badge de valeur */}
-              {selectedLogo && (
-                <div
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-                  onClick={() => setSelectedLogo(null)}
+        {/* Ligne profil compacte — toujours visible */}
+        <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-2 flex items-center gap-3">
+
+          {/* Avatar cliquable */}
+          <button
+            className="relative flex-shrink-0 cursor-pointer group"
+            onClick={() => navigate("/moi/profil")}
+            title="Voir mon profil"
+          >
+            {(() => {
+              const rawPhoto =
+                userData.photo ||
+                (userData as any).manPhoto ||
+                (userData as any).familyPhoto;
+              const photoUrl = getPhotoUrl(rawPhoto);
+              return (
+                <img
+                  src={photoUrl || DefaultAvatar}
+                  alt="Photo de profil"
+                  width="44"
+                  height="44"
+                  loading="eager"
+                  fetchPriority="high"
+                  className="w-11 h-11 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 group-hover:opacity-90 transition-opacity"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes("default-avatar")) {
+                      target.src = DefaultAvatar;
+                      return;
+                    }
+                    target.style.display = "none";
+                    const parent = target.parentElement;
+                    if (parent && !parent.querySelector(".avatar-placeholder")) {
+                      const placeholder = document.createElement("div");
+                      placeholder.className =
+                        "avatar-placeholder w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg";
+                      placeholder.textContent = userData.prenom?.charAt(0) || "👤";
+                      parent.appendChild(placeholder);
+                    }
+                  }}
+                />
+              );
+            })()}
+            {userData.logo && (
+              <div className="absolute -bottom-1 -right-1 text-xs leading-none">
+                {getLogoIcon(userData.logo)}
+              </div>
+            )}
+          </button>
+
+          {/* Nom + NuméroH */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">
+              {userData.prenom} {userData.nomFamille}
+            </p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono truncate">
+              {getNumeroHForDisplay(userData.numeroH, true, false)}
+            </p>
+          </div>
+
+          {/* Badges + admin */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {userLogos.slice(0, 3).map((userLogo) => {
+              if (!userLogo?.logo) return null;
+              return (
+                <button
+                  key={userLogo.id}
+                  onClick={() => setSelectedLogo(userLogo)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border-2 transition-all hover:scale-110 active:scale-95"
+                  style={{
+                    backgroundColor: `${userLogo.logo.color}20`,
+                    borderColor: userLogo.logo.color || '#10B981',
+                    color: userLogo.logo.color || '#10B981',
+                    fontSize: '16px'
+                  }}
+                  title={userLogo.logo.name}
                 >
-                  <div
-                    className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div
-                      className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4"
-                      style={{
-                        backgroundColor: `${selectedLogo.logo.color}20`,
-                        borderColor: selectedLogo.logo.color || '#10B981'
-                      }}
-                    >
-                      {selectedLogo.logo.icon}
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {selectedLogo.logo.name}
-                    </h3>
-                    {selectedLogo.note ? (
-                      <p className="text-gray-800 font-medium text-sm leading-relaxed">
-                        {selectedLogo.note}
-                      </p>
-                    ) : (
-                      <p className="text-gray-600 text-sm leading-relaxed">
-                        {selectedLogo.logo.description}
-                      </p>
-                    )}
-                    <button
-                      onClick={() => setSelectedLogo(null)}
-                      className="mt-5 px-6 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-                      style={{ backgroundColor: selectedLogo.logo.color || '#10B981' }}
-                    >
-                      {t('btn.close')}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                  {userLogo.logo.icon}
+                </button>
+              );
+            })}
+            {isMasterAdmin(userData) && (
+              <button
+                onClick={() => navigate("/admin")}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors text-base"
+                aria-label="Administration"
+              >
+                👑
+              </button>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Navigation principale — style Facebook : plat, trait bleu actif */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto flex">
+        {/* Onglets de navigation */}
+        <div className="max-w-7xl mx-auto flex border-t border-gray-100 dark:border-gray-800">
           {navItems.map((item) => {
             const isActive = item.type === "tab" && activeTab === item.id;
             return (
@@ -410,6 +361,48 @@ export function UserDashboard() {
           })}
         </div>
       </div>
+
+      {/* Modal badge de valeur */}
+      {selectedLogo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setSelectedLogo(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border-4"
+              style={{
+                backgroundColor: `${selectedLogo.logo.color}20`,
+                borderColor: selectedLogo.logo.color || '#10B981'
+              }}
+            >
+              {selectedLogo.logo.icon}
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {selectedLogo.logo.name}
+            </h3>
+            {selectedLogo.note ? (
+              <p className="text-gray-800 font-medium text-sm leading-relaxed">
+                {selectedLogo.note}
+              </p>
+            ) : (
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {selectedLogo.logo.description}
+              </p>
+            )}
+            <button
+              onClick={() => setSelectedLogo(null)}
+              className="mt-5 px-6 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+              style={{ backgroundColor: selectedLogo.logo.color || '#10B981' }}
+            >
+              {t('btn.close')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Contenu des onglets — lazy chargés à la demande */}
       <div className="dashboard-content max-w-7xl mx-auto">
