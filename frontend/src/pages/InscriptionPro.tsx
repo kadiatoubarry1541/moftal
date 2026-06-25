@@ -159,7 +159,11 @@ export default function InscriptionPro() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const d = await r.json();
-        setNomStatut(d.disponible ? 'disponible' : 'pris');
+        if (!r.ok || d.success === false) {
+          setNomStatut('');
+        } else {
+          setNomStatut(d.disponible === true ? 'disponible' : 'pris');
+        }
       } catch {
         setNomStatut('');
       }
