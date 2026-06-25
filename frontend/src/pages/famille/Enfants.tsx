@@ -432,19 +432,10 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      {!inline && (
-        <Link
-          to="/famille"
-          state={{ returnToHub: true }}
-          className="mb-4 inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl transition-colors border border-gray-200 dark:border-gray-600"
-        >
-          ← Retour à Famille
-        </Link>
-      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold text-slate-800">👶 Mes Enfants</h2>
+          <h2 className="text-lg font-bold text-slate-800">🧒 Mes Enfants</h2>
           <Link to="/famille/inspir" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300">
             🤝 Inspir
           </Link>
@@ -557,7 +548,7 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
             {pendingSent.map((inv) => (
               <div key={inv.id} className="flex items-center justify-between bg-white rounded-lg p-4 border border-amber-200">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">👶</span>
+                  <span className="text-2xl">🧒</span>
                   <div>
                     <p className="font-semibold text-slate-800">
                       {inv.child ? `${inv.child.prenom} ${inv.child.nomFamille}` : inv.childNumeroH}
@@ -670,7 +661,7 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
                     <>
                       {/* Bannière */}
                       <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl px-5 py-3 text-white mb-4 flex items-center gap-3">
-                        <span className="text-xl">👶</span>
+                        <span className="text-xl">🧒</span>
                         <span className="font-bold text-base">{childName}</span>
                       </div>
 
@@ -948,7 +939,7 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
               </>
             ) : (
               <div className="bg-slate-50 rounded-xl border border-slate-200 p-12 text-center">
-                <div className="text-5xl mb-4">👶</div>
+                <div className="text-5xl mb-4">🧒</div>
                 <p className="text-slate-700 font-medium mb-2">Sélectionnez un enfant</p>
                 <p className="text-slate-500 text-sm">Cliquez sur un enfant dans la liste à gauche pour afficher et gérer les activités partagées avec lui ou elle.</p>
               </div>

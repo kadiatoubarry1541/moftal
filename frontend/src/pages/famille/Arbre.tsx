@@ -212,8 +212,8 @@ export default function Arbre() {
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges' | 'foyer'>('arbre')
-  const [foyerSection, setFoyerSection] = useState<'parents' | 'enfants' | 'femme' | 'homme' | null>(null)
+  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges' | 'foyer'>('echanges')
+  const [foyerSection, setFoyerSection] = useState<'parents' | 'enfants' | 'femme' | 'homme' | null>('parents')
   const { t } = useI18n()
 
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -899,30 +899,13 @@ const enhancedUser: UserData = useMemo(() => {
     <div className="max-w-6xl mx-auto px-4 pb-6">
 
       {/* En-tête */}
-      <div className="flex items-center justify-between pt-3 pb-2">
+      <div className="flex items-center pt-2 pb-1">
         <h1 className="text-2xl font-bold text-gray-900">Héritage</h1>
-        <button className="w-9 h-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
       </div>
 
       {/* Navigation — style Facebook plat */}
       <div className="bg-white border-b border-gray-200 mb-4">
         <nav className="flex" role="tablist">
-
-          <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
-            onClick={() => setActiveTab('foyer')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'foyer'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <span className="text-lg leading-none">🏠</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Foyer</span>
-          </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'echanges'}
             onClick={() => setActiveTab('echanges')}
@@ -934,6 +917,18 @@ const enhancedUser: UserData = useMemo(() => {
           >
             <span className="text-lg leading-none">💬</span>
             <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Messages</span>
+          </button>
+
+          <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
+            onClick={() => setActiveTab('foyer')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
+              activeTab === 'foyer'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <span className="text-lg leading-none">🏠</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Foyer</span>
           </button>
 
           <button type="button"
@@ -1482,7 +1477,7 @@ const enhancedUser: UserData = useMemo(() => {
               <nav className="flex">
                 {([
                   { id: 'parents', emoji: '👨‍👩‍👦', label: 'Parents'   },
-                  { id: 'enfants', emoji: '👶',    label: 'Enfants'   },
+                  { id: 'enfants', emoji: '🧍',    label: 'Enfants'   },
                   { id: 'femme',   emoji: '👰',    label: 'Ma femme'  },
                   { id: 'homme',   emoji: '🤵',    label: 'Mon homme' },
                 ] as const).map(item => (
