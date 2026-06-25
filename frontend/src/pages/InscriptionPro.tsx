@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 const PRO_TYPES = [
@@ -139,36 +139,30 @@ export default function InscriptionPro() {
     services: "", specialties: "",
   });
 
-  // Vérification du nom en temps réel
+  // Vérification du nom uniquement quand l'utilisateur quitte le champ (onBlur)
   type NomStatut = '' | 'checking' | 'disponible' | 'pris';
   const [nomStatut, setNomStatut] = useState<NomStatut>('');
-  const nomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  const verifierNom = async () => {
     const nom = form.name.trim();
     if (!nom || nom.length < 2) { setNomStatut(''); return; }
-
     setNomStatut('checking');
-    if (nomTimerRef.current) clearTimeout(nomTimerRef.current);
-
-    nomTimerRef.current = setTimeout(async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const r = await fetch(
-          `http://localhost:5002/api/professionals/verifier-nom?nom=${encodeURIComponent(nom)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const d = await r.json();
-        if (!r.ok || d.success === false) {
-          setNomStatut('');
-        } else {
-          setNomStatut(d.disponible === true ? 'disponible' : 'pris');
-        }
-      } catch {
+    try {
+      const token = localStorage.getItem('token');
+      const r = await fetch(
+        `http://localhost:5002/api/professionals/verifier-nom?nom=${encodeURIComponent(nom)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const d = await r.json();
+      if (!r.ok || d.success === false) {
         setNomStatut('');
+      } else {
+        setNomStatut(d.disponible === true ? 'disponible' : 'pris');
       }
-    }, 600);
-  }, [form.name]);
+    } catch {
+      setNomStatut('');
+    }
+  };
   const [subSector, setSubSector] = useState<"primaire" | "secondaire" | "tertiaire" | "">("");
   const [securityType, setSecurityType] = useState<"policier" | "gendarme" | "pompier" | "agent_prive" | "">("");
 
@@ -398,7 +392,8 @@ export default function InscriptionPro() {
                   type="text"
                   required
                   value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  onChange={e => { setForm({ ...form, name: e.target.value }); setNomStatut(''); }}
+                  onBlur={verifierNom}
                   className={`${inputCls} ${nomStatut === 'pris' ? 'border-red-400 focus:ring-red-400' : nomStatut === 'disponible' ? 'border-green-400 focus:ring-green-400' : ''}`}
                   placeholder={selectedType === "restaurant" ? "Ex: Restaurant Chez Kadiatou" : "Nom de votre établissement"}
                 />
