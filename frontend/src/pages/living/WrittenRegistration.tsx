@@ -517,21 +517,44 @@ export function WrittenRegistration() {
             <div className="field">
               <label>Date de naissance *</label>
               <input
-                type="date"
-                value={data.dateNaissance}
+                type="text"
+                inputMode="numeric"
+                placeholder="JJ/MM/AAAA"
+                maxLength={10}
+                value={data.dateNaissance
+                  ? (() => {
+                      const [y, m, d] = data.dateNaissance.split('-')
+                      return d && m && y ? `${d}/${m}/${y}` : data.dateNaissance
+                    })()
+                  : ''}
                 onChange={(e) => {
-                  const generation = calculateGeneration(e.target.value)
-                  setData((prev) => ({ ...prev, dateNaissance: e.target.value, generation }))
-                  if (e.target.value) {
+                  // Auto-formatage : insère les / automatiquement
+                  let raw = e.target.value.replace(/\D/g, '')
+                  if (raw.length > 8) raw = raw.slice(0, 8)
+                  let formatted = raw
+                  if (raw.length > 4) formatted = raw.slice(0, 2) + '/' + raw.slice(2, 4) + '/' + raw.slice(4)
+                  else if (raw.length > 2) formatted = raw.slice(0, 2) + '/' + raw.slice(2)
+
+                  // Convertir en YYYY-MM-DD pour le backend dès que la date est complète
+                  if (raw.length === 8) {
+                    const dd = raw.slice(0, 2)
+                    const mm = raw.slice(2, 4)
+                    const yyyy = raw.slice(4, 8)
+                    const iso = `${yyyy}-${mm}-${dd}`
+                    const generation = calculateGeneration(iso)
+                    setData((prev) => ({ ...prev, dateNaissance: iso, generation }))
                     setValidationErrors((prev) => {
                       const next = new Set(prev)
                       next.delete('dateNaissance')
                       return next
                     })
+                  } else {
+                    // Date incomplète — stocker le texte en cours tel quel
+                    setData((prev) => ({ ...prev, dateNaissance: formatted, generation: '' }))
                   }
                 }}
                 required
-                className={getFieldClassName('dateNaissance', !!data.dateNaissance)}
+                className={getFieldClassName('dateNaissance', !!data.dateNaissance && data.dateNaissance.includes('-'))}
               />
             </div>
           </div>
