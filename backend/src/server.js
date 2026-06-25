@@ -2414,8 +2414,8 @@ app.use('/api', limiter);
 
 // Middleware pour parser le JSON
 // Limite élevée pour enregistrement vivant (photo + vidéo en base64)
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // Servir les fichiers uploads (photos, vidéos)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {

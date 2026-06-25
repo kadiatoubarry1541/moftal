@@ -11,7 +11,7 @@ const router = express.Router();
 const memStorage = multer.memoryStorage();
 const upload = multer({
   storage: memStorage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max (vidéos inscription)
   fileFilter: (req, file, cb) => {
     const allowed = /image\/(jpeg|jpg|png|gif|webp)|video\/(mp4|quicktime|x-msvideo|avi)|audio\/(wav|mpeg|mp3)|application\/(pdf|msword)/;
     if (allowed.test(file.mimetype)) return cb(null, true);
@@ -19,10 +19,10 @@ const upload = multer({
   },
 });
 
-// Rate limit pour les uploads publics (inscription) : 10 uploads/IP/heure
+// Rate limit pour les uploads publics (inscription) : 50 uploads/IP/heure
 const registerUploadLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: 50,
   message: { success: false, message: 'Trop de tentatives, réessayez dans 1 heure' },
 });
 

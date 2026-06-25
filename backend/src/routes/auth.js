@@ -416,6 +416,15 @@ router.post('/register', validateUser, async (req, res) => {
           message: 'Le serveur met trop de temps à répondre. Réessayez dans un moment.'
         });
       }
+      // Erreur de contrainte d'unicité (email ou téléphone déjà utilisé)
+      if (dbError?.name === 'SequelizeUniqueConstraintError' || dbError?.parent?.code === '23505') {
+        const fields = (dbError.errors || []).map(e => e.path).join(', ');
+        let msg = 'Un compte existe déjà avec ces informations.';
+        if (fields.includes('email'))  msg = 'Cette adresse email est déjà associée à un compte existant. Utilisez une autre adresse email.';
+        else if (fields.includes('tel1') || fields.includes('telephone')) msg = 'Ce numéro de téléphone est déjà associé à un compte existant. Utilisez un autre numéro.';
+        else if (fields.includes('numero_h')) msg = 'Un problème de génération du NuméroH est survenu. Réessayez.';
+        return res.status(409).json({ success: false, message: msg });
+      }
       console.error('❌ Erreur base de données lors de l\'inscription:', dbError);
       return res.status(500).json({
         success: false,
