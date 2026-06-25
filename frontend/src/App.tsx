@@ -467,6 +467,7 @@ function App() {
           <Route path="/sante" element={<Sante />} />
           <Route path="/securite" element={<Securite />} />
           <Route path="/mes-amours" element={<Navigate to="/famille/mes-amours" replace />} />
+          <Route path="/mes-amis" element={<Navigate to="/famille/mes-amours?tab=requests" replace />} />
           <Route path="/identite" element={<Identite />} />
           <Route path="/activite" element={<Activite />} />
           <Route path="/education" element={<Education />} />

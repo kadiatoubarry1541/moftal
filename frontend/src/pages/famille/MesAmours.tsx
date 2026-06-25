@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import { getNumeroHForDisplay } from '../../utils/auth';
@@ -76,8 +76,10 @@ interface MesAmoursStory {
 }
 
 export default function MesAmours() {
+  const [searchParams] = useSearchParams();
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'info'>('friends');
+  const initialTab = (searchParams.get('tab') as 'friends' | 'requests' | 'info') || 'friends';
+  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'info'>(initialTab);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -201,8 +203,7 @@ export default function MesAmours() {
       } else {
         setFriendRequests([]);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des demandes:', error);
+    } catch {
       setFriendRequests([]);
     }
   };
