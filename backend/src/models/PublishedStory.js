@@ -35,8 +35,9 @@ PublishedStory.init({
   },
   content: {
     type: DataTypes.TEXT,
-    allowNull: false,
-    comment: 'Contenu textuel de l\'histoire'
+    allowNull: true,
+    defaultValue: '',
+    comment: 'Contenu textuel de l\'histoire (optionnel pour les stories image/vidéo)'
   },
   photos: {
     type: DataTypes.JSON,

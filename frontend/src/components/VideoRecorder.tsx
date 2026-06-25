@@ -34,93 +34,52 @@ export function VideoRecorder({ onVideoRecorded, maxDuration = 10 }: VideoRecord
     }
   }, [])
 
-  const startCamera = async () => {
-    try {
-      setError(null)
-      console.log('🎥 Demande d\'accès à la caméra...')
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      })
-      
-      console.log('✅ Stream caméra obtenu:', stream)
-      streamRef.current = stream
-      
-      if (videoRef.current) {
-        console.log('📹 Configuration de l\'élément vidéo...')
-        videoRef.current.srcObject = stream
-        
-        // Forcer l'affichage immédiat
-        videoRef.current.style.display = 'block'
-        videoRef.current.style.visibility = 'visible'
-        videoRef.current.style.opacity = '1'
-        
-        // Événements pour s'assurer que la vidéo s'affiche
-        videoRef.current.onloadstart = () => {
-          console.log('📹 Début du chargement vidéo')
-        }
-        
-        videoRef.current.onloadedmetadata = () => {
-          console.log('📹 Métadonnées vidéo chargées')
-          videoRef.current?.play().then(() => {
-            console.log('✅ Vidéo en cours de lecture')
-          }).catch(err => {
-            console.error('❌ Erreur lecture vidéo:', err)
-          })
-        }
-        
-        videoRef.current.oncanplay = () => {
-          console.log('📹 Vidéo peut être lue')
-          videoRef.current?.play().then(() => {
-            console.log('✅ Vidéo démarrée avec succès')
-          }).catch(err => {
-            console.error('❌ Erreur lecture vidéo:', err)
-          })
-        }
-        
-        videoRef.current.onplay = () => {
-          console.log('🎬 Vidéo en cours de lecture - Tu devrais te voir maintenant!')
-          setCameraReady(true)
-        }
-        
-        // Forcer la lecture immédiate
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.play().then(() => {
-              console.log('✅ Lecture forcée réussie')
-              setCameraReady(true)
-            }).catch(err => {
-              console.error('❌ Erreur lecture forcée:', err)
-              setError('Erreur lors du démarrage de la vidéo. Vérifiez que votre caméra n\'est pas utilisée par une autre application.')
-            })
-          }
-        }, 100)
-        
-        // Vérification supplémentaire après 2 secondes
-        setTimeout(() => {
-          if (videoRef.current && videoRef.current.readyState >= 2) {
-            console.log('✅ Vidéo prête après vérification')
-            setCameraReady(true)
-          } else {
-            console.warn('⚠️ Vidéo pas encore prête après 2 secondes')
-          }
-        }, 2000)
+  const applyStream = (stream: MediaStream) => {
+    streamRef.current = stream
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream
+      videoRef.current.style.display = 'block'
+      videoRef.current.style.visibility = 'visible'
+      videoRef.current.style.opacity = '1'
+      videoRef.current.onloadedmetadata = () => {
+        videoRef.current?.play().catch(() => {})
       }
-      
-      setHasPermission(true)
-      console.log('✅ Caméra démarrée avec succès')
-    } catch (err) {
-      setError('Impossible d\'accéder à la caméra. Vérifiez vos permissions.')
-      console.error('Erreur caméra:', err)
+      videoRef.current.onplay = () => { setCameraReady(true) }
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.play().then(() => setCameraReady(true)).catch(() => {})
+        }
+      }, 100)
+    }
+    setHasPermission(true)
+  }
+
+  const startCamera = async () => {
+    setError(null)
+
+    // --- Infos de diagnostic affichées à l'écran ---
+    const protocol = location.protocol
+    const hostname = location.hostname
+    const hasMediaDevices = !!(navigator.mediaDevices)
+    const hasGetUserMedia = !!(navigator.mediaDevices?.getUserMedia)
+    const diagBase = `[DIAG] protocole=${protocol} host=${hostname} mediaDevices=${hasMediaDevices} getUserMedia=${hasGetUserMedia}`
+
+    if (!hasMediaDevices || !hasGetUserMedia) {
+      setError(`Caméra non disponible dans ce contexte.\n${diagBase}`)
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: true
+      })
+      applyStream(stream)
+    } catch (err: any) {
+      const name: string = err?.name ?? 'inconnu'
+      const message: string = err?.message ?? ''
+      // Afficher l'erreur brute + le diagnostic pour pouvoir identifier la vraie cause
+      setError(`ERREUR: ${name}\nDétail: ${message}\n${diagBase}`)
     }
   }
 
@@ -232,7 +191,11 @@ export function VideoRecorder({ onVideoRecorded, maxDuration = 10 }: VideoRecord
           <button className="btn" onClick={startCamera}>
             Autoriser l'accès à la caméra
           </button>
-          {error && <div className="error">{error}</div>}
+          {error && (
+            <div className="error" style={{ whiteSpace: 'pre-line', marginTop: '12px', padding: '12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#991b1b', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              {error}
+            </div>
+          )}
         </div>
       </div>
     )

@@ -1416,7 +1416,7 @@ const enhancedUser: UserData = useMemo(() => {
                         }
                       }}
                       placeholder="Écrivez un message familial..."
-                      className="flex-1 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
+                      className="flex-1 min-w-0 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
                     />
 
                     {/* Micro vocal : appui = enregistre, relâche = envoie */}

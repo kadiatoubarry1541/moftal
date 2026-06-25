@@ -2295,6 +2295,32 @@ async function initAllTables() {
   } catch (err) {
     console.warn('⚠️ initAllTables [demo-seed]:', err.message);
   }
+
+  // ── published_stories : colonnes ajoutées progressivement ─────────────────
+  try {
+    await sequelize.query(`
+      ALTER TABLE "published_stories" ADD COLUMN IF NOT EXISTS "photos"    JSON    DEFAULT '[]';
+    `).catch(() => {});
+    await sequelize.query(`
+      ALTER TABLE "published_stories" ADD COLUMN IF NOT EXISTS "videos"    JSON    DEFAULT '[]';
+    `).catch(() => {});
+    await sequelize.query(`
+      ALTER TABLE "published_stories" ADD COLUMN IF NOT EXISTS "views"     INTEGER DEFAULT 0;
+    `).catch(() => {});
+    await sequelize.query(`
+      ALTER TABLE "published_stories" ADD COLUMN IF NOT EXISTS "likes"     INTEGER DEFAULT 0;
+    `).catch(() => {});
+    await sequelize.query(`
+      ALTER TABLE "published_stories" ADD COLUMN IF NOT EXISTS "witnesses" JSON    DEFAULT '[]';
+    `).catch(() => {});
+    // Rendre content nullable pour les stories sans texte (image/vidéo seule)
+    await sequelize.query(`
+      ALTER TABLE "published_stories" ALTER COLUMN "content" DROP NOT NULL;
+    `).catch(() => {});
+    console.log('✅ Colonnes published_stories vérifiées');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [published_stories]:', err.message);
+  }
 }
 
 // Démarrage : tout pointe sur enfants_adam_eve — une seule base, 5 instances Sequelize
