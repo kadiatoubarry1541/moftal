@@ -15,38 +15,32 @@ router.use(requireAdmin);
 // @access  Admin
 router.get('/users', async (req, res) => {
   try {
-    const { search, role, type, isActive, limit = 100, offset = 0 } = req.query;
-    
+    const { search, role, type, isActive, limit = 10000, offset = 0 } = req.query;
+
     // Construire les conditions de recherche
     const where = {};
-    
+
     if (search) {
       where[Op.or] = [
-        { prenom: { [Op.iLike]: `%${search}%` } },
-        { nomFamille: { [Op.iLike]: `%${search}%` } },
-        { numeroH: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } }
+        { prenom:      { [Op.iLike]: `%${search}%` } },
+        { nomFamille:  { [Op.iLike]: `%${search}%` } },
+        { numeroH:     { [Op.iLike]: `%${search}%` } },
+        { email:       { [Op.iLike]: `%${search}%` } }
       ];
     }
-    
-    if (role) {
-      where.role = role;
-    }
-    
-    if (type) {
-      where.type = type;
-    }
-    
-    if (isActive !== undefined) {
-      where.isActive = isActive === 'true';
-    }
-    
-    // Récupérer les utilisateurs
+
+    if (role) where.role = role;
+    if (type) where.type = type;
+    // isActive : seulement si explicitement demandé — par défaut on voit TOUS les utilisateurs
+    if (isActive === 'true')  where.isActive = true;
+    if (isActive === 'false') where.isActive = false;
+
+    // Récupérer les utilisateurs — tous, sans filtre caché
     const users = await User.findAndCountAll({
       where,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['created_at', 'DESC']],
+      limit:  Math.min(parseInt(limit) || 10000, 50000),
+      offset: parseInt(offset) || 0,
+      order:  [['created_at', 'DESC']],
       attributes: { exclude: ['password'] }
     });
     

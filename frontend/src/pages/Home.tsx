@@ -1,8 +1,25 @@
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '../i18n/useI18n'
 
 export function Home() {
   const { t } = useI18n()
+  const navigate = useNavigate()
+
+  // Auto-redirect si déjà connecté — comme Facebook qui ouvre directement le fil
+  useEffect(() => {
+    try {
+      const session = localStorage.getItem('session_user')
+      const token   = localStorage.getItem('token')
+      if (session && token) {
+        const parsed = JSON.parse(session)
+        const user   = parsed.userData || parsed
+        if (user?.numeroH) {
+          navigate('/compte', { replace: true })
+        }
+      }
+    } catch {}
+  }, [])
 
   return (
     <div className="flex-1 flex flex-col">

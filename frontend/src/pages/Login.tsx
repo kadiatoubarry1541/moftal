@@ -18,11 +18,21 @@ export function Login() {
   const location = useLocation()
   const { t } = useI18n()
 
-  // Afficher la modal si l'utilisateur n'a pas encore accepté les CGU
+  // Auto-redirect si déjà connecté (comme Facebook)
   useEffect(() => {
-    if (!hasAcceptedTerms()) {
-      setShowTerms(true)
-    }
+    try {
+      const session = localStorage.getItem('session_user')
+      const token   = localStorage.getItem('token')
+      if (session && token) {
+        const parsed = JSON.parse(session)
+        const user   = parsed.userData || parsed
+        if (user?.numeroH) {
+          navigate('/compte', { replace: true })
+          return
+        }
+      }
+    } catch {}
+    if (!hasAcceptedTerms()) setShowTerms(true)
   }, [])
   const successMessage = (location.state as { message?: string } | null)?.message
 

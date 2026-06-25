@@ -16,7 +16,20 @@ export function LoginMembre() {
   const navigate = useNavigate()
   const { t } = useI18n()
 
+  // Auto-redirect si déjà connecté (comme Facebook)
   useEffect(() => {
+    try {
+      const session = localStorage.getItem('session_user')
+      const token   = localStorage.getItem('token')
+      if (session && token) {
+        const parsed = JSON.parse(session)
+        const user   = parsed.userData || parsed
+        if (user?.numeroH) {
+          navigate('/compte', { replace: true })
+          return
+        }
+      }
+    } catch {}
     if (!hasAcceptedTerms()) setShowTerms(true)
   }, [])
 

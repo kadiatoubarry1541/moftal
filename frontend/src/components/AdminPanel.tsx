@@ -90,10 +90,12 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
   }
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.nomFamille.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.numeroH.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = filterRole === 'all' || user.role === filterRole
+    const prenom     = (user.prenom     || '').toLowerCase()
+    const nomFamille = (user.nomFamille || '').toLowerCase()
+    const numeroH    = (user.numeroH    || '').toLowerCase()
+    const search     = searchTerm.toLowerCase()
+    const matchesSearch = !search || prenom.includes(search) || nomFamille.includes(search) || numeroH.includes(search)
+    const matchesRole   = filterRole === 'all' || user.role === filterRole
     return matchesSearch && matchesRole
   })
 
