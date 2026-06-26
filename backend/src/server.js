@@ -677,6 +677,33 @@ async function initAllTables() {
   ];
   for (const sql of treeAlters) await sequelize.query(sql).catch(() => {});
 
+  // Fix family_trees.members et deceasedMembers : json → jsonb (nécessaire pour l'opérateur @>)
+  const membersJsonbAlters = [
+    `ALTER TABLE "family_trees" ALTER COLUMN "members" TYPE JSONB USING members::jsonb;`,
+    `ALTER TABLE "family_trees" ALTER COLUMN "deceasedMembers" TYPE JSONB USING "deceasedMembers"::jsonb;`
+  ];
+  for (const sql of membersJsonbAlters) await sequelize.query(sql).catch(() => {});
+
+  // Fix couple_links — colonnes husband/wife manquantes sur Neon
+  const coupleLinkAlters = [
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "husband_numero_h"      VARCHAR(255);`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "wife_numero_h"         VARCHAR(255);`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "initiated_by_numero_h" VARCHAR(255);`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "numero_mariage_mairie" VARCHAR(255);`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "confirmed_at"          TIMESTAMPTZ;`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "is_archived"           BOOLEAN DEFAULT false;`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "archived_at"           TIMESTAMPTZ;`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "archived_by_numero_h"  VARCHAR(255);`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "broken_at"             TIMESTAMPTZ;`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "broken_by_numero_h"    VARCHAR(255);`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "deleted_by_numero_h1"  VARCHAR(255);`,
+    `ALTER TABLE "couple_links" ADD COLUMN IF NOT EXISTS "deleted_by_numero_h2"  VARCHAR(255);`,
+    `CREATE INDEX IF NOT EXISTS idx_cl_husband ON "couple_links" ("husband_numero_h");`,
+    `CREATE INDEX IF NOT EXISTS idx_cl_wife    ON "couple_links" ("wife_numero_h");`
+  ];
+  for (const sql of coupleLinkAlters) await sequelize.query(sql).catch(() => {});
+  console.log('✅ Colonnes couple_links vérifiées');
+
   // ia_conversations (numero_h) : géré par connectDB_IA() via sync({ alter: true })
   console.log('✅ Colonnes family_trees vérifiées');
 
