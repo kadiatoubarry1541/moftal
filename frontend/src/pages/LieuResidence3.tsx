@@ -115,31 +115,30 @@ export default function LieuResidence3() {
       }
       
       setUserData(user);
-      loadGroups();
+      loadGroups(user);
     } catch {
       navigate("/login");
     }
   }, [navigate]);
 
-  const loadGroups = async () => {
+  const loadGroups = async (user?: UserData) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/residences/lieu3/groups', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const currentUser = user || userData;
+      const location = currentUser?.lieu3 || currentUser?.lieuResidence3 || currentUser?.lieu_residence_3 || '';
+      if (!location) { setGroups([]); setLoading(false); return; }
+      const response = await fetch(`/api/residences/groups?location=${encodeURIComponent(location)}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      
       if (response.ok) {
         const data = await response.json();
         setGroups(data.groups || []);
       } else {
-        setGroups(getDefaultGroups());
+        setGroups([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des groupes:', error);
-      setGroups(getDefaultGroups());
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -177,7 +176,7 @@ export default function LieuResidence3() {
   const createGroup = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/residences/lieu3/groups', {
+      const response = await fetch('/api/residences/groups', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -207,7 +206,7 @@ export default function LieuResidence3() {
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/residences/lieu3/groups/${groupId}/join`, {
+      const response = await fetch(`/api/residences/groups/${groupId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -249,7 +248,7 @@ export default function LieuResidence3() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/residences/lieu3/groups/${selectedGroup.id}/posts`, {
+      const response = await fetch(`/api/residences/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -292,6 +291,20 @@ export default function LieuResidence3() {
 
   if (!userData) return null;
 
+  const userLieu3 = userData.lieu3 || userData.lieuResidence3 || userData.lieu_residence_3 || '';
+  if (!userLieu3) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button onClick={() => window.history.back()} className="mb-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors flex items-center gap-2">← Retour</button>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+          <div className="text-4xl mb-3">🏘️</div>
+          <h2 className="text-xl font-bold text-amber-800 mb-2">Lieu de résidence 3 non renseigné</h2>
+          <p className="text-amber-700">Pour rejoindre le groupe de votre troisième quartier, renseignez votre Lieu de résidence 3 dans votre profil.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <button
@@ -302,13 +315,18 @@ export default function LieuResidence3() {
       </button>
 
       <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-green-500 border border-slate-200 p-6 hover:shadow-md transition-shadow duration-200">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-2">
           <div className="text-4xl">🏘️</div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Lieu de Résidence 3</h1>
-            <p className="text-gray-600">Communauté de votre deuxième lieu de résidence</p>
+            <p className="text-gray-600">Votre quartier : <span className="font-semibold text-green-700">{userLieu3}</span></p>
           </div>
         </div>
+        {groups.length > 0 && (
+          <div className="mb-4 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
+            ✅ Vous êtes automatiquement dans le groupe <strong>{groups[0]?.title || userLieu3}</strong>.
+          </div>
+        )}
         
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

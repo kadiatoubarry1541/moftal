@@ -54,17 +54,18 @@ interface Supplier {
 export default function EchangeNourriture() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
-  const [rawSuppliers, setRawSuppliers] = useState<Supplier[]>([]);
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
   const [gpsActive, setGpsActive] = useState(false);
   const products = useMemo(() => sortAnyByProximity(rawProducts, userGeo), [rawProducts, userGeo]);
-  const suppliers = useMemo(() => sortAnyByProximity(rawSuppliers, userGeo), [rawSuppliers, userGeo]);
   const [loading, setLoading] = useState(true);
+  const [canPublish, setCanPublish] = useState(false);
+  const [vendorName, setVendorName] = useState('');
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
-  const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
+  const [showVendorRegistration, setShowVendorRegistration] = useState(false);
+  const [newVendor, setNewVendor] = useState({ nomBoutique: '', description: '', secteur: 'primaire', telephone: '', ville: '' });
+  const [vendorSubmitting, setVendorSubmitting] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [activeTab] = useState<'aliments-base'>('aliments-base');
   const navigate = useNavigate();
 
   const [newProduct, setNewProduct] = useState({
@@ -79,24 +80,6 @@ export default function EchangeNourriture() {
     videos: [] as File[],
     photoForAudio: null as File | null,
     audio30s: null as File | null
-  });
-
-  const [newSupplier, setNewSupplier] = useState({
-    businessName: '',
-    businessType: 'individuel' as 'individuel' | 'entreprise' | 'coopérative' | 'association',
-    description: '',
-    categories: [''],
-    contactInfo: {
-      phone: '',
-      email: '',
-      website: ''
-    },
-    address: {
-      street: '',
-      city: '',
-      region: '',
-      country: 'Pays'
-    }
   });
 
   useEffect(() => {
@@ -116,10 +99,55 @@ export default function EchangeNourriture() {
       
       setUserData(user);
       loadData();
+      checkVendorStatus();
     } catch {
       navigate("/login");
     }
   }, [navigate]);
+
+  const checkVendorStatus = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${config.API_BASE_URL}/exchange/vendor-status`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Peut publier ici seulement si secteur primaire approuvé (ou admin)
+        const canPublishHere = data.isAdmin || (data.isVendor && (data.sector === 'primaire' || !data.sector));
+        setCanPublish(canPublishHere);
+        if (data.accountName) setVendorName(data.accountName);
+        if (data.hasPendingRequest) setHasPendingRequest(true);
+      }
+    } catch {
+      setCanPublish(false);
+    }
+  };
+
+  const submitVendorRegistration = async () => {
+    if (!newVendor.nomBoutique.trim()) return alert('Le nom de la boutique est obligatoire.');
+    setVendorSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${config.API_BASE_URL}/exchange/register-vendor`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(newVendor)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(data.message);
+        setShowVendorRegistration(false);
+        setHasPendingRequest(true);
+      } else {
+        alert(data.message || 'Erreur lors de l\'envoi de la demande.');
+      }
+    } catch {
+      alert('Erreur réseau. Vérifiez votre connexion.');
+    } finally {
+      setVendorSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     requestGPS().then(coords => {
@@ -149,26 +177,9 @@ export default function EchangeNourriture() {
         setRawProducts([]);
       }
 
-      // Charger les fournisseurs
-      const suppliersEndpoint = `${config.API_BASE_URL}/exchange/suppliers`;
-      const suppliersResponse = await fetch(suppliersEndpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (suppliersResponse.ok) {
-        const suppliersData = await suppliersResponse.json();
-        setRawSuppliers(suppliersData.suppliers || []);
-      } else {
-        setRawSuppliers([]);
-      }
-
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
       setRawProducts([]);
-      setRawSuppliers([]);
     } finally {
       setLoading(false);
     }
@@ -186,7 +197,8 @@ export default function EchangeNourriture() {
       formData.append('condition', newProduct.condition);
       formData.append('location', newProduct.location);
       formData.append('seller', userData?.numeroH || '');
-      formData.append('sellerName', `${userData?.prenom} ${userData?.nomFamille}`);
+      // Utiliser le nom de la boutique Moftal si disponible, sinon le nom personnel
+      formData.append('sellerName', vendorName || `${userData?.prenom} ${userData?.nomFamille}`);
       
       // Ajouter les images
       newProduct.images.forEach((image, index) => {
@@ -236,94 +248,6 @@ export default function EchangeNourriture() {
     }
   };
 
-  const registerSupplier = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const endpoint = `${config.API_BASE_URL}/exchange/suppliers`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          businessName: newSupplier.businessName,
-          businessType: newSupplier.businessType,
-          description: newSupplier.description,
-          categories: newSupplier.categories.filter(c => c.trim() !== ''),
-          contactInfo: newSupplier.contactInfo,
-          address: newSupplier.address
-        })
-      });
-      
-      if (response.ok) {
-        alert('Demande d\'inscription envoyée ! Vous serez contacté après validation.');
-        setShowSupplierRegistration(false);
-        setNewSupplier({
-          businessName: '',
-          businessType: 'individuel',
-          description: '',
-          categories: [''],
-          contactInfo: { phone: '', email: '', website: '' },
-          address: { street: '', city: '', region: '', country: 'Pays' }
-        });
-        loadData();
-      } else {
-        alert('Erreur lors de l\'inscription');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'inscription');
-    }
-  };
-
-  const approveSupplier = async (supplierId: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      const endpoint = `${config.API_BASE_URL}/exchange/suppliers/${supplierId}/approve`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        alert('Fournisseur approuvé avec succès !');
-        loadData();
-      } else {
-        alert('Erreur lors de l\'approbation');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'approbation');
-    }
-  };
-
-  const rejectSupplier = async (supplierId: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      const endpoint = `${config.API_BASE_URL}/exchange/suppliers/${supplierId}/reject`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        alert('Demande de fournisseur rejetée.');
-        loadData();
-      } else {
-        alert('Erreur lors du rejet');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors du rejet');
-    }
-  };
 
   const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.numeroH === 'G0C0P0R0E0F0 0';
 
@@ -375,18 +299,38 @@ export default function EchangeNourriture() {
       {/* Boutons publier + admin */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
         <div className="flex flex-col gap-4">
-          <PublierAnnonceButtons
-            onSelect={() => setShowCreateProduct(true)}
-            title="Publier une annonce"
-          />
-          {isAdmin && (
-            <button
-              onClick={() => setSelectedSupplier({} as Supplier)}
-              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all text-sm flex items-center gap-1.5 w-fit"
-            >
-              <span>⚙️</span>
-              <span>Gérer</span>
-            </button>
+          {(canPublish || isAdmin) ? (
+            <>
+              {vendorName && !isAdmin && (
+                <p className="text-xs text-green-700 font-medium">Vendeur Moftal : {vendorName}</p>
+              )}
+              <PublierAnnonceButtons
+                onSelect={() => setShowCreateProduct(true)}
+                title="Publier une annonce"
+              />
+            </>
+          ) : hasPendingRequest ? (
+            <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <span className="text-2xl">⏳</span>
+              <div>
+                <p className="font-semibold text-blue-800 text-sm">Demande en cours d'examen</p>
+                <p className="text-blue-700 text-xs mt-1">Votre inscription comme vendeur Moftal est en attente d'approbation par un administrateur. Vous serez notifié dès qu'elle sera validée.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <span className="text-2xl">🔒</span>
+              <div>
+                <p className="font-semibold text-amber-800 text-sm">Réservé aux vendeurs Moftal</p>
+                <p className="text-amber-700 text-xs mt-1">Pour publier des produits ici, vous devez vous inscrire comme vendeur sur la plateforme Échange Moftal et attendre l'approbation de votre compte.</p>
+                <button
+                  onClick={() => setShowVendorRegistration(true)}
+                  className="mt-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                >
+                  S'inscrire comme vendeur Moftal
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -628,118 +572,93 @@ export default function EchangeNourriture() {
         </div>
       )}
 
-      {/* Formulaire d'inscription fournisseur */}
-      {showSupplierRegistration && (
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="text-3xl">🏢</div>
-            <h3 className="text-2xl font-bold text-gray-900">Devenir fournisseur</h3>
+      {/* Formulaire d'inscription vendeur Moftal */}
+      {showVendorRegistration && (
+        <div className="bg-white rounded-2xl shadow-xl border border-amber-200 p-8 mb-8">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="text-3xl">🏪</div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">S'inscrire comme vendeur Moftal</h3>
+              <p className="text-sm text-gray-500">Votre demande sera examinée par un administrateur avant activation.</p>
+            </div>
           </div>
-          
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+            <p className="text-sm text-amber-800 font-medium">Choisissez votre secteur de vente :</p>
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              {[
+                { val: 'primaire', label: 'Secteur Primaire', desc: 'Aliments, agriculture, matières premières' },
+                { val: 'secondaire', label: 'Secteur Secondaire', desc: 'Électronique, vêtements, produits manufacturés' },
+                { val: 'tertiaire', label: 'Secteur Tertiaire', desc: 'Services, immobilier, matériaux de construction' },
+              ].map(s => (
+                <button
+                  key={s.val}
+                  onClick={() => setNewVendor({ ...newVendor, secteur: s.val })}
+                  className={`p-3 rounded-xl border-2 text-left transition-colors ${newVendor.secteur === s.val ? 'border-amber-500 bg-amber-100' : 'border-gray-200 hover:border-amber-300'}`}
+                >
+                  <p className="font-semibold text-sm text-gray-800">{s.label}</p>
+                  <p className="text-xs text-gray-500 mt-1">{s.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Nom de l'entreprise</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Nom de la boutique / activité *</label>
               <input
                 type="text"
-                value={newSupplier.businessName}
-                onChange={(e) => setNewSupplier({...newSupplier, businessName: e.target.value})}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                placeholder="Ex: Coopérative Agricole ABC"
+                value={newVendor.nomBoutique}
+                onChange={(e) => setNewVendor({ ...newVendor, nomBoutique: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                placeholder="Ex: Boutique Fatou, Marché Central..."
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Type d'entreprise</label>
-              <select
-                value={newSupplier.businessType}
-                onChange={(e) => setNewSupplier({...newSupplier, businessType: e.target.value as any})}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-              >
-                <option value="individuel">Individuel</option>
-                <option value="entreprise">Entreprise</option>
-                <option value="coopérative">Coopérative</option>
-                <option value="association">Association</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Téléphone</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Téléphone</label>
               <input
                 type="tel"
-                value={newSupplier.contactInfo.phone}
-                onChange={(e) => setNewSupplier({
-                  ...newSupplier, 
-                  contactInfo: {...newSupplier.contactInfo, phone: e.target.value}
-                })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                placeholder="+224 123 456 789"
+                value={newVendor.telephone}
+                onChange={(e) => setNewVendor({ ...newVendor, telephone: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                placeholder="+224 XXX XXX XXX"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Email</label>
-              <input
-                type="email"
-                value={newSupplier.contactInfo.email}
-                onChange={(e) => setNewSupplier({
-                  ...newSupplier, 
-                  contactInfo: {...newSupplier.contactInfo, email: e.target.value}
-                })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                placeholder="contact@entreprise.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Ville</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Ville</label>
               <input
                 type="text"
-                value={newSupplier.address.city}
-                onChange={(e) => setNewSupplier({
-                  ...newSupplier, 
-                  address: {...newSupplier.address, city: e.target.value}
-                })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                placeholder="Ville Principale"
+                value={newVendor.ville}
+                onChange={(e) => setNewVendor({ ...newVendor, ville: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                placeholder="Conakry, Kindia..."
               />
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Région</label>
-              <select
-                value={newSupplier.address.region}
-                onChange={(e) => setNewSupplier({
-                  ...newSupplier, 
-                  address: {...newSupplier.address, region: e.target.value}
-                })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-              >
-                <option value="">Sélectionner une région</option>
-                <option value="Zone Côtière">Zone Côtière</option>
-                <option value="Zone Montagneuse">Zone Montagneuse</option>
-                <option value="Zone Agricole">Zone Agricole</option>
-                <option value="Zone Forestière">Zone Forestière</option>
-              </select>
-            </div>
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Description de l'activité</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Description de votre activité</label>
               <textarea
-                value={newSupplier.description}
-                onChange={(e) => setNewSupplier({...newSupplier, description: e.target.value})}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                rows={4}
-                placeholder="Décrivez votre activité commerciale..."
+                value={newVendor.description}
+                onChange={(e) => setNewVendor({ ...newVendor, description: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                rows={3}
+                placeholder="Décrivez ce que vous vendez..."
               />
             </div>
           </div>
-          
-          <div className="flex gap-4 mt-8">
+
+          <div className="flex gap-4 mt-6">
             <button
-              onClick={registerSupplier}
-              className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl"
+              onClick={submitVendorRegistration}
+              disabled={vendorSubmitting}
+              className="px-8 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-all font-semibold shadow-md disabled:opacity-60"
             >
-              📝 Envoyer la Demande
+              {vendorSubmitting ? 'Envoi...' : 'Envoyer ma demande'}
             </button>
             <button
-              onClick={() => setShowSupplierRegistration(false)}
-              className="px-8 py-4 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all duration-200 font-semibold"
+              onClick={() => setShowVendorRegistration(false)}
+              className="px-8 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all font-semibold"
             >
-              ❌ Annuler
+              Annuler
             </button>
           </div>
         </div>
@@ -751,12 +670,14 @@ export default function EchangeNourriture() {
           {getFilteredProducts().length === 0 ? (
             <div className="col-span-full text-center py-12 bg-gray-50 rounded-xl">
               <p className="text-gray-600 text-lg">Aucun produit dans cette catégorie pour le moment.</p>
-              <button
-                onClick={() => setShowCreateProduct(true)}
-                className="mt-4 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200"
-              >
-                ➕ Publier le premier produit
-              </button>
+              {(canPublish || isAdmin) && (
+                <button
+                  onClick={() => setShowCreateProduct(true)}
+                  className="mt-4 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200"
+                >
+                  ➕ Publier le premier produit
+                </button>
+              )}
             </div>
           ) : (
             getFilteredProducts().map((product) => (
@@ -785,6 +706,16 @@ export default function EchangeNourriture() {
                   </div>
                 )}
                 <div className="p-6">
+                {/* Badge vendeur Moftal */}
+                {product.sellerName && (
+                  <div className="flex items-center gap-2 mb-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <span className="text-base">🏪</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold text-amber-900 text-sm truncate block">{product.sellerName}</span>
+                    </div>
+                    <span className="text-xs bg-amber-600 text-white px-2 py-0.5 rounded-full whitespace-nowrap">Vendeur Moftal</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-900 text-lg mb-1">{product.title}</h3>
@@ -835,58 +766,6 @@ export default function EchangeNourriture() {
       </div>
 
       {/* Gestion des fournisseurs (Admin) */}
-      {isAdmin && (
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="text-3xl">⚙️</div>
-            <h3 className="text-2xl font-bold text-gray-900">Gestion des Fournisseurs</h3>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {suppliers.map((supplier) => (
-              <div key={supplier.id} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h4 className="font-bold text-gray-900">{supplier.businessName}</h4>
-                    <p className="text-sm text-gray-600">{supplier.businessType}</p>
-                  </div>
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    supplier.isApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {supplier.isApproved ? '✅ Approuvé' : '⏳ En attente'}
-                  </div>
-                </div>
-                
-                <p className="text-gray-700 mb-4 text-sm">{supplier.description}</p>
-                
-                <div className="mb-4">
-                  <h5 className="font-semibold text-gray-900 mb-2">Contact :</h5>
-                  <p className="text-sm text-gray-600">📞 {supplier.contactInfo?.phone || 'Non renseigné'}</p>
-                  <p className="text-sm text-gray-600">📧 {supplier.contactInfo?.email || 'Non renseigné'}</p>
-                </div>
-                
-                {!supplier.isApproved && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => approveSupplier(supplier.id)}
-                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-sm font-medium"
-                    >
-                      ✅ Approuver
-                    </button>
-                    <button
-                      onClick={() => rejectSupplier(supplier.id)}
-                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 text-sm font-medium"
-                    >
-                      ❌ Rejeter
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Modal de contact produit */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -933,13 +812,19 @@ export default function EchangeNourriture() {
         <div className="text-center text-gray-500 py-20">
           <div className="text-8xl mb-6">🍽️</div>
           <h3 className="text-2xl font-bold mb-4">Aucun produit alimentaire</h3>
-          <p className="text-lg mb-6">Soyez le premier à publier un produit alimentaire !</p>
-          <button
-            onClick={() => setShowCreateProduct(true)}
-            className="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-semibold shadow-lg"
-          >
-            ➕ Publier le premier produit
-          </button>
+          {(canPublish || isAdmin) ? (
+            <>
+              <p className="text-lg mb-6">Soyez le premier à publier un produit alimentaire !</p>
+              <button
+                onClick={() => setShowCreateProduct(true)}
+                className="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-semibold shadow-lg"
+              >
+                ➕ Publier le premier produit
+              </button>
+            </>
+          ) : (
+            <p className="text-base text-gray-500">Les vendeurs professionnels approuvés peuvent publier leurs produits ici.</p>
+          )}
         </div>
       )}
     </div>

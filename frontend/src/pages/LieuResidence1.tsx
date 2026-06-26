@@ -106,34 +106,43 @@ export default function LieuResidence1() {
         navigate("/login");
         return;
       }
-      
+
       setUserData(user);
-      loadGroups();
+      loadGroups(user);
     } catch {
       navigate("/login");
     }
   }, [navigate]);
 
-  const loadGroups = async () => {
+  const loadGroups = async (user?: UserData) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/residences/lieu1/groups', {
+      const currentUser = user || userData;
+      // Utilise lieu1 (ou lieuResidence1 si disponible) pour trouver le groupe du quartier
+      const location = currentUser?.lieu1 || currentUser?.lieuResidence1 || currentUser?.lieu_residence_1 || '';
+
+      if (!location) {
+        setGroups([]);
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`/api/residences/groups?location=${encodeURIComponent(location)}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setGroups(data.groups || []);
       } else {
-        // Fallback avec des groupes par défaut
-        setGroups(getDefaultGroups());
+        setGroups([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des groupes:', error);
-      setGroups(getDefaultGroups());
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -171,7 +180,7 @@ export default function LieuResidence1() {
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/residences/lieu1/groups/${groupId}/join`, {
+      const response = await fetch(`/api/residences/groups/${groupId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -179,16 +188,14 @@ export default function LieuResidence1() {
         },
         body: JSON.stringify({ numeroH: userData?.numeroH })
       });
-      
+
       if (response.ok) {
-        alert('Vous avez rejoint le Organisation !');
-        loadGroups();
+        loadGroups(userData ?? undefined);
       } else {
-        alert('Erreur lors de l\'adhésion au Organisation');
+        alert('Erreur lors de l\'adhésion au groupe');
       }
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'adhésion au Organisation');
     }
   };
 
@@ -213,7 +220,7 @@ export default function LieuResidence1() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/residences/lieu1/groups/${selectedGroup.id}/posts`, {
+      const response = await fetch(`/api/residences/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -222,10 +229,9 @@ export default function LieuResidence1() {
       });
       
       if (response.ok) {
-        alert('Publication créée avec succès !');
-        setNewPost({ 
-          content: '', 
-          type: 'text', 
+        setNewPost({
+          content: '',
+          type: 'text',
           mediaFile: null,
           eventDetails: {
             title: '', date: '', time: '', location: '', maxParticipants: 20, description: ''
@@ -234,37 +240,26 @@ export default function LieuResidence1() {
             title: '', type: '', description: '', price: '', contact: '', availability: ''
           }
         });
-        loadGroups();
+        loadGroups(userData ?? undefined);
       } else {
-        alert('Erreur lors de la création de la publication');
+        alert('Erreur lors de la publication');
       }
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de la création de la publication');
     }
   };
 
   const joinEvent = async (postId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/residences/lieu1/posts/${postId}/join-event`, {
+      await fetch(`/api/residences/groups/${selectedGroup?.id}/posts/${postId}/join-event`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ numeroH: userData?.numeroH })
       });
-      
-      if (response.ok) {
-        alert('Vous avez rejoint l\'événement !');
-        loadGroups();
-      } else {
-        alert('Erreur lors de l\'inscription à l\'événement');
-      }
+      loadGroups(userData ?? undefined);
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'inscription à l\'événement');
     }
   };
 
@@ -272,13 +267,29 @@ export default function LieuResidence1() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-600">Chargement des rencontres Lieu de résidence 1...</div>
+          <div className="text-lg text-gray-600">Chargement de votre groupe de quartier...</div>
         </div>
       </div>
     );
   }
 
   if (!userData) return null;
+
+  const userLieu1 = userData.lieu1 || userData.lieuResidence1 || userData.lieu_residence_1 || '';
+  if (!userLieu1) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button onClick={() => window.history.back()} className="mb-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors flex items-center gap-2">
+          ← Retour
+        </button>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+          <div className="text-4xl mb-3">🏠</div>
+          <h2 className="text-xl font-bold text-amber-800 mb-2">Lieu de résidence 1 non renseigné</h2>
+          <p className="text-amber-700">Pour rejoindre automatiquement le groupe de votre quartier, veuillez d'abord renseigner votre Lieu de résidence 1 dans votre profil.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -290,13 +301,18 @@ export default function LieuResidence1() {
       </button>
 
       <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-blue-500 border border-slate-200 p-6 hover:shadow-md transition-shadow duration-200">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-2">
           <div className="text-4xl">🏠</div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Lieu de Résidence 1</h1>
-            <p className="text-gray-600">Rencontrez vos voisins et habitants du même quartier</p>
+            <p className="text-gray-600">Votre quartier : <span className="font-semibold text-blue-700">{userLieu1}</span></p>
           </div>
         </div>
+        {groups.length > 0 && (
+          <div className="mb-4 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
+            ✅ Vous êtes automatiquement dans le groupe <strong>{groups[0]?.title || userLieu1}</strong> avec tous les habitants de {userLieu1}.
+          </div>
+        )}
         
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

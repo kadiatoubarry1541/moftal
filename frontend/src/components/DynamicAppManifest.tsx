@@ -51,7 +51,7 @@ export default function DynamicAppManifest({
       short_name: shortName || name.slice(0, 12),
       description: description || `Gestion ${name}`,
       start_url: startUrl,
-      scope: startUrl,
+      scope: "/",
       display: "standalone",
       orientation: "portrait",
       lang: "fr",

@@ -64,7 +64,20 @@ router.get('/requests', async (req, res) => {
       where: { toUser: req.user.numeroH, status: 'pending' },
       order: [['createdAt', 'DESC']]
     });
-    res.json({ success: true, requests });
+
+    // Enrichir avec les infos de l'expéditeur si fromUserName manquant
+    const enriched = await Promise.all(requests.map(async (r) => {
+      const data = r.toJSON();
+      if (!data.fromUserName) {
+        const sender = await User.findByNumeroH(data.fromUser);
+        if (sender) {
+          data.fromUserName = [sender.prenom, sender.nomFamille].filter(Boolean).join(' ') || data.fromUser;
+        }
+      }
+      return data;
+    }));
+
+    res.json({ success: true, requests: enriched });
   } catch (error) {
     console.error('Erreur /friends/requests:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
@@ -191,6 +204,18 @@ router.post('/respond-request', async (req, res) => {
           commonInterests: []
         });
       }
+
+      // Notifier l'expéditeur que sa demande a été acceptée
+      const responderName = [req.user.prenom, req.user.nomFamille].filter(Boolean).join(' ') || req.user.numeroH;
+      try {
+        await Notification.createNotification({
+          recipientNumeroH: request.fromUser,
+          type: 'friend_accepted',
+          title: 'Demande d\'amitié acceptée',
+          message: `${responderName} a accepté votre demande d'amitié. Vous êtes maintenant amis !`,
+          relatedId: request.id
+        });
+      } catch (e) { console.error('Notif friend_accepted:', e.message); }
     }
 
     res.json({ success: true, message: action === 'accept' ? 'Demande acceptée' : 'Demande rejetée' });
@@ -208,7 +233,7 @@ router.get('/search-by-phone', async (req, res) => {
     if (!tel || tel.trim().length < 6) {
       return res.status(400).json({ success: false, message: 'Numéro requis (min. 6 chiffres)' });
     }
-    const telClean = tel.trim().replace(/s+/g, '');
+    const telClean = tel.trim().replace(/\s+/g, '');
     const user = await User.findOne({
       where: {
         [Op.or]: [
@@ -228,6 +253,34 @@ router.get('/search-by-phone', async (req, res) => {
     res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille } });
   } catch (error) {
     console.error('Erreur /friends/search-by-phone:', error);
+    res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
+  }
+});
+
+// search-by-name
+router.get('/search-by-name', async (req, res) => {
+  try {
+    const { prenom, nom } = req.query;
+    if (!prenom?.trim() && !nom?.trim()) {
+      return res.status(400).json({ success: false, message: 'Prénom ou nom requis' });
+    }
+    const where = { isActive: true };
+    const andClauses = [];
+    if (prenom?.trim()) andClauses.push({ prenom: { [Op.iLike]: '%' + prenom.trim() + '%' } });
+    if (nom?.trim()) andClauses.push({ nomFamille: { [Op.iLike]: '%' + nom.trim() + '%' } });
+    where[Op.and] = andClauses;
+    const users = await User.findAll({
+      where,
+      attributes: ['numeroH', 'prenom', 'nomFamille'],
+      limit: 10
+    });
+    const filtered = users.filter(u => u.numeroH !== req.user?.numeroH);
+    if (!filtered.length) {
+      return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé' });
+    }
+    res.json({ success: true, users: filtered });
+  } catch (error) {
+    console.error('Erreur /friends/search-by-name:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
   }
 });

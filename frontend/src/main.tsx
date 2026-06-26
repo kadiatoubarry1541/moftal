@@ -28,15 +28,29 @@ keysToClean.forEach(key => {
 
 const basename = '';
 
+// Capturer le prompt d'installation PWA le plus tôt possible (avant montage React)
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  (window as any).__pwaInstallPrompt = e;
+  window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
+});
+
 async function clearSWAndRender() {
-  // Supprimer TOUS les service workers et caches avant de démarrer l'app
   if ('serviceWorker' in navigator) {
+    // Supprimer les anciens SW (évite les caches bloquants)
     const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map(sw => sw.unregister()));
+    await Promise.all(
+      registrations
+        .filter((sw) => !sw.active?.scriptURL.endsWith('/sw.js'))
+        .map((sw) => sw.unregister())
+    );
+    // Réenregistrer notre SW (requis pour l'installation PWA sur Android)
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
   if ('caches' in window) {
     const keys = await caches.keys();
-    await Promise.all(keys.map(k => caches.delete(k)));
+    // Ne pas supprimer notre cache SW
+    await Promise.all(keys.filter((k) => k !== 'moftal-sw-v1').map((k) => caches.delete(k)));
   }
 
   createRoot(document.getElementById("root")!).render(

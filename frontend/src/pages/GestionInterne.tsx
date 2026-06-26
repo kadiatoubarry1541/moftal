@@ -4,6 +4,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import { config } from "../config/api";
 import Activite from "./Activite";
 import InstallAppButton from "../components/InstallAppButton";
+import { AddPersonModal } from "../components/AddPersonModal";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
@@ -48,6 +49,7 @@ export default function GestionInterne() {
   const [payGILoading, setPayGILoading]   = useState(false);
   const [showPaywall, setShowPaywall]     = useState(false);
   const [tabOverride, setTabOverride]     = useState<'pro' | 'activite' | null>(null);
+  const [connectModal, setConnectModal]   = useState<{ accountId: number; name: string } | null>(null);
 
   const currentUser = getSessionUser();
   const userIsAdmin = isAdmin(currentUser);
@@ -485,10 +487,22 @@ export default function GestionInterne() {
 
   return (
     <div>
-      <div style={{ maxWidth:700, margin:"0 auto", padding:"20px 20px 0" }}>
+      <div style={{ maxWidth:700, margin:"0 auto", padding:"16px 20px 0" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
+        {/* Bouton retour */}
+        <button
+          onClick={() => navigate(-1 as any)}
+          style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", cursor:"pointer", color:"#64748b", fontSize:14, fontWeight:600, padding:"0 0 14px 0", marginBottom:2 }}
+        >
+          ← Retour
+        </button>
+
         <div className="mb-3"><InstallAppButton /></div>
+
+        {/* Séparateur visuel avant les onglets */}
+        <div style={{ borderTop:"1.5px solid #e2e8f0", marginBottom:16 }} />
+
         <TabButtons
           proLabel={accounts.length === 0 ? "Créer un compte pro" : "Espace Pro"}
           onProClick={() => accounts.length === 0 ? navigate("/inscription-pro") : setTabOverride('pro')}
@@ -547,15 +561,19 @@ export default function GestionInterne() {
                       </div>
                       <div style={{ color:info.color, fontSize:13, fontWeight:600, flexShrink:0 }}>Gérer ›</div>
                     </button>
-                    {info.vitrinePath && (
-                      <div style={{ borderTop:"1px solid #f1f5f9", padding:"8px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fafbfc" }}>
-                        <span style={{ fontSize:12, color:"#64748b" }}>Site public visible par les clients</span>
+                    {/* Pied de carte : vitrine + connecter un client */}
+                    <div style={{ borderTop:"1px solid #f1f5f9", padding:"8px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, background:"#fafbfc", flexWrap:"wrap" }}>
+                      {info.vitrinePath ? (
                         <button onClick={() => navigate(`/${info.vitrinePath}/${a.tenant_code}`)}
                           style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", background:info.color, color:"white", border:"none", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>
                           🌐 Voir le site client
                         </button>
-                      </div>
-                    )}
+                      ) : <span />}
+                      <button onClick={() => setConnectModal({ accountId: a.id, name: a.name })}
+                        style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", background:"#f0fdf4", color:"#166534", border:"1.5px solid #bbf7d0", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>
+                        🤝 Connecter un client
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -566,6 +584,28 @@ export default function GestionInterne() {
       </div>
 
       {tab === 'activite' && <Activite embedded />}
+
+      {connectModal && (
+        <AddPersonModal
+          title={`Connecter un client — ${connectModal.name}`}
+          onSelect={async (numeroH) => {
+            try {
+              const r = await fetch(`${API}/api/professionals/${connectModal.accountId}/connect-client`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientNumeroH: numeroH })
+              });
+              const d = await r.json();
+              alert(d.message || (d.success ? 'Client connecté avec succès !' : 'Erreur lors de la connexion.'));
+            } catch { alert('Erreur de connexion au serveur.'); }
+            setConnectModal(null);
+          }}
+          onClose={() => setConnectModal(null)}
+          myNumeroH={currentUser?.numeroH}
+          myPrenom={currentUser?.prenom}
+          myNom={currentUser?.nomFamille}
+        />
+      )}
     </div>
   );
 }

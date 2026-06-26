@@ -1,9 +1,10 @@
-﻿import { lazy, Suspense, useEffect, useRef, useState } from "react";
+﻿import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, useLocation, Link, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
-import { getSessionUser, isAdmin, getPhotoUrl } from "./utils/auth";
+import { getSessionUser, isAdmin, isMasterAdmin, getPhotoUrl, getNumeroHForDisplay } from "./utils/auth";
+import DefaultAvatar from "./assets/default-avatar.svg";
 import NotificationBell from "./components/NotificationBell";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
@@ -196,6 +197,7 @@ function App() {
   const [guideReady, setGuideReady] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+  const mastheadRef = useRef<HTMLDivElement>(null);
   const [showFavoriModal, setShowFavoriModal] = useState(false);
 
   useEffect(() => {
@@ -213,9 +215,35 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Mesurer la hauteur du masthead dès qu'il est visible et à chaque redimensionnement
+  useLayoutEffect(() => {
+    const el = mastheadRef.current;
+    if (!el) return;
+    const update = () => {
+      const h = el.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--masthead-h', h + 'px');
+    };
+    update();
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }); // pas de [] : re-mesure à chaque render (masthead peut apparaître/disparaître)
+
   const navigate = useNavigate();
-  const currentUser = getSessionUser();
+  const [currentUser, setCurrentUser] = useState(getSessionUser);
   const isLoggedIn = currentUser !== null;
+
+  // Recharger le profil dès que la session change (ex: après modification dans EditProfileModal)
+  useEffect(() => {
+    const refresh = () => setCurrentUser(getSessionUser());
+    window.addEventListener("session-updated", refresh);
+    return () => window.removeEventListener("session-updated", refresh);
+  }, []);
+
+  // Recharger aussi à chaque changement de page (gère le logout, la première connexion…)
+  useEffect(() => {
+    setCurrentUser(getSessionUser());
+  }, [pathname]);
 
   // Afficher le choix du favori à la première connexion
   useEffect(() => {
@@ -278,119 +306,181 @@ function App() {
   const showFullHeader = !isLoggedIn || isHome;
   return (
     <div className={!isFullscreenPage ? "bg-gray-900 min-h-screen" : ""}>
-    <div className={`flex flex-col bg-stone-50 dark:bg-gray-900 overflow-x-hidden${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-screen' : ''}${isHome ? ' h-screen overflow-hidden' : ''}`}>
+    <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-screen' : ''}${isHome ? ' h-screen overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine */}
-      {!isFullscreenPage && <header className="bg-white dark:bg-gray-900 sticky top-0 z-50 safe-area-inset-top">
-        <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 py-1">
-          <div className="flex items-center justify-between gap-2">
-            {/* Gauche : Logo */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {isLoggedIn && !isPublicPage && (
-                <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
-                  <div style={{ background: "white", borderRadius: 10, padding: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <img src="/logo-moftal.svg" alt="Moftal" width="56" height="56" style={{ width: 56, height: 56, display: "block" }}/>
-                  </div>
-                </Link>
-              )}
-            </div>
+      {/* ══ MASTHEAD STICKY — Logo + Carte Profil + Navigation (reste collé en haut comme Facebook) ══ */}
+      {!isFullscreenPage && (
+        <div ref={mastheadRef} className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm safe-area-inset-top">
 
-            {/* Droite : Gestion Pro + Cloche + Langue */}
-            <div className="flex items-center gap-2 justify-end min-h-[44px]">
-              {isLoggedIn && !isPublicPage && (
-                <button
-                  onClick={() => navigate("/gestion-interne")}
-                  className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 transition-colors whitespace-nowrap"
-                >
-                  {t('header.manage_pro')}
-                </button>
-              )}
-              {isLoggedIn && !isPublicPage && <NotificationBell />}
-              {/* Langue : toujours sur accueil, sinon seulement si non connecté */}
-              {(!isLoggedIn || isHome) && (
-                <div ref={langRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setLangOpen((o) => !o)}
-                    className="min-h-[36px] flex items-center px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors whitespace-nowrap"
-                    aria-label={t('header.language')}
-                    aria-haspopup="listbox"
-                    aria-expanded={langOpen}
-                  >
-                    <span>{t('header.language')}</span>
-                  </button>
-                  {langOpen && (
-                    <div
-                      role="listbox"
-                      className="absolute right-0 top-11 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-2xl ring-1 ring-gray-200 dark:ring-gray-700 z-50 overflow-hidden py-1"
-                    >
-                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-                        {t('header.language')}
-                      </div>
-                      <div className="max-h-60 overflow-y-auto">
-                        {Object.entries(LANG_LABELS).map(([code, label]) => (
-                          <button
-                            key={code}
-                            type="button"
-                            role="option"
-                            aria-selected={lang === code}
-                            onClick={() => { setLang(code as "fr" | "en" | "ar" | "man" | "pul"); setLangOpen(false); }}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                              lang === code
-                                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold"
-                                : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                            }`}
-                          >
-                            <span className="flex-1">{label}</span>
-                            {lang === code && <span className="text-blue-600 dark:text-blue-400">✓</span>}
-                          </button>
-                        ))}
-                      </div>
+          {/* Ligne 1 : Logo + Activité + Cloche */}
+          <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 py-1">
+            <div className="flex items-center justify-between gap-2">
+              {/* Gauche : Logo */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isLoggedIn && !isPublicPage && (
+                  <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
+                    <div style={{ background: "white", borderRadius: 10, padding: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <img src="/logo-moftal.svg" alt="Moftal" width="56" height="56" style={{ width: 56, height: 56, display: "block" }}/>
                     </div>
-                  )}
-                </div>
-              )}
+                  </Link>
+                )}
+              </div>
+
+              {/* Droite : Activité + Cloche + Langue */}
+              <div className="flex items-center gap-2 justify-end min-h-[44px]">
+                {isLoggedIn && !isPublicPage && (
+                  <button
+                    onClick={() => navigate("/gestion-interne")}
+                    className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 transition-colors whitespace-nowrap"
+                  >
+                    {t('header.manage_pro')}
+                  </button>
+                )}
+                {isLoggedIn && !isPublicPage && <NotificationBell />}
+                {(!isLoggedIn || isHome) && (
+                  <div ref={langRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setLangOpen((o) => !o)}
+                      className="min-h-[36px] flex items-center px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors whitespace-nowrap"
+                      aria-label={t('header.language')}
+                      aria-haspopup="listbox"
+                      aria-expanded={langOpen}
+                    >
+                      <span>{t('header.language')}</span>
+                    </button>
+                    {langOpen && (
+                      <div
+                        role="listbox"
+                        className="absolute right-0 top-11 w-40 bg-white dark:bg-gray-800 rounded-xl shadow-2xl ring-1 ring-gray-200 dark:ring-gray-700 z-50 overflow-hidden py-1"
+                      >
+                        <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                          {t('header.language')}
+                        </div>
+                        <div className="max-h-60 overflow-y-auto">
+                          {Object.entries(LANG_LABELS).map(([code, label]) => (
+                            <button
+                              key={code}
+                              type="button"
+                              role="option"
+                              aria-selected={lang === code}
+                              onClick={() => { setLang(code as "fr" | "en" | "ar" | "man" | "pul"); setLangOpen(false); }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                                lang === code
+                                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold"
+                                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                              }`}
+                            >
+                              <span className="flex-1">{label}</span>
+                              {lang === code && <span className="text-blue-600 dark:text-blue-400">✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-      </header>}
+          {/* Ligne 2 : Carte Profil complète */}
+          {isLoggedIn && !isPublicPage && currentUser && (
+            <div className="px-3 pt-1 pb-2 border-t border-gray-100 dark:border-gray-800">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-3">
+                <div className="flex items-start gap-3">
+                  {/* Avatar cliquable → Mon Profil */}
+                  {(() => {
+                    const photoUrl = getPhotoUrl(
+                      currentUser.photo || currentUser.manPhoto || currentUser.familyPhoto
+                    );
+                    return (
+                      <button onClick={() => navigate("/moi/profil")} className="flex-shrink-0 focus:outline-none">
+                        {photoUrl ? (
+                          <img
+                            src={photoUrl}
+                            alt="Photo de profil"
+                            className="w-20 h-20 rounded-full object-cover border-2 border-emerald-400"
+                            onError={(e) => { (e.target as HTMLImageElement).src = DefaultAvatar; }}
+                          />
+                        ) : (
+                          <img
+                            src={DefaultAvatar}
+                            alt="Avatar"
+                            className="w-20 h-20 rounded-full"
+                          />
+                        )}
+                      </button>
+                    );
+                  })()}
 
-      {/* ── Repère de navigation — ordre fixe : Famille / Terre ADAM / Échanges / Services ── */}
-      {isLoggedIn && !isPublicPage && !isFullscreenPage && pathname !== '/compte' && pathname !== '/terre-adam' && (
-        <div className="sticky top-[53px] z-40 bg-white border-b border-gray-200 shadow-sm">
-          <div className="grid grid-cols-8 gap-0.5 px-1 py-1">
-            {([
-              { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
-              { id: "terre-adam", label: t('nav.terre_adam') || "Terre ADAM", icon: "🌍",  path: "/compte"  },
-              { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: null,  path: "/echange" },
-              { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",  path: "/services"},
-            ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => {
-              const isActive =
-                item.id === "terre-adam"
-                  ? pathname === "/compte" || pathname === "/terre-adam"
-                  : pathname === item.path || pathname.startsWith(item.path + "/");
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(item.path)}
-                  className={`col-span-2 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all ${
-                    isActive
-                      ? "bg-blue-100 ring-1 ring-blue-300"
-                      : "bg-white hover:bg-gray-50 shadow-sm"
-                  }`}
-                >
-                  {item.id === "echanges"
-                    ? <SalesIcon size={20} className={isActive ? "text-blue-600" : "text-gray-500"} />
-                    : <span className="text-lg leading-none">{item.icon}</span>
-                  }
-                  <span className={`text-[9px] font-medium ${isActive ? "text-blue-700" : "text-gray-600"}`}>
-                    {item.label}
-                  </span>
-                  {isActive && <span className="w-3 h-0.5 rounded-full bg-blue-600" />}
-                </button>
-              );
-            })}
-          </div>
+                  {/* Infos à droite de la photo */}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                      {currentUser.prenom} {currentUser.nomFamille}
+                    </h2>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        {isAdmin(currentUser) ? 'Administrateur' : 'Utilisateur'}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                        NuméroH : {getNumeroHForDisplay(currentUser.numeroH, true, false)}
+                      </span>
+                    </div>
+                    {isMasterAdmin(currentUser) && (
+                      <button
+                        onClick={() => navigate("/admin")}
+                        className="mt-2 w-9 h-9 flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-700 text-white text-base transition-colors"
+                        aria-label="Administration"
+                      >
+                        👑
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ligne 3 : Navigation (Famille / Terre ADAM / Échanges / Services) — toujours visible */}
+          {isLoggedIn && !isPublicPage && (
+            <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <div className="grid grid-cols-4 px-1 py-1">
+                {([
+                  { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
+                  { id: "terre-adam", label: t('nav.terre_adam') || "Terre ADAM", icon: "🌍",  path: "/compte"  },
+                  { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: null,  path: "/echange" },
+                  { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",  path: "/services"},
+                ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => {
+                  const isActive =
+                    item.id === "terre-adam"
+                      ? pathname === "/compte" || pathname === "/terre-adam"
+                      : pathname === item.path || pathname.startsWith(item.path + "/");
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => navigate(item.path)}
+                      className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all ${
+                        isActive
+                          ? "bg-blue-100 ring-1 ring-blue-300"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+                      {item.id === "echanges"
+                        ? <SalesIcon size={20} className={isActive ? "text-blue-600" : "text-gray-500"} />
+                        : <span className="text-lg leading-none">{item.icon}</span>
+                      }
+                      <span className={`text-[9px] font-medium ${isActive ? "text-blue-700" : "text-gray-600"}`}>
+                        {item.label}
+                      </span>
+                      {isActive && <span className="w-3 h-0.5 rounded-full bg-blue-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
@@ -410,13 +500,32 @@ function App() {
             </div>
             {/* Actions droite */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* Carte identité — toujours visible sur les pages gestion */}
               {currentUser && (
-                <div style={{ textAlign: "right", marginRight: 4 }}>
-                  <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: 600, maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {(currentUser as any).prenom || (currentUser as any).nom || "Gérant"}
+                <Link
+                  to="/moi/profil"
+                  style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, padding: "5px 10px 5px 5px", textDecoration: "none", flexShrink: 0 }}
+                >
+                  {getPhotoUrl((currentUser as any).photo) ? (
+                    <img
+                      src={getPhotoUrl((currentUser as any).photo)!}
+                      alt=""
+                      style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399", flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#059669", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 14, fontWeight: 700, border: "2px solid #34d399", flexShrink: 0 }}>
+                      {((currentUser as any).prenom?.[0] || (currentUser as any).nom?.[0] || '?').toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: "rgba(255,255,255,0.95)", fontSize: 12, fontWeight: 700, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {(currentUser as any).prenom || (currentUser as any).nom || "Mon profil"}
+                    </div>
+                    <div style={{ color: "#34d399", fontSize: 10, fontFamily: "monospace", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {((currentUser as any).numeroH || "").split(' ')[0]}
+                    </div>
                   </div>
-                  <div style={{ color: "#475569", fontSize: 11 }}>{(currentUser as any).numeroH || ""}</div>
-                </div>
+                </Link>
               )}
               <button onClick={() => navigate("/gestion-interne")}
                 title="Mes espaces de gestion"
@@ -438,7 +547,7 @@ function App() {
       )}
 
       {/* Main content - plein écran, chaque page gère son propre container */}
-      <main className="w-full overflow-x-hidden flex-1">
+      <main className="w-full flex-1" style={{ overflowX: 'clip' }}>
         <Suspense fallback={<LoadingBar />}>
         <Routes>
           <Route path="/" element={<Home />} />

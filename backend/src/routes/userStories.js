@@ -263,6 +263,97 @@ router.post('/all', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET + PUT /api/user-stories/mon-contact-narrateur
+// Avant GET /:numeroH pour ne pas être intercepté par le wildcard
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/mon-contact-narrateur', async (req, res) => {
+  try {
+    const user = await User.findOne({
+      where: { numeroH: req.userId },
+      attributes: ['narrateurContact']
+    });
+    res.json({ success: true, contact: user?.narrateurContact || null });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.put('/mon-contact-narrateur', async (req, res) => {
+  try {
+    const { contact } = req.body;
+    if (!contact || !contact.trim()) {
+      return res.status(400).json({ success: false, message: 'Numéro requis.' });
+    }
+    await User.update(
+      { narrateurContact: contact.trim() },
+      { where: { numeroH: req.userId } }
+    );
+    res.json({ success: true, message: 'Numéro de contact narrateur mis à jour.' });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// Récupérer le flux de stories Mes Amours (amis + soi-même) sur 24h
+// @route   GET /api/user-stories/mes-amours/feed
+// @desc    Récupère les stories Mes Amours des amis (et de soi-même) des dernières 24h
+// @access  Private
+router.get('/mes-amours/feed', async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentification requise'
+      });
+    }
+
+    // Récupérer tous les amis acceptés
+    const friends = await Friend.findAll({
+      where: {
+        status: 'accepted',
+        [Op.or]: [
+          { userNumeroH: user.numeroH },
+          { friendNumeroH: user.numeroH }
+        ]
+      }
+    });
+
+    const numeros = new Set([user.numeroH]);
+    for (const f of friends) {
+      if (f.userNumeroH === user.numeroH) {
+        numeros.add(f.friendNumeroH);
+      } else {
+        numeros.add(f.userNumeroH);
+      }
+    }
+
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const stories = await PublishedStory.findAll({
+      where: {
+        sectionId: 'mes_amours_story',
+        isPublished: true,
+        numeroH: { [Op.in]: Array.from(numeros) },
+        publishedAt: { [Op.gte]: since24h }
+      },
+      order: [['publishedAt', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      stories
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération du feed Mes Amours:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des stories'
+    });
+  }
+});
+
 // @route   GET /api/user-stories/:numeroH
 // @desc    Récupérer toutes les histoires d'un utilisateur
 // @access  Private
@@ -603,6 +694,14 @@ router.post('/mes-amours/story', upload.single('file'), async (req, res) => {
       });
     }
 
+    // Limite à 10MB pour les stories (éviter saturation DB)
+    if (req.file.size > 10 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        message: 'Fichier trop volumineux. Maximum 10 MB pour une story.'
+      });
+    }
+
     const isImage = req.file.mimetype.startsWith('image/');
     const isVideo = req.file.mimetype.startsWith('video/');
 
@@ -618,9 +717,11 @@ router.post('/mes-amours/story', upload.single('file'), async (req, res) => {
     const dataUrl = toDataUrl(req.file);
     const now = new Date();
 
+    const authorName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
+
     const storyData = {
       numeroH: user.numeroH,
-      authorName: `${user.prenom} ${user.nomFamille}`,
+      authorName,
       sectionId: 'mes_amours_story',
       sectionTitle: 'Mes Amours - Story',
       content,
@@ -641,106 +742,11 @@ router.post('/mes-amours/story', upload.single('file'), async (req, res) => {
       story
     });
   } catch (error) {
-    console.error('Erreur lors de la publication Mes Amours:', error);
+    console.error('Erreur lors de la publication Mes Amours:', error.message, error.stack);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors de la publication de la story'
+      message: `Erreur serveur lors de la publication de la story : ${error.message}`
     });
-  }
-});
-
-// Récupérer le flux de stories Mes Amours (amis + soi-même) sur 24h
-// @route   GET /api/user-stories/mes-amours/feed
-// @desc    Récupère les stories Mes Amours des amis (et de soi-même) des dernières 24h
-// @access  Private
-router.get('/mes-amours/feed', async (req, res) => {
-  try {
-    const user = req.user;
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentification requise'
-      });
-    }
-
-    // Récupérer tous les amis acceptés
-    const friends = await Friend.findAll({
-      where: {
-        status: 'accepted',
-        [Op.or]: [
-          { userNumeroH: user.numeroH },
-          { friendNumeroH: user.numeroH }
-        ]
-      }
-    });
-
-    const numeros = new Set([user.numeroH]);
-    for (const f of friends) {
-      if (f.userNumeroH === user.numeroH) {
-        numeros.add(f.friendNumeroH);
-      } else {
-        numeros.add(f.userNumeroH);
-      }
-    }
-
-    const stories = await PublishedStory.findAll({
-      where: {
-        sectionId: 'mes_amours_story',
-        isPublished: true,
-        numeroH: {
-          [Op.in]: Array.from(numeros)
-        }
-      },
-      order: [['publishedAt', 'DESC']]
-    });
-
-    res.json({
-      success: true,
-      stories
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération du feed Mes Amours:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la récupération des stories'
-    });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/user-stories/mon-contact-narrateur
-// Récupère le numéro Orange Money du narrateur connecté
-// ─────────────────────────────────────────────────────────────────────────────
-router.get('/mon-contact-narrateur', authenticate, async (req, res) => {
-  try {
-    const user = await User.findOne({
-      where: { numeroH: req.userId },
-      attributes: ['narrateurContact']
-    });
-    res.json({ success: true, contact: user?.narrateurContact || null });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
-  }
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PUT /api/user-stories/mon-contact-narrateur
-// Met à jour le numéro Orange Money du narrateur (modifiable à tout moment)
-// ─────────────────────────────────────────────────────────────────────────────
-router.put('/mon-contact-narrateur', authenticate, async (req, res) => {
-  try {
-    const { contact } = req.body;
-    if (!contact || !contact.trim()) {
-      return res.status(400).json({ success: false, message: 'Numéro requis.' });
-    }
-    await User.update(
-      { narrateurContact: contact.trim() },
-      { where: { numeroH: req.userId } }
-    );
-    res.json({ success: true, message: 'Numéro de contact narrateur mis à jour.' });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
   }
 });
 

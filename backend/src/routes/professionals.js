@@ -78,7 +78,7 @@ router.get('/verifier-nom', authenticate, async (req, res) => {
       return res.json({ success: true, disponible: false, message: 'Nom vide.' });
     }
     const existant = await ProfessionalAccount.findOne({
-      where: { name: { [Op.iLike]: nom.trim() } }
+      where: { name: { [Op.iLike]: nom.trim() }, status: { [Op.ne]: 'rejected' } }
     });
     if (existant) {
       return res.json({
@@ -121,7 +121,7 @@ router.post('/register', authenticate, async (req, res) => {
     // ── Vérification : le nom doit être unique (insensible à la casse) ──────────
     const nomNettoye = name.trim();
     const nomExistant = await ProfessionalAccount.findOne({
-      where: { name: { [Op.iLike]: nomNettoye } }
+      where: { name: { [Op.iLike]: nomNettoye }, status: { [Op.ne]: 'rejected' } }
     });
     if (nomExistant) {
       return res.status(409).json({
@@ -257,6 +257,32 @@ router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
     res.json({ success: true, tenantCode });
   } catch (e) {
     console.error('ensure-tenant:', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// POST /api/professionals/:id/connect-client
+router.post('/:id/connect-client', authenticate, async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    if (account.ownerNumeroH !== req.userId) return res.status(403).json({ success: false, message: 'Non autorisé' });
+
+    const { clientNumeroH } = req.body;
+    if (!clientNumeroH) return res.status(400).json({ success: false, message: 'clientNumeroH requis' });
+
+    // Notifier le client
+    await Notification.create({
+      recipientNumeroH: clientNumeroH,
+      senderNumeroH: req.userId,
+      type: 'pro_connection',
+      message: `${account.name} vous a connecté à son espace professionnel.`,
+      isRead: false
+    }).catch(() => {}); // non bloquant si le champ type n'est pas dans l'ENUM
+
+    res.json({ success: true, message: `Client connecté à ${account.name} avec succès.` });
+  } catch (e) {
+    console.error('connect-client:', e);
     res.status(500).json({ success: false, message: e.message });
   }
 });

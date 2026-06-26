@@ -2,279 +2,173 @@ import { useState, useRef, useEffect } from 'react'
 
 interface VideoRecorderProps {
   onVideoRecorded: (videoBlob: Blob) => void
-  /** Durée max d'enregistrement en secondes (défaut 10) */
   maxDuration?: number
 }
 
-export function VideoRecorder({ onVideoRecorded, maxDuration = 10 }: VideoRecorderProps) {
-  const [isRecording, setIsRecording] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const [duration, setDuration] = useState(0)
-  const [hasPermission, setHasPermission] = useState(false)
+export function VideoRecorder({ onVideoRecorded, maxDuration = 30 }: VideoRecorderProps) {
   const [error, setError] = useState<string | null>(null)
-  const [cameraReady, setCameraReady] = useState(false)
-  
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const chunksRef = useRef<Blob[]>([])
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const [validating, setValidating] = useState(false)
+  const [videoFile, setVideoFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [videoDuration, setVideoDuration] = useState<number>(0)
 
-  const safeMaxSeconds = Math.min(maxDuration, 240)
-  const maxDurationMs = safeMaxSeconds * 1000 // secondes → millisecondes
+  const captureRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop())
-      }
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
     }
-  }, [])
+  }, [previewUrl])
 
-  const applyStream = (stream: MediaStream) => {
-    streamRef.current = stream
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream
-      videoRef.current.style.display = 'block'
-      videoRef.current.style.visibility = 'visible'
-      videoRef.current.style.opacity = '1'
-      videoRef.current.onloadedmetadata = () => {
-        videoRef.current?.play().catch(() => {})
-      }
-      videoRef.current.onplay = () => { setCameraReady(true) }
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.play().then(() => setCameraReady(true)).catch(() => {})
-        }
-      }, 100)
-    }
-    setHasPermission(true)
-  }
-
-  const startCamera = async () => {
+  const handleFile = async (file: File) => {
     setError(null)
+    setValidating(true)
 
-    // --- Infos de diagnostic affichées à l'écran ---
-    const protocol = location.protocol
-    const hostname = location.hostname
-    const hasMediaDevices = !!(navigator.mediaDevices)
-    const hasGetUserMedia = !!(navigator.mediaDevices?.getUserMedia)
-    const diagBase = `[DIAG] protocole=${protocol} host=${hostname} mediaDevices=${hasMediaDevices} getUserMedia=${hasGetUserMedia}`
-
-    if (!hasMediaDevices || !hasGetUserMedia) {
-      setError(`Caméra non disponible dans ce contexte.\n${diagBase}`)
+    // Certains Android renvoient file.type vide — on vérifie par extension si besoin
+    const mimeOk = file.type.startsWith('video/')
+    const extOk = /\.(mp4|mov|avi|mkv|webm|3gp|3gpp|m4v|wmv|flv|ts|mts)$/i.test(file.name)
+    if (file.type && !mimeOk && !extOk) {
+      setError('Le fichier sélectionné n\'est pas une vidéo reconnue.')
+      setValidating(false)
       return
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' },
-        audio: true
-      })
-      applyStream(stream)
-    } catch (err: any) {
-      const name: string = err?.name ?? 'inconnu'
-      const message: string = err?.message ?? ''
-      // Afficher l'erreur brute + le diagnostic pour pouvoir identifier la vraie cause
-      setError(`ERREUR: ${name}\nDétail: ${message}\n${diagBase}`)
-    }
-  }
-
-  const startRecording = () => {
-    if (!streamRef.current) {
-      setError('Aucun flux vidéo disponible. Veuillez d\'abord démarrer la caméra.')
+    if (file.size > 200 * 1024 * 1024) {
+      setError('La vidéo est trop volumineuse (maximum 200 MB).')
+      setValidating(false)
       return
     }
 
-    try {
-      // Essayer différents codecs selon la compatibilité du navigateur
-      let mimeType = 'video/webm;codecs=vp9,opus'
-      const codecs = [
-        'video/webm;codecs=vp9,opus',
-        'video/webm;codecs=vp8,opus',
-        'video/webm;codecs=vp8',
-        'video/webm',
-        'video/mp4'
-      ]
-      
-      // Trouver le premier codec supporté
-      for (const codec of codecs) {
-        if (MediaRecorder.isTypeSupported(codec)) {
-          mimeType = codec
-          console.log('✅ Codec sélectionné:', mimeType)
-          break
-        }
-      }
-      
-      console.log('🎬 Démarrage de l\'enregistrement avec:', mimeType)
-      const mediaRecorder = new MediaRecorder(streamRef.current, {
-        mimeType: mimeType
-      })
-      
-      mediaRecorderRef.current = mediaRecorder
-      chunksRef.current = []
+    const url = URL.createObjectURL(file)
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data)
-        }
-      }
+    const duration = await new Promise<number>((resolve) => {
+      const vid = document.createElement('video')
+      vid.preload = 'metadata'
+      vid.onloadedmetadata = () => resolve(vid.duration)
+      vid.onerror = () => resolve(NaN)
+      // Timeout de sécurité si onloadedmetadata ne se déclenche pas
+      setTimeout(() => resolve(NaN), 5000)
+      vid.src = url
+    })
 
-      mediaRecorder.onstop = () => {
-        const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' })
-        onVideoRecorded(videoBlob)
-        setIsRecording(false)
-        setIsPaused(false)
-        setDuration(0)
-      }
+    URL.revokeObjectURL(url)
 
-      mediaRecorder.start(1000) // Collecter les données chaque seconde
-      setIsRecording(true)
-      
-      // Timer pour la durée
-      timerRef.current = setInterval(() => {
-        setDuration(prev => {
-          const newDuration = prev + 1000
-          if (newDuration >= maxDurationMs) {
-            stopRecording()
-            return maxDurationMs
-          }
-          return newDuration
-        })
-      }, 1000)
+    // NaN ou Infinity = durée non lisible → on laisse passer (le serveur vérifiera)
+    const durationReadable = Number.isFinite(duration) && !Number.isNaN(duration)
+    if (durationReadable && duration > maxDuration) {
+      setError(
+        `Vidéo trop longue : ${Math.round(duration)} secondes.\nMaximum autorisé : ${maxDuration} secondes.\nEnregistrez une vidéo plus courte puis réessayez.`
+      )
+      setValidating(false)
+      return
+    }
 
-    } catch (err) {
-      setError('Erreur lors du démarrage de l\'enregistrement')
-      console.error('Erreur enregistrement:', err)
+    const newUrl = URL.createObjectURL(file)
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(newUrl)
+    setVideoFile(file)
+    setVideoDuration(Math.round(duration))
+    onVideoRecorded(file)
+    setValidating(false)
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+    e.target.value = ''
+  }
+
+  const reset = () => {
+    setVideoFile(null)
+    setError(null)
+    setVideoDuration(0)
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
     }
   }
 
-  const pauseRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      if (isPaused) {
-        mediaRecorderRef.current.resume()
-        setIsPaused(false)
-      } else {
-        mediaRecorderRef.current.pause()
-        setIsPaused(true)
-      }
-    }
-  }
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-    }
-  }
-
-  const formatTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000)
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = totalSeconds % 60
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
-
-  const progress = (duration / maxDurationMs) * 100
-
-  if (!hasPermission) {
+  if (videoFile && previewUrl) {
     return (
-      <div className="video-recorder">
-        <div className="camera-setup">
-          <h3>Configuration de la caméra</h3>
-          <p>Pour enregistrer votre vidéo, nous avons besoin d'accéder à votre caméra et microphone.</p>
-          <button className="btn" onClick={startCamera}>
-            Autoriser l'accès à la caméra
-          </button>
-          {error && (
-            <div className="error" style={{ whiteSpace: 'pre-line', marginTop: '12px', padding: '12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#991b1b', fontSize: '0.9rem', lineHeight: '1.6' }}>
-              {error}
-            </div>
-          )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <video
+          src={previewUrl}
+          controls
+          playsInline
+          style={{ width: '100%', maxHeight: '360px', borderRadius: '10px', background: '#000' }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px' }}>
+          <span style={{ fontSize: '1.2rem' }}>✅</span>
+          <div>
+            <div style={{ fontWeight: 600, color: '#15803d', fontSize: '0.9rem' }}>Vidéo prête</div>
+            <div style={{ color: '#166534', fontSize: '0.8rem' }}>{videoFile.name} — {videoDuration}s</div>
+          </div>
         </div>
+        <button
+          className="btn secondary"
+          onClick={reset}
+          style={{ width: '100%' }}
+        >
+          Changer la vidéo
+        </button>
       </div>
     )
   }
 
   return (
-    <div className="video-recorder">
-      <div className="video-container">
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          className="camera-preview"
-          style={{
-            width: '100%',
-            height: '400px',
-            objectFit: 'cover',
-            backgroundColor: '#000',
-            transform: 'scaleX(-1)', // Miroir pour se voir comme dans un miroir
-            visibility: 'visible',
-            opacity: 1,
-            display: 'block',
-            position: 'relative',
-            zIndex: 1
-          }}
-        />
-        
-        {isRecording && (
-          <div className="recording-overlay">
-            <div className="recording-indicator">
-              <div className="recording-dot"></div>
-              <span>ENREGISTREMENT</span>
-            </div>
-            <div className="recording-timer">
-              {formatTime(duration)} / {maxDuration}s
-            </div>
-          </div>
-        )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ padding: '14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', fontSize: '0.9rem', color: '#1e40af', lineHeight: '1.5' }}>
+        Enregistrez une courte vidéo de présentation.<br />
+        <strong>Durée maximum : {maxDuration} secondes.</strong>
       </div>
 
-      <div className="recording-controls">
-        {!isRecording ? (
-          <div className="recording-buttons">
-            <button className="btn" onClick={startRecording}>
-              Commencer l'enregistrement
-            </button>
-            {!cameraReady && (
-              <button className="btn secondary" onClick={startCamera}>
-                🔄 Redémarrer la caméra
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="recording-buttons">
-            <button 
-              className={`btn ${isPaused ? 'secondary' : ''}`}
-              onClick={pauseRecording}
-            >
-              {isPaused ? 'Reprendre' : 'Pause'}
-            </button>
-            <button className="btn" onClick={stopRecording}>
-              Arrêter
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Filmer directement */}
+      <input
+        ref={captureRef}
+        type="file"
+        accept="video/*"
+        capture="user"
+        style={{ display: 'none' }}
+        onChange={handleChange}
+      />
+      <button
+        className="btn"
+        onClick={() => captureRef.current?.click()}
+        disabled={validating}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px' }}
+      >
+        <span style={{ fontSize: '1.3rem' }}>📷</span>
+        Filmer maintenant
+      </button>
 
-      {isRecording && (
-        <div className="progress-container">
-          <div className="progress-bar">
-            <div 
-              className="progress-fill"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <div className="progress-text">
-            {formatTime(duration)} / {maxDuration}s
-          </div>
+      {/* Choisir depuis galerie */}
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="video/*"
+        style={{ display: 'none' }}
+        onChange={handleChange}
+      />
+      <button
+        className="btn secondary"
+        onClick={() => galleryRef.current?.click()}
+        disabled={validating}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px' }}
+      >
+        <span style={{ fontSize: '1.3rem' }}>🎞️</span>
+        Choisir depuis la galerie
+      </button>
+
+      {validating && (
+        <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.9rem', padding: '10px' }}>
+          Vérification de la vidéo…
+        </div>
+      )}
+
+      {error && (
+        <div style={{ whiteSpace: 'pre-line', padding: '12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#991b1b', fontSize: '0.9rem', lineHeight: '1.6' }}>
+          {error}
         </div>
       )}
     </div>

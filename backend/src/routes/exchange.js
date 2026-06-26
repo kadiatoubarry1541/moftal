@@ -62,6 +62,88 @@ const upload = multer({
 // Toutes les routes nécessitent l'authentification
 router.use(authenticate);
 
+// ========== VENDEURS MARKETPLACE MOFTAL ==========
+
+// @route   GET /api/exchange/vendor-status
+// @desc    Vérifie si l'utilisateur est un vendeur Moftal approuvé, retourne son secteur
+// @access  Authentifié
+router.get('/vendor-status', async (req, res) => {
+  try {
+    const userNumeroH = req.user?.numeroH || req.userId;
+    if (!userNumeroH) return res.json({ success: true, isVendor: false });
+
+    if (isGlobalAdmin(req.user)) return res.json({ success: true, isVendor: true, isAdmin: true });
+
+    const [account] = await sequelize.query(
+      `SELECT id, name, sub_sector, status FROM professional_accounts
+       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' LIMIT 1`,
+      { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+    );
+
+    if (account) {
+      return res.json({ success: true, isVendor: true, sector: account.sub_sector, accountName: account.name });
+    }
+
+    // Vérifier si une demande est en attente
+    const [pending] = await sequelize.query(
+      `SELECT id, sub_sector FROM professional_accounts
+       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='pending' LIMIT 1`,
+      { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+    );
+
+    if (pending) {
+      return res.json({ success: true, isVendor: false, hasPendingRequest: true, pendingSector: pending.sub_sector });
+    }
+
+    return res.json({ success: true, isVendor: false });
+  } catch (e) {
+    console.error('vendor-status error:', e);
+    res.json({ success: true, isVendor: false });
+  }
+});
+
+// @route   POST /api/exchange/register-vendor
+// @desc    Inscription comme vendeur Moftal (crée un compte en attente d'approbation)
+// @access  Authentifié
+router.post('/register-vendor', async (req, res) => {
+  try {
+    const userNumeroH = req.user?.numeroH || req.userId;
+    const { nomBoutique, description, secteur, telephone, ville } = req.body;
+
+    if (!nomBoutique || !secteur) {
+      return res.status(400).json({ success: false, message: 'Nom de boutique et secteur obligatoires.' });
+    }
+    if (!['primaire', 'secondaire', 'tertiaire'].includes(secteur)) {
+      return res.status(400).json({ success: false, message: 'Secteur invalide.' });
+    }
+
+    // Vérifier qu'il n'a pas déjà une demande en cours ou un compte approuvé
+    const [existing] = await sequelize.query(
+      `SELECT id, status FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' LIMIT 1`,
+      { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (existing) {
+      const msg = existing.status === 'approved'
+        ? 'Vous avez déjà un compte vendeur Moftal approuvé.'
+        : existing.status === 'pending'
+          ? 'Votre demande est déjà en cours d\'examen. Veuillez patienter.'
+          : 'Une demande existe déjà pour ce compte.';
+      return res.status(409).json({ success: false, message: msg });
+    }
+
+    await sequelize.query(
+      `INSERT INTO professional_accounts (id, type, name, description, phone, city, owner_numero_h, status, sub_sector, subscription_status, is_trial, created_at, updated_at)
+       VALUES (gen_random_uuid(), 'moftal_vendor', :nom, :desc, :tel, :ville, :owner, 'pending', :secteur, 'never_paid', true, NOW(), NOW())`,
+      { replacements: { nom: nomBoutique, desc: description || '', tel: telephone || '', ville: ville || '', owner: userNumeroH, secteur } }
+    );
+
+    res.json({ success: true, message: 'Demande envoyée ! Un administrateur examinera votre dossier sous peu.' });
+  } catch (e) {
+    console.error('register-vendor error:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur : ' + e.message });
+  }
+});
+
 // ========== PRODUITS ==========
 
 // @route   GET /api/exchange/products
@@ -232,12 +314,25 @@ router.post('/products', upload.array('images', 10), async (req, res) => {
 
 // @route   POST /api/exchange/primaire/products
 // @desc    Créer un produit primaire
-// @access  Authentifié
+// @access  Vendeur professionnel approuvé ou Admin
 router.post('/primaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
     const user = req.user;
     const estAdmin = isGlobalAdmin(user);
+    const userNumeroH = user?.numeroH || req.userId;
+
+    // Vérification : seul un vendeur Moftal approuvé sur le secteur primaire peut publier ici
+    if (!estAdmin) {
+      const [vendorOk] = await sequelize.query(
+        `SELECT id FROM professional_accounts
+         WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='primaire' LIMIT 1`,
+        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+      ).catch(() => []);
+      if (!vendorOk) {
+        return res.status(403).json({ success: false, message: 'Accès refusé. Seuls les vendeurs Moftal approuvés (secteur primaire) peuvent publier ici.' });
+      }
+    }
     const sousCategorieNormalisee = (category || '').toLowerCase().trim();
 
     // Si c'est du riz ou de l'huile publié par l'admin → marqué Moftal (apparaît en 1er)

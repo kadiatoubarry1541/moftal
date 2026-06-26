@@ -44,7 +44,7 @@ export default function PrendreRendezVous() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [account, setAccount] = useState<ProAccount | null>(null);
-  const [mode, setMode] = useState<"choose" | "written" | "video" | "recording" | "done">("choose");
+  const [mode, setMode] = useState<"choose" | "written" | "video" | "done">("choose");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -54,12 +54,10 @@ export default function PrendreRendezVous() {
   const [time, setTime] = useState("");
   const [service, setService] = useState("");
 
-  // Vidéo
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const [countdown, setCountdown] = useState(30);
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  // Vidéo — file input (compatible tous appareils)
+  const captureRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
   const token = localStorage.getItem("token");
@@ -105,47 +103,20 @@ export default function PrendreRendezVous() {
     finally { setSending(false); }
   };
 
-  // === Enregistrement vidéo 30s ===
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      chunksRef.current = [];
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
-        setVideoBlob(blob);
-        setVideoPreview(URL.createObjectURL(blob));
-      };
-
-      recorder.start();
-      setMode("recording");
-      setCountdown(30);
-
-      const interval = setInterval(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
-            clearInterval(interval);
-            recorder.stop();
-            return 0;
-          }
-          return c - 1;
-        });
-      }, 1000);
-    } catch {
-      alert("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+  // === Sélection/enregistrement vidéo (file input — compatible tous appareils) ===
+  const handleVideoFile = (file: File) => {
+    if (file.size > 200 * 1024 * 1024) {
+      alert("Vidéo trop volumineuse (maximum 200 MB).");
+      return;
     }
+    setVideoFile(file);
+    const url = URL.createObjectURL(file);
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setVideoPreview(url);
   };
 
   const sendVideoAppointment = async () => {
-    if (!videoBlob) return;
+    if (!videoFile) return;
     setSending(true);
     setError("");
     try {
@@ -165,7 +136,7 @@ export default function PrendreRendezVous() {
         else setError(data.message || "Erreur");
         setSending(false);
       };
-      reader.readAsDataURL(videoBlob);
+      reader.readAsDataURL(videoFile);
     } catch {
       setError("Erreur de connexion");
       setSending(false);
@@ -295,11 +266,11 @@ export default function PrendreRendezVous() {
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Par écrit</h3>
                 <p className="text-sm text-gray-500">Remplissez le jour, l'heure et le service souhaité</p>
               </button>
-              <button onClick={startRecording}
+              <button onClick={() => setMode("video")}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg ring-1 ring-gray-200 dark:ring-gray-700 p-6 text-left transition-all hover:scale-[1.02]">
                 <div className="text-4xl mb-3">📹</div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Par vidéo</h3>
-                <p className="text-sm text-gray-500">Enregistrez une vidéo de 30 secondes</p>
+                <p className="text-sm text-gray-500">Enregistrez ou importez une vidéo courte</p>
               </button>
             </div>
           </div>
@@ -343,26 +314,65 @@ export default function PrendreRendezVous() {
           </form>
         )}
 
-        {/* Enregistrement vidéo */}
-        {mode === "recording" && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 p-6 text-center">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">📹 Enregistrement vidéo</h2>
-            <div className="text-4xl font-bold text-red-500 mb-3">{countdown}s</div>
-            <video ref={videoRef} className="w-full max-w-sm mx-auto rounded-lg bg-black mb-4" muted playsInline />
-            <p className="text-sm text-gray-500">La vidéo s'arrête automatiquement après 30 secondes</p>
+        {/* Enregistrement / sélection vidéo */}
+        {mode === "video" && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 p-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">📹 Rendez-vous par vidéo</h2>
 
-            {/* Si l'enregistrement est fini (countdown = 0) */}
-            {countdown === 0 && videoPreview && (
-              <div className="mt-4">
-                <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Aperçu :</h3>
-                <video src={videoPreview} controls className="w-full max-w-sm mx-auto rounded-lg mb-4" />
-                <div className="flex gap-3 justify-center">
-                  <button onClick={sendVideoAppointment} disabled={sending}
-                    className="min-h-[44px] px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-colors">
-                    {sending ? "Envoi..." : "✅ Envoyer"}
+            {/* Inputs cachés */}
+            <input
+              ref={captureRef}
+              type="file"
+              accept="video/*"
+              capture="user"
+              style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoFile(f); e.target.value = ""; }}
+            />
+            <input
+              ref={galleryRef}
+              type="file"
+              accept="video/*"
+              style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleVideoFile(f); e.target.value = ""; }}
+            />
+
+            {!videoPreview ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-500 mb-4">
+                  Filmez ou importez une courte vidéo de présentation de votre demande (maximum 30 s recommandé).
+                </p>
+                <button
+                  onClick={() => captureRef.current?.click()}
+                  className="w-full min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span>📷</span> Filmer maintenant
+                </button>
+                <button
+                  onClick={() => galleryRef.current?.click()}
+                  className="w-full min-h-[44px] px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span>🎞️</span> Choisir depuis la galerie
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <video src={videoPreview} controls playsInline className="w-full rounded-lg bg-black" />
+                <div className="flex gap-3">
+                  <button
+                    onClick={sendVideoAppointment}
+                    disabled={sending}
+                    className="flex-1 min-h-[44px] px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    {sending ? "Envoi en cours..." : "✅ Envoyer"}
                   </button>
-                  <button onClick={() => { setMode("choose"); setVideoBlob(null); setVideoPreview(null); setCountdown(30); }}
-                    className="min-h-[44px] px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-colors">
+                  <button
+                    onClick={() => {
+                      setVideoFile(null);
+                      if (videoPreview) URL.revokeObjectURL(videoPreview);
+                      setVideoPreview(null);
+                    }}
+                    className="flex-1 min-h-[44px] px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-lg transition-colors"
+                  >
                     🔄 Recommencer
                   </button>
                 </div>

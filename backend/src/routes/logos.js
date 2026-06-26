@@ -6,6 +6,24 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// @route   GET /api/logos/public/:numeroH
+// @desc    Récupérer les logos d'un utilisateur quelconque — route publique visible par tous
+// @access  Authentifié (lecture seule)
+router.get('/public/:numeroH', authenticate, async (req, res) => {
+  try {
+    const { numeroH } = req.params;
+    const userLogos = await UserLogo.findAll({
+      where: { numeroH },
+      include: [{ model: Logo, as: 'logo', where: { isActive: true }, required: true }],
+      order: [['assignedAt', 'DESC']]
+    });
+    res.json({ success: true, logos: userLogos });
+  } catch (error) {
+    console.error('Erreur logos public:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // Route publique pour récupérer ses propres logos (avant requireAdmin)
 // @route   GET /api/logos/my-logos
 // @desc    Récupérer les logos de l'utilisateur connecté

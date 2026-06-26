@@ -754,10 +754,15 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                 ? allTabs
                 : allTabs.filter((tab) => !!getActivityName(tab.id));
 
-              // Toujours afficher au moins l'onglet Activité 1
-              const tabs = filteredTabs.length > 0 ? filteredTabs : [allTabs[0]];
+              if (filteredTabs.length === 0) {
+                return (
+                  <div className="col-span-3 py-3 text-center text-sm text-gray-500">
+                    Aucune activité professionnelle. Ajoutez votre activité dans votre profil.
+                  </div>
+                );
+              }
 
-              return tabs.map((tab) => (
+              return filteredTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}

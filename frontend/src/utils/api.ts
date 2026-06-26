@@ -32,7 +32,7 @@ export const api = {
   // Enregistrer un utilisateur vivant (vidéo + photo → payload lourd, timeout long)
   async registerLiving(userData: User) {
     const controller = new AbortController()
-    const timeoutMs = 30000 // 30 s max (photo compressée → payload léger)
+    const timeoutMs = 120000 // 2 min — connexion 4G lente tolérée
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
     try {
@@ -99,10 +99,11 @@ export const api = {
           ...userData,
           type: 'defunt',
           isDeceased: true,
-          numeroH: userData.numeroHD || userData.numeroH,
+          // numeroH pas requis pour les défunts — le backend génère DM0001, DM0002…
           prenom: userData.prenom || 'Défunt',
           nomFamille: userData.nom || userData.nomFamille || 'Inconnu',
-          email: userData.email || `${userData.numeroHD || userData.numeroH}@defunt.genealogie`,
+          // Email unique garanti (pas de doublon possible)
+          email: `defunt.${Date.now()}@moftal.genealogie`,
           password: crypto.randomUUID()
         })
       })

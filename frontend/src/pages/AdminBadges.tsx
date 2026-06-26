@@ -285,6 +285,7 @@ export default function AdminBadges() {
   const [selectedLogoForAssign, setSelectedLogoForAssign] = useState<Logo | null>(null);
   const [assignLogoNumeroH, setAssignLogoNumeroH] = useState('');
   const [assignLogoNote, setAssignLogoNote] = useState('');
+  const [assignUserSearch, setAssignUserSearch] = useState('');
   const navigate = useNavigate();
 
   const [newBadge, setNewBadge] = useState({
@@ -1301,7 +1302,7 @@ export default function AdminBadges() {
       {/* Modal d'attribution de logo à un utilisateur */}
       {showAssignLogo && selectedLogoForAssign && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl">
             <div className="text-center mb-5">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mx-auto mb-3 border-4"
@@ -1309,33 +1310,83 @@ export default function AdminBadges() {
               >
                 {selectedLogoForAssign.icon}
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Attribuer le logo</h3>
-              <p className="text-sm text-gray-500 mt-1">{selectedLogoForAssign.name}</p>
+              <h3 className="text-xl font-bold text-gray-900">Donner le logo professionnel</h3>
+              <p className="text-sm font-semibold mt-1" style={{ color: selectedLogoForAssign.color }}>{selectedLogoForAssign.name}</p>
+              <p className="text-xs text-gray-500">{selectedLogoForAssign.description}</p>
             </div>
             <div className="space-y-4">
+              {/* Recherche par nom */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">NuméroH de l'utilisateur *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rechercher l'utilisateur par nom</label>
+                <input
+                  type="text"
+                  value={assignUserSearch}
+                  onChange={(e) => setAssignUserSearch(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Tapez le prénom ou nom..."
+                  autoFocus
+                />
+              </div>
+              {/* Sélecteur avec liste filtrée */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sélectionner l'utilisateur *</label>
+                <select
+                  value={assignLogoNumeroH}
+                  onChange={(e) => setAssignLogoNumeroH(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  size={5}
+                >
+                  <option value="">— Sélectionner —</option>
+                  {users
+                    .filter(u => {
+                      if (!assignUserSearch.trim()) return true;
+                      const q = assignUserSearch.toLowerCase();
+                      return (
+                        (u.prenom || '').toLowerCase().includes(q) ||
+                        (u.nomFamille || '').toLowerCase().includes(q) ||
+                        (u.numeroH || '').toLowerCase().includes(q)
+                      );
+                    })
+                    .slice(0, 50)
+                    .map((u) => (
+                      <option key={u.numeroH} value={u.numeroH}>
+                        {u.prenom} {u.nomFamille} — {u.numeroH}
+                        {u.activite1 ? ` (${u.activite1})` : ''}
+                      </option>
+                    ))
+                  }
+                </select>
+                {assignLogoNumeroH && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✅ Sélectionné : <strong>{users.find(u => u.numeroH === assignLogoNumeroH)?.prenom} {users.find(u => u.numeroH === assignLogoNumeroH)?.nomFamille}</strong>
+                  </p>
+                )}
+              </div>
+              {/* Saisie manuelle en secours */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Ou entrez le NuméroH directement
+                </label>
                 <input
                   type="text"
                   value={assignLogoNumeroH}
                   onChange={(e) => setAssignLogoNumeroH(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="Ex: G7C7P7R7E7F7"
-                  autoFocus
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Précision (optionnel)
+                  Précision sur ce logo (optionnel)
                 </label>
                 <textarea
                   value={assignLogoNote}
                   onChange={(e) => setAssignLogoNote(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  placeholder={`Ex: Roi / Président de la République de Guinée\nEx: Médecin validé par le Ministère de la Santé`}
+                  rows={2}
+                  placeholder={`Ex: Médecin validé par le Ministère de la Santé\nEx: Ingénieur diplômé de l'USTG`}
                 />
-                <p className="text-xs text-gray-400 mt-1">Ce texte s'affichera quand l'utilisateur cliquera sur le badge</p>
+                <p className="text-xs text-gray-400 mt-1">Ce texte s'affichera sur le profil de l'utilisateur</p>
               </div>
             </div>
             <div className="flex space-x-3 mt-6">
@@ -1345,6 +1396,7 @@ export default function AdminBadges() {
                   setSelectedLogoForAssign(null);
                   setAssignLogoNumeroH('');
                   setAssignLogoNote('');
+                  setAssignUserSearch('');
                 }}
                 className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-lg transition-colors"
               >
@@ -1352,10 +1404,11 @@ export default function AdminBadges() {
               </button>
               <button
                 onClick={handleAssignLogo}
-                className="flex-1 text-white py-2 px-4 rounded-lg transition-colors font-medium"
+                disabled={!assignLogoNumeroH.trim()}
+                className="flex-1 text-white py-2 px-4 rounded-lg transition-colors font-medium disabled:opacity-50"
                 style={{ backgroundColor: selectedLogoForAssign.color || '#3B82F6' }}
               >
-                {selectedLogoForAssign.icon} Attribuer
+                {selectedLogoForAssign.icon} Donner ce logo
               </button>
             </div>
           </div>

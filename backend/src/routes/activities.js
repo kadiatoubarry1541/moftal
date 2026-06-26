@@ -11,6 +11,60 @@ const router = express.Router();
 // Toutes les routes nécessitent l'authentification
 router.use(authenticate);
 
+// @route   GET /api/activities/my-group
+// @desc    Trouver ou créer le groupe de l'utilisateur pour son activité (niveau 1, 2 ou 3)
+//          et l'y ajouter automatiquement
+// @access  Authentifié
+router.get('/my-group', async (req, res) => {
+  try {
+    const level = parseInt(req.query.level) || 1;
+    if (level < 1 || level > 3) {
+      return res.status(400).json({ success: false, message: 'level doit être 1, 2 ou 3' });
+    }
+
+    const activityKey  = `activite${level}`;                  // 'activite1', 'activite2', 'activite3'
+    const activityType = `Activité${level}`;                  // 'Activité1', 'Activité2', 'Activité3'
+
+    const userRecord = await User.findOne({ where: { numero_h: req.user.numeroH } });
+    const activityValue = userRecord ? userRecord[activityKey] : null;
+
+    if (!activityValue) {
+      return res.json({ success: true, group: null, activityValue: null,
+        message: `Aucune activité définie pour le niveau ${level}` });
+    }
+
+    // Chercher le groupe correspondant à cette activité exacte
+    let group = await ActivityGroup.findOne({
+      where: { activity: activityType, name: activityValue, isActive: true }
+    });
+
+    if (!group) {
+      // Créer le groupe si personne ne l'a encore créé
+      group = await ActivityGroup.create({
+        name: activityValue,
+        description: `Groupe des personnes ayant l'activité : ${activityValue}`,
+        activity: activityType,
+        members: [req.user.numeroH],
+        posts: [],
+        createdBy: req.user.numeroH,
+        pays: userRecord?.pays || ''
+      });
+    } else {
+      // Auto-rejoindre si pas encore membre
+      const members = group.members || [];
+      if (!members.includes(req.user.numeroH)) {
+        members.push(req.user.numeroH);
+        await group.update({ members });
+      }
+    }
+
+    res.json({ success: true, group, activityValue });
+  } catch (error) {
+    console.error('Erreur my-group activité:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // @route   GET /api/activities/groups
 // @desc    Récupérer les groupes d'activités, filtrés par pays si fourni
 // @access  Authentifié

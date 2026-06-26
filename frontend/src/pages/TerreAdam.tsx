@@ -569,17 +569,7 @@ export default function TerreAdam() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Terre ADAM</h1>
-        <button className="w-9 h-9 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Navigation — menu 3 points */}
+      {/* Header + Menu 3 points */}
       {(() => {
         const navTabs = [
           { id: 'lieux', icon: '🏠', label: 'Résidence' },
@@ -602,30 +592,23 @@ export default function TerreAdam() {
         ];
         const current = navTabs.find(t => t.id === activeTab);
         return (
-          <div className="bg-white border-b shadow-sm sticky top-0 z-10 flex items-center justify-between px-4 py-2">
-            {/* Section active */}
-            <div className="flex items-center gap-2">
-              <span className="text-xl">{current?.icon}</span>
-              <span className="font-semibold text-gray-800 text-sm">{current?.label}</span>
-            </div>
-
-            {/* ⋮ Menu 3 points */}
+          <div className="bg-white flex items-center justify-between px-4 py-3">
+            <h1 className="text-2xl font-bold text-gray-900">Terre ADAM</h1>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setMenuOpen(v => !v)}
-                className="flex flex-col items-center justify-center gap-[4px] p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 transition"
+                className="flex flex-col items-center justify-center gap-[4px] w-9 h-9 rounded-full bg-black hover:bg-gray-800 active:bg-gray-700 transition"
                 aria-label="Menu"
               >
-                <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
-                <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
-                <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
+                <span className="block w-[5px] h-[5px] rounded-full bg-white" />
+                <span className="block w-[5px] h-[5px] rounded-full bg-white" />
+                <span className="block w-[5px] h-[5px] rounded-full bg-white" />
               </button>
-
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-12 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 min-w-[200px]">
+                  <div className="absolute right-0 top-11 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 min-w-[200px]">
                     {navTabs.map((tab, i) => (
                       <div key={tab.id}>
                         {i === 1 && <div className="border-t border-gray-100 my-1" />}
@@ -653,12 +636,12 @@ export default function TerreAdam() {
       })()}
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-2 sm:py-4 md:py-6 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 pb-4">
         {/* 1. Résidence */}
         {activeTab === 'lieux' && (
-          <div className="space-y-3 sm:space-y-4 md:space-y-6 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 md:p-6 overflow-hidden">
-              <h2 className="text-base font-bold text-emerald-800 mb-4 flex items-center gap-2">
+          <div className="space-y-3">
+            <div className="bg-white p-3 sm:p-4">
+              <h2 className="text-base font-bold text-emerald-800 mb-3 flex items-center gap-2">
                 <span className="text-xl">🏠</span>
                 <span>Résidence</span>
               </h2>
@@ -674,7 +657,8 @@ export default function TerreAdam() {
                         if (loc?.name) return loc.name;
                         return isRealLieu(c) ? String(c).trim() : 'Résidence 1';
                       })(),
-                      icon: '🏘️'
+                      icon: '🏘️',
+                      visible: isAdmin || isRealLieu(userQuartierCodes[0])
                     },
                     {
                       id: 'quartier-2' as LieuTabId,
@@ -684,7 +668,8 @@ export default function TerreAdam() {
                         if (loc?.name) return loc.name;
                         return isRealLieu(c) ? String(c).trim() : 'Résidence 2';
                       })(),
-                      icon: '🏘️'
+                      icon: '🏘️',
+                      visible: isAdmin || isRealLieu(userQuartierCodes[1])
                     },
                     {
                       id: 'quartier-3' as LieuTabId,
@@ -694,11 +679,12 @@ export default function TerreAdam() {
                         if (loc?.name) return loc.name;
                         return isRealLieu(c) ? String(c).trim() : 'Résidence 3';
                       })(),
-                      icon: '🏘️'
+                      icon: '🏘️',
+                      visible: isAdmin || isRealLieu(userQuartierCodes[2])
                     },
-                    { id: 'sous-prefecture' as LieuTabId, label: userSousPrefecture?.name || userData.sousPrefecture || getCountryGeoLabels(userData.pays || '').level3.label, icon: '🏛️' },
-                    { id: 'prefecture' as LieuTabId, label: userPrefecture?.name || userData.prefecture || getCountryGeoLabels(userData.pays || '').level2.label, icon: '🏢' }
-                  ].map((tab) => (
+                    { id: 'sous-prefecture' as LieuTabId, label: userSousPrefecture?.name || userData.sousPrefecture || getCountryGeoLabels(userData.pays || '').level3.label, icon: '🏛️', visible: true },
+                    { id: 'prefecture' as LieuTabId, label: userPrefecture?.name || userData.prefecture || getCountryGeoLabels(userData.pays || '').level2.label, icon: '🏢', visible: true }
+                  ].filter(tab => tab.visible).map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveLieuTab(tab.id)}
@@ -1101,8 +1087,8 @@ export default function TerreAdam() {
 
         {/* 2. Région */}
         {activeTab === 'region' && (
-          <div className="space-y-3 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 overflow-hidden">
+          <div className="space-y-3">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
               <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <span className="text-xl">{getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine)}</span>
                 <span>{userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'}</span>
@@ -1129,8 +1115,8 @@ export default function TerreAdam() {
 
         {/* 3. Pays */}
         {activeTab === 'pays' && (
-          <div className="space-y-3 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 overflow-hidden">
+          <div className="space-y-3">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
               <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <span className="text-xl">{effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️'}</span>
                 <span>{effectiveCountry?.name || userData?.pays || 'Pays'}</span>
@@ -1157,8 +1143,8 @@ export default function TerreAdam() {
 
         {/* 4. Continent */}
         {activeTab === 'continent' && (
-          <div className="space-y-3 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 overflow-hidden">
+          <div className="space-y-3">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
               <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <span className="text-xl">{effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : getContinentIcon(undefined, undefined)}</span>
                 <span>{effectiveContinent?.name || userData?.continent || 'Continent'}</span>
@@ -1185,8 +1171,8 @@ export default function TerreAdam() {
 
         {/* 5. Mondial */}
         {activeTab === 'mondial' && (
-          <div className="space-y-3 overflow-hidden">
-            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 overflow-hidden">
+          <div className="space-y-3">
+            <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
               <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <span className="text-xl">🌎</span>
                 <span>Mondial</span>

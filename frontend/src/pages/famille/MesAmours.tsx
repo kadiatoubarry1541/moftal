@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
+import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay } from '../../utils/auth';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -95,7 +96,17 @@ export default function MesAmours() {
   });
 
   // Modes d'ajout d'ami
-  const [addMode, setAddMode] = useState<'numeroh' | 'phone' | 'qr'>('numeroh');
+  const [addMode, setAddMode] = useState<'numeroh' | 'phone' | 'qr' | 'ecrit' | 'video'>('numeroh');
+  // Écrit
+  const [ecritPrenom, setEcritPrenom] = useState('');
+  const [ecritNom, setEcritNom] = useState('');
+  const [ecritLoading, setEcritLoading] = useState(false);
+  const [ecritError, setEcritError] = useState('');
+  const [ecritResults, setEcritResults] = useState<{ numeroH: string; prenom: string; nomFamille: string }[]>([]);
+  // Vidéo ajout ami
+  const [friendVideoFile, setFriendVideoFile] = useState<File | null>(null);
+  const [friendVideoNumeroH, setFriendVideoNumeroH] = useState('');
+  const friendVideoInputRef = useRef<HTMLInputElement>(null);
   const [phoneInput, setPhoneInput] = useState('');
   const [phoneResult, setPhoneResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
   const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
@@ -103,11 +114,15 @@ export default function MesAmours() {
   const [qrSubMode, setQrSubMode] = useState<'show' | 'scan'>('show');
   const [qrScannerActive, setQrScannerActive] = useState(false);
   const [qrScannedUser, setQrScannedUser] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
-  const [qrScanError, setQrScanError] = useState('');
+  const [qrScanError, setQrScanError] = useState<'denied' | 'busy' | 'not_found' | 'no_qr' | 'unknown' | ''>('');
+  const [qrImageScanning, setQrImageScanning] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanLoopRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const qrScannerRef = useRef<QrScanner | null>(null);
+  const qrCameraRef = useRef<HTMLInputElement>(null);
+  const qrGalleryRef = useRef<HTMLInputElement>(null);
 
   const [editInfoForm, setEditInfoForm] = useState({
     bio: '',
@@ -385,57 +400,92 @@ export default function MesAmours() {
   });
 
   const stopQRScanner = useCallback(() => {
-    if (scanLoopRef.current) {
-      cancelAnimationFrame(scanLoopRef.current);
-      scanLoopRef.current = null;
+    // Arrêter qr-scanner (pro)
+    if (qrScannerRef.current) {
+      qrScannerRef.current.stop();
+      qrScannerRef.current.destroy();
+      qrScannerRef.current = null;
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
+    // Arrêter le flux legacy si présent
+    if (scanLoopRef.current) { cancelAnimationFrame(scanLoopRef.current); scanLoopRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
     setQrScannerActive(false);
   }, []);
 
   const startQRScanner = useCallback(async () => {
     setQrScanError('');
     setQrScannedUser(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      streamRef.current = stream;
-      setQrScannerActive(true);
-      // On attend que videoRef soit attaché au DOM
-      setTimeout(() => {
-        if (!videoRef.current) return;
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+    stopQRScanner();
 
-        const scan = () => {
-          if (!videoRef.current || !canvasRef.current) return;
-          const video = videoRef.current;
-          const canvas = canvasRef.current;
-          if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
-            if (code && code.data.startsWith('ADAM://friend/')) {
-              const scannedNumeroH = code.data.replace('ADAM://friend/', '').trim();
-              stopQRScanner();
-              fetchUserByNumeroH(scannedNumeroH);
-              return;
-            }
+    // Afficher l'élément vidéo dans le DOM
+    setQrScannerActive(true);
+
+    // Attendre que React monte <video> dans le DOM (max 30 frames ≈ 500ms)
+    let video: HTMLVideoElement | null = null;
+    for (let i = 0; i < 30; i++) {
+      video = videoRef.current;
+      if (video) break;
+      await new Promise(r => requestAnimationFrame(r));
+    }
+    if (!video) { setQrScannerActive(false); setQrScanError('unknown'); return; }
+
+    try {
+      const scanner = new QrScanner(
+        video,
+        (result) => {
+          const data = typeof result === 'string' ? result : result.data;
+          if (data.startsWith('ADAM://friend/')) {
+            stopQRScanner();
+            fetchUserByNumeroH(data.replace('ADAM://friend/', '').trim());
           }
-          scanLoopRef.current = requestAnimationFrame(scan);
-        };
-        scanLoopRef.current = requestAnimationFrame(scan);
-      }, 200);
-    } catch {
-      setQrScanError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+        },
+        {
+          preferredCamera: 'environment',
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+          returnDetailedScanResult: true,
+          maxScansPerSecond: 10,
+        }
+      );
+      qrScannerRef.current = scanner;
+      await scanner.start();
+    } catch (err: any) {
+      setQrScannerActive(false);
+      const name = err?.name || String(err) || '';
+      if (name.includes('NotAllowed') || name.includes('Permission')) setQrScanError('denied');
+      else if (name.includes('NotFound') || name.includes('Devices')) setQrScanError('not_found');
+      else if (name.includes('NotReadable') || name.includes('TrackStart')) setQrScanError('busy');
+      else setQrScanError('unknown');
     }
   }, [stopQRScanner]);
+
+  const processQRImageFile = useCallback((file: File) => {
+    setQrScanError('');
+    setQrImageScanning(true);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height);
+        if (code?.data.startsWith('ADAM://friend/')) {
+          fetchUserByNumeroH(code.data.replace('ADAM://friend/', '').trim());
+        } else {
+          setQrScanError('no_qr');
+        }
+      } finally {
+        URL.revokeObjectURL(url);
+        setQrImageScanning(false);
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); setQrImageScanning(false); setQrScanError('unknown'); };
+    img.src = url;
+  }, []);
 
   const fetchUserByNumeroH = (numeroH: string) => {
     // On affiche le numeroH scanné et laisse send-request valider l'existence
@@ -513,6 +563,48 @@ export default function MesAmours() {
     }
   };
 
+  const searchFriendByName = async () => {
+    if (!ecritPrenom.trim() && !ecritNom.trim()) return;
+    const token = localStorage.getItem('token');
+    setEcritLoading(true);
+    setEcritError('');
+    setEcritResults([]);
+    try {
+      const params = new URLSearchParams();
+      if (ecritPrenom.trim()) params.append('prenom', ecritPrenom.trim());
+      if (ecritNom.trim()) params.append('nom', ecritNom.trim());
+      const res = await fetch(`${API_BASE}/api/friends/search-by-name?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = await res.json();
+      if (d.success && d.users?.length) {
+        setEcritResults(d.users);
+      } else {
+        setEcritError(d.message || 'Aucun résultat trouvé.');
+      }
+    } catch { setEcritError('Erreur réseau.'); }
+    finally { setEcritLoading(false); }
+  };
+
+  const sendFriendRequestTo = async (targetNumeroH: string) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_BASE}/api/friends/send-request`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUser: targetNumeroH })
+      });
+      const d = await res.json();
+      if (res.ok) {
+        alert("Demande d'amitié envoyée !");
+        setShowAddFriend(false);
+        loadFriendRequests();
+      } else {
+        alert(d?.message || "Erreur lors de l'envoi");
+      }
+    } catch { alert('Erreur de connexion'); }
+  };
+
   const handleAddFriend = () => {
     setAddFriendForm({ numeroH: '', message: '' });
     setAddMode('numeroh');
@@ -522,6 +614,8 @@ export default function MesAmours() {
     setQrSubMode('show');
     setQrScannedUser(null);
     setQrScanError('');
+    setEcritPrenom(''); setEcritNom(''); setEcritResults([]); setEcritError('');
+    setFriendVideoFile(null); setFriendVideoNumeroH('');
     setShowAddFriend(true);
   };
 
@@ -704,14 +798,14 @@ export default function MesAmours() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
-              { id: 'friends', label: 'Mes Amis', icon: '👥' },
-              { id: 'requests', label: 'Demandes', icon: '📨' },
-              { id: 'info', label: 'Informations', icon: 'ℹ️' }
+              { id: 'friends', label: 'Mes Amis', icon: '👥', count: 0 },
+              { id: 'requests', label: 'Demandes', icon: '📨', count: friendRequests.length },
+              { id: 'info', label: 'Mes Stories', icon: '📢', count: 0 }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
+                className={`relative flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                   activeTab === tab.id
                     ? 'bg-emerald-500 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -719,6 +813,11 @@ export default function MesAmours() {
               >
                 <span className="text-base sm:text-lg">{tab.icon}</span>
                 <span className="text-center leading-tight">{tab.label}</span>
+                {tab.count > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {tab.count}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -733,8 +832,15 @@ export default function MesAmours() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">👥 Ma Liste d'Amis</h2>
               {friends.length === 0 && (
                 <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">Vous n'avez pas encore d'amis</p>
-                  <p className="text-gray-400 text-sm mt-2">Utilisez le bouton "Ajouter un ami" pour envoyer une demande</p>
+                  <div className="text-5xl mb-3">👥</div>
+                  <p className="text-gray-500 text-lg font-medium">Vous n'avez pas encore d'amis</p>
+                  <p className="text-gray-400 text-sm mt-2">Utilisez le bouton "➕ Ajouter un ami" pour envoyer une invitation</p>
+                  <button
+                    onClick={handleAddFriend}
+                    className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg transition-colors font-medium"
+                  >
+                    ➕ Ajouter mon premier ami
+                  </button>
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -823,42 +929,58 @@ export default function MesAmours() {
         {activeTab === 'requests' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">📨 Demandes d'Amitié</h2>
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">📨 Invitations reçues</h2>
+                {friendRequests.length > 0 && (
+                  <span className="bg-red-500 text-white text-sm font-bold rounded-full px-2.5 py-0.5">
+                    {friendRequests.length}
+                  </span>
+                )}
+              </div>
               <div className="space-y-4">
                 {friendRequests.map((request) => (
-                  <div key={request.id} className="border rounded-lg p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          {request.fromUserName}
-                        </h3>
+                  <div key={request.id} className="border border-emerald-100 bg-emerald-50 rounded-xl p-4 sm:p-5">
+                    <div className="flex items-start gap-4">
+                      {/* Avatar initiale */}
+                      <div className="w-12 h-12 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-xl shrink-0">
+                        {(request.fromUserName || '?')[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-base">
+                          {request.fromUserName || 'Utilisateur inconnu'}
+                        </p>
+                        <p className="text-xs text-gray-500 font-mono mb-1">{request.fromUser}</p>
                         {request.message && (
-                          <p className="text-gray-600 mb-3">{request.message}</p>
+                          <p className="text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200 mb-2">
+                            "{request.message}"
+                          </p>
                         )}
-                        <p className="text-sm text-gray-500">
-                          Demande envoyée le: {new Date(request.createdAt).toLocaleDateString()}
+                        <p className="text-xs text-gray-400">
+                          Reçue le {new Date(request.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                       </div>
-                      <div className="flex space-x-2 ml-4">
-                        <button
-                          onClick={() => handleFriendRequest(request.id, 'accept')}
-                          className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
-                        >
-                          ✓ Accepter
-                        </button>
-                        <button
-                          onClick={() => handleFriendRequest(request.id, 'reject')}
-                          className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors"
-                        >
-                          ✗ Rejeter
-                        </button>
-                      </div>
+                    </div>
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={() => handleFriendRequest(request.id, 'accept')}
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-lg font-medium transition-colors text-sm"
+                      >
+                        ✓ Accepter
+                      </button>
+                      <button
+                        onClick={() => handleFriendRequest(request.id, 'reject')}
+                        className="flex-1 bg-white hover:bg-red-50 text-red-600 border border-red-300 py-2.5 px-4 rounded-lg font-medium transition-colors text-sm"
+                      >
+                        ✗ Refuser
+                      </button>
                     </div>
                   </div>
                 ))}
                 {friendRequests.length === 0 && (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Aucune demande d'amitié en attente</p>
+                  <div className="text-center py-12">
+                    <div className="text-5xl mb-3">📭</div>
+                    <p className="text-gray-500 font-medium">Aucune invitation en attente</p>
+                    <p className="text-gray-400 text-sm mt-1">Quand quelqu'un vous enverra une invitation, elle apparaîtra ici</p>
                   </div>
                 )}
               </div>
@@ -870,7 +992,10 @@ export default function MesAmours() {
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">📢 Story Mes Amours (24h)</h2>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">📢 Publier une Story</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Visible par toi et tes amis pendant 24h</p>
+                </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                   <input
                     type="file"
@@ -965,14 +1090,23 @@ export default function MesAmours() {
             {/* Tabs mode */}
             <div className="flex border-b mx-6 mb-4">
               {([
-                { key: 'numeroh', label: '🔢 NumeroH' },
-                { key: 'phone',   label: '📞 Téléphone' },
-                { key: 'qr',      label: '📷 QR Code' },
+                { key: 'numeroh', label: '🔢 NumH' },
+                { key: 'phone',   label: '📞 Tél.' },
+                { key: 'qr',      label: '📷 QR' },
+                { key: 'ecrit',   label: '✍️ Écrit' },
+                { key: 'video',   label: '🎬 Vidéo' },
               ] as const).map(tab => (
                 <button
                   key={tab.key}
-                  onClick={() => { stopQRScanner(); setAddMode(tab.key); setPhoneResult(null); setPhoneSearchError(''); setQrScannedUser(null); setQrScanError(''); }}
-                  className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${addMode === tab.key ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  onClick={() => {
+                    stopQRScanner();
+                    setAddMode(tab.key);
+                    setPhoneResult(null); setPhoneSearchError('');
+                    setQrScannedUser(null); setQrScanError('');
+                    setEcritResults([]); setEcritError('');
+                    setFriendVideoFile(null); setFriendVideoNumeroH('');
+                  }}
+                  className={`flex-1 py-2 text-xs font-medium border-b-2 transition-colors ${addMode === tab.key ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                 >
                   {tab.label}
                 </button>
@@ -1112,46 +1246,115 @@ export default function MesAmours() {
 
                   {/* Scanner QR */}
                   {qrSubMode === 'scan' && (
-                    <div className="flex flex-col items-center gap-3">
-                      {!qrScannerActive && !qrScannedUser && (
-                        <button
-                          onClick={startQRScanner}
-                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium transition-colors"
-                        >
-                          📷 Activer la caméra
-                        </button>
-                      )}
+                    <div className="flex flex-col gap-3">
+                      {/* Inputs fichiers cachés */}
+                      <input ref={qrCameraRef} type="file" accept="image/*" capture="environment" className="hidden"
+                        onChange={e => { const f = e.target.files?.[0]; if (f) processQRImageFile(f); e.target.value = ''; }} />
+                      <input ref={qrGalleryRef} type="file" accept="image/*" className="hidden"
+                        onChange={e => { const f = e.target.files?.[0]; if (f) processQRImageFile(f); e.target.value = ''; }} />
 
-                      {qrScannerActive && (
-                        <div className="w-full relative">
-                          <video ref={videoRef} className="w-full rounded-lg" playsInline muted />
-                          <canvas ref={canvasRef} className="hidden" />
-                          <div className="absolute inset-0 border-2 border-emerald-400 rounded-lg pointer-events-none" />
-                          <p className="text-center text-sm text-gray-500 mt-2">Pointez vers un QR Code Adam...</p>
-                          <button
-                            onClick={stopQRScanner}
-                            className="mt-2 w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg text-sm"
-                          >
-                            Arrêter
+                      {/* QR détecté */}
+                      {qrScannedUser ? (
+                        <div className="border-2 border-emerald-400 bg-emerald-50 rounded-xl p-4 text-center space-y-3">
+                          <div className="text-4xl">✅</div>
+                          <p className="font-bold text-gray-900">{qrScannedUser.prenom || 'Utilisateur trouvé'}</p>
+                          <p className="text-xs text-gray-500 font-mono">{qrScannedUser.numeroH}</p>
+                          <button onClick={sendFriendFromQR}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-sm font-bold">
+                            Envoyer l'invitation d'amitié
+                          </button>
+                          <button onClick={() => { setQrScannedUser(null); setQrScanError(''); stopQRScanner(); }}
+                            className="w-full bg-gray-100 text-gray-600 py-2 rounded-xl text-xs">
+                            Scanner un autre
                           </button>
                         </div>
-                      )}
 
-                      {qrScanError && (
-                        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 w-full">{qrScanError}</p>
-                      )}
+                      ) : qrImageScanning ? (
+                        <div className="flex flex-col items-center gap-3 py-6">
+                          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                          <p className="text-sm text-gray-500">Analyse du QR Code...</p>
+                        </div>
 
-                      {qrScannedUser && (
-                        <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4 w-full">
-                          <p className="text-sm font-medium text-gray-700 mb-1">Profil trouvé :</p>
-                          <p className="font-semibold text-gray-900">{qrScannedUser.prenom || qrScannedUser.numeroH}</p>
-                          <p className="text-xs text-gray-500 mb-3">{qrScannedUser.numeroH}</p>
-                          <button
-                            onClick={sendFriendFromQR}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium"
-                          >
-                            Envoyer l'invitation
+                      ) : qrScannerActive ? (
+                        <div className="space-y-2">
+                          <div className="relative rounded-xl overflow-hidden bg-black" style={{ minHeight: 260 }}>
+                            <video ref={videoRef} className="w-full" playsInline muted style={{ display: 'block' }} />
+                            <canvas ref={canvasRef} className="hidden" />
+                          </div>
+                          <p className="text-center text-xs text-emerald-600 font-medium">
+                            🎯 Pointez vers le QR Code Moftal — il sera détecté automatiquement
+                          </p>
+                          <button onClick={stopQRScanner}
+                            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2.5 rounded-xl text-sm font-semibold">
+                            ⏹ Arrêter
                           </button>
+                        </div>
+
+                      ) : (
+                        <div className="space-y-3">
+                          {/* Erreur */}
+                          {qrScanError && (
+                            <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
+                              {qrScanError === 'denied' ? (
+                                <>
+                                  <p className="font-bold text-amber-800 text-sm">🔒 Caméra bloquée dans Chrome</p>
+                                  <div className="space-y-2">
+                                    {[
+                                      'Appuyez sur le 🔒 cadenas dans la barre d\'adresse',
+                                      'Tapez "Autorisations du site"',
+                                      'Tapez "Caméra" → Autoriser',
+                                    ].map((s, i) => (
+                                      <div key={i} className="flex items-start gap-2">
+                                        <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i+1}</div>
+                                        <p className="text-xs text-amber-800">{s}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </>
+                              ) : qrScanError === 'busy' ? (
+                                <p className="text-sm text-amber-800">⚠️ La caméra est utilisée par une autre app. Fermez-la et réessayez.</p>
+                              ) : qrScanError === 'no_qr' ? (
+                                <p className="text-sm text-amber-800">❌ Aucun QR Code Moftal trouvé. Assurez-vous que le QR Code est bien visible et net.</p>
+                              ) : (
+                                <p className="text-sm text-amber-800">⚠️ Impossible d'accéder à la caméra. Utilisez "Prendre une photo" à la place.</p>
+                              )}
+                              <div className="flex gap-2">
+                                <button onClick={() => { setQrScanError(''); startQRScanner(); }}
+                                  className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold">
+                                  🔄 Réessayer
+                                </button>
+                                <button onClick={() => { setQrScanError(''); qrCameraRef.current?.click(); }}
+                                  className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold">
+                                  📸 Photo
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {!qrScanError && (
+                            <>
+                              {/* Bouton principal scan en direct */}
+                              <button onClick={startQRScanner}
+                                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-2xl font-bold text-base flex items-center justify-center gap-3 shadow-md">
+                                <span className="text-2xl">📷</span>
+                                <div className="text-left">
+                                  <div>Scanner en direct</div>
+                                  <div className="text-xs font-normal opacity-80">Ouverture de la caméra</div>
+                                </div>
+                              </button>
+                              <div className="flex items-center gap-2">
+                                <hr className="flex-1 border-gray-200" /><span className="text-xs text-gray-400">ou</span><hr className="flex-1 border-gray-200" />
+                              </div>
+                              <button onClick={() => qrCameraRef.current?.click()}
+                                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+                                📸 Prendre une photo du QR Code
+                              </button>
+                              <button onClick={() => qrGalleryRef.current?.click()}
+                                className="w-full py-2.5 border border-gray-200 text-gray-500 rounded-xl text-xs flex items-center justify-center gap-2">
+                                🖼️ Choisir depuis la galerie
+                              </button>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1160,6 +1363,74 @@ export default function MesAmours() {
                   <div className="flex justify-end pt-1">
                     <button onClick={() => { stopQRScanner(); setShowAddFriend(false); }} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">Fermer</button>
                   </div>
+                </>
+              )}
+
+              {/* ── Mode Écrit ── */}
+              {addMode === 'ecrit' && (
+                <>
+                  <p className="text-sm text-gray-500">Recherchez une personne par son prénom ou son nom.</p>
+                  <div className="flex gap-2">
+                    <input type="text" value={ecritPrenom} onChange={e => { setEcritPrenom(e.target.value); setEcritResults([]); setEcritError(''); }}
+                      onKeyDown={e => e.key === 'Enter' && searchFriendByName()}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Prénom" autoFocus />
+                    <input type="text" value={ecritNom} onChange={e => { setEcritNom(e.target.value); setEcritResults([]); setEcritError(''); }}
+                      onKeyDown={e => e.key === 'Enter' && searchFriendByName()}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Nom" />
+                  </div>
+                  <button onClick={searchFriendByName} disabled={ecritLoading || (!ecritPrenom.trim() && !ecritNom.trim())}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-medium text-sm transition-colors">
+                    {ecritLoading ? 'Recherche...' : '🔍 Chercher'}
+                  </button>
+                  {ecritError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{ecritError}</p>}
+                  {ecritResults.map(u => (
+                    <div key={u.numeroH} className="border border-emerald-200 bg-emerald-50 rounded-lg p-3 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold shrink-0">{u.prenom?.[0] || '?'}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{u.prenom} {u.nomFamille}</p>
+                        <p className="text-xs text-gray-500 truncate">{u.numeroH}</p>
+                      </div>
+                      <button onClick={() => sendFriendRequestTo(u.numeroH)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shrink-0">Inviter</button>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* ── Mode Vidéo ── */}
+              {addMode === 'video' && (
+                <>
+                  <p className="text-sm text-gray-500">Filmez ou choisissez une vidéo de présentation, puis saisissez le NumeroH.</p>
+                  <input ref={friendVideoInputRef} type="file" accept="video/*" className="hidden"
+                    onChange={e => setFriendVideoFile(e.target.files?.[0] || null)} />
+                  {!friendVideoFile ? (
+                    <div className="flex gap-2">
+                      <button onClick={() => { if (friendVideoInputRef.current) { friendVideoInputRef.current.setAttribute('capture', 'user'); friendVideoInputRef.current.click(); } }}
+                        className="flex-1 py-3 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-medium hover:bg-emerald-50">📹 Filmer</button>
+                      <button onClick={() => { if (friendVideoInputRef.current) { friendVideoInputRef.current.removeAttribute('capture'); friendVideoInputRef.current.click(); } }}
+                        className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-50">🎞️ Galerie</button>
+                    </div>
+                  ) : (
+                    <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-3 flex items-center gap-2">
+                      <span className="text-2xl">🎬</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{friendVideoFile.name}</p>
+                        <p className="text-xs text-gray-500">{(friendVideoFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                      </div>
+                      <button onClick={() => setFriendVideoFile(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">NumeroH de la personne</label>
+                    <input type="text" value={friendVideoNumeroH} onChange={e => setFriendVideoNumeroH(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && friendVideoFile && friendVideoNumeroH.trim()) sendFriendRequestTo(friendVideoNumeroH.trim()); }}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Ex: G1C1P2R1E1F1 1" />
+                  </div>
+                  <button onClick={() => friendVideoFile && friendVideoNumeroH.trim() && sendFriendRequestTo(friendVideoNumeroH.trim())}
+                    disabled={!friendVideoFile || !friendVideoNumeroH.trim()}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-medium text-sm transition-colors">
+                    Envoyer l'invitation →
+                  </button>
                 </>
               )}
 

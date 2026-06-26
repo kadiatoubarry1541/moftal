@@ -536,16 +536,25 @@ export default function Famille() {
   const loadFamilyMessages = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family/messages', {
+      const response = await fetch('/api/family-tree/messages', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        setFamilyMessages(data.messages || []);
+        const msgs = (data.messages || []).map((m: any) => ({
+          id: m.id,
+          author: m.numeroH,
+          authorName: m.authorName,
+          content: m.content,
+          type: m.messageType || 'text',
+          mediaUrl: m.mediaUrl,
+          createdAt: m.created_at || m.createdAt
+        }));
+        setFamilyMessages(msgs);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des messages:', error);
@@ -633,7 +642,7 @@ export default function Famille() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family/add-member', {
+      const response = await fetch('/api/family/members', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -661,29 +670,36 @@ export default function Famille() {
 
     try {
       const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append('content', newMessage.content);
-      formData.append('type', newMessage.type);
-      formData.append('category', newMessage.category);
-      formData.append('author', userData?.numeroH || '');
-      formData.append('authorName', `${userData?.prenom} ${userData?.nomFamille}`);
-      if (newMessage.mediaFile) formData.append('media', newMessage.mediaFile);
 
-      const response = await fetch('/api/family/send-message', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      if (response.ok) {
-        setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
-        loadFamilyMessages();
+      if (newMessage.type === 'text') {
+        const response = await fetch('/api/family-tree/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ content: newMessage.content, messageType: 'text' })
+        });
+        if (response.ok) {
+          setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
+          loadFamilyMessages();
+        }
       } else {
-        alert('Erreur lors de l\'envoi du message');
+        const formData = new FormData();
+        if (newMessage.content) formData.append('content', newMessage.content);
+        if (newMessage.mediaFile) formData.append('media', newMessage.mediaFile);
+        const response = await fetch('/api/family-tree/messages/upload', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        if (response.ok) {
+          setNewMessage({ content: '', type: 'text', category: 'information', mediaFile: null });
+          loadFamilyMessages();
+        }
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
-      alert('Erreur lors de l\'envoi du message');
     }
   };
 

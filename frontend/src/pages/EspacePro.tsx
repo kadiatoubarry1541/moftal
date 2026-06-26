@@ -512,15 +512,14 @@ export default function EspacePro() {
   const [addMemberRole, setAddMemberRole]   = useState('client');
   const [memberMsg, setMemberMsg]           = useState('');
 
-  // Vidéo réponse
-  const [responseVideoId, setResponseVideoId]   = useState<string | null>(null);
-  const [recording, setRecording]               = useState(false);
-  const [countdown, setCountdown] = useState(10);
-  const [videoSent, setVideoSent]               = useState(false);
-  const videoRef         = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef        = useRef<Blob[]>([]);
-  const currentAptIdRef  = useRef<string | null>(null);
+  // Vidéo réponse — file input (compatible tous appareils)
+  const [responseVideoId, setResponseVideoId] = useState<string | null>(null);
+  const [videoSent, setVideoSent]             = useState(false);
+  const [proVideoFile, setProVideoFile]       = useState<File | null>(null);
+  const [proVideoPreview, setProVideoPreview] = useState<string | null>(null);
+  const proCaptureRef = useRef<HTMLInputElement>(null);
+  const proGalleryRef = useRef<HTMLInputElement>(null);
+  const currentAptIdRef = useRef<string | null>(null);
 
   const token = localStorage.getItem("token");
 
@@ -709,55 +708,39 @@ export default function EspacePro() {
     }
   };
 
-  /* ---- Enregistrement vidéo 30 s ---- */
-  const startVideoRecording = async (aptId: string) => {
+  /* ---- Ouverture modal vidéo ---- */
+  const openVideoModal = (aptId: string) => {
     currentAptIdRef.current = aptId;
     setResponseVideoId(aptId);
     setVideoSent(false);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      chunksRef.current = [];
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
+    setProVideoFile(null);
+    if (proVideoPreview) URL.revokeObjectURL(proVideoPreview);
+    setProVideoPreview(null);
+  };
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
-        setRecording(false);
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const capturedId = currentAptIdRef.current;
-          if (capturedId) {
-            await handleAccept(capturedId, reader.result as string);
-            setVideoSent(true);
-          }
-        };
-        reader.readAsDataURL(blob);
-      };
-
-      recorder.start();
-      setRecording(true);
-      setCountdown(10);
-
-      const interval = setInterval(() => {
-        setCountdown((c) => {
-          if (c <= 1) { clearInterval(interval); recorder.stop(); return 0; }
-          return c - 1;
-        });
-      }, 1000);
-    } catch (err) {
-      console.error(err);
-      alert("Impossible d'accéder à la caméra");
-      setResponseVideoId(null);
+  /* ---- Sélection fichier vidéo (pro) ---- */
+  const handleProVideoFile = (file: File) => {
+    if (file.size > 200 * 1024 * 1024) {
+      alert("Vidéo trop volumineuse (maximum 200 MB).");
+      return;
     }
+    setProVideoFile(file);
+    const url = URL.createObjectURL(file);
+    if (proVideoPreview) URL.revokeObjectURL(proVideoPreview);
+    setProVideoPreview(url);
+  };
+
+  /* ---- Envoi vidéo réponse ---- */
+  const sendProVideo = async () => {
+    if (!proVideoFile) return;
+    const capturedId = currentAptIdRef.current;
+    if (!capturedId) return;
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      await handleAccept(capturedId, reader.result as string);
+      setVideoSent(true);
+    };
+    reader.readAsDataURL(proVideoFile);
   };
 
   /* ---- Upload logo ---- */
@@ -1007,8 +990,14 @@ export default function EspacePro() {
         startUrl={`/espace-pro/${account.id}`}
         themeColor={SERVICE_MANIFEST_COLOR[serviceKey] || "#1a8f1a"}
       />
-      <div className="max-w-5xl mx-auto px-4 pt-3">
-        <InstallAppButton />
+      <div className="max-w-5xl mx-auto px-4 pt-3 pb-2">
+        <div className="flex items-center gap-3 bg-white rounded-xl border border-emerald-100 shadow-sm px-4 py-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-800">Accès rapide sur votre téléphone</p>
+            <p className="text-xs text-gray-500 mt-0.5">Installez votre espace comme une app — icône directe sur l'écran d'accueil</p>
+          </div>
+          <InstallAppButton />
+        </div>
       </div>
 
       {/* ══════════════════════════════════════════
@@ -1198,7 +1187,7 @@ export default function EspacePro() {
                               : <>✅ Accepter</>}
                           </button>
                           <button
-                            onClick={() => startVideoRecording(apt.id)}
+                            onClick={() => openVideoModal(apt.id)}
                             disabled={!!actionLoading}
                             className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
                           >
@@ -1751,14 +1740,42 @@ export default function EspacePro() {
             ONGLET : MON PROFIL
             ───────────────────────────── */}
         {tab === "profile" && (
-          <div className="space-y-4">
-            {/* Carte principale */}
+          <div>
             <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+              {/* En-tête unique */}
               <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4`}>
-                <h2 className="text-white font-bold text-base">Informations du compte</h2>
-                <p className="text-white/70 text-xs mt-0.5">Vos coordonnées visibles par les utilisateurs</p>
+                <h2 className="text-white font-bold text-base">Mon profil</h2>
+                <p className="text-white/70 text-xs mt-0.5">Vos coordonnées et logo visibles par les utilisateurs</p>
               </div>
-              <div className="p-5">
+
+              <div className="p-5 space-y-6">
+                {/* Logo */}
+                <div className="flex flex-col sm:flex-row items-center gap-5">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center shadow-inner border border-gray-200 dark:border-gray-600">
+                    {account.photo ? (
+                      <img src={account.photo} alt="Logo" className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-5xl">{typeInfo.icon}</span>
+                    )}
+                  </div>
+                  <div className="flex-1 w-full">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Logo de l'établissement</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      Apparaît dans votre dashboard et sur votre fiche publique. PNG, JPG ou SVG recommandé.
+                    </p>
+                    <label className={`cursor-pointer inline-flex items-center gap-2 min-h-[40px] px-4 py-2 ${logoUploading ? "opacity-60 cursor-not-allowed" : ""} ${svc.btnPrimary} text-white font-semibold rounded-xl transition-colors text-sm`}>
+                      {logoUploading ? "⏳ Envoi en cours..." : "📷 Choisir un logo"}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />
+                    </label>
+                    {logoSuccess && (
+                      <p className="text-green-600 dark:text-green-400 text-xs mt-2 font-medium">✅ Logo mis à jour</p>
+                    )}
+                  </div>
+                </div>
+
+                <hr className="border-gray-100 dark:border-gray-700" />
+
+                {/* Informations */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {[
                     { label: "Adresse",   value: account.address },
@@ -1776,136 +1793,86 @@ export default function EspacePro() {
                     },
                   ].map((f) => (
                     <div key={f.label}>
-                      <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
-                        {f.label}
-                      </p>
+                      <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{f.label}</p>
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {f.value || <span className="text-gray-400 italic">Non renseigné</span>}
                       </p>
                     </div>
                   ))}
                   <div className="sm:col-span-2">
-                    <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
-                      Description
-                    </p>
+                    <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Description</p>
                     <p className="text-sm text-gray-900 dark:text-gray-100">
                       {account.description || <span className="text-gray-400 italic">Non renseigné</span>}
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Services & Spécialités */}
-            {(account.services?.length > 0 || account.specialties?.length > 0) && (
-              <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} p-5`}>
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4 text-sm flex items-center gap-2">
-                  {typeInfo.icon} Services & Spécialités
-                </h3>
-
-                {account.services?.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
-                      Services proposés
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {account.services.map((s, i) => (
-                        <span key={i} className={`px-3 py-1.5 ${svc.badgeBg} text-sm rounded-full font-medium`}>
-                          {s}
-                        </span>
-                      ))}
+                {/* Services & Spécialités */}
+                {(account.services?.length > 0 || account.specialties?.length > 0) && (
+                  <>
+                    <hr className="border-gray-100 dark:border-gray-700" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        {typeInfo.icon} Services & Spécialités
+                      </p>
+                      {account.services?.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Services proposés</p>
+                          <div className="flex flex-wrap gap-2">
+                            {account.services.map((s, i) => (
+                              <span key={i} className={`px-3 py-1.5 ${svc.badgeBg} text-sm rounded-full font-medium`}>{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {account.specialties?.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Spécialités</p>
+                          <div className="flex flex-wrap gap-2">
+                            {account.specialties.map((s, i) => (
+                              <span key={i} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-full font-medium">{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </>
                 )}
 
-                {account.specialties?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
-                      Spécialités
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {account.specialties.map((s, i) => (
-                        <span key={i}
-                          className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-full font-medium">
-                          {s}
-                        </span>
-                      ))}
+                {/* Moftal Pay — clinic & supplier uniquement */}
+                {(account.type === 'clinic' || account.type === 'supplier') && (
+                  <>
+                    <hr className="border-gray-100 dark:border-gray-700" />
+                    <div className="flex items-start gap-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl p-4">
+                      <span className="text-3xl flex-shrink-0">💳</span>
+                      <div className="flex-1">
+                        <p className="font-bold text-teal-900 dark:text-teal-200 text-sm mb-1">Moftal Pay</p>
+                        <p className="text-xs text-teal-700 dark:text-teal-400 mb-3">
+                          {account.type === 'clinic'
+                            ? "Recevez des paiements de familles et gérez votre Moftal Pay depuis une seule interface."
+                            : "Encaissez les paiements de vos clients familles et suivez votre Moftal Pay facilement."}
+                        </p>
+                        <button
+                          onClick={() => navigate("/moftal-pay-pro")}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-bold"
+                          style={{ background: 'linear-gradient(135deg,#1a8f1a,#0891b2)' }}
+                        >
+                          💰 Accéder à Moftal Pay
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
-              </div>
-            )}
 
-            {/* Moftal Pay card — clinic & supplier */}
-            {(account.type === 'clinic' || account.type === 'supplier') && (
-              <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl p-5 flex items-start gap-4">
-                <span className="text-3xl flex-shrink-0">💳</span>
-                <div className="flex-1">
-                  <h3 className="font-bold text-teal-900 text-sm mb-1">Moftal Pay</h3>
-                  <p className="text-xs text-teal-700 mb-3">
-                    {account.type === 'clinic'
-                      ? "Recevez des paiements de familles et gérez votre Moftal Pay depuis une seule interface."
-                      : "Encaissez les paiements de vos clients familles et suivez votre Moftal Pay facilement."}
-                  </p>
-                  <button
-                    onClick={() => navigate("/moftal-pay-pro")}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-bold"
-                    style={{ background: 'linear-gradient(135deg,#1a8f1a,#0891b2)' }}
-                  >
-                    💰 Accéder à Moftal Pay
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Logo de l'établissement */}
-            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
-              <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4`}>
-                <h2 className="text-white font-bold text-base">Logo de l'établissement</h2>
-                <p className="text-white/70 text-xs mt-0.5">
-                  Personnalisez l'interface — les membres reconnaîtront votre {typeInfo.label.toLowerCase()} grâce à ce logo
-                </p>
-              </div>
-              <div className="p-5 flex flex-col sm:flex-row items-center gap-5">
-                {/* Aperçu */}
-                <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center shadow-inner border border-gray-200 dark:border-gray-600">
-                  {account.photo ? (
-                    <img src={account.photo} alt="Logo" className="w-full h-full object-contain" />
-                  ) : (
-                    <span className="text-5xl">{typeInfo.icon}</span>
-                  )}
-                </div>
-                {/* Upload */}
-                <div className="flex-1 w-full">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-                    Ce logo apparaît dans votre dashboard et sur votre fiche publique. Format PNG, JPG ou SVG recommandé.
-                  </p>
-                  <label className={`cursor-pointer inline-flex items-center gap-2 min-h-[44px] px-4 py-2.5 ${logoUploading ? "opacity-60 cursor-not-allowed" : ""} ${svc.btnPrimary} text-white font-semibold rounded-xl transition-colors text-sm`}>
-                    {logoUploading ? "⏳ Envoi en cours..." : "📷 Choisir un logo"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleLogoUpload}
-                      disabled={logoUploading}
-                    />
-                  </label>
-                  {logoSuccess && (
-                    <p className="text-green-600 dark:text-green-400 text-sm mt-2 font-medium flex items-center gap-1">
-                      ✅ Logo mis à jour — visible dans votre header
-                    </p>
-                  )}
-                </div>
+                {/* Bouton modifier */}
+                <button
+                  onClick={() => navigate(`/inscription-pro?edit=${account.id}`)}
+                  className={`w-full min-h-[48px] px-5 py-3 ${svc.btnPrimary} text-white font-semibold rounded-xl transition-colors text-sm flex items-center justify-center gap-2`}
+                >
+                  ✏️ Modifier mes informations
+                </button>
               </div>
             </div>
-
-            {/* Bouton mettre à jour */}
-            <button
-              onClick={() => navigate(`/inscription-pro?edit=${account.id}`)}
-              className={`w-full min-h-[48px] px-5 py-3 ${svc.btnPrimary} text-white font-semibold rounded-xl transition-colors text-sm flex items-center justify-center gap-2`}
-            >
-              ✏️ Modifier mes informations
-            </button>
           </div>
         )}
       </div>
@@ -1968,7 +1935,7 @@ export default function EspacePro() {
       )}
 
       {/* ══════════════════════════════════════════
-          MODAL : RÉPONSE VIDÉO 30 s
+          MODAL : RÉPONSE VIDÉO (file input)
           ══════════════════════════════════════════ */}
       {responseVideoId && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
@@ -1977,48 +1944,84 @@ export default function EspacePro() {
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">
               📹 Réponse vidéo au patient
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {recording
-                ? `Enregistrement en cours... ${countdown}s restantes`
-                : videoSent
-                ? "Vidéo envoyée avec succès !"
-                : "Préparation de la caméra..."}
-            </p>
 
-            {recording && (
-              <div className="relative mb-4">
-                <div className="absolute top-2 left-2 z-10 bg-red-600 text-white text-xs px-2.5 py-1 rounded-full font-bold animate-pulse flex items-center gap-1">
-                  ● REC {countdown}s
-                </div>
-                {/* Barre de progression */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 rounded-b-xl">
-                  <div
-                    className="h-full bg-red-500 transition-all duration-1000 rounded-b-xl"
-                    style={{ width: `${((10 - countdown) / 10) * 100}%` }}
-                  />
-                </div>
-                <video ref={videoRef} className="w-full rounded-xl bg-black aspect-video object-cover" muted playsInline />
-              </div>
-            )}
+            {/* Inputs cachés */}
+            <input
+              ref={proCaptureRef}
+              type="file"
+              accept="video/*"
+              capture="user"
+              style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleProVideoFile(f); e.target.value = ""; }}
+            />
+            <input
+              ref={proGalleryRef}
+              type="file"
+              accept="video/*"
+              style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleProVideoFile(f); e.target.value = ""; }}
+            />
 
-            {!recording && videoSent && (
+            {videoSent ? (
               <div className="text-center py-6">
                 <div className="text-5xl mb-3">✅</div>
                 <p className="text-green-600 dark:text-green-400 font-semibold">Vidéo envoyée au patient !</p>
                 <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Le rendez-vous a été accepté</p>
               </div>
-            )}
-
-            {!recording && !videoSent && (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600" />
+            ) : proVideoPreview ? (
+              <div className="space-y-4 mt-3">
+                <video src={proVideoPreview} controls playsInline className="w-full rounded-xl bg-black" />
+                <div className="flex gap-3">
+                  <button
+                    onClick={sendProVideo}
+                    className="flex-1 min-h-[44px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    ✅ Envoyer au patient
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProVideoFile(null);
+                      if (proVideoPreview) URL.revokeObjectURL(proVideoPreview);
+                      setProVideoPreview(null);
+                    }}
+                    className="flex-1 min-h-[44px] px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold rounded-xl transition-colors"
+                  >
+                    🔄 Recommencer
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 mt-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Filmez ou importez votre vidéo de réponse au patient (30 s recommandé).
+                </p>
+                <button
+                  onClick={() => proCaptureRef.current?.click()}
+                  className="w-full min-h-[44px] px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span>📷</span> Filmer maintenant
+                </button>
+                <button
+                  onClick={() => proGalleryRef.current?.click()}
+                  className="w-full min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span>🎞️</span> Choisir depuis la galerie
+                </button>
               </div>
             )}
 
-            {!recording && (
+            {!videoSent && (
+              <button
+                onClick={() => { setResponseVideoId(null); setVideoSent(false); setProVideoFile(null); if (proVideoPreview) URL.revokeObjectURL(proVideoPreview); setProVideoPreview(null); }}
+                className="w-full min-h-[44px] mt-3 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors"
+              >
+                Annuler
+              </button>
+            )}
+            {videoSent && (
               <button
                 onClick={() => { setResponseVideoId(null); setVideoSent(false); }}
-                className="w-full min-h-[44px] mt-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors"
+                className="w-full min-h-[44px] mt-3 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-colors"
               >
                 Fermer
               </button>

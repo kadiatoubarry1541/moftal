@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isAdmin } from '../utils/auth';
 import { QuickMediaCapture } from '../components/QuickMediaCapture';
 import { AudioRecorder } from '../components/AudioRecorder';
 
@@ -98,6 +99,12 @@ export default function Hommes() {
         return;
       }
       
+      // Une femme ne peut pas accéder à la page Hommes (sauf admin)
+      if (user.genre === 'FEMME' && !isAdmin(user)) {
+        navigate('/communaute', { replace: true });
+        return;
+      }
+
       setUserData(user);
       loadGroups();
     } catch {

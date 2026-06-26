@@ -1,103 +1,397 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { config } from '../config/api';
 
-// ─── Base de connaissance complète du site ────────────────────────────────────
+// ─── Base de connaissance complète du site Moftal ─────────────────────────────
 const SITE_KNOWLEDGE = [
+  // ── PRÉSENTATION GÉNÉRALE ──────────────────────────────────────────────────
   {
-    keywords: ['compte', 'inscription', 'enregistrer', 'creer', 'créer', 's inscrire', 'inscris', 'nouveau', 'rejoindre', 'register', 'sign up'],
-    response: `**Comment créer un compte sur Moftal ?**\n\nVous avez **2 types de comptes** :\n\n👤 **Compte Vivant** — Pour vous-même\n→ Cliquez sur "S'inscrire" puis choisissez **"Vivant"**\n→ Renseignez vos informations personnelles\n→ Un **Numéro H** unique vous est attribué (votre identifiant)\n\n🕊️ **Compte Défunt** — Pour un proche décédé\n→ Choisissez **"Défunt"** lors de l'inscription\n→ Créez un profil mémoriel pour votre proche\n\n📌 Liens directs :`,
-    links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Se connecter', path: '/login' }]
+    keywords: [
+      'but', 'objectif', "c'est quoi", 'qu est ce que', 'qu est-ce que',
+      'kesqui', 'quoi moftal', 'a quoi sert', 'à quoi ça sert', 'a quoi ca sert',
+      'presentation', 'présentation', 'plateforme', 'application', 'site',
+      'explique', 'comment fonctionne', 'keskoze', 'c quoi', 'kc', 'pourquoi',
+      'pour quoi', 'role', 'rôle', 'mission'
+    ],
+    response: `**Moftal — La plateforme des Enfants d'Adam** 🌍\n\nMoftal est un **système d'enregistrement généalogique et communautaire** qui permet à chaque être humain d'exister numériquement et de rester connecté à sa famille, ses proches et sa communauté.\n\n**Ce que vous pouvez faire sur Moftal :**\n\n🌳 **Construire votre arbre généalogique** — Ajoutez parents, enfants, conjoint et visualisez votre lignée familiale\n\n🆔 **Obtenir un Numéro H** — Votre identifiant unique sur la plateforme (pour les vivants) ou **Numéro HD** (pour les défunts)\n\n💬 **Messagerie privée** — Communiquez avec votre conjoint(e) via "Mes Amours"\n\n🏥 **Prendre des rendez-vous** — Avec des médecins, cliniques et professionnels de santé\n\n🎓 **Accéder à l'éducation** — Professeur IA spécialisé Maths & Français (CP → Terminale)\n\n🛒 **Faire des échanges** — Achat/vente de produits entre membres\n\n💼 **Créer un compte professionnel** — Pour médecins, entreprises, écoles, ONG...\n\n💰 **Moftal Pay** — Système de paiement intégré pour les services\n\n👨‍👩‍👧‍👦 **Compte Famille** — Créé automatiquement dès 5 membres dans l'arbre`,
+    links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Se connecter', path: '/login' }, { label: 'Ma Famille', path: '/famille' }]
   },
+
+  // ── NUMÉRO H (VIVANT) ──────────────────────────────────────────────────────
   {
-    keywords: ['connecter', 'connexion', 'login', 'mot de passe', 'se connecter', 'oublié', 'acceder', 'accéder', 'mdp'],
-    response: `**Comment se connecter ?**\n\nCliquez sur **"Connexion"** et entrez :\n- Votre **Numéro H** (ex: H-12345)\n- Votre **mot de passe**\n\n🔑 Mot de passe oublié ? Utilisez le lien dédié sur la page de connexion.\n\n📌 Accès rapide :`,
+    keywords: [
+      'numeroh', 'numero h', 'numéro h', 'h-', 'mon numero', 'mon numéro',
+      'identifiant', 'numero unique', 'numéro unique', 'numero personnel',
+      'numero membre', 'qu est ce qu un numeroh', 'c quoi numeroh', 'numero h?',
+      'trouver mon numero', 'ou est mon numero', 'numero inscription',
+      'numero enregistrement', 'numero vivant'
+    ],
+    response: `**Le Numéro H — Votre identité numérique unique** 🆔\n\nLe **Numéro H** est l'identifiant unique attribué automatiquement à chaque membre **vivant** lors de son inscription sur Moftal.\n\n**Format :** H-XXXXX (ex: H-12345, H-98765)\n\n**À quoi sert le Numéro H ?**\n✅ Se connecter à votre compte (à la place d'un email)\n✅ Être retrouvé par vos proches dans l'arbre familial\n✅ Lier des membres de famille entre eux\n✅ Identifier votre lignée dans l'histoire généalogique\n✅ Accéder à tous les services Moftal\n\n**Comment l'obtenir ?**\n→ Il vous est attribué automatiquement à l'inscription\n\n**Comment le retrouver ?**\n→ Dans votre profil → Mon Compte\n→ Dans l'email de confirmation d'inscription\n\n⚠️ **Conservez votre Numéro H précieusement !** Sans lui, vous ne pouvez pas vous connecter.\n\n📌 Le Numéro HD (avec D) est réservé aux comptes Défunts.`,
+    links: [{ label: 'Mon Compte', path: '/compte' }, { label: 'Se connecter', path: '/login' }]
+  },
+
+  // ── NUMÉRO HD (DÉFUNT) ─────────────────────────────────────────────────────
+  {
+    keywords: [
+      'numerohd', 'numero hd', 'numéro hd', 'hd-', 'defunt numeroh',
+      'defunt numero', 'défunt numero', 'mort numeroh', 'compte defunt numero',
+      'numero defunt', 'numéro défunt', 'identifiant defunt', 'hd', 'mort numero'
+    ],
+    response: `**Le Numéro HD — Identifiant des comptes Défunts** 🕊️\n\nLe **Numéro HD** est l'identifiant unique attribué aux **comptes mémoriels** de personnes décédées.\n\n**Format :** HD-XXXXX (ex: HD-00123)\n\n**Différence avec le Numéro H :**\n| Numéro H | Numéro HD |\n|---|---|\n| Pour les vivants | Pour les défunts |\n| Connexion personnelle | Géré par un proche |\n| H-XXXXX | HD-XXXXX |\n\n**À quoi sert le Numéro HD ?**\n✅ Créer un profil mémoriel pour un proche décédé\n✅ Intégrer le défunt dans l'arbre généalogique familial\n✅ Conserver les informations et photos du défunt\n✅ Permettre à toute la famille de se souvenir\n\n**Comment créer un compte Défunt ?**\n→ Cliquez sur "S'inscrire"\n→ Choisissez **"Défunt"**\n→ Renseignez les informations du proche décédé\n→ Un Numéro HD lui est attribué automatiquement`,
+    links: [{ label: "Créer un compte Défunt", path: '/choix' }, { label: 'Inscription', path: '/inscription-defunt' }]
+  },
+
+  // ── CRÉER UN COMPTE ────────────────────────────────────────────────────────
+  {
+    keywords: [
+      'compte', 'inscription', 'enregistrer', 'creer', 'créer', 's inscrire',
+      'inscris', 'nouveau', 'rejoindre', 'register', 'sign up', 'inscrire',
+      'comment m inscrire', 'comment je cree', 'je veux creer', 'comment ouvrir',
+      'ouvrir un compte', 'nouveau compte', 'premiere fois'
+    ],
+    response: `**Comment créer un compte sur Moftal ?** 📝\n\nVous avez **2 types de comptes** :\n\n👤 **Compte Vivant** — Pour vous-même\n→ Cliquez sur "S'inscrire" puis choisissez **"Vivant"**\n→ Renseignez : prénom, nom, date de naissance, téléphone, mot de passe\n→ Un **Numéro H unique** vous est attribué automatiquement\n→ Conservez votre Numéro H ! Il sert à vous connecter\n\n🕊️ **Compte Défunt** — Pour un proche décédé\n→ Choisissez **"Défunt"** lors de l'inscription\n→ Renseignez les informations du défunt\n→ Un **Numéro HD unique** lui est attribué\n→ Vous gérez ce compte en son honneur\n\n**Étapes rapides :**\n1️⃣ Cliquez sur "Créer un compte"\n2️⃣ Choisissez Vivant ou Défunt\n3️⃣ Remplissez le formulaire\n4️⃣ Notez votre Numéro H ou HD\n5️⃣ Connectez-vous !`,
+    links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Inscription Vivant', path: '/inscription-vivant' }, { label: 'Inscription Défunt', path: '/inscription-defunt' }]
+  },
+
+  // ── CONNEXION ──────────────────────────────────────────────────────────────
+  {
+    keywords: [
+      'connecter', 'connexion', 'login', 'se connecter', 'acceder', 'accéder',
+      'entrer', 'ouvrir session', 'je veux me connecter', 'comment je me connecte',
+      'comment acceder', 'entrer dans mon compte', 'rejoindre mon compte'
+    ],
+    response: `**Comment se connecter sur Moftal ?** 🔐\n\n**Étapes :**\n1️⃣ Cliquez sur **"Connexion"**\n2️⃣ Entrez votre **Numéro H** (ex: H-12345) OU votre **Numéro HD** (ex: HD-00123)\n3️⃣ Entrez votre **mot de passe**\n4️⃣ Cliquez sur **"Se connecter"**\n\n💡 **Astuce :** Votre identifiant est votre Numéro H, pas votre email !\n\n**Problèmes fréquents :**\n❌ "Numéro incorrect" → Vérifiez que vous entrez H-XXXXX et non votre email\n❌ "Mot de passe incorrect" → Utilisez le lien "Mot de passe oublié"\n❌ "Compte introuvable" → Vérifiez que vous êtes bien inscrit`,
     links: [{ label: 'Se connecter', path: '/login' }, { label: 'Mot de passe oublié', path: '/mot-de-passe-oublie' }]
   },
+
+  // ── MOT DE PASSE OUBLIÉ ────────────────────────────────────────────────────
   {
-    keywords: ['famille', 'arbre', 'genealogique', 'généalogique', 'parents', 'enfants', 'partenaire', 'mari', 'femme', 'conjoint', 'familial'],
-    response: `**La page Famille** 👨‍👩‍👧‍👦\n\nC'est le cœur du site ! Vous pouvez :\n\n🌳 **Arbre généalogique** — Visualisez votre arbre familial\n👨‍👩 **Parents** — Ajoutez et consultez vos parents\n👶 **Enfants** — Gérez vos enfants\n💑 **Partenaire** — Votre femme ou mari\n❤️ **Mes Amours** — Messagerie privée avec votre partenaire\n📸 **Galerie** — Photos de famille\n\n📌 Accéder :`,
-    links: [{ label: 'Ma Famille', path: '/famille' }, { label: 'Mon Arbre Généalogique', path: '/famille/moi/arbre' }, { label: 'Mes Parents', path: '/famille/parents' }]
+    keywords: [
+      'mot de passe', 'mdp', 'oublie', 'oublié', 'password', 'reinitialiser',
+      'réinitialiser', 'reset', 'changer mot de passe', 'modifier mot de passe',
+      'mot de passe perdu', 'oubli', 'mot passe oublie'
+    ],
+    response: `**Mot de passe oublié ?** 🔑\n\n**Comment réinitialiser votre mot de passe :**\n\n1️⃣ Allez sur la page de connexion\n2️⃣ Cliquez sur **"Mot de passe oublié"**\n3️⃣ Entrez votre **Numéro H** ou votre **email**\n4️⃣ Suivez les instructions envoyées\n\n**Changer votre mot de passe (si connecté) :**\n→ Mon Compte → Paramètres → Changer le mot de passe\n\n⚠️ Si vous avez perdu votre Numéro H ET votre mot de passe, contactez le support Moftal.`,
+    links: [{ label: 'Mot de passe oublié', path: '/mot-de-passe-oublie' }, { label: 'Mon Compte', path: '/compte' }]
   },
+
+  // ── PAGE FAMILLE (HUB) ─────────────────────────────────────────────────────
   {
-    keywords: ['sante', 'santé', 'médecin', 'medecin', 'rendez-vous', 'rendezvous', 'rdv', 'docteur', 'clinique', 'hopital', 'hôpital'],
-    response: `**La page Santé** 🏥\n\nTrouvez des professionnels de santé et prenez rendez-vous :\n\n📋 Consultez la liste des médecins et cliniques\n📅 **Prenez un rendez-vous** directement en ligne\n🎥 Option **vidéo consultation** (30 secondes)\n📊 Suivez vos rendez-vous (En attente / Accepté / Refusé)\n\n📌 Accéder :`,
+    keywords: [
+      'famille', 'familial', 'page famille', 'espace famille', 'hub famille',
+      'menu famille', 'section famille', 'onglet famille'
+    ],
+    response: `**La Page Famille** 👨‍👩‍👧‍👦\n\nC'est le **cœur de Moftal** ! La page Famille donne accès à tout votre univers familial :\n\n🌳 **Mon Arbre Généalogique** — Visualisez et construisez votre arbre\n👨‍👩 **Mes Parents** — Père, mère et leurs informations\n👶 **Mes Enfants** — Gérez vos enfants\n💑 **Mon Partenaire** — Conjoint(e) et messagerie privée\n❤️ **Mes Amours** — Messagerie chiffrée avec votre conjoint(e)\n📸 **Galerie Famille** — Albums photos partagés\n🏠 **Compte Famille** — Créé automatiquement dès 5 membres\n\n**La Page Famille est accessible depuis le menu principal.**`,
+    links: [{ label: 'Ma Famille', path: '/famille' }, { label: 'Mon Arbre', path: '/famille/moi/arbre' }]
+  },
+
+  // ── ARBRE GÉNÉALOGIQUE ─────────────────────────────────────────────────────
+  {
+    keywords: [
+      'arbre', 'genealogique', 'généalogique', 'arbre familial', 'ascendance',
+      'descendance', 'lignee', 'lignée', 'ancetres', 'ancêtres', 'generations',
+      'générations', 'arbre genea', 'genealogie', 'généalogie', 'construire arbre',
+      'creer arbre', 'voir arbre', 'afficher arbre', 'visualiser famille'
+    ],
+    response: `**L'Arbre Généalogique** 🌳\n\nVisualisez et construisez votre arbre familial sur Moftal :\n\n**Comment ajouter des membres :**\n👨 **Ajouter un père/mère** → Bouton "+" dans la section Parents\n👶 **Ajouter un enfant** → Bouton "+" dans la section Enfants\n💑 **Ajouter un(e) conjoint(e)** → Section Partenaire\n\n**Activation de l'arbre :**\n💰 L'arbre complet s'active pour **100 000 GNF / 5 ans**\n→ Options disponibles : 5 / 10 / 15 / 20 ans\n→ Sans activation, les fonctions restent limitées\n\n**Compte Famille automatique :**\n→ Dès que vous ajoutez **5 membres** dans l'arbre, un **Compte Famille** est créé automatiquement\n→ Vous recevez un **Numéro Sang** (ex: F2S1) — identifiant unique de votre lignée\n\n**Voir votre arbre :**\n→ Famille → Mon Arbre Généalogique`,
+    links: [{ label: 'Mon Arbre Généalogique', path: '/famille/moi/arbre' }, { label: 'Ma Famille', path: '/famille' }]
+  },
+
+  // ── COMPTE FAMILLE & NUMÉRO SANG ──────────────────────────────────────────
+  {
+    keywords: [
+      'compte famille', 'numéro sang', 'numero sang', 'sanguin', 'familycode',
+      'family code', 'f2s1', 'code famille', 'famille 5 membres', 'compte familial',
+      'creation compte famille', 'quand compte famille', 'comment compte famille',
+      'seuil membres', '5 membres', 'cinq membres'
+    ],
+    response: `**Le Compte Famille & Numéro Sang** 🏠\n\n**Compte Famille :**\n→ Créé **automatiquement** dès que votre arbre atteint **5 membres**\n→ Aucune action manuelle nécessaire — c'est automatique !\n\n**Le Numéro Sang :**\n→ Identifiant unique de votre lignée familiale\n→ Format : ex. **F2S1** (Family + Numéro lignée)\n→ Jamais répété, unique à votre famille\n→ Visible dans votre Arbre et votre Compte Famille\n→ Disponible après activation de l'arbre\n\n**Activation de l'arbre :**\n💰 **100 000 GNF = 5 ans** d'accès complet\n→ Options : 5 / 10 / 15 / 20 ans\n→ Abonnement renouvelable (pas à vie)\n\n**Contenu du Compte Famille :**\n✅ Tableau de bord familial\n✅ Gestion des fonds familiaux\n✅ Gérants familiaux (gérant 1 & gérant 2)\n✅ Conseiller familial\n✅ Statistiques de la famille`,
+    links: [{ label: 'Ma Famille', path: '/famille' }, { label: 'Mon Arbre', path: '/famille/moi/arbre' }]
+  },
+
+  // ── MES AMOURS (MESSAGERIE COUPLE) ────────────────────────────────────────
+  {
+    keywords: [
+      'amours', 'mes amours', 'messagerie couple', 'message conjoint',
+      'parler conjoint', 'chat couple', 'messagerie partenaire', 'message mari',
+      'message femme', 'private message', 'couple message', 'discuter conjoint',
+      'envoyer message', 'tchat prive', 'tchat privé'
+    ],
+    response: `**Mes Amours — Messagerie Privée Couple** ❤️\n\n"Mes Amours" est la **messagerie privée** entre vous et votre conjoint(e) sur Moftal.\n\n**Fonctionnalités :**\n💬 Échange de messages privés\n🖼️ Partage de photos\n🔒 Conversation privée (accessible uniquement au couple)\n\n**Comment y accéder :**\n→ Page Famille → Mes Amours\n→ Ou depuis votre profil partenaire\n\n**Prérequis :**\n→ Avoir un(e) partenaire lié(e) dans votre arbre familial\n→ Le/la partenaire doit avoir un compte Moftal actif`,
+    links: [{ label: 'Mes Amours', path: '/famille/mes-amours' }, { label: 'Ma Famille', path: '/famille' }]
+  },
+
+  // ── ACTIVATION ARBRE / PAIEMENT ────────────────────────────────────────────
+  {
+    keywords: [
+      'activation', 'activer arbre', 'activer compte', 'payer arbre',
+      '100000', '100 000', 'gnf', 'prix arbre', 'tarif arbre', 'cout arbre',
+      'combien arbre', 'abonnement arbre', '5 ans', 'duree abonnement',
+      'durée abonnement', 'renouveler', 'expiration', 'moftal pay', 'paiement',
+      'payer', 'tarif', 'prix', 'cout', 'coût', 'combien', 'frais'
+    ],
+    response: `**Moftal Pay — Système de Paiement** 💰\n\n**Activation de l'Arbre Généalogique :**\n💰 **100 000 GNF = 5 ans** d'accès complet\n\nOptions de durée disponibles :\n| Durée | Prix |\n|-------|------|\n| 5 ans | 100 000 GNF |\n| 10 ans | 200 000 GNF |\n| 15 ans | 300 000 GNF |\n| 20 ans | 400 000 GNF |\n\n⚠️ L'abonnement est **renouvelable** (PAS à vie)\n\n**Autres tarifs :**\n🏥 **Compte Professionnel Standard** : 500 000 GNF/an\n❤️ **ONG/Associations** : 10 000 GNF/an (tarif humanitaire spécial)\n🎓 **Professeur IA** : 5 000 GNF/mois ou 50 000 GNF/an\n\n**Wallet Pro :**\n→ Disponible pour les comptes Santé (clinic) et Alimentation (supplier)\n→ Les autres types : "Bientôt disponible"\n\n🔒 Les paiements réels sont gérés par Lengopay (externe au site)`,
+    links: [{ label: 'Mon Compte', path: '/compte' }, { label: 'Inscription Pro', path: '/inscription-pro' }]
+  },
+
+  // ── SANTÉ / RENDEZ-VOUS ────────────────────────────────────────────────────
+  {
+    keywords: [
+      'sante', 'santé', 'médecin', 'medecin', 'rendez-vous', 'rendezvous', 'rdv',
+      'docteur', 'clinique', 'hopital', 'hôpital', 'prendre rdv', 'prendre rendez',
+      'consultation', 'voir medecin', 'contacter medecin', 'appointment', 'medecins'
+    ],
+    response: `**La Page Santé** 🏥\n\nTrouvez des professionnels de santé et prenez rendez-vous en ligne :\n\n**Comment prendre un rendez-vous :**\n1️⃣ Allez sur la page **Santé**\n2️⃣ Consultez la liste des médecins et cliniques disponibles\n3️⃣ Cliquez sur le professionnel souhaité\n4️⃣ Choisissez le **type de rendez-vous** :\n   📝 **Écrit** — Décrivez votre problème par écrit + choisissez date/heure/service\n   🎥 **Vidéo** — Enregistrez une courte vidéo (30 secondes)\n5️⃣ Soumettez votre demande\n\n**Suivi de vos rendez-vous :**\n⏳ **En attente** — Le professionnel examine votre demande\n✅ **Accepté** — Votre RDV est confirmé\n❌ **Refusé** — Avec une raison optionnelle\n\n🔔 Vous recevez une **notification** quand votre RDV est accepté ou refusé`,
     links: [{ label: 'Page Santé', path: '/sante' }, { label: 'Trouver un professionnel', path: '/professionnels' }]
   },
+
+  // ── ENREGISTREMENT VIDÉO (STORIES) ────────────────────────────────────────
   {
-    keywords: ['securite', 'sécurité', 'police', 'protection', 'agence securite'],
-    response: `**La page Sécurité** 🛡️\n\nAccédez aux **agences de sécurité** et services de protection enregistrés.\n\nVous pouvez contacter et prendre rendez-vous avec des professionnels de la sécurité.\n\n📌 Accéder :`,
-    links: [{ label: 'Page Sécurité', path: '/securite' }]
+    keywords: [
+      'video', 'vidéo', 'enregistrement video', 'enregistrer video', 'story video',
+      'inscription video', 'rdv video', 'consultation video', 'video rdv',
+      'enregistrer', 'webcam', 'camera', 'caméra', '30 secondes', 'video consultation'
+    ],
+    response: `**L'Enregistrement Vidéo** 🎥\n\nSur Moftal, les vidéos servent à :\n\n📹 **Rendez-vous Vidéo** — Enregistrez une vidéo de 30 secondes pour présenter votre problème à un médecin\n📝 **Histoire Personnelle** — Enregistrez votre témoignage vidéo pour l'arbre généalogique\n\n**Comment enregistrer une vidéo pour un RDV :**\n1️⃣ Choisissez le type "Vidéo" lors de la prise de RDV\n2️⃣ Autorisez l'accès à votre caméra\n3️⃣ Enregistrez votre message (max **30 secondes**)\n4️⃣ Visionnez et validez\n5️⃣ Envoyez votre demande\n\n**Limites :**\n📦 Taille maximale : **200 MB** par vidéo\n⏱️ Durée maximale : **30 secondes** pour les RDV\n\n💡 Si votre caméra ne fonctionne pas, choisissez le type "Écrit" à la place.`,
+    links: [{ label: 'Page Santé', path: '/sante' }, { label: 'Trouver un professionnel', path: '/professionnels' }]
   },
+
+  // ── COMPTES PROFESSIONNELS ─────────────────────────────────────────────────
   {
-    keywords: ['echange', 'échange', 'commerce', 'vente', 'achat', 'produit', 'nourriture', 'medicament', 'médicament', 'primaire', 'secondaire', 'tertiaire', 'annonce', 'publier'],
-    response: `**La page Échanges** 🛒\n\nPlateforme de commerce et d'échanges entre membres :\n\n🥗 **Nourriture** — Aliments, produits frais\n💊 **Médicaments** — Produits pharmaceutiques\n🏭 **Primaire** — Matières premières, agriculture\n🔧 **Secondaire** — Industrie, transformation\n💼 **Tertiaire** — Services professionnels\n\n✏️ **Publier une annonce** — Proposez vos produits ou services\n\n📌 Accéder :`,
-    links: [{ label: 'Tous les échanges', path: '/echange' }, { label: 'Publier une annonce', path: '/echange/publier' }, { label: 'Nourriture', path: '/echange/nourriture' }]
+    keywords: [
+      'pro', 'professionnel', 'compte pro', 'espace pro', 'inscription pro',
+      'creer compte pro', 'créer compte pro', 'dashboard pro', 'espace professionnel',
+      'mon espace pro', 'gerer mon compte pro', 'compte enterprise',
+      'compte clinique', 'professionnel inscription'
+    ],
+    response: `**Les Comptes Professionnels** 💼\n\nEnregistrez votre activité professionnelle sur Moftal :\n\n**Types de comptes disponibles :**\n🏥 **Santé** — Médecins, cliniques, hôpitaux\n🏢 **Activité** — Entreprises, écoles, établissements\n🔬 **Science** — Chercheurs, laboratoires, scientifiques\n❤️ **Solidarité** — ONG, associations humanitaires\n🛡️ **Sécurité** — Agences de sécurité, protection\n🛒 **Échanges** — Fournisseurs, journalistes\n🕌 **Mosquée/Madrasa** — Établissements religieux\n🏪 **Commerce** — Boutiques, vendeurs, producteurs\n🍽️ **Restaurant** — Établissements de restauration\n🚌 **Transport** — Compagnies de transport\n💄 **Beauté** — Salons de beauté, coiffeurs\n🛠️ **Artisan** — Artisans et métiers manuels\n🏛️ **Mairie** — Collectivités locales\n\n**Étapes d'inscription pro :**\n1️⃣ Cliquez sur "Inscription Professionnelle"\n2️⃣ Choisissez votre type\n3️⃣ Renseignez les informations de votre organisation\n4️⃣ Soumettez pour validation`,
+    links: [{ label: 'Inscription Professionnelle', path: '/inscription-pro' }, { label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }, { label: 'Liste Professionnels', path: '/professionnels' }]
   },
+
+  // ── ESPACE PRO / DASHBOARD ─────────────────────────────────────────────────
   {
-    keywords: ['science', 'recherche', 'scientifique', 'decouverte', 'découverte', 'laboratoire', 'chercheur'],
-    response: `**La page Science** 🔬\n\nEspace dédié aux publications et découvertes scientifiques :\n\n📄 Consultez les publications des scientifiques membres\n🔬 Suivez les recherches en cours\n🧑‍🔬 Connectez-vous avec des chercheurs\n\n📌 Accéder :`,
-    links: [{ label: 'Page Science', path: '/science' }]
+    keywords: [
+      'tableau de bord', 'dashboard', 'mes demandes', 'gerer rdv', 'gérer rdv',
+      'accepter rdv', 'refuser rdv', 'historique rdv', 'espace pro dashboard',
+      'voir mes rendez-vous', 'mes patients', 'notifications pro'
+    ],
+    response: `**L'Espace Professionnel (Dashboard)** 📊\n\nChaque compte professionnel dispose d'un tableau de bord complet :\n\n**Onglet Demandes :**\n📋 Liste de toutes les demandes de RDV reçues\n✅ **Accepter** — Confirmer le rendez-vous\n🎥 **Accepter + Vidéo** — Accepter avec une réponse vidéo\n❌ **Refuser** — Refuser avec une raison optionnelle\n\n**Onglet Historique :**\n📁 Tous vos anciens RDV (Acceptés / Refusés / Tous)\n\n**Onglet Profil :**\nℹ️ Informations de votre compte pro\n🔧 Services et spécialités proposés\n\n**Statistiques :**\n📊 Total RDV / En attente / Acceptés / Refusés\n\n**Vitrine publique :**\n→ Chaque compte pro a une page publique accessible par les membres`,
+    links: [{ label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }, { label: 'Inscription Pro', path: '/inscription-pro' }]
   },
+
+  // ── ÉDUCATION / PROFESSEUR IA ──────────────────────────────────────────────
   {
-    keywords: ['education', 'éducation', 'ecole', 'école', 'apprendre', 'cours', 'professeur', 'ia scolaire', 'maths', 'francais', 'français', 'etude', 'étude'],
-    response: `**La page Éducation** 🎓\n\nAccès à l'éducation et au Professeur IA :\n\n🤖 **Professeur IA** — Spécialisé en Français et Mathématiques (CP → Terminale)\n   - Posez des questions de cours\n   - Faites des exercices interactifs avec correction automatique\n🏫 Trouvez des établissements scolaires membres\n\n📌 Accéder :`,
+    keywords: [
+      'education', 'éducation', 'ecole', 'école', 'apprendre', 'cours',
+      'professeur', 'ia scolaire', 'maths', 'math', 'mathematique', 'mathématique',
+      'francais', 'français', 'etude', 'étude', 'professeur ia', 'ia education',
+      'exercice', 'scolaire', 'cp', 'ce1', 'ce2', 'cm1', 'cm2', 'college',
+      'lycee', 'lycée', 'terminale', 'brevet', 'bac', 'cours en ligne'
+    ],
+    response: `**La Page Éducation & Professeur IA** 🎓\n\n**Professeur IA — Spécialisé :**\n📚 **Français** : Vocabulaire, Grammaire, Conjugaison, Homophones\n🔢 **Mathématiques** : Arithmétique, Algèbre, Géométrie, Probabilités\n\n**Niveaux couverts :** CP → Terminale\n\n**Ce que le Professeur IA peut faire :**\n✅ Répondre à vos questions de cours\n✅ Générer des exercices interactifs avec correction automatique\n✅ Résoudre des équations (1er et 2ème degré)\n✅ Expliquer des notions (trigonométrie, fractions, conjugaison...)\n✅ Corriger vos réponses et expliquer les erreurs\n\n**Accès :**\n→ Menu → Éducation → Professeur IA\n\n**Tarif :**\n💰 5 000 GNF/mois ou 50 000 GNF/an\n\n**Onglets disponibles :**\n🏋️ Entraînement — Exercices interactifs\n💬 Questions — Chat libre\n🕐 Historique — Vos conversations`,
     links: [{ label: 'Page Éducation', path: '/education' }, { label: 'Professeur IA', path: '/professeur-ia' }]
   },
+
+  // ── ÉCHANGES / COMMERCE ────────────────────────────────────────────────────
   {
-    keywords: ['solidarite', 'solidarité', 'aide', 'don', 'humanitaire', 'ong', 'association', 'benevole', 'bénévole'],
-    response: `**La page Solidarité** ❤️\n\nEspace dédié à l'entraide et à la solidarité :\n\n🤝 Trouvez des ONG et associations enregistrées\n💝 Faites des dons ou demandez de l'aide\n🌍 Actions humanitaires et communautaires\n\n📌 Accéder :`,
-    links: [{ label: 'Page Solidarité', path: '/solidarite' }]
+    keywords: [
+      'echange', 'échange', 'commerce', 'vente', 'achat', 'produit', 'nourriture',
+      'aliment', 'medicament', 'médicament', 'annonce', 'publier', 'acheter',
+      'vendre', 'marche', 'marché', 'boutique', 'article', 'offre', 'demande',
+      'primaire', 'secondaire', 'tertiaire', 'alimentation', 'pharmacie'
+    ],
+    response: `**La Page Échanges** 🛒\n\nPlateforme de commerce et d'échanges entre membres :\n\n**Catégories disponibles :**\n🥗 **Nourriture** — Aliments, produits frais, alimentation\n💊 **Médicaments** — Produits pharmaceutiques, santé\n🌱 **Primaire** — Matières premières, agriculture, élevage\n🔧 **Secondaire** — Industrie, transformation, artisanat\n💼 **Tertiaire** — Services professionnels, conseil\n\n**Comment publier une annonce :**\n1️⃣ Allez sur la page Échanges\n2️⃣ Cliquez sur **"Publier une annonce"**\n3️⃣ Choisissez la catégorie\n4️⃣ Ajoutez titre, description, photo, prix\n5️⃣ Publiez !\n\n**Comment acheter :**\n→ Parcourez les annonces\n→ Contactez le vendeur\n→ Effectuez la transaction\n\n💡 Les annonces sont visibles par tous les membres Moftal`,
+    links: [{ label: 'Tous les échanges', path: '/echange' }, { label: 'Publier une annonce', path: '/echange/publier' }, { label: 'Nourriture', path: '/echange/nourriture' }]
   },
+
+  // ── SOLIDARITÉ / ONG ──────────────────────────────────────────────────────
   {
-    keywords: ['zaka', 'zakat', 'islam', 'aumone', 'aumône', 'musulman', 'muslim'],
-    response: `**La page Zaka (Zakat)** 🕌\n\nSection réservée aux membres de religion Islam :\n\n🕌 Calculez et gérez votre Zakat\n💰 Contributions selon les principes islamiques\n\n⚠️ Accessible uniquement aux profils Islam ou administrateurs.\n\n📌 Accéder :`,
+    keywords: [
+      'solidarite', 'solidarité', 'aide', 'don', 'humanitaire', 'ong',
+      'association', 'benevole', 'bénévole', 'charité', 'charite', 'bénévolat',
+      'benevolat', 'soutien', 'entraide', 'collecte'
+    ],
+    response: `**La Page Solidarité** ❤️\n\nEspace dédié à l'entraide et à la solidarité communautaire :\n\n**Ce que vous pouvez faire :**\n🤝 Trouver des ONG et associations enregistrées sur Moftal\n💝 Faire des dons ou demander de l'aide\n🌍 Participer à des actions humanitaires et communautaires\n👥 Rejoindre des associations de bénévoles\n\n**Tarif spécial ONG :**\n💰 **10 000 GNF/an** (tarif humanitaire préférentiel)\n→ Au lieu de 500 000 GNF/an pour les autres pro\n\n**Comment créer un compte ONG :**\n→ Inscription Professionnelle → Type "Solidarité" (ONG)`,
+    links: [{ label: 'Page Solidarité', path: '/solidarite' }, { label: 'Inscription ONG', path: '/inscription-pro' }]
+  },
+
+  // ── SCIENCE ───────────────────────────────────────────────────────────────
+  {
+    keywords: [
+      'science', 'recherche', 'scientifique', 'decouverte', 'découverte',
+      'laboratoire', 'chercheur', 'publication', 'recherches', 'scientifiques',
+      'labo', 'experimentation', 'expérimentation'
+    ],
+    response: `**La Page Science** 🔬\n\nEspace dédié aux publications et découvertes scientifiques :\n\n**Pour les visiteurs :**\n📄 Consultez les publications des scientifiques membres\n🔬 Suivez les recherches en cours\n🧑‍🔬 Connectez-vous avec des chercheurs\n\n**Pour les scientifiques (compte pro) :**\n📝 Publiez vos découvertes et recherches\n🔗 Partagez vos travaux avec la communauté\n📊 Gérez votre vitrine publique\n\n**Créer un compte Scientifique :**\n→ Inscription Professionnelle → Type "Science"`,
+    links: [{ label: 'Page Science', path: '/science' }, { label: 'Inscription Scientifique', path: '/inscription-pro' }]
+  },
+
+  // ── SÉCURITÉ ──────────────────────────────────────────────────────────────
+  {
+    keywords: [
+      'securite', 'sécurité', 'police', 'protection', 'agence securite',
+      'agent securite', 'gardien', 'surveillance', 'garde', 'vigile'
+    ],
+    response: `**La Page Sécurité** 🛡️\n\nAccédez aux **agences de sécurité** et services de protection enregistrés sur Moftal :\n\n**Fonctionnalités :**\n🛡️ Trouvez des agences de sécurité certifiées\n📋 Prenez contact et demandez leurs services\n✅ Vérifiez les agréments des entreprises\n\n**Pour les agences de sécurité :**\n→ Créez un compte professionnel "Sécurité"\n→ Gérez vos demandes de services\n→ Présentez vos prestations`,
+    links: [{ label: 'Page Sécurité', path: '/securite' }, { label: 'Inscription Pro Sécurité', path: '/inscription-pro' }]
+  },
+
+  // ── ZAKA / ISLAM ──────────────────────────────────────────────────────────
+  {
+    keywords: [
+      'zaka', 'zakat', 'islam', 'aumone', 'aumône', 'musulman', 'muslim',
+      'mosquee', 'mosquée', 'madrasa', 'religion', 'islamique', 'priere',
+      'prière', 'sadaka', 'sadaqa'
+    ],
+    response: `**La Page Zaka (Zakat)** 🕌\n\nSection spécialement réservée aux membres de confession islamique :\n\n**Fonctionnalités :**\n🕌 Calculez et gérez votre Zakat\n💰 Contributions selon les principes islamiques\n🤲 Sadaqa et aumônes\n\n**Établissements religieux sur Moftal :**\n🕌 Mosquées enregistrées\n📚 Madrasas (écoles coraniques)\n\n⚠️ La page Zaka est accessible aux membres ayant un profil Islam.`,
     links: [{ label: 'Page Zaka', path: '/zaka' }]
   },
+
+  // ── HISTOIRE DE L'HUMANITÉ ─────────────────────────────────────────────────
   {
-    keywords: ['terre adam', 'pays', 'lieu', 'residence', 'carte', 'monde', 'territoire', 'geographie', 'géographie', 'region'],
-    response: `**La page Terre Adam** 🌍\n\nVisualisez la répartition mondiale des membres :\n\n🗺️ Carte interactive des pays et régions\n📍 Découvrez où vivent les membres de la communauté\n🌐 Statistiques par pays et région\n\n📌 Accéder :`,
-    links: [{ label: 'Terre Adam', path: '/terre-adam' }]
-  },
-  {
-    keywords: ['histoire', 'historique', 'humanite', 'humanité', 'civilisation', 'origines', 'a retenir', 'à retenir'],
-    response: `**Les pages Histoire** 📜\n\nDécouvrez l'histoire :\n\n🌍 **Histoire de l'Humanité** — 95 générations de G1 à aujourd'hui\n📌 **À Retenir (G96)** — Écrivez votre propre histoire\n\n📌 Accéder :`,
+    keywords: [
+      'histoire', 'historique', 'humanite', 'humanité', 'civilisation',
+      'origines', 'a retenir', 'à retenir', 'generations humanite',
+      'g96', 'g1', 'génération', 'generation', '95 generations', 'passe',
+      'passé', 'histoire monde'
+    ],
+    response: `**Les Pages Histoire** 📜\n\n**Histoire de l'Humanité :**\n🌍 Retracez **95 générations** de l'humanité — de G1 (Adam) à aujourd'hui\n📚 Explorez les grandes périodes de la civilisation humaine\n🗺️ Découvrez l'histoire par régions et cultures\n\n**À Retenir (G96) :**\n✍️ La **génération 96** c'est VOUS — la génération actuelle\n📝 Écrivez et partagez votre propre histoire\n🏛️ Laissez une trace pour les générations futures\n\n💡 Chaque membre peut contribuer à l'histoire de sa génération`,
     links: [{ label: "Histoire de l'Humanité", path: '/histoire-humanite' }, { label: 'À Retenir — G96', path: '/a-retenir' }]
   },
+
+  // ── TERRE ADAM ────────────────────────────────────────────────────────────
   {
-    keywords: ['pro', 'professionnel', 'compte pro', 'espace pro', 'inscription pro', 'creer compte pro', 'créer compte pro', 'dashboard pro'],
-    response: `**Les Comptes Professionnels** 💼\n\nEnregistrez votre activité sur la plateforme :\n\n🏥 **Santé** — Médecins, cliniques\n🏢 **Activité** — Entreprises, écoles\n🔬 **Science** — Chercheurs\n❤️ **Solidarité** — ONG, associations\n🛡️ **Sécurité** — Agences de sécurité\n🛒 **Échanges** — Fournisseurs, journalistes\n\n✅ **Étapes pour créer un compte pro :**\n1. Cliquez sur "Inscription Professionnelle"\n2. Choisissez votre type de compte\n3. Renseignez les informations de votre organisation\n\n📌 Accéder :`,
-    links: [{ label: 'Inscription Professionnelle', path: '/inscription-pro' }, { label: 'Mes Comptes Pro', path: '/mes-comptes-pro' }, { label: 'Liste des professionnels', path: '/professionnels' }]
+    keywords: [
+      'terre adam', 'pays', 'carte', 'monde', 'territoire', 'geographie',
+      'géographie', 'region', 'répartition', 'repartition', 'membres monde',
+      'ou vivent', 'où vivent', 'statistiques membres', 'map', 'carte monde'
+    ],
+    response: `**La Page Terre Adam** 🌍\n\nVisualisez la répartition mondiale des membres Moftal :\n\n🗺️ **Carte interactive** des pays et régions\n📍 Découvrez où vivent les membres de la communauté\n🌐 **Statistiques** : nombre de membres par pays et région\n🌍 Couverture mondiale des Enfants d'Adam\n\n💡 Plus vous ajoutez des membres dans votre arbre, plus la carte s'enrichit !`,
+    links: [{ label: 'Terre Adam', path: '/terre-adam' }]
   },
+
+  // ── GALERIE FAMILLE ────────────────────────────────────────────────────────
   {
-    keywords: ['mon profil', 'profil', 'modifier profil', 'informations personnelles', 'photo profil', 'mes informations'],
-    response: `**Mon Profil & Mon Compte** 👤\n\nGérez vos informations personnelles :\n\n✏️ **Modifier mon profil** — Photo, bio, informations\n🔐 **Mon Compte** — Paramètres et sécurité\n📋 Consultez vos activités et contributions\n\n📌 Accéder :`,
-    links: [{ label: 'Mon Compte', path: '/compte' }, { label: 'Mon Profil', path: '/moi/profil' }]
+    keywords: [
+      'galerie', 'photo', 'image', 'album', 'photos famille', 'partager photo',
+      'ajouter photo', 'voir photos', 'album famille', 'photos partagees',
+      'photos partagées'
+    ],
+    response: `**La Galerie Famille** 📸\n\nPartagez et consultez vos photos de famille en privé :\n\n🖼️ Créez des **albums photos familiaux**\n📤 **Partagez des photos** avec vos proches membres\n👨‍👩‍👧 Photos accessibles aux membres de votre famille\n🔒 Espace privé — accessible uniquement à votre famille\n\n**Comment ajouter des photos :**\n1️⃣ Famille → Galerie Famille\n2️⃣ Cliquez sur "Ajouter"\n3️⃣ Sélectionnez vos photos\n4️⃣ Publiez dans l'album`,
+    links: [{ label: 'Galerie Famille', path: '/galerie-famille' }, { label: 'Ma Famille', path: '/famille' }]
   },
+
+  // ── MON PROFIL & IDENTITÉ ──────────────────────────────────────────────────
   {
-    keywords: ['numeroh', 'numero h', 'numéro h', 'identifiant', 'numero unique', 'numéro unique', 'h-', 'mon numero'],
-    response: `**Le Numéro H — Votre identifiant unique** 🆔\n\nChaque membre reçoit un Numéro H unique lors de l'inscription.\n\n- Format : **H-XXXXX** (ex: H-12345)\n- Utilisé pour se connecter (à la place d'un email)\n- Permet de vous retrouver dans l'arbre généalogique\n- Partagez-le avec vos proches pour les lier à votre profil\n\nConservez-le précieusement !`,
-    links: []
+    keywords: [
+      'profil', 'mon profil', 'modifier profil', 'informations personnelles',
+      'photo profil', 'mes informations', 'modifier mes infos', 'bio', 'biographie',
+      'identite', 'identité', 'page identite', 'ma page', 'mon compte',
+      'parametres', 'paramètres', 'settings', 'changer photo'
+    ],
+    response: `**Mon Profil & Mon Identité** 👤\n\nGérez votre présence sur Moftal :\n\n**Page Identité :**\n📸 Photo de profil\n📝 Informations personnelles (prénom, nom, âge, lieu...)\n🌍 Origine et résidence\n💬 Biographie\n\n**Mon Compte :**\n🔐 Paramètres de sécurité\n🔑 Changer le mot de passe\n📊 Votre Numéro H\n⚙️ Préférences du compte\n\n**Comment modifier votre profil :**\n→ Mon Compte → Modifier le profil\n→ Ou directement via la page Identité`,
+    links: [{ label: 'Mon Compte', path: '/compte' }, { label: 'Mon Identité', path: '/identite' }, { label: 'Mon Profil', path: '/moi/profil' }]
   },
+
+  // ── GESTION INTERNE (ADMIN) ────────────────────────────────────────────────
   {
-    keywords: ['galerie', 'photo', 'image', 'album', 'photos famille'],
-    response: `**La Galerie Famille** 📸\n\nPartagez et consultez vos photos de famille :\n\n🖼️ Créez des albums photos familiaux\n📤 Partagez des photos avec vos proches\n👨‍👩‍👧 Photos accessibles aux membres de votre famille\n\n📌 Accéder :`,
-    links: [{ label: 'Galerie Famille', path: '/galerie-famille' }]
+    keywords: [
+      'gestion interne', 'admin', 'administration', 'administrateur',
+      'gestion admin', 'panneau admin', 'back office', 'backoffice',
+      'moderation', 'modération', 'gerer membres', 'gérer membres'
+    ],
+    response: `**La Gestion Interne** ⚙️\n\nLa Gestion Interne est le **panneau d'administration** réservé aux administrateurs Moftal.\n\n**Fonctionnalités (admins uniquement) :**\n👥 Gestion des membres et comptes\n💼 Validation des comptes professionnels\n📊 Statistiques de la plateforme\n🔧 Configuration des services\n📝 Gestion des contenus\n\n⚠️ **Accès restreint** — Réservé aux administrateurs officiels de Moftal.\n\nSi vous pensez avoir besoin d'un accès admin, contactez l'équipe Moftal.`,
+    links: [{ label: 'Gestion Interne', path: '/gestion-interne' }]
   },
+
+  // ── AJOUTER DES MEMBRES FAMILLE ────────────────────────────────────────────
   {
-    keywords: ['aide', 'comment', 'utiliser', 'guide', 'tutoriel', 'commencer', 'debut', 'début', 'que faire', 'bonjour', 'salut', 'hello'],
-    response: `**Bienvenue sur Moftal !** 🌟\n\nVoici les premières étapes pour bien démarrer :\n\n1️⃣ **Créer votre compte** → Choisissez Vivant ou Défunt\n2️⃣ **Vous connecter** avec votre Numéro H\n3️⃣ **Compléter votre profil**\n4️⃣ **Construire votre arbre familial** → Page Famille\n5️⃣ **Découvrir les services** → Santé, Échanges, Éducation...\n\n💬 Posez-moi n'importe quelle question, je suis là pour vous guider !`,
+    keywords: [
+      'ajouter membre', 'ajouter personne', 'ajouter parent', 'ajouter enfant',
+      'ajouter conjoint', 'ajouter famille', 'lier compte', 'relier compte',
+      'inviter membre', 'invitation famille', 'ajouter proche', 'ajouter frere',
+      'ajouter soeur', 'frere', 'sœur', 'soeur', 'cousin', 'oncle', 'tante',
+      'grand-parent', 'grandparent', 'grand parent'
+    ],
+    response: `**Ajouter des membres dans votre Famille** 👪\n\n**Comment ajouter des proches :**\n\n👨‍👩 **Parents (père/mère) :**\n→ Famille → Mes Parents → Ajouter\n→ Entrez le Numéro H du parent (s'il a un compte)\n→ Ou créez un profil sans compte Moftal\n\n👶 **Enfants :**\n→ Famille → Mes Enfants → Ajouter\n→ Entrez le Numéro H de l'enfant\n\n💑 **Conjoint(e) :**\n→ Famille → Mon Partenaire → Ajouter\n→ Entrez le Numéro H du/de la conjoint(e)\n\n**Important :**\n→ Dès **5 membres** dans l'arbre : Compte Famille créé automatiquement\n→ Les membres liés voient votre profil dans leur arbre\n→ Demandez leur Numéro H à vos proches pour les lier`,
+    links: [{ label: 'Ma Famille', path: '/famille' }, { label: 'Mon Arbre', path: '/famille/moi/arbre' }]
+  },
+
+  // ── NOTIFICATIONS ──────────────────────────────────────────────────────────
+  {
+    keywords: [
+      'notification', 'notif', 'alerte', 'message recu', 'message reçu',
+      'informer', 'prevenir', 'prévenir', 'je suis pas informé', 'pas de notification'
+    ],
+    response: `**Les Notifications sur Moftal** 🔔\n\nMoftal vous informe automatiquement des événements importants :\n\n**Types de notifications :**\n✅ Rendez-vous **accepté** par un professionnel\n❌ Rendez-vous **refusé** (avec la raison)\n👥 Invitation à rejoindre un arbre familial\n💬 Nouveau message dans Mes Amours\n📋 Mise à jour de votre compte\n\n**Où voir vos notifications :**\n→ Icône 🔔 en haut de la page\n→ Tableau de bord de votre compte\n\n💡 Assurez-vous que les notifications de votre navigateur sont activées pour Moftal.`,
+    links: [{ label: 'Mon Compte', path: '/compte' }]
+  },
+
+  // ── NAVIGATION GÉNÉRALE / AIDE ─────────────────────────────────────────────
+  {
+    keywords: [
+      'aide', 'comment', 'utiliser', 'guide', 'tutoriel', 'commencer',
+      'debut', 'début', 'que faire', 'bonjour', 'salut', 'hello', 'hi',
+      'bonsoir', 'bonne nuit', 'slt', 'bjr', 'cava', 'ça va', 'ca va',
+      'je commence', 'nouveau sur', 'premiere visite', 'première visite',
+      'perdu', 'debutant', 'débutant', 'pas compris', 'comprend pas'
+    ],
+    response: `**Bienvenue sur Moftal !** 🌟\n\nJe suis votre **Guide IA officiel** — posez-moi n'importe quelle question sur le site !\n\n**Pour bien démarrer :**\n\n1️⃣ **Créer votre compte** → Choisissez Vivant ou Défunt\n2️⃣ **Vous connecter** avec votre **Numéro H** (votre identifiant unique)\n3️⃣ **Compléter votre profil** → Page Identité\n4️⃣ **Construire votre arbre familial** → Page Famille\n5️⃣ **Découvrir les services** → Santé, Échanges, Éducation, Science...\n\n**Questions fréquentes que je peux répondre :**\n🆔 C'est quoi le Numéro H ?\n🌳 Comment construire mon arbre familial ?\n🏥 Comment prendre un rendez-vous médical ?\n💼 Comment créer un compte professionnel ?\n💰 Quels sont les tarifs de Moftal ?\n\nPosez votre question ! 💬`,
     links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Se connecter', path: '/login' }]
+  },
+
+  // ── PROBLÈMES TECHNIQUES ────────────────────────────────────────────────────
+  {
+    keywords: [
+      'probleme', 'problème', 'bug', 'erreur', 'marche pas', 'fonctionne pas',
+      'ne fonctionne pas', 'bloque', 'bloqué', 'page blanche', 'chargement',
+      'lent', 'lente', 'impossible', 'echec', 'échec', 'connexion impossible'
+    ],
+    response: `**Problème technique ?** 🔧\n\n**Solutions rapides :**\n\n🔄 **Rechargez la page** (F5 ou tirer vers le bas sur mobile)\n\n🌐 **Vérifiez votre connexion internet**\n\n🧹 **Videz le cache :** Paramètres navigateur → Effacer les données\n\n🔓 **Déconnectez-vous et reconnectez-vous** avec votre Numéro H\n\n**Erreurs fréquentes :**\n❌ "Numéro H incorrect" → Vérifiez le format : H-XXXXX (avec le H majuscule et le tiret)\n❌ "Session expirée" → Reconnectez-vous\n❌ "Erreur serveur" → Réessayez dans quelques minutes\n\n**Si le problème persiste :**\n→ Notez le message d'erreur exact\n→ Contactez le support Moftal`,
+    links: [{ label: 'Se connecter', path: '/login' }, { label: 'Mon Compte', path: '/compte' }]
+  },
+
+  // ── ENREGISTREMENT ÉCRIT (STORIES) ────────────────────────────────────────
+  {
+    keywords: [
+      'enregistrement ecrit', 'enregistrement écrit', 'histoire ecrite',
+      'histoire écrite', 'story ecrite', 'story écrite', 'temoignage',
+      'témoignage', 'ecrire histoire', 'écrire histoire', 'rdv ecrit',
+      'rendez-vous ecrit', 'rendez-vous écrit', 'consultation ecrite'
+    ],
+    response: `**L'Enregistrement Écrit** 📝\n\n**Pour les Rendez-vous :**\nChoisissez "Écrit" lors de la prise de RDV pour :\n✍️ Décrire votre problème ou demande par écrit\n📅 Choisir une date et heure préférées\n🏥 Sélectionner un service spécifique\n\n**Pour votre Histoire Personnelle :**\n→ Rédigez votre témoignage, votre histoire de vie\n→ Visible dans votre profil et votre arbre généalogique\n→ Transmis aux générations futures\n\n**Comment accéder :**\n→ Santé → Choisir un professionnel → Type "Écrit"\n→ Famille → Mon Histoire`,
+    links: [{ label: 'Page Santé', path: '/sante' }, { label: 'Ma Famille', path: '/famille' }]
+  },
+
+  // ── LENGOPAY / PAIEMENT EXTERNE ────────────────────────────────────────────
+  {
+    keywords: [
+      'lengopay', 'fedapay', 'paiement externe', 'argent reel', 'vrai argent',
+      'paiement securise', 'paiement sécurisé', 'comment payer', 'moyen de paiement',
+      'mobile money', 'orange money', 'mtn money', 'wave', 'virement'
+    ],
+    response: `**Comment fonctionne le paiement sur Moftal ?** 💳\n\n**Principe important :**\n🔒 Moftal est une **simulation** — l'argent réel ne transite pas directement sur le site\n\n**Lengopay — Partenaire de paiement :**\n→ Les transactions réelles sont gérées par **Lengopay**\n→ Système externe sécurisé\n→ Accepte les moyens de paiement locaux\n\n**Moyens de paiement acceptés :**\n📱 Mobile Money (Orange Money, MTN...)\n💳 Virements bancaires\n💵 Autres méthodes via Lengopay\n\n**Tarifs Moftal :**\n🌳 Arbre 5 ans : 100 000 GNF\n🎓 Professeur IA : 5 000 GNF/mois ou 50 000 GNF/an\n💼 Compte Pro standard : 500 000 GNF/an\n❤️ ONG : 10 000 GNF/an`,
+    links: [{ label: 'Mon Compte', path: '/compte' }]
+  },
+
+  // ── VIVANT VS DÉFUNT ────────────────────────────────────────────────────────
+  {
+    keywords: [
+      'vivant', 'defunt', 'défunt', 'mort', 'decede', 'décédé', 'deces',
+      'décès', 'difference vivant defunt', 'choisir type compte',
+      'type compte', 'quel type', 'vivant ou defunt', 'vivant ou défunt'
+    ],
+    response: `**Compte Vivant vs Compte Défunt** 🌿🕊️\n\n**Compte Vivant :**\n👤 Pour vous-même, une personne vivante\n🆔 Reçoit un **Numéro H** (format H-XXXXX)\n✅ Accès complet à tous les services\n💬 Peut se connecter et interagir\n\n**Compte Défunt :**\n🕊️ Pour un proche décédé — compte mémoriel\n🆔 Reçoit un **Numéro HD** (format HD-XXXXX)\n📸 Conserve photos, informations et histoire\n👨‍👩‍👧 Géré par un proche vivant\n🌳 Intégré dans l'arbre généalogique familial\n\n**Lequel choisir ?**\n→ **Vous êtes vivant ?** → Compte Vivant\n→ **Pour honorer un proche décédé ?** → Compte Défunt`,
+    links: [{ label: 'Créer un compte Vivant', path: '/inscription-vivant' }, { label: 'Créer un compte Défunt', path: '/inscription-defunt' }]
   },
 ];
 
 const QUICK_QUESTIONS = [
-  { label: '🔑 Créer un compte', question: 'Comment créer un compte ?' },
-  { label: '👨‍👩‍👧 Page Famille', question: 'Comment utiliser la page Famille ?' },
+  { label: '🌍 C\'est quoi Moftal ?', question: "C'est quoi le but de cette application ?" },
+  { label: '🆔 Mon Numéro H ?', question: 'C\'est quoi le Numéro H ?' },
+  { label: '🌳 Mon arbre familial', question: 'Comment construire mon arbre généalogique ?' },
   { label: '🏥 Rendez-vous santé', question: 'Comment prendre un rendez-vous santé ?' },
   { label: '💼 Compte professionnel', question: 'Comment créer un compte professionnel ?' },
-  { label: '🎓 Professeur IA', question: 'Comment utiliser le Professeur IA ?' },
-  { label: '🛒 Publier une annonce', question: 'Comment publier une annonce dans les échanges ?' },
+  { label: '💰 Tarifs Moftal', question: 'Quels sont les tarifs sur Moftal ?' },
 ];
 
 interface Message {
@@ -111,15 +405,39 @@ interface Message {
 let _id = 0;
 
 function normalize(str: string) {
-  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
-function findAnswer(question: string) {
+function findBestAnswer(question: string) {
   const q = normalize(question);
+  const words = q.split(/\s+/).filter(w => w.length > 2);
+
+  let bestScore = 0;
+  let bestEntry: typeof SITE_KNOWLEDGE[0] | null = null;
+
   for (const entry of SITE_KNOWLEDGE) {
-    if (entry.keywords.some(kw => q.includes(normalize(kw)))) {
-      return { response: entry.response, links: entry.links };
+    let score = 0;
+    for (const kw of entry.keywords) {
+      const nkw = normalize(kw);
+      if (q.includes(nkw)) {
+        score += nkw.length > 5 ? 3 : 2;
+      }
     }
+    for (const word of words) {
+      for (const kw of entry.keywords) {
+        if (normalize(kw).includes(word) || word.includes(normalize(kw))) {
+          score += 1;
+        }
+      }
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestEntry = entry;
+    }
+  }
+
+  if (bestScore >= 2 && bestEntry) {
+    return { response: bestEntry.response, links: bestEntry.links };
   }
   return null;
 }
@@ -146,7 +464,7 @@ export function FloatingGuideIA() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: ++_id,
-      text: `Bonjour ! Je suis l'**Assistant IA** des **Moftal** 🌳\n\nJe suis ici pour vous guider — pages du site, création de compte, rendez-vous, fonctionnalités...\n\nPosez-moi n'importe quelle question !`,
+      text: `Bonjour ! Je suis l'**Assistant Guide** de **Moftal** 🌳\n\nJe connais tout le site : comptes, arbre familial, Numéro H, rendez-vous, services professionnels, paiements, éducation...\n\nPosez-moi n'importe quelle question !`,
       isUser: false,
       links: [],
       timestamp: new Date(),
@@ -179,34 +497,25 @@ export function FloatingGuideIA() {
     setMessages(prev => [...prev, { id: ++_id, text: q, isUser: true, links: [], timestamp: new Date() }]);
     setLoading(true);
 
-    // 1. Réponse locale instantanée
-    const local = findAnswer(q);
+    const local = findBestAnswer(q);
     if (local) {
-      setTimeout(() => { addBot(local.response, local.links); setLoading(false); }, 500);
+      setTimeout(() => { addBot(local.response, local.links); setLoading(false); }, 400);
       return;
     }
 
-    // 2. Fallback API IA
-    try {
-      const API = import.meta.env.MODE === 'production' ? '' : config.API_BASE_URL;
-      const prompt = `Tu es l'Assistant Guide du site "Moftal" (plateforme généalogique et communautaire). Réponds de façon concise et professionnelle à cette question d'un utilisateur : ${q}`;
-      const res = await fetch(`${API}/api/ia/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: prompt, history: [], lastExercice: null }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.response) {
-          addBot(data.response);
-          setLoading(false);
-          return;
-        }
-      }
-    } catch { /* réseau indisponible */ }
-
-    addBot("Je n'ai pas trouvé de réponse précise. Essayez : **créer un compte**, **page Famille**, **rendez-vous santé**, **compte professionnel**...", []);
-    setLoading(false);
+    setTimeout(() => {
+      addBot(
+        `Je n'ai pas trouvé de réponse précise à votre question.\n\nVoici ce que je peux vous expliquer — cliquez sur un bouton ou reformulez votre question :`,
+        [
+          { label: '🌍 Présentation Moftal', path: '/choix' },
+          { label: '🆔 Numéro H', path: '/login' },
+          { label: '🌳 Arbre familial', path: '/famille' },
+          { label: '🏥 Santé / RDV', path: '/sante' },
+          { label: '💼 Comptes pro', path: '/inscription-pro' },
+        ]
+      );
+      setLoading(false);
+    }, 500);
   };
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -281,7 +590,6 @@ export function FloatingGuideIA() {
                 <div className="w-2 h-2 rounded-full bg-lime-300 animate-pulse" />
                 <span className="text-white/80 text-[11px]">En ligne</span>
               </div>
-              {/* Bouton X pour fermer */}
               <button
                 aria-label="Fermer l'assistant"
                 onClick={() => setOpen(false)}
@@ -316,7 +624,6 @@ export function FloatingGuideIA() {
                   >🌿</div>
                 )}
                 <div className="max-w-[85%] space-y-2">
-                  {/* Bulle */}
                   <div
                     className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
                       msg.isUser ? 'text-white rounded-tr-sm' : 'text-gray-800 rounded-tl-sm shadow-sm'
@@ -329,7 +636,6 @@ export function FloatingGuideIA() {
                     <RenderText text={msg.text} />
                   </div>
 
-                  {/* Liens navigables */}
                   {msg.links && msg.links.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pl-1">
                       {msg.links.map((lnk, i) => (

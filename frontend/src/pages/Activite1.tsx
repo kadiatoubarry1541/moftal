@@ -54,6 +54,8 @@ interface Activity1Comment {
 export default function Activite1() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [groups, setGroups] = useState<Activity1Group[]>([]);
+  const [myGroup, setMyGroup] = useState<Activity1Group | null>(null);
+  const [activityValue, setActivityValue] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<Activity1Group | null>(null);
   const [showMeetingForm, setShowMeetingForm] = useState(false);
@@ -96,78 +98,42 @@ export default function Activite1() {
   const loadGroups = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/activities/activity1/groups', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const response = await fetch('/api/activities/my-group?level=1', {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      
       if (response.ok) {
         const data = await response.json();
-        setGroups(data.groups || []);
+        if (data.group) {
+          setMyGroup(data.group as Activity1Group);
+          setGroups([data.group as Activity1Group]);
+          setActivityValue(data.activityValue || '');
+        } else {
+          setMyGroup(null);
+          setGroups([]);
+          setActivityValue('');
+        }
       } else {
-        // Fallback avec des groupes par défaut
-        setGroups(getDefaultGroups());
+        setGroups([]);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des groupes:', error);
-      setGroups(getDefaultGroups());
+      console.error('Erreur lors du chargement du groupe:', error);
+      setGroups([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultGroups = (): Activity1Group[] => [
-    {
-      id: '1',
-      name: 'Développeurs Web Conakry',
-      description: 'Rencontres entre développeurs web pour échanger sur les technologies et projets',
-      activity: 'Développement Web',
-      members: userData ? [userData] : [],
-      posts: [],
-      isActive: true,
-      createdBy: userData?.numeroH || 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      location: 'Conakry, Guinée',
-      meetingTime: 'Samedi 14h00'
-    },
-    {
-      id: '2',
-      name: 'Entrepreneurs Tech',
-      description: 'Communauté d\'entrepreneurs dans le domaine technologique',
-      activity: 'Entrepreneuriat Tech',
-      members: [],
-      posts: [],
-      isActive: true,
-      createdBy: 'G0C0P0R0E0F0 0',
-      createdAt: new Date().toISOString(),
-      location: 'Conakry, Guinée',
-      meetingTime: 'Dimanche 16h00'
-    }
-  ];
-
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/activities/activity1/groups/${groupId}/join`, {
+      await fetch(`/api/activities/groups/${groupId}/join`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ numeroH: userData?.numeroH })
       });
-      
-      if (response.ok) {
-        alert('Vous avez rejoint le Organisation !');
-        loadGroups();
-      } else {
-        alert('Erreur lors de l\'adhésion au Organisation');
-      }
+      loadGroups();
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'adhésion au Organisation');
     }
   };
 
@@ -190,19 +156,15 @@ export default function Activite1() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/activities/activity1/groups/${selectedGroup.id}/posts`, {
+      const response = await fetch(`/api/activities/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
-      
       if (response.ok) {
-        alert('Publication créée avec succès !');
-        setNewPost({ 
-          content: '', 
-          type: 'text', 
+        setNewPost({
+          content: '',
+          type: 'text',
           mediaFile: null,
           meetingDetails: { date: '', time: '', location: '', maxParticipants: 10 }
         });
@@ -216,28 +178,8 @@ export default function Activite1() {
     }
   };
 
-  const joinMeeting = async (postId: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/activities/activity1/posts/${postId}/join-meeting`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ numeroH: userData?.numeroH })
-      });
-      
-      if (response.ok) {
-        alert('Vous avez rejoint la rencontre !');
-        loadGroups();
-      } else {
-        alert('Erreur lors de l\'inscription à la rencontre');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur lors de l\'inscription à la rencontre');
-    }
+  const joinMeeting = async (_postId: string) => {
+    loadGroups();
   };
 
   if (loading) {
@@ -252,6 +194,19 @@ export default function Activite1() {
 
   if (!userData) return null;
 
+  if (!loading && !myGroup && !activityValue) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button onClick={() => window.history.back()} className="mb-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors flex items-center gap-2">← Retour</button>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+          <div className="text-4xl mb-3">💼</div>
+          <h2 className="text-xl font-bold text-amber-800 mb-2">Activité 1 non renseignée</h2>
+          <p className="text-amber-700">Pour rejoindre le groupe de votre activité professionnelle, renseignez votre Activité 1 dans votre profil.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <button
@@ -262,13 +217,18 @@ export default function Activite1() {
       </button>
 
       <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-blue-500 border border-slate-200 p-6 hover:shadow-md transition-shadow duration-200">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-2">
           <div className="text-4xl">💼</div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Activité1 - Rencontres Professionnelles</h1>
-            <p className="text-gray-600">Rencontrez des personnes qui partagent votre première activité professionnelle</p>
+            <h1 className="text-3xl font-bold text-gray-900">Activité 1 — {activityValue}</h1>
+            <p className="text-gray-600">Groupe des personnes ayant la même activité : <span className="font-semibold text-blue-700">{activityValue}</span></p>
           </div>
         </div>
+        {myGroup && (
+          <div className="mb-4 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm">
+            ✅ Vous êtes automatiquement dans ce groupe avec tous les membres ayant l'activité <strong>{activityValue}</strong>.
+          </div>
+        )}
         
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

@@ -68,7 +68,8 @@ ProfessionalAccount.init({
       'beauty',      // salon de beauté, coiffeur, spa
       'artisan',     // plombier, électricien, menuisier, soudeur
       'mairie',      // mairie / état civil : mariages, naissances, décès, résidences
-      'reseau'       // association / réseau communautaire : membres, projets, cotisations
+      'reseau',      // association / réseau communautaire : membres, projets, cotisations
+      'moftal_vendor' // vendeur inscrit sur le marketplace Échange Moftal (primaire/secondaire/tertiaire)
     ),
     allowNull: false
   },

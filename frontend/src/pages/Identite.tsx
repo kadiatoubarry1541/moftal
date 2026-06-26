@@ -17,6 +17,104 @@ interface UserData {
   [key: string]: string | number | boolean | undefined;
 }
 
+const CONTINENT_NAMES: Record<string, string> = {
+  C1: "Afrique", C2: "Europe", C3: "Asie", C4: "Amérique", C5: "Océanie", C6: "Antarctique"
+};
+
+function parseNumeroH(numeroH: string) {
+  const match = numeroH.match(/^(G\d+)(C\d+)(P\d+)(R\d+)(E\d+)(F\d+)\s(\d+)$/)
+  if (!match) return null;
+  const genNum = parseInt(match[1].slice(1));
+  const anneeDepart = -4003;
+  const start = anneeDepart + (genNum - 1) * 63;
+  const end = start + 62;
+  return {
+    generation: match[1], genNum,
+    continent: match[2],
+    pays: match[3],
+    region: match[4],
+    ethnie: match[5],
+    famille: match[6],
+    sequence: match[7],
+    yearStart: start,
+    yearEnd: end,
+  };
+}
+
+function NumeroHDecoder({ numeroH, userData }: { numeroH: string; userData: UserData }) {
+  const parsed = parseNumeroH(numeroH);
+  if (!parsed) return null;
+
+  const continentName = CONTINENT_NAMES[parsed.continent] ?? parsed.continent;
+  const paysName = userData.pays ?? parsed.pays;
+  const regionName = userData.regionOrigine ?? parsed.region;
+  const ethnieName = userData.ethnie ?? parsed.ethnie;
+  const familleName = userData.nomFamille ?? parsed.famille;
+
+  const formatYear = (y: number) => y < 0 ? `${Math.abs(y)} av. J.-C.` : `${y}`;
+
+  const segments = [
+    { code: parsed.generation, label: "Génération", value: `Génération ${parsed.genNum} — ${formatYear(parsed.yearStart)} à ${formatYear(parsed.yearEnd)}`, bg: "bg-emerald-100", text: "text-emerald-800", border: "border-emerald-300", dot: "bg-emerald-500" },
+    { code: parsed.continent, label: "Continent", value: continentName, bg: "bg-blue-100", text: "text-blue-800", border: "border-blue-300", dot: "bg-blue-500" },
+    { code: parsed.pays, label: "Pays", value: paysName, bg: "bg-amber-100", text: "text-amber-800", border: "border-amber-300", dot: "bg-amber-500" },
+    { code: parsed.region, label: "Région", value: regionName, bg: "bg-purple-100", text: "text-purple-800", border: "border-purple-300", dot: "bg-purple-500" },
+    { code: parsed.ethnie, label: "Ethnie", value: ethnieName, bg: "bg-orange-100", text: "text-orange-800", border: "border-orange-300", dot: "bg-orange-500" },
+    { code: parsed.famille, label: "Famille", value: familleName, bg: "bg-rose-100", text: "text-rose-800", border: "border-rose-300", dot: "bg-rose-500" },
+    { code: parsed.sequence, label: "Numéro unique", value: `N° ${parsed.sequence} dans votre lignée`, bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-300", dot: "bg-slate-400" },
+  ];
+
+  return (
+    <div className="mt-8 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-blue-100 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 flex items-center gap-3">
+        <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0">🔬</div>
+        <div>
+          <h4 className="text-white font-bold text-base tracking-wide">Décodage de votre NumeroH</h4>
+          <p className="text-blue-100 text-xs mt-0.5">Votre identifiant humain unique — il encode toute votre origine</p>
+        </div>
+      </div>
+
+      <div className="p-6">
+        {/* Chips visuels */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {segments.map((s) => (
+            <span key={s.code} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-mono font-bold text-sm ${s.bg} ${s.text} ${s.border}`}>
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />
+              {s.code}
+            </span>
+          ))}
+        </div>
+
+        {/* Légende */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {segments.map((s) => (
+            <div key={s.code} className={`flex items-start gap-3 p-3 rounded-xl border ${s.border} ${s.bg}`}>
+              <div className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center`}>
+                <span className={`w-3 h-3 rounded-full ${s.dot}`} />
+              </div>
+              <div className="min-w-0">
+                <div className={`text-xs font-semibold uppercase tracking-wider ${s.text} opacity-70`}>{s.label}</div>
+                <div className={`font-mono font-bold text-sm ${s.text}`}>{s.code}</div>
+                <div className="text-slate-600 text-sm mt-0.5 leading-snug">{s.value}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Note bas */}
+        <div className="mt-5 flex items-start gap-2 p-3 bg-white rounded-xl border border-blue-100">
+          <span className="text-blue-500 mt-0.5">ℹ️</span>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Ce NumeroH est <strong className="text-slate-700">votre identité permanente</strong> sur la plateforme.
+            Il est unique dans toute l'humanité et encode votre génération, votre origine géographique, votre ethnie et votre famille.
+            <strong className="text-slate-700"> Retenez-le bien</strong> — il vous sera toujours demandé pour vous connecter.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const CONFIRM_DELETE_TEXT = "SUPPRIMER";
 
 export default function Identite() {
@@ -172,6 +270,8 @@ export default function Identite() {
           </p>
         </div>
       </div>
+
+      <NumeroHDecoder numeroH={userData.numeroH} userData={userData} />
 
       {/* Modal suppression de compte */}
       {showDeleteModal && (

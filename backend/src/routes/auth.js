@@ -262,7 +262,8 @@ async function addDeceasedToFamilyTree(numeroHD, numeroHPere, numeroHMere) {
 
 // Middleware de validation
 const validateUser = [
-  body('numeroH').trim().notEmpty().withMessage('Le NumeroH est requis'),
+  // numeroH optionnel pour les défunts (le backend génère le numeroHD automatiquement)
+  body('numeroH').if((value, { req }) => req.body.type !== 'defunt' && !req.body.isDeceased).trim().notEmpty().withMessage('Le NumeroH est requis'),
   body('prenom').trim().notEmpty().withMessage('Le prénom est requis'),
   body('nomFamille').trim().notEmpty().withMessage('Le nom de famille est requis'),
   body('password').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères'),
@@ -315,24 +316,35 @@ router.post('/register', validateUser, async (req, res) => {
 
     try {
       const registerWork = (async () => {
-      // Essayer d'utiliser la base de données PostgreSQL
-      const where = email
-        ? { [Op.or]: [{ numeroH: numeroH }, { email: email }] }
-        : { numeroH: numeroH };
-      const existingUser = await User.findOne({ where });
-      
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'Un utilisateur avec ce NumeroH ou cet email existe déjà'
-        });
+      // Pour les défunts, pas de compte utilisateur → pas de vérification de doublon
+      if (!userData.isDeceased && userData.type !== 'defunt') {
+        const where = email && numeroH
+          ? { [Op.or]: [{ numeroH }, { email }] }
+          : email
+            ? { email }
+            : { numeroH };
+        const existingUser = await User.findOne({ where });
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message: 'Un utilisateur avec ce NumeroH ou cet email existe déjà'
+          });
+        }
       }
 
       // Si l'utilisateur est un défunt, créer un DeceasedMember au lieu d'un User
       if (userData.type === 'defunt' || userData.isDeceased) {
-        // Les décédés n'ont pas de compte, seulement un enregistrement dans l'arbre
+        // Toujours générer un numeroHD propre au format DM0001 côté serveur
+        const total = await DeceasedMember.count();
+        let seq = total + 1;
+        let numeroHD = `DM${String(seq).padStart(4, '0')}`;
+        while (await DeceasedMember.findOne({ where: { numeroHD } })) {
+          seq++;
+          numeroHD = `DM${String(seq).padStart(4, '0')}`;
+        }
+
         const deceasedData = {
-          numeroHD: userData.numeroH,
+          numeroHD,
           prenom: userData.prenom,
           nomFamille: userData.nomFamille,
           genre: userData.genre,

@@ -13,9 +13,13 @@ const upload = multer({
   storage: memStorage,
   limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max (vidéos inscription)
   fileFilter: (req, file, cb) => {
-    const allowed = /image\/(jpeg|jpg|png|gif|webp)|video\/(mp4|quicktime|x-msvideo|avi)|audio\/(wav|mpeg|mp3)|application\/(pdf|msword)/;
-    if (allowed.test(file.mimetype)) return cb(null, true);
-    cb(new Error('Type de fichier non autorisé'));
+    // Accepter tous les formats vidéo courants (Android: 3gpp/webm, iPhone: quicktime, Desktop: mp4/avi)
+    const allowed = /image\/(jpeg|jpg|png|gif|webp)|video\/(mp4|quicktime|x-msvideo|avi|3gpp|3gpp2|webm|x-matroska|ogg|mpeg)|audio\/(wav|mpeg|mp3)|application\/(pdf|msword)/;
+    // Certains appareils envoient un mimetype vide ou générique → on accepte par l'extension
+    const ext = (file.originalname || '').toLowerCase();
+    const extOk = /\.(mp4|mov|avi|3gp|3gpp|webm|mkv|m4v|wmv|flv|ts|mts|ogv)$/.test(ext);
+    if (allowed.test(file.mimetype) || extOk) return cb(null, true);
+    cb(new Error('Format vidéo non reconnu. Formats acceptés : mp4, mov, 3gp, webm, avi.'));
   },
 });
 

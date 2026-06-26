@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { VideoRecorder } from '../../components/VideoRecorder'
 import { api } from '../../utils/api'
 import { uploadForRegistration } from '../../utils/uploadMedia'
-import { LangButton } from '../../components/LangButton'
 import {
   getAllCountries,
   getRegionsByCountry,
@@ -38,6 +37,8 @@ interface VideoData {
   activiteDescription?: string
   activiteDoc?: File | null
   activitePreuve?: File | null
+  specialite?: string
+  statutMatrimonial?: string
   prenom: string
   telephone: string
   email: string
@@ -84,6 +85,8 @@ export function VideoRegistration() {
     activiteDescription: '',
     activiteDoc: null,
     activitePreuve: null,
+    specialite: '',
+    statutMatrimonial: '',
     prenom: '',
     telephone: '',
     email: '',
@@ -111,6 +114,7 @@ export function VideoRegistration() {
   const [currentStep, setCurrentStep] = useState<'form' | 'video' | 'complete'>('form')
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set())
   const [paysSectionExpanded, setPaysSectionExpanded] = useState(true)
+  const [genreExpanded, setGenreExpanded] = useState(true)
 
   const navigate = useNavigate()
 
@@ -203,6 +207,7 @@ export function VideoRegistration() {
     if (!ethnieFilled) errors.add('ethnie')
     if (!familleFilled) errors.add('famille')
     if (!activiteFilled) errors.add('activite1')
+    if (videoData.activite1 && videoData.activite1 !== 'Autre' && !(videoData.specialite && videoData.specialite.trim())) errors.add('specialite')
     if (!videoData.prenom) errors.add('prenom')
     if (!videoData.telephone) errors.add('telephone')
     if (!videoData.email) errors.add('email')
@@ -397,6 +402,8 @@ export function VideoRegistration() {
       religion: normalizedData.religion?.trim() || '',
       handicap: normalizedData.handicap || '',
       genre: normalizedData.genre,
+      statutMatrimonial: normalizedData.statutMatrimonial || '',
+      specialite: normalizedData.specialite?.trim() || '',
       photo: photoUrl,
       photoPreview: photoUrl,
       activitePreuve: activitePreuveUrl,
@@ -447,6 +454,7 @@ export function VideoRegistration() {
     if (!ethnieFilled) missingFields.push('Ethnie')
     if (!familleFilled) missingFields.push('Nom de famille')
     if (!activiteFilled) missingFields.push('Activité principale')
+    if (videoData.activite1 && videoData.activite1 !== 'Autre' && !(videoData.specialite && videoData.specialite.trim())) missingFields.push('Spécialité')
     if (!videoData.prenom) missingFields.push('Prénom')
     if (!videoData.telephone) missingFields.push('Téléphone')
     if (!videoData.email) missingFields.push('E-mail')
@@ -460,7 +468,6 @@ export function VideoRegistration() {
 
     return (
       <div className="stack">
-        <LangButton />
         <button onClick={() => navigate('/vivant')} className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors text-sm font-medium w-fit bg-transparent border-none cursor-pointer p-0">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -470,31 +477,127 @@ export function VideoRegistration() {
         <h2>Inscription par vidéo — Informations</h2>
         <div className="card" style={{ maxWidth: '32rem', width: '100%' }}>
 
-          {/* ── Date de naissance + Genre ── */}
+          {/* ── Date de naissance + Genre & Statut ── */}
           <div className="row">
             <div className="col-6">
               <div className="field">
                 <label>Date de naissance *</label>
                 <input
-                  type="date"
-                  value={videoData.dateNaissance}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="JJ/MM/AAAA"
+                  maxLength={10}
+                  value={videoData.dateNaissance
+                    ? (() => {
+                        const [y, m, d] = videoData.dateNaissance.split('-')
+                        return d && m && y ? `${d}/${m}/${y}` : videoData.dateNaissance
+                      })()
+                    : ''}
                   onChange={(e) => {
-                    const generation = calculateGeneration(e.target.value)
-                    setVideoData((prev) => ({ ...prev, dateNaissance: e.target.value, generation }))
-                    if (e.target.value) setValidationErrors((prev) => { const n = new Set(prev); n.delete('dateNaissance'); return n })
+                    let raw = e.target.value.replace(/\D/g, '')
+                    if (raw.length > 8) raw = raw.slice(0, 8)
+                    let formatted = raw
+                    if (raw.length > 4) formatted = raw.slice(0, 2) + '/' + raw.slice(2, 4) + '/' + raw.slice(4)
+                    else if (raw.length > 2) formatted = raw.slice(0, 2) + '/' + raw.slice(2)
+
+                    if (raw.length === 8) {
+                      const dd = raw.slice(0, 2)
+                      const mm = raw.slice(2, 4)
+                      const yyyy = raw.slice(4, 8)
+                      const iso = `${yyyy}-${mm}-${dd}`
+                      const generation = calculateGeneration(iso)
+                      setVideoData((prev) => ({ ...prev, dateNaissance: iso, generation }))
+                      setValidationErrors((prev) => { const n = new Set(prev); n.delete('dateNaissance'); return n })
+                    } else {
+                      setVideoData((prev) => ({ ...prev, dateNaissance: formatted, generation: '' }))
+                    }
                   }}
                   required
-                  className={getFieldClassName('dateNaissance', !!videoData.dateNaissance)}
+                  className={getFieldClassName('dateNaissance', !!videoData.dateNaissance && videoData.dateNaissance.includes('-'))}
                 />
               </div>
             </div>
             <div className="col-6">
               <div className="field">
-                <label>Genre</label>
-                <select value={videoData.genre} onChange={(e) => setVideoData((prev) => ({ ...prev, genre: e.target.value }))}>
-                  <option value="HOMME">HOMME</option>
-                  <option value="FEMME">FEMME</option>
-                </select>
+                <label>Genre & Statut</label>
+                {videoData.genre && videoData.statutMatrimonial && !genreExpanded ? (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setGenreExpanded(true)}
+                    onKeyDown={(e) => e.key === 'Enter' && setGenreExpanded(true)}
+                    className="w-full px-4 py-3 border-2 border-green-400 rounded-lg bg-white cursor-pointer hover:border-blue-400 flex items-center justify-between transition-colors"
+                  >
+                    <span className="text-gray-800 font-medium">
+                      {videoData.genre === 'HOMME' ? '👨 Homme' : videoData.genre === 'FEMME' ? '👩 Femme' : videoData.genre}
+                      {' · '}
+                      {videoData.statutMatrimonial}
+                    </span>
+                    <span className="text-gray-400 text-sm">✏️</span>
+                  </div>
+                ) : (
+                  <div
+                    className="space-y-3 p-4 border-2 border-gray-300 rounded-lg bg-white"
+                    onBlur={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node) && videoData.genre && videoData.statutMatrimonial) {
+                        setGenreExpanded(false)
+                      }
+                    }}
+                  >
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-2">Genre *</label>
+                      <div className="flex gap-3">
+                        {[
+                          { val: 'HOMME', label: '👨 Homme' },
+                          { val: 'FEMME', label: '👩 Femme' },
+                        ].map(({ val, label }) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setVideoData((prev) => ({ ...prev, genre: val }))}
+                            className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                              videoData.genre === val
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {videoData.genre && (
+                      <div style={{ animation: 'fadeInDown 0.25s ease' }}>
+                        <label className="block text-xs font-medium text-gray-600 mb-2">Statut matrimonial *</label>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { val: 'Célibataire',  icon: '🔵' },
+                            { val: 'Marié(e)',      icon: '💍' },
+                            { val: 'Veuf/Veuve',   icon: '🕊️' },
+                            { val: 'Divorcé(e)',   icon: '📝' },
+                            { val: 'Séparé(e)',    icon: '↔️' },
+                          ].map(({ val, icon }) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => {
+                                setVideoData((prev) => ({ ...prev, statutMatrimonial: val }))
+                                setTimeout(() => setGenreExpanded(false), 300)
+                              }}
+                              className={`py-2 px-3 rounded-full border-2 text-sm font-medium transition-all ${
+                                videoData.statutMatrimonial === val
+                                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                              }`}
+                            >
+                              {icon} {val}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -672,6 +775,35 @@ export function VideoRegistration() {
                     <option value="Autre">✏️ Autre (je saisis mon activité)</option>
                   </select>
 
+                  {videoData.activite1 && videoData.activite1 !== 'Autre' && (
+                    <div className="mt-3" style={{ animation: 'fadeInDown 0.25s ease', borderLeft: '3px solid #22a722', paddingLeft: '0.75rem' }}>
+                      <label className="block text-xs font-semibold text-emerald-700 mb-1">
+                        🎯 Votre spécialité dans « {videoData.activite1} » *
+                      </label>
+                      <input
+                        type="text"
+                        value={videoData.specialite || ''}
+                        onChange={(e) => {
+                          setVideoData((prev) => ({ ...prev, specialite: e.target.value }))
+                          if (e.target.value.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('specialite'); return n })
+                        }}
+                        placeholder={`Ex : ${
+                          videoData.activite1 === 'Santé' ? 'Cardiologie, Pédiatrie, Sage-femme…' :
+                          videoData.activite1 === 'Enseignement' ? 'Mathématiques, Primaire, Lycée…' :
+                          videoData.activite1 === 'Commerce' ? 'Textile, Alimentation, Électronique…' :
+                          videoData.activite1 === 'Agriculture' ? 'Maraîchage, Riziculture, Élevage bovin…' :
+                          videoData.activite1 === 'Transport' ? 'Taxi, Moto, Livraison, Bus…' :
+                          videoData.activite1 === 'Informatique' ? 'Développement web, IA, Réseaux…' :
+                          videoData.activite1 === 'Construction' ? 'Maçonnerie, Génie civil, Architecture…' :
+                          'Précisez votre domaine exact…'
+                        }`}
+                        className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 bg-emerald-50/30 ${
+                          validationErrors.has('specialite') ? 'border-red-500 focus:ring-red-400' : 'border-emerald-300 focus:ring-emerald-400'
+                        }`}
+                      />
+                    </div>
+                  )}
+
                   {videoData.activite1 === 'Autre' && (
                     <div className="mt-3 space-y-3" style={{ borderLeft: '3px solid #3b82f6', paddingLeft: '0.75rem' }}>
                       <input
@@ -813,23 +945,7 @@ export function VideoRegistration() {
             </div>
           )}
 
-          {/* ── NuméroH Père + Mère ── */}
-          {videoData.prenom && (
-            <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
-              <div className="col-6">
-                <div className="field">
-                  <label>NuméroH (Père)</label>
-                  <input value={videoData.numeroHPere} onChange={(e) => setVideoData((prev) => ({ ...prev, numeroHPere: e.target.value }))} placeholder="Ex: G1C1P1R1E1F1 1" />
-                </div>
-              </div>
-              <div className="col-6">
-                <div className="field">
-                  <label>NuméroH (Mère)</label>
-                  <input value={videoData.numeroHMere} onChange={(e) => setVideoData((prev) => ({ ...prev, numeroHMere: e.target.value }))} placeholder="Ex: G1C1P1R1E1F1 2" />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* NuméroH père/mère : ajout possible depuis l'identité ou l'arbre après inscription */}
 
           {/* ── Email + Religion + Handicap ── */}
           {coordonneesOK && (
@@ -987,7 +1103,7 @@ export function VideoRegistration() {
       <div className="stack">
         <h2>Enregistrement Vidéo</h2>
         <div className="card">
-          <VideoRecorder onVideoRecorded={handleVideoRecorded} maxDuration={10} />
+          <VideoRecorder onVideoRecorded={handleVideoRecorded} maxDuration={30} />
           {videoData.video && (
             <div className="actions" style={{ marginTop: '20px' }}>
               <button className="btn" onClick={handleSubmit} disabled={loading}>

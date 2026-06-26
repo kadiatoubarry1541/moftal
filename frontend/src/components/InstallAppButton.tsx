@@ -5,17 +5,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-/**
- * Bouton "Installer l'application" — propose à l'utilisateur d'ajouter
- * l'app (icône + raccourci "Espace Gestion") sur son bureau / écran d'accueil,
- * comme WhatsApp Web. Invisible si l'app est déjà installée ou si le
- * navigateur ne supporte pas l'installation (alors on guide iOS manuellement).
- */
 export default function InstallAppButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [showIOSHint, setShowIOSHint] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     const standalone =
@@ -24,25 +18,41 @@ export default function InstallAppButton() {
     setIsInstalled(standalone);
     setIsIOS(/iPhone|iPad|iPod/.test(window.navigator.userAgent));
 
+    // Prompt peut avoir été capturé avant le montage du composant
+    const existing = (window as any).__pwaInstallPrompt;
+    if (existing) setDeferredPrompt(existing);
+
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
+    const handlePromptReady = () => {
+      const p = (window as any).__pwaInstallPrompt;
+      if (p) setDeferredPrompt(p);
+    };
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
       setIsInstalled(true);
+      (window as any).__pwaInstallPrompt = null;
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    window.addEventListener("pwa-prompt-ready", handlePromptReady);
     window.addEventListener("appinstalled", handleAppInstalled);
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      window.removeEventListener("pwa-prompt-ready", handlePromptReady);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
 
-  if (isInstalled) return null;
-  if (!deferredPrompt && !isIOS) return null;
+  if (isInstalled) {
+    return (
+      <div className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl bg-emerald-50 text-emerald-600 border-2 border-emerald-200">
+        <span>✅</span> Application installée
+      </div>
+    );
+  }
 
   const handleClick = async () => {
     if (deferredPrompt) {
@@ -50,23 +60,46 @@ export default function InstallAppButton() {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") setIsInstalled(true);
       setDeferredPrompt(null);
-      return;
+    } else {
+      setShowGuide((v) => !v);
     }
-    setShowIOSHint((v) => !v);
   };
 
   return (
-    <div className="inline-block">
+    <div>
       <button
         onClick={handleClick}
-        className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors whitespace-nowrap"
+        className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl bg-emerald-600 text-white shadow hover:bg-emerald-700 active:scale-95 transition-all whitespace-nowrap"
       >
-        📲 Installer l'application
+        <span className="text-base">📲</span>
+        Installer l'application
       </button>
-      {showIOSHint && (
-        <div className="mt-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 max-w-xs">
-          Pour installer : appuyez sur <strong>Partager</strong> (icône <strong>⬆️</strong> en bas de Safari),
-          puis choisissez <strong>"Sur l'écran d'accueil"</strong>.
+
+      {showGuide && (
+        <div className="mt-3 bg-white border border-emerald-200 rounded-xl px-4 py-3 shadow-sm text-sm text-gray-700 max-w-sm">
+          {isIOS ? (
+            <>
+              <p className="font-semibold text-emerald-800 mb-2">Installation sur iPhone / iPad :</p>
+              <ol className="list-decimal list-inside space-y-1 text-xs text-gray-600">
+                <li>Ouvrez cette page dans <strong>Safari</strong></li>
+                <li>Appuyez sur <strong>Partager</strong> <span>⬆️</span> en bas</li>
+                <li>Choisissez <strong>"Sur l'écran d'accueil"</strong></li>
+                <li>Appuyez sur <strong>Ajouter</strong></li>
+              </ol>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-emerald-800 mb-2">Installation sur Android / Chrome :</p>
+              <ol className="list-decimal list-inside space-y-1 text-xs text-gray-600">
+                <li>Appuyez sur les <strong>3 points</strong> ⋮ en haut à droite</li>
+                <li>Choisissez <strong>"Installer l'application"</strong> ou <strong>"Ajouter à l'écran d'accueil"</strong></li>
+                <li>Confirmez en appuyant sur <strong>Installer</strong></li>
+              </ol>
+              <p className="text-xs text-gray-400 mt-2">
+                Si l'option n'apparaît pas, rechargez la page une fois.
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>

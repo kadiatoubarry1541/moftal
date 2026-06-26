@@ -1,11 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { isMasterAdmin, getPhotoUrl, getNumeroHForDisplay } from "../utils/auth";
 import { useI18n } from "../i18n/useI18n";
 import { SalesIcon } from "../components/icons/SalesIcon";
-import NotificationBell from "../components/NotificationBell";
-import { FavorisDropdown, FavorisDropdownItem } from "../components/FavorisDropdown";
-import DefaultAvatar from "../assets/default-avatar.svg";
 
 // Onglets du dashboard — chargés uniquement quand l'onglet est actif
 const TerreAdam = lazy(() => import("./TerreAdam"));
@@ -227,141 +223,6 @@ export function UserDashboard() {
   return (
     <div className="user-dashboard bg-gray-50 dark:bg-gray-900 min-h-screen overflow-x-hidden">
 
-      {/* ── Header sticky : carte profil compacte + navigation ── */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-
-        {/* Ligne profil compacte — toujours visible */}
-        <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-2 flex items-center gap-3">
-
-          {/* Avatar cliquable */}
-          <button
-            className="relative flex-shrink-0 cursor-pointer group"
-            onClick={() => navigate("/moi/profil")}
-            title="Voir mon profil"
-          >
-            {(() => {
-              const rawPhoto =
-                userData.photo ||
-                (userData as any).manPhoto ||
-                (userData as any).familyPhoto;
-              const photoUrl = getPhotoUrl(rawPhoto);
-              return (
-                <img
-                  src={photoUrl || DefaultAvatar}
-                  alt="Photo de profil"
-                  width="44"
-                  height="44"
-                  loading="eager"
-                  fetchPriority="high"
-                  className="w-11 h-11 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 group-hover:opacity-90 transition-opacity"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (!target.src.includes("default-avatar")) {
-                      target.src = DefaultAvatar;
-                      return;
-                    }
-                    target.style.display = "none";
-                    const parent = target.parentElement;
-                    if (parent && !parent.querySelector(".avatar-placeholder")) {
-                      const placeholder = document.createElement("div");
-                      placeholder.className =
-                        "avatar-placeholder w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg";
-                      placeholder.textContent = userData.prenom?.charAt(0) || "👤";
-                      parent.appendChild(placeholder);
-                    }
-                  }}
-                />
-              );
-            })()}
-            {userData.logo && (
-              <div className="absolute -bottom-1 -right-1 text-xs leading-none">
-                {getLogoIcon(userData.logo)}
-              </div>
-            )}
-          </button>
-
-          {/* Nom + NuméroH */}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">
-              {userData.prenom} {userData.nomFamille}
-            </p>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono truncate">
-              {getNumeroHForDisplay(userData.numeroH, true, false)}
-            </p>
-          </div>
-
-          {/* Badges + admin */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {userLogos.slice(0, 3).map((userLogo) => {
-              if (!userLogo?.logo) return null;
-              return (
-                <button
-                  key={userLogo.id}
-                  onClick={() => setSelectedLogo(userLogo)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border-2 transition-all hover:scale-110 active:scale-95"
-                  style={{
-                    backgroundColor: `${userLogo.logo.color}20`,
-                    borderColor: userLogo.logo.color || '#10B981',
-                    color: userLogo.logo.color || '#10B981',
-                    fontSize: '16px'
-                  }}
-                  title={userLogo.logo.name}
-                >
-                  {userLogo.logo.icon}
-                </button>
-              );
-            })}
-            {isMasterAdmin(userData) && (
-              <button
-                onClick={() => navigate("/admin")}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors text-base"
-                aria-label="Administration"
-              >
-                👑
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Onglets de navigation */}
-        <div className="max-w-7xl mx-auto flex border-t border-gray-100 dark:border-gray-800">
-          {navItems.map((item) => {
-            const isActive = item.type === "tab" && activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item)}
-                className={`
-                  flex-1 flex flex-col items-center justify-center gap-0.5
-                  py-2 px-1 relative cursor-pointer border-b-[3px] transition-colors duration-150
-                  min-h-[52px]
-                  ${isActive
-                    ? "border-blue-600 dark:border-blue-400"
-                    : "border-transparent hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }
-                `}
-              >
-                {item.useSvg && item.SvgIcon ? (
-                  <item.SvgIcon
-                    className={`w-6 h-6 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}
-                    size={24}
-                  />
-                ) : (
-                  <span className={`text-2xl leading-none ${isActive ? "" : "grayscale-[30%]"}`}>
-                    {item.icon}
-                  </span>
-                )}
-                <span className={`text-[9px] xs:text-[10px] font-semibold leading-tight truncate max-w-full
-                  ${isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}
-                `}>
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Modal badge de valeur */}
       {selectedLogo && (
         <div
@@ -414,19 +275,6 @@ export function UserDashboard() {
     </div>
   );
 }
-
-function getLogoIcon(logo: string) {
-  const logos: Record<string, string> = {
-    "roi-grand": "👑",
-    "roi-moyen": "👑",
-    "roi-petit": "👑",
-    savant: "📖",
-    prophete: "🌙",
-    riche: "🥇",
-  };
-  return logos[logo] || "⭐";
-}
-
 
 function renderTabContent(tab: string, userData: UserData) {
   switch (tab) {

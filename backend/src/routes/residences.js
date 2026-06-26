@@ -82,12 +82,21 @@ router.get('/groups', async (req, res) => {
       const newGroup = await ResidenceGroup.create({
         location: normalizedLocation,
         title: displayName,
-        description: '',
+        description: `Groupe des habitants de ${displayName}`,
         admin: req.user.numeroH,
-        members: [],
+        members: [req.user.numeroH],
         createdBy: req.user.numeroH
       });
       groups = [newGroup];
+    } else if (normalizedLocation && groups.length > 0) {
+      // Auto-rejoindre le premier groupe du quartier si pas encore membre
+      const group = groups[0];
+      const members = group.members || [];
+      if (!members.includes(req.user.numeroH)) {
+        members.push(req.user.numeroH);
+        await group.update({ members });
+        groups[0] = await ResidenceGroup.findByPk(group.id);
+      }
     }
 
     res.json({
