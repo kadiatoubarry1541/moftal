@@ -104,7 +104,7 @@ export default function GestionClinique() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const [section, setSection] = useState<Section>("dashboard");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
   const [tenant, setTenant] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [recentPatients, setRecentPatients] = useState<any[]>([]);
@@ -209,6 +209,7 @@ export default function GestionClinique() {
   const loadSection = useCallback((s: Section) => {
     setSection(s);
     setSearch("");
+    if (window.innerWidth < 768) setCollapsed(true);
     if (s === "patients") get("/patients").then(d => d.success && setPatients(d.patients));
     if (s === "staff") get("/staff").then(d => d.success && setStaff(d.staff));
     if (s === "appointments") {
@@ -344,7 +345,8 @@ export default function GestionClinique() {
 
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
-  const sideW = collapsed ? 64 : 240;
+  const isMobile = window.innerWidth < 768;
+  const sideW = collapsed ? (isMobile ? 0 : 64) : 240;
   const filteredPatients = patients.filter(p => !search || `${p.nom} ${p.prenom} ${p.numero_matricule}`.toLowerCase().includes(search.toLowerCase()));
   const currentNav = NAV_ITEMS.find(n => n.id === section)!;
 
@@ -357,7 +359,16 @@ export default function GestionClinique() {
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        @media (max-width: 640px) {
+          .clinic-header-btn-secondary { display: none !important; }
+          .clinic-header-title { font-size: 14px !important; }
+          .clinic-header-sub { display: none !important; }
+          .clinic-header-actions { gap: 6px !important; }
+        }
+      `}</style>
 
       {/* Toast */}
       {toast && (
@@ -366,8 +377,13 @@ export default function GestionClinique() {
         </div>
       )}
 
+      {/* Overlay mobile quand sidebar ouverte */}
+      {!collapsed && isMobile && (
+        <div onClick={() => setCollapsed(true)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 49 }} />
+      )}
+
       {/* SIDEBAR */}
-      <aside style={{ display: "flex", flexDirection: "column", width: sideW, flexShrink: 0, transition: "width 0.25s ease", background: "linear-gradient(180deg,#042f2e 0%,#0d3d3c 50%,#134d4b 100%)", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+      <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 240, flexShrink: 0, transition: "width 0.25s ease", background: "linear-gradient(180deg,#042f2e 0%,#0d3d3c 50%,#134d4b 100%)", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, left: 0, height: "100vh", zIndex: 50 } : {}) }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${TEAL},${TEAL_LIGHT})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
             {(settingsForm.logo_url || tenant?.logo_url)
@@ -434,15 +450,27 @@ export default function GestionClinique() {
         />
 
         {/* Header */}
-        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{currentNav.label}</h1>
-            <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</p>
+        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            {/* Hamburger visible uniquement sur mobile quand sidebar fermée */}
+            {collapsed && (
+              <button onClick={() => setCollapsed(false)}
+                style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4, color: "#64748b", display: "flex", alignItems: "center" }}>
+                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
+            <div style={{ minWidth: 0 }}>
+              <h1 className="clinic-header-title" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{currentNav.label}</h1>
+              <p className="clinic-header-sub" style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</p>
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="clinic-header-actions" style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <InstallAppButton />
             <button
               onClick={() => navigate(`/clinique/${tenantCode}`)}
+              className="clinic-header-btn-secondary"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdfa", color: TEAL_DARK, border: `1px solid #99f6e4`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
               title="Voir la page vitrine publique de la clinique"
             >
@@ -450,6 +478,7 @@ export default function GestionClinique() {
             </button>
             <button
               onClick={() => navigate("/moftal-pay-pro")}
+              className="clinic-header-btn-secondary"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "linear-gradient(135deg,#1a8f1a,#0891b2)", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
               title="Moftal Pay"
             >

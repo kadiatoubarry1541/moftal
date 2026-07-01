@@ -2,6 +2,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const BASE = (code: string) => `${API}/api/mairie-mgmt/${code}`;
@@ -1073,6 +1075,12 @@ export default function GestionMairie() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc", fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <DynamicAppManifest
+        name={tenant?.name || "Gestion"}
+        description={`Gestion mairie — ${tenant?.name || ""}`}
+        startUrl={`/gestion-mairie/${tenantCode}`}
+        themeColor={BLUE}
+      />
       {/* Sidebar desktop */}
       <div className="hidden md:block"><Sidebar /></div>
 
@@ -1095,6 +1103,7 @@ export default function GestionMairie() {
             <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{tenant?.name || "Mairie"}</div>
             <div style={{ fontSize: 11, color: "#94a3b8" }}>🏛️ Espace État Civil · {NAV_ITEMS.find(n => n.id === section)?.label}</div>
           </div>
+          <InstallAppButton />
         </div>
 
         {/* Page content */}

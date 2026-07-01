@@ -2,6 +2,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API_ROOT = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const BASE = (code: string) => `${API_ROOT}/api/beauty-mgmt/${code}`;
@@ -182,15 +184,26 @@ export default function GestionBeauty() {
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px", fontFamily: "system-ui,sans-serif" }}>
+      <DynamicAppManifest
+        name={tenant?.name || "Gestion"}
+        description={`Gestion beauté — ${tenant?.name || ""}`}
+        startUrl={`/gestion-beauty/${tenantCode}`}
+        themeColor={COLOR}
+      />
+      <style>{`@media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
+
       {/* HEADER */}
       <div style={{ background: GRADIENT, borderRadius: 16, padding: "24px 28px", marginBottom: 24, color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 40 }}>💈</span>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{tenant?.name || "Beauté & Bien-être"}</h1>
+          <span style={{ fontSize: 40, flexShrink: 0 }}>💈</span>
+          <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Beauté & Bien-être"}</h1>
             <p style={{ margin: 0, opacity: 0.85, fontSize: 14 }}>Gestion Interne — Salon / Institut</p>
           </div>
-          <button onClick={() => navigate("/gestion-interne")} style={{ ...btn("rgba(255,255,255,0.2)"), marginLeft: "auto", fontSize: 13 }}>← Mes espaces</button>
+          <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
+            <InstallAppButton />
+            <button className="gestion-btn-secondary" onClick={() => navigate("/gestion-interne")} style={{ ...btn("rgba(255,255,255,0.2)"), fontSize: 13 }}>← Mes espaces</button>
+          </div>
         </div>
       </div>
 

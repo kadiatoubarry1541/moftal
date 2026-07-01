@@ -2,6 +2,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const BASE = (code: string) => `${API}/api/enterprise-mgmt/${code}`;
@@ -138,18 +140,25 @@ export default function GestionEntreprise() {
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui,sans-serif" }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <DynamicAppManifest
+        name={tenant?.name || "Gestion"}
+        description={`Gestion entreprise — ${tenant?.name || ""}`}
+        startUrl={`/gestion-entreprise/${tenantCode}`}
+        themeColor={INDIGO}
+      />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} @media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
 
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg,#4338ca,#7c3aed)`, borderRadius: 16, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ fontSize: 44 }}>🏢</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 800, color: "white", fontSize: 20 }}>{tenant?.name || "Entreprise"}</div>
+        <span style={{ fontSize: 44, flexShrink: 0 }}>🏢</span>
+        <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+          <div style={{ fontWeight: 800, color: "white", fontSize: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Entreprise"}</div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>Code : {tenantCode} · Gestion Interne</div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => navigate(`/entreprise/${tenantCode}`)} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🌐 Vitrine</button>
-          <button onClick={() => navigate(-1 as any)} style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>← Retour</button>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <InstallAppButton />
+          <button className="gestion-btn-secondary" onClick={() => navigate(`/entreprise/${tenantCode}`)} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🌐 Vitrine</button>
+          <button className="gestion-btn-secondary" onClick={() => navigate(-1 as any)} style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>← Retour</button>
         </div>
       </div>
 

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const BASE = (code: string) => `${API}/api/imam-mgmt/${code}`;
@@ -198,17 +200,26 @@ export default function GestionImam() {
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 0 60px" }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <DynamicAppManifest
+        name={tenant?.name || "Gestion"}
+        description={`Gestion imam — ${tenant?.name || ""}`}
+        startUrl={`/gestion-imam/${tenantCode}`}
+        themeColor={VIOLET}
+      />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} @media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
 
       {/* ── Header ── */}
       <div style={{ background: "linear-gradient(135deg, #6d28d9, #7c3aed)", padding: "28px 28px 0", borderBottom: "none" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30 }}>🕋</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, color: "white", fontSize: 20 }}>{tenant?.name || "Réseau Imam"}</div>
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>🕋</div>
+          <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+            <div style={{ fontWeight: 800, color: "white", fontSize: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Réseau Imam"}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>Code : {tenantCode} · Réseau Imam</div>
           </div>
-          <button onClick={() => navigate(-1)} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>← Retour</button>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <InstallAppButton />
+            <button className="gestion-btn-secondary" onClick={() => navigate(-1)} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>← Retour</button>
+          </div>
         </div>
 
         {/* Tabs */}

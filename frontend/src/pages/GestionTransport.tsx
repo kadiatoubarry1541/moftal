@@ -1,5 +1,7 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API = (import.meta as any).env?.VITE_API_URL || "http://localhost:5002";
 const token = () => localStorage.getItem("token") || "";
@@ -154,12 +156,21 @@ export default function GestionTransport() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "system-ui, sans-serif" }}>
+      <DynamicAppManifest
+        name={tenant?.name || "Gestion"}
+        description={`Gestion transport — ${tenant?.name || ""}`}
+        startUrl={`/gestion-transport/${tenantCode}`}
+        themeColor={BLUE}
+      />
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg, ${BLUE}, #1d4ed8)`, color: "white", padding: "20px 24px" }}>
-        <div style={{ maxWidth: 980, margin: "0 auto" }}>
-          <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 4 }}>Gestion Interne · Transport & Livraison</div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>🚌 {tenant?.name || "Transport & Livraison"}</h1>
-          <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Code : {code}</div>
+        <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
+            <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 4 }}>Gestion Interne · Transport & Livraison</div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🚌 {tenant?.name || "Transport & Livraison"}</h1>
+            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Code : {code}</div>
+          </div>
+          <div style={{ flexShrink: 0 }}><InstallAppButton /></div>
         </div>
       </div>
 

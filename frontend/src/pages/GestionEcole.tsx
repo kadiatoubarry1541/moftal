@@ -2,6 +2,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const BASE = (code: string) => `${API}/api/school-mgmt/${code}`;
@@ -35,7 +37,7 @@ export default function GestionEcole() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const [section, setSection] = useState<Section>("dashboard");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
   const [tenant, setTenant] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [recentStudents, setRecentStudents] = useState<any[]>([]);
@@ -120,6 +122,7 @@ export default function GestionEcole() {
 
   const loadSection = useCallback((s: Section) => {
     setSection(s);
+    if (window.innerWidth < 768) setCollapsed(true);
     setSearch("");
     if (s === "students") { get("/students").then(d => d.success && setStudents(d.students)); get("/classrooms").then(d => d.success && setClassrooms(d.classrooms)); }
     if (s === "staff") get("/staff").then(d => d.success && setStaff(d.staff));
@@ -205,7 +208,8 @@ export default function GestionEcole() {
 
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
-  const sideW = collapsed ? 64 : 240;
+  const isMobile = window.innerWidth < 768;
+  const sideW = collapsed ? (isMobile ? 0 : 64) : 240;
 
   const filteredStudents = students.filter(s => {
     const q = search.toLowerCase();
@@ -218,6 +222,12 @@ export default function GestionEcole() {
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
+      <DynamicAppManifest
+        name={tenant?.name || "Gestion"}
+        description={`Gestion école — ${tenant?.name || ""}`}
+        startUrl={`/gestion-ecole/${tenantCode}`}
+        themeColor="#1a8f1a"
+      />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {/* Toast */}
@@ -227,8 +237,13 @@ export default function GestionEcole() {
         </div>
       )}
 
+      {/* Overlay mobile */}
+      {!collapsed && isMobile && (
+        <div onClick={() => setCollapsed(true)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 49 }} />
+      )}
+
       {/* SIDEBAR */}
-      <aside style={{ display: "flex", flexDirection: "column", width: sideW, flexShrink: 0, transition: "width 0.25s ease", background: "linear-gradient(180deg, #052e16 0%, #0d3320 50%, #134a28 100%)", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+      <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 240, flexShrink: 0, transition: "width 0.25s ease", background: "linear-gradient(180deg, #052e16 0%, #0d3320 50%, #134a28 100%)", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, left: 0, height: "100vh", zIndex: 50 } : {}) }}>
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #1a8f1a, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
@@ -292,40 +307,53 @@ export default function GestionEcole() {
 
         {/* Page header */}
         <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{currentNav.label}</h1>
-            <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {collapsed && (
+              <button onClick={() => setCollapsed(false)}
+                style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4, color: "#64748b", display: "flex", alignItems: "center" }}>
+                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
+            <div>
+              <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{currentNav.label}</h1>
+              <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</p>
+            </div>
           </div>
-          {section === "students" && (
-            <button onClick={() => { setModal("add-student"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Nouvel élève
-            </button>
-          )}
-          {section === "staff" && (
-            <button onClick={() => { setModal("add-staff"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Ajouter personnel
-            </button>
-          )}
-          {section === "classrooms" && (
-            <button onClick={() => { setModal("add-classroom"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Créer une classe
-            </button>
-          )}
-          {section === "grades" && (
-            <button onClick={() => { setModal("add-grade"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Ajouter une note
-            </button>
-          )}
-          {section === "fees" && (
-            <button onClick={() => { setModal("add-fee"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Ajouter frais
-            </button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <InstallAppButton />
+            {section === "students" && (
+              <button onClick={() => { setModal("add-student"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                Nouvel élève
+              </button>
+            )}
+            {section === "staff" && (
+              <button onClick={() => { setModal("add-staff"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                Ajouter personnel
+              </button>
+            )}
+            {section === "classrooms" && (
+              <button onClick={() => { setModal("add-classroom"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                Créer une classe
+              </button>
+            )}
+            {section === "grades" && (
+              <button onClick={() => { setModal("add-grade"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                Ajouter une note
+              </button>
+            )}
+            {section === "fees" && (
+              <button onClick={() => { setModal("add-fee"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                Ajouter frais
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content */}

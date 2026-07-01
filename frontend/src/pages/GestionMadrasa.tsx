@@ -2,6 +2,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
+import DynamicAppManifest from "../components/DynamicAppManifest";
+import InstallAppButton from "../components/InstallAppButton";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const BASE = (code: string) => `${API}/api/madrasa-mgmt/${code}`;
@@ -41,7 +43,7 @@ export default function GestionMadrasa() {
   const navigate = useNavigate();
 
   const [section, setSection] = useState<Section>("dashboard");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
   const [tenant, setTenant]       = useState<any>(null);
   const [stats, setStats]         = useState<any>(null);
   const [students, setStudents]   = useState<any[]>([]);
@@ -100,6 +102,7 @@ export default function GestionMadrasa() {
 
   const loadSection = useCallback((s: Section) => {
     setSection(s); setSearch(""); setNiveauFilter("");
+    if (window.innerWidth < 768) setCollapsed(true);
     if (s === "apprenants")  { get("/students").then(d => d.students && setStudents(d.students)); get("/halaqas").then(d => d.halaqas && setHalaqas(d.halaqas)); }
     if (s === "enseignants") { get("/staff").then(d => d.staff && setStaff(d.staff)); }
     if (s === "halaqas")     { get("/halaqas").then(d => d.halaqas && setHalaqas(d.halaqas)); get("/staff").then(d => d.staff && setStaff(d.staff)); }
@@ -193,7 +196,8 @@ export default function GestionMadrasa() {
 
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
-  const sideW = collapsed ? 64 : 244;
+  const isMobile = window.innerWidth < 768;
+  const sideW = collapsed ? (isMobile ? 0 : 64) : 244;
 
   const filteredStudents = students.filter(s => {
     const q = search.toLowerCase();
@@ -410,6 +414,12 @@ export default function GestionMadrasa() {
   // ── Render principal ─────────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
+      <DynamicAppManifest
+        name={tenant?.name || "Gestion"}
+        description={`Gestion madrasa — ${tenant?.name || ""}`}
+        startUrl={`/gestion-madrasa/${tenantCode}`}
+        themeColor={TEAL}
+      />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}`}</style>
 
       {MODAL}
@@ -421,8 +431,13 @@ export default function GestionMadrasa() {
         </div>
       )}
 
+      {/* Overlay mobile */}
+      {!collapsed && isMobile && (
+        <div onClick={() => setCollapsed(true)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 49 }} />
+      )}
+
       {/* ── SIDEBAR ── */}
-      <aside style={{ display: "flex", flexDirection: "column", width: sideW, flexShrink: 0, transition: "width 0.25s ease", background: "linear-gradient(180deg,#082f49 0%,#0c4a6e 50%,#0e5a80 100%)", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+      <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 244, flexShrink: 0, transition: "width 0.25s ease", background: "linear-gradient(180deg,#082f49 0%,#0c4a6e 50%,#0e5a80 100%)", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, left: 0, height: "100vh", zIndex: 50 } : {}) }}>
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
@@ -480,16 +495,29 @@ export default function GestionMadrasa() {
 
         {/* Page header */}
         <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{currentNav.label}</h1>
-            <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {collapsed && (
+              <button onClick={() => setCollapsed(false)}
+                style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4, color: "#64748b", display: "flex", alignItems: "center" }}>
+                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
+            <div>
+              <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{currentNav.label}</h1>
+              <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</p>
+            </div>
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <InstallAppButton />
           {section === "apprenants"  && <button onClick={() => { setModal("add-apprenant"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><span style={{ fontSize: 16 }}>+</span> Nouvel apprenant</button>}
           {section === "enseignants" && <button onClick={() => { setModal("add-enseignant"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><span style={{ fontSize: 16 }}>+</span> Ajouter enseignant</button>}
           {section === "halaqas"     && <button onClick={() => { setModal("add-halaqa"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><span style={{ fontSize: 16 }}>+</span> Créer une halaqa</button>}
           {section === "progression" && <button onClick={() => { setModal("add-note"); setForm({ matiere: "Coran", periode: "Trim 1" }); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><span style={{ fontSize: 16 }}>+</span> Ajouter note</button>}
           {section === "frais"       && <button onClick={() => { setModal("add-frais"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><span style={{ fontSize: 16 }}>+</span> Ajouter frais</button>}
           {section === "bulletins"   && <button onClick={() => { setModal("gen-bulletin"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>⚙ Générer bulletins</button>}
+          </div>
         </div>
 
         {/* ── Content ── */}
