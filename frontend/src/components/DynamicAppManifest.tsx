@@ -1,39 +1,30 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
+
+const API = "http://localhost:5002";
 
 interface DynamicAppManifestProps {
-  /** Nom affiché sous l'icône installée (ex: nom de l'établissement) */
   name: string;
   shortName?: string;
   description?: string;
-  /** Logo de l'établissement (data URI, URL absolue ou chemin /uploads/...). Fallback : logo Moftal */
+  /** ID du compte pro — utilisé pour récupérer l'icône via le backend (URL réelle, pas base64) */
+  proId?: string;
+  /** Fallback si pas de proId (data URI ou URL) — ignoré si proId est fourni */
   iconUrl?: string | null;
-  /** Page ouverte au lancement de l'app installée (ex: /espace-pro/123) */
   startUrl: string;
   themeColor?: string;
   backgroundColor?: string;
 }
 
-function guessMimeType(url: string): string {
-  if (url.startsWith("data:")) {
-    const match = url.match(/^data:([^;]+);/);
-    return match ? match[1] : "image/png";
-  }
-  if (url.endsWith(".svg")) return "image/svg+xml";
-  if (url.endsWith(".webp")) return "image/webp";
-  if (url.endsWith(".jpg") || url.endsWith(".jpeg")) return "image/jpeg";
-  return "image/png";
-}
-
 /**
- * Remplace dynamiquement le manifest PWA de la page par un manifest propre
- * à l'établissement (nom + logo + accès direct à son espace de gestion),
- * pour que l'installation crée une icône indépendante de "Moftal".
- * Le manifest global est restauré au démontage.
+ * Remplace dynamiquement le manifest PWA par un manifest propre à l'établissement.
+ * Utilise l'URL backend /api/professionals/pwa-icon/:id pour les icônes
+ * car Chrome refuse les data URIs dans les manifests PWA.
  */
 export default function DynamicAppManifest({
   name,
   shortName,
   description,
+  proId,
   iconUrl,
   startUrl,
   themeColor = "#0f4b0f",
@@ -44,7 +35,15 @@ export default function DynamicAppManifest({
     if (!link) return;
     const originalHref = link.getAttribute("href");
 
-    const icon = iconUrl || "/logo-moftal.svg";
+    // Priorité : URL backend (si proId) > URL directe > icône Moftal par défaut
+    const iconSrc = proId
+      ? `${API}/api/professionals/pwa-icon/${proId}`
+      : (iconUrl && !iconUrl.startsWith("data:") ? iconUrl : "/icon-192.png");
+
+    const icon512 = proId
+      ? `${API}/api/professionals/pwa-icon/${proId}`
+      : "/icon-512.png";
+
     const manifest = {
       id: startUrl,
       name,
@@ -58,8 +57,9 @@ export default function DynamicAppManifest({
       background_color: backgroundColor,
       theme_color: themeColor,
       icons: [
-        { src: icon, sizes: "192x192", type: guessMimeType(icon), purpose: "any" },
-        { src: icon, sizes: "512x512", type: guessMimeType(icon), purpose: "any" },
+        { src: iconSrc, sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: icon512, sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: icon512, sizes: "512x512", type: "image/png", purpose: "maskable" },
       ],
     };
 
@@ -71,7 +71,7 @@ export default function DynamicAppManifest({
       if (originalHref) link.setAttribute("href", originalHref);
       URL.revokeObjectURL(blobUrl);
     };
-  }, [name, shortName, description, iconUrl, startUrl, themeColor, backgroundColor]);
+  }, [name, shortName, description, proId, iconUrl, startUrl, themeColor, backgroundColor]);
 
   return null;
 }

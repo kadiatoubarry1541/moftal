@@ -211,6 +211,36 @@ router.get('/detail/:id', async (req, res) => {
   }
 });
 
+// GET /api/professionals/pwa-icon/:id — sert le logo du pro comme vraie image PNG
+// Requis pour les manifests PWA (les data URIs sont refusées par Chrome)
+router.get('/pwa-icon/:id', async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id, {
+      attributes: ['photo', 'isActive']
+    });
+    if (!account?.photo || !account.isActive) {
+      return res.status(302).redirect('https://moftal.com/icon-192.png');
+    }
+    const photo = account.photo;
+    if (photo.startsWith('data:')) {
+      const commaIdx = photo.indexOf(',');
+      const header = photo.substring(0, commaIdx);
+      const base64 = photo.substring(commaIdx + 1);
+      const mimeMatch = header.match(/data:([^;]+);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const buffer = Buffer.from(base64, 'base64');
+      res.set('Content-Type', mime);
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.set('Access-Control-Allow-Origin', '*');
+      return res.send(buffer);
+    }
+    // URL externe : rediriger
+    res.redirect(302, photo);
+  } catch {
+    res.status(302).redirect('https://moftal.com/icon-192.png');
+  }
+});
+
 // ============ ESPACE PROPRIÉTAIRE ============
 
 // GET /api/professionals/my-accounts - Mes comptes professionnels

@@ -481,6 +481,17 @@ export default function EspacePro() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoSuccess, setLogoSuccess]     = useState(false);
 
+  // Lien client à partager
+  const [clientLinkCopied, setClientLinkCopied] = useState(false);
+  const copyClientLink = () => {
+    if (!account) return;
+    const link = `${window.location.origin}/installer-app/${account.id}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setClientLinkCopied(true);
+      setTimeout(() => setClientLinkCopied(false), 2500);
+    });
+  };
+
   // Menu restaurant
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [showAddMenuItem, setShowAddMenuItem] = useState(false);
@@ -986,17 +997,42 @@ export default function EspacePro() {
       <DynamicAppManifest
         name={account.name}
         description={`Gestion ${typeInfo.label} — ${account.name}`}
-        iconUrl={getPhotoUrl(account.photo)}
+        proId={account.id}
         startUrl={`/espace-pro/${account.id}`}
         themeColor={SERVICE_MANIFEST_COLOR[serviceKey] || "#1a8f1a"}
       />
-      <div className="max-w-5xl mx-auto px-4 pt-3 pb-2">
+      <div className="max-w-5xl mx-auto px-4 pt-3 pb-2 space-y-3">
+        {/* App du professionnel */}
         <div className="flex items-center gap-3 bg-white rounded-xl border border-emerald-100 shadow-sm px-4 py-3">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-800">Accès rapide sur votre téléphone</p>
-            <p className="text-xs text-gray-500 mt-0.5">Installez votre espace comme une app — icône directe sur l'écran d'accueil</p>
+            <p className="text-sm font-semibold text-gray-800">📲 Votre app de gestion</p>
+            <p className="text-xs text-gray-500 mt-0.5">Installez votre espace — icône avec votre logo sur votre écran d'accueil</p>
           </div>
           <InstallAppButton />
+        </div>
+
+        {/* Lien à partager aux clients */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 px-4 py-3">
+          <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">
+            🔗 Partagez votre app à vos clients
+          </p>
+          <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">
+            Vos patients / élèves / clients installent votre app directement sur leur téléphone avec votre logo.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-2 text-blue-700 dark:text-blue-300 truncate">
+              {window.location.origin}/installer-app/{account?.id}
+            </code>
+            <button
+              onClick={copyClientLink}
+              className="flex-shrink-0 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              {clientLinkCopied ? "✅ Copié" : "📋 Copier"}
+            </button>
+          </div>
+          <p className="text-xs text-blue-500 dark:text-blue-400 mt-1.5">
+            Envoyez ce lien par WhatsApp, SMS ou affichez-le dans votre local.
+          </p>
         </div>
       </div>
 

@@ -16,15 +16,17 @@ export default function InstallAppButton() {
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
     setIsInstalled(standalone);
-    setIsIOS(/iPhone|iPad|iPod/.test(window.navigator.userAgent));
 
-    // Prompt peut avoir été capturé avant le montage du composant
+    const ua = window.navigator.userAgent;
+    setIsIOS(/iPhone|iPad|iPod/.test(ua));
+
     const existing = (window as any).__pwaInstallPrompt;
     if (existing) setDeferredPrompt(existing);
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      (window as any).__pwaInstallPrompt = e;
     };
     const handlePromptReady = () => {
       const p = (window as any).__pwaInstallPrompt;
@@ -60,44 +62,89 @@ export default function InstallAppButton() {
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") setIsInstalled(true);
       setDeferredPrompt(null);
+      (window as any).__pwaInstallPrompt = null;
     } else {
       setShowGuide((v) => !v);
     }
   };
 
   return (
-    <div>
+    <div className="w-full">
       <button
         onClick={handleClick}
-        className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl bg-emerald-600 text-white shadow hover:bg-emerald-700 active:scale-95 transition-all whitespace-nowrap"
+        className="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold px-5 py-3 rounded-xl bg-emerald-600 text-white shadow-md hover:bg-emerald-700 active:scale-95 transition-all"
       >
-        <span className="text-base">📲</span>
-        Installer l'application
+        <span className="text-lg">📲</span>
+        {deferredPrompt ? "Installer maintenant" : "Voir comment installer"}
       </button>
 
-      {showGuide && (
-        <div className="mt-3 bg-white border border-emerald-200 rounded-xl px-4 py-3 shadow-sm text-sm text-gray-700 max-w-sm">
+      {/* Guide étape par étape toujours visible si pas de prompt automatique */}
+      {(!deferredPrompt || showGuide) && (
+        <div className="mt-4 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
           {isIOS ? (
             <>
-              <p className="font-semibold text-emerald-800 mb-2">Installation sur iPhone / iPad :</p>
-              <ol className="list-decimal list-inside space-y-1 text-xs text-gray-600">
-                <li>Ouvrez cette page dans <strong>Safari</strong></li>
-                <li>Appuyez sur <strong>Partager</strong> <span>⬆️</span> en bas</li>
-                <li>Choisissez <strong>"Sur l'écran d'accueil"</strong></li>
-                <li>Appuyez sur <strong>Ajouter</strong></li>
-              </ol>
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+                <p className="font-bold text-gray-800 text-sm">Installation sur iPhone / iPad</p>
+                <p className="text-xs text-gray-500 mt-0.5">Suivez ces 3 étapes dans Safari</p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                <div className="flex items-center gap-4 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 font-bold text-blue-700 text-sm">1</div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Ouvrez dans Safari</p>
+                    <p className="text-xs text-gray-500">Pas Chrome — uniquement Safari sur iPhone</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 font-bold text-blue-700 text-sm">2</div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Appuyez sur <span className="font-bold">Partager</span> ⬆️</p>
+                    <p className="text-xs text-gray-500">Bouton en bas au centre de Safari</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 font-bold text-blue-700 text-sm">3</div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Choisissez <span className="font-bold">"Sur l'écran d'accueil"</span></p>
+                    <p className="text-xs text-gray-500">Faites défiler vers le bas dans le menu Partager</p>
+                  </div>
+                </div>
+              </div>
             </>
           ) : (
             <>
-              <p className="font-semibold text-emerald-800 mb-2">Installation sur Android / Chrome :</p>
-              <ol className="list-decimal list-inside space-y-1 text-xs text-gray-600">
-                <li>Appuyez sur les <strong>3 points</strong> ⋮ en haut à droite</li>
-                <li>Choisissez <strong>"Installer l'application"</strong> ou <strong>"Ajouter à l'écran d'accueil"</strong></li>
-                <li>Confirmez en appuyant sur <strong>Installer</strong></li>
-              </ol>
-              <p className="text-xs text-gray-400 mt-2">
-                Si l'option n'apparaît pas, rechargez la page une fois.
-              </p>
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
+                <p className="font-bold text-gray-800 text-sm">Installation sur Android</p>
+                <p className="text-xs text-gray-500 mt-0.5">Ouvrez dans Chrome ou Samsung Internet</p>
+              </div>
+              <div className="divide-y divide-gray-100">
+                <div className="flex items-center gap-4 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 font-bold text-emerald-700 text-sm">1</div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Appuyez sur ⋮ en haut à droite</p>
+                    <p className="text-xs text-gray-500">Les 3 petits points dans Chrome</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 font-bold text-emerald-700 text-sm">2</div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Appuyez sur <span className="font-bold">"Ajouter à l'écran d'accueil"</span></p>
+                    <p className="text-xs text-gray-500">Ou "Installer l'application"</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 font-bold text-emerald-700 text-sm">3</div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Appuyez sur <span className="font-bold">Installer</span> ✅</p>
+                    <p className="text-xs text-gray-500">L'icône apparaît sur votre écran d'accueil</p>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 py-3 bg-amber-50 border-t border-amber-100">
+                <p className="text-xs text-amber-700">
+                  💡 Si le bouton "Installer" n'apparaît pas : rechargez la page, attendez 5 secondes, puis réessayez.
+                </p>
+              </div>
             </>
           )}
         </div>
