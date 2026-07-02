@@ -42,10 +42,10 @@ const linkBase =
   'flex flex-col items-center justify-center rounded-2xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 active:scale-[0.98]'
 
 function useEntourageItems(user: Props['user']): NavItem[] {
-  const genre = user?.genre ?? 'HOMME'
+  const genre = String(user?.genre ?? '').trim().toUpperCase()
   const userIsAdmin = user ? isAdmin(user as any) : false
-  const showMari = userIsAdmin || genre !== 'HOMME'
-  const showFemme = userIsAdmin || genre !== 'FEMME'
+  const showMari = userIsAdmin || genre === 'FEMME'
+  const showFemme = userIsAdmin || genre === 'HOMME'
 
   return [
     { id: 'parents', to: '/famille/parents', emoji: '👨‍👩‍👦', label: 'Parents', hint: 'Mes parents' },

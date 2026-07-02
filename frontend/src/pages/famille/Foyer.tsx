@@ -1,12 +1,13 @@
 import { lazy, Suspense, useState } from 'react'
 import ParentsTab from './Parents'
+import { getSessionUser, isAdmin } from '../../utils/auth'
 
 const EnfantsTab    = lazy(() => import('./Enfants'))
 const PartenaireTab = lazy(() => import('./Partenaire'))
 
 type TabId = 'parents' | 'enfants' | 'femmes' | 'mari'
 
-const TABS: { id: TabId; label: string; emoji: string }[] = [
+const ALL_TABS: { id: TabId; label: string; emoji: string }[] = [
   { id: 'parents', label: 'Parents',   emoji: '👨‍👩‍👦' },
   { id: 'enfants', label: 'Enfants',   emoji: '👶'    },
   { id: 'femmes',  label: 'Ma femme',  emoji: '👰'    },
@@ -14,7 +15,19 @@ const TABS: { id: TabId; label: string; emoji: string }[] = [
 ]
 
 export default function Foyer() {
-  const [activeTab, setActiveTab] = useState<TabId>('parents')
+  const user = getSessionUser()
+  const genre = String((user as any)?.genre ?? '').trim().toUpperCase()
+  const userIsAdmin = user ? isAdmin(user as any) : false
+
+  // "Ma femme" → visible uniquement pour les hommes (genre === 'HOMME')
+  // "Mon homme" → visible uniquement pour les femmes (genre === 'FEMME')
+  const TABS = ALL_TABS.filter(tab => {
+    if (tab.id === 'femmes') return userIsAdmin || genre === 'HOMME'
+    if (tab.id === 'mari')   return userIsAdmin || genre === 'FEMME'
+    return true
+  })
+
+  const [activeTab, setActiveTab] = useState<TabId>(TABS[0]?.id ?? 'parents')
 
   const active = TABS.find(t => t.id === activeTab)!
 
@@ -33,14 +46,14 @@ export default function Foyer() {
 
       {/* Barre d'onglets — sticky, toujours visible */}
       <div className="sticky top-[104px] z-20 bg-white dark:bg-gray-900 shadow-sm">
-        <div className="grid grid-cols-4 border-b-2 border-gray-100 dark:border-gray-800">
+        <div className="flex border-b-2 border-gray-100 dark:border-gray-800">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.id
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex flex-col items-center py-2.5 gap-0.5 transition-all ${
+                className={`relative flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-all ${
                   isActive
                     ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800'
                     : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'

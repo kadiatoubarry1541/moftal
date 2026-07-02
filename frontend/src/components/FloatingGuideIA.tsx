@@ -19,14 +19,28 @@ const SITE_KNOWLEDGE = [
   // ── NUMÉRO H (VIVANT) ──────────────────────────────────────────────────────
   {
     keywords: [
-      'numeroh', 'numero h', 'numéro h', 'h-', 'mon numero', 'mon numéro',
+      'numeroh', 'numero h', 'numéro h', 'mon numero', 'mon numéro',
       'identifiant', 'numero unique', 'numéro unique', 'numero personnel',
       'numero membre', 'qu est ce qu un numeroh', 'c quoi numeroh', 'numero h?',
       'trouver mon numero', 'ou est mon numero', 'numero inscription',
-      'numero enregistrement', 'numero vivant'
+      'numero enregistrement', 'numero vivant', 'mon identifiant'
     ],
-    response: `**Le Numéro H — Votre identité numérique unique** 🆔\n\nLe **Numéro H** est l'identifiant unique attribué automatiquement à chaque membre **vivant** lors de son inscription sur Moftal.\n\n**Format :** H-XXXXX (ex: H-12345, H-98765)\n\n**À quoi sert le Numéro H ?**\n✅ Se connecter à votre compte (à la place d'un email)\n✅ Être retrouvé par vos proches dans l'arbre familial\n✅ Lier des membres de famille entre eux\n✅ Identifier votre lignée dans l'histoire généalogique\n✅ Accéder à tous les services Moftal\n\n**Comment l'obtenir ?**\n→ Il vous est attribué automatiquement à l'inscription\n\n**Comment le retrouver ?**\n→ Dans votre profil → Mon Compte\n→ Dans l'email de confirmation d'inscription\n\n⚠️ **Conservez votre Numéro H précieusement !** Sans lui, vous ne pouvez pas vous connecter.\n\n📌 Le Numéro HD (avec D) est réservé aux comptes Défunts.`,
-    links: [{ label: 'Mon Compte', path: '/compte' }, { label: 'Se connecter', path: '/login' }]
+    response: `**Le Numéro H — Votre identité numérique unique** 🆔\n\nLe **Numéro H** est l'identifiant unique attribué automatiquement à chaque membre **vivant** lors de son inscription sur Moftal.\n\n**Format réel :** G{n}C{n}P{n}R{n}E{n}F{n} {n}\n**Exemple :** G96C1P1R1E1F2 1\n\n**Chaque lettre a une signification précise :**\n🌿 **G** = Génération (G96 = génération 96 = nés entre 1982 et 2044)\n🌍 **C** = Continent (C1=Afrique, C2=Europe, C3=Asie, C4=Amérique, C5=Océanie)\n🏳️ **P** = Pays (numéro de votre pays d'origine)\n📍 **R** = Région (numéro de votre région)\n👥 **E** = Ethnie (numéro de votre ethnie)\n👨‍👩‍👧 **F** = Famille (numéro de votre lignée familiale)\n🔢 **Le chiffre final** = Numéro unique dans votre lignée\n\n**À quoi sert le Numéro H ?**\n✅ Se connecter à votre compte (votre identifiant de connexion)\n✅ Être retrouvé par vos proches dans l'arbre familial\n✅ Lier des membres de famille entre eux\n✅ Identifier votre place dans l'histoire de l'humanité\n\n**Comment le retrouver ?**\n→ Page Identité → section "Décodage de votre NumeroH"\n\n⚠️ **Conservez votre Numéro H précieusement !** Sans lui, vous ne pouvez pas vous connecter.`,
+    links: [{ label: 'Mon Identité', path: '/identite' }, { label: 'Mon Compte', path: '/compte' }]
+  },
+
+  // ── DÉCODAGE NUMÉRO H ──────────────────────────────────────────────────────
+  {
+    keywords: [
+      'decoder numeroh', 'décoder numeroh', 'signification numeroh', 'que veut dire',
+      'lire numeroh', 'comprendre numeroh', 'g96', 'g1 adam', 'generation g',
+      'c1 afrique', 'c2 europe', 'c3 asie', 'lettre numeroh', 'lettre numero h',
+      'signification lettre', 'que signifie', 'expliquer numeroh', 'explication numeroh',
+      'format numeroh', 'comment lire mon numero', 'decode', 'chiffre apres espace',
+      'generation humanite', '63 ans', 'periode generation', 'numeroh format'
+    ],
+    response: `**Décodage complet du Numéro H** 🔬\n\n**Exemple : G96C1P1R1E1F2 1**\n\n━━━━━━━━━━━━━━━━━━━━━\n🌿 **G = Génération**\n→ G96 = vous appartenez à la **96ème génération** de l'humanité\n→ Chaque génération dure **63 ans**\n→ L'histoire commence avec G1 (Adam, vers -4003 av. J.-C.)\n→ G96 couvre la période **1982 à 2044**\n→ G97 débutera en 2045\n\n🌍 **C = Continent**\n→ C1 = Afrique | C2 = Europe | C3 = Asie\n→ C4 = Amérique | C5 = Océanie | C6 = Antarctique\n\n🏳️ **P = Pays**\n→ Numéro de votre pays d'origine sur Moftal\n→ Ex: P1 = premier pays enregistré dans votre continent\n\n📍 **R = Région**\n→ Numéro de votre région dans votre pays\n\n👥 **E = Ethnie**\n→ Numéro de votre groupe ethnique\n\n👨‍👩‍👧 **F = Famille / Lignée**\n→ Numéro de votre lignée familiale\n\n🔢 **Chiffre après l'espace = Séquence unique**\n→ Votre numéro personnel dans votre lignée\n→ Jamais répété — vous êtes unique !\n\n**Ce NumeroH encode toute votre identité humaine** : votre génération, votre continent, votre pays, votre région, votre ethnie et votre famille.`,
+    links: [{ label: 'Mon Identité', path: '/identite' }, { label: 'Histoire de l\'Humanité', path: '/histoire-humanite' }]
   },
 
   // ── NUMÉRO HD (DÉFUNT) ─────────────────────────────────────────────────────
@@ -59,7 +73,7 @@ const SITE_KNOWLEDGE = [
       'entrer', 'ouvrir session', 'je veux me connecter', 'comment je me connecte',
       'comment acceder', 'entrer dans mon compte', 'rejoindre mon compte'
     ],
-    response: `**Comment se connecter sur Moftal ?** 🔐\n\n**Étapes :**\n1️⃣ Cliquez sur **"Connexion"**\n2️⃣ Entrez votre **Numéro H** (ex: H-12345) OU votre **Numéro HD** (ex: HD-00123)\n3️⃣ Entrez votre **mot de passe**\n4️⃣ Cliquez sur **"Se connecter"**\n\n💡 **Astuce :** Votre identifiant est votre Numéro H, pas votre email !\n\n**Problèmes fréquents :**\n❌ "Numéro incorrect" → Vérifiez que vous entrez H-XXXXX et non votre email\n❌ "Mot de passe incorrect" → Utilisez le lien "Mot de passe oublié"\n❌ "Compte introuvable" → Vérifiez que vous êtes bien inscrit`,
+    response: `**Comment se connecter sur Moftal ?** 🔐\n\n**Étapes :**\n1️⃣ Cliquez sur **"Connexion"**\n2️⃣ Entrez votre **Numéro H** (ex: G96C1P1R1E1F2 1)\n3️⃣ Entrez votre **mot de passe**\n4️⃣ Cliquez sur **"Se connecter"**\n\n💡 **Astuce :** Votre identifiant est votre Numéro H — ce n'est pas un email !\n\n**Format du Numéro H :** G{génération}C{continent}P{pays}R{région}E{ethnie}F{famille} {séquence}\n\n**Problèmes fréquents :**\n❌ "Numéro incorrect" → Vérifiez le format exact de votre NumeroH\n❌ "Mot de passe incorrect" → Utilisez le lien "Mot de passe oublié"\n❌ "Compte introuvable" → Vérifiez que vous êtes bien inscrit`,
     links: [{ label: 'Se connecter', path: '/login' }, { label: 'Mot de passe oublié', path: '/mot-de-passe-oublie' }]
   },
 
@@ -387,7 +401,7 @@ const SITE_KNOWLEDGE = [
 
 const QUICK_QUESTIONS = [
   { label: '🌍 C\'est quoi Moftal ?', question: "C'est quoi le but de cette application ?" },
-  { label: '🆔 Mon Numéro H ?', question: 'C\'est quoi le Numéro H ?' },
+  { label: '🆔 Décoder mon NumeroH', question: 'Explique la signification de chaque lettre du NumeroH' },
   { label: '🌳 Mon arbre familial', question: 'Comment construire mon arbre généalogique ?' },
   { label: '🏥 Rendez-vous santé', question: 'Comment prendre un rendez-vous santé ?' },
   { label: '💼 Compte professionnel', question: 'Comment créer un compte professionnel ?' },
@@ -505,7 +519,7 @@ export function FloatingGuideIA() {
 
     setTimeout(() => {
       addBot(
-        `Je n'ai pas trouvé de réponse précise à votre question.\n\nVoici ce que je peux vous expliquer — cliquez sur un bouton ou reformulez votre question :`,
+        `Je n'ai pas trouvé de réponse précise à votre question.\n\nEssayez des mots comme : "Numéro H", "arbre familial", "rendez-vous", "compte professionnel", "G96", "génération"...\n\nOu cliquez sur un sujet ci-dessous :`,
         [
           { label: '🌍 Présentation Moftal', path: '/choix' },
           { label: '🆔 Numéro H', path: '/login' },

@@ -48,6 +48,8 @@ const MA_EXERCICES = [
 
 export default function ProfesseurIA() {
   const [activeTab, setActiveTab] = useState<Tab>('entrainement');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSelector, setShowSelector] = useState(true);
 
   // === ONGLET QUESTIONS ===
   const [messages, setMessages] = useState<Message[]>([
@@ -137,13 +139,26 @@ export default function ProfesseurIA() {
         if (data.success) {
           setMessages(prev => [...prev, { text: data.response, isUser: false, timestamp: new Date() }]);
         } else {
-          setMessages(prev => [...prev, { text: '⚠️ Le serveur a renvoyé une erreur.', isUser: false, timestamp: new Date() }]);
+          setMessages(prev => [...prev, { text: '⚠️ Le serveur a renvoyé une erreur. Réessayez.', isUser: false, timestamp: new Date() }]);
         }
+      } else if (res.status === 401) {
+        setMessages(prev => [...prev, { text: '🔒 Votre session a expiré. Veuillez vous reconnecter.', isUser: false, timestamp: new Date() }]);
+      } else if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        let msg = '⛔ Accès non autorisé.';
+        if (data.code === 'QUOTA_GRATUIT_ATTEINT') {
+          msg = '⏰ Vous avez utilisé vos **3 questions gratuites** d\'aujourd\'hui. Revenez demain ou abonnez-vous pour un accès illimité.';
+        } else if (data.code === 'MESSAGE_TROP_LONG') {
+          msg = '✂️ Message trop long — sans abonnement, la limite est **700 caractères**. Raccourcissez votre question.';
+        } else if (data.code === 'ABONNEMENT_REQUIS') {
+          msg = '📚 Un abonnement est nécessaire pour continuer. Rendez-vous sur la page Éducation IA pour vous abonner.';
+        }
+        setMessages(prev => [...prev, { text: msg, isUser: false, timestamp: new Date() }]);
       } else {
-        setMessages(prev => [...prev, { text: '⚠️ Serveur inaccessible. Vérifiez que le backend est démarré (port 5002).', isUser: false, timestamp: new Date() }]);
+        setMessages(prev => [...prev, { text: '⚠️ Une erreur s\'est produite. Réessayez dans quelques instants.', isUser: false, timestamp: new Date() }]);
       }
     } catch {
-      setMessages(prev => [...prev, { text: '⚠️ Impossible de joindre le serveur. Démarrez le backend puis rafraîchissez la page.', isUser: false, timestamp: new Date() }]);
+      setMessages(prev => [...prev, { text: '⚠️ Connexion impossible. Vérifiez votre connexion internet.', isUser: false, timestamp: new Date() }]);
     } finally {
       setChatLoading(false);
     }
@@ -170,16 +185,25 @@ export default function ProfesseurIA() {
           setCurrentExercice(data.exercice);
           setExerciceQuestion(data.exercice.question);
         } else if (data.success) {
-          // Réponse texte sans exercice structuré
           setExerciceQuestion(data.response);
         } else {
           setExerciceQuestion('⚠️ Erreur serveur. Réessayez.');
         }
+      } else if (res.status === 403) {
+        const data = await res.json().catch(() => ({}));
+        let msg = '⛔ Accès refusé.';
+        if (data.code === 'QUOTA_GRATUIT_ATTEINT') {
+          msg = '⏰ Vous avez utilisé vos 3 questions gratuites aujourd\'hui. Revenez demain ou abonnez-vous pour un accès illimité.';
+        } else if (data.code === 'ABONNEMENT_REQUIS') {
+          msg = '📚 Un abonnement est nécessaire pour continuer. Rendez-vous sur /ia-education pour vous abonner.';
+        }
+        setExerciceQuestion(msg);
+        setShowSelector(true);
       } else {
-        setExerciceQuestion('⚠️ Serveur inaccessible. Vérifiez que le backend est démarré.');
+        setExerciceQuestion('⚠️ Erreur serveur. Réessayez.');
       }
     } catch {
-      setExerciceQuestion('⚠️ Impossible de joindre le serveur.');
+      setExerciceQuestion('⚠️ Impossible de joindre le serveur. Vérifiez votre connexion.');
     } finally {
       setExerciceLoading(false);
     }
@@ -272,11 +296,37 @@ export default function ProfesseurIA() {
     setExerciceCorrection('');
   };
 
+  const selectTab = (tab: Tab) => {
+    setActiveTab(tab);
+    setSidebarOpen(false);
+    if (tab === 'entrainement') setShowSelector(true);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-white">
 
-      {/* ── Sidebar gauche style ChatGPT ── */}
-      <aside className="w-56 flex-shrink-0 flex flex-col border-r border-gray-200" style={{ background: '#f9f9f9' }}>
+      {/* ── Overlay mobile (fond sombre) ── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 sm:hidden"
+          style={{ background: 'rgba(0,0,0,0.45)', zIndex: 15 }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar gauche (animation de largeur, pas de fixed) ── */}
+      <aside
+        className={`
+          flex-shrink-0 flex flex-col border-r border-gray-200
+          transition-all duration-300 ease-in-out
+          ${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}
+          sm:w-56 sm:overflow-auto
+        `}
+        style={{ background: '#f9f9f9', zIndex: 20, position: 'relative' }}
+      >
+        {/* Contenu sidebar — min-w force la largeur même pendant l'animation */}
+        <div className="min-w-[256px] flex flex-col h-full">
+
         {/* Logo */}
         <div className="px-4 pt-5 pb-4 border-b border-gray-200">
           <div className="flex items-center gap-2.5">
@@ -294,7 +344,7 @@ export default function ProfesseurIA() {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1.5">
           <button
-            onClick={() => setActiveTab('questions')}
+            onClick={() => selectTab('questions')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
               activeTab === 'questions'
                 ? 'bg-white text-blue-700 shadow-sm border border-blue-100'
@@ -306,7 +356,7 @@ export default function ProfesseurIA() {
           </button>
 
           <button
-            onClick={() => setActiveTab('entrainement')}
+            onClick={() => selectTab('entrainement')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
               activeTab === 'entrainement'
                 ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100'
@@ -318,7 +368,7 @@ export default function ProfesseurIA() {
           </button>
 
           <button
-            onClick={() => { setActiveTab('historique'); loadIaHistory(); }}
+            onClick={() => { selectTab('historique'); loadIaHistory(); }}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all text-left ${
               activeTab === 'historique'
                 ? 'bg-white text-purple-700 shadow-sm border border-purple-100'
@@ -340,10 +390,33 @@ export default function ProfesseurIA() {
             Retour Éducation
           </button>
         </div>
+
+        </div>{/* fin min-w wrapper */}
       </aside>
 
       {/* ── Zone principale ── */}
       <div className="flex-1 overflow-y-auto" style={{ background: 'linear-gradient(160deg,#f0f9ff 0%,#e0f2fe 40%,#ede9fe 100%)' }}>
+
+        {/* Barre mobile avec hamburger */}
+        <div className="sm:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 sticky top-0 z-10">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+            aria-label="Ouvrir le menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{ background: 'linear-gradient(135deg,#0891b2,#2563eb)' }}>🎓</div>
+            <span className="font-bold text-gray-900 text-sm">Professeur IA</span>
+          </div>
+          <span className="ml-auto text-xs text-gray-400 font-semibold capitalize">{activeTab}</span>
+        </div>
+
       <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5">
 
         {/* ══════════════════════════════════════════════
@@ -364,51 +437,67 @@ export default function ProfesseurIA() {
               </div>
             )}
 
-            {/* Boutons de sélection (toujours visibles) */}
+            {/* Boutons de sélection — repliables */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-5 pt-4 pb-2 border-b border-gray-50">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choisissez un type d'exercice</p>
-              </div>
+              {/* En-tête avec bouton toggle */}
+              <button
+                onClick={() => setShowSelector(v => !v)}
+                className="w-full flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+              >
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  {showSelector ? 'Choisissez un type d\'exercice' : 'Changer d\'exercice'}
+                </p>
+                <svg
+                  width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  className={`text-gray-400 transition-transform duration-200 ${showSelector ? 'rotate-180' : 'rotate-0'}`}
+                >
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
 
-              {/* Français */}
-              <div className="px-5 py-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-xs">📖</span>
-                  <p className="text-sm font-bold text-blue-800">Français</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {FR_EXERCICES.map(btn => (
-                    <button
-                      key={btn.msg}
-                      onClick={() => { resetExercice(); launchExercice(btn.msg); }}
-                      disabled={exerciceLoading}
-                      className="px-3 py-1.5 bg-blue-50 border border-blue-200 hover:border-blue-500 hover:bg-blue-100 text-blue-800 text-sm font-medium rounded-xl transition-all disabled:opacity-40"
-                    >
-                      {btn.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {showSelector && (
+                <>
+                  {/* Français */}
+                  <div className="px-5 py-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-xs">📖</span>
+                      <p className="text-sm font-bold text-blue-800">Français</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {FR_EXERCICES.map(btn => (
+                        <button
+                          key={btn.msg}
+                          onClick={() => { resetExercice(); launchExercice(btn.msg); setShowSelector(false); }}
+                          disabled={exerciceLoading}
+                          className="px-3 py-1.5 bg-blue-50 border border-blue-200 hover:border-blue-500 hover:bg-blue-100 text-blue-800 text-sm font-medium rounded-xl transition-all disabled:opacity-40"
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* Maths */}
-              <div className="px-5 py-3 border-t border-gray-50">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-6 h-6 rounded-lg bg-green-600 flex items-center justify-center text-xs">📐</span>
-                  <p className="text-sm font-bold text-green-800">Mathématiques</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {MA_EXERCICES.map(btn => (
-                    <button
-                      key={btn.msg}
-                      onClick={() => { resetExercice(); launchExercice(btn.msg); }}
-                      disabled={exerciceLoading}
-                      className="px-3 py-1.5 bg-green-50 border border-green-200 hover:border-green-500 hover:bg-green-100 text-green-800 text-sm font-medium rounded-xl transition-all disabled:opacity-40"
-                    >
-                      {btn.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  {/* Maths */}
+                  <div className="px-5 py-3 border-t border-gray-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 rounded-lg bg-green-600 flex items-center justify-center text-xs">📐</span>
+                      <p className="text-sm font-bold text-green-800">Mathématiques</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {MA_EXERCICES.map(btn => (
+                        <button
+                          key={btn.msg}
+                          onClick={() => { resetExercice(); launchExercice(btn.msg); setShowSelector(false); }}
+                          disabled={exerciceLoading}
+                          className="px-3 py-1.5 bg-green-50 border border-green-200 hover:border-green-500 hover:bg-green-100 text-green-800 text-sm font-medium rounded-xl transition-all disabled:opacity-40"
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Exercice en cours */}
@@ -453,7 +542,7 @@ export default function ProfesseurIA() {
                       </ReactMarkdown>
                     </div>
                     <button
-                      onClick={resetExercice}
+                      onClick={() => { resetExercice(); setShowSelector(true); }}
                       className="mt-2 px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 transition-colors"
                     >
                       Choisir un autre exercice

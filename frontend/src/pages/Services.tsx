@@ -79,10 +79,8 @@ export default function Services({ onClose }: ServicesProps = {}) {
     { to: '/transport',                                emoji: '🚌', label: 'Transport',    bg: 'bg-blue-100'   },
     { to: '/beaute',                                   emoji: '💈', label: 'Beauté',       bg: 'bg-pink-100'   },
     { to: '/artisans',                                 emoji: '🔧', label: 'Artisanat',    bg: 'bg-stone-100'  },
-    { to: '/reseau-imam',                              emoji: '🧕', label: 'Imam',         bg: 'bg-green-100'  },
     { to: '/liste-professionnels?type=mairie',         emoji: '🏛️', label: 'Mairie',       bg: 'bg-gray-100'   },
     { to: '/liste-professionnels',                      emoji: '🔗', label: 'Réseau',       bg: 'bg-purple-100' },
-    { to: '/solidarite',                               emoji: '🤝', label: 'ONG',          bg: 'bg-rose-100'   },
     { to: '/liste-professionnels?type=vendor',         emoji: '🛍️', label: 'Vendeurs',     bg: 'bg-sky-100'    },
     { to: '/liste-professionnels?type=producer',       emoji: '🌾', label: 'Producteurs',  bg: 'bg-lime-100'   },
   ]

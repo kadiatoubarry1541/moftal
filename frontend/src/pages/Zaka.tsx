@@ -1006,6 +1006,17 @@ export default function Zaka() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPoorPeople.map((person) => (
                   <div key={person.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
+                    {/* Photo de profil */}
+                    {person.profilePicture && (
+                      <div className="flex justify-center mb-4">
+                        <img
+                          src={person.profilePicture}
+                          alt={`${person.prenom} ${person.nomFamille}`}
+                          className="w-20 h-20 rounded-full object-cover border-2 border-green-200"
+                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="text-lg font-semibold text-gray-900">
                         {person.prenom} {person.nomFamille}
@@ -1244,21 +1255,6 @@ export default function Zaka() {
 
         {activeTab === 'communaute' && (
           <div className="space-y-6">
-
-            {/* Mosquées & Imams */}
-            <a
-              href="/mosquee"
-              className="flex items-center gap-4 rounded-xl border-2 border-teal-200 hover:border-teal-400 bg-white px-5 py-4 shadow-sm transition hover:shadow-md"
-            >
-              <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center text-3xl flex-shrink-0">
-                🕌
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-base text-teal-800">Mosquées & Imams</div>
-                <div className="text-xs text-gray-500 mt-0.5">Mosquées et imams enregistrés dans votre région</div>
-              </div>
-              <span className="text-gray-400 text-lg flex-shrink-0">→</span>
-            </a>
 
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">

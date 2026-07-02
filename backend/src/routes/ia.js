@@ -1005,16 +1005,45 @@ router.get('/history', authenticate, async function(req, res) {
 
 router.post('/chat', authenticate, async function(req, res) {
   try {
-    // Vérifier l'abonnement Professeur IA avant de répondre
-    const aAbonnement = await verifierAbonnementIA(req.user.numeroH);
-    if (!aAbonnement) {
-      return res.status(403).json({
-        success: false,
-        code: 'ABONNEMENT_REQUIS',
-        message: 'L\'accès au Professeur IA nécessite un abonnement actif.',
-        prix: { afrique: { mois: 5000, an: 50000 }, horsAfrique: { mois: 10000, an: 100000 } },
-        lienPaiement: '/ia-education'
-      });
+    const numeroH = req.user.numeroH;
+    const role = (req.user.role || '').toLowerCase();
+    const isAdmin = role === 'admin'
+      || role === 'super-admin'
+      || req.user.isMasterAdmin === true
+      || req.user.bypassRestrictions === true;
+
+    if (!isAdmin) {
+      let aAbonnement = false;
+      try { aAbonnement = await verifierAbonnementIA(numeroH); } catch (_) { aAbonnement = false; }
+
+      if (!aAbonnement) {
+        // Quota gratuit : 3 questions/jour, 700 caractères max
+        const msg = (req.body || {}).message || '';
+
+        if (msg.length > 700) {
+          return res.status(403).json({
+            success: false,
+            code: 'MESSAGE_TROP_LONG',
+            message: 'Sans abonnement, vos questions sont limitées à 700 caractères. Abonnez-vous pour un accès illimité.',
+            lienPaiement: '/ia-education'
+          });
+        }
+
+        const debutJour = new Date();
+        debutJour.setHours(0, 0, 0, 0);
+        const questionsAujourdhui = await IaConversation.count({
+          where: { numeroH, created_at: { [Op.gte]: debutJour } }
+        });
+
+        if (questionsAujourdhui >= 3) {
+          return res.status(403).json({
+            success: false,
+            code: 'QUOTA_GRATUIT_ATTEINT',
+            message: 'Vous avez utilisé vos 3 questions gratuites aujourd\'hui. Revenez demain ou abonnez-vous pour un accès illimité.',
+            lienPaiement: '/ia-education'
+          });
+        }
+      }
     }
 
     var body = req.body || {};
@@ -1078,7 +1107,7 @@ router.post('/chat', authenticate, async function(req, res) {
             '⏳ Réfléchissez et tapez votre réponse !',
           ].join('\n');
           try {
-            await IaConversation.create({ sessionId: null, userMessage: message, botResponse: answer, source: 'professeur_ia_correction' });
+            await IaConversation.create({ sessionId: null, numeroH, userMessage: message, botResponse: answer, source: 'professeur_ia_correction' });
           } catch (e) { /* silencieux */ }
           return res.json({ success: true, response: answer, exercice: nextEx });
         } else {
@@ -1096,7 +1125,7 @@ router.post('/chat', authenticate, async function(req, res) {
             'Tapez **"exercice"** pour un nouvel entraînement.',
           ].join('\n');
           try {
-            await IaConversation.create({ sessionId: null, userMessage: message, botResponse: answer, source: 'professeur_ia_correction' });
+            await IaConversation.create({ sessionId: null, numeroH, userMessage: message, botResponse: answer, source: 'professeur_ia_correction' });
           } catch (e) { /* silencieux */ }
           return res.json({ success: true, response: answer, lastExercice: null });
         }
@@ -1109,7 +1138,7 @@ router.post('/chat', authenticate, async function(req, res) {
       var ex = generateExercice(typeExercice === 'random' ? null : typeExercice);
       answer = formatExercice(ex);
       try {
-        await IaConversation.create({ sessionId: null, userMessage: message, botResponse: answer, source: 'professeur_ia_exercice' });
+        await IaConversation.create({ sessionId: null, numeroH, userMessage: message, botResponse: answer, source: 'professeur_ia_exercice' });
       } catch (e) { /* silencieux */ }
       return res.json({ success: true, response: answer, exercice: ex });
     }
