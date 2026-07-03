@@ -79,7 +79,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
     { to: '/transport',                                emoji: '🚌', label: 'Transport',    bg: 'bg-blue-100'   },
     { to: '/beaute',                                   emoji: '💈', label: 'Beauté',       bg: 'bg-pink-100'   },
     { to: '/artisans',                                 emoji: '🔧', label: 'Artisanat',    bg: 'bg-stone-100'  },
-    { to: '/mairie',                                   emoji: '🏛️', label: 'Mairie',       bg: 'bg-gray-100'   },
     { to: '/reseau',                                   emoji: '🔗', label: 'Réseau',       bg: 'bg-purple-100' },
     { to: '/vendeurs',                                 emoji: '🛍️', label: 'Vendeurs',     bg: 'bg-sky-100'    },
     { to: '/producteurs',                              emoji: '🌾', label: 'Producteurs',  bg: 'bg-lime-100'   },

@@ -68,17 +68,17 @@ export default function IdentiteModal({
       onClick={onClose}
     >
       <div
-        className="relative bg-white rounded-xl shadow-xl p-6 max-w-2xl w-11/12 max-h-[90vh] overflow-y-auto"
+        className="relative bg-white rounded-xl shadow-xl p-4 sm:p-6 max-w-2xl w-11/12 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <h3 className="text-2xl font-bold">Identité</h3>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-lg sm:text-2xl font-bold truncate">Identité</h3>
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {/* Bouton Paramètres ⚙️ */}
             <div className="relative">
               <button
                 onClick={() => { setShowSettings(!showSettings); setShowLang(false); }}
-                className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
                 title="Paramètres"
               >
                 <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +160,7 @@ export default function IdentiteModal({
             </div>
 
             <button
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
+              className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium transition-colors whitespace-nowrap"
               onClick={() => {
                 if (onEditProfile) {
                   onEditProfile();
@@ -169,10 +169,10 @@ export default function IdentiteModal({
                 }
               }}
             >
-              ✏️ Modifier mon profil
+              ✏️ <span className="hidden sm:inline">Modifier mon profil</span><span className="sm:hidden">Modifier</span>
             </button>
             <button
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-2.5 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-base whitespace-nowrap"
               onClick={onClose}
             >
               Fermer
@@ -180,8 +180,8 @@ export default function IdentiteModal({
           </div>
         </div>
 
-        <div className="mt-4 flex gap-6 items-start">
-          <div className="relative">
+        <div className="mt-4 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start">
+          <div className="relative self-center sm:self-start flex-shrink-0">
             {photoUrl ? (
               <img
                 src={photoUrl}
@@ -209,8 +209,8 @@ export default function IdentiteModal({
             )}
           </div>
 
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold">
+          <div className="flex-1 w-full min-w-0">
+            <h2 className="text-lg sm:text-xl font-semibold break-words">
               {userData!.prenom} {userData!.nomFamille}
             </h2>
             <div className="mt-2 text-sm">
