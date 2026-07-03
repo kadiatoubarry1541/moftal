@@ -28,8 +28,8 @@ const APERÇU_SECONDAIRE: PreviewProduct[] = [
 ];
 
 const APERÇU_TERTIAIRE: PreviewProduct[] = [
-  { id: '1', title: 'Maison à louer 3 pièces', price: 500000, currency: 'FG' },
-  { id: '2', title: 'Ciment, Fer à béton', price: 85000, currency: 'FG' },
+  { id: '1', title: 'Ciment, Fer à béton', price: 85000, currency: 'FG' },
+  { id: '2', title: 'Tôles ondulées, planches', price: 120000, currency: 'FG' },
 ];
 
 function buildImageUrl(path: string | undefined): string | undefined {
@@ -223,7 +223,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
           >
             <span className="text-3xl">🏠</span>
             <span className="font-semibold">Tertiaire</span>
-            <span className="text-xs opacity-90">Maisons à louer, matériaux de construction</span>
+            <span className="text-xs opacity-90">Matériaux de construction et services</span>
           </button>
           <div className="p-4">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des annonces</p>

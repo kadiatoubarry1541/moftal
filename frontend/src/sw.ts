@@ -57,8 +57,8 @@ self.addEventListener('push', (event: PushEvent) => {
   const title = data.title || 'Moftal'
   const options: NotificationOptions = {
     body: data.message || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: '/logo-moftal.svg',
+    badge: '/logo-moftal.svg',
     tag: data.id || 'moftal-notif',
     renotify: true,
     vibrate: [200, 100, 200],

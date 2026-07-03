@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPhotoUrl, getNumeroHForDisplay } from "../utils/auth";
 import { api } from "../utils/api";
+import { useI18n } from "../i18n/useI18n";
+import { LANG_LABELS } from "../i18n/strings";
 
 interface UserData {
   numeroH: string;
@@ -22,10 +24,12 @@ export default function IdentiteModal({
   open,
   onClose,
   onEditProfile,
+  freshUserData,
 }: {
   open: boolean;
   onClose: () => void;
   onEditProfile?: () => void;
+  freshUserData?: any;
 }) {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -33,10 +37,17 @@ export default function IdentiteModal({
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showLang, setShowLang] = useState(false);
   const navigate = useNavigate();
+  const { t, lang, setLang } = useI18n();
 
   useEffect(() => {
     if (!open) return;
+    if (freshUserData) {
+      setUserData(freshUserData);
+      return;
+    }
     const raw = localStorage.getItem("session_user");
     if (!raw) return;
     try {
@@ -44,7 +55,7 @@ export default function IdentiteModal({
       const u = parsed.userData || parsed;
       setUserData(u);
     } catch {}
-  }, [open]);
+  }, [open, freshUserData]);
 
   if (!open) return null;
   if (open && !userData) return null;
@@ -57,12 +68,97 @@ export default function IdentiteModal({
       onClick={onClose}
     >
       <div
-        className="relative bg-white rounded-xl shadow-xl p-6 max-w-2xl w-11/12"
+        className="relative bg-white rounded-xl shadow-xl p-6 max-w-2xl w-11/12 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="text-2xl font-bold">Identité</h3>
           <div className="flex items-center gap-2">
+            {/* Bouton Paramètres ⚙️ */}
+            <div className="relative">
+              <button
+                onClick={() => { setShowSettings(!showSettings); setShowLang(false); }}
+                className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                title="Paramètres"
+              >
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+              {showSettings && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowSettings(false)} />
+                  <div className="absolute right-0 top-11 bg-white rounded-2xl shadow-xl border border-gray-200 w-68 z-50 overflow-hidden" style={{ minWidth: 240 }}>
+                    {/* Page d'accueil */}
+                    {userData?.numeroH && (
+                      <button
+                        onClick={() => {
+                          localStorage.removeItem(`moftal_favori_${userData.numeroH}`);
+                          window.dispatchEvent(new CustomEvent('open-favori-modal'));
+                          setShowSettings(false);
+                          onClose();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors border-b border-gray-100"
+                      >
+                        <span>⭐</span>
+                        <span>Changer ma page d'accueil</span>
+                      </button>
+                    )}
+                    {/* Langue */}
+                    <div className="border-b border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => setShowLang(!showLang)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="flex items-center gap-3">
+                          <span>🌐</span>
+                          <span>{t('header.language')}</span>
+                        </span>
+                        <span className="text-xs text-gray-400">{showLang ? '▲' : '▼'}</span>
+                      </button>
+                      {showLang && (
+                        <div className="px-3 pb-3 grid grid-cols-2 gap-1.5 border-t border-slate-100 pt-2">
+                          {Object.entries(LANG_LABELS).map(([code, label]) => {
+                            const isSelected = lang === code;
+                            return (
+                              <button
+                                key={code}
+                                type="button"
+                                onClick={() => setLang(code as "fr" | "en" | "ar" | "man" | "pul")}
+                                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border-2 text-xs font-medium transition-all ${
+                                  isSelected
+                                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                                    : "border-slate-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
+                                }`}
+                              >
+                                <span className="flex-1 text-left">{label}</span>
+                                {isSelected && <span className="text-emerald-600">✓</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    {/* Se déconnecter */}
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('session_user');
+                        onClose();
+                        navigate('/login');
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <span>⏻</span>
+                      <span>{t('btn.logout')}</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
               onClick={() => {
@@ -186,6 +282,24 @@ export default function IdentiteModal({
             </div>
           </div>
         </div>
+
+        {/* ── Vidéo d'inscription ── */}
+        {userData!.video && (
+          <div className="mt-5 pt-4 border-t border-gray-100">
+            <h4 className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
+              🎥 Ma vidéo d'inscription
+            </h4>
+            <p className="text-xs text-slate-400 mb-2">
+              Vidéo enregistrée lors de votre inscription. Elle sert à confirmer votre identité.
+            </p>
+            <video
+              src={userData!.video as string}
+              controls
+              className="w-full max-w-sm rounded-xl border border-slate-200 shadow-sm"
+              style={{ maxHeight: 220 }}
+            />
+          </div>
+        )}
 
         {/* Zone « Supprimer le compte » en bas, à part */}
         <div className="mt-6 pt-4 border-t border-gray-200">

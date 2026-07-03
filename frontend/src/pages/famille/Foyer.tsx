@@ -19,8 +19,8 @@ export default function Foyer() {
   const genre = String((user as any)?.genre ?? '').trim().toUpperCase()
   const userIsAdmin = user ? isAdmin(user as any) : false
 
-  // "Ma femme" → visible uniquement pour les hommes (genre === 'HOMME')
-  // "Mon homme" → visible uniquement pour les femmes (genre === 'FEMME')
+  // "Ma femme" → visible pour les hommes et les admins
+  // "Mon homme" → visible pour les femmes et les admins
   const TABS = ALL_TABS.filter(tab => {
     if (tab.id === 'femmes') return userIsAdmin || genre === 'HOMME'
     if (tab.id === 'mari')   return userIsAdmin || genre === 'FEMME'

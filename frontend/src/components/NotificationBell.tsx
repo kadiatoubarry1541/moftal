@@ -96,8 +96,8 @@ function showBrowserNotification(notif: Notification) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   const n = new window.Notification(notif.title, {
     body: notif.message,
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
+    icon: "/logo-moftal.svg",
+    badge: "/logo-moftal.svg",
     tag: notif.id,
     renotify: true
   });

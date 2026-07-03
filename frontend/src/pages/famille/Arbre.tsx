@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback, lazy, Suspense } fro
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import PaymentModal from '../../components/PaymentModal'
 import { hideIncrement } from '../../utils/formatNumeroH'
+import { isAdmin } from '../../utils/auth'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
@@ -1463,8 +1464,8 @@ const enhancedUser: UserData = useMemo(() => {
                 {([
                   { id: 'parents', emoji: '👨‍👩‍👦', label: 'Parents'   },
                   { id: 'enfants', emoji: '🧍',    label: 'Enfants'   },
-                  { id: 'femme',   emoji: '👰',    label: 'Ma femme'  },
-                  { id: 'homme',   emoji: '🤵',    label: 'Mon homme' },
+                  ...(isAdmin(user) || user?.genre === 'HOMME' ? [{ id: 'femme' as const,  emoji: '👰', label: 'Ma femme'  }] : []),
+                  ...(isAdmin(user) || user?.genre === 'FEMME' ? [{ id: 'homme' as const, emoji: '🤵', label: 'Mon homme' }] : []),
                 ] as const).map(item => (
                   <button
                     key={item.id}

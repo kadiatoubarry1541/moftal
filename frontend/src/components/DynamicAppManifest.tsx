@@ -35,14 +35,14 @@ export default function DynamicAppManifest({
     if (!link) return;
     const originalHref = link.getAttribute("href");
 
-    // Priorité : URL backend (si proId) > URL directe > icône Moftal par défaut
+    // Priorité : URL backend (si proId) > URL directe > logo Moftal par défaut
     const iconSrc = proId
       ? `${API}/api/professionals/pwa-icon/${proId}`
-      : (iconUrl && !iconUrl.startsWith("data:") ? iconUrl : "/icon-192.png");
+      : (iconUrl && !iconUrl.startsWith("data:") ? iconUrl : "/logo-moftal.svg");
 
     const icon512 = proId
       ? `${API}/api/professionals/pwa-icon/${proId}`
-      : "/icon-512.png";
+      : "/logo-moftal.svg";
 
     const manifest = {
       id: startUrl,
@@ -57,9 +57,8 @@ export default function DynamicAppManifest({
       background_color: backgroundColor,
       theme_color: themeColor,
       icons: [
-        { src: iconSrc, sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: icon512, sizes: "512x512", type: "image/png", purpose: "any" },
-        { src: icon512, sizes: "512x512", type: "image/png", purpose: "maskable" },
+        { src: iconSrc, sizes: "any", type: proId ? "image/png" : "image/svg+xml", purpose: "any" },
+        { src: icon512, sizes: "any", type: proId ? "image/png" : "image/svg+xml", purpose: "maskable" },
       ],
     };
 

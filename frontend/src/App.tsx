@@ -165,6 +165,13 @@ const AdminGovernments = lazy(() => import("./pages/AdminGovernments"));
 const GestionImam = lazy(() => import("./pages/GestionImam"));
 const GestionMadrasa = lazy(() => import("./pages/GestionMadrasa"));
 const GestionEcole = lazy(() => import("./pages/GestionEcole"));
+const Commerce = lazy(() => import("./pages/Commerce"));
+const Entreprise = lazy(() => import("./pages/Entreprise"));
+const Fournisseurs = lazy(() => import("./pages/Fournisseurs"));
+const Mairie = lazy(() => import("./pages/Mairie"));
+const Reseau = lazy(() => import("./pages/Reseau"));
+const Vendeurs = lazy(() => import("./pages/Vendeurs"));
+const Producteurs = lazy(() => import("./pages/Producteurs"));
 
 const LoadingBar = () => (
   <div className="fixed top-0 left-0 w-full h-1 z-[9999] bg-gray-200">
@@ -694,6 +701,13 @@ function App() {
           <Route path="/gestion-beauty/:tenantCode"    element={<GestionBeauty />} />
           <Route path="/gestion-artisan/:tenantCode"   element={<GestionArtisan />} />
           <Route path="/gestion-producer/:tenantCode"  element={<GestionProducer />} />
+          <Route path="/commerce" element={<Commerce />} />
+          <Route path="/entreprise" element={<Entreprise />} />
+          <Route path="/fournisseurs" element={<Fournisseurs />} />
+          <Route path="/mairie" element={<Mairie />} />
+          <Route path="/reseau" element={<Reseau />} />
+          <Route path="/vendeurs" element={<Vendeurs />} />
+          <Route path="/producteurs" element={<Producteurs />} />
           <Route path="/reseau-imam" element={<ReseauImam />} />
           <Route path="/reseau/:type" element={<ReseauPro />} />
           <Route path="/quartier" element={<Quartier />} />

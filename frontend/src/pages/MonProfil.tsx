@@ -7,7 +7,6 @@ import { AdminPanel } from "../components/AdminPanel";
 import { config } from "../config/api";
 import { getPhotoUrl, isMasterAdmin, getNumeroHForDisplay } from "../utils/auth";
 import { useI18n } from "../i18n/useI18n";
-import { LANG_LABELS } from "../i18n/strings";
 
 const MEMBERSHIP_ROLE_LABELS: Record<string, string> = {
   eleve: "🎓 Élève",
@@ -38,7 +37,7 @@ interface UserLogo {
 }
 
 export default function MonProfil() {
-  const { t, lang, setLang } = useI18n();
+  const { t } = useI18n();
   const [userData, setUserData] = useState<{
     prenom?: string;
     nomFamille?: string;
@@ -59,7 +58,6 @@ export default function MonProfil() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showActions, setShowActions] = useState(false);
-  const [showLang, setShowLang] = useState(false);
   const navigate = useNavigate();
 
   const loadUserData = () => {
@@ -180,7 +178,7 @@ export default function MonProfil() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-bold text-gray-900 leading-tight">
               {userData.prenom} {userData.nomFamille}
             </h1>
@@ -190,19 +188,6 @@ export default function MonProfil() {
       </header>
 
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-
-      {/* Changer la page favorite */}
-      {userData?.numeroH && (
-        <button
-          onClick={() => {
-            localStorage.removeItem(`moftal_favori_${userData.numeroH}`);
-            window.dispatchEvent(new CustomEvent('open-favori-modal'));
-          }}
-          className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 text-sm font-medium transition-colors"
-        >
-          ⭐ Changer ma page d'accueil
-        </button>
-      )}
 
       {/* Header Principal */}
       <div
@@ -387,27 +372,6 @@ export default function MonProfil() {
         </div>
       )}
 
-      {/* ── Vidéo d'inscription ── */}
-      {userData.video && (
-        <div
-          className="bg-white rounded-xl shadow-sm border border-blue-100 p-5 mt-6"
-          style={{ borderLeftWidth: "4px", borderLeftColor: "#3b82f6" }}
-        >
-          <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-            {t('profile.my_video')}
-          </h3>
-          <p className="text-sm text-slate-500 mb-3">
-            {t('profile.video_desc')}
-          </p>
-          <video
-            src={userData.video as string}
-            controls
-            className="w-full max-w-sm rounded-xl border border-slate-200 shadow-sm"
-            style={{ maxHeight: 280 }}
-          />
-        </div>
-      )}
-
       {/* ── Mes établissements liés ── */}
       {memberships.length > 0 && (
         <div
@@ -455,6 +419,7 @@ export default function MonProfil() {
           setOpen(false);
           setShowEditProfile(true);
         }}
+        freshUserData={userData}
       />
 
       <EditProfileModal
@@ -559,57 +524,6 @@ export default function MonProfil() {
         </div>
       )}
 
-      {/* ── Langue + Se déconnecter + Supprimer ── */}
-      <div className="mt-6 mb-4 flex flex-col gap-3">
-
-        {/* Langue collapsible */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowLang(!showLang)}
-            className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <span className="flex items-center gap-2">🌐 {t('header.language')}</span>
-            <span className="text-xs text-gray-400">{showLang ? '▲' : '▼'}</span>
-          </button>
-          {showLang && (
-            <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 gap-2 border-t border-slate-100 pt-3">
-              {Object.entries(LANG_LABELS).map(([code, label]) => {
-                const isSelected = lang === code;
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => setLang(code as "fr" | "en" | "ar" | "man" | "pul")}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${
-                      isSelected
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                        : "border-slate-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
-                    }`}
-                  >
-                    <span className="flex-1 text-left">{label}</span>
-                    {isSelected && <span className="text-emerald-600">✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Se déconnecter */}
-        <button
-          onClick={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('session_user');
-            navigate('/login');
-          }}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 font-semibold rounded-xl border border-orange-200 transition-colors"
-        >
-          <span>⏻</span>
-          {t('btn.logout')}
-        </button>
-
-      </div>
 
     </div>
     </div>

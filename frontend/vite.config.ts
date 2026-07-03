@@ -47,7 +47,7 @@ export default defineConfig(({ mode }) => {
         filename: "sw.ts",
         registerType: "autoUpdate",
         // Seuls les assets réellement utiles pour l'app shell PWA
-        includeAssets: ["logo.svg", "logo-moftal.svg", "icon-192.png", "icon-512.png"],
+        includeAssets: ["logo-moftal.svg"],
         manifest: {
           name: "Moftal",
           short_name: "Moftal",
@@ -62,21 +62,15 @@ export default defineConfig(({ mode }) => {
           lang: "fr",
           icons: [
             {
-              src: "/icon-192.png",
-              sizes: "192x192",
-              type: "image/png",
+              src: "/logo-moftal.svg",
+              sizes: "any",
+              type: "image/svg+xml",
               purpose: "any",
             },
             {
-              src: "/icon-512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "any",
-            },
-            {
-              src: "/icon-512.png",
-              sizes: "512x512",
-              type: "image/png",
+              src: "/logo-moftal.svg",
+              sizes: "any",
+              type: "image/svg+xml",
               purpose: "maskable",
             },
           ],
@@ -85,19 +79,19 @@ export default defineConfig(({ mode }) => {
             {
               name: "Accueil",
               url: "/",
-              icons: [{ src: "/icon-192.png", sizes: "192x192" }],
+              icons: [{ src: "/logo-moftal.svg", sizes: "any", type: "image/svg+xml" }],
             },
             {
               name: "Mon Profil",
               url: "/profil",
-              icons: [{ src: "/icon-192.png", sizes: "192x192" }],
+              icons: [{ src: "/logo-moftal.svg", sizes: "any", type: "image/svg+xml" }],
             },
             {
               name: "Espace Gestion",
               short_name: "Gestion",
               description: "Accès direct à vos espaces de gestion professionnelle",
               url: "/gestion-interne",
-              icons: [{ src: "/icon-192.png", sizes: "192x192" }],
+              icons: [{ src: "/logo-moftal.svg", sizes: "any", type: "image/svg+xml" }],
             },
           ],
         },
