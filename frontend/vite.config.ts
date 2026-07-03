@@ -23,22 +23,10 @@ export default defineConfig(({ mode }) => {
     },
   };
 
-  // Plugin qui force le navigateur à supprimer les anciens caches/SW en dev
-  const clearSwPlugin: Plugin = {
-    name: 'clear-sw-dev',
-    configureServer(server) {
-      server.middlewares.use((_req, res, next) => {
-        res.setHeader('Clear-Site-Data', '"cache"')
-        next()
-      })
-    }
-  }
-
   return {
     plugins: [
       react(),
       replaceLocalhostPlugin,
-      ...(mode === 'development' ? [clearSwPlugin] : []),
       viteCompression({ algorithm: "gzip", ext: ".gz" }),
       viteCompression({ algorithm: "brotliCompress", ext: ".br" }),
       VitePWA({
@@ -62,16 +50,28 @@ export default defineConfig(({ mode }) => {
           lang: "fr",
           icons: [
             {
-              src: "/logo-moftal.svg",
-              sizes: "any",
-              type: "image/svg+xml",
+              src: "/icon-192.png",
+              sizes: "192x192",
+              type: "image/png",
               purpose: "any",
+            },
+            {
+              src: "/icon-512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "/icon-512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
             },
             {
               src: "/logo-moftal.svg",
               sizes: "any",
               type: "image/svg+xml",
-              purpose: "maskable",
+              purpose: "any",
             },
           ],
           categories: ["social", "health", "education", "business"],

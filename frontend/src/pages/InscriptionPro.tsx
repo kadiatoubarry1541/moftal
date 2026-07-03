@@ -129,6 +129,7 @@ export default function InscriptionPro() {
   const initialType = typeFromUrl && PRO_TYPE_IDS.has(typeFromUrl) ? typeFromUrl : "";
 
   const [selectedType, setSelectedType] = useState(initialType);
+  const [planType, setPlanType] = useState<'visibility' | 'full' | ''>('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -214,6 +215,7 @@ export default function InscriptionPro() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
+    if (!planType) { setError("Veuillez choisir une formule (Visibilité ou Gestion Interne)."); return; }
     if (!form.name.trim()) { setError("Le nom est requis"); return; }
     if (nomStatut === 'pris') {
       setError(`Le nom "${form.name.trim()}" est déjà utilisé. Veuillez en choisir un autre.`);
@@ -273,6 +275,7 @@ export default function InscriptionPro() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           type: selectedType,
+          planType,
           subSector: NEEDS_SUBSECTOR.includes(selectedType) ? subSector : (selectedType === "broker" ? "tertiaire" : undefined),
           name: form.name.trim(),
           description: (form.description.trim() || "") + (form.website.trim() ? `\nSite: ${form.website.trim()}` : ""),
@@ -376,6 +379,65 @@ export default function InscriptionPro() {
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{PRO_TYPE_INFO[selectedType].expect}</p>
               <p className="text-sm font-medium text-blue-900 dark:text-blue-100">📍 Où vous serez publié :</p>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{PRO_TYPE_INFO[selectedType].page.replace(/\*\*(.*?)\*\*/g, "$1")}</p>
+            </div>
+          )}
+
+          {/* ── Choix de formule ── */}
+          {selectedType && (
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">Quelle formule souhaitez-vous ? *</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                {/* Option 1 : Visibilité + RDV */}
+                <button
+                  type="button"
+                  onClick={() => setPlanType('visibility')}
+                  className={`text-left p-4 rounded-2xl border-2 transition-all ${
+                    planType === 'visibility'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">🌐</span>
+                    <span className="font-bold text-gray-900 dark:text-gray-100 text-sm">Visibilité + Rendez-vous</span>
+                    {planType === 'visibility' && <span className="ml-auto w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">✓</span>}
+                  </div>
+                  <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mt-2">
+                    <li>✅ Page vitrine publique</li>
+                    <li>✅ Clients peuvent vous trouver</li>
+                    <li>✅ Prise de rendez-vous en ligne</li>
+                    <li className="text-gray-400">❌ Pas d'outils de gestion interne</li>
+                  </ul>
+                  <div className="mt-3 text-xs font-bold text-blue-600 dark:text-blue-400">Formule de base — incluse</div>
+                </button>
+
+                {/* Option 2 : Visibilité + RDV + Gestion Interne */}
+                <button
+                  type="button"
+                  onClick={() => setPlanType('full')}
+                  className={`text-left p-4 rounded-2xl border-2 transition-all relative ${
+                    planType === 'full'
+                      ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/30'
+                      : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-300'
+                  }`}
+                >
+                  <div className="absolute top-3 right-3 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">COMPLET</div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">🏢</span>
+                    <span className="font-bold text-gray-900 dark:text-gray-100 text-sm">Visibilité + Gestion Interne</span>
+                    {planType === 'full' && <span className="ml-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">✓</span>}
+                  </div>
+                  <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mt-2">
+                    <li>✅ Page vitrine publique</li>
+                    <li>✅ Prise de rendez-vous en ligne</li>
+                    <li>✅ Tableau de bord complet</li>
+                    <li>✅ Gestion stock, clients, personnel…</li>
+                  </ul>
+                  <div className="mt-3 text-xs font-bold text-orange-600 dark:text-orange-400">3 mois gratuits · puis abonnement</div>
+                </button>
+
+              </div>
             </div>
           )}
 
