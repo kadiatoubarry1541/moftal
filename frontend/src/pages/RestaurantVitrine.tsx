@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import ProPublicationsWidget from "../components/ProPublicationsWidget";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -248,6 +249,8 @@ export default function RestaurantVitrine() {
           )}
         </div>
       </section>
+
+      <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#ef4444" accentDark="#991b1b" />
 
       {/* FOOTER */}
       <footer style={{ background: RED_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>

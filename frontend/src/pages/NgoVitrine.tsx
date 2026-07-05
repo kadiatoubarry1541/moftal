@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import ProPublicationsWidget from "../components/ProPublicationsWidget";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -231,6 +232,8 @@ export default function NgoVitrine() {
           </div>
         </div>
       </section>
+
+      <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#e11d48" accentDark="#9f1239" />
 
       {/* FOOTER */}
       <footer style={{ background: ROSE_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>

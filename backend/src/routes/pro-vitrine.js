@@ -6,6 +6,26 @@ import { sequelize } from '../config/database_pro.js';
 
 const router = express.Router();
 
+// ─── ENDPOINT PUBLIC PAR TENANT CODE ─────────────────────────────────
+// GET /api/pro-vitrine/by-tenant/:tenantCode/publications (pour les vitrines)
+router.get('/by-tenant/:tenantCode/publications', async (req, res) => {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT pp.*
+       FROM pro_publications pp
+       JOIN professional_accounts pa ON pa.id = pp.professional_account_id
+       WHERE pa.tenant_code = :code
+         AND pp.is_active = true
+       ORDER BY pp.created_at DESC
+       LIMIT 30`,
+      { replacements: { code: req.params.tenantCode } }
+    );
+    res.json({ success: true, publications: rows || [] });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // ─── PUBLICATIONS ────────────────────────────────────────────────────
 
 // GET /api/pro-vitrine/:id/publications  (public — clients voient les publications)
@@ -28,7 +48,7 @@ router.post('/:id/publications', authenticate, async (req, res) => {
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     if (account.ownerNumeroH !== req.userId) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
-    const { type, titre, contenu, image, prix, disponible } = req.body;
+    const { type, titre, contenu, image, video, prix, disponible } = req.body;
     if (!titre?.trim()) return res.status(400).json({ success: false, message: 'Titre requis' });
 
     const pub = await ProPublication.create({
@@ -37,6 +57,7 @@ router.post('/:id/publications', authenticate, async (req, res) => {
       titre: titre.trim(),
       contenu: contenu || '',
       image: image || null,
+      video: video || null,
       prix: prix || null,
       disponible: disponible !== false
     });
@@ -56,12 +77,13 @@ router.put('/:id/publications/:pubId', authenticate, async (req, res) => {
     const pub = await ProPublication.findByPk(req.params.pubId);
     if (!pub) return res.status(404).json({ success: false, message: 'Publication non trouvée' });
 
-    const { type, titre, contenu, image, prix, disponible } = req.body;
+    const { type, titre, contenu, image, video, prix, disponible } = req.body;
     await pub.update({
       type: type !== undefined ? type : pub.type,
       titre: titre?.trim() || pub.titre,
       contenu: contenu !== undefined ? contenu : pub.contenu,
       image: image !== undefined ? image : pub.image,
+      video: video !== undefined ? video : pub.video,
       prix: prix !== undefined ? prix : pub.prix,
       disponible: disponible !== undefined ? disponible : pub.disponible
     });

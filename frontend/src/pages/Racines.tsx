@@ -170,7 +170,7 @@ export default function Racines() {
       {/* Retour Mon arbre */}
       <div style={{ marginBottom: 16 }}>
         <Link
-          to="/famille/moi/arbre"
+          to="/solidarite"
           style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             padding: "6px 14px", background: "#f1f5f9", borderRadius: 8,
@@ -178,7 +178,7 @@ export default function Racines() {
             textDecoration: "none", border: "1px solid #e2e8f0"
           }}
         >
-          ← Mon arbre
+          ← Solidarité
         </Link>
       </div>
 

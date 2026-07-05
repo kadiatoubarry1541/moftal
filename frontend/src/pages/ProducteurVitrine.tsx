@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import ProPublicationsWidget from "../components/ProPublicationsWidget";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const COLOR     = "#156315";
@@ -167,6 +168,7 @@ export default function ProducteurVitrine() {
           </div>
         )}
       </div>
+      <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#15803d" accentDark="#14532d" />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import ProPublicationsWidget from "../components/ProPublicationsWidget";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -245,6 +246,8 @@ export default function JournalisteVitrine() {
           </div>
         </div>
       </section>
+
+      <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#475569" accentDark="#1e293b" />
 
       {/* FOOTER */}
       <footer style={{ background: SLATE_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>

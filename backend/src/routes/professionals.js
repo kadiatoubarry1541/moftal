@@ -292,6 +292,84 @@ router.get('/pro-manifest/:id', async (req, res) => {
   }
 });
 
+// GET /api/professionals/tenant-icon/:tenantCode — sert le logo du tenant comme vraie image
+router.get('/tenant-icon/:tenantCode', async (req, res) => {
+  try {
+    const [tenant] = await sequelize.query(
+      `SELECT logo_url FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    const logo = tenant?.logo_url;
+    if (!logo) return res.status(302).redirect('/logo-moftal.svg');
+
+    if (logo.startsWith('data:')) {
+      const commaIdx = logo.indexOf(',');
+      const mime = (logo.substring(0, commaIdx).match(/data:([^;]+);/) || [])[1] || 'image/png';
+      const buffer = Buffer.from(logo.substring(commaIdx + 1), 'base64');
+      res.set('Content-Type', mime);
+      res.set('Cache-Control', 'public, max-age=86400');
+      res.set('Access-Control-Allow-Origin', '*');
+      return res.send(buffer);
+    }
+    res.redirect(302, logo);
+  } catch {
+    res.status(302).redirect('/logo-moftal.svg');
+  }
+});
+
+// GET /api/professionals/pro-manifest/by-tenant/:tenantCode — manifest PWA pour les pages gestion
+router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
+  try {
+    const { tenantCode } = req.params;
+    const startUrl = req.query.startUrl || `/gestion-interne`;
+
+    const [tenant] = await sequelize.query(
+      `SELECT tenant_code, name, type FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+
+    const name = tenant?.name || tenantCode;
+    const TYPE_COLORS = {
+      clinic: '#1a8f1a', health_worker: '#1a8f1a',
+      school: '#2563eb', madrasa: '#2563eb',
+      mosque: '#f43f5e', ngo: '#f43f5e',
+      enterprise: '#f59e0b', restaurant: '#f97316',
+      transport: '#3b82f6', beauty: '#d946ef',
+      artisan: '#57534e', security_agency: '#334155',
+      mairie: '#1e40af', scientist: '#4f46e5',
+      commerce: '#06b6d4', journalist: '#06b6d4',
+      supplier: '#06b6d4', vendor: '#06b6d4', reseau: '#06b6d4',
+    };
+    const themeColor = TYPE_COLORS[tenant?.type] || '#1a8f1a';
+    const iconUrl = `/api/professionals/tenant-icon/${tenantCode}`;
+
+    const manifest = {
+      id: startUrl,
+      name,
+      short_name: name.slice(0, 12),
+      description: `Gestion — ${name}`,
+      start_url: startUrl,
+      scope: '/',
+      display: 'standalone',
+      orientation: 'portrait',
+      lang: 'fr',
+      background_color: '#ffffff',
+      theme_color: themeColor,
+      icons: [
+        { src: iconUrl, sizes: 'any', type: 'image/png', purpose: 'any' },
+        { src: iconUrl, sizes: 'any', type: 'image/png', purpose: 'maskable' },
+      ],
+    };
+
+    res.set('Content-Type', 'application/manifest+json');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Access-Control-Allow-Origin', '*');
+    return res.json(manifest);
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ============ ESPACE PROPRIÉTAIRE ============
 
 // GET /api/professionals/my-accounts - Mes comptes professionnels

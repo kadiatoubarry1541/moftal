@@ -28,7 +28,11 @@ ProPublication.init({
     defaultValue: ''
   },
   image: {
-    type: DataTypes.TEXT, // base64
+    type: DataTypes.TEXT, // base64 image
+    allowNull: true
+  },
+  video: {
+    type: DataTypes.TEXT, // base64 video max 30s
     allowNull: true
   },
   prix: {

@@ -588,11 +588,16 @@ export default function Solidarite() {
                 : []),
               { id: 'realite', label: 'Réalité', icon: '📷' },
               { id: 'ong', label: 'ONG', icon: '🌍' },
+              { id: 'racines', label: 'Racines', icon: '🌿' },
               { id: 'livres', label: 'Les Livres de Dieu Unique', icon: '📖' }
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => tab.id === 'zaka' ? navigate('/zaka') : setActiveTab(tab.id as any)}
+                onClick={() => {
+                  if (tab.id === 'zaka') navigate('/zaka');
+                  else if (tab.id === 'racines') navigate('/solidarite/racines');
+                  else setActiveTab(tab.id as any);
+                }}
                 className={`flex-1 flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-lg font-medium text-[10px] transition-all ${
                   activeTab === tab.id
                     ? 'bg-green-500 text-white shadow-md'
@@ -1090,6 +1095,25 @@ export default function Solidarite() {
 
         {activeTab === 'ong' && (
           <div className="space-y-6">
+
+            {/* Problèmes familiaux & sociaux */}
+            <div className="flex items-center gap-4 rounded-xl border-2 border-emerald-200 bg-white px-5 py-4 shadow-sm">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-3xl flex-shrink-0">
+                👨‍👩‍👧‍👦
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-base text-emerald-800">Problèmes familiaux & sociaux</div>
+                <div className="text-xs text-gray-500 mt-0.5 mb-3">
+                  Conflits, séparations, difficultés sociales — retrouve ta communauté ethnique pour s'entraider.
+                </div>
+                <button
+                  onClick={() => navigate('/solidarite/racines')}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
+                >
+                  🌿 Découvrir ma communauté
+                </button>
+              </div>
+            </div>
 
             {/* Mosquées & Imams */}
             <a

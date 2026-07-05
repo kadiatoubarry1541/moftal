@@ -210,44 +210,19 @@ export default function Probleme() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Cartes principales (aucune redirection vers d'autres pages) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="text-left bg-white rounded-xl shadow-sm border border-red-100 p-5 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🏥</span>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Problèmes de santé de la famille
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Centralise ici les informations et preuves (vidéos, etc.) quand un membre de la famille est malade.
-                  Les détails se suivent dans le tableau d&apos;état ci‑dessous.
-                </p>
-              </div>
+        {/* Carte principale */}
+        <div className="text-left bg-white rounded-xl shadow-sm border border-red-100 p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🏥</span>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Problèmes de santé de la famille
+              </h2>
+              <p className="text-sm text-gray-600">
+                Centralise ici les informations et preuves (vidéos, etc.) quand un membre de la famille est malade.
+                Les détails se suivent dans le tableau d&apos;état ci‑dessous.
+              </p>
             </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-emerald-100 p-5 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">👨‍👩‍👧‍👦</span>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Problèmes familiaux & sociaux
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Relations avec la famille et la communauté.
-                </p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600">
-              Retrouve les membres de ta communauté ethnique pour s'entraider en cas de besoin.
-            </p>
-            <button
-              onClick={() => navigate('/famille/racines')}
-              className="self-start inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
-            >
-              🌿 Découvrir ma communauté
-            </button>
           </div>
         </div>
 

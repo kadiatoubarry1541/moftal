@@ -540,7 +540,8 @@ export default function EspacePro() {
   const [showAddPub, setShowAddPub]       = useState(false);
   const [pubSaving, setPubSaving]         = useState(false);
   const [pubSuccess, setPubSuccess]       = useState(false);
-  const [newPub, setNewPub] = useState({ type: 'annonce', titre: '', contenu: '', prix: '', disponible: true, image: null as string | null });
+  const [newPub, setNewPub] = useState({ type: 'annonce', titre: '', contenu: '', prix: '', disponible: true, image: null as string | null, video: null as string | null });
+  const [pubVideoLoading, setPubVideoLoading] = useState(false);
 
   // Vidéo réponse — file input (compatible tous appareils)
   const [responseVideoId, setResponseVideoId] = useState<string | null>(null);
@@ -703,7 +704,7 @@ export default function EspacePro() {
       const data = await res.json();
       if (data.success) {
         setPublications(prev => [data.publication, ...prev]);
-        setNewPub({ type: 'annonce', titre: '', contenu: '', prix: '', disponible: true, image: null });
+        setNewPub({ type: 'annonce', titre: '', contenu: '', prix: '', disponible: true, image: null, video: null });
         setShowAddPub(false);
         setPubSuccess(true);
         setTimeout(() => setPubSuccess(false), 3000);
@@ -743,8 +744,29 @@ export default function EspacePro() {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) { alert('Image max 2 Mo'); return; }
     const reader = new FileReader();
-    reader.onloadend = () => setNewPub(prev => ({ ...prev, image: reader.result as string }));
+    reader.onloadend = () => setNewPub(prev => ({ ...prev, image: reader.result as string, video: null }));
     reader.readAsDataURL(file);
+  };
+
+  const handlePubVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) { alert('Vidéo max 50 Mo'); return; }
+    const url = URL.createObjectURL(file);
+    const vid = document.createElement('video');
+    vid.preload = 'metadata';
+    vid.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      if (vid.duration > 31) { alert('La vidéo doit faire maximum 30 secondes'); return; }
+      setPubVideoLoading(true);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewPub(prev => ({ ...prev, video: reader.result as string, image: null }));
+        setPubVideoLoading(false);
+      };
+      reader.readAsDataURL(file);
+    };
+    vid.src = url;
   };
 
   const loadMesDemandes = async () => {
@@ -2158,44 +2180,82 @@ export default function EspacePro() {
                       />
                     </div>
 
-                    {/* Prix + Disponible */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Prix (optionnel)</label>
-                        <input
-                          type="text"
-                          value={newPub.prix}
-                          onChange={e => setNewPub(prev => ({ ...prev, prix: e.target.value }))}
-                          placeholder="Ex : 50 000 GNF"
-                          className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
-                        />
-                      </div>
-                      <div className="flex flex-col justify-end">
-                        <label className="flex items-center gap-2 cursor-pointer pb-2">
+                    {/* Prix + Disponible — masqué si vidéo (le prix est dans la vidéo) */}
+                    {!newPub.video && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Prix (optionnel)</label>
                           <input
-                            type="checkbox"
-                            checked={newPub.disponible}
-                            onChange={e => setNewPub(prev => ({ ...prev, disponible: e.target.checked }))}
-                            className="w-4 h-4 rounded"
+                            type="text"
+                            value={newPub.prix}
+                            onChange={e => setNewPub(prev => ({ ...prev, prix: e.target.value }))}
+                            placeholder="Ex : 50 000 GNF"
+                            className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
                           />
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Disponible maintenant</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Image */}
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Image (optionnel)</label>
-                      {newPub.image ? (
-                        <div className="flex items-center gap-3">
-                          <img src={newPub.image} alt="aperçu" className="w-16 h-16 object-cover rounded-xl border border-gray-200" />
-                          <button onClick={() => setNewPub(prev => ({ ...prev, image: null }))} className="text-red-500 text-sm font-medium hover:text-red-700">Supprimer l'image</button>
                         </div>
-                      ) : (
-                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 hover:border-gray-400 transition-colors">
-                          📷 Ajouter une image
-                          <input type="file" accept="image/*" className="hidden" onChange={handlePubImage} />
-                        </label>
+                        <div className="flex flex-col justify-end">
+                          <label className="flex items-center gap-2 cursor-pointer pb-2">
+                            <input
+                              type="checkbox"
+                              checked={newPub.disponible}
+                              onChange={e => setNewPub(prev => ({ ...prev, disponible: e.target.checked }))}
+                              className="w-4 h-4 rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Disponible maintenant</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                    {newPub.video && (
+                      <label className="flex items-center gap-2 cursor-pointer pb-1">
+                        <input
+                          type="checkbox"
+                          checked={newPub.disponible}
+                          onChange={e => setNewPub(prev => ({ ...prev, disponible: e.target.checked }))}
+                          className="w-4 h-4 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Disponible maintenant</span>
+                      </label>
+                    )}
+
+                    {/* Photo OU Vidéo (mutuellement exclusifs) */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Photo ou Vidéo (optionnel)</label>
+
+                      {/* Aperçu image */}
+                      {newPub.image && (
+                        <div className="flex items-center gap-3 mb-2">
+                          <img src={newPub.image} alt="aperçu" className="w-16 h-16 object-cover rounded-xl border border-gray-200" />
+                          <button onClick={() => setNewPub(prev => ({ ...prev, image: null }))} className="text-red-500 text-sm font-medium hover:text-red-700">✕ Supprimer</button>
+                        </div>
+                      )}
+
+                      {/* Aperçu vidéo */}
+                      {newPub.video && (
+                        <div className="flex items-center gap-3 mb-2">
+                          <video src={newPub.video} className="w-24 h-16 object-cover rounded-xl border border-gray-200" muted playsInline preload="metadata" />
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">📹 Vidéo prête (max 30s)</p>
+                            <button onClick={() => setNewPub(prev => ({ ...prev, video: null }))} className="text-red-500 text-sm font-medium hover:text-red-700">✕ Supprimer</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Boutons ajout (masqués si déjà un média) */}
+                      {!newPub.image && !newPub.video && (
+                        <div className="flex gap-3 flex-wrap">
+                          <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 hover:border-gray-400 transition-colors">
+                            📷 Ajouter une photo
+                            <input type="file" accept="image/*" className="hidden" onChange={handlePubImage} />
+                          </label>
+                          <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-xl text-sm text-purple-600 dark:text-purple-400 hover:border-purple-400 transition-colors ${pubVideoLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {pubVideoLoading ? '⏳ Chargement...' : '📹 Ajouter une vidéo (max 30s)'}
+                            <input type="file" accept="video/*" className="hidden" onChange={handlePubVideo} disabled={pubVideoLoading} />
+                          </label>
+                        </div>
+                      )}
+                      {newPub.video && (
+                        <p className="text-xs text-purple-500 dark:text-purple-400 mt-1">💡 Avec une vidéo, le prix n'est pas nécessaire — dites-le dans la vidéo !</p>
                       )}
                     </div>
 
@@ -2245,7 +2305,10 @@ export default function EspacePro() {
                             {pub.prix && <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-1">💰 {pub.prix}</p>}
                             <p className="text-xs text-gray-400 mt-1">{new Date(pub.created_at).toLocaleDateString('fr-FR')}</p>
                           </div>
-                          {pub.image && (
+                          {pub.video && (
+                            <video src={pub.video} className="w-20 h-16 object-cover rounded-xl flex-shrink-0 border border-purple-200 dark:border-purple-700" muted playsInline preload="metadata" />
+                          )}
+                          {!pub.video && pub.image && (
                             <img src={pub.image} alt={pub.titre} className="w-16 h-16 object-cover rounded-xl flex-shrink-0 border border-gray-200 dark:border-gray-700" />
                           )}
                         </div>

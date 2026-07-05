@@ -741,7 +741,7 @@ function App() {
           <Route path="/quartier" element={<Quartier />} />
           <Route path="/info" element={<Info />} />
           <Route path="/developpement" element={<Developpement />} />
-          <Route path="/famille/racines" element={<Racines />} />
+          <Route path="/solidarite/racines" element={<Racines />} />
           {/* Histoire & civilisations */}
           <Route path="/prehistoire"       element={<Prehistoire />} />
           <Route path="/antiquite"         element={<Antiquite />} />

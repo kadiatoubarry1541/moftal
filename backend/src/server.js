@@ -2360,6 +2360,7 @@ async function initAllTables() {
         "titre"                    VARCHAR(255)  NOT NULL,
         "contenu"                  TEXT          DEFAULT '',
         "image"                    TEXT,
+        "video"                    TEXT,
         "prix"                     VARCHAR(100),
         "disponible"               BOOLEAN       DEFAULT true,
         "is_active"                BOOLEAN       DEFAULT true,
@@ -2370,6 +2371,10 @@ async function initAllTables() {
     await sequelize.query(`
       CREATE INDEX IF NOT EXISTS "idx_pro_pub_account"
       ON "pro_publications" ("professional_account_id");
+    `).catch(() => {});
+    // Ajouter la colonne video si elle n'existe pas (tables existantes)
+    await sequelize.query(`
+      ALTER TABLE "pro_publications" ADD COLUMN IF NOT EXISTS "video" TEXT;
     `).catch(() => {});
     console.log('✅ Table pro_publications vérifiée');
   } catch (err) {
@@ -2649,10 +2654,10 @@ function servePrecompressed(assetsDir) {
 }
 
 // Servir le frontend React (build Vite) — uniquement si le dossier dist existe
-// (sur Render le frontend n'est pas buildé ici, il est hébergé séparément sur Cloudflare Pages)
 const frontendDist = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
   const assetsDir = path.join(frontendDist, 'assets');
+  const indexHtml = fs.readFileSync(path.join(frontendDist, 'index.html'), 'utf-8');
 
   // 1. Servir d'abord les fichiers pré-compressés (brotli > gzip > non-compressé)
   app.use('/assets', servePrecompressed(assetsDir));
@@ -2666,7 +2671,37 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
   // 3. Fichiers racine (logo, robots.txt…) : cache court
   app.use(express.static(frontendDist, { maxAge: '1h' }));
 
-  // 4. SPA : toutes les routes renvoient index.html
+  // 4. SPA — injection du bon manifest PWA dès le HTML pour les espaces de gestion.
+  //    Chrome lit le manifest AVANT que JavaScript s'exécute.
+  //    En servant le bon manifest dans le HTML, beforeinstallprompt se déclenche
+  //    avec la bonne identité → installation directe en 1 clic sans aucune question.
+
+  // EspacePro (/espace-pro/:id) — manifest par ID de compte professionnel
+  app.get('/espace-pro/:id', (req, res) => {
+    const proId = req.params.id;
+    const html = indexHtml.replace(
+      /<link rel="manifest"[^>]*>/,
+      `<link rel="manifest" href="/api/professionals/pro-manifest/${proId}">`
+    );
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(html);
+  });
+
+  // Pages gestion (/gestion-clinique/:code, /gestion-ecole/:code, etc.) — manifest par tenantCode
+  // Couvre tous les types : clinique, école, mosquée, mairie, transport, restaurant…
+  app.get(/^\/gestion-[^/]+\/([^/?]+)/, (req, res) => {
+    const tenantCode = req.params[0];
+    const startUrl = encodeURIComponent(req.path);
+    const html = indexHtml.replace(
+      /<link rel="manifest"[^>]*>/,
+      `<link rel="manifest" href="/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${startUrl}">`
+    );
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(html);
+  });
+
   app.get('*', (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
