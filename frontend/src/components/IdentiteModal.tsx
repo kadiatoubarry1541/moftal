@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPhotoUrl, getNumeroHForDisplay } from "../utils/auth";
 import { api } from "../utils/api";
+import { config } from "../config/api";
 import { useI18n } from "../i18n/useI18n";
 import { LANG_LABELS } from "../i18n/strings";
 
@@ -44,17 +45,28 @@ export default function IdentiteModal({
 
   useEffect(() => {
     if (!open) return;
-    if (freshUserData) {
-      setUserData(freshUserData);
-      return;
-    }
+    // Charger d'abord depuis le cache local pour affichage immédiat
     const raw = localStorage.getItem("session_user");
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      const u = parsed.userData || parsed;
-      setUserData(u);
-    } catch {}
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const u = parsed.userData || parsed;
+        setUserData(freshUserData || u);
+      } catch {}
+    } else if (freshUserData) {
+      setUserData(freshUserData);
+    }
+    // Puis toujours charger les données fraîches depuis la base de données
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${config.API_BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.success && data.user) setUserData(data.user);
+      })
+      .catch(() => {});
   }, [open, freshUserData]);
 
   if (!open) return null;
@@ -88,8 +100,8 @@ export default function IdentiteModal({
               </button>
               {showSettings && (
                 <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowSettings(false)} />
-                  <div className="absolute right-0 top-11 bg-white rounded-2xl shadow-xl border border-gray-200 w-68 z-50 overflow-hidden" style={{ minWidth: 240 }}>
+                  <div className="fixed inset-0 z-[60]" onClick={() => setShowSettings(false)} />
+                  <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-[70] overflow-hidden" style={{ minWidth: 220, maxWidth: '90vw' }}>
                     {/* Page d'accueil */}
                     {userData?.numeroH && (
                       <button
@@ -114,7 +126,7 @@ export default function IdentiteModal({
                       >
                         <span className="flex items-center gap-3">
                           <span>🌐</span>
-                          <span>{t('header.language')}</span>
+                          <span>{LANG_LABELS[lang]}</span>
                         </span>
                         <span className="text-xs text-gray-400">{showLang ? '▲' : '▼'}</span>
                       </button>

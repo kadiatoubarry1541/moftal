@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DynamicAppManifest from "../components/DynamicAppManifest";
-import InstallAppButton from "../components/InstallAppButton";
 
 const API = "http://localhost:5002";
 
@@ -125,11 +124,6 @@ export default function InstallClientApp() {
                 <p className="text-gray-500 text-sm mt-1">
                   Accédez directement à <strong>{pro.name}</strong> depuis votre écran d'accueil — sans chercher dans un navigateur.
                 </p>
-              </div>
-
-              {/* Bouton d'installation */}
-              <div className="flex justify-center">
-                <InstallAppButton />
               </div>
 
               {/* Description si dispo */}

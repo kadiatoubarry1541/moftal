@@ -7,13 +7,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', 'config.env') });
 
-// Connexion à la base de données "diangou"
-// Contient : Professeurs, Cours, Formations, Inscriptions aux formations
-// Note : cette base est aussi utilisée par le backend IA Diangou (IA Diangou/backend/)
+// Connexion à la base de données diangou — utilise DATABASE_URL_DIANGOU, ou DATABASE_URL comme fallback
 let sequelizeDiangou;
 
-if (process.env.DATABASE_URL_DIANGOU) {
-  sequelizeDiangou = new Sequelize(process.env.DATABASE_URL_DIANGOU, {
+const urlDiangou = process.env.DATABASE_URL_DIANGOU || process.env.DATABASE_URL;
+
+if (urlDiangou) {
+  sequelizeDiangou = new Sequelize(urlDiangou, {
     dialect: 'postgres',
     logging: false,
     dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },

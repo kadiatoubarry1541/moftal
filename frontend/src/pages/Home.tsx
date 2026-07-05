@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '../i18n/useI18n'
+import InstallAppButton from '../components/InstallAppButton'
 
 export function Home() {
   const { t } = useI18n()
@@ -67,6 +68,11 @@ export function Home() {
           >
             Créer un compte
           </Link>
+
+          {/* Bouton installation app principale */}
+          <div className="flex justify-center pt-1">
+            <InstallAppButton />
+          </div>
         </div>
       </div>
 

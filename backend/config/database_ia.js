@@ -7,11 +7,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', 'config.env') });
 
-// Connexion à la base de données "IAscience"
+// Connexion à la base de données IA — utilise DATABASE_URL_IA, ou DATABASE_URL comme fallback
 let sequelizeIA;
 
-if (process.env.DATABASE_URL_IA) {
-  sequelizeIA = new Sequelize(process.env.DATABASE_URL_IA, {
+const urlIA = process.env.DATABASE_URL_IA || process.env.DATABASE_URL;
+
+if (urlIA) {
+  sequelizeIA = new Sequelize(urlIA, {
     dialect: 'postgres',
     logging: false,
     dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },

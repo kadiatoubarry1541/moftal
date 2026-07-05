@@ -35,7 +35,16 @@ export default function DynamicAppManifest({
     if (!link) return;
     const originalHref = link.getAttribute("href");
 
-    // Priorité : URL backend (si proId) > URL directe > logo Moftal par défaut
+    // Espace de gestion pro : utiliser l'URL backend réelle (pas blob)
+    // Chrome gère mieux les vraies URLs pour la détection PWA installable
+    if (proId && startUrl.startsWith("/espace-pro/")) {
+      link.setAttribute("href", `/api/professionals/pro-manifest/${proId}`);
+      return () => {
+        if (originalHref) link.setAttribute("href", originalHref);
+      };
+    }
+
+    // Page client (/installer-app) : blob manifest avec logo du pro
     const iconSrc = proId
       ? `${API}/api/professionals/pwa-icon/${proId}`
       : (iconUrl && !iconUrl.startsWith("data:") ? iconUrl : "/logo-moftal.svg");

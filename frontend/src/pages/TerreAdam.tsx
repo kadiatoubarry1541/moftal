@@ -305,6 +305,7 @@ export default function TerreAdam() {
                   Object.assign(parsedSession, data.user);
                 }
                 localStorage.setItem("session_user", JSON.stringify(parsedSession));
+                window.dispatchEvent(new Event("session-updated"));
               }
             } catch { /* ignore */ }
           }

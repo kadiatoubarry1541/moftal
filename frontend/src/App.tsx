@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
 import { getSessionUser, isAdmin, isMasterAdmin, getPhotoUrl, getNumeroHForDisplay } from "./utils/auth";
+import { config } from "./config/api";
 import DefaultAvatar from "./assets/default-avatar.svg";
 import NotificationBell from "./components/NotificationBell";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
@@ -240,6 +241,33 @@ function App() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(getSessionUser);
   const isLoggedIn = currentUser !== null;
+
+  // Charger le profil depuis la base de données à chaque connexion
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch(`${config.API_BASE_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.success && data.user) {
+          const local = getSessionUser();
+          const merged = { ...local, ...data.user };
+          setCurrentUser(merged);
+          try {
+            const raw = localStorage.getItem("session_user");
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed.userData) parsed.userData = { ...parsed.userData, ...data.user };
+              else Object.assign(parsed, data.user);
+              localStorage.setItem("session_user", JSON.stringify(parsed));
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Recharger le profil dès que la session change (ex: après modification dans EditProfileModal)
   useEffect(() => {

@@ -5,10 +5,11 @@ import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from
 import { registerRoute, NavigationRoute } from 'workbox-routing'
 import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
-import { clientsClaim } from 'workbox-core'
+import { clientsClaim, skipWaiting } from 'workbox-core'
 
 declare const self: ServiceWorkerGlobalScope
 
+skipWaiting()
 clientsClaim()
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()

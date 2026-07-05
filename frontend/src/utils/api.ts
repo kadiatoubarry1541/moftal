@@ -188,6 +188,7 @@ export const api = {
           pays: result.user.pays,
           regionOrigine: result.user.regionOrigine,
           treeVisibility: result.user.treeVisibility,
+          photo: result.user.photo,
         }
         // Supprimer uniquement les anciennes données de session (pas les préférences)
         localStorage.removeItem('session_user')

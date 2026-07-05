@@ -174,9 +174,10 @@ export default function ProfesseurIA() {
     setCurrentExercice(null);
     setExerciceQuestion('');
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${iaApiBase()}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ message: msg, history: [], lastExercice: null }),
       });
       if (res.ok) {
@@ -216,9 +217,10 @@ export default function ProfesseurIA() {
     const userAnswer = exerciceAnswer.trim();
     setExerciceAnswer('');
     try {
+      const token = localStorage.getItem('token');
       const res = await fetch(`${iaApiBase()}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ message: userAnswer, history: [], lastExercice: currentExercice }),
       });
       if (res.ok) {

@@ -7,12 +7,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', 'config.env') });
 
-// Connexion à la base de données "temps"
-// Contient : Histoire, Préhistoire, Antiquité, Civilisations
+// Connexion à la base de données temps — utilise DATABASE_URL_TEMPS, ou DATABASE_URL comme fallback
 let sequelizeTemps;
 
-if (process.env.DATABASE_URL_TEMPS) {
-  sequelizeTemps = new Sequelize(process.env.DATABASE_URL_TEMPS, {
+const urlTemps = process.env.DATABASE_URL_TEMPS || process.env.DATABASE_URL;
+
+if (urlTemps) {
+  sequelizeTemps = new Sequelize(urlTemps, {
     dialect: 'postgres',
     logging: false,
     dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },

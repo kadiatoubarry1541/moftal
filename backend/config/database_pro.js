@@ -7,11 +7,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', 'config.env') });
 
-// Connexion à la base de données "professionnel"
+// Connexion à la base de données pro — utilise DATABASE_URL_PRO, ou DATABASE_URL comme fallback
 let sequelizePro;
 
-if (process.env.DATABASE_URL_PRO) {
-  sequelizePro = new Sequelize(process.env.DATABASE_URL_PRO, {
+const urlPro = process.env.DATABASE_URL_PRO || process.env.DATABASE_URL;
+
+if (urlPro) {
+  sequelizePro = new Sequelize(urlPro, {
     dialect: 'postgres',
     logging: false,
     dialectOptions: { ssl: { require: true, rejectUnauthorized: false } },

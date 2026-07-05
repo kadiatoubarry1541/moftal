@@ -49,7 +49,7 @@ interface Appointment {
   created_at: string;
 }
 
-type TabType = "pending" | "history" | "profile" | "menu" | "cours" | "retrait" | "membres";
+type TabType = "pending" | "history" | "profile" | "menu" | "cours" | "retrait" | "membres" | "vitrine";
 type HistoryFilter = "all" | "accepted" | "rejected";
 
 /* =============================================
@@ -523,6 +523,25 @@ export default function EspacePro() {
   const [addMemberRole, setAddMemberRole]   = useState('client');
   const [memberMsg, setMemberMsg]           = useState('');
 
+  // ── Ma Vitrine ───────────────────────────────────────────────────────────
+  const [vitrineInfo, setVitrineInfo] = useState({ name: '', description: '', address: '', city: '', country: '', phone: '', email: '' });
+  const [vitrineSaving, setVitrineSaving]   = useState(false);
+  const [vitrineSuccess, setVitrineSuccess] = useState('');
+
+  const [editServices, setEditServices]       = useState<string[]>([]);
+  const [editSpecialties, setEditSpecialties] = useState<string[]>([]);
+  const [newService, setNewService]           = useState('');
+  const [newSpecialty, setNewSpecialty]       = useState('');
+  const [servicesSaving, setServicesSaving]   = useState(false);
+  const [servicesSuccess, setServicesSuccess] = useState(false);
+
+  const [publications, setPublications]   = useState<any[]>([]);
+  const [pubsLoading, setPubsLoading]     = useState(false);
+  const [showAddPub, setShowAddPub]       = useState(false);
+  const [pubSaving, setPubSaving]         = useState(false);
+  const [pubSuccess, setPubSuccess]       = useState(false);
+  const [newPub, setNewPub] = useState({ type: 'annonce', titre: '', contenu: '', prix: '', disponible: true, image: null as string | null });
+
   // Vidéo réponse — file input (compatible tous appareils)
   const [responseVideoId, setResponseVideoId] = useState<string | null>(null);
   const [videoSent, setVideoSent]             = useState(false);
@@ -549,6 +568,14 @@ export default function EspacePro() {
   useEffect(() => { loadAccount(); }, [id]);
   useEffect(() => { if (tab === 'retrait' && account) loadMesDemandes(); }, [tab, account?.id]);
   useEffect(() => { if (tab === 'membres' && account) loadMembers(); }, [tab, account?.id]);
+  useEffect(() => {
+    if (tab === 'vitrine' && account) {
+      setVitrineInfo({ name: account.name || '', description: account.description || '', address: account.address || '', city: account.city || '', country: account.country || '', phone: account.phone || '', email: account.email || '' });
+      setEditServices(Array.isArray(account.services) ? account.services.filter((s: any) => typeof s === 'string') : []);
+      setEditSpecialties(Array.isArray(account.specialties) ? account.specialties : []);
+      loadPublications(account.id);
+    }
+  }, [tab, account?.id]);
 
   const loadAccount = async () => {
     setLoading(true);
@@ -614,6 +641,110 @@ export default function EspacePro() {
       });
       loadMembers();
     } catch { /* ignore */ }
+  };
+
+  /* ── Fonctions Ma Vitrine ─────────────────────────────────────────────── */
+
+  const loadPublications = async (accountId: string) => {
+    setPubsLoading(true);
+    try {
+      const res = await fetch(`${API}/api/pro-vitrine/${accountId}/publications`);
+      const data = await res.json();
+      if (data.success) setPublications(data.publications || []);
+    } catch { /* ignore */ } finally { setPubsLoading(false); }
+  };
+
+  const publishInfo = async () => {
+    if (!account) return;
+    setVitrineSaving(true);
+    setVitrineSuccess('');
+    try {
+      const res = await fetch(`${API}/api/pro-vitrine/${account.id}/publish-info`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(vitrineInfo),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAccount(prev => prev ? { ...prev, ...vitrineInfo } : prev);
+        setVitrineSuccess('✅ Informations publiées sur votre vitrine !');
+        setTimeout(() => setVitrineSuccess(''), 4000);
+      }
+    } catch { /* ignore */ } finally { setVitrineSaving(false); }
+  };
+
+  const publishServices = async () => {
+    if (!account) return;
+    setServicesSaving(true);
+    try {
+      const res = await fetch(`${API}/api/pro-vitrine/${account.id}/publish-info`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ services: editServices, specialties: editSpecialties }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAccount(prev => prev ? { ...prev, services: editServices, specialties: editSpecialties } : prev);
+        setServicesSuccess(true);
+        setTimeout(() => setServicesSuccess(false), 3500);
+      }
+    } catch { /* ignore */ } finally { setServicesSaving(false); }
+  };
+
+  const addPublication = async () => {
+    if (!account || !newPub.titre.trim()) return;
+    setPubSaving(true);
+    try {
+      const res = await fetch(`${API}/api/pro-vitrine/${account.id}/publications`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(newPub),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPublications(prev => [data.publication, ...prev]);
+        setNewPub({ type: 'annonce', titre: '', contenu: '', prix: '', disponible: true, image: null });
+        setShowAddPub(false);
+        setPubSuccess(true);
+        setTimeout(() => setPubSuccess(false), 3000);
+      }
+    } catch { /* ignore */ } finally { setPubSaving(false); }
+  };
+
+  const deletePublication = async (pubId: string) => {
+    if (!account) return;
+    if (!window.confirm('Supprimer cette publication ?')) return;
+    try {
+      await fetch(`${API}/api/pro-vitrine/${account.id}/publications/${pubId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPublications(prev => prev.filter(p => p.id !== pubId));
+    } catch { /* ignore */ }
+  };
+
+  const toggleDisponible = async (pub: any) => {
+    if (!account) return;
+    try {
+      const res = await fetch(`${API}/api/pro-vitrine/${account.id}/publications/${pub.id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ disponible: !pub.disponible }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPublications(prev => prev.map(p => p.id === pub.id ? { ...p, disponible: !p.disponible } : p));
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handlePubImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Image max 2 Mo'); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => setNewPub(prev => ({ ...prev, image: reader.result as string }));
+    reader.readAsDataURL(file);
   };
 
   const loadMesDemandes = async () => {
@@ -1076,6 +1207,7 @@ export default function EspacePro() {
               ...(account.type === 'restaurant' ? [{ key: "menu" as TabType, icon: "🍽️", label: "Mon Menu", badge: 0 }] : []),
               ...(account.type === 'school' ? [{ key: "cours" as TabType, icon: "📚", label: "Cours", badge: 0 }] : []),
               { key: "retrait" as TabType, icon: "💸", label: "Retrait", badge: mesDemandes.filter(d => d.statut === 'en_attente').length },
+              { key: "vitrine"  as TabType, icon: "🏪", label: "Ma Vitrine", badge: 0 },
               { key: "profile"  as TabType, icon: "👤", label: "Mon profil", badge: 0 },
             ]).map((t) => (
               <button
@@ -1769,6 +1901,375 @@ export default function EspacePro() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            ONGLET : MA VITRINE — contrôle total de la gestion publique
+            ═══════════════════════════════════════════════════════════════ */}
+        {tab === "vitrine" && (
+          <div className="space-y-5">
+
+            {/* ── SECTION 1 : Informations de base ────────────────────── */}
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+              <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4 flex items-center justify-between`}>
+                <div>
+                  <h2 className="text-white font-bold text-base">📝 Informations de base</h2>
+                  <p className="text-white/70 text-xs mt-0.5">Modifiez et publiez vos coordonnées sur votre vitrine</p>
+                </div>
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { key: 'name' as const, label: 'Nom de l\'établissement', placeholder: 'Ex : Clinique Al Baraka' },
+                    { key: 'phone' as const, label: 'Téléphone', placeholder: 'Ex : +224 620 000 000' },
+                    { key: 'email' as const, label: 'Email', placeholder: 'Ex : contact@etablissement.com' },
+                    { key: 'address' as const, label: 'Adresse', placeholder: 'Ex : Quartier Almamya' },
+                    { key: 'city' as const, label: 'Ville', placeholder: 'Ex : Conakry' },
+                    { key: 'country' as const, label: 'Pays', placeholder: 'Ex : Guinée' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">{f.label}</label>
+                      <input
+                        type="text"
+                        value={vitrineInfo[f.key]}
+                        onChange={e => setVitrineInfo(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        placeholder={f.placeholder}
+                        className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-0"
+                        style={{ '--tw-ring-color': 'currentColor' } as any}
+                      />
+                    </div>
+                  ))}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Description</label>
+                    <textarea
+                      rows={3}
+                      value={vitrineInfo.description}
+                      onChange={e => setVitrineInfo(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Décrivez votre activité, vos services, votre mission..."
+                      className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 resize-none"
+                    />
+                  </div>
+                </div>
+                {vitrineSuccess && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3 text-green-700 dark:text-green-300 text-sm font-medium">
+                    {vitrineSuccess}
+                  </div>
+                )}
+                <button
+                  onClick={publishInfo}
+                  disabled={vitrineSaving}
+                  className={`w-full min-h-[46px] ${svc.btnPrimary} text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60`}
+                >
+                  {vitrineSaving ? '⏳ Publication...' : '🚀 Publier les informations sur ma vitrine'}
+                </button>
+              </div>
+            </div>
+
+            {/* ── SECTION 2 : Logo ─────────────────────────────────────── */}
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+              <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4`}>
+                <h2 className="text-white font-bold text-base">🖼️ Logo & Photo</h2>
+                <p className="text-white/70 text-xs mt-0.5">Votre logo affiché sur votre vitrine publique</p>
+              </div>
+              <div className="p-5">
+                <div className="flex items-center gap-5">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center border border-gray-200 dark:border-gray-600">
+                    {account.photo ? (
+                      <img src={account.photo} alt="Logo" className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-4xl">{typeInfo.icon}</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">PNG, JPG ou SVG — max 2 Mo. Mise à jour instantanée sur la vitrine.</p>
+                    <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 ${logoUploading ? 'opacity-60 cursor-not-allowed' : ''} ${svc.btnPrimary} text-white font-semibold rounded-xl text-sm`}>
+                      {logoUploading ? '⏳ Envoi...' : '📷 Changer le logo'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />
+                    </label>
+                    {logoSuccess && <p className="text-green-600 dark:text-green-400 text-xs mt-2 font-medium">✅ Logo publié sur votre vitrine !</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── SECTION 3 : Services & Spécialités (masqué pour restaurant) ── */}
+            {account.type !== 'restaurant' && (
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+              <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4`}>
+                <h2 className="text-white font-bold text-base">{typeInfo.icon} Services & Spécialités</h2>
+                <p className="text-white/70 text-xs mt-0.5">Ce que vous proposez — visible sur votre vitrine</p>
+              </div>
+              <div className="p-5 space-y-5">
+                {/* Services */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Services proposés</p>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {editServices.map((s, i) => (
+                      <span key={i} className={`flex items-center gap-1.5 px-3 py-1.5 ${svc.badgeBg} text-sm rounded-full font-medium`}>
+                        {s}
+                        <button onClick={() => setEditServices(prev => prev.filter((_, j) => j !== i))} className="opacity-60 hover:opacity-100 text-base leading-none">×</button>
+                      </span>
+                    ))}
+                    {editServices.length === 0 && <span className="text-sm text-gray-400 italic">Aucun service — ajoutez-en ci-dessous</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newService}
+                      onChange={e => setNewService(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && newService.trim()) { setEditServices(prev => [...prev, newService.trim()]); setNewService(''); } }}
+                      placeholder="Ajouter un service (Entrée pour valider)"
+                      className="flex-1 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                    />
+                    <button
+                      onClick={() => { if (newService.trim()) { setEditServices(prev => [...prev, newService.trim()]); setNewService(''); } }}
+                      className={`px-4 py-2 ${svc.btnPrimary} text-white rounded-xl text-sm font-semibold`}
+                    >+</button>
+                  </div>
+                </div>
+
+                {/* Spécialités */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Spécialités</p>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {editSpecialties.map((s, i) => (
+                      <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-full font-medium">
+                        {s}
+                        <button onClick={() => setEditSpecialties(prev => prev.filter((_, j) => j !== i))} className="opacity-60 hover:opacity-100 text-base leading-none">×</button>
+                      </span>
+                    ))}
+                    {editSpecialties.length === 0 && <span className="text-sm text-gray-400 italic">Aucune spécialité</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSpecialty}
+                      onChange={e => setNewSpecialty(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && newSpecialty.trim()) { setEditSpecialties(prev => [...prev, newSpecialty.trim()]); setNewSpecialty(''); } }}
+                      placeholder="Ajouter une spécialité (Entrée pour valider)"
+                      className="flex-1 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                    />
+                    <button
+                      onClick={() => { if (newSpecialty.trim()) { setEditSpecialties(prev => [...prev, newSpecialty.trim()]); setNewSpecialty(''); } }}
+                      className={`px-4 py-2 ${svc.btnPrimary} text-white rounded-xl text-sm font-semibold`}
+                    >+</button>
+                  </div>
+                </div>
+
+                {servicesSuccess && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3 text-green-700 dark:text-green-300 text-sm font-medium">
+                    ✅ Services publiés sur votre vitrine !
+                  </div>
+                )}
+                <button
+                  onClick={publishServices}
+                  disabled={servicesSaving}
+                  className={`w-full min-h-[46px] ${svc.btnPrimary} text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-60`}
+                >
+                  {servicesSaving ? '⏳ Publication...' : '🚀 Publier les services sur ma vitrine'}
+                </button>
+              </div>
+            </div>
+            )}
+
+            {/* Restaurant → renvoi vers l'onglet Mon Menu pour le catalogue */}
+            {account.type === 'restaurant' && (
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+                <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4`}>
+                  <h2 className="text-white font-bold text-base">🍽️ Catalogue & Menu</h2>
+                  <p className="text-white/70 text-xs mt-0.5">Gérez vos plats depuis l'onglet dédié</p>
+                </div>
+                <div className="p-5 flex items-center gap-4">
+                  <span className="text-4xl">🍽️</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Votre menu est géré dans l'onglet "Mon Menu"</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Ajoutez, modifiez ou retirez vos plats depuis cet onglet — vos clients verront votre menu à jour en temps réel sur votre vitrine.</p>
+                    <button
+                      onClick={() => setTab('menu')}
+                      className={`inline-flex items-center gap-2 px-4 py-2 ${svc.btnPrimary} text-white font-semibold rounded-xl text-sm`}
+                    >
+                      🍽️ Gérer mon menu
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── SECTION 4 : Publications / Annonces ──────────────────── */}
+            <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
+              <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4 flex items-center justify-between`}>
+                <div>
+                  <h2 className="text-white font-bold text-base">📢 Publications & Annonces</h2>
+                  <p className="text-white/70 text-xs mt-0.5">Publiez vos produits, promos, infos — vos clients les verront sur votre vitrine</p>
+                </div>
+                <button
+                  onClick={() => setShowAddPub(!showAddPub)}
+                  className="bg-white/20 hover:bg-white/30 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
+                >
+                  {showAddPub ? '✕ Annuler' : '+ Nouvelle publication'}
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* Formulaire nouvelle publication */}
+                {showAddPub && (
+                  <div className={`${svc.lightBg} ${svc.darkBg} border ${svc.accentBorder} rounded-2xl p-4 space-y-3`}>
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Nouvelle publication</p>
+
+                    {/* Type */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Type</label>
+                      <select
+                        value={newPub.type}
+                        onChange={e => setNewPub(prev => ({ ...prev, type: e.target.value }))}
+                        className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                      >
+                        <option value="annonce">📢 Annonce</option>
+                        <option value="produit">📦 Produit</option>
+                        <option value="service">🛠️ Service</option>
+                        <option value="promotion">🎉 Promotion</option>
+                        <option value="evenement">📅 Événement</option>
+                        <option value="info">ℹ️ Information</option>
+                      </select>
+                    </div>
+
+                    {/* Titre */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Titre *</label>
+                      <input
+                        type="text"
+                        value={newPub.titre}
+                        onChange={e => setNewPub(prev => ({ ...prev, titre: e.target.value }))}
+                        placeholder="Ex : Promotion sur les consultations, Nouveau produit en stock..."
+                        className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                      />
+                    </div>
+
+                    {/* Contenu */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Description</label>
+                      <textarea
+                        rows={3}
+                        value={newPub.contenu}
+                        onChange={e => setNewPub(prev => ({ ...prev, contenu: e.target.value }))}
+                        placeholder="Détails de votre publication..."
+                        className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 resize-none"
+                      />
+                    </div>
+
+                    {/* Prix + Disponible */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Prix (optionnel)</label>
+                        <input
+                          type="text"
+                          value={newPub.prix}
+                          onChange={e => setNewPub(prev => ({ ...prev, prix: e.target.value }))}
+                          placeholder="Ex : 50 000 GNF"
+                          className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2"
+                        />
+                      </div>
+                      <div className="flex flex-col justify-end">
+                        <label className="flex items-center gap-2 cursor-pointer pb-2">
+                          <input
+                            type="checkbox"
+                            checked={newPub.disponible}
+                            onChange={e => setNewPub(prev => ({ ...prev, disponible: e.target.checked }))}
+                            className="w-4 h-4 rounded"
+                          />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Disponible maintenant</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Image */}
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Image (optionnel)</label>
+                      {newPub.image ? (
+                        <div className="flex items-center gap-3">
+                          <img src={newPub.image} alt="aperçu" className="w-16 h-16 object-cover rounded-xl border border-gray-200" />
+                          <button onClick={() => setNewPub(prev => ({ ...prev, image: null }))} className="text-red-500 text-sm font-medium hover:text-red-700">Supprimer l'image</button>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm text-gray-500 hover:border-gray-400 transition-colors">
+                          📷 Ajouter une image
+                          <input type="file" accept="image/*" className="hidden" onChange={handlePubImage} />
+                        </label>
+                      )}
+                    </div>
+
+                    {/* Bouton publier */}
+                    <button
+                      onClick={addPublication}
+                      disabled={pubSaving || !newPub.titre.trim()}
+                      className={`w-full min-h-[46px] ${svc.btnPrimary} text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-60`}
+                    >
+                      {pubSaving ? '⏳ Publication en cours...' : '🚀 Publier maintenant'}
+                    </button>
+                  </div>
+                )}
+
+                {pubSuccess && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3 text-green-700 dark:text-green-300 text-sm font-medium">
+                    ✅ Publication publiée sur votre vitrine !
+                  </div>
+                )}
+
+                {/* Liste des publications */}
+                {pubsLoading ? (
+                  <div className="text-center py-8 text-gray-400 text-sm">⏳ Chargement...</div>
+                ) : publications.length === 0 ? (
+                  <div className="text-center py-10">
+                    <div className="text-5xl mb-3">📭</div>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Aucune publication pour l'instant</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Publiez vos produits, promotions et annonces ci-dessus</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{publications.length} publication{publications.length > 1 ? 's' : ''}</p>
+                    {publications.map(pub => (
+                      <div key={pub.id} className={`border ${pub.disponible ? 'border-gray-200 dark:border-gray-700' : 'border-gray-100 dark:border-gray-800 opacity-60'} rounded-2xl p-4`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${svc.badgeBg}`}>
+                                {{annonce:'📢',produit:'📦',service:'🛠️',promotion:'🎉',evenement:'📅',info:'ℹ️'}[pub.type as string] || '📝'} {pub.type}
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${pub.disponible ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                                {pub.disponible ? '✅ Disponible' : '🔴 Indisponible'}
+                              </span>
+                            </div>
+                            <p className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{pub.titre}</p>
+                            {pub.contenu && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{pub.contenu}</p>}
+                            {pub.prix && <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-1">💰 {pub.prix}</p>}
+                            <p className="text-xs text-gray-400 mt-1">{new Date(pub.created_at).toLocaleDateString('fr-FR')}</p>
+                          </div>
+                          {pub.image && (
+                            <img src={pub.image} alt={pub.titre} className="w-16 h-16 object-cover rounded-xl flex-shrink-0 border border-gray-200 dark:border-gray-700" />
+                          )}
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => toggleDisponible(pub)}
+                            className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${pub.disponible ? 'border-orange-300 text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-900/20' : 'border-green-300 text-green-600 hover:bg-green-50 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900/20'}`}
+                          >
+                            {pub.disponible ? '🔴 Marquer indisponible' : '✅ Marquer disponible'}
+                          </button>
+                          <button
+                            onClick={() => deletePublication(pub.id)}
+                            className="px-4 py-2 rounded-xl text-xs font-semibold border border-red-200 text-red-500 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                          >
+                            🗑️ Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         )}
 

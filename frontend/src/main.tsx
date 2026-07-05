@@ -28,6 +28,33 @@ keysToClean.forEach(key => {
 
 const basename = '';
 
+// Recharge automatique si un chunk JS est introuvable après un nouveau déploiement
+window.addEventListener('unhandledrejection', (event) => {
+  const msg = (event.reason as Error)?.message || '';
+  const isChunkError =
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('ChunkLoadError') ||
+    msg.includes('Loading chunk');
+  if (isChunkError) {
+    const key = 'chunk-reload-v1';
+    if (!sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, '1');
+      window.location.reload();
+    }
+  }
+});
+
+// Pour /espace-pro/:id : swapper le manifest AVANT que React monte
+// → Chrome voit le manifest pro dès le début et peut déclencher beforeinstallprompt avec la bonne identité
+const _proPathMatch = window.location.pathname.match(/^\/espace-pro\/([^/]+)/);
+if (_proPathMatch) {
+  const _proId = _proPathMatch[1];
+  const _manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+  if (_manifestLink) {
+    _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/${_proId}`);
+  }
+}
+
 // Capturer le prompt d'installation PWA le plus tôt possible (avant montage React)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -35,22 +62,11 @@ window.addEventListener('beforeinstallprompt', (e) => {
   window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
 });
 
-async function clearSWAndRender() {
+function initAndRender() {
   if ('serviceWorker' in navigator) {
-    // Supprimer les anciens SW (évite les caches bloquants)
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(
-      registrations
-        .filter((sw) => !sw.active?.scriptURL.endsWith('/sw.js'))
-        .map((sw) => sw.unregister())
-    );
-    // Réenregistrer notre SW (requis pour l'installation PWA sur Android)
+    // En développement : enregistrement manuel (VitePWA désactivé en dev)
+    // En production : VitePWA enregistre automatiquement son SW workbox
     navigator.serviceWorker.register('/sw.js').catch(() => {});
-  }
-  if ('caches' in window) {
-    const keys = await caches.keys();
-    // Ne pas supprimer notre cache SW
-    await Promise.all(keys.filter((k) => k !== 'moftal-sw-v1').map((k) => caches.delete(k)));
   }
 
   createRoot(document.getElementById("root")!).render(
@@ -69,4 +85,4 @@ async function clearSWAndRender() {
   );
 }
 
-clearSWAndRender();
+initAndRender();

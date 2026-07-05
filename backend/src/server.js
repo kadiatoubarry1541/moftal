@@ -43,6 +43,7 @@ import stateMessagesRoutes from './routes/stateMessages.js';
 import stateProductsRoutes from './routes/stateProducts.js';
 import userStoriesRoutes from './routes/userStories.js';
 import professionalRoutes from './routes/professionals.js';
+import proVitrineRoutes from './routes/pro-vitrine.js';
 import proMembersRoutes from './routes/pro-members.js';
 import clinicMgmtRoutes from './routes/clinic-management.js';
 import mairieMgmtRoutes  from './routes/mairie-management.js';
@@ -2348,6 +2349,32 @@ async function initAllTables() {
   } catch (err) {
     console.warn('⚠️ initAllTables [published_stories]:', err.message);
   }
+
+  // ── pro_publications : publications/annonces des pros ─────────────────────
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "pro_publications" (
+        "id"                       UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+        "professional_account_id"  UUID          NOT NULL,
+        "type"                     VARCHAR(50)   NOT NULL DEFAULT 'annonce',
+        "titre"                    VARCHAR(255)  NOT NULL,
+        "contenu"                  TEXT          DEFAULT '',
+        "image"                    TEXT,
+        "prix"                     VARCHAR(100),
+        "disponible"               BOOLEAN       DEFAULT true,
+        "is_active"                BOOLEAN       DEFAULT true,
+        "created_at"               TIMESTAMPTZ   DEFAULT NOW(),
+        "updated_at"               TIMESTAMPTZ   DEFAULT NOW()
+      );
+    `);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS "idx_pro_pub_account"
+      ON "pro_publications" ("professional_account_id");
+    `).catch(() => {});
+    console.log('✅ Table pro_publications vérifiée');
+  } catch (err) {
+    console.warn('⚠️ initAllTables [pro_publications]:', err.message);
+  }
 }
 
 // Démarrage : tout pointe sur enfants_adam_eve — une seule base, 5 instances Sequelize
@@ -2502,6 +2529,7 @@ app.use('/api/state-messages', stateMessagesRoutes);
 app.use('/api/state-products', stateProductsRoutes);
 app.use('/api/user-stories', userStoriesRoutes);
 app.use('/api/professionals', professionalRoutes);
+app.use('/api/pro-vitrine',   proVitrineRoutes);
 app.use('/api/pro-members',   proMembersRoutes);
 app.use('/api/clinic-mgmt',   clinicMgmtRoutes);
 app.use('/api/mairie-mgmt',   mairieMgmtRoutes);

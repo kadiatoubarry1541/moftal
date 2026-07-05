@@ -241,6 +241,57 @@ router.get('/pwa-icon/:id', async (req, res) => {
   }
 });
 
+// GET /api/professionals/pro-manifest/:id — manifest PWA pour l'espace de gestion pro
+router.get('/pro-manifest/:id', async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id, {
+      attributes: ['id', 'name', 'type', 'isActive']
+    });
+    if (!account) return res.status(404).json({ error: 'Compte introuvable' });
+
+    const TYPE_COLORS = {
+      clinic: '#1a8f1a', health_worker: '#1a8f1a',
+      school: '#2563eb', madrasa: '#2563eb',
+      mosque: '#f43f5e', ngo: '#f43f5e',
+      enterprise: '#f59e0b', restaurant: '#f97316',
+      transport: '#3b82f6', beauty: '#d946ef',
+      artisan: '#57534e', security_agency: '#334155',
+      mairie: '#1e40af', scientist: '#4f46e5',
+      commerce: '#06b6d4', journalist: '#06b6d4',
+      supplier: '#06b6d4', vendor: '#06b6d4', reseau: '#06b6d4',
+    };
+
+    const themeColor = TYPE_COLORS[account.type] || '#1a8f1a';
+    const startUrl = `/espace-pro/${account.id}`;
+    const iconUrl = `/api/professionals/pwa-icon/${account.id}`;
+
+    const manifest = {
+      id: startUrl,
+      name: account.name,
+      short_name: account.name.slice(0, 12),
+      description: `Gestion — ${account.name}`,
+      start_url: startUrl,
+      scope: '/',
+      display: 'standalone',
+      orientation: 'portrait',
+      lang: 'fr',
+      background_color: '#ffffff',
+      theme_color: themeColor,
+      icons: [
+        { src: iconUrl, sizes: 'any', type: 'image/png', purpose: 'any' },
+        { src: iconUrl, sizes: 'any', type: 'image/png', purpose: 'maskable' },
+      ],
+    };
+
+    res.set('Content-Type', 'application/manifest+json');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Access-Control-Allow-Origin', '*');
+    return res.json(manifest);
+  } catch {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // ============ ESPACE PROPRIÉTAIRE ============
 
 // GET /api/professionals/my-accounts - Mes comptes professionnels
@@ -342,6 +393,14 @@ router.put('/:id', authenticate, async (req, res) => {
       photo: photo !== undefined ? photo : account.photo,
       billingInfo: billingInfo !== undefined ? billingInfo : account.billingInfo
     });
+
+    // Synchroniser management_tenants pour que la vitrine publique soit à jour
+    if (account.tenant_code) {
+      await sequelize.query(
+        `UPDATE management_tenants SET name=:name, description=:desc, address=:addr, phone=:phone, email=:email, logo_url=:logo WHERE tenant_code=:code`,
+        { replacements: { name: account.name, desc: account.description || '', addr: account.address || '', phone: account.phone || '', email: account.email || '', logo: account.photo || null, code: account.tenant_code } }
+      ).catch(() => {});
+    }
 
     res.json({ success: true, account: sanitizeAccountForPublic(account) });
   } catch (error) {

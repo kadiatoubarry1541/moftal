@@ -130,6 +130,8 @@ export default function InscriptionPro() {
 
   const [selectedType, setSelectedType] = useState(initialType);
   const [planType, setPlanType] = useState<'visibility' | 'full' | ''>('');
+  const [hasOwnManagement, setHasOwnManagement] = useState<'platform' | 'external' | ''>('');
+  const [externalManagementLink, setExternalManagementLink] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -196,6 +198,9 @@ export default function InscriptionPro() {
   // Types Échanges qui nécessitent un sous-secteur
   const NEEDS_SUBSECTOR = ["vendor", "supplier", "producer"];
 
+  // Types qui nécessitent un justificatif obligatoire
+  const REQUIRES_JUSTIFICATIF = ["clinic", "health_worker", "school", "mairie", "security_agency", "ngo"];
+
   // Champs spécifiques restaurant
   const [cuisineType, setCuisineType] = useState("");
   const [openingHours, setOpeningHours] = useState("");
@@ -231,6 +236,10 @@ export default function InscriptionPro() {
     }
     if (selectedType === "restaurant" && !form.phone.trim()) {
       setError("Le numéro de téléphone est obligatoire pour un restaurant.");
+      return;
+    }
+    if (REQUIRES_JUSTIFICATIF.includes(selectedType) && !form.justificatifDocument) {
+      setError("Un justificatif officiel est obligatoire pour ce type de compte. Veuillez joindre un document (diplôme, agrément, autorisation…).");
       return;
     }
     setLoading(true);
@@ -286,6 +295,8 @@ export default function InscriptionPro() {
           email: form.email.trim(),
           photo: form.mediaUrl.trim() || undefined,
           justificatifDocument: form.justificatifDocument.trim() || undefined,
+          hasOwnManagement: planType === 'full' ? hasOwnManagement : undefined,
+          externalManagementLink: (planType === 'full' && hasOwnManagement === 'external') ? externalManagementLink.trim() : undefined,
           services,
           specialties,
         }),
@@ -438,6 +449,69 @@ export default function InscriptionPro() {
                 </button>
 
               </div>
+
+              {/* ── Sous-question gestion interne ── */}
+              {planType === 'full' && (
+                <div className="mt-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">
+                    Avez-vous déjà un outil de gestion interne ? *
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => { setHasOwnManagement('platform'); setExternalManagementLink(''); }}
+                      className={`text-left p-3 rounded-xl border-2 transition-all ${
+                        hasOwnManagement === 'platform'
+                          ? 'border-orange-500 bg-orange-100 dark:bg-orange-800/40'
+                          : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xl">📱</span>
+                        <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Non — j'utilise celui de la plateforme</span>
+                        {hasOwnManagement === 'platform' && <span className="ml-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">✓</span>}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 ml-7">
+                        Vous aurez un tableau de bord complet directement sur cette plateforme
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setHasOwnManagement('external')}
+                      className={`text-left p-3 rounded-xl border-2 transition-all ${
+                        hasOwnManagement === 'external'
+                          ? 'border-orange-500 bg-orange-100 dark:bg-orange-800/40'
+                          : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xl">🔗</span>
+                        <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Oui — j'en ai déjà un</span>
+                        {hasOwnManagement === 'external' && <span className="ml-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">✓</span>}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 ml-7">
+                        Vous avez déjà un site ou une application — indiquez le lien ou le nom
+                      </p>
+                    </button>
+                  </div>
+
+                  {hasOwnManagement === 'external' && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Lien de votre site ou nom de votre application <span className="text-gray-400 font-normal">(optionnel)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={externalManagementLink}
+                        onChange={e => setExternalManagementLink(e.target.value)}
+                        className="w-full min-h-[44px] px-4 py-2.5 border border-orange-300 dark:border-orange-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                        placeholder="Ex: https://monecole.com ou MonApp Scolaire"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -707,9 +781,30 @@ export default function InscriptionPro() {
 
             {/* Justificatif */}
             <div className="sm:col-span-2">
-              <label className={labelCls}>Justificatif d'activité (optionnel)</label>
+              <label className={labelCls}>
+                Justificatif d'activité{" "}
+                {REQUIRES_JUSTIFICATIF.includes(selectedType)
+                  ? <span className="text-red-500 font-semibold">* (obligatoire)</span>
+                  : <span className="text-gray-400 font-normal">(optionnel)</span>
+                }
+              </label>
+              {REQUIRES_JUSTIFICATIF.includes(selectedType) && (
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">
+                  ⚠️ Ce type de compte nécessite un document officiel pour être validé par l'administration.
+                </p>
+              )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                {selectedType === "restaurant"
+                {selectedType === "clinic" || selectedType === "health_worker"
+                  ? "Diplôme médical, agrément sanitaire, autorisation d'exercice. PDF ou image. Max 10 Mo."
+                  : selectedType === "school"
+                  ? "Autorisation d'ouverture d'établissement scolaire. PDF ou image. Max 10 Mo."
+                  : selectedType === "mairie"
+                  ? "Document officiel attestant votre fonction. PDF ou image. Max 10 Mo."
+                  : selectedType === "security_agency"
+                  ? "Agrément de sécurité, carte professionnelle ou autorisation. PDF ou image. Max 10 Mo."
+                  : selectedType === "ngo"
+                  ? "Récépissé d'enregistrement de l'ONG ou association. PDF ou image. Max 10 Mo."
+                  : selectedType === "restaurant"
                   ? "Autorisation d'exploitation, patente, ou photo du local. PDF ou image. Max 10 Mo."
                   : "Diplôme, agrément, Kbis... PDF ou image. Max 10 Mo. Réservé à l'administrateur."}
               </p>
