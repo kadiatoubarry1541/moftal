@@ -633,297 +633,253 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       )}
 
       {/* Vue arbre généalogique — style MyHeritage : couleurs par genre, dates, boutons "+" */}
-      <div className="tree-view-horizontal">
-        <svg className="tree-svg" width="100%" height="750" viewBox="0 0 1350 750">
-          {/* ── G-1 : Grands-parents (affiché seulement si présents) ── */}
-          {familyMembers.filter(m => m.generation === 'G-1').length > 0 && (() => {
-            const gpp = familyMembers.filter(m => m.relation === 'grand-pere' && m.generation === 'G-1')[0]
-            const gmp = familyMembers.filter(m => m.relation === 'grand-mere' && m.generation === 'G-1')[0]
-            const gpm = familyMembers.filter(m => m.relation === 'grand-pere' && m.generation === 'G-1')[1]
-            const gmm = familyMembers.filter(m => m.relation === 'grand-mere' && m.generation === 'G-1')[1]
-            return (
+      <div className="tree-view-horizontal" style={{ overflowX: 'auto', overflowY: 'visible' }}>
+       {(() => {
+        const NW = 160, NH = 70, NGAP = 40
+
+        // ── Fratrie G1 : tous les frères/sœurs réels (génération G1, pas enfants du user) ──
+        const g1Siblings = familyMembers.filter(
+          m => (m.relation === 'frere' || m.relation === 'soeur') &&
+               m.generation === 'G1' &&
+               m.parentId !== `user-${userData.numeroH}` &&
+               m.isVisible !== false && !isHidden(m.numeroH)
+        )
+        const g1SibSlots = g1Siblings.length > 0 ? g1Siblings.length : 2
+        const g1Total = g1SibSlots + 1 + (hasConjoint ? 1 : 0)
+        const vousG1Idx = g1SibSlots
+
+        // ── Enfants G2 : enfants directs + défunts enfants (relation=enfant, gen=G2) ──
+        const g2Members = familyMembers.filter(
+          m => (m.parentId === `user-${userData.numeroH}` ||
+                (m.relation === 'enfant' && m.generation === 'G2')) &&
+               m.isVisible !== false && !isHidden(m.numeroH)
+        )
+        const g2Slots = Math.max(2, g2Members.length)
+
+        // ── Largeur SVG dynamique ──
+        const g1RowW = g1Total * (NW + NGAP) - NGAP
+        const g2RowW = g2Slots * (NW + NGAP) - NGAP
+        const SVG_W = Math.max(1350, g1RowW + 200, g2RowW + 200)
+        const SVG_H = g2Members.length > 0 ? 780 : 620
+
+        // ── Positions G1 centrées ──
+        const g1StartX = Math.round((SVG_W - g1RowW) / 2)
+        const g1Xs = Array.from({ length: g1Total }, (_, i) => g1StartX + i * (NW + NGAP))
+        const vousX = g1Xs[vousG1Idx]
+        const vousMidX = vousX + NW / 2
+        const conjX = hasConjoint ? g1Xs[vousG1Idx + 1] : -1
+        const conjMidX = hasConjoint ? conjX + NW / 2 : vousMidX
+        const downX = hasConjoint ? Math.round((vousMidX + conjMidX) / 2) : vousMidX
+
+        // ── Positions G2 centrées ──
+        const g2StartX = Math.round((SVG_W - (g2Slots * (NW + NGAP) - NGAP)) / 2)
+        const g2Xs = Array.from({ length: g2Slots }, (_, i) => g2StartX + i * (NW + NGAP))
+
+        // ── G0 parents : centrés sur downX ──
+        const pX = Math.max(60, downX - 140 - NW)
+        const mX = downX + 140
+        const pmMidX = Math.round((pX + NW / 2 + mX + NW / 2) / 2)
+
+        // ── G-1 grands-parents : flanquant les parents ──
+        const gppX = Math.max(0, pX - NW - NGAP)
+        const gmpX = pX
+        const gpmX = mX
+        const gmmX = mX + NW + NGAP
+
+        // ── Barres de connexion ──
+        const g1BarL = g1Xs[0] + NW / 2
+        const g1BarR = g1Xs[g1Total - 1] + NW / 2
+        const g2BarL = g2Xs[0] + NW / 2
+        const g2BarR = g2Xs[g2Slots - 1] + NW / 2
+
+        return (
+        <svg className="tree-svg" width={SVG_W} height={SVG_H} viewBox={`0 0 ${SVG_W} ${SVG_H}`}>
+          {/* ── G-1 : Grands-parents ── */}
+          {familyMembers.some(m => m.generation === 'G-1') && (
             <g className="generation-g-1">
+              {renderNodeShape('HOMME', gppX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpp || null))}
+              <circle cx={gppX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
+              {gpp?.photo && <image href={gpp.photo} x={gppX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gpp)"/>}
+              <defs><clipPath id="c-gpp"><circle cx={gppX+26} cy={75} r={20}/></clipPath></defs>
+              <text x={gppX+54} y={66} fontSize={11} fontWeight="bold" fill="#2c5530">Père</text>
+              <text x={gppX+54} y={80} fontSize={11} fill="#555">{gpp?.prenom||'Grand-père'}</text>
+              <text x={gppX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gpp?.numeroH||''}</text>
+              <line x1={gppX+NW} y1={75} x2={gmpX} y2={75} stroke="#A0522D" strokeWidth={2}/>
 
-              {/* Grand-père paternel  [x=190..350, y=40..110] — HOMME = rectangle */}
-              {renderNodeShape('HOMME', 190, 40, 160, 70, '#A0522D', 3, 'white',
-                () => setSelectedMember(gpp || null))}
-              <circle cx="218" cy="75" r="20" fill="#A0522D" opacity="0.25" />
-              {gpp?.photo && (
-                <image href={gpp.photo}
-                  x="198" y="55" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                  clipPath="url(#c-gpp)" />
-              )}
-              <defs><clipPath id="c-gpp"><circle cx="218" cy="75" r="20"/></clipPath></defs>
-              <text x="246" y="66" fontSize="11" fontWeight="bold" fill="#2c5530">Père</text>
-              <text x="246" y="80" fontSize="11" fill="#555">{gpp?.prenom || 'Grand-père'}</text>
-              <text x="246" y="94" fontSize="10" fill="#A0522D" fontWeight="bold">{gpp?.numeroH || ''}</text>
+              {renderNodeShape('FEMME', gmpX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmp || null))}
+              <circle cx={gmpX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
+              {gmp?.photo && <image href={gmp.photo} x={gmpX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gmp)"/>}
+              <defs><clipPath id="c-gmp"><circle cx={gmpX+26} cy={75} r={20}/></clipPath></defs>
+              <text x={gmpX+54} y={66} fontSize={11} fontWeight="bold" fill="#2c5530">Mère</text>
+              <text x={gmpX+54} y={80} fontSize={11} fill="#555">{gmp?.prenom||'Grand-mère'}</text>
+              <text x={gmpX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gmp?.numeroH||''}</text>
+              <line x1={gmpX+NW/2} y1={110} x2={gmpX+NW/2} y2={190} stroke="#A0522D" strokeWidth={2}/>
 
-              {/* Connecteur horizontal couple paternel — dans le gap x=350..390 */}
-              <line x1="350" y1="75" x2="390" y2="75" stroke="#A0522D" strokeWidth="2"/>
+              {renderNodeShape('HOMME', gpmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpm || null))}
+              <circle cx={gpmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
+              {gpm?.photo && <image href={gpm.photo} x={gpmX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gpm)"/>}
+              <defs><clipPath id="c-gpm"><circle cx={gpmX+26} cy={75} r={20}/></clipPath></defs>
+              <text x={gpmX+54} y={66} fontSize={11} fontWeight="bold" fill="#2c5530">Père</text>
+              <text x={gpmX+54} y={80} fontSize={11} fill="#555">{gpm?.prenom||'Grand-père'}</text>
+              <text x={gpmX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gpm?.numeroH||''}</text>
+              <line x1={gpmX+NW} y1={75} x2={gmmX} y2={75} stroke="#A0522D" strokeWidth={2}/>
 
-              {/* Grand-mère paternelle  [x=390..550] — FEMME = hexagone */}
-              {renderNodeShape('FEMME', 390, 40, 160, 70, '#A0522D', 3, 'white',
-                () => setSelectedMember(gmp || null))}
-              <circle cx="418" cy="75" r="20" fill="#A0522D" opacity="0.25" />
-              {gmp?.photo && (
-                <image href={gmp.photo}
-                  x="398" y="55" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                  clipPath="url(#c-gmp)" />
-              )}
-              <defs><clipPath id="c-gmp"><circle cx="418" cy="75" r="20"/></clipPath></defs>
-              <text x="446" y="66" fontSize="11" fontWeight="bold" fill="#2c5530">Mère</text>
-              <text x="446" y="80" fontSize="11" fill="#555">{gmp?.prenom || 'Grand-mère'}</text>
-              <text x="446" y="94" fontSize="10" fill="#A0522D" fontWeight="bold">{gmp?.numeroH || ''}</text>
+              {renderNodeShape('FEMME', gmmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmm || null))}
+              <circle cx={gmmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
+              {gmm?.photo && <image href={gmm.photo} x={gmmX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gmm)"/>}
+              <defs><clipPath id="c-gmm"><circle cx={gmmX+26} cy={75} r={20}/></clipPath></defs>
+              <text x={gmmX+54} y={66} fontSize={11} fontWeight="bold" fill="#2c5530">Mère</text>
+              <text x={gmmX+54} y={80} fontSize={11} fill="#555">{gmm?.prenom||'Grand-mère'}</text>
+              <text x={gmmX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gmm?.numeroH||''}</text>
+              <line x1={gmmX+NW/2} y1={110} x2={gmmX+NW/2} y2={190} stroke="#A0522D" strokeWidth={2}/>
 
-              {/* Vertical couple paternel → Père G0
-                  x=370 est dans le gap 350..390, y=75..190 ne croise aucune boîte */}
-              <line x1="370" y1="75" x2="370" y2="190" stroke="#A0522D" strokeWidth="2"/>
-
-              {/* Grand-père maternel  [x=630..790] — HOMME = rectangle */}
-              {renderNodeShape('HOMME', 630, 40, 160, 70, '#A0522D', 3, 'white',
-                () => setSelectedMember(gpm || null))}
-              <circle cx="658" cy="75" r="20" fill="#A0522D" opacity="0.25" />
-              {gpm?.photo && (
-                <image href={gpm.photo}
-                  x="638" y="55" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                  clipPath="url(#c-gpm)" />
-              )}
-              <defs><clipPath id="c-gpm"><circle cx="658" cy="75" r="20"/></clipPath></defs>
-              <text x="686" y="66" fontSize="11" fontWeight="bold" fill="#2c5530">Père</text>
-              <text x="686" y="80" fontSize="11" fill="#555">{gpm?.prenom || 'Grand-père'}</text>
-              <text x="686" y="94" fontSize="10" fill="#A0522D" fontWeight="bold">{gpm?.numeroH || ''}</text>
-
-              {/* Connecteur horizontal couple maternel — dans le gap x=790..830 */}
-              <line x1="790" y1="75" x2="830" y2="75" stroke="#A0522D" strokeWidth="2"/>
-
-              {/* Grand-mère maternelle  [x=830..990] — FEMME = hexagone */}
-              {renderNodeShape('FEMME', 830, 40, 160, 70, '#A0522D', 3, 'white',
-                () => setSelectedMember(gmm || null))}
-              <circle cx="858" cy="75" r="20" fill="#A0522D" opacity="0.25" />
-              {gmm?.photo && (
-                <image href={gmm.photo}
-                  x="838" y="55" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                  clipPath="url(#c-gmm)" />
-              )}
-              <defs><clipPath id="c-gmm"><circle cx="858" cy="75" r="20"/></clipPath></defs>
-              <text x="886" y="66" fontSize="11" fontWeight="bold" fill="#2c5530">Mère</text>
-              <text x="886" y="80" fontSize="11" fill="#555">{gmm?.prenom || 'Grand-mère'}</text>
-              <text x="886" y="94" fontSize="10" fill="#A0522D" fontWeight="bold">{gmm?.numeroH || ''}</text>
-
-              {/* Vertical couple maternel → Mère G0
-                  x=810 dans le gap 790..830 */}
-              <line x1="810" y1="75" x2="810" y2="190" stroke="#A0522D" strokeWidth="2"/>
+              {renderPlusButton(gppX+80, 35, 'G-père paternel', 'grand-pere')}
+              {renderPlusButton(gmpX+80, 35, 'G-mère paternelle', 'grand-mere')}
+              {renderPlusButton(gpmX+80, 35, 'G-père maternel', 'grand-pere')}
+              {renderPlusButton(gmmX+80, 35, 'G-mère maternelle', 'grand-mere')}
             </g>
-            )
-          })()}
+          )}
 
           {/* ── G0 : Parents ── */}
           <g className="generation-g0">
+            {renderNodeShape('HOMME', pX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='pere')||null))}
+            <circle cx={pX+26} cy={225} r={20} fill="#CD853F" opacity="0.25"/>
+            {familyMembers.find(m=>m.relation==='pere')?.photo && <image href={familyMembers.find(m=>m.relation==='pere')?.photo} x={pX+6} y={205} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-pere)"/>}
+            <defs><clipPath id="c-pere"><circle cx={pX+26} cy={225} r={20}/></clipPath></defs>
+            <text x={pX+54} y={216} fontSize={11} fontWeight="bold" fill="#2c5530">Mari / Père</text>
+            <text x={pX+54} y={230} fontSize={11} fill="#555">{familyMembers.find(m=>m.relation==='pere')?.prenom||userData.prenomPere||'Père'}</text>
+            <text x={pX+54} y={244} fontSize={10} fill="#CD853F" fontWeight="bold">{familyMembers.find(m=>m.relation==='pere')?.numeroH||userData.numeroHPere||''}</text>
 
-            {/* Père  [x=290..450, cy=225] — HOMME = rectangle */}
-            {renderNodeShape('HOMME', 290, 190, 160, 70, '#CD853F', 3, 'white',
-              () => setSelectedMember(familyMembers.find(m => m.relation === 'pere') || null))}
-            <circle cx="318" cy="225" r="20" fill="#CD853F" opacity="0.25" />
-            {familyMembers.find(m => m.relation === 'pere')?.photo && (
-                <image href={familyMembers.find(m => m.relation === 'pere')?.photo}
-                x="298" y="205" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                clipPath="url(#c-pere)" />
-            )}
-            <defs><clipPath id="c-pere"><circle cx="318" cy="225" r="20"/></clipPath></defs>
-            <text x="346" y="216" fontSize="11" fontWeight="bold" fill="#2c5530">Mari / Père</text>
-            <text x="346" y="230" fontSize="11" fill="#555">{familyMembers.find(m => m.relation === 'pere')?.prenom || userData.prenomPere || 'Père'}</text>
-            <text x="346" y="244" fontSize="10" fill="#CD853F" fontWeight="bold">{familyMembers.find(m => m.relation === 'pere')?.numeroH || userData.numeroHPere || ''}</text>
+            <line x1={pX+NW} y1={225} x2={mX} y2={225} stroke="#CD853F" strokeWidth={2}/>
+            <text x={pmMidX} y={217} textAnchor="middle" fontSize={11} fill="#FF9800" fontWeight="bold">Conjoints</text>
 
-            {/* Connecteur horizontal Père ↔ Mère — dans le gap x=450..730
-                Vertical de descente part du milieu (x=590) — x=590 hors de toute boîte G0 */}
-            <line x1="450" y1="225" x2="730" y2="225" stroke="#CD853F" strokeWidth="2"/>
-            <text x="590" y="217" textAnchor="middle" fontSize="11" fill="#FF9800" fontWeight="bold">Conjoints</text>
+            {renderNodeShape('FEMME', mX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='mere')||null))}
+            <circle cx={mX+26} cy={225} r={20} fill="#CD853F" opacity="0.25"/>
+            {familyMembers.find(m=>m.relation==='mere')?.photo && <image href={familyMembers.find(m=>m.relation==='mere')?.photo} x={mX+6} y={205} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-mere)"/>}
+            <defs><clipPath id="c-mere"><circle cx={mX+26} cy={225} r={20}/></clipPath></defs>
+            <text x={mX+54} y={216} fontSize={11} fontWeight="bold" fill="#2c5530">Femme / Mère</text>
+            <text x={mX+54} y={230} fontSize={11} fill="#555">{familyMembers.find(m=>m.relation==='mere')?.prenom||userData.prenomMere||'Mère'}</text>
+            <text x={mX+54} y={244} fontSize={10} fill="#CD853F" fontWeight="bold">{familyMembers.find(m=>m.relation==='mere')?.numeroH||userData.numeroHMere||''}</text>
 
-            {/* Mère  [x=730..890, cy=225] — FEMME = hexagone */}
-            {renderNodeShape('FEMME', 730, 190, 160, 70, '#CD853F', 3, 'white',
-              () => setSelectedMember(familyMembers.find(m => m.relation === 'mere') || null))}
-            <circle cx="758" cy="225" r="20" fill="#CD853F" opacity="0.25" />
-            {familyMembers.find(m => m.relation === 'mere')?.photo && (
-                <image href={familyMembers.find(m => m.relation === 'mere')?.photo}
-                x="738" y="205" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                clipPath="url(#c-mere)" />
-            )}
-            <defs><clipPath id="c-mere"><circle cx="758" cy="225" r="20"/></clipPath></defs>
-            <text x="786" y="216" fontSize="11" fontWeight="bold" fill="#2c5530">Femme / Mère</text>
-            <text x="786" y="230" fontSize="11" fill="#555">{familyMembers.find(m => m.relation === 'mere')?.prenom || userData.prenomMere || 'Mère'}</text>
-            <text x="786" y="244" fontSize="10" fill="#CD853F" fontWeight="bold">{familyMembers.find(m => m.relation === 'mere')?.numeroH || userData.numeroHMere || ''}</text>
-
-            {/* Vertical G0 → barre G1  (x=590 dans le gap père..mère, y=225→310) */}
-            <line x1="590" y1="225" x2="590" y2="310" stroke="#CD853F" strokeWidth="2"/>
+            <line x1={pmMidX} y1={260} x2={pmMidX} y2={310} stroke="#CD853F" strokeWidth={2}/>
+            {renderPlusButton(pX+80, 215, 'Lier père', 'pere')}
+            {renderPlusButton(mX+80, 215, 'Lier mère', 'mere')}
           </g>
 
-          {/* ── Barre horizontale G1 (y=310) + branches vers chaque enfant ──
-               Barre de x=390 à x=790 ; branches descendent vers les boîtes y=350
-               Aucune boîte n'est à y=310 (G0 finit à y=260, G1 commence à y=350) */}
-          <line x1="390" y1="310" x2="790" y2="310" stroke="#4CAF50" strokeWidth="2"/>
-          <line x1="390" y1="310" x2="390" y2="350" stroke="#4CAF50" strokeWidth="2"/>
-          <line x1="590" y1="310" x2="590" y2="350" stroke="#4CAF50" strokeWidth="2"/>
-          <line x1="790" y1="310" x2="790" y2="350" stroke="#4CAF50" strokeWidth="2"/>
+          {/* ── Barre G0→G1 + branches dynamiques ── */}
+          <line x1={g1BarL} y1={310} x2={g1BarR} y2={310} stroke="#4CAF50" strokeWidth={2}/>
+          {g1Xs.map((x, i) => <line key={`b1-${i}`} x1={x+NW/2} y1={310} x2={x+NW/2} y2={350} stroke="#4CAF50" strokeWidth={2}/>)}
 
-          {/* ── G1 : Fratrie + VOUS + Conjoint(e) ── */}
+          {/* ── G1 : Fratrie DYNAMIQUE + VOUS + Conjoint ── */}
           <g className="generation-g1">
+            {/* Frères et sœurs (tous, dynamiquement) */}
+            {g1Siblings.length > 0
+              ? g1Siblings.map((sib, i) => {
+                  const x = g1Xs[i]
+                  const clipId = `c-sib-${i}`
+                  return (
+                    <g key={sib.id}>
+                      {renderSVGNode(sib.genre, x, 350, sib.prenom, sib.numeroH,
+                        sib.relation === 'frere' ? 'Frère' : 'Sœur',
+                        sib.photo, sib.dateNaissance, sib.dateDeces, clipId,
+                        () => setSelectedMember(sib))}
+                      {renderPlusButton(x+80, 375, `Voir ${sib.prenom}`, sib.relation)}
+                    </g>
+                  )
+                })
+              : (
+                <>
+                  {renderSVGNode('HOMME', g1Xs[0], 350, 'Frère', '', 'Frère', undefined, undefined, undefined, 'c-ph-frere', undefined)}
+                  {renderSVGNode('FEMME', g1Xs[1], 350, 'Sœur', '', 'Sœur', undefined, undefined, undefined, 'c-ph-soeur', undefined)}
+                  {renderPlusButton(g1Xs[0]+80, 375, 'Ajouter frère', 'frere')}
+                  {renderPlusButton(g1Xs[1]+80, 375, 'Ajouter sœur', 'soeur')}
+                </>
+              )
+            }
 
-            {/* Frère  [x=310..470, cx=390] — HOMME = rectangle */}
-            {renderNodeShape('HOMME', 310, 350, 160, 70, '#667eea', 3, 'white',
-              () => setSelectedMember(familyMembers.find(m => m.relation === 'frere') || null))}
-            <circle cx="338" cy="385" r="20" fill="#667eea" opacity="0.25" />
-            {familyMembers.find(m => m.id === '6')?.photo && (
-              <image href={familyMembers.find(m => m.id === '6')?.photo}
-                x="318" y="365" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                clipPath="url(#c-frere)" />
+            {/* VOUS */}
+            {renderNodeShape(
+              (userData.genre?.toUpperCase() || 'HOMME') as 'HOMME'|'FEMME'|'AUTRE',
+              vousX, 350, NW, NH, '#667eea', 4, 'white',
+              () => setSelectedMember(familyMembers.find(m=>m.numeroH===userData.numeroH)||null),
+              { className: 'current-user' }
             )}
-            <defs><clipPath id="c-frere"><circle cx="338" cy="385" r="20"/></clipPath></defs>
-            <text x="366" y="377" fontSize="11" fontWeight="bold" fill="#2c5530">Frère</text>
-            <text x="366" y="391" fontSize="11" fill="#555">{familyMembers.find(m => m.relation === 'frere')?.prenom || 'Frère'}</text>
-            <text x="366" y="405" fontSize="10" fill="#667eea" fontWeight="bold">{familyMembers.find(m => m.relation === 'frere')?.numeroH || ''}</text>
+            <circle cx={vousX+26} cy={385} r={20} fill="#667eea" opacity="0.4"/>
+            {userData.photo && <image href={userData.photo} x={vousX+6} y={365} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-vous)"/>}
+            <defs><clipPath id="c-vous"><circle cx={vousX+26} cy={385} r={20}/></clipPath></defs>
+            <text x={vousX+54} y={377} fontSize={11} fontWeight="bold" fill="#667eea">VOUS</text>
+            <text x={vousX+54} y={391} fontSize={11} fill="#555">{userData.prenom}</text>
+            <text x={vousX+54} y={405} fontSize={10} fill="#667eea" fontWeight="bold">{userData.numeroH}</text>
+            <circle cx={vousX+NW-8} cy={358} r={5} fill="#FF9800"/>
+            {renderPlusButton(vousX+80, 375, 'Ajouter un enfant', 'enfant')}
 
-            {/* Sœur  [x=510..670, cx=590] — FEMME = hexagone */}
-            {renderNodeShape('FEMME', 510, 350, 160, 70, '#667eea', 3, 'white',
-              () => setSelectedMember(familyMembers.find(m => m.relation === 'soeur') || null))}
-            <circle cx="538" cy="385" r="20" fill="#667eea" opacity="0.25" />
-            {familyMembers.find(m => m.relation === 'soeur')?.photo && (
-                <image href={familyMembers.find(m => m.relation === 'soeur')?.photo}
-                x="518" y="365" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                clipPath="url(#c-soeur)" />
-            )}
-            <defs><clipPath id="c-soeur"><circle cx="538" cy="385" r="20"/></clipPath></defs>
-            <text x="566" y="377" fontSize="11" fontWeight="bold" fill="#2c5530">Sœur</text>
-            <text x="566" y="391" fontSize="11" fill="#555">{familyMembers.find(m => m.relation === 'soeur')?.prenom || 'Sœur'}</text>
-            <text x="566" y="405" fontSize="10" fill="#667eea" fontWeight="bold">{familyMembers.find(m => m.relation === 'soeur')?.numeroH || ''}</text>
-
-            {/* VOUS  [x=710..870, cx=790] — forme selon userData.genre */}
-            {renderNodeShape((userData.genre?.toUpperCase() || 'HOMME') as 'HOMME' | 'FEMME' | 'AUTRE', 710, 350, 160, 70, '#667eea', 4, 'white',
-              () => setSelectedMember(familyMembers.find(m => m.numeroH === userData.numeroH) || null),
-              { className: 'current-user' })}
-            <circle cx="738" cy="385" r="20" fill="#667eea" opacity="0.4" />
-            {userData.photo && (
-              <image href={userData.photo}
-                x="718" y="365" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                clipPath="url(#c-vous)" />
-            )}
-            <defs><clipPath id="c-vous"><circle cx="738" cy="385" r="20"/></clipPath></defs>
-            <text x="766" y="377" fontSize="11" fontWeight="bold" fill="#667eea">VOUS</text>
-            <text x="766" y="391" fontSize="11" fill="#555">{userData.prenom}</text>
-            <text x="766" y="405" fontSize="10" fill="#667eea" fontWeight="bold">{userData.numeroH}</text>
-            {/* Indicateur orange */}
-            <circle cx="862" cy="360" r="5" fill="#FF9800"/>
-
-            {/* Conjoint(e) et descente vers G2 */}
-            {Boolean(userData.conjointNumeroH && userData.conjointPrenom) ? (
+            {/* Conjoint */}
+            {hasConjoint && (
               <>
-                {/* Connecteur VOUS ↔ Conjoint — dans le gap x=870..910 */}
-                <line x1="870" y1="385" x2="910" y2="385" stroke="#4CAF50" strokeWidth="2"/>
-                <text x="890" y="377" textAnchor="middle" fontSize="10" fill="#FF9800" fontWeight="bold">♥</text>
-
-                {/* Conjoint(e)  [x=910..1070, cx=990] — forme selon conjointGenre */}
-                {renderNodeShape((userData.conjointGenre?.toUpperCase() === 'FEMME' ? 'FEMME' : 'HOMME') as 'HOMME' | 'FEMME' | 'AUTRE', 910, 350, 160, 70, '#667eea', 3, 'white',
-                  () => setSelectedMember(familyMembers.find(m => m.relation === 'conjoint') || null))}
-                <circle cx="938" cy="385" r="20" fill="#667eea" opacity="0.25" />
-                {userData.conjointPhoto && (
-                  <image href={userData.conjointPhoto}
-                    x="918" y="365" width="40" height="40" preserveAspectRatio="xMidYMid slice"
-                    clipPath="url(#c-conj)" />
+                <line x1={vousX+NW} y1={385} x2={conjX} y2={385} stroke="#4CAF50" strokeWidth={2}/>
+                <text x={Math.round((vousX+NW+conjX)/2)} y={377} textAnchor="middle" fontSize={10} fill="#FF9800" fontWeight="bold">♥</text>
+                {renderNodeShape(
+                  (userData.conjointGenre?.toUpperCase()==='FEMME' ? 'FEMME' : 'HOMME') as 'HOMME'|'FEMME'|'AUTRE',
+                  conjX, 350, NW, NH, '#667eea', 3, 'white',
+                  () => setSelectedMember(familyMembers.find(m=>m.relation==='conjoint')||null)
                 )}
-                <defs><clipPath id="c-conj"><circle cx="938" cy="385" r="20"/></clipPath></defs>
-                <text x="966" y="377" fontSize="11" fontWeight="bold" fill="#2c5530">
-                  {userData.conjointGenre?.toUpperCase() === 'HOMME' ? 'Époux' : 'Épouse'}
+                <circle cx={conjX+26} cy={385} r={20} fill="#667eea" opacity="0.25"/>
+                {userData.conjointPhoto && <image href={userData.conjointPhoto} x={conjX+6} y={365} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-conj)"/>}
+                <defs><clipPath id="c-conj"><circle cx={conjX+26} cy={385} r={20}/></clipPath></defs>
+                <text x={conjX+54} y={377} fontSize={11} fontWeight="bold" fill="#2c5530">
+                  {userData.conjointGenre?.toUpperCase()==='HOMME' ? 'Époux' : 'Épouse'}
                 </text>
-                <text x="966" y="391" fontSize="11" fill="#555">{userData.conjointPrenom}</text>
-                <text x="966" y="405" fontSize="10" fill="#667eea" fontWeight="bold">{userData.conjointNumeroH}</text>
-                {/* Bouton "Voir plus" pour accéder à l'arbre du conjoint */}
-                <g style={{ cursor: 'pointer' }} onClick={() => handleViewSpouseTree(userData.conjointNumeroH)}>
-                  <rect x="912" y="413" width="72" height="16" rx="6" fill="#667eea" opacity="0.85"/>
-                  <text x="948" y="424" fontSize="9" textAnchor="middle" fill="white" fontWeight="bold">Voir arbre</text>
+                <text x={conjX+54} y={391} fontSize={11} fill="#555">{userData.conjointPrenom}</text>
+                <text x={conjX+54} y={405} fontSize={10} fill="#667eea" fontWeight="bold">{userData.conjointNumeroH}</text>
+                <g style={{cursor:'pointer'}} onClick={()=>handleViewSpouseTree(userData.conjointNumeroH)}>
+                  <rect x={conjX+2} y={425} width={72} height={16} rx={6} fill="#667eea" opacity="0.85"/>
+                  <text x={conjX+38} y={436} fontSize={9} textAnchor="middle" fill="white" fontWeight="bold">Voir arbre</text>
                 </g>
-
-                {/* Vertical du milieu du connecteur (x=890, dans le gap 870..910) vers barre G2
-                    y=385→420 : x=890 dans le gap — aucune boîte traversée
-                    y=420→460 : espace libre entre G1 et G2 */}
-                <line x1="890" y1="385" x2="890" y2="460" stroke="#1a8f1a" strokeWidth="2"/>
+                {renderPlusButton(conjX+80, 375, 'Lier conjoint(e)', 'conjoint')}
               </>
-            ) : (
-              /* Sans conjoint : vertical depuis le bas de la boîte VOUS (y=420)
-                 y=420 = bord inférieur de VOUS — aucune boîte traversée */
-              <line x1="790" y1="420" x2="790" y2="460" stroke="#1a8f1a" strokeWidth="2"/>
             )}
+
+            {/* Vertical vers G2 */}
+            <line x1={downX} y1={420} x2={downX} y2={460} stroke="#1a8f1a" strokeWidth={2}/>
           </g>
 
-          {/* ── Barre horizontale G2 (y=460) + branches ──
-               Barre de x=790 à x=990 ; branches à x=790 et x=990
-               y=460 est entre G1 (finit y=420) et G2 (commence y=490) */}
-          <line x1="790" y1="460" x2="990" y2="460" stroke="#1a8f1a" strokeWidth="2"/>
-          <line x1="790" y1="460" x2="790" y2="490" stroke="#1a8f1a" strokeWidth="2"/>
-          <line x1="990" y1="460" x2="990" y2="490" stroke="#1a8f1a" strokeWidth="2"/>
+          {/* ── Barre G1→G2 + branches dynamiques ── */}
+          <line x1={g2BarL} y1={460} x2={g2BarR} y2={460} stroke="#1a8f1a" strokeWidth={2}/>
+          {g2Xs.map((x, i) => <line key={`b2-${i}`} x1={x+NW/2} y1={460} x2={x+NW/2} y2={490} stroke="#1a8f1a" strokeWidth={2}/>)}
 
-          {/* ── G2 : Enfants + leurs conjoints ── */}
+          {/* ── G2 : Enfants DYNAMIQUES ── */}
           <g className="generation-g2">
-
-            {/* Mari de la Fille  [x=510..670] */}
-            {renderPersonNode({ genre: 'HOMME', prenom: '', nomFamille: '', numeroH: '' }, 510, 490, 160, 70, { label: 'Mari' })}
-
-            {/* Connecteur Mari ↔ Fille — dans le gap x=670..710 */}
-            <line x1="670" y1="525" x2="710" y2="525" stroke="#1a8f1a" strokeWidth="2"/>
-
-            {/* Fille  [x=710..870, cx=790] */}
-            {renderPersonNode({ genre: 'FEMME', prenom: '', nomFamille: userData.nomFamille, numeroH: '' }, 710, 490, 160, 70, { label: 'Fille' })}
-
-            {/* Vertical couple Mari-Fille → Petite-fille
-                x=690 dans le gap 670..710 ; y=525→560 dans la zone G2 (gap) ; y=560→630 espace libre */}
-            <line x1="690" y1="525" x2="690" y2="630" stroke="#1a8f1a" strokeWidth="2"/>
-
-            {/* Garçon  [x=910..1070, cx=990] */}
-            {renderPersonNode({ genre: 'HOMME', prenom: '', nomFamille: userData.nomFamille, numeroH: '' }, 910, 490, 160, 70, { label: 'Garçon' })}
-
-            {/* Connecteur Garçon ↔ Femme — dans le gap x=1070..1110 */}
-            <line x1="1070" y1="525" x2="1110" y2="525" stroke="#1a8f1a" strokeWidth="2"/>
-
-            {/* Femme du Garçon  [x=1110..1270] */}
-            {renderPersonNode({ genre: 'FEMME', prenom: '', nomFamille: '', numeroH: '' }, 1110, 490, 160, 70, { label: 'Femme' })}
-
-            {/* Vertical couple Garçon-Femme → Petit-garçon
-                x=1090 dans le gap 1070..1110 */}
-            <line x1="1090" y1="525" x2="1090" y2="630" stroke="#1a8f1a" strokeWidth="2"/>
+            {g2Members.length > 0
+              ? g2Members.map((child, i) => {
+                  const x = g2Xs[i]
+                  const clipId = `c-child-${i}`
+                  const label = child.genre === 'FEMME' ? 'Fille' : 'Garçon'
+                  return (
+                    <g key={child.id}>
+                      {renderSVGNode(
+                        child.genre, x, 490,
+                        child.prenom || '—', child.numeroH || '',
+                        label, child.photo, child.dateNaissance, child.dateDeces,
+                        clipId, () => setSelectedMember(child)
+                      )}
+                      {renderPlusButton(x+80, 515, label, 'enfant')}
+                    </g>
+                  )
+                })
+              : (
+                <>
+                  {renderPersonNode({genre:'FEMME', prenom:'', nomFamille:userData.nomFamille, numeroH:''}, g2Xs[0], 490, NW, NH, {label:'Fille'})}
+                  {renderPersonNode({genre:'HOMME', prenom:'', nomFamille:userData.nomFamille, numeroH:''}, g2Xs[1], 490, NW, NH, {label:'Garçon'})}
+                  {renderPlusButton(g2Xs[0]+80, 515, 'Ajouter fille', 'enfant')}
+                  {renderPlusButton(g2Xs[1]+80, 515, 'Ajouter garçon', 'enfant')}
+                </>
+              )
+            }
           </g>
-
-          {/* ── G3 : Petits-enfants ── */}
-          <g className="generation-g3">
-            {/* Petite-fille  [x=610..770, cx=690] */}
-            {renderPersonNode({ genre: 'FEMME', prenom: '', nomFamille: userData.nomFamille, numeroH: '' }, 610, 630, 160, 70, { label: 'Petite-fille' })}
-            {/* Petit-garçon  [x=1010..1170, cx=1090] */}
-            {renderPersonNode({ genre: 'HOMME', prenom: '', nomFamille: userData.nomFamille, numeroH: '' }, 1010, 630, 160, 70, { label: 'Petit-garçon' })}
-          </g>
-
-          {/* ── Badges "+" sur TOUS les nœuds (ajout MyHeritage-style) ── */}
-          {/* G-1 : sur chaque carte grand-parent quand la section est visible */}
-          {familyMembers.some(m => m.generation === 'G-1') && (<>
-            {renderPlusButton(270, 75, 'G-père paternel', 'grand-pere')}
-            {renderPlusButton(470, 75, 'G-mère paternelle', 'grand-mere')}
-            {renderPlusButton(710, 75, 'G-père maternel', 'grand-pere')}
-            {renderPlusButton(910, 75, 'G-mère maternelle', 'grand-mere')}
-          </>)}
-          {/* G0 : Père et Mère */}
-          {renderPlusButton(370, 225, 'Lier père', 'pere')}
-          {renderPlusButton(810, 225, 'Lier mère', 'mere')}
-          {/* G1 : Frère, Sœur, VOUS, Conjoint */}
-          {renderPlusButton(390, 385, 'Ajouter frère', 'frere')}
-          {renderPlusButton(590, 385, 'Ajouter sœur', 'soeur')}
-          {renderPlusButton(790, 385, 'Ajouter un enfant', 'enfant')}
-          {hasConjoint && renderPlusButton(990, 385, 'Lier conjoint(e)', 'conjoint')}
-          {/* G2 : enfants et leurs conjoints */}
-          {renderPlusButton(590, 525, 'Mari de la fille', 'conjoint')}
-          {renderPlusButton(790, 525, 'Ajouter fille', 'enfant')}
-          {renderPlusButton(990, 525, 'Ajouter garçon', 'enfant')}
-          {renderPlusButton(1190, 525, 'Femme du garçon', 'conjoint')}
-          {/* G3 : petits-enfants */}
-          {renderPlusButton(690, 665, 'Petite-fille', 'enfant')}
-          {renderPlusButton(1090, 665, 'Petit-garçon', 'enfant')}
 
         </svg>
+        )
+       })()}
       </div>
 
       {/* Personnes masquées : liste avec bouton Réafficher */}
