@@ -91,7 +91,7 @@ router.get('/mon-compte', async (req, res) => {
     if (!fund) {
       const nbMembres = await compterMembresArbre(nomFamille);
       // Auto-création si l'arbre atteint 10 membres
-      if (nbMembres >= 5) {
+      if (nbMembres >= 3) {
         fund = await FamilyFund.create({
           nomFamille: nomFamille.trim(),
           gerant1NumeroH: req.user.numeroH
@@ -102,7 +102,7 @@ router.get('/mon-compte', async (req, res) => {
           success: true,
           existe: false,
           nbMembres,
-          message: `Votre arbre a ${nbMembres} membre(s). Le Moftal Pay familial s'active automatiquement à 5 membres.`
+          message: `Votre arbre a ${nbMembres} membre(s). Le Moftal Pay familial s'active automatiquement à 3 membres.`
         });
       }
     }
@@ -138,7 +138,7 @@ router.get('/mon-compte', async (req, res) => {
         where: { familyName: { [Op.iLike]: nomFamille.trim() } },
         attributes: ['familyCode', 'bloodNumber']
       });
-      if (tree && nbMembres >= 5) {
+      if (tree && nbMembres >= 3) {
         familyCode = tree.familyCode || null;
         bloodNumber = tree.bloodNumber || null;
       }
@@ -213,12 +213,12 @@ router.post('/creer', async (req, res) => {
 
     // Vérification : l'arbre doit avoir au moins 10 membres
     const nbMembres = await compterMembresArbre(nomFamille);
-    if (nbMembres < 5) {
+    if (nbMembres < 3) {
       return res.status(403).json({
         success: false,
-        message: `Votre arbre familial n'a que ${nbMembres} membre${nbMembres > 1 ? 's' : ''}. Le Moftal Pay familial s'ouvre à partir de 5 membres.`,
+        message: `Votre arbre familial n'a que ${nbMembres} membre${nbMembres > 1 ? 's' : ''}. Le Moftal Pay familial s'ouvre à partir de 3 membres.`,
         nbMembres,
-        requis: 5
+        requis: 3
       });
     }
 

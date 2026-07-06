@@ -328,32 +328,32 @@ export default function CompteFamille() {
         )}
 
         {/* Arbre pas encore assez grand */}
-        {!existe && !msgErreur && nbMembres < 5 && (
+        {!existe && !msgErreur && nbMembres < 3 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-blue-100">
             <div className="text-center mb-4">
               <div className="text-5xl mb-3">🌳</div>
-              <h2 className="font-bold text-gray-900 text-lg mb-1">Moftal Pay s'ouvre à 5 membres</h2>
+              <h2 className="font-bold text-gray-900 text-lg mb-1">Moftal Pay s'ouvre à 3 membres</h2>
               <p className="text-gray-500 text-sm">
-                Votre arbre familial doit rassembler <strong>5 membres</strong> pour activer le Moftal Pay.
+                Votre arbre familial doit rassembler <strong>3 membres</strong> pour activer le Moftal Pay.
               </p>
             </div>
             <div className="mb-4">
               <div className="flex justify-between text-xs font-semibold mb-1.5">
                 <span className="text-gray-600">Membres actuels</span>
-                <span style={{ color: '#2563eb' }}>{nbMembres} / 5</span>
+                <span style={{ color: '#2563eb' }}>{nbMembres} / 3</span>
               </div>
               <div className="w-full h-3 bg-blue-100 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
-                  style={{ width: `${Math.min((nbMembres / 5) * 100, 100)}%`, background: 'linear-gradient(90deg,#2563eb,#1e3a5f)' }}
+                  style={{ width: `${Math.min((nbMembres / 3) * 100, 100)}%`, background: 'linear-gradient(90deg,#2563eb,#1e3a5f)' }}
                 />
               </div>
               <p className="text-blue-600 text-xs font-bold mt-1.5 text-center">
-                Encore {5 - nbMembres} membre{5 - nbMembres > 1 ? 's' : ''} à inviter dans l'arbre
+                Encore {3 - nbMembres} membre{3 - nbMembres > 1 ? 's' : ''} à inviter dans l'arbre
               </p>
             </div>
             <div className="rounded-xl p-3 text-sm space-y-1" style={{ background: '#f0f7ff' }}>
-              <p className="font-semibold text-blue-900 text-xs mb-1">Ce qui s'active à 5 membres :</p>
+              <p className="font-semibold text-blue-900 text-xs mb-1">Ce qui s'active à 3 membres :</p>
               {CATEGORIES.map(c => (
                 <div key={c.key} className="flex items-center gap-2 text-xs text-gray-600">
                   <span>{c.icon}</span>
@@ -365,7 +365,7 @@ export default function CompteFamille() {
         )}
 
         {/* Activation en cours */}
-        {!existe && !msgErreur && nbMembres >= 5 && (
+        {!existe && !msgErreur && nbMembres >= 3 && (
           <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-green-100">
             <div className="text-5xl mb-3">⏳</div>
             <h2 className="font-bold text-gray-900 text-lg mb-1">Activation en cours…</h2>

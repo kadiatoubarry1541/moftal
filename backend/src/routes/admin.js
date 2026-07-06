@@ -476,8 +476,8 @@ router.get('/arbres-activation', async (req, res) => {
     });
 
     const actives   = result.filter(t => t.arbreActive);
-    const inactives = result.filter(t => !t.arbreActive && t.memberCount >= 5);
-    const enAttente = result.filter(t => !t.arbreActive && t.memberCount < 5);
+    const inactives = result.filter(t => !t.arbreActive && t.memberCount >= 3);
+    const enAttente = result.filter(t => !t.arbreActive && t.memberCount < 3);
 
     res.json({
       success: true,

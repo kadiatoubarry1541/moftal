@@ -85,9 +85,9 @@ router.get('/tree', async (req, res) => {
         familyCode: arbreActive ? (tree.familyCode || null) : null,
         bloodNumber: arbreActive ? (tree.bloodNumber || null) : null,
         familyName: tree.familyName || null,
-        codeUnlocked: members.length >= 5,
+        codeUnlocked: members.length >= 3,
         arbreActive,
-        codePaiementRequis: members.length >= 5 && !arbreActive
+        codePaiementRequis: members.length >= 3 && !arbreActive
       }
     });
   } catch (error) {
@@ -899,7 +899,7 @@ async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
  */
 async function assignFamilyCodeIfNeeded(tree, members) {
   if (tree.familyCode) return; // déjà attribué
-  if (members.length < 5) return;
+  if (members.length < 3) return;
 
   // Récupérer le nom de famille depuis le membre racine si pas encore défini
   let familyName = tree.familyName;
@@ -1122,9 +1122,9 @@ router.get('/spouse-tree/:spouseNumeroH', async (req, res) => {
         members,
         deceasedMembers,
         memberCount: members.length,
-        familyCode: members.length >= 5 ? (spouseTree.familyCode || null) : null,
+        familyCode: members.length >= 3 ? (spouseTree.familyCode || null) : null,
         familyName: spouseTree.familyName || null,
-        codeUnlocked: members.length >= 5
+        codeUnlocked: members.length >= 3
       }
     });
   } catch (error) {
