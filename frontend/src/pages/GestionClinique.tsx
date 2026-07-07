@@ -467,7 +467,11 @@ export default function GestionClinique() {
             </div>
           </div>
           <div className="clinic-header-actions" style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <InstallAppButton />
+            <InstallAppButton
+              name={tenant?.name}
+              logoUrl={settingsForm.logo_url || tenant?.logo_url}
+              themeColor={TEAL}
+            />
             <button
               onClick={() => navigate(`/clinique/${tenantCode}`)}
               className="clinic-header-btn-secondary"
