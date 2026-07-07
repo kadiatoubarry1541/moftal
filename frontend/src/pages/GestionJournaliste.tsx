@@ -195,7 +195,7 @@ export default function GestionJournaliste() {
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>Code : {tenantCode} · Journalistes & Médias</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <InstallAppButton />
+            <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={RED} />
             <button className="gestion-btn-secondary" onClick={() => navigate(`/journaliste/${tenantCode}`)} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>🌐 Vitrine</button>
             <button className="gestion-btn-secondary" onClick={() => navigate(-1)} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>← Retour</button>
           </div>

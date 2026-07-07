@@ -201,7 +201,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <InstallAppButton />
+          <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={COLOR} />
           <button className="gestion-btn-secondary" onClick={() => navigate(`/commerce/${tenantCode}`)} style={{ padding: "8px 14px", background: "rgba(255,255,255,0.25)", color: "white", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🌐 Voir ma vitrine</button>
           <button className="gestion-btn-secondary" onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>← Retour</button>
         </div>

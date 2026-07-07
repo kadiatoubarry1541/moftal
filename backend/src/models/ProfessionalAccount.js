@@ -1,5 +1,5 @@
 import { DataTypes, Model, Op } from 'sequelize';
-import { sequelize } from '../../config/database_pro.js';
+import { sequelize } from '../../config/database.js';
 
 class ProfessionalAccount extends Model {
   static async getPendingAccounts() {

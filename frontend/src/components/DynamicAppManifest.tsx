@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const API = "http://localhost:5002";
+const API = typeof window !== "undefined" ? window.location.origin : "";
 
 interface DynamicAppManifestProps {
   name: string;

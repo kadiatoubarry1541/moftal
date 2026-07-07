@@ -12,10 +12,6 @@ import { spawn } from 'child_process';
 import { initSocket } from './socket.js';
 
 import connectDB, { sequelize } from '../config/database.js';
-import { connectDB_Pro } from '../config/database_pro.js';
-import { connectDB_IA } from '../config/database_ia.js';
-import { connectDB_Temps } from '../config/database_temps.js';
-import { connectDB_Diangou } from '../config/database_diangou.js';
 import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import badgeRoutes from './routes/badges.js';
@@ -2413,19 +2409,9 @@ async function initAllTables() {
   }
 }
 
-// Démarrage : tout pointe sur enfants_adam_eve — une seule base, 5 instances Sequelize
-// (main, pro, IA, temps, diangou) → toutes synchronisées sur la même DB.
 connectDB()
   .then(() => initAllTables())
   .then(() => ensureAdmin())
-  .then(() => {
-    return Promise.all([
-      connectDB_Pro().catch(e => console.error('⚠️  Modèles [pro] non disponibles:', e.message)),
-      connectDB_IA().catch(e => console.error('⚠️  Modèles [IA] non disponibles:', e.message)),
-      connectDB_Temps().catch(e => console.error('⚠️  Modèles [temps] non disponibles:', e.message)),
-      connectDB_Diangou().catch(e => console.error('⚠️  Modèles [diangou] non disponibles:', e.message))
-    ]);
-  })
   .then(() => {
     console.log('✅ Tous les modèles synchronisés sur enfants_adam_eve');
     initSocket(httpServer, rawOrigins);

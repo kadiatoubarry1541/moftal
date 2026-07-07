@@ -1,5 +1,5 @@
 import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../../config/database_ia.js';
+import { sequelize } from '../../config/database.js';
 
 class IaKnowledge extends Model {}
 

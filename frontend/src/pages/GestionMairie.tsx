@@ -1103,7 +1103,7 @@ export default function GestionMairie() {
             <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>{tenant?.name || "Mairie"}</div>
             <div style={{ fontSize: 11, color: "#94a3b8" }}>🏛️ Espace État Civil · {NAV_ITEMS.find(n => n.id === section)?.label}</div>
           </div>
-          <InstallAppButton />
+          <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={BLUE} />
         </div>
 
         {/* Page content */}

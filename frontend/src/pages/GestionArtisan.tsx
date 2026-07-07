@@ -198,7 +198,7 @@ export default function GestionArtisan() {
             <p style={{ margin: 0, opacity: 0.85, fontSize: 14 }}>Gestion Interne — Artisan</p>
           </div>
           <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
-            <InstallAppButton />
+            <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={COLOR} />
             <button className="gestion-btn-secondary" onClick={() => navigate("/gestion-interne")} style={{ ...btn("rgba(255,255,255,0.2)"), fontSize: 13 }}>← Mes espaces</button>
           </div>
         </div>

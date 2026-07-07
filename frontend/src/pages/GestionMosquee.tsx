@@ -269,7 +269,7 @@ export default function GestionMosquee() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <InstallAppButton />
+          <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={GREEN} />
           <button className="gestion-btn-secondary" onClick={() => navigate(`/mosquee/${tenantCode}`)} style={{ padding: "8px 14px", background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🌐 Vitrine</button>
           <button className="gestion-btn-secondary" onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>← Retour</button>
         </div>

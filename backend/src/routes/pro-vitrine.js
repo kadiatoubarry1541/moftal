@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import ProPublication from '../models/ProPublication.js';
-import { sequelize } from '../config/database_pro.js';
+import { sequelize } from '../../config/database.js';
 
 const router = express.Router();
 

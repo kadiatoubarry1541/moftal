@@ -44,21 +44,34 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Pour /espace-pro/:id : swapper le manifest AVANT que React monte
-// → Chrome voit le manifest pro dès le début et peut déclencher beforeinstallprompt avec la bonne identité
-const _proPathMatch = window.location.pathname.match(/^\/espace-pro\/([^/]+)/);
-if (_proPathMatch) {
-  const _proId = _proPathMatch[1];
-  const _manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
-  if (_manifestLink) {
-    _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/${_proId}`);
-  }
+// Swapper le manifest AVANT que React monte — Chrome doit voir le bon manifest dès le chargement
+// pour déclencher beforeinstallprompt avec la bonne identité (app principale OU gestion spécifique)
+const _manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+const _pathname = window.location.pathname;
+
+const _proPathMatch = _pathname.match(/^\/espace-pro\/([^/]+)/);
+const _gestionMatch = _pathname.match(/^\/gestion-[^/]+\/([^/]+)/);
+
+if (_proPathMatch && _manifestLink) {
+  // EspacePro (/espace-pro/:id) → manifest par ID de compte
+  _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/${_proPathMatch[1]}`);
+} else if (_gestionMatch && _manifestLink) {
+  // Pages Gestion (/gestion-clinique/:code etc.) → manifest par tenantCode
+  const _encodedStart = encodeURIComponent(_pathname);
+  _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/by-tenant/${_gestionMatch[1]}?startUrl=${_encodedStart}`);
 }
 
 // Capturer le prompt d'installation PWA le plus tôt possible (avant montage React)
+// __pwaInstallPrompt = prompt de l'app principale (scope /)
+// __pwaGestionPrompt = prompt de la gestion interne (scope spécifique)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
-  (window as any).__pwaInstallPrompt = e;
+  const isGestionPage = _gestionMatch || _proPathMatch;
+  if (isGestionPage) {
+    (window as any).__pwaGestionPrompt = e;
+  } else {
+    (window as any).__pwaInstallPrompt = e;
+  }
   window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
 });
 

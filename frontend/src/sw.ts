@@ -11,6 +11,41 @@ declare const self: ServiceWorkerGlobalScope
 
 skipWaiting()
 clientsClaim()
+
+// Intercepte le fetch du manifest.webmanifest avant Workbox.
+// Quand Chrome vérifie l'installabilité PWA, le SW lui retourne le bon manifest
+// selon la page active (gestion interne ou app principale).
+// C'est la seule méthode fiable : Chrome lit le manifest avant que main.tsx s'exécute.
+self.addEventListener('fetch', (event: FetchEvent) => {
+  const url = new URL(event.request.url)
+  if (url.pathname !== '/manifest.webmanifest') return
+
+  event.respondWith(
+    (async () => {
+      try {
+        const client = event.clientId ? await self.clients.get(event.clientId) : null
+        const clientPath = client ? new URL(client.url).pathname : ''
+
+        const gestionMatch = clientPath.match(/^\/gestion-[^/]+\/([^/]+)/)
+        const proMatch = clientPath.match(/^\/espace-pro\/([^/]+)/)
+
+        if (gestionMatch) {
+          const tenantCode = gestionMatch[1]
+          const res = await fetch(
+            `/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodeURIComponent(clientPath)}`
+          )
+          if (res.ok) return res
+        } else if (proMatch) {
+          const res = await fetch(`/api/professionals/pro-manifest/${proMatch[1]}`)
+          if (res.ok) return res
+        }
+      } catch { /* silencieux — fallback ci-dessous */ }
+
+      return fetch(event.request)
+    })()
+  )
+})
+
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 

@@ -1,5 +1,5 @@
 import { DataTypes, Model, Op } from 'sequelize';
-import { sequelize } from '../config/database_ia.js';
+import { sequelize } from '../../config/database.js';
 
 class SciencePermission extends Model {
   // Méthodes statiques

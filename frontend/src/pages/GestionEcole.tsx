@@ -322,7 +322,7 @@ export default function GestionEcole() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <InstallAppButton />
+            <InstallAppButton name={tenant?.name} logoUrl={settingsForm.logo_url || tenant?.logo_url} themeColor="#1a8f1a" />
             {section === "students" && (
               <button onClick={() => { setModal("add-student"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>

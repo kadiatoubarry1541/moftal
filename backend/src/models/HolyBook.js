@@ -1,5 +1,5 @@
 import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../../config/database_temps.js';
+import { sequelize } from '../../config/database.js';
 
 class HolyBook extends Model {
   static async getBooksByReligion(religion) {

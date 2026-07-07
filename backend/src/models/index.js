@@ -69,7 +69,5 @@ export { default as Payment } from './Payment.js';
 // Export des modèles supplémentaires (DB principale)
 export * from './additional.js';
 
-// HistorySection est exporté par additional.js (base principale enfants_adam_eve)
-// HistorySection.js pointe sur database_temps.js → maintenant aussi enfants_adam_eve
 
 

@@ -25,6 +25,11 @@ export function Home() {
   return (
     <div className="flex-1 flex flex-col">
 
+      {/* Bannière d'installation — tout en haut, visible immédiatement */}
+      <div style={{ display: "flex", justifyContent: "center", padding: "12px 16px 0" }}>
+        <InstallAppButton />
+      </div>
+
       {/* Zone principale : logo + slogan + boutons */}
       <div className="flex-1 flex flex-col items-center justify-center px-4">
 
@@ -69,10 +74,6 @@ export function Home() {
             Créer un compte
           </Link>
 
-          {/* Bouton installation app principale */}
-          <div className="flex justify-center pt-1">
-            <InstallAppButton />
-          </div>
         </div>
       </div>
 

@@ -159,7 +159,7 @@ export default function GestionFournisseur() {
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>Code : {tenantCode} · Gestion Interne</div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <InstallAppButton />
+          <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={CYAN} />
           <button className="gestion-btn-secondary" onClick={() => navigate(-1 as any)} style={{ background: "rgba(255,255,255,0.2)", color: "white", border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>← Retour</button>
         </div>
       </div>

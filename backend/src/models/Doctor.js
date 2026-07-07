@@ -1,5 +1,5 @@
 import { DataTypes, Model } from 'sequelize';
-import { sequelize } from '../../config/database_pro.js';
+import { sequelize } from '../../config/database.js';
 
 class Doctor extends Model {
   // Méthodes d'instance

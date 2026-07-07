@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import { sequelize } from '../../config/database_temps.js';
+import { sequelize } from '../../config/database.js';
 
 // Sections historiques (Préhistoire, Antiquité, Moyen-Âge, Moderne, Contemporain)
 export const HistorySection = sequelize.define('HistorySection', {

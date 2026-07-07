@@ -516,7 +516,7 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <InstallAppButton />
+            <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={V.color} />
             {section === "apprenants"  && <button onClick={()=>{setModal("add-apprenant");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Nouvel {V.apprenant.toLowerCase()}</button>}
             {section === "staff"       && <button onClick={()=>{setModal("add-staff");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter</button>}
             {section === "groupes"     && <button onClick={()=>{setModal("add-groupe");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Créer {V.groupe.toLowerCase()}</button>}

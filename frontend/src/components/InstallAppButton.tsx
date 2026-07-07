@@ -6,81 +6,245 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 interface Props {
-  label?: string;
+  // Props pour la gestion interne (ignorées sur la page d'accueil)
+  name?: string;
+  logoUrl?: string;
+  themeColor?: string;
   color?: string;
-  name?: string;       // Nom de l'établissement (ex: "Clinique Moussa")
-  logoUrl?: string;    // Logo de l'établissement
-  themeColor?: string; // Couleur principale de la gestion
+  label?: string;
 }
 
-function detectOS(): "ios" | "other" {
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "ios" : "other";
+// ─── Utilitaires ────────────────────────────────────────────────────────────
+
+function isGestionPage() {
+  const p = window.location.pathname;
+  return p.startsWith("/espace-pro/") || p.startsWith("/gestion-");
 }
 
-export default function InstallAppButton({ label, color, name, logoUrl, themeColor }: Props = {}) {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+function getTenantStorageKey() {
+  const p = window.location.pathname;
+  if (p.startsWith("/espace-pro/")) return `proInstalled_${p.split("/")[2]}`;
+  if (p.startsWith("/gestion-"))   return `gestionInstalled_${p.split("/")[2]}`;
+  return null;
+}
+
+function getShownKey() {
+  const p = window.location.pathname;
+  if (p.startsWith("/espace-pro/")) return `proCardShown_${p.split("/")[2]}`;
+  if (p.startsWith("/gestion-"))   return `gestionCardShown_${p.split("/")[2]}`;
+  return null;
+}
+
+function isIOS() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+// ─── Composant ──────────────────────────────────────────────────────────────
+
+export default function InstallAppButton({ name, logoUrl, themeColor, color, label }: Props = {}) {
+
+  const onGestionPage = isGestionPage();
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // MODE 1 — PAGE D'ACCUEIL : installer l'application Moftal principale
+  // ══════════════════════════════════════════════════════════════════════════
+  if (!onGestionPage) {
+    return <MainAppInstallButton />;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // MODE 2 — GESTION INTERNE : installer l'espace de gestion du professionnel
+  // ══════════════════════════════════════════════════════════════════════════
+  return (
+    <GestionInstallButton
+      name={name}
+      logoUrl={logoUrl}
+      themeColor={themeColor || color || "#1d4ed8"}
+      label={label}
+    />
+  );
+}
+
+// ─── Bouton installation app principale (page d'accueil) ────────────────────
+
+function MainAppInstallButton() {
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    setInstalled(standalone);
+
+    // Récupérer le prompt déjà capturé dans main.tsx
+    const existing = (window as any).__pwaInstallPrompt;
+    if (existing) setPrompt(existing);
+
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      (window as any).__pwaInstallPrompt = e;
+      setPrompt(e as BeforeInstallPromptEvent);
+    };
+    const onReady = () => {
+      const p = (window as any).__pwaInstallPrompt;
+      if (p) setPrompt(p);
+    };
+    const onInstalled = () => {
+      setInstalled(true);
+      setPrompt(null);
+    };
+
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("pwa-prompt-ready", onReady);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("pwa-prompt-ready", onReady);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const [showIOSCard, setShowIOSCard] = useState(false);
+
+  if (installed) return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
+      <span>✅</span> Application installée
+    </div>
+  );
+
+  if (!prompt) {
+    if (!isIOS()) return null;
+    return (
+      <>
+        <button
+          onClick={() => setShowIOSCard(true)}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(26,143,26,0.35)" }}
+        >
+          <span style={{ fontSize: 20 }}>📲</span> Installer l'application
+        </button>
+        {showIOSCard && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setShowIOSCard(false); }}>
+            <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)" }}>
+              <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 2, margin: "0 auto 24px" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+                <img src="/logo-moftal.svg" alt="" style={{ width: 56, height: 56, borderRadius: 12 }} />
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 800 }}>Installer Moftal</div>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>Application mobile gratuite</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>Installer sur iPhone / iPad :</p>
+              {[
+                { icon: "⎙", text: "Appuyez sur le bouton Partager en bas de Safari" },
+                { icon: "＋", text: "Choisissez « Sur l'écran d'accueil »" },
+                { icon: "✅", text: "Appuyez sur Ajouter — c'est fait !" },
+              ].map((s, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: "#1a8f1a", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{s.icon}</div>
+                  <span style={{ fontSize: 13, color: "#374151" }}>{s.text}</span>
+                </div>
+              ))}
+              <button onClick={() => setShowIOSCard(false)} style={{ width: "100%", marginTop: 16, padding: "14px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+                J'ai compris
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  const handleInstall = async () => {
+    setLoading(true);
+    try {
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      if (outcome === "accepted") setInstalled(true);
+    } finally {
+      setPrompt(null);
+      (window as any).__pwaInstallPrompt = null;
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleInstall}
+      disabled={loading}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8,
+        padding: "12px 24px",
+        background: "#1a8f1a", color: "white",
+        border: "none", borderRadius: 12,
+        fontSize: 15, fontWeight: 800, cursor: "pointer",
+        boxShadow: "0 4px 14px rgba(26,143,26,0.35)",
+        opacity: loading ? 0.75 : 1,
+      }}
+    >
+      <span style={{ fontSize: 20 }}>{loading ? "⏳" : "📲"}</span>
+      {loading ? "Installation…" : "Installer l'application"}
+    </button>
+  );
+}
+
+// ─── Carte installation gestion interne (espace professionnel) ──────────────
+
+function GestionInstallButton({ name, logoUrl, themeColor, label }: {
+  name?: string; logoUrl?: string; themeColor: string; label?: string;
+}) {
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [showCard, setShowCard] = useState(false);
 
-  const path = window.location.pathname;
-  const isPro = path.startsWith("/espace-pro/") || path.startsWith("/gestion-");
-
-  // Clé unique par établissement
-  let STORAGE_KEY: string | null = null;
-  let SHOWN_KEY: string | null = null;
-  if (path.startsWith("/espace-pro/")) {
-    const id = path.split("/")[2];
-    if (id) { STORAGE_KEY = `proInstalled_${id}`; SHOWN_KEY = `proCardShown_${id}`; }
-  } else if (path.startsWith("/gestion-")) {
-    const code = path.split("/")[2];
-    if (code) { STORAGE_KEY = `gestionInstalled_${code}`; SHOWN_KEY = `gestionCardShown_${code}`; }
-  }
-
-  const btnColor = color || themeColor || (isPro ? "#1d4ed8" : "#1a8f1a");
-  const os = detectOS();
+  const STORAGE_KEY = getTenantStorageKey();
+  const SHOWN_KEY   = getShownKey();
+  const displayName = name || label || "votre espace pro";
 
   useEffect(() => {
-    if (isPro) {
-      const installed = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
-      setIsInstalled(installed);
-      (window as any).__pwaInstallPrompt = null;
+    // Vérifier si déjà installé (uniquement via localStorage — jamais display-mode)
+    const alreadyInstalled = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
+    setInstalled(alreadyInstalled);
 
-      // Afficher la carte d'installation automatiquement à la 1ère visite
-      if (!installed && SHOWN_KEY) {
-        const shownAt = localStorage.getItem(SHOWN_KEY);
-        const sevenDays = 7 * 24 * 60 * 60 * 1000;
-        const shouldShow = !shownAt || (Date.now() - Number(shownAt)) > sevenDays;
-        if (shouldShow) {
-          setTimeout(() => setShowCard(true), 1500); // légère pause pour laisser la page charger
-        }
+    // Récupérer le prompt de gestion (capturé dans main.tsx pour les pages gestion)
+    const existing = (window as any).__pwaGestionPrompt;
+    if (existing) setPrompt(existing);
+
+    // Afficher la carte automatiquement à la 1ère visite
+    if (!alreadyInstalled && SHOWN_KEY) {
+      const shownAt = localStorage.getItem(SHOWN_KEY);
+      const sept_jours = 7 * 24 * 60 * 60 * 1000;
+      if (!shownAt || Date.now() - Number(shownAt) > sept_jours) {
+        setTimeout(() => setShowCard(true), 1800);
       }
-    } else {
-      const standalone =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as any).standalone === true;
-      setIsInstalled(standalone);
-      const existing = (window as any).__pwaInstallPrompt;
-      if (existing) setDeferredPrompt(existing);
     }
 
-    const onBefore = (e: Event) => {
+    // Écouter les nouveaux prompts (si le manifest vient de se charger)
+    const onPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      (window as any).__pwaInstallPrompt = e;
+      (window as any).__pwaGestionPrompt = e;
+      setPrompt(e as BeforeInstallPromptEvent);
+    };
+    const onReady = () => {
+      const p = (window as any).__pwaGestionPrompt;
+      if (p) setPrompt(p);
     };
     const onInstalled = () => {
-      setDeferredPrompt(null);
-      (window as any).__pwaInstallPrompt = null;
       if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
-      setIsInstalled(true);
+      setInstalled(true);
       setShowCard(false);
+      setPrompt(null);
+      (window as any).__pwaGestionPrompt = null;
     };
 
-    window.addEventListener("beforeinstallprompt", onBefore);
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("pwa-prompt-ready", onReady);
     window.addEventListener("appinstalled", onInstalled);
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBefore);
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("pwa-prompt-ready", onReady);
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
@@ -91,234 +255,144 @@ export default function InstallAppButton({ label, color, name, logoUrl, themeCol
   };
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
+    if (!prompt) return;
     setInstalling(true);
     try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
       if (outcome === "accepted") {
         if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
-        setIsInstalled(true);
+        setInstalled(true);
         setShowCard(false);
       }
     } finally {
-      setDeferredPrompt(null);
-      (window as any).__pwaInstallPrompt = null;
+      setPrompt(null);
+      (window as any).__pwaGestionPrompt = null;
       setInstalling(false);
     }
   };
 
-  // ── Petit badge "installée" dans le header ──
-  if (isInstalled) {
+  // Déjà installée → petit badge vert discret
+  if (installed) {
     return (
-      <div style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        padding: "8px 14px",
-        background: "#f0fdf4", color: "#166534",
-        border: "1.5px solid #bbf7d0",
-        borderRadius: 10, fontSize: 13, fontWeight: 700,
-        flexShrink: 0,
-      }}>
-        <span style={{ fontSize: 15 }}>✅</span>
-        Appli installée
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
+        <span style={{ fontSize: 15 }}>✅</span> Appli installée
       </div>
     );
   }
 
-  // App principale sans prompt → rien
-  if (!isPro && !deferredPrompt) return null;
-
-  const displayName = name || label || "votre espace pro";
-
   return (
     <>
-      {/* ── Petit bouton permanent dans le header ── */}
+      {/* Petit bouton permanent dans le header */}
       <button
-        onClick={() => deferredPrompt ? handleInstall() : setShowCard(true)}
+        onClick={() => prompt ? handleInstall() : setShowCard(true)}
         style={{
           display: "inline-flex", alignItems: "center", gap: 7,
           padding: "8px 14px",
-          background: btnColor, color: "white",
+          background: themeColor, color: "white",
           border: "none", borderRadius: 10,
           cursor: "pointer", fontSize: 13, fontWeight: 700,
           whiteSpace: "nowrap", flexShrink: 0,
           boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
         }}
       >
-        <span style={{ fontSize: 16 }}>📲</span>
-        {isPro ? "Installer" : "Installer l'app"}
+        <span style={{ fontSize: 16 }}>📲</span> Installer
       </button>
 
-      {/* ── Carte d'installation (overlay) ── */}
+      {/* Carte d'installation (bottom sheet) */}
       {showCard && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 9999,
-          background: "rgba(0,0,0,0.55)",
-          display: "flex", alignItems: "flex-end", justifyContent: "center",
-          padding: "0 0 env(safe-area-inset-bottom,0) 0",
-        }}
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
           onClick={e => { if (e.target === e.currentTarget) dismissCard(); }}
         >
-          <div style={{
-            background: "white", borderRadius: "24px 24px 0 0",
-            padding: "28px 24px 32px", width: "100%", maxWidth: 480,
-            boxShadow: "0 -8px 40px rgba(0,0,0,0.22)",
-            animation: "slideUp 0.3s ease",
-          }}>
+          <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", animation: "slideUp 0.3s ease" }}>
             <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
 
-            {/* Trait de poignée */}
+            {/* Poignée */}
             <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 2, margin: "0 auto 24px" }} />
 
             {/* Logo + nom */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-              <div style={{
-                width: 68, height: 68, borderRadius: 16, overflow: "hidden",
-                background: btnColor + "22", flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                border: `2px solid ${btnColor}33`,
-              }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }}>
+              <div style={{ width: 68, height: 68, borderRadius: 16, overflow: "hidden", background: themeColor + "22", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${themeColor}44` }}>
                 {logoUrl
-                  ? <img src={logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : <span style={{ fontSize: 32 }}>🏢</span>
                 }
               </div>
               <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
-                  {displayName}
-                </div>
-                <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>
-                  Votre application professionnelle
-                </div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>{displayName}</div>
+                <div style={{ fontSize: 13, color: "#64748b", marginTop: 3 }}>Votre application de gestion</div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 4, background: "#1a8f1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 10, color: "white", fontWeight: 800 }}>M</span>
+                  <div style={{ width: 16, height: 16, borderRadius: 3, background: "#1a8f1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: 9, color: "white", fontWeight: 800 }}>M</span>
                   </div>
                   <span style={{ fontSize: 11, color: "#94a3b8" }}>Propulsé par Moftal</span>
                 </div>
               </div>
             </div>
 
-            {/* Description */}
-            <div style={{
-              background: "#f8fafc", borderRadius: 12, padding: "12px 14px",
-              marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 10,
-            }}>
-              <span style={{ fontSize: 22, flexShrink: 0 }}>📱</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
-                  Icône dédiée sur votre écran d'accueil
-                </div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, lineHeight: 1.5 }}>
-                  Ouvrez votre gestion en un tap, sans passer par le navigateur.
-                  Votre logo, votre nom — comme une vraie appli.
-                </div>
+            {/* Info */}
+            <div style={{ background: "#f8fafc", borderRadius: 12, padding: "12px 14px", marginBottom: 20, display: "flex", gap: 10 }}>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
+              <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
+                <strong style={{ color: "#0f172a" }}>Icône dédiée sur votre écran d'accueil</strong><br />
+                Accédez à votre gestion en 1 tap, sans passer par le navigateur. Votre logo, votre nom.
               </div>
             </div>
 
-            {/* ── Bouton natif (Android/Chrome) ── */}
-            {deferredPrompt && (
+            {/* Bouton natif (Android / Chrome Desktop) */}
+            {prompt && (
               <button
                 onClick={handleInstall}
                 disabled={installing}
-                style={{
-                  width: "100%", padding: "16px", marginBottom: 10,
-                  background: btnColor, color: "white",
-                  border: "none", borderRadius: 14,
-                  fontSize: 16, fontWeight: 800, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  boxShadow: `0 4px 16px ${btnColor}55`,
-                  opacity: installing ? 0.75 : 1,
-                }}
+                style={{ width: "100%", padding: "16px", marginBottom: 10, background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 16, fontWeight: 800, cursor: installing ? "default" : "pointer", opacity: installing ? 0.75 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: `0 4px 16px ${themeColor}55` }}
               >
                 <span style={{ fontSize: 22 }}>{installing ? "⏳" : "📲"}</span>
                 {installing ? "Installation en cours…" : `Installer ${displayName}`}
               </button>
             )}
 
-            {/* ── Instructions iOS ── */}
-            {!deferredPrompt && os === "ios" && (
+            {/* Instructions iOS */}
+            {!prompt && isIOS() && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>
-                  Comment installer sur iPhone / iPad :
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {[
-                    { icon: "⎙", step: "Appuyez sur le bouton Partager en bas de Safari" },
-                    { icon: "＋", step: "Sélectionnez « Sur l'écran d'accueil »" },
-                    { icon: "✅", step: "Appuyez sur Ajouter — c'est installé !" },
-                  ].map((s, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{
-                        width: 34, height: 34, borderRadius: 8,
-                        background: btnColor, color: "white",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 16, fontWeight: 800, flexShrink: 0,
-                      }}>{s.icon}</div>
-                      <span style={{ fontSize: 13, color: "#374151" }}>{s.step}</span>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={dismissCard}
-                  style={{
-                    width: "100%", marginTop: 14, padding: "14px",
-                    background: btnColor, color: "white",
-                    border: "none", borderRadius: 14,
-                    fontSize: 15, fontWeight: 800, cursor: "pointer",
-                  }}
-                >
-                  J'ai compris, je vais l'installer
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>Installer sur iPhone / iPad :</p>
+                {[
+                  { icon: "⎙", text: "Appuyez sur le bouton Partager en bas de Safari" },
+                  { icon: "＋", text: "Choisissez « Sur l'écran d'accueil »" },
+                  { icon: "✅", text: "Appuyez sur Ajouter — c'est fait !" },
+                ].map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: themeColor, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{s.icon}</div>
+                    <span style={{ fontSize: 13, color: "#374151" }}>{s.text}</span>
+                  </div>
+                ))}
+                <button onClick={dismissCard} style={{ width: "100%", marginTop: 10, padding: "14px", background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+                  J'ai compris
                 </button>
               </div>
             )}
 
-            {/* ── Instructions Android sans prompt ── */}
-            {!deferredPrompt && os !== "ios" && (
+            {/* Instructions Android sans prompt */}
+            {!prompt && !isIOS() && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>
-                  Comment installer sur Android :
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {[
-                    { icon: "⋮", step: "Appuyez sur le menu ⋮ en haut à droite du navigateur" },
-                    { icon: "＋", step: "Sélectionnez « Ajouter à l'écran d'accueil »" },
-                    { icon: "✅", step: "Confirmez — votre appli est prête !" },
-                  ].map((s, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{
-                        width: 34, height: 34, borderRadius: 8,
-                        background: btnColor, color: "white",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 16, fontWeight: 800, flexShrink: 0,
-                      }}>{s.icon}</div>
-                      <span style={{ fontSize: 13, color: "#374151" }}>{s.step}</span>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={dismissCard}
-                  style={{
-                    width: "100%", marginTop: 14, padding: "14px",
-                    background: btnColor, color: "white",
-                    border: "none", borderRadius: 14,
-                    fontSize: 15, fontWeight: 800, cursor: "pointer",
-                  }}
-                >
-                  J'ai compris, je vais l'installer
+                <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>Installer sur Android :</p>
+                {[
+                  { icon: "⋮", text: "Menu ⋮ en haut à droite du navigateur" },
+                  { icon: "＋", text: "« Ajouter à l'écran d'accueil »" },
+                  { icon: "✅", text: "Confirmer — votre appli est prête !" },
+                ].map((s, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: themeColor, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{s.icon}</div>
+                    <span style={{ fontSize: 13, color: "#374151" }}>{s.text}</span>
+                  </div>
+                ))}
+                <button onClick={dismissCard} style={{ width: "100%", marginTop: 10, padding: "14px", background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+                  J'ai compris
                 </button>
               </div>
             )}
 
-            <button
-              onClick={dismissCard}
-              style={{
-                width: "100%", padding: "12px",
-                background: "transparent", color: "#94a3b8",
-                border: "1.5px solid #e2e8f0", borderRadius: 12,
-                fontSize: 14, cursor: "pointer", fontWeight: 600,
-              }}
-            >
+            <button onClick={dismissCard} style={{ width: "100%", padding: "12px", background: "transparent", color: "#94a3b8", border: "1.5px solid #e2e8f0", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
               Plus tard
             </button>
           </div>

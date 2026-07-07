@@ -510,7 +510,7 @@ export default function GestionMadrasa() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <InstallAppButton />
+            <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={TEAL} />
           {section === "apprenants"  && <button onClick={() => { setModal("add-apprenant"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><span style={{ fontSize: 16 }}>+</span> Nouvel apprenant</button>}
           {section === "enseignants" && <button onClick={() => { setModal("add-enseignant"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><span style={{ fontSize: 16 }}>+</span> Ajouter enseignant</button>}
           {section === "halaqas"     && <button onClick={() => { setModal("add-halaqa"); setForm({}); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><span style={{ fontSize: 16 }}>+</span> Créer une halaqa</button>}
