@@ -32,6 +32,7 @@ interface UserData {
   activite3?: string;
   specialite?: string;
   statutMatrimonial?: string;
+  preuve?: string;
   lieu1?: string;
   lieu2?: string;
   lieu3?: string;
@@ -56,11 +57,13 @@ export default function EditProfileModal({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [preuveFile, setPreuveFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const preuveInputRef = useRef<HTMLInputElement>(null);
   const allLocations = useMemo(() => getAllLocationsForGroups(), []);
 
   const ACTIVITY_OPTIONS = [
@@ -239,6 +242,14 @@ export default function EditProfileModal({
             numeroHPere: formData.numeroHPere,
             numeroHMere: formData.numeroHMere,
             languesAutre: formData.languesAutre,
+            handicap: formData.handicap,
+            ...(preuveFile ? await (async () => {
+              const reader = new FileReader()
+              return new Promise<{ preuve: string }>((resolve) => {
+                reader.onload = (e) => resolve({ preuve: e.target?.result as string })
+                reader.readAsDataURL(preuveFile)
+              })
+            })() : {}),
           }),
         });
 
@@ -312,7 +323,7 @@ export default function EditProfileModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-bold">Modifier mon profil</h3>
+          <h3 className="text-2xl font-bold">Mettre à jour mon profil</h3>
           <button
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             onClick={onClose}
@@ -459,20 +470,29 @@ export default function EditProfileModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Situation de handicap (non modifiable)
+                Personne en situation de handicap ?
+                {formData.handicap && (
+                  <span className="ml-2 text-xs text-amber-600 font-normal">🔒 Non modifiable après première saisie</span>
+                )}
               </label>
-              <input
-                type="text"
-                value={
-                  formData.handicap === "OUI"
-                    ? "Oui"
-                    : formData.handicap === "NON"
-                    ? "Non"
-                    : "Non renseigné"
-                }
-                readOnly
-                className="w-full px-3 py-2 border border-gray-200 bg-gray-100 text-gray-700 rounded-lg"
-              />
+              {formData.handicap ? (
+                <input
+                  type="text"
+                  value={formData.handicap === "OUI" ? "Oui" : "Non"}
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-200 bg-gray-100 text-gray-700 rounded-lg cursor-not-allowed"
+                />
+              ) : (
+                <select
+                  value=""
+                  onChange={(e) => handleInputChange("handicap", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">— Sélectionner —</option>
+                  <option value="NON">Non</option>
+                  <option value="OUI">Oui</option>
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -628,6 +648,42 @@ export default function EditProfileModal({
                       placeholder="Ex : Cardiologie, Maraîchage, Développement web…"
                       className="w-full px-3 py-2 border-2 border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-50/30 text-sm"
                     />
+                    {/* Preuve d'activité */}
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <label className="block text-xs font-semibold text-gray-600 mb-2">
+                        📎 Preuve d'activité
+                        <span className="text-gray-400 font-normal ml-1">(diplôme, attestation, carte pro…)</span>
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx"
+                        ref={preuveInputRef}
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          setPreuveFile(file)
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => preuveInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 px-3 py-2 border border-dashed border-gray-400 rounded-lg text-sm text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
+                      >
+                        📎 {preuveFile ? preuveFile.name : (formData.preuve ? 'Changer la preuve' : 'Joindre un document')}
+                      </button>
+                      {preuveFile && (
+                        <button
+                          type="button"
+                          onClick={() => { setPreuveFile(null); if (preuveInputRef.current) preuveInputRef.current.value = '' }}
+                          className="ml-2 text-xs text-red-500 hover:underline"
+                        >
+                          Supprimer
+                        </button>
+                      )}
+                      {formData.preuve && !preuveFile && (
+                        <p className="text-xs text-green-600 mt-1">✓ Preuve déjà enregistrée</p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

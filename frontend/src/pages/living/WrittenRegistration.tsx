@@ -105,7 +105,6 @@ export function WrittenRegistration() {
   const [hasShownReminder, setHasShownReminder] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set())
   const [paysSectionExpanded, setPaysSectionExpanded] = useState(true)
-  const [genreExpanded, setGenreExpanded] = useState(true)
   const navigate = useNavigate()
 
   const countries = useMemo(
@@ -177,7 +176,6 @@ export function WrittenRegistration() {
     if (!data.prenom) errors.add('prenom')
     if (!data.dateNaissance) errors.add('dateNaissance')
     if (!hasCustomActivite) errors.add('activite1')
-    if (data.activite1 && data.activite1 !== 'Autre' && !(data.specialite && data.specialite.trim())) errors.add('specialite')
     if (!data.email) errors.add('email')
     if (!data.telephone) errors.add('telephone')
     if (!data.password) errors.add('password')
@@ -558,91 +556,26 @@ export function WrittenRegistration() {
           </div>
           <div className="col-6">
             <div className="field">
-              <label>Genre & Statut</label>
-              {/* Accordéon : fermé = résumé cliquable / ouvert = sélecteurs */}
-              {data.genre && data.statutMatrimonial && !genreExpanded ? (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setGenreExpanded(true)}
-                  onKeyDown={(e) => e.key === 'Enter' && setGenreExpanded(true)}
-                  className="w-full px-4 py-3 border-2 border-green-400 rounded-lg bg-white cursor-pointer hover:border-blue-400 flex items-center justify-between transition-colors"
-                >
-                  <span className="text-gray-800 font-medium">
-                    {data.genre === 'HOMME' ? '👨 Homme' : data.genre === 'FEMME' ? '👩 Femme' : data.genre}
-                    {' · '}
-                    {data.statutMatrimonial}
-                  </span>
-                  <span className="text-gray-400 text-sm">✏️</span>
-                </div>
-              ) : (
-                <div
-                  className="space-y-3 p-4 border-2 border-gray-300 rounded-lg bg-white"
-                  onBlur={(e) => {
-                    if (!e.currentTarget.contains(e.relatedTarget as Node) && data.genre && data.statutMatrimonial) {
-                      setGenreExpanded(false)
-                    }
-                  }}
-                >
-                  {/* Genre */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">Genre *</label>
-                    <div className="flex gap-3">
-                      {[
-                        { val: 'HOMME', label: '👨 Homme' },
-                        { val: 'FEMME', label: '👩 Femme' },
-                      ].map(({ val, label }) => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setData((prev) => ({ ...prev, genre: val }))}
-                          className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                            data.genre === val
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Statut matrimonial — apparaît quand le genre est choisi */}
-                  {data.genre && (
-                    <div style={{ animation: 'fadeInDown 0.25s ease' }}>
-                      <label className="block text-xs font-medium text-gray-600 mb-2">
-                        Statut matrimonial *
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { val: 'Célibataire',   icon: '🔵' },
-                          { val: 'Marié(e)',       icon: '💍' },
-                          { val: 'Veuf/Veuve',    icon: '🕊️' },
-                          { val: 'Divorcé(e)',    icon: '📝' },
-                          { val: 'Séparé(e)',     icon: '↔️' },
-                        ].map(({ val, icon }) => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => {
-                              setData((prev) => ({ ...prev, statutMatrimonial: val }))
-                              // Ferme automatiquement quand les deux sont choisis
-                              setTimeout(() => setGenreExpanded(false), 300)
-                            }}
-                            className={`py-2 px-3 rounded-full border-2 text-sm font-medium transition-all ${
-                              data.statutMatrimonial === val
-                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-                            }`}
-                          >
-                            {icon} {val}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              <label>Genre *</label>
+              <div className="flex gap-3">
+                {[
+                  { val: 'HOMME', label: '👨 Homme' },
+                  { val: 'FEMME', label: '👩 Femme' },
+                ].map(({ val, label }) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setData((prev) => ({ ...prev, genre: val }))}
+                    className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                      data.genre === val
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -825,41 +758,6 @@ export function WrittenRegistration() {
                   <option value="Autre">✏️ Autre (je saisis mon activité)</option>
                 </select>
 
-                {/* ── Spécialité : apparaît dès qu'une activité est choisie ── */}
-                {data.activite1 && data.activite1 !== 'Autre' && (
-                  <div className="mt-3" style={{ animation: 'fadeInDown 0.25s ease', borderLeft: '3px solid #22a722', paddingLeft: '0.75rem' }}>
-                    <label className="block text-xs font-semibold text-emerald-700 mb-1">
-                      🎯 Votre spécialité dans « {data.activite1} » *
-                    </label>
-                    <input
-                      type="text"
-                      value={data.specialite || ''}
-                      onChange={(e) => {
-                        setData((prev) => ({ ...prev, specialite: e.target.value }))
-                        if (e.target.value.trim()) {
-                          setValidationErrors((prev) => {
-                            const next = new Set(prev)
-                            next.delete('specialite')
-                            return next
-                          })
-                        }
-                      }}
-                      placeholder={`Ex : ${
-                        data.activite1 === 'Santé' ? 'Cardiologie, Pédiatrie, Sage-femme…' :
-                        data.activite1 === 'Enseignement' ? 'Mathématiques, Primaire, Lycée…' :
-                        data.activite1 === 'Commerce' ? 'Textile, Alimentation, Électronique…' :
-                        data.activite1 === 'Agriculture' ? 'Maraîchage, Riziculture, Élevage bovin…' :
-                        data.activite1 === 'Transport' ? 'Taxi, Moto, Livraison, Bus…' :
-                        data.activite1 === 'Informatique' ? 'Développement web, IA, Réseaux…' :
-                        data.activite1 === 'Construction' ? 'Maçonnerie, Génie civil, Architecture…' :
-                        'Précisez votre domaine exact…'
-                      }`}
-                      className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 bg-emerald-50/30 ${
-                        validationErrors.has('specialite') ? 'border-red-500 focus:ring-red-400' : 'border-emerald-300 focus:ring-emerald-400'
-                      }`}
-                    />
-                  </div>
-                )}
 
                 {/* Sous-champs quand "Autre" est sélectionné */}
                 {data.activite1 === 'Autre' && (
@@ -895,51 +793,6 @@ export function WrittenRegistration() {
                       />
                     </div>
 
-                    {/* Upload document professionnel (facultatif) */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Document professionnel <span className="text-gray-400 font-normal">(facultatif)</span>
-                      </label>
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        id="activite-doc-upload"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null
-                          setData((prev) => ({ ...prev, activiteDoc: file }))
-                        }}
-                      />
-                      <label
-                        htmlFor="activite-doc-upload"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.4rem',
-                          padding: '0.4rem 0.8rem',
-                          border: '1px dashed #6b7280',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.85rem',
-                          color: '#374151',
-                          background: '#f9fafb'
-                        }}
-                      >
-                        📎 {data.activiteDoc ? data.activiteDoc.name : 'Joindre un document (diplôme, attestation, carte pro…)'}
-                      </label>
-                      {data.activiteDoc && (
-                        <button
-                          type="button"
-                          onClick={() => setData((prev) => ({ ...prev, activiteDoc: null }))}
-                          className="ml-2 text-xs text-red-500 underline"
-                        >
-                          Supprimer
-                        </button>
-                      )}
-                      <small className="block text-gray-400 mt-1">
-                        PDF, image ou Word acceptés. Ce document n&apos;est pas obligatoire.
-                      </small>
-                    </div>
                   </div>
                 )}
 
@@ -947,61 +800,6 @@ export function WrittenRegistration() {
                   <small className="text-green-600">✓ Activité : {data.activite1}</small>
                 )}
 
-                {/* Champ Preuve (photo, PDF, document) — pour toutes les activités */}
-                {data.activite1 && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Preuve (photo, PDF, document)</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      id="activite-preuve-capture"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null
-                        setData((prev) => ({ ...prev, activitePreuve: file }))
-                      }}
-                    />
-                    <input
-                      type="file"
-                      accept="image/*,.pdf,.doc,.docx"
-                      id="activite-preuve-choose"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null
-                        setData((prev) => ({ ...prev, activitePreuve: file }))
-                      }}
-                    />
-                    <div className="flex gap-3 flex-wrap">
-                      <label
-                        htmlFor="activite-preuve-capture"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition-colors text-sm font-medium"
-                      >
-                        <span>📷</span>
-                        <span>Prendre une photo</span>
-                      </label>
-                      <label
-                        htmlFor="activite-preuve-choose"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors text-sm font-medium"
-                      >
-                        <span>🖼️</span>
-                        <span>Choisir depuis galerie / fichier</span>
-                      </label>
-                    </div>
-                    {data.activitePreuve && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-sm text-green-600">✓ {data.activitePreuve.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => setData((prev) => ({ ...prev, activitePreuve: null }))}
-                          className="text-xs text-red-500 hover:underline"
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -1169,21 +967,6 @@ export function WrittenRegistration() {
                     onChange={(e) => setData((prev) => ({ ...prev, religion: e.target.value }))}
                     placeholder="Religion"
                   />
-                </div>
-              </div>
-            </div>
-            <div className="row">
-              <div className="col-6">
-                <div className="field">
-                  <label>Personne en situation de handicap ?</label>
-                  <select
-                    value={data.handicap}
-                    onChange={(e) => setData((prev) => ({ ...prev, handicap: e.target.value }))}
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="NON">Non</option>
-                    <option value="OUI">Oui</option>
-                  </select>
                 </div>
               </div>
             </div>

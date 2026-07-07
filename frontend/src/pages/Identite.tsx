@@ -179,7 +179,7 @@ export default function Identite() {
               onClick={() => navigate("/moi/profil")}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors duration-200"
             >
-              ✏️ Modifier mon profil
+              ✏️ Mettre à jour
             </button>
           </div>
         </div>

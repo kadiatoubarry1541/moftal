@@ -181,7 +181,7 @@ export default function IdentiteModal({
                 }
               }}
             >
-              ✏️ <span className="hidden sm:inline">Modifier mon profil</span><span className="sm:hidden">Modifier</span>
+              ✏️ <span className="hidden sm:inline">Mettre à jour</span><span className="sm:hidden">Mettre à jour</span>
             </button>
             <button
               className="px-2.5 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-base whitespace-nowrap"

@@ -198,8 +198,9 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [showCard, setShowCard] = useState(false);
-  // true = l'utilisateur est DANS l'app Moftal installée (standalone) → beforeinstallprompt ne peut pas se déclencher
   const [isInsidePWA, setIsInsidePWA] = useState(false);
+  // Le bouton n'apparaît qu'à partir de la 2ème visite (SW actif dès la 2ème connexion)
+  const [swReady, setSwReady] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
   const SHOWN_KEY   = getShownKey();
@@ -211,6 +212,16 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       (window.navigator as any).standalone === true;
     setIsInsidePWA(standalone);
 
+    // Compter les visites sur cette page gestion
+    const p = window.location.pathname;
+    const visitKey = p.startsWith('/espace-pro/')
+      ? `proVisits_${p.split('/')[2]}`
+      : `gestionVisits_${p.split('/')[2]}`;
+    const visits = parseInt(localStorage.getItem(visitKey) || '0') + 1;
+    localStorage.setItem(visitKey, String(visits));
+    // Dès la 2ème visite, le SW est actif et le manifest gestion est bien intercepté
+    setSwReady(visits >= 2);
+
     // Vérifier si déjà installé (uniquement via localStorage — jamais display-mode)
     const alreadyInstalled = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
     setInstalled(alreadyInstalled);
@@ -219,8 +230,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     const existing = (window as any).__pwaGestionPrompt;
     if (existing) setPrompt(existing);
 
-    // Afficher la carte automatiquement à la 1ère visite (sauf si déjà dans PWA → pas besoin)
-    if (!alreadyInstalled && !standalone && SHOWN_KEY) {
+    // Afficher la carte automatiquement à partir de la 2ème visite (sauf si déjà dans PWA)
+    if (!alreadyInstalled && !standalone && SHOWN_KEY && visits >= 2) {
       const shownAt = localStorage.getItem(SHOWN_KEY);
       const sept_jours = 7 * 24 * 60 * 60 * 1000;
       if (!shownAt || Date.now() - Number(shownAt) > sept_jours) {
@@ -287,6 +298,9 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       </div>
     );
   }
+
+  // 1ère visite → SW pas encore actif → on n'affiche rien
+  if (!swReady) return null;
 
   // CAS SPÉCIAL : l'utilisateur est à l'intérieur de l'app Moftal installée (standalone).
   // Chrome ne peut pas déclencher beforeinstallprompt depuis l'intérieur d'une PWA.

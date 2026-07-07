@@ -130,8 +130,6 @@ export default function InscriptionPro() {
 
   const [selectedType, setSelectedType] = useState(initialType);
   const [planType, setPlanType] = useState<'visibility' | 'full' | ''>('');
-  const [hasOwnManagement, setHasOwnManagement] = useState<'platform' | 'external' | ''>('');
-  const [externalManagementLink, setExternalManagementLink] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -221,8 +219,7 @@ export default function InscriptionPro() {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
     if (!planType) { setError("Veuillez choisir une formule (Visibilité ou Gestion Interne)."); return; }
-    if (planType === 'full' && !hasOwnManagement) { setError("Veuillez indiquer si vous utilisez la gestion de la plateforme ou la vôtre."); return; }
-    if (!form.name.trim()) { setError("Le nom est requis"); return; }
+if (!form.name.trim()) { setError("Le nom est requis"); return; }
     if (nomStatut === 'pris') {
       setError(`Le nom "${form.name.trim()}" est déjà utilisé. Veuillez en choisir un autre.`);
       return;
@@ -291,7 +288,6 @@ export default function InscriptionPro() {
           description: [
             form.description.trim(),
             form.website.trim() ? `Site: ${form.website.trim()}` : "",
-            (planType === 'full' && hasOwnManagement === 'external' && externalManagementLink.trim()) ? `Gestion externe: ${externalManagementLink.trim()}` : "",
           ].filter(Boolean).join("\n"),
           address: form.address.trim(),
           city: form.city.trim(),
@@ -300,8 +296,6 @@ export default function InscriptionPro() {
           email: form.email.trim(),
           photo: form.mediaUrl.trim() || undefined,
           justificatifDocument: form.justificatifDocument.trim() || undefined,
-          hasOwnManagement: planType === 'full' ? hasOwnManagement : undefined,
-          externalManagementLink: (planType === 'full' && hasOwnManagement === 'external') ? externalManagementLink.trim() : undefined,
           services,
           specialties,
         }),
@@ -423,7 +417,7 @@ export default function InscriptionPro() {
                     <li>✅ Page vitrine publique</li>
                     <li>✅ Clients peuvent vous trouver</li>
                     <li>✅ Prise de rendez-vous en ligne</li>
-                    <li className="text-gray-400">❌ Pas d'outils de gestion interne</li>
+                    <li className="text-gray-400">❌ Pas d'installation ni de suivi client continu</li>
                   </ul>
                   <div className="mt-3 text-xs font-bold text-blue-600 dark:text-blue-400">Formule de base — incluse</div>
                 </button>
@@ -449,74 +443,14 @@ export default function InscriptionPro() {
                     <li>✅ Prise de rendez-vous en ligne</li>
                     <li>✅ Tableau de bord complet</li>
                     <li>✅ Gestion stock, clients, personnel…</li>
+                    <li>✅ App installée sur vos appareils</li>
+                    <li>✅ Connexion continue avec vos clients</li>
                   </ul>
                   <div className="mt-3 text-xs font-bold text-orange-600 dark:text-orange-400">3 mois gratuits · puis abonnement</div>
                 </button>
 
               </div>
 
-              {/* ── Sous-question gestion interne ── */}
-              {planType === 'full' && (
-                <div className="mt-4 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700">
-                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">
-                    Avez-vous déjà un outil de gestion interne ? *
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => { setHasOwnManagement('platform'); setExternalManagementLink(''); }}
-                      className={`text-left p-3 rounded-xl border-2 transition-all ${
-                        hasOwnManagement === 'platform'
-                          ? 'border-orange-500 bg-orange-100 dark:bg-orange-800/40'
-                          : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xl">📱</span>
-                        <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Non — j'utilise celui de la plateforme</span>
-                        {hasOwnManagement === 'platform' && <span className="ml-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">✓</span>}
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 ml-7">
-                        Vous aurez un tableau de bord complet directement sur cette plateforme
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setHasOwnManagement('external')}
-                      className={`text-left p-3 rounded-xl border-2 transition-all ${
-                        hasOwnManagement === 'external'
-                          ? 'border-orange-500 bg-orange-100 dark:bg-orange-800/40'
-                          : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-orange-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xl">🔗</span>
-                        <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">Oui — j'en ai déjà un</span>
-                        {hasOwnManagement === 'external' && <span className="ml-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">✓</span>}
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 ml-7">
-                        Vous avez déjà un site ou une application — indiquez le lien ou le nom
-                      </p>
-                    </button>
-                  </div>
-
-                  {hasOwnManagement === 'external' && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Lien de votre site ou nom de votre application <span className="text-gray-400 font-normal">(optionnel)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={externalManagementLink}
-                        onChange={e => setExternalManagementLink(e.target.value)}
-                        className="w-full min-h-[44px] px-4 py-2.5 border border-orange-300 dark:border-orange-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-                        placeholder="Ex: https://monecole.com ou MonApp Scolaire"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
