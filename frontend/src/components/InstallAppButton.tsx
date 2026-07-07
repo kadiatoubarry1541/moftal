@@ -198,12 +198,19 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [showCard, setShowCard] = useState(false);
+  // true = l'utilisateur est DANS l'app Moftal installée (standalone) → beforeinstallprompt ne peut pas se déclencher
+  const [isInsidePWA, setIsInsidePWA] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
   const SHOWN_KEY   = getShownKey();
   const displayName = name || label || "votre espace pro";
 
   useEffect(() => {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    setIsInsidePWA(standalone);
+
     // Vérifier si déjà installé (uniquement via localStorage — jamais display-mode)
     const alreadyInstalled = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
     setInstalled(alreadyInstalled);
@@ -212,8 +219,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     const existing = (window as any).__pwaGestionPrompt;
     if (existing) setPrompt(existing);
 
-    // Afficher la carte automatiquement à la 1ère visite
-    if (!alreadyInstalled && SHOWN_KEY) {
+    // Afficher la carte automatiquement à la 1ère visite (sauf si déjà dans PWA → pas besoin)
+    if (!alreadyInstalled && !standalone && SHOWN_KEY) {
       const shownAt = localStorage.getItem(SHOWN_KEY);
       const sept_jours = 7 * 24 * 60 * 60 * 1000;
       if (!shownAt || Date.now() - Number(shownAt) > sept_jours) {
@@ -278,6 +285,71 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
         <span style={{ fontSize: 15 }}>✅</span> Appli installée
       </div>
+    );
+  }
+
+  // CAS SPÉCIAL : l'utilisateur est à l'intérieur de l'app Moftal installée (standalone).
+  // Chrome ne peut pas déclencher beforeinstallprompt depuis l'intérieur d'une PWA.
+  // Solution : ouvrir la gestion dans Chrome navigateur via window.open → le prompt se déclenche là.
+  if (isInsidePWA && !prompt) {
+    return (
+      <>
+        <button
+          onClick={() => setShowCard(true)}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "8px 14px",
+            background: themeColor, color: "white",
+            border: "none", borderRadius: 10,
+            cursor: "pointer", fontSize: 13, fontWeight: 700,
+            whiteSpace: "nowrap", flexShrink: 0,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+          }}
+        >
+          <span style={{ fontSize: 16 }}>📲</span> Installer
+        </button>
+
+        {showCard && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+            onClick={e => { if (e.target === e.currentTarget) dismissCard(); }}
+          >
+            <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", animation: "slideUp 0.3s ease" }}>
+              <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+              <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 2, margin: "0 auto 24px" }} />
+
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+                <div style={{ width: 60, height: 60, borderRadius: 14, overflow: "hidden", background: themeColor + "22", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${themeColor}44` }}>
+                  {logoUrl ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 28 }}>🏢</span>}
+                </div>
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>{displayName}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Votre application de gestion</div>
+                </div>
+              </div>
+
+              {/* Explication : pourquoi ouvrir dans Chrome */}
+              <div style={{ background: "#fef3c7", border: "1.5px solid #fde68a", borderRadius: 12, padding: "12px 14px", marginBottom: 18, display: "flex", gap: 10 }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>💡</span>
+                <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.5 }}>
+                  Pour installer cette gestion sur votre écran d'accueil, vous devez d'abord l'ouvrir dans <strong>Chrome</strong> (en dehors de l'app Moftal).
+                </div>
+              </div>
+
+              <button
+                onClick={() => { window.open(window.location.href, '_blank'); dismissCard(); }}
+                style={{ width: "100%", padding: "16px", marginBottom: 10, background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: `0 4px 14px ${themeColor}55` }}
+              >
+                <span style={{ fontSize: 20 }}>🌐</span> Ouvrir dans Chrome
+              </button>
+
+              <button onClick={dismissCard} style={{ width: "100%", padding: "12px", background: "transparent", color: "#94a3b8", border: "1.5px solid #e2e8f0", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                Plus tard
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
