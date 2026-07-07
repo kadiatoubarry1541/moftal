@@ -212,15 +212,14 @@ router.get('/detail/:id', async (req, res) => {
   }
 });
 
-// GET /api/professionals/pwa-icon/:id — sert le logo du pro comme vraie image PNG
-// Requis pour les manifests PWA (les data URIs sont refusées par Chrome)
+// GET /api/professionals/pwa-icon/:id — sert le logo du pro comme image pour le manifest PWA
 router.get('/pwa-icon/:id', async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id, {
       attributes: ['photo', 'isActive']
     });
     if (!account?.photo || !account.isActive) {
-      return res.status(302).redirect('https://moftal.com/icon-192.png');
+      return res.status(302).redirect('/logo-moftal.svg');
     }
     const photo = account.photo;
     if (photo.startsWith('data:')) {
@@ -235,10 +234,9 @@ router.get('/pwa-icon/:id', async (req, res) => {
       res.set('Access-Control-Allow-Origin', '*');
       return res.send(buffer);
     }
-    // URL externe : rediriger
     res.redirect(302, photo);
   } catch {
-    res.status(302).redirect('https://moftal.com/icon-192.png');
+    res.status(302).redirect('/logo-moftal.svg');
   }
 });
 
@@ -246,7 +244,7 @@ router.get('/pwa-icon/:id', async (req, res) => {
 router.get('/pro-manifest/:id', async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id, {
-      attributes: ['id', 'name', 'type', 'isActive']
+      attributes: ['id', 'name', 'type', 'isActive', 'photo']
     });
     if (!account) return res.status(404).json({ error: 'Compte introuvable' });
 
@@ -264,7 +262,23 @@ router.get('/pro-manifest/:id', async (req, res) => {
 
     const themeColor = TYPE_COLORS[account.type] || '#1a8f1a';
     const startUrl = `/espace-pro/${account.id}`;
+
+    // Détecter le type MIME réel du logo
+    let iconMime = 'image/svg+xml';
+    if (account.photo?.startsWith('data:')) {
+      const m = account.photo.match(/data:([^;]+);/);
+      if (m) iconMime = m[1];
+    }
+
     const iconUrl = `/api/professionals/pwa-icon/${account.id}`;
+    const icons = account.photo ? [
+      { src: iconUrl, sizes: 'any', type: iconMime, purpose: 'any' },
+      { src: iconUrl, sizes: 'any', type: iconMime, purpose: 'maskable' },
+      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+    ] : [
+      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+    ];
 
     const manifest = {
       id: startUrl,
@@ -278,10 +292,7 @@ router.get('/pro-manifest/:id', async (req, res) => {
       lang: 'fr',
       background_color: '#ffffff',
       theme_color: themeColor,
-      icons: [
-        { src: iconUrl, sizes: 'any', type: 'image/png', purpose: 'any' },
-        { src: iconUrl, sizes: 'any', type: 'image/png', purpose: 'maskable' },
-      ],
+      icons,
     };
 
     res.set('Content-Type', 'application/manifest+json');
@@ -325,7 +336,7 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     const startUrl = req.query.startUrl || `/gestion-interne`;
 
     const [tenant] = await sequelize.query(
-      `SELECT tenant_code, name, type FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
+      `SELECT tenant_code, name, type, logo_url FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
       { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
 
@@ -342,7 +353,23 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
       supplier: '#06b6d4', vendor: '#06b6d4', reseau: '#06b6d4',
     };
     const themeColor = TYPE_COLORS[tenant?.type] || '#1a8f1a';
+
+    // Détecter le type MIME réel du logo tenant
+    let iconMime = 'image/svg+xml';
+    if (tenant?.logo_url?.startsWith('data:')) {
+      const m = tenant.logo_url.match(/data:([^;]+);/);
+      if (m) iconMime = m[1];
+    }
+
     const iconUrl = `/api/professionals/tenant-icon/${tenantCode}`;
+    const icons = tenant?.logo_url ? [
+      { src: iconUrl, sizes: 'any', type: iconMime, purpose: 'any' },
+      { src: iconUrl, sizes: 'any', type: iconMime, purpose: 'maskable' },
+      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+    ] : [
+      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+    ];
 
     const manifest = {
       id: startUrl,
@@ -356,10 +383,7 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
       lang: 'fr',
       background_color: '#ffffff',
       theme_color: themeColor,
-      icons: [
-        { src: iconUrl, sizes: 'any', type: 'image/png', purpose: 'any' },
-        { src: iconUrl, sizes: 'any', type: 'image/png', purpose: 'maskable' },
-      ],
+      icons,
     };
 
     res.set('Content-Type', 'application/manifest+json');

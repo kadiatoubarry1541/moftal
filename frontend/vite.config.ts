@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
         // Seuls les assets réellement utiles pour l'app shell PWA
         includeAssets: ["logo-moftal.svg"],
         manifest: {
+          id: "/",
           name: "Moftal",
           short_name: "Moftal",
           description:
