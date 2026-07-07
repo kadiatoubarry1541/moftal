@@ -1096,40 +1096,6 @@ export default function Solidarite() {
         {activeTab === 'ong' && (
           <div className="space-y-6">
 
-            {/* Problèmes familiaux & sociaux */}
-            <div className="flex items-center gap-4 rounded-xl border-2 border-emerald-200 bg-white px-5 py-4 shadow-sm">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-3xl flex-shrink-0">
-                👨‍👩‍👧‍👦
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-base text-emerald-800">Problèmes familiaux & sociaux</div>
-                <div className="text-xs text-gray-500 mt-0.5 mb-3">
-                  Conflits, séparations, difficultés sociales — retrouve ta communauté ethnique pour s'entraider.
-                </div>
-                <button
-                  onClick={() => navigate('/solidarite/racines')}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors"
-                >
-                  🌿 Découvrir ma communauté
-                </button>
-              </div>
-            </div>
-
-            {/* Mosquées & Imams */}
-            <a
-              href="/mosquee"
-              className="flex items-center gap-4 rounded-xl border-2 border-teal-200 hover:border-teal-400 bg-white px-5 py-4 shadow-sm transition hover:shadow-md"
-            >
-              <div className="w-14 h-14 rounded-full bg-teal-100 flex items-center justify-center text-3xl flex-shrink-0">
-                🕌
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-base text-teal-800">Mosquées & Imams</div>
-                <div className="text-xs text-gray-500 mt-0.5">Mosquées et imams enregistrés dans votre région</div>
-              </div>
-              <span className="text-gray-400 text-lg flex-shrink-0">→</span>
-            </a>
-
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">🌍 ONG & Associations</h2>
               <p className="text-gray-600 mb-6">

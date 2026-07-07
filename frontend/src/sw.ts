@@ -14,14 +14,21 @@ clientsClaim()
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
-// SPA : toutes les navigations servent index.html (sauf /api/ et /uploads/)
+// Navigation SPA : NetworkFirst — essaie toujours le réseau en priorité.
+// Si réseau indisponible → sert index.html depuis le cache (app fonctionne quand même).
+// Ainsi l'app s'ouvre toujours, que ce soit /espace-pro/:id, /gestion-*, ou la home.
 registerRoute(
-  new NavigationRoute(createHandlerBoundToURL('index.html'), {
-    denylist: [/\/api\//, /\/uploads\//]
-  })
+  new NavigationRoute(
+    new NetworkFirst({
+      cacheName: 'pages-cache',
+      networkTimeoutSeconds: 5, // 5s max d'attente réseau, sinon bascule sur le cache
+      plugins: [
+        new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 7 * 24 * 60 * 60 })
+      ]
+    }),
+    { denylist: [/\/api\//, /\/uploads\//] }
+  )
 )
-
-// API : pas de cache — toujours réseau direct (auth, données temps réel)
 
 // Google Fonts : Cache First (1 an)
 registerRoute(
@@ -76,14 +83,12 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
     self.clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then(clientList => {
-        // Si un onglet de l'app est déjà ouvert, on le focus et on navigue
         for (const client of clientList) {
           if ('focus' in client) {
             (client as WindowClient).navigate(targetUrl)
             return (client as WindowClient).focus()
           }
         }
-        // Sinon on ouvre un nouvel onglet
         return self.clients.openWindow(targetUrl)
       })
   )

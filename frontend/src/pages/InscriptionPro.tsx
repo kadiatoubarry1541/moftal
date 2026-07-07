@@ -221,6 +221,7 @@ export default function InscriptionPro() {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
     if (!planType) { setError("Veuillez choisir une formule (Visibilité ou Gestion Interne)."); return; }
+    if (planType === 'full' && !hasOwnManagement) { setError("Veuillez indiquer si vous utilisez la gestion de la plateforme ou la vôtre."); return; }
     if (!form.name.trim()) { setError("Le nom est requis"); return; }
     if (nomStatut === 'pris') {
       setError(`Le nom "${form.name.trim()}" est déjà utilisé. Veuillez en choisir un autre.`);
@@ -287,7 +288,11 @@ export default function InscriptionPro() {
           planType,
           subSector: NEEDS_SUBSECTOR.includes(selectedType) ? subSector : (selectedType === "broker" ? "tertiaire" : undefined),
           name: form.name.trim(),
-          description: (form.description.trim() || "") + (form.website.trim() ? `\nSite: ${form.website.trim()}` : ""),
+          description: [
+            form.description.trim(),
+            form.website.trim() ? `Site: ${form.website.trim()}` : "",
+            (planType === 'full' && hasOwnManagement === 'external' && externalManagementLink.trim()) ? `Gestion externe: ${externalManagementLink.trim()}` : "",
+          ].filter(Boolean).join("\n"),
           address: form.address.trim(),
           city: form.city.trim(),
           country: form.country.trim(),
@@ -823,11 +828,14 @@ export default function InscriptionPro() {
               />
               {justificatifFileName && <p className="mt-1 text-sm text-green-600 dark:text-green-400">Fichier : {justificatifFileName}</p>}
             </div>
-            <div className="sm:col-span-2">
-              <label className={labelCls}>Site web (optionnel)</label>
-              <input type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })}
-                className={inputCls} placeholder="https://..." />
-            </div>
+            {/* Site web : uniquement pour la formule Visibilité (sans gestion interne plateforme) */}
+            {planType !== 'full' && (
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Site web (optionnel)</label>
+                <input type="url" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })}
+                  className={inputCls} placeholder="https://..." />
+              </div>
+            )}
           </div>
 
           <button type="submit" disabled={loading}

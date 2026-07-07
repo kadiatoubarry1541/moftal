@@ -27,7 +27,8 @@ export function Login() {
         const parsed = JSON.parse(session)
         const user   = parsed.userData || parsed
         if (user?.numeroH) {
-          navigate('/compte', { replace: true })
+          const from = (location.state as any)?.from || '/compte'
+          navigate(from, { replace: true })
           return
         }
       }
@@ -71,7 +72,9 @@ export function Login() {
       setSlowServer(false)
 
       if (result?.success) {
-        navigate('/compte', { state: { fromLogin: true } })
+        // Retourner à la page d'origine (espace-pro, gestion, etc.) ou /compte par défaut
+        const from = (location.state as any)?.from || '/compte'
+        navigate(from, { replace: true, state: { fromLogin: true } })
       } else if (result?.networkError) {
         setIsNetworkError(true)
         setError(result.message || 'Serveur inaccessible. Réessayez dans quelques instants.')

@@ -105,8 +105,9 @@ router.post('/register', authenticate, async (req, res) => {
     }
 
     const validTypes = [
-      'clinic', 'security_agency', 'journalist', 'enterprise', 'school',
-      'supplier', 'scientist', 'ngo', 'vendor', 'producer', 'broker', 'restaurant'
+      'clinic', 'health_worker', 'security_agency', 'journalist', 'enterprise', 'school',
+      'supplier', 'scientist', 'ngo', 'vendor', 'producer', 'broker', 'restaurant',
+      'transport', 'beauty', 'artisan', 'mairie', 'mosque', 'madrasa', 'commerce', 'reseau'
     ];
     if (!validTypes.includes(type)) {
       return res.status(400).json({ success: false, message: 'Type invalide' });
@@ -271,7 +272,7 @@ router.get('/pro-manifest/:id', async (req, res) => {
       short_name: account.name.slice(0, 12),
       description: `Gestion — ${account.name}`,
       start_url: startUrl,
-      scope: '/',
+      scope: startUrl,
       display: 'standalone',
       orientation: 'portrait',
       lang: 'fr',
@@ -349,7 +350,7 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
       short_name: name.slice(0, 12),
       description: `Gestion — ${name}`,
       start_url: startUrl,
-      scope: '/',
+      scope: startUrl,
       display: 'standalone',
       orientation: 'portrait',
       lang: 'fr',

@@ -38,15 +38,19 @@ const connectDB_IA = async () => {
   try {
     await sequelizeIA.authenticate();
     console.log('✅ PostgreSQL [IA → enfants_adam_eve] connecté');
+  } catch (error) {
+    console.error('❌ Connexion [IA] échouée:', error.message);
+    return;
+  }
+  try {
     if (process.env.NODE_ENV === 'development') {
       await sequelizeIA.sync({ alter: true });
       console.log('✅ Modèles [IA] synchronisés');
     } else {
       await sequelizeIA.sync({ force: false });
     }
-  } catch (error) {
-    console.error('❌ Connexion [IAscience] échouée:', error.message);
-    console.error('   → Créez la base : CREATE DATABASE "IAscience";');
+  } catch (syncErr) {
+    console.warn('⚠️ Sync [IA] partiel (index déjà existants ignorés):', syncErr.message);
   }
 };
 

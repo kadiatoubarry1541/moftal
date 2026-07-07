@@ -705,7 +705,17 @@ async function initAllTables() {
   for (const sql of coupleLinkAlters) await sequelize.query(sql).catch(() => {});
   console.log('✅ Colonnes couple_links vérifiées');
 
-  // ia_conversations (numero_h) : géré par connectDB_IA() via sync({ alter: true })
+  // ia_conversations — colonnes obligatoires (sync alter:true ne fonctionne qu'en DEV)
+  const iaConvAlters = [
+    `ALTER TABLE "ia_conversations" ADD COLUMN IF NOT EXISTS "numero_h"   VARCHAR(255);`,
+    `ALTER TABLE "ia_conversations" ADD COLUMN IF NOT EXISTS "session_id" VARCHAR(255);`,
+    `CREATE INDEX IF NOT EXISTS idx_ia_conv_numero_h    ON "ia_conversations" ("numero_h");`,
+    `CREATE INDEX IF NOT EXISTS idx_ia_conv_created_at  ON "ia_conversations" ("created_at");`,
+    `CREATE INDEX IF NOT EXISTS idx_ia_conv_session_id  ON "ia_conversations" ("session_id");`,
+    `CREATE INDEX IF NOT EXISTS idx_ia_conv_source      ON "ia_conversations" ("source");`,
+  ];
+  for (const sql of iaConvAlters) await sequelize.query(sql).catch(() => {});
+  console.log('✅ Colonnes ia_conversations vérifiées');
   console.log('✅ Colonnes family_trees vérifiées');
 
   // ── GESTION INTERNE : cliniques & écoles ──────────────────────────────────
@@ -1562,6 +1572,27 @@ async function initAllTables() {
     // Colonnes supplémentaires (idempotentes)
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "tenant_code" VARCHAR(50) UNIQUE;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "gestion_interne_valid_until" TIMESTAMPTZ;`).catch(() => {});
+    // Colonnes récentes du modèle ProfessionalAccount — absentes des vieilles DBs
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_professional_accounts_subscription_status') THEN
+          CREATE TYPE "enum_professional_accounts_subscription_status" AS ENUM ('never_paid','active','overdue','blocked');
+        END IF;
+      END $$;
+    `).catch(() => {});
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "subscription_status" "enum_professional_accounts_subscription_status" NOT NULL DEFAULT 'never_paid';`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "subscription_valid_until" TIMESTAMPTZ;`).catch(() => {});
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_professional_accounts_sub_sector') THEN
+          CREATE TYPE "enum_professional_accounts_sub_sector" AS ENUM ('primaire','secondaire','tertiaire');
+        END IF;
+      END $$;
+    `).catch(() => {});
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "sub_sector" "enum_professional_accounts_sub_sector";`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "billing_info" JSONB;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "is_trial" BOOLEAN DEFAULT true;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "granted_to_sub_admin" BOOLEAN DEFAULT false;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "numero_h" VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "parent_numero_h" VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "address"      TEXT;`).catch(() => {});

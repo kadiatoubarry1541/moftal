@@ -255,6 +255,36 @@ export default function Racines() {
         </div>
       </div>
 
+      {/* Problèmes familiaux & sociaux */}
+      <div style={{
+        background: "#fff",
+        border: "2px solid #d1fae5",
+        borderRadius: 16,
+        padding: "20px 20px",
+        marginBottom: 24,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 16
+      }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: "50%",
+          background: "#d1fae5",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 26, flexShrink: 0
+        }}>
+          👨‍👩‍👧‍👦
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: "#065f46", marginBottom: 6 }}>
+            Problèmes familiaux & sociaux
+          </div>
+          <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, margin: 0 }}>
+            Conflits, séparations, difficultés sociales — ta communauté ethnique est là pour t'écouter et t'aider.
+            Retrouve ci-dessous les membres qui partagent tes racines.
+          </p>
+        </div>
+      </div>
+
       {/* Barre de recherche */}
       {total > 5 && (
         <div style={{ marginBottom: 20 }}>

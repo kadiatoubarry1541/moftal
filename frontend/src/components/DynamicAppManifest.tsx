@@ -6,20 +6,13 @@ interface DynamicAppManifestProps {
   name: string;
   shortName?: string;
   description?: string;
-  /** ID du compte pro — utilisé pour récupérer l'icône via le backend (URL réelle, pas base64) */
   proId?: string;
-  /** Fallback si pas de proId (data URI ou URL) — ignoré si proId est fourni */
   iconUrl?: string | null;
   startUrl: string;
   themeColor?: string;
   backgroundColor?: string;
 }
 
-/**
- * Remplace dynamiquement le manifest PWA par un manifest propre à l'établissement.
- * Utilise l'URL backend /api/professionals/pwa-icon/:id pour les icônes
- * car Chrome refuse les data URIs dans les manifests PWA.
- */
 export default function DynamicAppManifest({
   name,
   shortName,
@@ -35,23 +28,26 @@ export default function DynamicAppManifest({
     if (!link) return;
     const originalHref = link.getAttribute("href");
 
-    // Espace de gestion pro : utiliser l'URL backend réelle (pas blob)
-    // Chrome gère mieux les vraies URLs pour la détection PWA installable
+    // EspacePro (/espace-pro/:id) — manifest par ID de compte
     if (proId && startUrl.startsWith("/espace-pro/")) {
       link.setAttribute("href", `/api/professionals/pro-manifest/${proId}`);
-      return () => {
-        if (originalHref) link.setAttribute("href", originalHref);
-      };
+      return () => { if (originalHref) link.setAttribute("href", originalHref); };
     }
 
-    // Page client (/installer-app) : blob manifest avec logo du pro
+    // Pages Gestion (/gestion-clinique/:code, /gestion-ecole/:code, etc.)
+    // On extrait le tenantCode depuis la startUrl
+    const gestionMatch = startUrl.match(/^\/gestion-[^/]+\/([^/]+)/);
+    if (gestionMatch) {
+      const tenantCode = gestionMatch[1];
+      const encodedStart = encodeURIComponent(startUrl);
+      link.setAttribute("href", `/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodedStart}`);
+      return () => { if (originalHref) link.setAttribute("href", originalHref); };
+    }
+
+    // Page client (/installer-app) — blob manifest personnalisé avec logo du pro
     const iconSrc = proId
       ? `${API}/api/professionals/pwa-icon/${proId}`
       : (iconUrl && !iconUrl.startsWith("data:") ? iconUrl : "/logo-moftal.svg");
-
-    const icon512 = proId
-      ? `${API}/api/professionals/pwa-icon/${proId}`
-      : "/logo-moftal.svg";
 
     const manifest = {
       id: startUrl,
@@ -67,7 +63,7 @@ export default function DynamicAppManifest({
       theme_color: themeColor,
       icons: [
         { src: iconSrc, sizes: "any", type: proId ? "image/png" : "image/svg+xml", purpose: "any" },
-        { src: icon512, sizes: "any", type: proId ? "image/png" : "image/svg+xml", purpose: "maskable" },
+        { src: iconSrc, sizes: "any", type: proId ? "image/png" : "image/svg+xml", purpose: "maskable" },
       ],
     };
 

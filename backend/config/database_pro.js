@@ -38,15 +38,19 @@ const connectDB_Pro = async () => {
   try {
     await sequelizePro.authenticate();
     console.log('✅ PostgreSQL [pro → enfants_adam_eve] connecté');
+  } catch (error) {
+    console.error('❌ Connexion [pro] échouée:', error.message);
+    return;
+  }
+  try {
     if (process.env.NODE_ENV === 'development') {
       await sequelizePro.sync({ alter: true });
       console.log('✅ Modèles [pro] synchronisés');
     } else {
       await sequelizePro.sync({ force: false });
     }
-  } catch (error) {
-    console.error('❌ Connexion [professionnel] échouée:', error.message);
-    console.error('   → Créez la base : CREATE DATABASE professionnel;');
+  } catch (syncErr) {
+    console.warn('⚠️ Sync [pro] partiel (colonnes/index ignorés):', syncErr.message);
   }
 };
 

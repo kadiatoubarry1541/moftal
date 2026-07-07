@@ -554,6 +554,14 @@ export default function EspacePro() {
 
   const token = localStorage.getItem("token");
 
+  // Si pas de token → rediriger vers login en mémorisant la page cible
+  useEffect(() => {
+    if (!token) {
+      navigate("/login", { replace: true, state: { from: `/espace-pro/${id}` } });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Lire les données utilisateur pour le paiement
   const userData = (() => {
     try { const s = localStorage.getItem('session_user'); return s ? JSON.parse(s).userData : null; } catch { return null; }

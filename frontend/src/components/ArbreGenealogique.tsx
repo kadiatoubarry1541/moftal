@@ -58,6 +58,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [familyDocs, setFamilyDocs] = useState<Record<string, Array<{type: string; description: string; annee?: string}>>>({})
   const [newDoc, setNewDoc] = useState({ type: 'naissance', description: '', annee: '' })
   const [showAddDoc, setShowAddDoc] = useState(false)
+  const [zoom, setZoom] = useState(1.0)
   const navigate = useNavigate()
 
   const handleViewSpouseTree = async (spouseNumeroH: string) => {
@@ -633,11 +634,31 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       )}
 
       {/* Vue arbre généalogique — style MyHeritage : couleurs par genre, dates, boutons "+" */}
-      <div className="tree-view-horizontal" style={{ overflowX: 'auto', overflowY: 'visible' }}>
-       {(() => {
-        const NW = 160, NH = 70, NGAP = 40
 
-        // ── Fratrie G1 : tous les frères/sœurs réels (génération G1, pas enfants du user) ──
+      {/* ── Contrôles de zoom ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => setZoom(z => Math.min(2.0, +(z + 0.1).toFixed(1)))}
+          style={{ padding: '5px 16px', borderRadius: 8, border: '1px solid #16a34a', background: '#16a34a', color: 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>+</button>
+        <span style={{ minWidth: 52, textAlign: 'center', fontWeight: 'bold', fontSize: 14, color: '#374151' }}>{Math.round(zoom * 100)}%</span>
+        <button
+          onClick={() => setZoom(z => Math.max(0.25, +(z - 0.1).toFixed(1)))}
+          style={{ padding: '5px 16px', borderRadius: 8, border: '1px solid #dc2626', background: '#dc2626', color: 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>−</button>
+        <button
+          onClick={() => setZoom(1.0)}
+          style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #9ca3af', background: '#f9fafb', color: '#374151', fontSize: 12, cursor: 'pointer' }}>↺ Normal</button>
+        <button
+          onClick={() => setZoom(0.55)}
+          style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #3b82f6', background: '#eff6ff', color: '#1d4ed8', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>🔍 Vue globale</button>
+      </div>
+
+      <div className="tree-view-horizontal" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '78vh' }}>
+       {(() => {
+        // ── Constantes de mise en page ──
+        // PG = gap entre père et mère (>= NW+NGAP=200 pour que les grands-parents ne se chevauchent pas)
+        const NW = 160, NH = 70, NGAP = 40, PG = 400
+
+        // ── Fratrie G1 ──
         const g1Siblings = familyMembers.filter(
           m => (m.relation === 'frere' || m.relation === 'soeur') &&
                m.generation === 'G1' &&
@@ -648,7 +669,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         const g1Total = g1SibSlots + 1 + (hasConjoint ? 1 : 0)
         const vousG1Idx = g1SibSlots
 
-        // ── Enfants G2 : enfants directs + défunts enfants (relation=enfant, gen=G2) ──
+        // ── Enfants G2 ──
         const g2Members = familyMembers.filter(
           m => (m.parentId === `user-${userData.numeroH}` ||
                 (m.relation === 'enfant' && m.generation === 'G2')) &&
@@ -656,44 +677,68 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         )
         const g2Slots = Math.max(2, g2Members.length)
 
-        // ── Largeur SVG dynamique ──
-        const g1RowW = g1Total * (NW + NGAP) - NGAP
-        const g2RowW = g2Slots * (NW + NGAP) - NGAP
-        const SVG_W = Math.max(1350, g1RowW + 200, g2RowW + 200)
-        const SVG_H = g2Members.length > 0 ? 780 : 620
+        // ── G3 : Petits-enfants (s'adapte dynamiquement) ──
+        const g3Members = familyMembers.filter(
+          m => m.generation === 'G3' && m.isVisible !== false && !isHidden(m.numeroH)
+        )
+        const hasG3 = g3Members.length > 0
+        const g3Slots = Math.max(1, g3Members.length)
+        const g3RowW = g3Slots * NW + (g3Slots - 1) * NGAP
 
-        // ── Positions G1 centrées ──
+        // ── Largeur SVG — s'adapte au nombre réel de membres ──
+        const g1RowW = g1Total * NW + (g1Total - 1) * NGAP
+        const g2RowW = g2Slots * NW + (g2Slots - 1) * NGAP
+        const hasGP = familyMembers.some(m => m.generation === 'G-1')
+        const MARGIN = 80
+        // Avec PG=280 et NW=160, les grands-parents ont besoin de SVG_W >= 800
+        const SVG_W = Math.max(g1RowW + 2 * MARGIN, g2RowW + 2 * MARGIN, g3RowW + 2 * MARGIN, hasGP ? 1100 : 600)
+        // ── Hauteur SVG — grandit si G3 (petits-enfants) existe ──
+        const SVG_H = hasG3 ? 680 : 580
+
+        // ── G1 : centré sur SVG_W ──
         const g1StartX = Math.round((SVG_W - g1RowW) / 2)
         const g1Xs = Array.from({ length: g1Total }, (_, i) => g1StartX + i * (NW + NGAP))
+        const g1BarL = g1Xs[0] + NW / 2
+        const g1BarR = g1Xs[g1Total - 1] + NW / 2
+        const g1CenterX = Math.round((g1BarL + g1BarR) / 2)   // centre de TOUTE la barre G1
+
+        // ── VOUS et conjoint ──
         const vousX = g1Xs[vousG1Idx]
         const vousMidX = vousX + NW / 2
         const conjX = hasConjoint ? g1Xs[vousG1Idx + 1] : -1
         const conjMidX = hasConjoint ? conjX + NW / 2 : vousMidX
+        // downX = point de descente vers G2 (entre VOUS et conjoint)
         const downX = hasConjoint ? Math.round((vousMidX + conjMidX) / 2) : vousMidX
 
-        // ── Positions G2 centrées ──
-        const g2StartX = Math.round((SVG_W - (g2Slots * (NW + NGAP) - NGAP)) / 2)
+        // ── G0 : père et mère centrés exactement sur g1CenterX ──
+        //   gap entre père droit et mère gauche = PG
+        //   milieu = g1CenterX  →  pX = g1CenterX - NW - PG/2  |  mX = g1CenterX + PG/2
+        const pX = g1CenterX - NW - Math.round(PG / 2)
+        const mX = g1CenterX + Math.round(PG / 2)
+        // pmMidX = milieu exact de la barre horizontale père↔mère = g1CenterX
+        const pmMidX = g1CenterX
+
+        // ── G-1 : grands-parents symétriques autour du père et de la mère ──
+        //   La verticale depuis le couple paternel tombe sur le centre du père (pX + NW/2)
+        //   gppX est à gauche, gmpX à droite, séparés par NGAP, centré sur pX + NW/2
+        const pMidX = pX + NW / 2    // centre du père → verticale paternelle
+        const mMidX = mX + NW / 2    // centre de la mère → verticale maternelle
+        const gppX = Math.round(pMidX - NGAP / 2 - NW)   // grand-père paternel
+        const gmpX = Math.round(pMidX + NGAP / 2)         // grand-mère paternelle
+        const gpmX = Math.round(mMidX - NGAP / 2 - NW)   // grand-père maternel
+        const gmmX = Math.round(mMidX + NGAP / 2)         // grand-mère maternelle
+
+        // ── G2 : centré sur SVG_W, barre étendue pour toujours inclure downX ──
+        const g2StartX = Math.round((SVG_W - g2RowW) / 2)
         const g2Xs = Array.from({ length: g2Slots }, (_, i) => g2StartX + i * (NW + NGAP))
-
-        // ── G0 parents : centrés sur downX ──
-        const pX = Math.max(60, downX - 140 - NW)
-        const mX = downX + 140
-        const pmMidX = Math.round((pX + NW / 2 + mX + NW / 2) / 2)
-
-        // ── G-1 grands-parents : flanquant les parents ──
-        const gppX = Math.max(0, pX - NW - NGAP)
-        const gmpX = pX
-        const gpmX = mX
-        const gmmX = mX + NW + NGAP
-
-        // ── Barres de connexion ──
-        const g1BarL = g1Xs[0] + NW / 2
-        const g1BarR = g1Xs[g1Total - 1] + NW / 2
-        const g2BarL = g2Xs[0] + NW / 2
-        const g2BarR = g2Xs[g2Slots - 1] + NW / 2
+        const g2BarL = Math.min(g2Xs[0] + NW / 2, downX)
+        const g2BarR = Math.max(g2Xs[g2Slots - 1] + NW / 2, downX)
+        // ── G3 centré sur SVG_W ──
+        const g3StartX = Math.round((SVG_W - g3RowW) / 2)
+        const g3Xs = Array.from({ length: g3Slots }, (_, i) => g3StartX + i * (NW + NGAP))
 
         return (
-        <svg className="tree-svg" width={SVG_W} height={SVG_H} viewBox={`0 0 ${SVG_W} ${SVG_H}`}>
+        <svg className="tree-svg" width={SVG_W * zoom} height={SVG_H * zoom} viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ display: 'block' }}>
           {/* ── G-1 : Grands-parents ── */}
           {familyMembers.some(m => m.generation === 'G-1') && (
             <g className="generation-g-1">
@@ -713,7 +758,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gmpX+54} y={66} fontSize={11} fontWeight="bold" fill="#2c5530">Mère</text>
               <text x={gmpX+54} y={80} fontSize={11} fill="#555">{gmp?.prenom||'Grand-mère'}</text>
               <text x={gmpX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gmp?.numeroH||''}</text>
-              <line x1={gmpX+NW/2} y1={110} x2={gmpX+NW/2} y2={190} stroke="#A0522D" strokeWidth={2}/>
+              {/* Verticale couple paternel → père G0 : au centre du gap entre gpp et gmp */}
+              <line x1={pMidX} y1={75} x2={pMidX} y2={190} stroke="#A0522D" strokeWidth={2}/>
 
               {renderNodeShape('HOMME', gpmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpm || null))}
               <circle cx={gpmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
@@ -731,7 +777,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gmmX+54} y={66} fontSize={11} fontWeight="bold" fill="#2c5530">Mère</text>
               <text x={gmmX+54} y={80} fontSize={11} fill="#555">{gmm?.prenom||'Grand-mère'}</text>
               <text x={gmmX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gmm?.numeroH||''}</text>
-              <line x1={gmmX+NW/2} y1={110} x2={gmmX+NW/2} y2={190} stroke="#A0522D" strokeWidth={2}/>
+              {/* Verticale couple maternel → mère G0 : au centre du gap entre gpm et gmm */}
+              <line x1={mMidX} y1={75} x2={mMidX} y2={190} stroke="#A0522D" strokeWidth={2}/>
 
               {renderPlusButton(gppX+80, 35, 'G-père paternel', 'grand-pere')}
               {renderPlusButton(gmpX+80, 35, 'G-mère paternelle', 'grand-mere')}
@@ -766,8 +813,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             {renderPlusButton(mX+80, 215, 'Lier mère', 'mere')}
           </g>
 
-          {/* ── Barre G0→G1 + branches dynamiques ── */}
+          {/* Barre horizontale G1 couvrant tous les nœuds */}
           <line x1={g1BarL} y1={310} x2={g1BarR} y2={310} stroke="#4CAF50" strokeWidth={2}/>
+          {/* Branches descendantes vers chaque nœud G1 */}
           {g1Xs.map((x, i) => <line key={`b1-${i}`} x1={x+NW/2} y1={310} x2={x+NW/2} y2={350} stroke="#4CAF50" strokeWidth={2}/>)}
 
           {/* ── G1 : Fratrie DYNAMIQUE + VOUS + Conjoint ── */}
@@ -843,8 +891,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <line x1={downX} y1={420} x2={downX} y2={460} stroke="#1a8f1a" strokeWidth={2}/>
           </g>
 
-          {/* ── Barre G1→G2 + branches dynamiques ── */}
+          {/* ── Barre G1→G2 : étendue pour toujours inclure downX ── */}
           <line x1={g2BarL} y1={460} x2={g2BarR} y2={460} stroke="#1a8f1a" strokeWidth={2}/>
+          {/* Branches descendantes vers chaque nœud G2 */}
           {g2Xs.map((x, i) => <line key={`b2-${i}`} x1={x+NW/2} y1={460} x2={x+NW/2} y2={490} stroke="#1a8f1a" strokeWidth={2}/>)}
 
           {/* ── G2 : Enfants DYNAMIQUES ── */}
@@ -876,6 +925,43 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               )
             }
           </g>
+
+          {/* ── G3 : Petits-enfants — HOMME=rectangle / FEMME=hexagone ── */}
+          {hasG3 && (() => {
+            const g2CenterX = g2Xs.length > 1
+              ? Math.round((g2Xs[0] + NW / 2 + g2Xs[g2Xs.length - 1] + NW / 2) / 2)
+              : (g2Xs[0] ?? downX) + NW / 2
+            const g3BarL = Math.min(g3Xs[0] + NW / 2, g2CenterX)
+            const g3BarR = Math.max(g3Xs[g3Slots - 1] + NW / 2, g2CenterX)
+            const G3_Y = 610
+            return (
+              <>
+                {/* Verticale G2→barre G3 */}
+                <line x1={g2CenterX} y1={560} x2={g2CenterX} y2={600} stroke="#059669" strokeWidth={2}/>
+                {/* Barre horizontale G3 */}
+                <line x1={g3BarL} y1={600} x2={g3BarR} y2={600} stroke="#059669" strokeWidth={2}/>
+                {/* Branches descendantes vers chaque petit-enfant */}
+                {g3Xs.map((x, i) => (
+                  <line key={`b3-${i}`} x1={x + NW / 2} y1={600} x2={x + NW / 2} y2={G3_Y} stroke="#059669" strokeWidth={2}/>
+                ))}
+                <g className="generation-g3">
+                  {g3Members.map((gc, i) => (
+                    <g key={gc.id}>
+                      {renderSVGNode(
+                        gc.genre,         // HOMME → rect, FEMME → hexagone ← règle respectée
+                        g3Xs[i], G3_Y,
+                        gc.prenom || '—', gc.numeroH || '',
+                        gc.genre === 'FEMME' ? 'Petite-fille' : 'Petit-fils',
+                        gc.photo, gc.dateNaissance, gc.dateDeces,
+                        `c-gc-${i}`,
+                        () => setSelectedMember(gc)
+                      )}
+                    </g>
+                  ))}
+                </g>
+              </>
+            )
+          })()}
 
         </svg>
         )
