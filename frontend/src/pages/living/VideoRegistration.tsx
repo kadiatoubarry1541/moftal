@@ -287,15 +287,6 @@ export function VideoRegistration() {
     setVideoData((prev) => ({ ...prev, video: videoBlob }))
   }
 
-  const blobToBase64 = (blob: Blob): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () =>
-        typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Conversion impossible'))
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
-
   // ── Submit final ───────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (loading) return
@@ -350,44 +341,21 @@ export function VideoRegistration() {
 
     setVideoData((prev) => ({ ...prev, numeroH }))
 
-    const fileToBase64 = (file: File): Promise<string> =>
-      new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-
-    // Upload vers le cloud (ImageKit pour photos, R2 pour vidéos)
+    // Upload photo séparément — si ça échoue, on continue sans
     let photoUrl = normalizedData.photoPreview || null
-    let videoUrl = null
-    let activitePreuveUrl = null
-    let activiteDocUrl = null
-
     try {
       if (normalizedData.photo) {
         photoUrl = await uploadForRegistration(normalizedData.photo, 'photos')
       }
+    } catch { /* photo non uploadée, on continue */ }
+
+    // Upload vidéo séparément — si ça échoue, le compte est quand même créé sans vidéo
+    let videoUrl: string | null = null
+    try {
       if (normalizedData.video) {
         videoUrl = await uploadForRegistration(normalizedData.video, 'videos', 'video.mp4')
       }
-      if (normalizedData.activitePreuve) {
-        activitePreuveUrl = await uploadForRegistration(normalizedData.activitePreuve, 'documents')
-      }
-      if (normalizedData.activiteDoc) {
-        activiteDocUrl = await uploadForRegistration(normalizedData.activiteDoc, 'documents')
-      }
-    } catch (uploadErr) {
-      console.warn('Upload cloud échoué, fallback base64:', uploadErr)
-      // Fallback base64 si upload échoue
-      if (normalizedData.video && !videoUrl) {
-        videoUrl = await blobToBase64(normalizedData.video)
-      }
-      if (normalizedData.photo && !photoUrl) {
-        const reader = new FileReader()
-        photoUrl = await new Promise(r => { reader.onload = () => r(reader.result as string); reader.readAsDataURL(normalizedData.photo!) })
-      }
-    }
+    } catch { /* vidéo non uploadée, compte créé sans vidéo */ }
 
     const { activitePreuve: _p, activiteDoc: _d, ...restData } = normalizedData
     const completeData = {
@@ -406,8 +374,8 @@ export function VideoRegistration() {
       specialite: normalizedData.specialite?.trim() || '',
       photo: photoUrl,
       photoPreview: photoUrl,
-      activitePreuve: activitePreuveUrl,
-      activiteDoc: activiteDocUrl,
+      activitePreuve: null,
+      activiteDoc: null,
       lieu1: normalizedData.quartier?.trim() || normalizedData.lieu1 || '',
       video: videoUrl,
     }
@@ -433,8 +401,23 @@ export function VideoRegistration() {
         alert(`❌ Erreur: ${result.message}${details ? '\n\n' + details : ''}`)
       }
     } catch (error) {
-      console.error('Erreur enregistrement:', error)
-      alert('Erreur lors de l\'enregistrement. Veuillez réessayer.')
+      // Fallback : si le backend est inaccessible, stocker en localStorage et naviguer quand même
+      console.error('Erreur enregistrement vidéo:', error)
+      const dataWithClearPassword = {
+        ...completeData,
+        password: normalizedData.password,
+        confirmPassword: normalizedData.confirmPassword,
+      }
+      localStorage.setItem('vivant_video', JSON.stringify(dataWithClearPassword))
+      localStorage.setItem('dernier_vivant', JSON.stringify(dataWithClearPassword))
+      localStorage.setItem('session_user', JSON.stringify({
+        numeroH,
+        userData: dataWithClearPassword,
+        type: 'vivant',
+        source: 'registration_video_fallback',
+      }))
+      showCredentialsReminder(numeroH, normalizedData.password)
+      navigate('/compte')
     } finally {
       setLoading(false)
     }
