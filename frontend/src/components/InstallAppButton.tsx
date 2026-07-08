@@ -189,7 +189,7 @@ function MainAppInstallButton() {
   );
 }
 
-// ─── Carte installation gestion interne (espace professionnel) ──────────────
+// ─── Bouton installation gestion interne (espace professionnel) ─────────────
 
 function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   name?: string; logoUrl?: string; themeColor: string; label?: string;
@@ -197,14 +197,9 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
-  const [showCard, setShowCard] = useState(false);
   const [isInsidePWA, setIsInsidePWA] = useState(false);
-  // Le bouton n'apparaît qu'à partir de la 2ème visite (SW actif dès la 2ème connexion)
-  const [swReady, setSwReady] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
-  const SHOWN_KEY   = getShownKey();
-  const displayName = name || label || "votre espace pro";
 
   useEffect(() => {
     const standalone =
@@ -212,34 +207,12 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       (window.navigator as any).standalone === true;
     setIsInsidePWA(standalone);
 
-    // Compter les visites sur cette page gestion
-    const p = window.location.pathname;
-    const visitKey = p.startsWith('/espace-pro/')
-      ? `proVisits_${p.split('/')[2]}`
-      : `gestionVisits_${p.split('/')[2]}`;
-    const visits = parseInt(localStorage.getItem(visitKey) || '0') + 1;
-    localStorage.setItem(visitKey, String(visits));
-    // Dès la 2ème visite, le SW est actif et le manifest gestion est bien intercepté
-    setSwReady(visits >= 2);
-
-    // Vérifier si déjà installé (uniquement via localStorage — jamais display-mode)
     const alreadyInstalled = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
     setInstalled(alreadyInstalled);
 
-    // Récupérer le prompt de gestion (capturé dans main.tsx pour les pages gestion)
     const existing = (window as any).__pwaGestionPrompt;
     if (existing) setPrompt(existing);
 
-    // Afficher la carte automatiquement à partir de la 2ème visite (sauf si déjà dans PWA)
-    if (!alreadyInstalled && !standalone && SHOWN_KEY && visits >= 2) {
-      const shownAt = localStorage.getItem(SHOWN_KEY);
-      const sept_jours = 7 * 24 * 60 * 60 * 1000;
-      if (!shownAt || Date.now() - Number(shownAt) > sept_jours) {
-        setTimeout(() => setShowCard(true), 1800);
-      }
-    }
-
-    // Écouter les nouveaux prompts (si le manifest vient de se charger)
     const onPrompt = (e: Event) => {
       e.preventDefault();
       (window as any).__pwaGestionPrompt = e;
@@ -252,7 +225,6 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     const onInstalled = () => {
       if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
       setInstalled(true);
-      setShowCard(false);
       setPrompt(null);
       (window as any).__pwaGestionPrompt = null;
     };
@@ -267,11 +239,6 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     };
   }, []);
 
-  const dismissCard = () => {
-    if (SHOWN_KEY) localStorage.setItem(SHOWN_KEY, String(Date.now()));
-    setShowCard(false);
-  };
-
   const handleInstall = async () => {
     if (!prompt) return;
     setInstalling(true);
@@ -281,7 +248,6 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       if (outcome === "accepted") {
         if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
         setInstalled(true);
-        setShowCard(false);
       }
     } finally {
       setPrompt(null);
@@ -290,7 +256,6 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     }
   };
 
-  // Déjà installée → petit badge vert discret
   if (installed) {
     return (
       <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
@@ -299,191 +264,29 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     );
   }
 
-  // 1ère visite → SW pas encore actif → on n'affiche rien
-  if (!swReady) return null;
-
-  // CAS SPÉCIAL : l'utilisateur est à l'intérieur de l'app Moftal installée (standalone).
-  // Chrome ne peut pas déclencher beforeinstallprompt depuis l'intérieur d'une PWA.
-  // Solution : ouvrir la gestion dans Chrome navigateur via window.open → le prompt se déclenche là.
+  // Dans une PWA installée, Chrome ne peut pas déclencher le prompt → ouvrir dans le navigateur
   if (isInsidePWA && !prompt) {
     return (
-      <>
-        <button
-          onClick={() => setShowCard(true)}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "8px 14px",
-            background: themeColor, color: "white",
-            border: "none", borderRadius: 10,
-            cursor: "pointer", fontSize: 13, fontWeight: 700,
-            whiteSpace: "nowrap", flexShrink: 0,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
-          }}
-        >
-          <span style={{ fontSize: 16 }}>📲</span> Installer
-        </button>
-
-        {showCard && (
-          <div
-            style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
-            onClick={e => { if (e.target === e.currentTarget) dismissCard(); }}
-          >
-            <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", animation: "slideUp 0.3s ease" }}>
-              <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
-              <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 2, margin: "0 auto 24px" }} />
-
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
-                <div style={{ width: 60, height: 60, borderRadius: 14, overflow: "hidden", background: themeColor + "22", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${themeColor}44` }}>
-                  {logoUrl ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 28 }}>🏢</span>}
-                </div>
-                <div>
-                  <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>{displayName}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Votre application de gestion</div>
-                </div>
-              </div>
-
-              {/* Explication : pourquoi ouvrir dans Chrome */}
-              <div style={{ background: "#fef3c7", border: "1.5px solid #fde68a", borderRadius: 12, padding: "12px 14px", marginBottom: 18, display: "flex", gap: 10 }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>💡</span>
-                <div style={{ fontSize: 13, color: "#92400e", lineHeight: 1.5 }}>
-                  Pour installer cette gestion sur votre écran d'accueil, vous devez d'abord l'ouvrir dans <strong>Chrome</strong> (en dehors de l'app Moftal).
-                </div>
-              </div>
-
-              <button
-                onClick={() => { window.open(window.location.href, '_blank'); dismissCard(); }}
-                style={{ width: "100%", padding: "16px", marginBottom: 10, background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: `0 4px 14px ${themeColor}55` }}
-              >
-                <span style={{ fontSize: 20 }}>🌐</span> Ouvrir dans Chrome
-              </button>
-
-              <button onClick={dismissCard} style={{ width: "100%", padding: "12px", background: "transparent", color: "#94a3b8", border: "1.5px solid #e2e8f0", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                Plus tard
-              </button>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  return (
-    <>
-      {/* Petit bouton permanent dans le header */}
       <button
-        onClick={() => prompt ? handleInstall() : setShowCard(true)}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 7,
-          padding: "8px 14px",
-          background: themeColor, color: "white",
-          border: "none", borderRadius: 10,
-          cursor: "pointer", fontSize: 13, fontWeight: 700,
-          whiteSpace: "nowrap", flexShrink: 0,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
-        }}
+        onClick={() => window.open(window.location.href, '_blank')}
+        style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", background: themeColor, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}
       >
         <span style={{ fontSize: 16 }}>📲</span> Installer
       </button>
+    );
+  }
 
-      {/* Carte d'installation (bottom sheet) */}
-      {showCard && (
-        <div
-          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
-          onClick={e => { if (e.target === e.currentTarget) dismissCard(); }}
-        >
-          <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", animation: "slideUp 0.3s ease" }}>
-            <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+  // Pas de prompt disponible → bouton masqué
+  if (!prompt) return null;
 
-            {/* Poignée */}
-            <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 2, margin: "0 auto 24px" }} />
-
-            {/* Logo + nom */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 22 }}>
-              <div style={{ width: 68, height: 68, borderRadius: 16, overflow: "hidden", background: themeColor + "22", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${themeColor}44` }}>
-                {logoUrl
-                  ? <img src={logoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span style={{ fontSize: 32 }}>🏢</span>
-                }
-              </div>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>{displayName}</div>
-                <div style={{ fontSize: 13, color: "#64748b", marginTop: 3 }}>Votre application de gestion</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 6 }}>
-                  <div style={{ width: 16, height: 16, borderRadius: 3, background: "#1a8f1a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: 9, color: "white", fontWeight: 800 }}>M</span>
-                  </div>
-                  <span style={{ fontSize: 11, color: "#94a3b8" }}>Propulsé par Moftal</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Info */}
-            <div style={{ background: "#f8fafc", borderRadius: 12, padding: "12px 14px", marginBottom: 20, display: "flex", gap: 10 }}>
-              <span style={{ fontSize: 20, flexShrink: 0 }}>📱</span>
-              <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
-                <strong style={{ color: "#0f172a" }}>Icône dédiée sur votre écran d'accueil</strong><br />
-                Accédez à votre gestion en 1 tap, sans passer par le navigateur. Votre logo, votre nom.
-              </div>
-            </div>
-
-            {/* Bouton natif (Android / Chrome Desktop) */}
-            {prompt && (
-              <button
-                onClick={handleInstall}
-                disabled={installing}
-                style={{ width: "100%", padding: "16px", marginBottom: 10, background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 16, fontWeight: 800, cursor: installing ? "default" : "pointer", opacity: installing ? 0.75 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: `0 4px 16px ${themeColor}55` }}
-              >
-                <span style={{ fontSize: 22 }}>{installing ? "⏳" : "📲"}</span>
-                {installing ? "Installation en cours…" : `Installer ${displayName}`}
-              </button>
-            )}
-
-            {/* Instructions iOS */}
-            {!prompt && isIOS() && (
-              <div style={{ marginBottom: 12 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>Installer sur iPhone / iPad :</p>
-                {[
-                  { icon: "⎙", text: "Appuyez sur le bouton Partager en bas de Safari" },
-                  { icon: "＋", text: "Choisissez « Sur l'écran d'accueil »" },
-                  { icon: "✅", text: "Appuyez sur Ajouter — c'est fait !" },
-                ].map((s, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 8, background: themeColor, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{s.icon}</div>
-                    <span style={{ fontSize: 13, color: "#374151" }}>{s.text}</span>
-                  </div>
-                ))}
-                <button onClick={dismissCard} style={{ width: "100%", marginTop: 10, padding: "14px", background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-                  J'ai compris
-                </button>
-              </div>
-            )}
-
-            {/* Instructions Android sans prompt */}
-            {!prompt && !isIOS() && (
-              <div style={{ marginBottom: 12 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>Installer sur Android :</p>
-                {[
-                  { icon: "⋮", text: "Menu ⋮ en haut à droite du navigateur" },
-                  { icon: "＋", text: "« Ajouter à l'écran d'accueil »" },
-                  { icon: "✅", text: "Confirmer — votre appli est prête !" },
-                ].map((s, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 8, background: themeColor, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{s.icon}</div>
-                    <span style={{ fontSize: 13, color: "#374151" }}>{s.text}</span>
-                  </div>
-                ))}
-                <button onClick={dismissCard} style={{ width: "100%", marginTop: 10, padding: "14px", background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-                  J'ai compris
-                </button>
-              </div>
-            )}
-
-            <button onClick={dismissCard} style={{ width: "100%", padding: "12px", background: "transparent", color: "#94a3b8", border: "1.5px solid #e2e8f0", borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-              Plus tard
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+  return (
+    <button
+      onClick={handleInstall}
+      disabled={installing}
+      style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", background: themeColor, color: "white", border: "none", borderRadius: 10, cursor: installing ? "default" : "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)", opacity: installing ? 0.75 : 1 }}
+    >
+      <span style={{ fontSize: 16 }}>{installing ? "⏳" : "📲"}</span>
+      {installing ? "Installation…" : "Installer"}
+    </button>
   );
 }
