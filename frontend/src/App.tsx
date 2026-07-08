@@ -373,7 +373,7 @@ function App() {
                     {t('header.manage_pro')}
                   </button>
                 )}
-                {isLoggedIn && !isPublicPage && <InstallAppButton />}
+                {isLoggedIn && !isPublicPage && !pathname.startsWith("/espace-pro") && <InstallAppButton />}
                 {isLoggedIn && !isPublicPage && <NotificationBell />}
                 {(!isLoggedIn || isHome) && (
                   <div ref={langRef} className="relative">
