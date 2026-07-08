@@ -8,6 +8,8 @@ export function ForgotPassword() {
 
   const [step, setStep] = useState<'verify' | 'code' | 'reset'>('verify')
   const [numeroH, setNumeroH] = useState('')
+  const [parentNumeroH, setParentNumeroH] = useState('')
+  const [familyCode, setFamilyCode] = useState('')
   const [otpToken, setOtpToken] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [token, setToken] = useState('')
@@ -35,7 +37,9 @@ export function ForgotPassword() {
     setLoading(true)
     try {
       const result = await api.forgotPasswordVerify(
-        api.normalizeNumeroH(numeroH)
+        api.normalizeNumeroH(numeroH),
+        parentNumeroH.trim() ? api.normalizeNumeroH(parentNumeroH) : undefined,
+        familyCode.trim() ? familyCode.trim().toUpperCase() : undefined
       )
       if (result.success && result.otpToken) {
         setOtpToken(result.otpToken)
@@ -110,16 +114,33 @@ export function ForgotPassword() {
         {step === 'verify' ? (
           <>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Saisissez votre NumeroH pour réinitialiser votre mot de passe.
+              Saisissez votre NumeroH pour vérifier votre identité. Les autres champs sont facultatifs.
             </p>
 
             <div className="field">
-              <label>Votre NumeroH</label>
+              <label>Votre NumeroH <span className="text-red-500">*</span></label>
               <input
                 value={numeroH}
                 onChange={(e) => setNumeroH(e.target.value)}
                 placeholder="Ex: G1C1P2R1E1F1 1"
               />
+            </div>
+            <div className="field">
+              <label>NumeroH d'un parent (père ou mère) <span className="text-gray-400 text-xs font-normal">— facultatif</span></label>
+              <input
+                value={parentNumeroH}
+                onChange={(e) => setParentNumeroH(e.target.value)}
+                placeholder="Ex: G1C1P2R1E1F1 0"
+              />
+            </div>
+            <div className="field">
+              <label>Numéro de l'arbre familial <span className="text-gray-400 text-xs font-normal">— facultatif</span></label>
+              <input
+                value={familyCode}
+                onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
+                placeholder="Ex: FADAMS3"
+              />
+              <span className="text-xs text-gray-400">Visible dans votre arbre généalogique (disponible dès 10 membres)</span>
             </div>
             {error && <div className="error">{error}</div>}
             <div className="actions">

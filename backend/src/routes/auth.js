@@ -590,7 +590,7 @@ function normalizeNumeroHForAuth(numeroH) {
 }
 
 // @route   POST /api/auth/forgot-password/verify
-// @desc    Vérifier l'identité pour réinitialisation : NumeroH uniquement
+// @desc    Vérifier l'identité : NumeroH obligatoire, NumeroH parent et code arbre facultatifs
 // @access  Public
 router.post('/forgot-password/verify', [
   body('numeroH').trim().notEmpty().withMessage('Le NumeroH est requis')
@@ -600,7 +600,7 @@ router.post('/forgot-password/verify', [
     if (!errors.isEmpty()) {
       return res.status(400).json({ success: false, message: 'Données invalides', errors: errors.array() });
     }
-    const { numeroH } = req.body;
+    const { numeroH, parentNumeroH, familyCode } = req.body;
     const normalizedNumeroH = normalizeNumeroHForAuth(numeroH);
 
     const user = await User.findByNumeroH(normalizedNumeroH);
@@ -609,6 +609,36 @@ router.post('/forgot-password/verify', [
     }
     if (user.type === 'defunt' || user.isDeceased) {
       return res.status(403).json({ success: false, message: 'Ce compte ne peut pas réinitialiser un mot de passe.' });
+    }
+
+    // Vérification parent (facultative — si fournie, elle doit correspondre)
+    if (parentNumeroH && parentNumeroH.trim()) {
+      const normalizedParent = normalizeNumeroHForAuth(parentNumeroH);
+      const pereNorm = user.numeroHPere ? normalizeNumeroHForAuth(user.numeroHPere) : '';
+      const mereNorm = user.numeroHMere ? normalizeNumeroHForAuth(user.numeroHMere) : '';
+      const parentMatch = (pereNorm && pereNorm === normalizedParent) || (mereNorm && mereNorm === normalizedParent);
+      if (!parentMatch) {
+        return res.status(400).json({ success: false, message: 'Le NumeroH du parent ne correspond pas.' });
+      }
+    }
+
+    // Vérification arbre familial (facultative — si fournie, elle doit correspondre)
+    if (familyCode && familyCode.trim()) {
+      const codeStr = String(familyCode).trim().toUpperCase();
+      const { Op } = await import('sequelize');
+      const familyTree = await FamilyTree.findOne({
+        where: { familyCode: { [Op.iLike]: codeStr } }
+      });
+      if (!familyTree) {
+        return res.status(400).json({ success: false, message: 'Code de l\'arbre familial introuvable.' });
+      }
+      const treeMembers = familyTree.members || [];
+      const userInTree = treeMembers.includes(normalizedNumeroH) ||
+                         treeMembers.includes(user.numeroH) ||
+                         familyTree.rootMember === user.numeroH;
+      if (!userInTree) {
+        return res.status(400).json({ success: false, message: 'Vous n\'appartenez pas à cet arbre familial.' });
+      }
     }
 
     // Générer un code OTP à 6 chiffres
