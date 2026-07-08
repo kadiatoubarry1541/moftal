@@ -7,6 +7,7 @@ import { getSessionUser, isAdmin, isMasterAdmin, getPhotoUrl, getNumeroHForDispl
 import { config } from "./config/api";
 import DefaultAvatar from "./assets/default-avatar.svg";
 import NotificationBell from "./components/NotificationBell";
+import InstallAppButton from "./components/InstallAppButton";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
 
@@ -372,6 +373,7 @@ function App() {
                     {t('header.manage_pro')}
                   </button>
                 )}
+                {isLoggedIn && !isPublicPage && <InstallAppButton />}
                 {isLoggedIn && !isPublicPage && <NotificationBell />}
                 {(!isLoggedIn || isHome) && (
                   <div ref={langRef} className="relative">

@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useI18n } from '../i18n/useI18n'
-import InstallAppButton from '../components/InstallAppButton'
 
 export function Home() {
   const { t } = useI18n()
@@ -24,11 +23,6 @@ export function Home() {
 
   return (
     <div className="flex-1 flex flex-col">
-
-      {/* Bannière d'installation — tout en haut, visible immédiatement */}
-      <div style={{ display: "flex", justifyContent: "center", padding: "12px 16px 0" }}>
-        <InstallAppButton />
-      </div>
 
       {/* Zone principale : logo + slogan + boutons */}
       <div className="flex-1 flex flex-col items-center justify-center px-4">
