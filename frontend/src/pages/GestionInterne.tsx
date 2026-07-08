@@ -128,7 +128,7 @@ export default function GestionInterne() {
   function ouvrirGestionUrl(path: string, tenantCode: string) {
     const t = localStorage.getItem('token') || '';
     const s = localStorage.getItem('session_user') || '';
-    window.location.href = `https://gestion.moftal.com/${path}/${tenantCode}?_t=${encodeURIComponent(t)}&_s=${encodeURIComponent(s)}`;
+    window.location.href = `https://pro.moftal.com/${path}/${tenantCode}?_t=${encodeURIComponent(t)}&_s=${encodeURIComponent(s)}`;
   }
 
   // Ouvre la gestion : vérifie l'accès, auto-setup tenant_code si manquant
