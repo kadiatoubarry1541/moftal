@@ -29,7 +29,7 @@ keysToClean.forEach(key => {
 const basename = '';
 
 // Sur gestion.moftal.com : récupérer le token passé dans l'URL depuis moftal.com
-if (window.location.hostname === 'pro.moftal.com') {
+if (window.location.hostname === 'gestion.moftal.com') {
   const _p = new URLSearchParams(window.location.search);
   const _t = _p.get('_t');
   const _s = _p.get('_s');
