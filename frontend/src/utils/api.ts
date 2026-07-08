@@ -233,12 +233,12 @@ export const api = {
     }
   },
 
-  // Mot de passe oublié : vérifier identité (NumeroH + NumeroH parent + code arbre familial)
-  async forgotPasswordVerify(numeroH: string, parentNumeroH: string, familyCode: string) {
+  // Mot de passe oublié : vérifier identité (NumeroH uniquement)
+  async forgotPasswordVerify(numeroH: string) {
     const response = await fetch(`${API_BASE_URL}/auth/forgot-password/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ numeroH, parentNumeroH, familyCode })
+      body: JSON.stringify({ numeroH })
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok) {

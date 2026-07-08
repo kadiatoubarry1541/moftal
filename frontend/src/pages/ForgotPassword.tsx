@@ -8,8 +8,6 @@ export function ForgotPassword() {
 
   const [step, setStep] = useState<'verify' | 'code' | 'reset'>('verify')
   const [numeroH, setNumeroH] = useState('')
-  const [parentNumeroH, setParentNumeroH] = useState('')
-  const [familyCode, setFamilyCode] = useState('')
   const [otpToken, setOtpToken] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [token, setToken] = useState('')
@@ -30,16 +28,14 @@ export function ForgotPassword() {
 
   const onVerify = async () => {
     setError('')
-    if (!numeroH.trim() || !parentNumeroH.trim() || !familyCode.trim()) {
-      setError('Veuillez remplir tous les champs.')
+    if (!numeroH.trim()) {
+      setError('Veuillez saisir votre NumeroH.')
       return
     }
     setLoading(true)
     try {
       const result = await api.forgotPasswordVerify(
-        api.normalizeNumeroH(numeroH),
-        api.normalizeNumeroH(parentNumeroH),
-        familyCode.trim().toUpperCase()
+        api.normalizeNumeroH(numeroH)
       )
       if (result.success && result.otpToken) {
         setOtpToken(result.otpToken)
@@ -114,7 +110,7 @@ export function ForgotPassword() {
         {step === 'verify' ? (
           <>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Saisissez votre NumeroH, le NumeroH d'un de vos parents (père ou mère) et le numéro de votre arbre familial pour vérifier votre identité.
+              Saisissez votre NumeroH pour réinitialiser votre mot de passe.
             </p>
 
             <div className="field">
@@ -124,23 +120,6 @@ export function ForgotPassword() {
                 onChange={(e) => setNumeroH(e.target.value)}
                 placeholder="Ex: G1C1P2R1E1F1 1"
               />
-            </div>
-            <div className="field">
-              <label>NumeroH d'un parent (père ou mère)</label>
-              <input
-                value={parentNumeroH}
-                onChange={(e) => setParentNumeroH(e.target.value)}
-                placeholder="Ex: G1C1P2R1E1F1 0"
-              />
-            </div>
-            <div className="field">
-              <label>Numéro de l'arbre familial</label>
-              <input
-                value={familyCode}
-                onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
-                placeholder="Ex: FADAMS3"
-              />
-              <span className="text-xs text-gray-400">Visible dans votre arbre généalogique (disponible dès 10 membres)</span>
             </div>
             {error && <div className="error">{error}</div>}
             <div className="actions">
@@ -192,7 +171,7 @@ export function ForgotPassword() {
             <button
               type="button"
               className="link text-sm text-gray-500 dark:text-gray-400"
-              onClick={() => { setStep('verify'); setError(''); setOtpCode(''); setEmailInfo(null); }}
+              onClick={() => { setStep('verify'); setError(''); setOtpCode(''); setEmailInfo(null) }}
             >
               ← Modifier les informations de vérification
             </button>
