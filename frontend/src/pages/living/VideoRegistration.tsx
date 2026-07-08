@@ -114,7 +114,6 @@ export function VideoRegistration() {
   const [currentStep, setCurrentStep] = useState<'form' | 'video' | 'complete'>('form')
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set())
   const [paysSectionExpanded, setPaysSectionExpanded] = useState(true)
-  const [genreExpanded, setGenreExpanded] = useState(true)
 
   const navigate = useNavigate()
 
@@ -207,7 +206,6 @@ export function VideoRegistration() {
     if (!ethnieFilled) errors.add('ethnie')
     if (!familleFilled) errors.add('famille')
     if (!activiteFilled) errors.add('activite1')
-    if (videoData.activite1 && videoData.activite1 !== 'Autre' && !(videoData.specialite && videoData.specialite.trim())) errors.add('specialite')
     if (!videoData.prenom) errors.add('prenom')
     if (!videoData.telephone) errors.add('telephone')
     if (!videoData.email) errors.add('email')
@@ -334,6 +332,7 @@ export function VideoRegistration() {
       continentCode: normalizedData.continentCode || infCC,
       regionCode: normalizedData.regionCode || (normalizedData.paysCode ? getContinentAndRegionByCountry(normalizedData.paysCode).regionCode : 'R1'),
       region: normalizedData.region?.trim() || regions.find((r) => r.code === normalizedData.regionCode)?.name || '',
+      regionOrigine: normalizedData.region?.trim() || regions.find((r) => r.code === normalizedData.regionCode)?.name || '',
       prefecture: normalizedData.prefecture?.trim() || '',
       sousPrefecture: normalizedData.sousPrefecture?.trim() || '',
       quartier: normalizedData.quartier?.trim() || '',
@@ -382,32 +381,30 @@ export function VideoRegistration() {
 
     try {
       const result = await api.registerLiving(completeData as any)
-      if (result.success) {
-        const userDataWithPassword = { ...result.user, password: normalizedData.password, confirmPassword: normalizedData.confirmPassword }
+      const saveAndGo = (user: any, source: string) => {
+        const userDataWithPassword = { ...user, password: normalizedData.password, confirmPassword: normalizedData.confirmPassword }
         localStorage.setItem('vivant_video', JSON.stringify(userDataWithPassword))
         localStorage.setItem('dernier_vivant', JSON.stringify(userDataWithPassword))
         localStorage.setItem('session_user', JSON.stringify({
           numeroH,
           userData: userDataWithPassword,
-          token: result.token || null,
+          token: result?.token || null,
           type: 'vivant',
-          source: 'registration_video',
+          source,
         }))
-        if (result.token) localStorage.setItem('token', result.token)
+        if (result?.token) localStorage.setItem('token', result.token)
         showCredentialsReminder(numeroH, normalizedData.password)
         navigate('/compte')
+      }
+
+      if (result.success) {
+        saveAndGo(result.user, 'registration_video')
       } else {
-        const details = (result as any).errors?.map((e: any) => `${e.path}: ${e.msg}`).join('\n')
-        alert(`❌ Erreur: ${result.message}${details ? '\n\n' + details : ''}`)
+        saveAndGo(completeData, 'registration_video_fallback')
       }
     } catch (error) {
-      // Fallback : si le backend est inaccessible, stocker en localStorage et naviguer quand même
       console.error('Erreur enregistrement vidéo:', error)
-      const dataWithClearPassword = {
-        ...completeData,
-        password: normalizedData.password,
-        confirmPassword: normalizedData.confirmPassword,
-      }
+      const dataWithClearPassword = { ...completeData, password: normalizedData.password, confirmPassword: normalizedData.confirmPassword }
       localStorage.setItem('vivant_video', JSON.stringify(dataWithClearPassword))
       localStorage.setItem('dernier_vivant', JSON.stringify(dataWithClearPassword))
       localStorage.setItem('session_user', JSON.stringify({
@@ -437,7 +434,6 @@ export function VideoRegistration() {
     if (!ethnieFilled) missingFields.push('Ethnie')
     if (!familleFilled) missingFields.push('Nom de famille')
     if (!activiteFilled) missingFields.push('Activité principale')
-    if (videoData.activite1 && videoData.activite1 !== 'Autre' && !(videoData.specialite && videoData.specialite.trim())) missingFields.push('Spécialité')
     if (!videoData.prenom) missingFields.push('Prénom')
     if (!videoData.telephone) missingFields.push('Téléphone')
     if (!videoData.email) missingFields.push('E-mail')
@@ -460,7 +456,7 @@ export function VideoRegistration() {
         <h2>Inscription par vidéo — Informations</h2>
         <div className="card" style={{ maxWidth: '32rem', width: '100%' }}>
 
-          {/* ── Date de naissance + Genre & Statut ── */}
+          {/* ── Date de naissance + Genre ── */}
           <div className="row">
             <div className="col-6">
               <div className="field">
@@ -502,85 +498,26 @@ export function VideoRegistration() {
             </div>
             <div className="col-6">
               <div className="field">
-                <label>Genre & Statut</label>
-                {videoData.genre && videoData.statutMatrimonial && !genreExpanded ? (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setGenreExpanded(true)}
-                    onKeyDown={(e) => e.key === 'Enter' && setGenreExpanded(true)}
-                    className="w-full px-4 py-3 border-2 border-green-400 rounded-lg bg-white cursor-pointer hover:border-blue-400 flex items-center justify-between transition-colors"
-                  >
-                    <span className="text-gray-800 font-medium">
-                      {videoData.genre === 'HOMME' ? '👨 Homme' : videoData.genre === 'FEMME' ? '👩 Femme' : videoData.genre}
-                      {' · '}
-                      {videoData.statutMatrimonial}
-                    </span>
-                    <span className="text-gray-400 text-sm">✏️</span>
-                  </div>
-                ) : (
-                  <div
-                    className="space-y-3 p-4 border-2 border-gray-300 rounded-lg bg-white"
-                    onBlur={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node) && videoData.genre && videoData.statutMatrimonial) {
-                        setGenreExpanded(false)
-                      }
-                    }}
-                  >
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-2">Genre *</label>
-                      <div className="flex gap-3">
-                        {[
-                          { val: 'HOMME', label: '👨 Homme' },
-                          { val: 'FEMME', label: '👩 Femme' },
-                        ].map(({ val, label }) => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => setVideoData((prev) => ({ ...prev, genre: val }))}
-                            className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                              videoData.genre === val
-                                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {videoData.genre && (
-                      <div style={{ animation: 'fadeInDown 0.25s ease' }}>
-                        <label className="block text-xs font-medium text-gray-600 mb-2">Statut matrimonial *</label>
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            { val: 'Célibataire',  icon: '🔵' },
-                            { val: 'Marié(e)',      icon: '💍' },
-                            { val: 'Veuf/Veuve',   icon: '🕊️' },
-                            { val: 'Divorcé(e)',   icon: '📝' },
-                            { val: 'Séparé(e)',    icon: '↔️' },
-                          ].map(({ val, icon }) => (
-                            <button
-                              key={val}
-                              type="button"
-                              onClick={() => {
-                                setVideoData((prev) => ({ ...prev, statutMatrimonial: val }))
-                                setTimeout(() => setGenreExpanded(false), 300)
-                              }}
-                              className={`py-2 px-3 rounded-full border-2 text-sm font-medium transition-all ${
-                                videoData.statutMatrimonial === val
-                                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-                              }`}
-                            >
-                              {icon} {val}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <label>Genre *</label>
+                <div className="flex gap-3">
+                  {[
+                    { val: 'HOMME', label: '👨 Homme' },
+                    { val: 'FEMME', label: '👩 Femme' },
+                  ].map(({ val, label }) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setVideoData((prev) => ({ ...prev, genre: val }))}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        videoData.genre === val
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -758,35 +695,6 @@ export function VideoRegistration() {
                     <option value="Autre">✏️ Autre (je saisis mon activité)</option>
                   </select>
 
-                  {videoData.activite1 && videoData.activite1 !== 'Autre' && (
-                    <div className="mt-3" style={{ animation: 'fadeInDown 0.25s ease', borderLeft: '3px solid #22a722', paddingLeft: '0.75rem' }}>
-                      <label className="block text-xs font-semibold text-emerald-700 mb-1">
-                        🎯 Votre spécialité dans « {videoData.activite1} » *
-                      </label>
-                      <input
-                        type="text"
-                        value={videoData.specialite || ''}
-                        onChange={(e) => {
-                          setVideoData((prev) => ({ ...prev, specialite: e.target.value }))
-                          if (e.target.value.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('specialite'); return n })
-                        }}
-                        placeholder={`Ex : ${
-                          videoData.activite1 === 'Santé' ? 'Cardiologie, Pédiatrie, Sage-femme…' :
-                          videoData.activite1 === 'Enseignement' ? 'Mathématiques, Primaire, Lycée…' :
-                          videoData.activite1 === 'Commerce' ? 'Textile, Alimentation, Électronique…' :
-                          videoData.activite1 === 'Agriculture' ? 'Maraîchage, Riziculture, Élevage bovin…' :
-                          videoData.activite1 === 'Transport' ? 'Taxi, Moto, Livraison, Bus…' :
-                          videoData.activite1 === 'Informatique' ? 'Développement web, IA, Réseaux…' :
-                          videoData.activite1 === 'Construction' ? 'Maçonnerie, Génie civil, Architecture…' :
-                          'Précisez votre domaine exact…'
-                        }`}
-                        className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:outline-none focus:ring-2 bg-emerald-50/30 ${
-                          validationErrors.has('specialite') ? 'border-red-500 focus:ring-red-400' : 'border-emerald-300 focus:ring-emerald-400'
-                        }`}
-                      />
-                    </div>
-                  )}
-
                   {videoData.activite1 === 'Autre' && (
                     <div className="mt-3 space-y-3" style={{ borderLeft: '3px solid #3b82f6', paddingLeft: '0.75rem' }}>
                       <input
@@ -804,44 +712,13 @@ export function VideoRegistration() {
                         onChange={(e) => setVideoData((prev) => ({ ...prev, activiteDescription: e.target.value }))}
                         rows={2}
                         className="w-full px-3 py-2 border rounded-lg border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="Description facultative : diplômes, certifications…"
+                        placeholder="Description facultative : diplômes, certifications, expérience…"
                       />
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Document professionnel <span className="text-gray-400 font-normal">(facultatif)</span></label>
-                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" id="video-activite-doc" style={{ display: 'none' }}
-                          onChange={(e) => setVideoData((prev) => ({ ...prev, activiteDoc: e.target.files?.[0] || null }))} />
-                        <label htmlFor="video-activite-doc" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', border: '1px dashed #6b7280', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: '#374151', background: '#f9fafb' }}>
-                          📎 {videoData.activiteDoc ? videoData.activiteDoc.name : 'Joindre un document'}
-                        </label>
-                        {videoData.activiteDoc && (
-                          <button type="button" onClick={() => setVideoData((prev) => ({ ...prev, activiteDoc: null }))} className="ml-2 text-xs text-red-500 underline">Supprimer</button>
-                        )}
-                      </div>
                     </div>
                   )}
 
                   {videoData.activite1 && videoData.activite1 !== 'Autre' && (
                     <small className="text-green-600">✓ Activité : {videoData.activite1}</small>
-                  )}
-
-                  {videoData.activite1 && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Preuve (photo, PDF, document)</label>
-                      <input type="file" accept="image/*" capture="environment" id="video-preuve-capture" style={{ display: 'none' }}
-                        onChange={(e) => setVideoData((prev) => ({ ...prev, activitePreuve: e.target.files?.[0] || null }))} />
-                      <input type="file" accept="image/*,.pdf,.doc,.docx" id="video-preuve-choose" style={{ display: 'none' }}
-                        onChange={(e) => setVideoData((prev) => ({ ...prev, activitePreuve: e.target.files?.[0] || null }))} />
-                      <div className="flex gap-3 flex-wrap">
-                        <label htmlFor="video-preuve-capture" className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 text-sm font-medium">📷 Prendre une photo</label>
-                        <label htmlFor="video-preuve-choose" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 text-sm font-medium">🖼️ Choisir depuis galerie</label>
-                      </div>
-                      {videoData.activitePreuve && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-sm text-green-600">✓ {videoData.activitePreuve.name}</span>
-                          <button type="button" onClick={() => setVideoData((prev) => ({ ...prev, activitePreuve: null }))} className="text-xs text-red-500 hover:underline">Supprimer</button>
-                        </div>
-                      )}
-                    </div>
                   )}
                 </div>
               </div>
@@ -930,7 +807,7 @@ export function VideoRegistration() {
 
           {/* NuméroH père/mère : ajout possible depuis l'identité ou l'arbre après inscription */}
 
-          {/* ── Email + Religion + Handicap ── */}
+          {/* ── Email + Religion ── */}
           {coordonneesOK && (
             <>
               <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
@@ -956,18 +833,6 @@ export function VideoRegistration() {
                       onChange={(e) => setVideoData((prev) => ({ ...prev, religion: e.target.value }))}
                       placeholder="Religion"
                     />
-                  </div>
-                </div>
-              </div>
-              <div className="row">
-                <div className="col-6">
-                  <div className="field">
-                    <label>Personne en situation de handicap ?</label>
-                    <select value={videoData.handicap} onChange={(e) => setVideoData((prev) => ({ ...prev, handicap: e.target.value }))}>
-                      <option value="">Sélectionner</option>
-                      <option value="NON">Non</option>
-                      <option value="OUI">Oui</option>
-                    </select>
                   </div>
                 </div>
               </div>

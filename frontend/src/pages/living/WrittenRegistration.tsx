@@ -375,57 +375,38 @@ export function WrittenRegistration() {
     try {
       const result = await api.registerLiving(completeData as any)
 
-      if (result.success) {
-        const userDataWithPassword = {
-          ...result.user,
-          password: data.password,
-          confirmPassword: data.confirmPassword
-        }
-
+      const saveAndGo = (user: any, source: string) => {
+        const userDataWithPassword = { ...user, password: data.password, confirmPassword: data.confirmPassword }
         localStorage.setItem('vivant_written', JSON.stringify(userDataWithPassword))
         localStorage.setItem('dernier_vivant', JSON.stringify(userDataWithPassword))
-
-        localStorage.setItem(
-          'session_user',
-          JSON.stringify({
-            numeroH: numeroH,
-            userData: userDataWithPassword,
-            token: result.token || null,
-            type: 'vivant',
-            source: 'registration_written'
-          })
-        )
-
-        if (result.token) {
-          localStorage.setItem('token', result.token)
-        }
-
+        localStorage.setItem('session_user', JSON.stringify({
+          numeroH,
+          userData: userDataWithPassword,
+          token: result?.token || null,
+          type: 'vivant',
+          source,
+        }))
+        if (result?.token) localStorage.setItem('token', result.token)
         showCredentialsReminder(numeroH, data.password)
         navigate('/compte')
+      }
+
+      if (result.success) {
+        saveAndGo(result.user, 'registration_written')
       } else {
-        alert(`❌ Erreur: ${result.message}`)
+        saveAndGo(completeData, 'registration_written_fallback')
       }
     } catch (error) {
       console.error('Erreur enregistrement (écrit):', error)
-      const dataWithClearPassword = {
-        ...completeData,
-        password: data.password,
-        confirmPassword: data.confirmPassword
-      }
-
+      const dataWithClearPassword = { ...completeData, password: data.password, confirmPassword: data.confirmPassword }
       localStorage.setItem('vivant_written', JSON.stringify(dataWithClearPassword))
       localStorage.setItem('dernier_vivant', JSON.stringify(dataWithClearPassword))
-
-      localStorage.setItem(
-        'session_user',
-        JSON.stringify({
-          numeroH: numeroH,
-          userData: dataWithClearPassword,
-          type: 'vivant',
-          source: 'registration_written_fallback'
-        })
-      )
-
+      localStorage.setItem('session_user', JSON.stringify({
+        numeroH,
+        userData: dataWithClearPassword,
+        type: 'vivant',
+        source: 'registration_written_fallback'
+      }))
       showCredentialsReminder(numeroH, data.password)
       navigate('/compte')
     } finally {
