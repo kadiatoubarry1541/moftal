@@ -28,6 +28,23 @@ keysToClean.forEach(key => {
 
 const basename = '';
 
+// Sur gestion.moftal.com : récupérer le token passé dans l'URL depuis moftal.com
+if (window.location.hostname === 'gestion.moftal.com') {
+  const _p = new URLSearchParams(window.location.search);
+  const _t = _p.get('_t');
+  const _s = _p.get('_s');
+  if (_t) { localStorage.setItem('token', decodeURIComponent(_t)); _p.delete('_t'); }
+  if (_s) { localStorage.setItem('session_user', decodeURIComponent(_s)); _p.delete('_s'); }
+  if (_t || _s) {
+    const clean = window.location.pathname + (_p.toString() ? '?' + _p.toString() : '');
+    window.history.replaceState({}, '', clean);
+  }
+  // Si pas de token du tout → renvoyer vers moftal.com pour se connecter
+  if (!localStorage.getItem('token')) {
+    window.location.href = `https://moftal.com/login?redirect=${encodeURIComponent(window.location.href)}`;
+  }
+}
+
 // Recharge automatique si un chunk JS est introuvable après un nouveau déploiement
 window.addEventListener('unhandledrejection', (event) => {
   const msg = (event.reason as Error)?.message || '';

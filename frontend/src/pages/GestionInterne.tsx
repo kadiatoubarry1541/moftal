@@ -94,7 +94,7 @@ export default function GestionInterne() {
     const a = accounts[0];
     if (a.tenant_code) {
       const info = getTypeInfo(a.type);
-      navigate(`/${info.path}/${a.tenant_code}`);
+      ouvrirGestionUrl(info.path, a.tenant_code);
     }
   }, [accounts, accesGI]);
 
@@ -124,6 +124,13 @@ export default function GestionInterne() {
   // Raccourci pour l'ancien bouton (5 ans)
   const payerGestionInterneVie = () => payerGestionInterne('cinqAns');
 
+  // Redirige vers gestion.moftal.com avec le token d'authentification
+  function ouvrirGestionUrl(path: string, tenantCode: string) {
+    const t = localStorage.getItem('token') || '';
+    const s = localStorage.getItem('session_user') || '';
+    window.location.href = `https://gestion.moftal.com/${path}/${tenantCode}?_t=${encodeURIComponent(t)}&_s=${encodeURIComponent(s)}`;
+  }
+
   // Ouvre la gestion : vérifie l'accès, auto-setup tenant_code si manquant
   async function ouvrirGestion(account: any) {
     // Bloquer si l'essai est terminé et pas payé à vie
@@ -133,7 +140,7 @@ export default function GestionInterne() {
     }
     const info = getTypeInfo(account.type);
     if (account.tenant_code) {
-      navigate(`/${info.path}/${account.tenant_code}`);
+      ouvrirGestionUrl(info.path, account.tenant_code);
       return;
     }
     try {
@@ -143,7 +150,7 @@ export default function GestionInterne() {
       });
       const d = await r.json();
       if (d.success && d.tenantCode) {
-        navigate(`/${info.path}/${d.tenantCode}`);
+        ouvrirGestionUrl(info.path, d.tenantCode);
       } else {
         alert(d.message || "Impossible d'activer la gestion interne. Contactez l'administrateur.");
       }

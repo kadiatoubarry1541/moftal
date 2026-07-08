@@ -2459,7 +2459,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],
-      connectSrc: ["'self'", "wss:", "ws:", "https://api.moftal.com", "https://moftal.com", "http://localhost:5002", "http://localhost:7777", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+      connectSrc: ["'self'", "wss:", "ws:", "https://api.moftal.com", "https://moftal.com", "https://gestion.moftal.com", "http://localhost:5002", "http://localhost:7777", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'", "data:", "blob:"],
@@ -2478,6 +2478,7 @@ const rawOrigins = [
   ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : []),
   'https://moftal.com',
   'https://www.moftal.com',
+  'https://gestion.moftal.com',
   'http://localhost:3000',
   'http://localhost:5173',
 ].filter(Boolean);
