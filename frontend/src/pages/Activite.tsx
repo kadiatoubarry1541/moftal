@@ -787,17 +787,17 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
             {/* Interface TOUJOURS visible — le contenu s'affiche dès l'ouverture */}
             <div className="space-y-4">
               {/* Filtres */}
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 w-full">
                 <button type="button" onClick={() => setFeedFilter('all')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium text-center whitespace-nowrap ${feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                   💬 Messages
                 </button>
                 <button type="button" onClick={() => setFeedFilter('opportunite')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${feedFilter === 'opportunite' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}>
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium text-center whitespace-nowrap ${feedFilter === 'opportunite' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}>
                   🌟 Opportunités
                 </button>
                 <button type="button" onClick={() => setFeedFilter('outil')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium ${feedFilter === 'outil' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'}`}>
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium text-center whitespace-nowrap ${feedFilter === 'outil' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'}`}>
                   🛠️ Outils
                 </button>
               </div>

@@ -10,12 +10,24 @@ async function verifyTenant(req, res, next) {
   const userNumeroH = req.user?.numeroH || req.userId;
   try {
     if (isAdminUser) {
-      const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code=:code LIMIT 1`, { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT });
+      const [tenant] = await sequelize.query(
+        `SELECT mt.*, pa.photo AS pa_photo FROM management_tenants mt
+         LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
+         WHERE mt.tenant_code=:code LIMIT 1`,
+        { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+      );
+      if (tenant) tenant.logo_url = tenant.logo_url || tenant.pa_photo || null;
       req.tenant = tenant || { tenant_code: tenantCode, name: 'Entreprise Admin', type: 'enterprise', owner_numero_h: 'ADMIN-G7', is_active: true };
       return next();
     }
-    const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code=:code AND owner_numero_h=:n LIMIT 1`, { replacements: { code: tenantCode, n: userNumeroH }, type: sequelize.QueryTypes.SELECT });
+    const [tenant] = await sequelize.query(
+      `SELECT mt.*, pa.photo AS pa_photo FROM management_tenants mt
+       LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
+       WHERE mt.tenant_code=:code AND mt.owner_numero_h=:n LIMIT 1`,
+      { replacements: { code: tenantCode, n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+    );
     if (!tenant) return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    tenant.logo_url = tenant.logo_url || tenant.pa_photo || null;
     req.tenant = tenant; next();
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 }

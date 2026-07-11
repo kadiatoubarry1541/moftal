@@ -206,7 +206,11 @@ export default function GestionNgo() {
       {/* ── Header ── */}
       <div style={{ background: "linear-gradient(135deg,#be123c,#e11d48)", padding: "28px 28px 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>🤝</div>
+          {tenant?.logo_url ? (
+            <img src={tenant.logo_url} alt="" style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover", flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, flexShrink: 0 }}>🤝</div>
+          )}
           <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontWeight: 800, color: "white", fontSize: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "ONG & Associations"}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>Code : {tenantCode} · ONG & Associations</div>

@@ -140,7 +140,11 @@ export default function GestionImmobilier() {
 
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg,#92400e,#b45309)", borderRadius: 16, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ fontSize: 44, flexShrink: 0 }}>🏠</span>
+        {tenant?.logo_url ? (
+          <img src={tenant.logo_url} alt="" style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "rgba(255,255,255,0.15)" }} />
+        ) : (
+          <span style={{ fontSize: 44, flexShrink: 0 }}>🏠</span>
+        )}
         <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
           <div style={{ fontWeight: 800, color: "white", fontSize: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Gestion Immobilière"}</div>
           <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>Code : {tenantCode} · Gestion Interne</div>

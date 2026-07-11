@@ -190,7 +190,11 @@ export default function GestionVendeur() {
       {/* HEADER */}
       <div style={{ background: GRADIENT, borderRadius: 16, padding: "24px 28px", marginBottom: 24, color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 40, flexShrink: 0 }}>🛒</span>
+          {tenant?.logo_url ? (
+            <img src={tenant.logo_url} alt="" style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "rgba(255,255,255,0.15)" }} />
+          ) : (
+            <span style={{ fontSize: 40, flexShrink: 0 }}>🛒</span>
+          )}
           <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Vente au Détail"}</h1>
             <p style={{ margin: 0, opacity: 0.85, fontSize: 14 }}>Gestion Interne — Vendeur</p>
