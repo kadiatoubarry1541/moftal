@@ -70,13 +70,16 @@ const _apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:5002').repla
 const _proPathMatch = _pathname.match(/^\/espace-pro\/([^/]+)/);
 const _gestionMatch = _pathname.match(/^\/gestion-[^/]+\/([^/]+)/);
 
+const _pageOrigin = encodeURIComponent(window.location.origin);
+
 if (_proPathMatch && _manifestLink) {
   // EspacePro (/espace-pro/:id) → manifest par ID de compte
-  _manifestLink.setAttribute('href', `${_apiBase}/api/professionals/pro-manifest/${_proPathMatch[1]}`);
+  // On passe l'origine de la page pour que le backend construise des URLs absolues correctes
+  _manifestLink.setAttribute('href', `${_apiBase}/api/professionals/pro-manifest/${_proPathMatch[1]}?origin=${_pageOrigin}`);
 } else if (_gestionMatch && _manifestLink) {
   // Pages Gestion (/gestion-clinique/:code etc.) → manifest par tenantCode
   const _encodedStart = encodeURIComponent(_pathname);
-  _manifestLink.setAttribute('href', `${_apiBase}/api/professionals/pro-manifest/by-tenant/${_gestionMatch[1]}?startUrl=${_encodedStart}`);
+  _manifestLink.setAttribute('href', `${_apiBase}/api/professionals/pro-manifest/by-tenant/${_gestionMatch[1]}?startUrl=${_encodedStart}&origin=${_pageOrigin}`);
 }
 
 // Capturer le prompt d'installation PWA le plus tôt possible (avant montage React)

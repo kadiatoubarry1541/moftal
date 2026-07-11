@@ -261,7 +261,10 @@ router.get('/pro-manifest/:id', async (req, res) => {
     };
 
     const themeColor = TYPE_COLORS[account.type] || '#1a8f1a';
-    const startUrl = `/espace-pro/${account.id}`;
+    const relativeStart = `/espace-pro/${account.id}`;
+    const pageOrigin = req.query.origin ? decodeURIComponent(req.query.origin) : '';
+    const startUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
+    const scopeUrl = pageOrigin ? `${pageOrigin}/` : '/';
 
     // Détecter le type MIME réel du logo
     let iconMime = 'image/svg+xml';
@@ -286,7 +289,7 @@ router.get('/pro-manifest/:id', async (req, res) => {
       short_name: account.name.slice(0, 12),
       description: `Gestion — ${account.name}`,
       start_url: startUrl,
-      scope: '/',
+      scope: scopeUrl,
       display: 'standalone',
       orientation: 'portrait',
       lang: 'fr',
@@ -333,7 +336,10 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
 router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
   try {
     const { tenantCode } = req.params;
-    const startUrl = req.query.startUrl || `/gestion-interne`;
+    const relativeStart = req.query.startUrl || `/gestion-interne`;
+    const pageOrigin = req.query.origin ? decodeURIComponent(req.query.origin) : '';
+    const startUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
+    const scopeUrl = pageOrigin ? `${pageOrigin}/` : '/';
 
     const [tenant] = await sequelize.query(
       `SELECT tenant_code, name, type, logo_url FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
@@ -377,7 +383,7 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
       short_name: name.slice(0, 12),
       description: `Gestion — ${name}`,
       start_url: startUrl,
-      scope: '/',
+      scope: scopeUrl,
       display: 'standalone',
       orientation: 'portrait',
       lang: 'fr',
