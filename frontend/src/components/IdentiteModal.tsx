@@ -101,7 +101,17 @@ export default function IdentiteModal({
               {showSettings && (
                 <>
                   <div className="fixed inset-0 z-[60]" onClick={() => setShowSettings(false)} />
-                  <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 z-[70] overflow-hidden" style={{ minWidth: 220, maxWidth: '90vw' }}>
+                  <div
+                    className="fixed z-[70] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+                    style={{
+                      top: 'auto',
+                      right: 16,
+                      left: 'auto',
+                      width: 'min(280px, calc(100vw - 32px))',
+                      maxHeight: 'calc(100vh - 120px)',
+                      overflowY: 'auto',
+                    }}
+                  >
                     {/* Page d'accueil */}
                     {userData?.numeroH && (
                       <button
@@ -117,7 +127,7 @@ export default function IdentiteModal({
                         <span>Changer ma page d'accueil</span>
                       </button>
                     )}
-                    {/* Langue */}
+                    {/* Langue de l'application */}
                     <div className="border-b border-gray-100">
                       <button
                         type="button"
@@ -126,30 +136,38 @@ export default function IdentiteModal({
                       >
                         <span className="flex items-center gap-3">
                           <span>🌐</span>
-                          <span>{LANG_LABELS[lang]}</span>
+                          <span className="text-left">
+                            <span className="block font-semibold text-gray-800">Langue de l'application</span>
+                            <span className="block text-xs text-gray-400 font-normal">{LANG_LABELS[lang]}</span>
+                          </span>
                         </span>
-                        <span className="text-xs text-gray-400">{showLang ? '▲' : '▼'}</span>
+                        <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{showLang ? '▲' : '▼'}</span>
                       </button>
                       {showLang && (
-                        <div className="px-3 pb-3 grid grid-cols-2 gap-1.5 border-t border-slate-100 pt-2">
-                          {Object.entries(LANG_LABELS).map(([code, label]) => {
-                            const isSelected = lang === code;
-                            return (
-                              <button
-                                key={code}
-                                type="button"
-                                onClick={() => setLang(code as "fr" | "en" | "ar" | "man" | "pul")}
-                                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border-2 text-xs font-medium transition-all ${
-                                  isSelected
-                                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                    : "border-slate-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
-                                }`}
-                              >
-                                <span className="flex-1 text-left">{label}</span>
-                                {isSelected && <span className="text-emerald-600">✓</span>}
-                              </button>
-                            );
-                          })}
+                        <div className="px-4 pb-3 border-t border-slate-100">
+                          <p className="text-xs text-slate-400 py-2">
+                            Choisissez la langue dans laquelle l'application s'affiche pour vous.
+                          </p>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {Object.entries(LANG_LABELS).map(([code, label]) => {
+                              const isSelected = lang === code;
+                              return (
+                                <button
+                                  key={code}
+                                  type="button"
+                                  onClick={() => setLang(code as "fr" | "en" | "ar" | "man" | "pul")}
+                                  className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border-2 text-xs font-medium transition-all ${
+                                    isSelected
+                                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                                      : "border-slate-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
+                                  }`}
+                                >
+                                  <span className="flex-1 text-left">{label}</span>
+                                  {isSelected && <span className="text-emerald-600">✓</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
