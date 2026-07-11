@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { config } from "../config/api";
 import Activite from "./Activite";
-import InstallAppButton from "../components/InstallAppButton";
 import { AddPersonModal } from "../components/AddPersonModal";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
@@ -280,7 +279,6 @@ export default function GestionInterne() {
       <div style={{ maxWidth:1000, margin:"0 auto", padding:"32px 20px" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
-        <div className="mb-3"><InstallAppButton /></div>
         <TabButtons proLabel="Espace Pro" onProClick={() => setTabOverride('pro')} />
 
         {tab === 'pro' && <>
@@ -508,8 +506,6 @@ export default function GestionInterne() {
         >
           ← Retour
         </button>
-
-        <div className="mb-3"><InstallAppButton /></div>
 
         {/* Séparateur visuel avant les onglets */}
         <div style={{ borderTop:"1.5px solid #e2e8f0", marginBottom:16 }} />
