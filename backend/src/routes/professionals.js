@@ -311,10 +311,13 @@ router.get('/pro-manifest/:id', async (req, res) => {
 router.get('/tenant-icon/:tenantCode', async (req, res) => {
   try {
     const [tenant] = await sequelize.query(
-      `SELECT logo_url FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
+      `SELECT mt.logo_url, pa.photo
+       FROM management_tenants mt
+       LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
+       WHERE mt.tenant_code = :code LIMIT 1`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
-    const logo = tenant?.logo_url;
+    const logo = tenant?.logo_url || tenant?.photo;
     if (!logo) return res.status(302).redirect('/logo-moftal.svg');
 
     if (logo.startsWith('data:')) {
@@ -342,7 +345,10 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     const scopeUrl = pageOrigin ? `${pageOrigin}/` : '/';
 
     const [tenant] = await sequelize.query(
-      `SELECT tenant_code, name, type, logo_url FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
+      `SELECT mt.tenant_code, mt.name, mt.type, COALESCE(mt.logo_url, pa.photo) AS logo_url
+       FROM management_tenants mt
+       LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
+       WHERE mt.tenant_code = :code LIMIT 1`,
       { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
 
@@ -436,8 +442,10 @@ router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
     const tenantCode = account.tenant_code || `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
 
     await sequelize.query(
-      `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
-      { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
+      `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, logo_url)
+       VALUES (:code, :type, :name, :owner, :logo)
+       ON CONFLICT (tenant_code) DO UPDATE SET logo_url = COALESCE(management_tenants.logo_url, EXCLUDED.logo_url)`,
+      { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH, logo: account.photo || null } }
     ).catch(() => {});
 
     if (!account.tenant_code) {
