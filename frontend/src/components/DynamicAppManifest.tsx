@@ -1,9 +1,6 @@
 import { useEffect } from "react";
-import { config } from "../config/api";
 
 const API = typeof window !== "undefined" ? window.location.origin : "";
-// Base de l'API backend (ex: https://api.moftal.com)
-const API_BACKEND = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
 interface DynamicAppManifestProps {
   name: string;
@@ -33,19 +30,18 @@ export default function DynamicAppManifest({
 
     const pageOrigin = encodeURIComponent(window.location.origin);
 
-    // EspacePro (/espace-pro/:id) — manifest par ID de compte
+    // EspacePro (/espace-pro/:id) — manifest same-origin via proxy /api/
     if (proId && startUrl.startsWith("/espace-pro/")) {
-      link.setAttribute("href", `${API_BACKEND}/api/professionals/pro-manifest/${proId}?origin=${pageOrigin}`);
+      link.setAttribute("href", `/api/professionals/pro-manifest/${proId}?origin=${pageOrigin}`);
       return () => { if (originalHref) link.setAttribute("href", originalHref); };
     }
 
     // Pages Gestion (/gestion-clinique/:code, /gestion-ecole/:code, etc.)
-    // On extrait le tenantCode depuis la startUrl
     const gestionMatch = startUrl.match(/^\/gestion-[^/]+\/([^/]+)/);
     if (gestionMatch) {
       const tenantCode = gestionMatch[1];
       const encodedStart = encodeURIComponent(startUrl);
-      link.setAttribute("href", `${API_BACKEND}/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodedStart}&origin=${pageOrigin}`);
+      link.setAttribute("href", `/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodedStart}&origin=${pageOrigin}`);
       return () => { if (originalHref) link.setAttribute("href", originalHref); };
     }
 
