@@ -264,7 +264,8 @@ router.get('/pro-manifest/:id', async (req, res) => {
     const relativeStart = `/espace-pro/${account.id}`;
     const pageOrigin = req.query.origin ? decodeURIComponent(req.query.origin) : '';
     const startUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
-    const scopeUrl = pageOrigin ? `${pageOrigin}/` : '/';
+    // Scope spécifique à ce compte — évite le conflit avec le scope "/" de l'app Moftal principale
+    const scopeUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
 
     // Détecter le type MIME réel du logo
     let iconMime = 'image/svg+xml';
@@ -342,7 +343,8 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     const relativeStart = req.query.startUrl || `/gestion-interne`;
     const pageOrigin = req.query.origin ? decodeURIComponent(req.query.origin) : '';
     const startUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
-    const scopeUrl = pageOrigin ? `${pageOrigin}/` : '/';
+    // Scope spécifique à cet établissement — évite le conflit avec le scope "/" de l'app Moftal principale
+    const scopeUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
 
     const [tenant] = await sequelize.query(
       `SELECT mt.tenant_code, mt.name, mt.type, COALESCE(mt.logo_url, pa.photo) AS logo_url
