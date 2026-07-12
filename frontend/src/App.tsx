@@ -422,8 +422,8 @@ function App() {
             </div>
           </div>
 
-          {/* Ligne 2 : Carte Profil complète */}
-          {isLoggedIn && !isPublicPage && currentUser && (
+          {/* Ligne 2 : Carte Profil complète — visible uniquement sur /famille */}
+          {isLoggedIn && !isPublicPage && currentUser && (pathname === '/famille' || pathname.startsWith('/famille/')) && (
             <div className="px-3 pt-1 pb-2 border-t border-gray-100 dark:border-gray-800">
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-3">
                 <div className="flex items-start gap-3">

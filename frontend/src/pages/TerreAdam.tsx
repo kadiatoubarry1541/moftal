@@ -155,6 +155,7 @@ export default function TerreAdam() {
   const [feedFilter, setFeedFilter] = useState<string>('all');
   const [activeCanal, setActiveCanal] = useState<CanalItem | null>(null);
   const [showCategoryGrid, setShowCategoryGrid] = useState(false);
+  const [showMembersList, setShowMembersList] = useState(false);
 
   // Niveau actuel : quartier (Résidence 1/2/3) ou plus large (sous-préfecture, région, pays, continent)
   const isQuartierLevel =
@@ -774,26 +775,34 @@ export default function TerreAdam() {
                                   {' · '}{messages.length} message{messages.length > 1 ? 's' : ''}
                                 </p>
                               </div>
-                              {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
-                                <div className="flex -space-x-1.5 flex-shrink-0">
-                                  {selectedGroup.members.slice(0, 5).map((member: any, index: number) => {
-                                    const isObject = member && typeof member === 'object';
-                                    const prenom = isObject ? (member.prenom as string | undefined) : undefined;
-                                    const photo = isObject ? (member.photo as string | undefined) : undefined;
-                                    const initiale = (prenom || '?').charAt(0).toUpperCase();
-                                    return (
-                                      <div key={index} title={prenom || `Membre ${index + 1}`} className="w-6 h-6 rounded-full bg-emerald-200 border border-gray-700 overflow-hidden flex items-center justify-center text-[9px] font-bold text-emerald-800 flex-shrink-0">
-                                        {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
+                                  <div className="flex -space-x-2">
+                                    {selectedGroup.members.slice(0, 4).map((member: any, index: number) => {
+                                      const isObject = member && typeof member === 'object';
+                                      const prenom = isObject ? (member.prenom as string | undefined) : undefined;
+                                      const photo = isObject ? (member.photo as string | undefined) : undefined;
+                                      const initiale = (prenom || '?').charAt(0).toUpperCase();
+                                      return (
+                                        <div key={index} title={prenom || `Membre ${index + 1}`} className="w-10 h-10 rounded-full bg-emerald-200 border-2 border-gray-700 overflow-hidden flex items-center justify-center text-xs font-bold text-emerald-800 flex-shrink-0">
+                                          {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
+                                        </div>
+                                      );
+                                    })}
+                                    {selectedGroup.members.length > 4 && (
+                                      <div className="w-10 h-10 rounded-full bg-gray-600 border-2 border-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-300 flex-shrink-0">
+                                        +{selectedGroup.members.length - 4}
                                       </div>
-                                    );
-                                  })}
-                                  {selectedGroup.members.length > 5 && (
-                                    <div className="w-6 h-6 rounded-full bg-gray-600 border border-gray-700 flex items-center justify-center text-[9px] font-bold text-gray-300 flex-shrink-0">
-                                      +{selectedGroup.members.length - 5}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                                    )}
+                                  </div>
+                                )}
+                                <button
+                                  onClick={() => setShowMembersList(true)}
+                                  className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
+                                >
+                                  👥 Liste
+                                </button>
+                              </div>
                             </div>
                             {isAdmin && groups.length > 1 && (
                               <div className="flex gap-2 overflow-x-auto px-3 pb-2">
@@ -843,8 +852,9 @@ export default function TerreAdam() {
                                     >
                                       {canal.icon} {canal.label}
                                       {count > 0 && (
-                                        <span className={`px-1.5 rounded-full text-[9px] font-bold ${isActive ? 'bg-white/30 text-white' : 'bg-gray-300 text-gray-600'}`}>
-                                          {count}
+                                        <span className={`flex items-center gap-0.5 ${isActive ? 'text-white' : 'text-red-600'}`}>
+                                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-white' : 'bg-red-500'}`} />
+                                          <span className="text-[9px] font-bold">{count}</span>
                                         </span>
                                       )}
                                     </button>
@@ -1020,6 +1030,16 @@ export default function TerreAdam() {
                                     className="flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm"
                                   />
                                 )}
+                                {newMessage.messageType !== 'audio' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setNewMessage({...newMessage, messageType: 'audio', mediaFile: null})}
+                                    className="flex-shrink-0 w-11 h-11 rounded-full bg-gray-200 hover:bg-emerald-100 text-gray-600 hover:text-emerald-700 flex items-center justify-center text-xl transition-colors"
+                                    title="Envoyer un message vocal"
+                                  >
+                                    🎤
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
                                   disabled={newMessage.messageType === 'text' ? !newMessage.content.trim() : !newMessage.mediaFile}
@@ -1184,6 +1204,50 @@ export default function TerreAdam() {
         )}
 
       </div>
+
+      {/* Modal — Liste des membres du quartier */}
+      {showMembersList && selectedGroup && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowMembersList(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-emerald-700 px-4 py-3 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-white font-bold text-base">👥 Membres du quartier</h2>
+                <p className="text-emerald-200 text-xs mt-0.5">{selectedGroup.members?.length ?? 0} personne{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}</p>
+              </div>
+              <button onClick={() => setShowMembersList(false)} className="text-white text-2xl font-bold leading-none">×</button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-3 space-y-3">
+              {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 ? (
+                selectedGroup.members.map((member: any, index: number) => {
+                  const isObject = member && typeof member === 'object';
+                  if (!isObject) return null;
+                  const prenom = member.prenom as string | undefined;
+                  const nomFamille = member.nomFamille as string | undefined;
+                  const photo = member.photo as string | undefined;
+                  const initiale = (prenom || '?').charAt(0).toUpperCase();
+                  return (
+                    <div key={index} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                      <div className="bg-emerald-600 px-4 py-3 flex items-center gap-3">
+                        <div className="w-16 h-16 rounded-full bg-emerald-200 overflow-hidden flex items-center justify-center text-2xl font-bold text-emerald-800 flex-shrink-0 border-2 border-white">
+                          {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-white text-base truncate">{prenom} {nomFamille}</p>
+                          {member.numeroH && (
+                            <p className="text-emerald-200 text-xs font-mono mt-0.5">NuméroH : {String(member.numeroH).split(' ')[0]}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-center text-gray-400 text-sm py-8">Aucun membre trouvé</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
