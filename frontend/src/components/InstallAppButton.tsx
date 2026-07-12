@@ -198,7 +198,6 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [isInsidePWA, setIsInsidePWA] = useState(false);
-  const [showCard, setShowCard] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
 
@@ -277,58 +276,12 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     );
   }
 
-  // Pas de prompt natif disponible → instructions manuelles
+  // Pas de prompt natif disponible
   if (!prompt) {
-    const ios = isIOS();
-    const steps = ios
-      ? [
-          { icon: "⎙", text: "Appuyez sur Partager en bas de Safari" },
-          { icon: "＋", text: "Choisissez « Sur l'écran d'accueil »" },
-          { icon: "✅", text: "Appuyez sur Ajouter — c'est fait !" },
-        ]
-      : [
-          { icon: "⊕", text: "Cherchez l'icône d'installation dans la barre d'adresse" },
-          { icon: "⋮", text: "Ou ouvrez le menu du navigateur (⋮) → « Installer l'application »" },
-          { icon: "✅", text: "Acceptez — l'app s'installe avec votre logo et votre nom" },
-        ];
-
-    return (
-      <>
-        <button
-          onClick={() => setShowCard(true)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", background: themeColor, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}
-        >
-          <span style={{ fontSize: 16 }}>📲</span> Installer
-        </button>
-        {showCard && (
-          <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setShowCard(false); }}>
-            <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)" }}>
-              <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 2, margin: "0 auto 24px" }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
-                {logoUrl
-                  ? <img src={logoUrl} alt="" style={{ width: 56, height: 56, borderRadius: 12, objectFit: "cover" }} />
-                  : <div style={{ width: 56, height: 56, borderRadius: 12, background: themeColor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🏥</div>
-                }
-                <div>
-                  <div style={{ fontSize: 17, fontWeight: 800 }}>Installer {name || "la gestion"}</div>
-                  <div style={{ fontSize: 13, color: "#64748b" }}>Application de votre établissement</div>
-                </div>
-              </div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>Comment installer :</p>
-              {steps.map((s, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 8, background: themeColor, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{s.icon}</div>
-                  <span style={{ fontSize: 13, color: "#374151" }}>{s.text}</span>
-                </div>
-              ))}
-              <button onClick={() => setShowCard(false)} style={{ width: "100%", marginTop: 16, padding: "14px", background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-                J'ai compris
-              </button>
-            </div>
-          </div>
-        )}
-      </>
-    );
+    // iOS : on ne peut pas installer programmatiquement, on cache le bouton
+    if (isIOS()) return null;
+    // Desktop/Android : Chrome affiche déjà l'icône d'installation dans la barre d'adresse
+    return null;
   }
 
   return (
