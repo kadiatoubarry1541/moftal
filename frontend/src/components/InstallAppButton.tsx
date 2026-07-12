@@ -198,6 +198,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [isInsidePWA, setIsInsidePWA] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
 
@@ -240,7 +241,13 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   }, []);
 
   const handleInstall = async () => {
-    if (!prompt) return;
+    if (!prompt) {
+      // Prompt pas encore prêt : ouvrir un nouvel onglet pour forcer Chrome à proposer l'install
+      if (isInsidePWA) { window.open(window.location.href, '_blank'); return; }
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3500);
+      return;
+    }
     setInstalling(true);
     try {
       await prompt.prompt();
@@ -259,39 +266,26 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   if (installed) {
     return (
       <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
-        <span style={{ fontSize: 15 }}>✅</span> Appli installée
+        <span style={{ fontSize: 15 }}>✅</span> Application installée
       </div>
     );
   }
 
-  // Dans une PWA installée, Chrome ne peut pas déclencher le prompt → ouvrir dans le navigateur
-  if (isInsidePWA && !prompt) {
-    return (
-      <button
-        onClick={() => window.open(window.location.href, '_blank')}
-        style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", background: themeColor, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}
-      >
-        <span style={{ fontSize: 16 }}>📲</span> Installer
-      </button>
-    );
-  }
-
-  // Pas de prompt natif disponible
-  if (!prompt) {
-    // iOS : on ne peut pas installer programmatiquement, on cache le bouton
-    if (isIOS()) return null;
-    // Desktop/Android : Chrome affiche déjà l'icône d'installation dans la barre d'adresse
-    return null;
-  }
-
   return (
-    <button
-      onClick={handleInstall}
-      disabled={installing}
-      style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", background: themeColor, color: "white", border: "none", borderRadius: 10, cursor: installing ? "default" : "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)", opacity: installing ? 0.75 : 1 }}
-    >
-      <span style={{ fontSize: 16 }}>{installing ? "⏳" : "📲"}</span>
-      {installing ? "Installation…" : "Installer"}
-    </button>
+    <>
+      <button
+        onClick={handleInstall}
+        disabled={installing}
+        style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", background: themeColor, color: "white", border: "none", borderRadius: 10, cursor: installing ? "default" : "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)", opacity: installing ? 0.75 : 1 }}
+      >
+        <span style={{ fontSize: 16 }}>{installing ? "⏳" : "📲"}</span>
+        {installing ? "Installation…" : (label || "Installer")}
+      </button>
+      {showToast && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "#1e293b", color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
+          📲 Appuyez sur l'icône d'installation dans la barre du navigateur
+        </div>
+      )}
+    </>
   );
 }
