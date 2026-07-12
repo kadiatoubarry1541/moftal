@@ -3,12 +3,11 @@ import { useParams } from "react-router-dom";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 
-const API = (import.meta as any).env?.VITE_API_URL || "http://localhost:5002";
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
 
 async function api(path: string, opts: RequestInit = {}) {
-  const r = await fetch(`${API}/api/transport-mgmt${path}`, { ...opts, headers: { ...h(), ...(opts.headers || {}) } });
+  const r = await fetch(`/api/transport-mgmt${path}`, { ...opts, headers: { ...h(), ...(opts.headers || {}) } });
   return r.json();
 }
 

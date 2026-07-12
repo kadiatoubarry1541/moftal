@@ -7,7 +7,6 @@ import InstallAppButton from "../components/InstallAppButton";
 
 interface Props { mode: "school" | "madrasa"; }
 
-const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "notes" | "frais" | "bulletins";
@@ -90,22 +89,22 @@ export default function GestionEnseignement({ mode }: Props) {
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
   const get = useCallback(async (path: string) => {
-    const r = await fetch(`${API}/api/${apiName}/${tenantCode!}${path}`, { headers: auth() });
+    const r = await fetch(`/api/${apiName}/${tenantCode!}${path}`, { headers: auth() });
     return r.json();
   }, [tenantCode, apiName]);
 
   const post = useCallback(async (path: string, body: any) => {
-    const r = await fetch(`${API}/api/${apiName}/${tenantCode!}${path}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+    const r = await fetch(`/api/${apiName}/${tenantCode!}${path}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
     return r.json();
   }, [tenantCode, apiName]);
 
   const put = useCallback(async (path: string, body: any) => {
-    const r = await fetch(`${API}/api/${apiName}/${tenantCode!}${path}`, { method: "PUT", headers: auth(), body: JSON.stringify(body) });
+    const r = await fetch(`/api/${apiName}/${tenantCode!}${path}`, { method: "PUT", headers: auth(), body: JSON.stringify(body) });
     return r.json();
   }, [tenantCode, apiName]);
 
   const del = useCallback(async (path: string) => {
-    const r = await fetch(`${API}/api/${apiName}/${tenantCode!}${path}`, { method: "DELETE", headers: auth() });
+    const r = await fetch(`/api/${apiName}/${tenantCode!}${path}`, { method: "DELETE", headers: auth() });
     return r.json();
   }, [tenantCode, apiName]);
 

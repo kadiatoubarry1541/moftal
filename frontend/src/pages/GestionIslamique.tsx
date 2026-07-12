@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 
-const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 // ── CONFIG PAR MODE ───────────────────────────────────────────────────────────
@@ -56,7 +55,7 @@ export default function GestionIslamique({ mode }: Props) {
   const navigate = useNavigate();
   const user = getSessionUser();
   const M = MODES[mode];
-  const BASE = (code: string) => `${API}/api/${M.apiPrefix}/${code}`;
+  const BASE = (code: string) => `/api/${M.apiPrefix}/${code}`;
 
   const [tab, setTab] = useState<AnyTab>("dashboard");
   const [tenant, setTenant] = useState<any>(null);

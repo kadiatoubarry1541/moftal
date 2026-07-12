@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 
-const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
-const BASE = (code: string) => `${API}/api/imam-mgmt/${code}`;
+const BASE = (code: string) => `/api/imam-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 type Tab = "dashboard" | "imams" | "predications" | "mosques" | "announcements";

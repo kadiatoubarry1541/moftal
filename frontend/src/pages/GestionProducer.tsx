@@ -5,8 +5,7 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 
-const API_ROOT = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
-const BASE = (code: string) => `${API_ROOT}/api/producer-mgmt/${code}`;
+const BASE = (code: string) => `/api/producer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 type Tab = "dashboard" | "products" | "lots" | "orders" | "staff" | "announcements";

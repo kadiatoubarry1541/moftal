@@ -5,7 +5,6 @@ import { config } from "../config/api";
 import Activite from "./Activite";
 import { AddPersonModal } from "../components/AddPersonModal";
 
-const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
 // Tous les services de la plateforme — référence unique de l'admin
 const ADMIN_SERVICES = [
@@ -57,7 +56,7 @@ export default function GestionInterne() {
   useEffect(() => {
     if (!currentUser) { navigate("/login"); return; }
 
-    const myAccountsPromise = fetch(`${API}/api/professionals/my-accounts`, {
+    const myAccountsPromise = fetch(`/api/professionals/my-accounts`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())
@@ -70,14 +69,14 @@ export default function GestionInterne() {
 
     // Vérifier l'accès à la Gestion Interne (essai ou vie)
     const accesPromise = !userIsAdmin
-      ? fetch(`${API}/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
+      ? fetch(`/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
           .then(r => r.json())
           .then(d => { if (d.success) setAccesGI(d); })
           .catch(() => {})
       : Promise.resolve();
 
     const adminTenantsPromise = userIsAdmin
-      ? fetch(`${API}/api/professionals/admin/tenants`, { headers: { Authorization: `Bearer ${token}` } })
+      ? fetch(`/api/professionals/admin/tenants`, { headers: { Authorization: `Bearer ${token}` } })
           .then(r => r.json())
           .then(data => { if (data.success) setAdminTenants(data.tenants || []); })
           .catch(() => {})
@@ -102,7 +101,7 @@ export default function GestionInterne() {
     try {
       const purposeMap = { mois: 'gestion_mois', an: 'gestion_an', cinqAns: 'gestion_5ans' };
       const prixMap = { mois: accesGI?.prixMois, an: accesGI?.prixAn, cinqAns: accesGI?.prixCinqAns };
-      const r = await fetch(`${API}/api/payment/initiate`, {
+      const r = await fetch(`/api/payment/initiate`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +142,7 @@ export default function GestionInterne() {
       return;
     }
     try {
-      const r = await fetch(`${API}/api/professionals/${account.id}/ensure-tenant`, {
+      const r = await fetch(`/api/professionals/${account.id}/ensure-tenant`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -597,7 +596,7 @@ export default function GestionInterne() {
           title={`Connecter un client — ${connectModal.name}`}
           onSelect={async (numeroH) => {
             try {
-              const r = await fetch(`${API}/api/professionals/${connectModal.accountId}/connect-client`, {
+              const r = await fetch(`/api/professionals/${connectModal.accountId}/connect-client`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ clientNumeroH: numeroH })
