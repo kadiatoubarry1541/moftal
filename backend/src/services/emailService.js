@@ -11,10 +11,11 @@
 import nodemailer from 'nodemailer';
 
 // ─── Variables d'environnement ────────────────────────────────────────────────
-const BREVO_API_KEY      = process.env.BREVO_API_KEY      || '';
-const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY || '';
 const GMAIL_USER         = process.env.GMAIL_USER         || '';
 const GMAIL_APP_PASS     = process.env.GMAIL_APP_PASS     || '';
+const BREVO_SMTP_USER    = process.env.BREVO_SMTP_USER    || '';
+const BREVO_SMTP_PASS    = process.env.BREVO_SMTP_PASS    || '';
+const MAILERSEND_API_KEY = process.env.MAILERSEND_API_KEY || '';
 
 const FROM_EMAIL   = process.env.FROM_EMAIL   || 'noreply@moftal.com';
 const FROM_NAME    = process.env.FROM_NAME    || 'Moftal';
@@ -53,7 +54,7 @@ async function notifyAdminEmailFailure({ to, subject }) {
   }
 }
 
-// ─── Fournisseur 1 : Gmail SMTP (OTP uniquement) ─────────────────────────────
+// ─── Fournisseur 1 : Gmail SMTP (OTP mot de passe oublié uniquement) ─────────
 
 let gmailTransporter = null;
 
@@ -89,34 +90,40 @@ async function sendGmail({ to, toName = '', subject, htmlContent }) {
   }
 }
 
-// ─── Fournisseur 2 : Brevo REST API (automatique — principal) ────────────────
+// ─── Fournisseur 2 : Brevo SMTP (abonnements + paiements) ────────────────────
+
+let brevoTransporter = null;
+
+function getBrevoTransporter() {
+  if (!BREVO_SMTP_USER || !BREVO_SMTP_PASS) return null;
+  if (!brevoTransporter) {
+    brevoTransporter = nodemailer.createTransport({
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      secure: false,
+      auth: { user: BREVO_SMTP_USER, pass: BREVO_SMTP_PASS },
+    });
+  }
+  return brevoTransporter;
+}
 
 async function sendBrevo({ to, toName = '', subject, htmlContent }) {
-  if (!BREVO_API_KEY) return false;
-  try {
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'api-key': BREVO_API_KEY,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        sender: { name: FROM_NAME, email: FROM_EMAIL },
-        to: [{ email: to, name: toName }],
-        subject,
-        htmlContent,
-      }),
-    });
-    if (res.ok) {
-      console.log(`✅ [Brevo] → ${to}`);
-      return true;
-    }
-    const err = await res.json().catch(() => ({}));
-    console.error('❌ [Brevo]', res.status, err?.message || '');
+  const transporter = getBrevoTransporter();
+  if (!transporter) {
+    console.warn('⚠️  Brevo SMTP non configuré');
     return false;
+  }
+  try {
+    await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: toName ? `"${toName}" <${to}>` : to,
+      subject,
+      html: htmlContent,
+    });
+    console.log(`✅ [Brevo SMTP] → ${to}`);
+    return true;
   } catch (e) {
-    console.error('❌ [Brevo]', e.message);
+    console.error('❌ [Brevo SMTP]', e.message);
     return false;
   }
 }
@@ -152,7 +159,7 @@ async function sendMailerSend({ to, toName = '', subject, htmlContent }) {
   }
 }
 
-// ─── Envoi OTP : Gmail → Brevo (secours) ─────────────────────────────────────
+// ─── OTP : Gmail → Brevo (secours) ───────────────────────────────────────────
 
 async function sendOtp({ to, toName, subject, htmlContent }) {
   if (!to) return;
@@ -164,7 +171,19 @@ async function sendOtp({ to, toName, subject, htmlContent }) {
   }
 }
 
-// ─── Envoi automatique : Brevo → MailerSend (secours) ────────────────────────
+// ─── Bienvenue : MailerSend → Brevo (secours) ────────────────────────────────
+
+async function sendWelcome({ to, toName, subject, htmlContent }) {
+  if (!to) return;
+  const sent = await sendMailerSend({ to, toName, subject, htmlContent });
+  if (!sent) {
+    console.warn('⚠️  MailerSend indisponible — bascule Brevo pour bienvenue');
+    const sentBrevo = await sendBrevo({ to, toName, subject, htmlContent });
+    if (!sentBrevo) await notifyAdminEmailFailure({ to, subject });
+  }
+}
+
+// ─── Abonnements/paiements : Brevo → MailerSend (secours) ────────────────────
 
 async function sendAutomatic({ to, toName, subject, htmlContent }) {
   if (!to) return;
@@ -256,7 +275,7 @@ export async function sendWelcomeEmail({ to, toName = '', numeroH }) {
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
       <p style="color:#9ca3af;font-size:11px;text-align:center;">© Moftal — ${new Date().getFullYear()}</p>
     </div>`;
-  await sendAutomatic({ to, toName, subject, htmlContent });
+  await sendWelcome({ to, toName, subject, htmlContent });
 }
 
 // ─── Reçu de paiement (Brevo → MailerSend secours) ───────────────────────────
