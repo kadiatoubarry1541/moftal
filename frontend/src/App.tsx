@@ -366,11 +366,9 @@ function App() {
               {/* Droite : Activité + Cloche + Langue */}
               <div className="flex items-center gap-2 justify-end min-h-[44px]">
                 {isLoggedIn && !isPublicPage && (
-                  <button
-                    onClick={() => navigate("/gestion-interne")}
-                    className="min-h-[36px] px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 transition-colors whitespace-nowrap"
-                  >
-                    {t('header.manage_pro')}
+                  <button onClick={() => navigate('/gestion-interne?tab=activite')} className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all border-none cursor-pointer shadow-sm">
+                    <span className="text-base">🎯</span>
+                    <span className="text-xs font-semibold text-gray-700">{t('header.manage_pro')}</span>
                   </button>
                 )}
                 {isLoggedIn && !isPublicPage && !pathname.startsWith("/espace-pro") && <InstallAppButton />}
@@ -525,59 +523,53 @@ function App() {
       {/* ── Barre Espace Gestion (comme Messenger est séparé de Facebook) ── */}
       {isGestionMode && (
         <header style={{ background: "#0f172a", position: "sticky", top: 0, zIndex: 50, borderBottom: "2px solid #1e293b", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
-          <div style={{ width: "100%", padding: "6px 12px 6px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            {/* Logo + nom de l'app */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
-              <div style={{ background: "white", borderRadius: 10, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 52, width: 52, objectFit: "contain", display: "block" }} />
-              </div>
-              <div>
-                <div style={{ color: "white", fontWeight: 800, fontSize: 15, letterSpacing: "-0.2px" }}>{t('header.pro_mode')}</div>
-                <div style={{ color: "#475569", fontSize: 11, fontWeight: 500 }}>Moftal</div>
+          <div style={{ width: "100%", padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            {/* Gauche : ← + logo + Professionnel */}
+            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+              <button
+                onClick={() => navigate(-1 as any)}
+                style={{ background: "none", color: "white", border: "none", padding: "2px 2px", cursor: "pointer", fontSize: 26, fontWeight: 300, lineHeight: 1, flexShrink: 0, opacity: 0.9 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
+              >
+                ‹
+              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
+                <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 24, width: 24, objectFit: "contain", display: "block" }} />
+                </div>
+                <span style={{ color: "white", fontWeight: 800, fontSize: 14, letterSpacing: "-0.2px" }}>{t('header.pro_mode')}</span>
               </div>
             </div>
-            {/* Actions droite */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {/* Carte identité — toujours visible sur les pages gestion */}
+            {/* Droite : profil + Espace Pro */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
               {currentUser && (
                 <Link
                   to="/moi/profil"
-                  style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, padding: "5px 10px 5px 5px", textDecoration: "none", flexShrink: 0 }}
+                  style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "3px 7px 3px 3px", textDecoration: "none", minWidth: 0 }}
                 >
                   {getPhotoUrl((currentUser as any).photo) ? (
-                    <img
-                      src={getPhotoUrl((currentUser as any).photo)!}
-                      alt=""
-                      style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399", flexShrink: 0 }}
-                    />
+                    <img src={getPhotoUrl((currentUser as any).photo)!} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", border: "2px solid #34d399", flexShrink: 0 }} />
                   ) : (
-                    <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#059669", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 14, fontWeight: 700, border: "2px solid #34d399", flexShrink: 0 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#059669", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 700, border: "2px solid #34d399", flexShrink: 0 }}>
                       {((currentUser as any).prenom?.[0] || (currentUser as any).nom?.[0] || '?').toUpperCase()}
                     </div>
                   )}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ color: "rgba(255,255,255,0.95)", fontSize: 12, fontWeight: 700, maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {(currentUser as any).prenom || (currentUser as any).nom || "Mon profil"}
+                    <div style={{ color: "rgba(255,255,255,0.95)", fontSize: 11, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>
+                      {(currentUser as any).prenom || (currentUser as any).nom || "Profil"}
                     </div>
-                    <div style={{ color: "#34d399", fontSize: 10, fontFamily: "monospace", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ color: "#34d399", fontSize: 9, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>
                       {((currentUser as any).numeroH || "").split(' ')[0]}
                     </div>
                   </div>
                 </Link>
               )}
-              <button onClick={() => navigate("/gestion-interne")}
-                title="Mes espaces de gestion"
-                style={{ background: "rgba(255,255,255,0.07)", color: "#94a3b8", border: "1px solid #1e293b", borderRadius: 8, padding: "7px 13px", cursor: "pointer", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "background 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.12)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"; }}>
-                🏠 <span style={{ display: "none" }}>{t('header.my_spaces')}</span>
-              </button>
-              <button onClick={() => { localStorage.removeItem("token"); navigate("/login"); }}
-                title={t('btn.logout')}
-                style={{ background: "rgba(220,38,38,0.15)", color: "#f87171", border: "1px solid rgba(220,38,38,0.3)", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "background 0.15s" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.25)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.15)"; }}>
-                ⏻ {t('header.quit')}
+              <button
+                onClick={() => navigate("/gestion-interne?tab=pro")}
+                style={{ background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}
+              >
+                Espace Pro
               </button>
             </div>
           </div>

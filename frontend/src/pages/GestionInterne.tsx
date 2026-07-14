@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { config } from "../config/api";
 import Activite from "./Activite";
@@ -39,6 +39,7 @@ function getTypeInfo(type: string) {
 
 export default function GestionInterne() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [accounts, setAccounts]           = useState<any[]>([]);
   const [adminTenants, setAdminTenants]   = useState<any[]>([]);
   const [loading, setLoading]             = useState(true);
@@ -48,6 +49,14 @@ export default function GestionInterne() {
   const [showPaywall, setShowPaywall]     = useState(false);
   const [tabOverride, setTabOverride]     = useState<'pro' | 'activite' | null>(null);
   const [connectModal, setConnectModal]   = useState<{ accountId: number; name: string } | null>(null);
+
+  // Lit le paramètre ?tab=pro depuis l'URL (utilisé par le bouton Espace Pro du header)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const urlTab = params.get('tab');
+    if (urlTab === 'pro') setTabOverride('pro');
+    else if (urlTab === 'activite') setTabOverride('activite');
+  }, [location.search]);
 
   const currentUser = getSessionUser();
   const userIsAdmin = isAdmin(currentUser);
@@ -221,19 +230,20 @@ export default function GestionInterne() {
     </div>
   );
 
-  // Sans compte pro (et non admin) : on ouvre directement Activité (page créée depuis l'inscription, déjà accessible)
   const defaultTab: 'pro' | 'activite' = 'activite';
   const tab = tabOverride ?? defaultTab;
 
-  // Deux espaces toujours visibles : Activité / Espace Pro (Activité en premier : tout le monde en a une, pas forcément un compte pro)
-  const TabButtons = ({ proLabel, onProClick }: { proLabel: string; onProClick: () => void }) => (
-    <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-      <button onClick={() => setTabOverride('activite')} style={{ flex:1, padding:"12px 0", borderRadius:10, border: tab === 'activite' ? "2px solid #cbd5e1" : "2px solid transparent", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'activite' ? "#e2e8f0" : "#f1f5f9", color: tab === 'activite' ? "#1e293b" : "#475569" }}>
-        🎯 Activité
-      </button>
-      <button onClick={onProClick} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'pro' ? "#1a8f1a" : "#f1f5f9", color: tab === 'pro' ? "white" : "#475569" }}>
-        {proLabel}
-      </button>
+  const TabButtons = () => (
+    <div style={{ marginBottom:16 }}>
+      {tab === 'activite' ? (
+        <h2 style={{ margin:0, padding:"10px 0", fontSize:18, fontWeight:800, color:"#0f172a", display:"flex", alignItems:"center", gap:8 }}>
+          🎯 Activité
+        </h2>
+      ) : (
+        <button onClick={() => setTabOverride('activite')} style={{ width:"100%", padding:"12px 0", borderRadius:10, border:"2px solid transparent", cursor:"pointer", fontSize:14, fontWeight:800, background:"#f1f5f9", color:"#475569" }}>
+          🎯 Activité
+        </button>
+      )}
     </div>
   );
 
@@ -275,29 +285,12 @@ export default function GestionInterne() {
 
     return (
       <>
-      <div style={{ maxWidth:1000, margin:"0 auto", padding:"32px 20px" }}>
+      <div style={{ maxWidth:1000, margin:"0 auto", padding:"6px 20px" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
-        {/* Header admin avec logo Moftal (comme Messenger → Facebook) */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-          <button
-            onClick={() => navigate(-1 as any)}
-            style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", cursor:"pointer", color:"#64748b", fontSize:14, fontWeight:600, padding:0 }}
-          >
-            ← Retour
-          </button>
-          <button
-            onClick={() => navigate("/")}
-            title="Aller sur Moftal"
-            style={{ background:"white", border:"1.5px solid #e2e8f0", borderRadius:10, padding:5, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 1px 4px rgba(0,0,0,0.08)", transition:"box-shadow 0.15s" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 10px rgba(0,0,0,0.18)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)"; }}
-          >
-            <img src="/logo-moftal.svg" alt="Moftal" style={{ width:34, height:34, objectFit:"contain", display:"block" }} />
-          </button>
-        </div>
 
-        <TabButtons proLabel="Espace Pro" onProClick={() => setTabOverride('pro')} />
+
+        <TabButtons />
 
         {tab === 'pro' && <>
         {/* Header Super Admin */}
@@ -514,35 +507,13 @@ export default function GestionInterne() {
 
   return (
     <div>
-      <div style={{ maxWidth:700, margin:"0 auto", padding:"16px 20px 0" }}>
+      <div style={{ maxWidth:700, margin:"0 auto", padding:"4px 20px 0" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-
-        {/* Header Gestion Interne avec logo Moftal (comme Messenger → Facebook) */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingBottom:14, marginBottom:2 }}>
-          <button
-            onClick={() => navigate(-1 as any)}
-            style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", cursor:"pointer", color:"#64748b", fontSize:14, fontWeight:600, padding:0 }}
-          >
-            ← Retour
-          </button>
-          <button
-            onClick={() => navigate("/")}
-            title="Aller sur Moftal"
-            style={{ background:"white", border:"1.5px solid #e2e8f0", borderRadius:10, padding:5, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 1px 4px rgba(0,0,0,0.08)", transition:"box-shadow 0.15s" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 10px rgba(0,0,0,0.18)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)"; }}
-          >
-            <img src="/logo-moftal.svg" alt="Moftal" style={{ width:34, height:34, objectFit:"contain", display:"block" }} />
-          </button>
-        </div>
 
         {/* Séparateur visuel avant les onglets */}
         <div style={{ borderTop:"1.5px solid #e2e8f0", marginBottom:16 }} />
 
-        <TabButtons
-          proLabel={accounts.length === 0 ? "Créer un compte pro" : "Espace Pro"}
-          onProClick={() => accounts.length === 0 ? navigate("/inscription-pro") : setTabOverride('pro')}
-        />
+        <TabButtons />
 
         {tab === 'pro' && <>
         {/* Bandeau Espace Pro adaptatif */}
