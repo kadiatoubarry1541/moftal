@@ -278,6 +278,25 @@ export default function GestionInterne() {
       <div style={{ maxWidth:1000, margin:"0 auto", padding:"32px 20px" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
+        {/* Header admin avec logo Moftal (comme Messenger → Facebook) */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+          <button
+            onClick={() => navigate(-1 as any)}
+            style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", cursor:"pointer", color:"#64748b", fontSize:14, fontWeight:600, padding:0 }}
+          >
+            ← Retour
+          </button>
+          <button
+            onClick={() => navigate("/")}
+            title="Aller sur Moftal"
+            style={{ background:"white", border:"1.5px solid #e2e8f0", borderRadius:10, padding:5, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 1px 4px rgba(0,0,0,0.08)", transition:"box-shadow 0.15s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 10px rgba(0,0,0,0.18)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)"; }}
+          >
+            <img src="/logo-moftal.svg" alt="Moftal" style={{ width:34, height:34, objectFit:"contain", display:"block" }} />
+          </button>
+        </div>
+
         <TabButtons proLabel="Espace Pro" onProClick={() => setTabOverride('pro')} />
 
         {tab === 'pro' && <>
@@ -498,13 +517,24 @@ export default function GestionInterne() {
       <div style={{ maxWidth:700, margin:"0 auto", padding:"16px 20px 0" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
-        {/* Bouton retour */}
-        <button
-          onClick={() => navigate(-1 as any)}
-          style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", cursor:"pointer", color:"#64748b", fontSize:14, fontWeight:600, padding:"0 0 14px 0", marginBottom:2 }}
-        >
-          ← Retour
-        </button>
+        {/* Header Gestion Interne avec logo Moftal (comme Messenger → Facebook) */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingBottom:14, marginBottom:2 }}>
+          <button
+            onClick={() => navigate(-1 as any)}
+            style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", cursor:"pointer", color:"#64748b", fontSize:14, fontWeight:600, padding:0 }}
+          >
+            ← Retour
+          </button>
+          <button
+            onClick={() => navigate("/")}
+            title="Aller sur Moftal"
+            style={{ background:"white", border:"1.5px solid #e2e8f0", borderRadius:10, padding:5, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 1px 4px rgba(0,0,0,0.08)", transition:"box-shadow 0.15s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 3px 10px rgba(0,0,0,0.18)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)"; }}
+          >
+            <img src="/logo-moftal.svg" alt="Moftal" style={{ width:34, height:34, objectFit:"contain", display:"block" }} />
+          </button>
+        </div>
 
         {/* Séparateur visuel avant les onglets */}
         <div style={{ borderTop:"1.5px solid #e2e8f0", marginBottom:16 }} />
