@@ -336,7 +336,7 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
   }
 });
 
-// GET /api/professionals/tenant-icon-badged/:tenantCode — logo de l'établissement + badge "M" Moftal
+// GET /api/professionals/tenant-icon-badged/:tenantCode — logo établissement + vrai logo Moftal en badge
 router.get('/tenant-icon-badged/:tenantCode', async (req, res) => {
   try {
     const [tenant] = await sequelize.query(
@@ -347,26 +347,33 @@ router.get('/tenant-icon-badged/:tenantCode', async (req, res) => {
     );
     const logo = tenant?.logo_url || tenant?.photo;
 
-    // Si pas de logo → retourner le logo Moftal directement (pas besoin de badge)
-    if (!logo) return res.status(302).redirect('/logo-moftal.svg');
-
-    // Extraire le base64 du logo
-    let logoDataUrl = logo;
-    if (!logo.startsWith('data:')) {
+    // Si pas de logo → retourner le logo Moftal directement
+    if (!logo || !logo.startsWith('data:')) {
       return res.status(302).redirect('/logo-moftal.svg');
     }
 
-    // SVG composite : logo de l'établissement + badge "M" Moftal en bas à droite
+    // Lire le vrai logo Moftal SVG depuis le disque et l'encoder en base64
+    let moftalBadgeDataUrl = '';
+    try {
+      const moftalSvgPath = path.join(__dirname, '../../../frontend/public/logo-moftal.svg');
+      const moftalSvgContent = fs.readFileSync(moftalSvgPath, 'utf8');
+      moftalBadgeDataUrl = 'data:image/svg+xml;base64,' + Buffer.from(moftalSvgContent).toString('base64');
+    } catch {
+      // Si le fichier n'est pas accessible, on utilise une URL publique
+      moftalBadgeDataUrl = 'https://moftal.com/logo-moftal.svg';
+    }
+
+    // SVG composite : logo établissement (grand) + logo Moftal (petit badge en bas à droite)
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" width="512" height="512">
-  <!-- Fond blanc arrondi -->
+  <defs><clipPath id="main"><rect width="100" height="100" rx="18"/></clipPath></defs>
+  <!-- Fond blanc -->
   <rect width="100" height="100" rx="18" fill="white"/>
-  <!-- Logo de l'établissement -->
-  <image href="${logoDataUrl}" x="4" y="4" width="92" height="92" preserveAspectRatio="xMidYMid meet" clip-path="url(#rounded)"/>
-  <clipPath id="rounded"><rect width="100" height="100" rx="18"/></clipPath>
-  <!-- Badge Moftal en bas à droite -->
-  <circle cx="76" cy="76" r="22" fill="white"/>
-  <circle cx="76" cy="76" r="19" fill="#1a8f1a"/>
-  <text x="76" y="83" text-anchor="middle" fill="white" font-size="17" font-weight="900" font-family="Arial,sans-serif">M</text>
+  <!-- Logo de l'établissement (occupe 80% de l'icône) -->
+  <image href="${logo}" x="2" y="2" width="78" height="78" preserveAspectRatio="xMidYMid meet" clip-path="url(#main)"/>
+  <!-- Fond blanc pour le badge Moftal -->
+  <circle cx="77" cy="77" r="24" fill="white"/>
+  <!-- Vrai logo Moftal en petit en bas à droite -->
+  <image href="${moftalBadgeDataUrl}" x="55" y="55" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>
 </svg>`;
 
     res.set('Content-Type', 'image/svg+xml');

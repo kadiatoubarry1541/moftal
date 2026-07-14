@@ -228,8 +228,8 @@ export default function GestionInterne() {
   // Deux espaces toujours visibles : Activité / Espace Pro (Activité en premier : tout le monde en a une, pas forcément un compte pro)
   const TabButtons = ({ proLabel, onProClick }: { proLabel: string; onProClick: () => void }) => (
     <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-      <button onClick={() => setTabOverride('activite')} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'activite' ? "#1a8f1a" : "#f1f5f9", color: tab === 'activite' ? "white" : "#475569" }}>
-        Activité
+      <button onClick={() => setTabOverride('activite')} style={{ flex:1, padding:"12px 0", borderRadius:10, border: tab === 'activite' ? "2px solid #cbd5e1" : "2px solid transparent", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'activite' ? "#e2e8f0" : "#f1f5f9", color: tab === 'activite' ? "#1e293b" : "#475569" }}>
+        🎯 Activité
       </button>
       <button onClick={onProClick} style={{ flex:1, padding:"12px 0", borderRadius:10, border:"none", cursor:"pointer", fontSize:14, fontWeight:800, background: tab === 'pro' ? "#1a8f1a" : "#f1f5f9", color: tab === 'pro' ? "white" : "#475569" }}>
         {proLabel}
