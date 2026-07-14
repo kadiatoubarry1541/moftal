@@ -819,10 +819,10 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                       return (
                         <>
                           <div className="mb-4 flex justify-center">
-                            <Link to="/info-wallou" className="flex items-center gap-4 bg-gradient-to-r from-blue-700 to-slate-800 rounded-xl p-4 shadow-md border border-blue-500 hover:brightness-110 transition-all group max-w-xl w-full">
+                            <Link to="/info-wallou" className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-700 to-slate-800 rounded-xl shadow-md border border-blue-500 max-w-xl w-full hover:brightness-110 transition-all group">
                               <span className="text-4xl group-hover:scale-110 transition-transform">📋</span>
                               <div className="flex-1">
-                                <h3 className="font-bold text-white text-base">Moftal Info</h3>
+                                <h3 className="font-bold text-white text-base">Info Moftal</h3>
                                 <p className="text-sm text-blue-200">Créez des carreaux d'information avec photo, vidéo et audio</p>
                                 <p className="text-xs text-blue-300 mt-1">Mariage · Baptême · Réunion · Santé · Décès</p>
                               </div>
@@ -830,10 +830,10 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                             </Link>
                           </div>
                           <div className="mb-4 flex justify-center">
-                            <Link to="/professeur-ia" className="flex items-center gap-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl p-4 shadow-md border border-cyan-400 hover:brightness-110 transition-all group max-w-xl w-full">
+                            <Link to="/professeur-ia" className="flex items-center gap-4 p-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl shadow-md border border-cyan-400 max-w-xl w-full hover:brightness-110 transition-all group">
                               <span className="text-4xl group-hover:scale-110 transition-transform">🤖</span>
                               <div className="flex-1">
-                                <h3 className="font-bold text-white text-base">Assistant IA Français & Mathématiques</h3>
+                                <h3 className="font-bold text-white text-base">IA Education Moftal</h3>
                                 <p className="text-sm text-cyan-100">Posez vos questions en français et en math, l'IA vous aide pas à pas.</p>
                               </div>
                               <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>

@@ -183,6 +183,8 @@ export function WrittenRegistration() {
     if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
       errors.add('confirmPassword')
     }
+    if (!data.religion) errors.add('religion')
+    if (!data.photo && !data.photoPreview) errors.add('photo')
 
     setValidationErrors(errors)
     return errors.size === 0
@@ -442,8 +444,10 @@ export function WrittenRegistration() {
   if (!data.prenom) missingFields.push('Prénom')
   if (!data.telephone) missingFields.push('Téléphone')
   if (!data.email) missingFields.push('E-mail')
+  if (!data.religion) missingFields.push('Religion')
   if (!data.password) missingFields.push('Mot de passe')
   if (!data.confirmPassword) missingFields.push('Confirmation du mot de passe')
+  if (!data.photo && !data.photoPreview) missingFields.push('Photo de profil')
   if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
     missingFields.push('Les mots de passe ne correspondent pas')
   }
@@ -942,11 +946,21 @@ export function WrittenRegistration() {
               </div>
               <div className="col-6">
                 <div className="field">
-                  <label>Religion</label>
+                  <label>Religion *</label>
                   <input
                     value={data.religion}
-                    onChange={(e) => setData((prev) => ({ ...prev, religion: e.target.value }))}
+                    onChange={(e) => {
+                      setData((prev) => ({ ...prev, religion: e.target.value }))
+                      if (e.target.value.trim()) {
+                        setValidationErrors((prev) => {
+                          const next = new Set(prev)
+                          next.delete('religion')
+                          return next
+                        })
+                      }
+                    }}
                     placeholder="Religion"
+                    className={getFieldClassName('religion', !!data.religion)}
                   />
                 </div>
               </div>
@@ -1040,8 +1054,8 @@ export function WrittenRegistration() {
             <div className="row">
               <div className="col-12">
                 <div className="field">
-                  <label>Photo de profil</label>
-                  <div className="photo-upload-section">
+                  <label>Photo de profil *</label>
+                  <div className={`photo-upload-section${validationErrors.has('photo') ? ' border-2 border-red-500 rounded-lg p-1' : ''}`}>
                     {data.photoPreview ? (
                       <div className="photo-preview">
                         <img src={data.photoPreview} alt="Aperçu de la photo" className="preview-image" />

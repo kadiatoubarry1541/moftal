@@ -17,7 +17,9 @@
   "shortcuts": [
     { "name": "Accueil", "url": "/", "icons": [{ "src": "/logo-moftal.svg", "sizes": "any", "type": "image/svg+xml" }] },
     { "name": "Mon Profil", "url": "/profil", "icons": [{ "src": "/logo-moftal.svg", "sizes": "any", "type": "image/svg+xml" }] },
-    { "name": "Espace Gestion", "short_name": "Gestion", "url": "/gestion-interne", "icons": [{ "src": "/logo-moftal.svg", "sizes": "any", "type": "image/svg+xml" }] }
+    { "name": "Espace Gestion", "short_name": "Gestion", "url": "/gestion-interne", "icons": [{ "src": "/logo-moftal.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Info Moftal", "short_name": "Info", "url": "/info-wallou", "description": "Créez des carreaux d'information avec photo, vidéo et audio", "icons": [{ "src": "/icon-info-moftal.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "IA Education Moftal", "short_name": "IA Edu", "url": "/professeur-ia", "description": "Assistant IA pour Français et Mathématiques", "icons": [{ "src": "/icon-ia-education-moftal.svg", "sizes": "any", "type": "image/svg+xml" }] }
   ]
 
 }

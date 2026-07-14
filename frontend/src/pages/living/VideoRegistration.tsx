@@ -214,6 +214,8 @@ export function VideoRegistration() {
     if (!videoData.confirmPassword) errors.add('confirmPassword')
     if (videoData.password && videoData.confirmPassword && videoData.password !== videoData.confirmPassword)
       errors.add('confirmPassword')
+    if (!videoData.religion) errors.add('religion')
+    if (!videoData.photo && !videoData.photoPreview) errors.add('photo')
     setValidationErrors(errors)
     return errors.size === 0
   }
@@ -437,8 +439,10 @@ export function VideoRegistration() {
     if (!videoData.prenom) missingFields.push('Prénom')
     if (!videoData.telephone) missingFields.push('Téléphone')
     if (!videoData.email) missingFields.push('E-mail')
+    if (!videoData.religion) missingFields.push('Religion')
     if (!videoData.password) missingFields.push('Mot de passe')
     if (!videoData.confirmPassword) missingFields.push('Confirmation du mot de passe')
+    if (!videoData.photo && !videoData.photoPreview) missingFields.push('Photo de profil')
     if (videoData.password && videoData.confirmPassword && videoData.password !== videoData.confirmPassword)
       missingFields.push('Les mots de passe ne correspondent pas')
     if (videoData.password && videoData.password.length < 6)
@@ -827,11 +831,15 @@ export function VideoRegistration() {
                 </div>
                 <div className="col-6">
                   <div className="field">
-                    <label>Religion</label>
+                    <label>Religion *</label>
                     <input
                       value={videoData.religion}
-                      onChange={(e) => setVideoData((prev) => ({ ...prev, religion: e.target.value }))}
+                      onChange={(e) => {
+                        setVideoData((prev) => ({ ...prev, religion: e.target.value }))
+                        if (e.target.value.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('religion'); return n })
+                      }}
                       placeholder="Religion"
+                      className={getFieldClassName('religion', !!videoData.religion)}
                     />
                   </div>
                 </div>
@@ -894,8 +902,8 @@ export function VideoRegistration() {
               <div className="row">
                 <div className="col-12">
                   <div className="field">
-                    <label>Photo de profil (optionnel)</label>
-                    <div className="photo-upload-section">
+                    <label>Photo de profil *</label>
+                    <div className={`photo-upload-section${validationErrors.has('photo') ? ' border-2 border-red-500 rounded-lg p-1' : ''}`}>
                       {videoData.photoPreview ? (
                         <div className="photo-preview">
                           <img src={videoData.photoPreview} alt="Aperçu" className="preview-image" />

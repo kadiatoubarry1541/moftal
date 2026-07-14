@@ -81,6 +81,33 @@ export default function ProfesseurIA() {
 
   const navigate = useNavigate();
 
+  // PWA : manifest indépendant pour IA Education Moftal
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [pwaInstalled, setPwaInstalled] = useState(false);
+
+  useEffect(() => {
+    const link = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+    const originalHref = link?.href;
+    if (link) link.href = '/manifest-ia-education-moftal.webmanifest';
+
+    if (window.matchMedia('(display-mode: standalone)').matches) setPwaInstalled(true);
+
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setPwaInstalled(true));
+
+    return () => {
+      if (link && originalHref) link.href = originalHref;
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    setInstallPrompt(null);
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -341,6 +368,20 @@ export default function ProfesseurIA() {
               <p className="text-[10px] text-gray-400">CP → Terminale</p>
             </div>
           </div>
+          {!pwaInstalled && installPrompt && (
+            <button onClick={handleInstallPwa}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95"
+              style={{ background: 'linear-gradient(135deg,#0891b2,#2563eb)', boxShadow: '0 3px 12px rgba(8,145,178,0.35)' }}>
+              <img src="/icon-ia-education-moftal.svg" alt="IA Education Moftal" width="22" height="22" style={{ borderRadius: 5, background: '#fff' }} />
+              Installer IA Education
+            </button>
+          )}
+          {pwaInstalled && (
+            <div className="mt-2 flex items-center justify-center gap-1.5">
+              <img src="/icon-ia-education-moftal.svg" alt="" width="14" height="14" style={{ borderRadius: 3 }} />
+              <p className="text-[10px] text-emerald-600 font-semibold">Application installée</p>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}

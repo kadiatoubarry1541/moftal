@@ -1,0 +1,18 @@
+{
+  "id": "/info-wallou",
+  "name": "Info Moftal",
+  "short_name": "Info Moftal",
+  "description": "Créez des carreaux d'information avec photo, vidéo et audio. Mariage, Baptême, Réunion, Santé, Décès.",
+  "start_url": "/info-wallou",
+  "scope": "/info-wallou",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "fr",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "categories": ["social", "utilities", "communication"],
+  "icons": [
+    { "src": "/icon-info-moftal.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-info-moftal.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

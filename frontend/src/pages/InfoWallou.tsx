@@ -1688,6 +1688,33 @@ export default function InfoWallou() {
   const [sendStatus, setSendStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [sendError, setSendError] = useState('');
 
+  // PWA : manifest indépendant pour Info Moftal
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [pwaInstalled, setPwaInstalled] = useState(false);
+
+  useEffect(() => {
+    const link = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+    const originalHref = link?.href;
+    if (link) link.href = '/manifest-info-moftal.webmanifest';
+
+    if (window.matchMedia('(display-mode: standalone)').matches) setPwaInstalled(true);
+
+    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setPwaInstalled(true));
+
+    return () => {
+      if (link && originalHref) link.href = originalHref;
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    setInstallPrompt(null);
+  };
+
   useEffect(() => {
     const session = localStorage.getItem("session_user");
     if (!session) return;
@@ -1882,6 +1909,23 @@ export default function InfoWallou() {
               </span>
             ))}
           </div>
+
+          {/* Bouton installer PWA */}
+          {!pwaInstalled && installPrompt && (
+            <button onClick={handleInstallPwa}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95"
+              style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)", boxShadow: "0 4px 16px rgba(79,70,229,0.4)" }}>
+              <img src="/icon-info-moftal.svg" alt="Info Moftal" width="22" height="22" style={{ borderRadius: 5, background: "#fff" }} />
+              Installer Info Moftal
+            </button>
+          )}
+          {pwaInstalled && (
+            <span className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold text-emerald-300 border border-emerald-500/30"
+              style={{ background: "rgba(16,185,129,0.08)" }}>
+              <img src="/icon-info-moftal.svg" alt="" width="16" height="16" style={{ borderRadius: 3 }} />
+              Application installée
+            </span>
+          )}
 
           {/* Badge points / statut freemium */}
           <div className="mt-4 flex items-center gap-3">
