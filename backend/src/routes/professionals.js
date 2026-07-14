@@ -336,6 +336,48 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
   }
 });
 
+// GET /api/professionals/tenant-icon-badged/:tenantCode — logo de l'établissement + badge "M" Moftal
+router.get('/tenant-icon-badged/:tenantCode', async (req, res) => {
+  try {
+    const [tenant] = await sequelize.query(
+      `SELECT mt.logo_url, pa.photo FROM management_tenants mt
+       LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
+       WHERE mt.tenant_code = :code LIMIT 1`,
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    const logo = tenant?.logo_url || tenant?.photo;
+
+    // Si pas de logo → retourner le logo Moftal directement (pas besoin de badge)
+    if (!logo) return res.status(302).redirect('/logo-moftal.svg');
+
+    // Extraire le base64 du logo
+    let logoDataUrl = logo;
+    if (!logo.startsWith('data:')) {
+      return res.status(302).redirect('/logo-moftal.svg');
+    }
+
+    // SVG composite : logo de l'établissement + badge "M" Moftal en bas à droite
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" width="512" height="512">
+  <!-- Fond blanc arrondi -->
+  <rect width="100" height="100" rx="18" fill="white"/>
+  <!-- Logo de l'établissement -->
+  <image href="${logoDataUrl}" x="4" y="4" width="92" height="92" preserveAspectRatio="xMidYMid meet" clip-path="url(#rounded)"/>
+  <clipPath id="rounded"><rect width="100" height="100" rx="18"/></clipPath>
+  <!-- Badge Moftal en bas à droite -->
+  <circle cx="76" cy="76" r="22" fill="white"/>
+  <circle cx="76" cy="76" r="19" fill="#1a8f1a"/>
+  <text x="76" y="83" text-anchor="middle" fill="white" font-size="17" font-weight="900" font-family="Arial,sans-serif">M</text>
+</svg>`;
+
+    res.set('Content-Type', 'image/svg+xml');
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.set('Access-Control-Allow-Origin', '*');
+    return res.send(svg);
+  } catch {
+    res.status(302).redirect('/logo-moftal.svg');
+  }
+});
+
 // GET /api/professionals/pro-manifest/by-tenant/:tenantCode — manifest PWA pour les pages gestion
 router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
   try {
@@ -375,11 +417,10 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
       if (m) iconMime = m[1];
     }
 
-    const iconUrl = `/api/professionals/tenant-icon/${tenantCode}`;
+    const iconUrl = `/api/professionals/tenant-icon-badged/${tenantCode}`;
     const icons = tenant?.logo_url ? [
-      { src: iconUrl, sizes: 'any', type: iconMime, purpose: 'any' },
-      { src: iconUrl, sizes: 'any', type: iconMime, purpose: 'maskable' },
-      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
     ] : [
       { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
       { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },

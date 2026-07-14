@@ -18,7 +18,8 @@ interface Props {
 
 function isGestionPage() {
   const p = window.location.pathname;
-  return p.startsWith("/espace-pro/") || p.startsWith("/gestion-");
+  // Exige un tenant code (/gestion-xxx/CODE ou /espace-pro/ID) pour éviter d'installer Moftal en double
+  return Boolean(p.match(/^\/espace-pro\/[^/]+/)) || Boolean(p.match(/^\/gestion-[^/]+\/[^/]+/));
 }
 
 function getTenantStorageKey() {
