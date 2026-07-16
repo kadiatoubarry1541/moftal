@@ -63,11 +63,16 @@ function getGmailTransporter() {
   if (!gmailTransporter) {
     gmailTransporter = nodemailer.createTransport({
       service: 'gmail',
+      connectionTimeout: 8000,
+      greetingTimeout: 5000,
+      socketTimeout: 15000,
       auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS },
     });
   }
   return gmailTransporter;
 }
+
+const SMTP_TIMEOUT_MS = 18000;
 
 async function sendGmail({ to, toName = '', subject, htmlContent }) {
   const transporter = getGmailTransporter();
@@ -76,12 +81,17 @@ async function sendGmail({ to, toName = '', subject, htmlContent }) {
     return false;
   }
   try {
-    await transporter.sendMail({
-      from: `"${FROM_NAME}" <${GMAIL_USER}>`,
-      to: toName ? `"${toName}" <${to}>` : to,
-      subject,
-      html: htmlContent,
-    });
+    await Promise.race([
+      transporter.sendMail({
+        from: `"${FROM_NAME}" <${GMAIL_USER}>`,
+        to: toName ? `"${toName}" <${to}>` : to,
+        subject,
+        html: htmlContent,
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Gmail SMTP timeout 18s')), SMTP_TIMEOUT_MS)
+      ),
+    ]);
     console.log(`✅ [Gmail SMTP] → ${to}`);
     return true;
   } catch (e) {
@@ -101,6 +111,9 @@ function getBrevoTransporter() {
       host: 'smtp-relay.brevo.com',
       port: 587,
       secure: false,
+      connectionTimeout: 8000,
+      greetingTimeout: 5000,
+      socketTimeout: 15000,
       auth: { user: BREVO_SMTP_USER, pass: BREVO_SMTP_PASS },
     });
   }
@@ -114,12 +127,17 @@ async function sendBrevo({ to, toName = '', subject, htmlContent }) {
     return false;
   }
   try {
-    await transporter.sendMail({
-      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-      to: toName ? `"${toName}" <${to}>` : to,
-      subject,
-      html: htmlContent,
-    });
+    await Promise.race([
+      transporter.sendMail({
+        from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+        to: toName ? `"${toName}" <${to}>` : to,
+        subject,
+        html: htmlContent,
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Brevo SMTP timeout 18s')), SMTP_TIMEOUT_MS)
+      ),
+    ]);
     console.log(`✅ [Brevo SMTP] → ${to}`);
     return true;
   } catch (e) {
@@ -133,8 +151,11 @@ async function sendBrevo({ to, toName = '', subject, htmlContent }) {
 async function sendMailerSend({ to, toName = '', subject, htmlContent }) {
   if (!MAILERSEND_API_KEY) return false;
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
     const res = await fetch('https://api.mailersend.com/v1/email', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Authorization': `Bearer ${MAILERSEND_API_KEY}`,
         'Content-Type': 'application/json',
@@ -146,6 +167,7 @@ async function sendMailerSend({ to, toName = '', subject, htmlContent }) {
         html: htmlContent,
       }),
     });
+    clearTimeout(timer);
     if (res.ok || res.status === 202) {
       console.log(`✅ [MailerSend] → ${to}`);
       return true;
@@ -159,15 +181,19 @@ async function sendMailerSend({ to, toName = '', subject, htmlContent }) {
   }
 }
 
-// ─── OTP : Gmail → Brevo (secours) ───────────────────────────────────────────
+// ─── OTP : Gmail → MailerSend (REST, rapide) → Brevo (ultime secours) ───────
 
 async function sendOtp({ to, toName, subject, htmlContent }) {
   if (!to) return;
   const sent = await sendGmail({ to, toName, subject, htmlContent });
   if (!sent) {
-    console.warn('⚠️  Gmail indisponible — bascule Brevo pour OTP');
-    const sentBrevo = await sendBrevo({ to, toName, subject, htmlContent });
-    if (!sentBrevo) await notifyAdminEmailFailure({ to, subject });
+    console.warn('⚠️  Gmail indisponible — bascule MailerSend pour OTP');
+    const sentMailerSend = await sendMailerSend({ to, toName, subject, htmlContent });
+    if (!sentMailerSend) {
+      console.warn('⚠️  MailerSend indisponible — bascule Brevo pour OTP');
+      const sentBrevo = await sendBrevo({ to, toName, subject, htmlContent });
+      if (!sentBrevo) await notifyAdminEmailFailure({ to, subject });
+    }
   }
 }
 
