@@ -163,7 +163,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
             {/* Panneau test */}
             {testWalletId === w.id && (
               <div className="border-t border-amber-100 bg-amber-50 px-4 py-3 rounded-b-2xl">
-                <p className="text-xs font-bold text-amber-700 mb-2">🧪 Dépôt de test — Admin G7</p>
+                <p className="text-xs font-bold text-amber-700 mb-2">🧪 Dépôt de test</p>
                 <div className="flex gap-2 items-center">
                   <input
                     type="number" min="1000" step="1000"

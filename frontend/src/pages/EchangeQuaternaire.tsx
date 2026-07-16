@@ -40,47 +40,47 @@ function buildImageUrl(path: string | undefined): string | undefined {
   return `${API_ORIGIN}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-type MateriauxTab = 'tous' | 'gros_oeuvre' | 'finition' | 'plomberie' | 'electricite';
+type TechTab = 'tous' | 'telephones' | 'ordinateurs' | 'tv' | 'accessoires';
 
-const MATERIAUX_TABS: { key: MateriauxTab; icon: string; label: string; desc: string; keywords: string[] }[] = [
+const TECH_TABS: { key: TechTab; icon: string; label: string; desc: string; keywords: string[] }[] = [
   {
     key: 'tous',
-    icon: '🏗️',
+    icon: '📦',
     label: 'Tous',
-    desc: 'Tous les matériaux disponibles',
+    desc: 'Tous les appareils',
     keywords: [],
   },
   {
-    key: 'gros_oeuvre',
-    icon: '🧱',
-    label: 'Gros œuvre',
-    desc: 'Ciment, fer, tôle, bois, parpaing',
-    keywords: ['ciment', 'fer', 'tôle', 'bois', 'parpaing', 'béton', 'brique', 'sable', 'gravier', 'acier', 'charpente', 'fondation', 'dalle'],
+    key: 'telephones',
+    icon: '📱',
+    label: 'Téléphones',
+    desc: 'Smartphones, téléphones, SIM',
+    keywords: ['téléphone', 'telephone', 'smartphone', 'mobile', 'iphone', 'samsung', 'huawei', 'tecno', 'infinix', 'itel', 'xiaomi', 'oppo', 'vivo', 'android', 'sim'],
   },
   {
-    key: 'finition',
-    icon: '🎨',
-    label: 'Finition',
-    desc: 'Carrelage, peinture, menuiserie',
-    keywords: ['carrelage', 'faïence', 'peinture', 'enduit', 'plâtre', 'menuiserie', 'porte', 'fenêtre', 'aluminium', 'vitrage', 'faux plafond', 'revêtement'],
+    key: 'ordinateurs',
+    icon: '💻',
+    label: 'Ordinateurs',
+    desc: 'Laptops, PC, tablettes',
+    keywords: ['ordinateur', 'laptop', 'pc', 'tablette', 'ipad', 'macbook', 'dell', 'hp', 'lenovo', 'asus', 'acer', 'chromebook', 'desktop', 'bureau'],
   },
   {
-    key: 'plomberie',
-    icon: '🚿',
-    label: 'Plomberie',
-    desc: 'Tuyaux, robinets, sanitaires',
-    keywords: ['plomberie', 'tuyau', 'robinet', 'sanitaire', 'wc', 'lavabo', 'douche', 'réservoir', 'pompe', 'forage', 'château d\'eau', 'pvc'],
+    key: 'tv',
+    icon: '📺',
+    label: 'TV & Photo',
+    desc: 'Télévisions, appareils photo, caméras',
+    keywords: ['télévision', 'television', 'tv', 'écran', 'ecran', 'appareil photo', 'caméra', 'camera', 'projecteur', 'hifi', 'sono', 'enceinte', 'home cinéma'],
   },
   {
-    key: 'electricite',
-    icon: '⚡',
-    label: 'Électricité',
-    desc: 'Câbles, interrupteurs, panneaux solaires',
-    keywords: ['câble', 'cable', 'électricité', 'electricite', 'interrupteur', 'prise', 'tableau', 'disjoncteur', 'fil', 'gaine', 'panneau solaire', 'onduleur'],
+    key: 'accessoires',
+    icon: '🎧',
+    label: 'Accessoires',
+    desc: 'Écouteurs, chargeurs, coques, câbles',
+    keywords: ['écouteur', 'ecouteur', 'casque', 'chargeur', 'coque', 'câble', 'cable', 'batterie', 'powerbank', 'clé usb', 'souris', 'clavier', 'imprimante', 'disque dur', 'flash'],
   },
 ];
 
-export default function EchangeTertiaire() {
+export default function EchangeQuaternaire() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
@@ -89,7 +89,7 @@ export default function EchangeTertiaire() {
   const [loading, setLoading] = useState(true);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
-  const [activeTab, setActiveTab] = useState<MateriauxTab>('tous');
+  const [activeTab, setActiveTab] = useState<TechTab>('tous');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
   const navigate = useNavigate();
 
@@ -99,7 +99,7 @@ export default function EchangeTertiaire() {
     category: '',
     price: 0,
     currency: 'FG',
-    condition: 'neuf' as string,
+    condition: 'bon' as string,
     location: '',
     images: [] as File[],
     videos: [] as File[],
@@ -129,7 +129,7 @@ export default function EchangeTertiaire() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const res = await fetch(`${config.API_BASE_URL}/exchange/tertiaire/products`, {
+      const res = await fetch(`${config.API_BASE_URL}/exchange/quaternaire/products`, {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       if (res.ok) {
@@ -148,7 +148,7 @@ export default function EchangeTertiaire() {
   const getFilteredProducts = () => {
     if (!products || !Array.isArray(products)) return [];
     if (activeTab === 'tous') return products;
-    const tab = MATERIAUX_TABS.find(t => t.key === activeTab);
+    const tab = TECH_TABS.find(t => t.key === activeTab);
     if (!tab || tab.keywords.length === 0) return products;
     return products.filter(p => {
       const text = `${p.title} ${p.category} ${p.description} ${p.subcategory || ''}`.toLowerCase();
@@ -177,8 +177,8 @@ export default function EchangeTertiaire() {
 
       const formData = new FormData();
       formData.append('title', newProduct.title);
-      formData.append('description', newProduct.description.trim() || 'Matériaux de construction');
-      formData.append('category', newProduct.category || 'Matériaux');
+      formData.append('description', newProduct.description.trim() || 'Appareil numérique');
+      formData.append('category', newProduct.category || 'Numérique');
       formData.append('price', newProduct.price.toString());
       formData.append('currency', newProduct.currency);
       formData.append('condition', newProduct.condition);
@@ -190,7 +190,7 @@ export default function EchangeTertiaire() {
       if (newProduct.audio30s) formData.append('audio_0', newProduct.audio30s);
 
       const token = localStorage.getItem('token');
-      const res = await fetch(`${config.API_BASE_URL}/exchange/tertiaire/products`, {
+      const res = await fetch(`${config.API_BASE_URL}/exchange/quaternaire/products`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -199,7 +199,7 @@ export default function EchangeTertiaire() {
       if (res.ok) {
         setShowCreateProduct(false);
         setPublishMode(null);
-        setNewProduct({ title: '', description: '', category: '', price: 0, currency: 'FG', condition: 'neuf', location: '', images: [], videos: [], photoForAudio: null, audio30s: null });
+        setNewProduct({ title: '', description: '', category: '', price: 0, currency: 'FG', condition: 'bon', location: '', images: [], videos: [], photoForAudio: null, audio30s: null });
         loadData();
       } else {
         alert("Erreur lors de la publication de l'annonce");
@@ -211,7 +211,7 @@ export default function EchangeTertiaire() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
           <p className="text-lg text-gray-600 dark:text-gray-400">Chargement…</p>
         </div>
@@ -220,7 +220,7 @@ export default function EchangeTertiaire() {
   }
 
   const filteredProducts = getFilteredProducts();
-  const currentTab = MATERIAUX_TABS.find(t => t.key === activeTab)!;
+  const currentTab = TECH_TABS.find(t => t.key === activeTab)!;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -232,7 +232,7 @@ export default function EchangeTertiaire() {
       </button>
 
       {(userGeo.city || userGeo.country || gpsActive) && (
-        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4">
+        <div className="flex items-center gap-2 text-xs text-violet-700 bg-violet-50 border border-violet-200 rounded-xl px-3 py-2 mb-4">
           <span>{gpsActive ? '📡' : '📍'}</span>
           <span>
             {gpsActive
@@ -250,11 +250,11 @@ export default function EchangeTertiaire() {
           <span className="ml-auto bg-white text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">OFFICIEL</span>
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          <span className="text-5xl">🧱</span>
+          <span className="text-5xl">📱</span>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-900 dark:text-white">Matériaux de construction — Stocks disponibles</p>
+            <p className="font-bold text-gray-900 dark:text-white">Appareils numériques — Téléphones, PC &amp; Accessoires</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Ciment, fer à béton, tôles, bois, carrelage. Contactez-nous pour un devis ou une commande.
+              Smartphones, ordinateurs, tablettes, TV et accessoires certifiés. Contactez-nous pour commander.
             </p>
           </div>
           <a
@@ -266,13 +266,13 @@ export default function EchangeTertiaire() {
         </div>
       </div>
 
-      {/* Header Tertiaire */}
-      <div className="bg-gradient-to-r from-amber-600 to-yellow-600 rounded-xl p-6 mb-6 text-white shadow-lg">
+      {/* Header Quaternaire */}
+      <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-xl p-6 mb-6 text-white shadow-lg">
         <div className="flex flex-col items-center text-center gap-2">
-          <span className="text-5xl">🧱</span>
-          <h1 className="text-2xl font-bold">Secteur Tertiaire — Matériaux</h1>
-          <p className="text-amber-100 text-sm">
-            Achetez et vendez ciment, fer, tôle, bois, carrelage et tous les matériaux de construction
+          <span className="text-5xl">📱</span>
+          <h1 className="text-2xl font-bold">Secteur Quaternaire — Numérique</h1>
+          <p className="text-violet-100 text-sm">
+            Achetez et vendez téléphones, ordinateurs, tablettes, TV et accessoires électroniques
           </p>
         </div>
       </div>
@@ -280,14 +280,14 @@ export default function EchangeTertiaire() {
       {/* Onglets */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
-          {MATERIAUX_TABS.map(tab => (
+          {TECH_TABS.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`px-3 py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 ${
                 activeTab === tab.key
-                  ? 'bg-amber-600 text-white shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-700'
+                  ? 'bg-violet-600 text-white shadow-lg'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-700'
               }`}
             >
               <span className="text-xl">{tab.icon}</span>
@@ -299,31 +299,21 @@ export default function EchangeTertiaire() {
         {userData && (
           <PublierAnnonceButtons
             onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
-            title="Vendre des matériaux"
+            title="Vendre un appareil"
           />
         )}
-      </div>
-
-      {/* Bannière immobilier */}
-      <div
-        onClick={() => navigate('/immobilier')}
-        className="mb-6 cursor-pointer bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-700 rounded-2xl p-4 flex items-center gap-4 hover:shadow-md transition-shadow"
-      >
-        <span className="text-3xl">🏘️</span>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-lime-800 dark:text-lime-200 text-sm">Vous cherchez un logement ?</p>
-          <p className="text-xs text-lime-600 dark:text-lime-400 mt-0.5">
-            Consultez nos agents immobiliers agréés → Location &amp; Vente de maisons
-          </p>
-        </div>
-        <span className="text-lime-500 text-xl font-bold">›</span>
       </div>
 
       {/* Formulaire de publication */}
       {showCreateProduct && publishMode !== null && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 mb-8">
           <div className="flex items-center gap-4 mb-6">
-            <button onClick={() => { setPublishMode(null); setShowCreateProduct(false); }} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">←</button>
+            <button
+              onClick={() => { setPublishMode(null); setShowCreateProduct(false); }}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              ←
+            </button>
             <span className="text-2xl">{currentTab.icon}</span>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               {publishMode === 'ecrit' && 'Publier par écrit (champs + photo)'}
@@ -334,58 +324,68 @@ export default function EchangeTertiaire() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Titre</label>
-              <input type="text" value={newProduct.title}
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Titre de l'annonce</label>
+              <input
+                type="text"
+                value={newProduct.title}
                 onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="Ex: Ciment Portland 50kg, Fer à béton 12mm…" />
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                placeholder="Ex: Samsung Galaxy A54, MacBook Pro 2021…"
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Catégorie</label>
-              <select value={newProduct.category}
+              <select
+                value={newProduct.category}
                 onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              >
                 <option value="">Choisir une catégorie</option>
-                <optgroup label="🧱 Gros œuvre">
-                  <option value="Ciment">Ciment</option>
-                  <option value="Fer à béton">Fer à béton</option>
-                  <option value="Tôle">Tôle ondulée / Tôle plate</option>
-                  <option value="Bois / Planches">Bois / Planches</option>
-                  <option value="Parpaing / Brique">Parpaing / Brique</option>
-                  <option value="Sable / Gravier">Sable / Gravier</option>
-                  <option value="Acier / Charpente">Acier / Charpente métallique</option>
+                <optgroup label="📱 Téléphones">
+                  <option value="Smartphone">Smartphone</option>
+                  <option value="Téléphone basique">Téléphone basique</option>
+                  <option value="Téléphone double SIM">Téléphone double SIM</option>
                 </optgroup>
-                <optgroup label="🎨 Finition">
-                  <option value="Carrelage / Faïence">Carrelage / Faïence</option>
-                  <option value="Peinture / Enduit">Peinture / Enduit</option>
-                  <option value="Porte / Fenêtre">Porte / Fenêtre</option>
-                  <option value="Menuiserie aluminium">Menuiserie aluminium</option>
-                  <option value="Faux plafond">Faux plafond</option>
+                <optgroup label="💻 Ordinateurs & Tablettes">
+                  <option value="Laptop / PC portable">Laptop / PC portable</option>
+                  <option value="PC de bureau">PC de bureau</option>
+                  <option value="Tablette">Tablette</option>
+                  <option value="Pièces & composants">Pièces &amp; composants</option>
                 </optgroup>
-                <optgroup label="🚿 Plomberie">
-                  <option value="Tuyaux PVC">Tuyaux PVC</option>
-                  <option value="Robinetterie">Robinetterie / Sanitaires</option>
-                  <option value="Pompe à eau">Pompe à eau</option>
-                  <option value="Château d'eau">Château d'eau / Réservoir</option>
+                <optgroup label="📺 TV & Photo">
+                  <option value="Télévision">Télévision</option>
+                  <option value="Appareil photo">Appareil photo</option>
+                  <option value="Caméra">Caméra / Dashcam</option>
+                  <option value="Enceinte / Sono">Enceinte / Sono</option>
+                  <option value="Projecteur">Projecteur / Vidéoprojecteur</option>
                 </optgroup>
-                <optgroup label="⚡ Électricité">
-                  <option value="Câbles électriques">Câbles électriques</option>
-                  <option value="Panneau solaire">Panneau solaire / Onduleur</option>
-                  <option value="Tableau électrique">Tableau / Disjoncteur</option>
-                  <option value="Prises / Interrupteurs">Prises / Interrupteurs</option>
+                <optgroup label="🎧 Accessoires">
+                  <option value="Écouteurs / Casque">Écouteurs / Casque</option>
+                  <option value="Chargeur">Chargeur / Câble</option>
+                  <option value="Coque / Protection">Coque / Protection</option>
+                  <option value="Batterie externe">Batterie externe / Powerbank</option>
+                  <option value="Clé USB / Stockage">Clé USB / Carte mémoire</option>
+                  <option value="Souris / Clavier">Souris / Clavier</option>
+                  <option value="Imprimante / Scanner">Imprimante / Scanner</option>
+                  <option value="Disque dur">Disque dur externe</option>
                 </optgroup>
               </select>
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Prix</label>
               <div className="flex gap-2">
-                <input type="number" value={newProduct.price || ''}
+                <input
+                  type="number"
+                  value={newProduct.price || ''}
                   onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) || 0 })}
-                  className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  placeholder="0" />
-                <select value={newProduct.currency}
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                  placeholder="0"
+                />
+                <select
+                  value={newProduct.currency}
                   onChange={(e) => setNewProduct({ ...newProduct, currency: e.target.value })}
-                  className="px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                  className="px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                >
                   <option value="FG">FG</option>
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
@@ -393,22 +393,38 @@ export default function EchangeTertiaire() {
               </div>
             </div>
             <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">État</label>
+              <select
+                value={newProduct.condition}
+                onChange={(e) => setNewProduct({ ...newProduct, condition: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              >
+                <option value="neuf">Neuf (jamais utilisé)</option>
+                <option value="bon">Bon état</option>
+                <option value="moyen">État moyen</option>
+                <option value="usé">Usé / Pour pièces</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Localisation</label>
-              <input type="text" value={newProduct.location}
+              <input
+                type="text"
+                value={newProduct.location}
                 onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="Ex: Conakry, Kindia…" />
+                className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                placeholder="Ex: Conakry, Kindia, Labé…"
+              />
             </div>
 
             {publishMode === 'photo_audio' && (
               <div className="lg:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Photo + message vocal (max 10 s)</label>
-                <div className="rounded-xl border-2 border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/20 p-4 space-y-3">
+                <div className="rounded-xl border-2 border-violet-200 dark:border-violet-700 bg-violet-50/50 dark:bg-violet-900/20 p-4 space-y-3">
                   <div>
-                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Photo du matériau</span>
+                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Photo de l'appareil</span>
                     <input type="file" accept="image/*" capture="environment"
                       onChange={(e) => setNewProduct(prev => ({ ...prev, photoForAudio: e.target.files?.[0] || null }))}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-amber-100 file:text-amber-800 dark:file:bg-amber-900/30 dark:file:text-amber-200" />
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-800 dark:file:bg-violet-900/30 dark:file:text-violet-200" />
                     {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ Photo sélectionnée</p>}
                   </div>
                   <div>
@@ -426,7 +442,7 @@ export default function EchangeTertiaire() {
             {publishMode === 'video' && (
               <div className="lg:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Vidéo (max 10 secondes)</label>
-                <div className="rounded-xl border-2 border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/20 p-4">
+                <div className="rounded-xl border-2 border-violet-200 dark:border-violet-700 bg-violet-50/50 dark:bg-violet-900/20 p-4">
                   <VideoRecorder maxDuration={10} onVideoRecorded={(blob) => {
                     const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                     setNewProduct(prev => ({ ...prev, videos: [file, ...prev.videos] }));
@@ -439,28 +455,32 @@ export default function EchangeTertiaire() {
             {publishMode === 'ecrit' && (
               <>
                 <div className="lg:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📷 Photos</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📷 Photos de l'appareil</label>
                   <input type="file" accept="image/*" multiple
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
                       setNewProduct(p => ({ ...p, images: [...p.images, ...files] }));
                     }}
-                    className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-amber-100 file:text-amber-800 dark:file:bg-amber-900/30 dark:file:text-amber-200" />
-                  {newProduct.images.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400">{newProduct.images.length} photo(s)</p>}
+                    className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-800 dark:file:bg-violet-900/30 dark:file:text-violet-200"
+                  />
+                  {newProduct.images.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400">{newProduct.images.length} photo(s) ajoutée(s)</p>}
                 </div>
                 <div className="lg:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</label>
-                  <textarea value={newProduct.description}
+                  <textarea
+                    value={newProduct.description}
                     onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                    rows={4} placeholder="Décrivez vos matériaux (quantité, qualité, origine…)" />
+                    className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                    rows={4}
+                    placeholder="Décrivez l'appareil : marque, modèle, stockage, couleur, raison de la vente…"
+                  />
                 </div>
               </>
             )}
           </div>
 
           <div className="flex gap-4 mt-6">
-            <button onClick={createProduct} className="px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-semibold">✅ Publier</button>
+            <button onClick={createProduct} className="px-6 py-3 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-semibold">✅ Publier</button>
             <button onClick={() => { setShowCreateProduct(false); setPublishMode(null); }} className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-semibold">Annuler</button>
           </div>
         </div>
@@ -478,13 +498,13 @@ export default function EchangeTertiaire() {
       {/* Grille des annonces */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.length === 0 ? (
-          <div className="col-span-full text-center py-14 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800">
+          <div className="col-span-full text-center py-14 bg-violet-50 dark:bg-violet-900/10 rounded-2xl border border-violet-200 dark:border-violet-800">
             <span className="text-6xl block mb-4">{currentTab.icon}</span>
             <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
               Aucune annonce dans <strong>{currentTab.label}</strong> pour le moment.
             </p>
             {userData && (
-              <button onClick={() => { setShowCreateProduct(true); setPublishMode(null); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700">
+              <button onClick={() => { setShowCreateProduct(true); setPublishMode(null); }} className="px-6 py-3 bg-violet-600 text-white rounded-xl hover:bg-violet-700">
                 ➕ Publier la première annonce
               </button>
             )}
@@ -499,13 +519,13 @@ export default function EchangeTertiaire() {
                 <video src={buildImageUrl(product.videos[0])} className="w-full h-48 object-cover" autoPlay muted loop playsInline
                   onError={(e) => { (e.target as HTMLVideoElement).style.display = 'none'; }} />
               ) : product.audio && product.audio.length > 0 ? (
-                <div className="w-full h-48 bg-amber-50 dark:bg-amber-900/20 flex flex-col items-center justify-center gap-2 px-4">
+                <div className="w-full h-48 bg-violet-50 dark:bg-violet-900/20 flex flex-col items-center justify-center gap-2 px-4">
                   <span className="text-4xl">🎙️</span>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Message vocal du vendeur</p>
+                  <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">Message vocal du vendeur</p>
                   <audio src={buildImageUrl(product.audio[0])} controls className="w-full" />
                 </div>
               ) : (
-                <div className="w-full h-48 bg-amber-50 dark:bg-amber-900/20 flex flex-col items-center justify-center gap-2">
+                <div className="w-full h-48 bg-violet-50 dark:bg-violet-900/20 flex flex-col items-center justify-center gap-2">
                   <span className="text-5xl">{currentTab.icon}</span>
                   <p className="text-xs text-gray-400">Pas encore de photo</p>
                 </div>
@@ -513,15 +533,25 @@ export default function EchangeTertiaire() {
               <div className="p-5">
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <h3 className="font-bold text-gray-900 dark:text-white text-base leading-snug">{product.title}</h3>
-                  <span className="flex-shrink-0 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold">
-                    {product.category || 'Matériaux'}
+                  <span className="flex-shrink-0 px-2 py-0.5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 rounded-full text-xs font-semibold">
+                    {product.category || 'Numérique'}
                   </span>
                 </div>
+                {product.condition && (
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium mb-2 ${
+                    product.condition === 'neuf' ? 'bg-green-100 text-green-700' :
+                    product.condition === 'bon' ? 'bg-blue-100 text-blue-700' :
+                    product.condition === 'moyen' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {product.condition === 'neuf' ? 'Neuf' : product.condition === 'bon' ? 'Bon état' : product.condition === 'moyen' ? 'État moyen' : 'Usé'}
+                  </span>
+                )}
                 {product.description && (
                   <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-2 mb-3">{product.description}</p>
                 )}
-                <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
-                  <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
+                <div className="mb-3 p-3 bg-violet-50 dark:bg-violet-900/20 rounded-xl">
+                  <span className="text-lg font-bold text-violet-700 dark:text-violet-400">
                     {Number(product.price).toLocaleString()} {product.currency}
                   </span>
                 </div>
@@ -531,7 +561,7 @@ export default function EchangeTertiaire() {
                   </p>
                 )}
                 <button onClick={() => setSelectedProduct(product)}
-                  className="w-full py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium text-sm transition-colors">
+                  className="w-full py-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-medium text-sm transition-colors">
                   📞 Contacter le vendeur
                 </button>
               </div>
@@ -544,13 +574,24 @@ export default function EchangeTertiaire() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={() => setSelectedProduct(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{selectedProduct.title}</h3>
-            <span className="inline-block px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold mb-3">
-              {selectedProduct.category || 'Matériaux'}
-            </span>
+            <div className="flex gap-2 mb-3 flex-wrap">
+              <span className="px-3 py-1 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 rounded-full text-xs font-semibold">
+                {selectedProduct.category || 'Numérique'}
+              </span>
+              {selectedProduct.condition && (
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  selectedProduct.condition === 'neuf' ? 'bg-green-100 text-green-700' :
+                  selectedProduct.condition === 'bon' ? 'bg-blue-100 text-blue-700' :
+                  'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {selectedProduct.condition === 'neuf' ? 'Neuf' : selectedProduct.condition === 'bon' ? 'Bon état' : selectedProduct.condition}
+                </span>
+              )}
+            </div>
             {selectedProduct.description && (
               <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm">{selectedProduct.description}</p>
             )}
-            <p className="text-lg font-bold text-amber-600 dark:text-amber-400 mb-2">
+            <p className="text-lg font-bold text-violet-600 dark:text-violet-400 mb-2">
               {Number(selectedProduct.price).toLocaleString()} {selectedProduct.currency}
             </p>
             {selectedProduct.location && (

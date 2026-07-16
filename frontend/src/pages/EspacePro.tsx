@@ -366,11 +366,12 @@ import { config } from "../config/api";
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || (import.meta.env.VITE_API_URL || "");
 
 /* ============================================================
-   MURO DE PAGO POR SUSCRIPCIÓN
+   PAYWALL VISIBILITÉ + RENDEZ-VOUS
+   Niveau 1 — profil public + gestion des rendez-vous
    ============================================================ */
 function SubscriptionPaymentWall({
   account,
-  userData,
+  userData: _userData,
   onSuccess,
 }: {
   account: ProAccount;
@@ -378,83 +379,171 @@ function SubscriptionPaymentWall({
   onSuccess: () => void;
 }) {
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  const [prix, setPrix] = useState<{ visibilite: Record<string, number>; gestionInterne: Record<string, number> } | null>(null);
+  const [periodeChoisie, setPeriodeChoisie] = useState<"mois" | "an" | "cinqAns">("mois");
   const [showPayment, setShowPayment] = useState(false);
 
-  // Prix d'abonnement mensuel selon le type de compte (en GNF)
-  const SUBSCRIPTION_PRICES: Record<string, number> = {
-    clinic: 500000,
-    enterprise: 300000,
-    school: 200000,
-    scientist: 150000,
-    ngo: 100000,
-    security_agency: 400000,
-    supplier: 250000,
-    journalist: 150000,
-  };
-
-  const price = SUBSCRIPTION_PRICES[account.type] || 200000;
-  const isOverdue = account.subscriptionStatus === "overdue";
+  const isOverdue   = account.subscriptionStatus === "overdue";
   const isNeverPaid = account.subscriptionStatus === "never_paid";
 
+  useEffect(() => {
+    fetch(`/api/payment/prix-compte-pro?proId=${account.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.success) setPrix(d); })
+      .catch(() => {});
+  }, [account.id]);
+
+  const PERIODES: { key: "mois" | "an" | "cinqAns"; label: string; sub: string; badge?: string }[] = [
+    { key: "mois",    label: "Mensuel",  sub: "Renouvelable chaque mois" },
+    { key: "an",      label: "Annuel",   sub: "2 mois offerts",          badge: "2 mois offerts" },
+    { key: "cinqAns", label: "5 ans",    sub: "1 an offert",             badge: "1 an offert"    },
+  ];
+
+  const PURPOSE_MAP: Record<string, string> = {
+    mois: "visibilite_mois", an: "visibilite_an", cinqAns: "visibilite_5ans",
+  };
+
+  const montantChoisi = prix?.visibilite[periodeChoisie] ?? 0;
+  const purposeChoisi = PURPOSE_MAP[periodeChoisie];
+  const descChoisi    = `Visibilité ${PERIODES.find(p => p.key === periodeChoisie)?.label} — ${account.name}`;
+
+  const FEATURES_VISIBILITE = [
+    "Profil public visible dans les recherches de la plateforme",
+    "Réception des demandes de rendez-vous des utilisateurs",
+    "Accepter, refuser et gérer vos rendez-vous",
+    "Vitrine publique avec vos services et coordonnées",
+    "Notifications en temps réel",
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-orange-200 dark:border-orange-800 p-6 text-center">
-        <div className="text-5xl mb-3">{isOverdue ? "⏰" : "🔒"}</div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          {isOverdue ? "Abonnement expiré" : "Activez votre abonnement"}
-        </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-          {isNeverPaid
-            ? "Votre compte est approuvé ! Payez votre premier abonnement mensuel pour accéder à votre dashboard."
-            : "Votre abonnement mensuel a expiré. Renouvelez-le pour continuer à utiliser votre dashboard."}
-        </p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-8">
+      <div className="max-w-lg w-full space-y-4">
 
-        {/* Prix */}
-        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 mb-5">
-          <p className="text-xs text-gray-500 mb-1">Abonnement mensuel</p>
-          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-            {price.toLocaleString('fr-FR')} GNF
-          </p>
-          <p className="text-xs text-gray-400 mt-1">Valable 30 jours — Renouvelable</p>
-        </div>
+        {/* ── Carte Visibilité ── */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-blue-200 dark:border-blue-700 p-6">
+          <div className="text-center mb-4">
+            <div className="text-5xl mb-2">{isOverdue ? "⏰" : "👁️"}</div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+              {isOverdue ? "Renouveler votre Visibilité" : "Activer votre Visibilité"}
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {isNeverPaid
+                ? "Votre compte est approuvé. Choisissez une formule pour être visible et recevoir des rendez-vous."
+                : "Votre abonnement a expiré. Renouvelez pour rester visible et accessible."}
+            </p>
+          </div>
 
-        {/* Avantages */}
-        <div className="text-left mb-5 space-y-2">
-          {["Tableau de bord complet", "Gestion des rendez-vous", "Profil visible dans les recherches", "Notifications en temps réel"].map(f => (
-            <div key={f} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-              <span className="text-green-500">✓</span> {f}
+          {/* Ce que comprend la Visibilité */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 mb-4">
+            <p className="text-xs font-bold text-blue-700 dark:text-blue-300 mb-2 uppercase tracking-wide">Visibilité + Rendez-vous</p>
+            <div className="space-y-1.5">
+              {FEATURES_VISIBILITE.map(f => (
+                <div key={f} className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
+                  <span className="text-blue-500 mt-0.5 flex-shrink-0">✓</span>
+                  <span>{f}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          {/* Sélection de période */}
+          {prix ? (
+            <div className="space-y-2 mb-4">
+              {PERIODES.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setPeriodeChoisie(opt.key)}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 transition-all text-left ${
+                    periodeChoisie === opt.key
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500"
+                  }`}
+                >
+                  <div>
+                    <span className="font-bold text-sm text-gray-900 dark:text-gray-100">{opt.label}</span>
+                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{opt.sub}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {opt.badge && (
+                      <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold hidden sm:inline">
+                        {opt.badge}
+                      </span>
+                    )}
+                    <span className={`font-bold text-sm ${periodeChoisie === opt.key ? "text-blue-600 dark:text-blue-400" : "text-gray-700 dark:text-gray-300"}`}>
+                      {(prix.visibilite[opt.key] || 0).toLocaleString("fr-GN")} GNF
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-gray-400 text-sm animate-pulse">Chargement des prix...</div>
+          )}
+
+          <button
+            onClick={() => setShowPayment(true)}
+            disabled={!prix || montantChoisi === 0}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors mb-2"
+          >
+            💳 Payer {montantChoisi > 0 ? `${montantChoisi.toLocaleString("fr-GN")} GNF` : "..."}
+          </button>
+          <p className="text-xs text-gray-400 text-center mb-3">Orange Money · Wave · Visa · Mastercard</p>
+
+          <button
+            onClick={() => navigate("/mes-comptes-pro")}
+            className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-center"
+          >
+            ← Retour à mes comptes
+          </button>
         </div>
 
-        {/* Bouton payer */}
-        <button
-          onClick={() => setShowPayment(true)}
-          className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-colors mb-3 flex items-center justify-center gap-2"
-        >
-          💳 Payer {price.toLocaleString('fr-FR')} GNF
-        </button>
-
-        <p className="text-xs text-gray-400 mb-3">Orange Money • MTN MoMo • Visa • Mastercard</p>
-
-        <button
-          onClick={() => navigate("/mes-comptes-pro")}
-          className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-        >
-          ← Retour à mes comptes
-        </button>
+        {/* ── Upgrade vers Gestion Interne ── */}
+        {prix && (
+          <div className="rounded-2xl overflow-hidden shadow-md">
+            <div className="bg-gradient-to-br from-green-700 to-green-900 p-5 text-white">
+              <div className="flex items-start gap-3 mb-3">
+                <span className="text-3xl flex-shrink-0">⚡</span>
+                <div>
+                  <p className="font-bold text-base leading-tight">Gestion Interne — Service Complet</p>
+                  <p className="text-green-200 text-xs mt-0.5">
+                    Inclut tout ce que donne la Visibilité <span className="text-white font-bold">+</span> la gestion complète de votre établissement
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {PERIODES.map(opt => (
+                  <div key={opt.key} className="bg-white/10 rounded-xl p-2 text-center">
+                    <div className="text-xs text-green-200 mb-0.5">{opt.label}</div>
+                    <div className="font-bold text-sm">{(prix.gestionInterne[opt.key] || 0).toLocaleString("fr-GN")}</div>
+                    <div className="text-[10px] text-green-300">GNF</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/mes-comptes-pro")}
+              className="w-full py-3 bg-white text-green-800 font-bold text-sm hover:bg-green-50 transition-colors text-center"
+            >
+              Choisir la Gestion Interne →
+            </button>
+          </div>
+        )}
       </div>
 
-      {showPayment && (
+      {showPayment && prix && (
         <PaymentModal
           isOpen={showPayment}
           onClose={() => setShowPayment(false)}
           onSuccess={() => { setShowPayment(false); onSuccess(); }}
-          amount={price}
+          amount={montantChoisi}
           currency="GNF"
-          purpose="subscription_pro"
+          purpose={purposeChoisi}
           relatedId={account.id}
-          description={`Abonnement mensuel — ${account.name}`}
+          description={descChoisi}
         />
       )}
     </div>

@@ -13,6 +13,7 @@ interface ProAccount {
   created_at: string;
   subscriptionStatus?: "never_paid" | "active" | "overdue" | "blocked";
   subscriptionValidUntil?: string | null;
+  gestionInterneValidUntil?: string | null;
   billingInfo?: {
     proPaymentDetails?: string;
   } | null;
@@ -221,133 +222,174 @@ export default function MesComptesPro() {
         ) : (
           <div className="space-y-3">
             {accounts.map((acc) => {
-              const typeInfo   = TYPE_LABELS[acc.type]      || { label: acc.type, icon: "📄" };
-              const statusInfo = STATUS_STYLES[acc.status]  || { label: acc.status, cls: "bg-gray-100 text-gray-700" };
-              const btnClass   = TYPE_TO_BTN[acc.type]      || "bg-blue-600 hover:bg-blue-700";
-              const badgeClass = TYPE_TO_BADGE[acc.type]    || "bg-gray-100 text-gray-700";
-              const svcLabel   = TYPE_TO_SERVICE_LABEL[acc.type] || "";
+              const typeInfo   = TYPE_LABELS[acc.type]           || { label: acc.type, icon: "📄" };
+              const statusInfo = STATUS_STYLES[acc.status]        || { label: acc.status, cls: "bg-gray-100 text-gray-700" };
+              const btnClass   = TYPE_TO_BTN[acc.type]            || "bg-blue-600 hover:bg-blue-700";
+              const badgeClass = TYPE_TO_BADGE[acc.type]          || "bg-gray-100 text-gray-700";
+              const svcLabel   = TYPE_TO_SERVICE_LABEL[acc.type]  || "";
               const subStatus  = acc.subscriptionStatus || "never_paid";
-              const now = new Date();
-              const expiry = acc.subscriptionValidUntil ? new Date(acc.subscriptionValidUntil) : null;
-              const daysLeft = expiry ? Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+              const now        = new Date();
+
+              // ── Visibilité (Niveau 1) ────────────────────────────────────────
+              const expiry      = acc.subscriptionValidUntil ? new Date(acc.subscriptionValidUntil) : null;
+              const daysLeft    = expiry ? Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
               const expiringSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
-              const isExpired = expiry ? expiry < now : false;
-              const canOpenDashboard = acc.status === "approved" && subStatus === "active" && !isExpired;
+              const isExpired    = expiry ? expiry < now : false;
+              const hasVisibilite = acc.status === "approved" && subStatus === "active" && !isExpired;
+
+              // ── Gestion Interne (Niveau 2) ───────────────────────────────────
+              const giExpiry   = acc.gestionInterneValidUntil ? new Date(acc.gestionInterneValidUntil) : null;
+              const hasGI      = giExpiry ? giExpiry > now : false;
+              const giDaysLeft = giExpiry ? Math.ceil((giExpiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+
+              const canOpenDashboard = hasVisibilite || hasGI;
 
               return (
                 <div
                   key={acc.id}
-                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+                  className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-4 sm:p-5"
                 >
-                  {/* Icône */}
-                  <div className={`w-14 h-14 rounded-2xl ${badgeClass} flex items-center justify-center text-3xl flex-shrink-0`}>
-                    {typeInfo.icon}
-                  </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    {/* Icône */}
+                    <div className={`w-14 h-14 rounded-2xl ${badgeClass} flex items-center justify-center text-3xl flex-shrink-0`}>
+                      {typeInfo.icon}
+                    </div>
 
-                  {/* Info principale */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center flex-wrap gap-2 mb-1">
-                      <span className="font-bold text-gray-900 dark:text-gray-100 text-base">{acc.name}</span>
-                      {svcLabel && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badgeClass}`}>
-                          {svcLabel}
+                    {/* Info principale */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center flex-wrap gap-2 mb-1">
+                        <span className="font-bold text-gray-900 dark:text-gray-100 text-base">{acc.name}</span>
+                        {svcLabel && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badgeClass}`}>
+                            {svcLabel}
+                          </span>
+                        )}
+                        {/* Badge tier actif */}
+                        {hasGI && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700">
+                            ⚡ Gestion Interne
+                          </span>
+                        )}
+                        {hasVisibilite && !hasGI && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">
+                            👁️ Visibilité
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {typeInfo.label}{acc.city ? ` · ${acc.city}` : ""}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        Créé le {new Date(acc.created_at).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+
+                    {/* Statut compte + dates d'expiration */}
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className={`px-3 py-1.5 text-xs font-semibold rounded-full ${statusInfo.cls}`}>
+                        {statusInfo.label}
+                      </span>
+                      {acc.status === "approved" && hasGI && giDaysLeft !== null && (
+                        <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
+                          giDaysLeft <= 7 ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"
+                        }`}>
+                          {giDaysLeft <= 7 ? `⚠️ GI expire dans ${giDaysLeft}j` : `⚡ GI valide ${giDaysLeft}j`}
+                        </span>
+                      )}
+                      {acc.status === "approved" && hasVisibilite && !hasGI && expiry && (
+                        <>
+                          <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
+                            expiringSoon ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
+                          }`}>
+                            {expiringSoon ? `⚠️ Expire dans ${daysLeft}j` : `👁️ Valide ${daysLeft}j`}
+                          </span>
+                        </>
+                      )}
+                      {acc.status === "approved" && !hasVisibilite && !hasGI && (
+                        <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
+                          isExpired ? "bg-red-100 text-red-700" : "bg-gray-100 dark:bg-gray-700 text-gray-500"
+                        }`}>
+                          {isExpired ? "⛔ Expiré" : SUBSCRIPTION_LABELS[subStatus] || "🔒 Non activé"}
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {typeInfo.label}
-                      {acc.city ? ` · ${acc.city}` : ""}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      Créé le {new Date(acc.created_at).toLocaleDateString("fr-FR")}
-                    </p>
-                  </div>
 
-                  {/* Statut compte + abonnement */}
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className={`px-3 py-1.5 text-xs font-semibold rounded-full ${statusInfo.cls}`}>
-                      {statusInfo.label}
-                    </span>
-                    {acc.status === "approved" && (
-                      <>
-                        <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
-                          expiringSoon ? "bg-orange-100 text-orange-700" :
-                          isExpired ? "bg-red-100 text-red-700" :
-                          "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                        }`}>
-                          {expiringSoon
-                            ? `⚠️ Expire dans ${daysLeft}j`
-                            : isExpired
-                            ? "⛔ Abonnement expiré"
-                            : SUBSCRIPTION_LABELS[subStatus] || "Abonnement"}
-                        </span>
-                        {expiry && (
-                          <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                            {isExpired ? "Expiré le" : "Valide jusqu'au"} {expiry.toLocaleDateString("fr-FR")}
-                          </span>
+                    {/* Boutons d'accès selon le tier */}
+                    {canOpenDashboard && (
+                      <div className="flex flex-col gap-2 flex-shrink-0">
+                        {hasGI && (
+                          <button
+                            onClick={() => navigate("/gestion-interne")}
+                            className="min-h-[40px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap"
+                          >
+                            ⚡ Gestion Interne
+                          </button>
                         )}
-                      </>
+                        <button
+                          onClick={() => navigate(`/espace-pro/${acc.id}`)}
+                          className={`min-h-[40px] px-4 py-2 ${hasGI ? "bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200" : `${btnClass} text-white`} text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap`}
+                        >
+                          📅 Mes Rendez-vous
+                        </button>
+                      </div>
                     )}
                   </div>
 
-                  {/* Bouton dashboard */}
-                  {canOpenDashboard && (
-                    <button
-                      onClick={() => navigate(`/espace-pro/${acc.id}`)}
-                      className={`min-h-[42px] px-5 py-2 ${btnClass} text-white text-sm font-semibold rounded-xl transition-colors flex-shrink-0 flex items-center gap-2`}
-                    >
-                      📊 Mon dashboard
-                    </button>
-                  )}
-
+                  {/* Paywall — formules d'abonnement */}
                   {acc.status === "approved" && !canOpenDashboard && (
-                    <div className="w-full mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
-                      {(isExpired || expiringSoon) && (
-                        <p className="text-xs font-bold text-red-600 mb-2">
-                          {isExpired ? "⛔ Abonnement expiré — choisissez une formule" : `⚠️ Expire dans ${daysLeft} jours — renouvelez`}
-                        </p>
-                      )}
-                      {!isExpired && !expiringSoon && (
-                        <p className="text-xs font-bold text-amber-600 mb-2">🔒 Choisissez votre formule pour activer</p>
+                    <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                      {isExpired ? (
+                        <p className="text-xs font-bold text-red-600 mb-3">⛔ Abonnement expiré — choisissez une formule pour réactiver</p>
+                      ) : (
+                        <p className="text-xs font-bold text-amber-600 mb-3">🔒 Choisissez votre formule pour activer votre compte</p>
                       )}
 
-                      {/* Grille 2 colonnes : Visibilité | Gestion Interne */}
                       {prix[acc.id] ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {/* Visibilité seulement */}
-                          <div className="border border-gray-200 rounded-xl p-3 bg-gray-50">
-                            <p className="font-bold text-gray-700 text-xs mb-2">👁️ Visibilité seulement</p>
-                            <p className="text-xs text-gray-500 mb-2">Profil public + rendez-vous</p>
+
+                          {/* ── Niveau 1 : Visibilité + Rendez-vous ── */}
+                          <div className="border border-blue-200 rounded-xl p-3 bg-blue-50 dark:bg-blue-900/10">
+                            <p className="font-bold text-blue-800 dark:text-blue-300 text-xs mb-0.5">👁️ Visibilité + Rendez-vous</p>
+                            <p className="text-[11px] text-blue-600 dark:text-blue-400 mb-2 leading-tight">
+                              Profil public · Recevoir des rendez-vous · Vitrine
+                            </p>
                             {(['mois','an','cinqAns'] as const).map(p => (
                               <button key={p}
                                 onClick={() => handlePay(acc, 'visibilite', p)}
                                 disabled={paying === acc.id}
-                                className="w-full text-left px-3 py-1.5 mb-1 rounded-lg text-xs font-semibold bg-white border border-gray-300 hover:bg-gray-100 transition-colors disabled:opacity-50"
+                                className="w-full text-left px-3 py-2 mb-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-gray-700 border border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50 flex justify-between items-center"
                               >
-                                {p === 'mois' ? '📅 Mensuel' : p === 'an' ? '📆 Annuel' : '🏆 5 ans'} —{' '}
-                                <span className="text-blue-700">{prix[acc.id].visibilite[p].toLocaleString('fr-GN')} GNF</span>
+                                <span>{p === 'mois' ? '📅 Mensuel' : p === 'an' ? '📆 Annuel' : '🏆 5 ans'}</span>
+                                <span className="text-blue-700 dark:text-blue-300 font-bold">
+                                  {prix[acc.id].visibilite[p].toLocaleString('fr-GN')} GNF
+                                </span>
                               </button>
                             ))}
                           </div>
 
-                          {/* Gestion Interne */}
-                          <div className="border-2 border-green-300 rounded-xl p-3 bg-green-50">
-                            <p className="font-bold text-green-800 text-xs mb-1">⚡ Gestion Interne</p>
-                            <p className="text-xs text-green-600 mb-2">Tout inclus + compte pro gratuit</p>
+                          {/* ── Niveau 2 : Gestion Interne (tout inclus) ── */}
+                          <div className="border-2 border-green-400 rounded-xl p-3 bg-green-50 dark:bg-green-900/10">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <p className="font-bold text-green-800 dark:text-green-300 text-xs">⚡ Gestion Interne</p>
+                              <span className="text-[10px] bg-green-600 text-white px-1.5 py-0.5 rounded-full font-bold">Complet</span>
+                            </div>
+                            <p className="text-[11px] text-green-700 dark:text-green-400 mb-2 leading-tight">
+                              Inclut Visibilité + Rendez-vous + Gestion complète
+                            </p>
                             {(['mois','an','cinqAns'] as const).map(p => (
                               <button key={p}
                                 onClick={() => handlePay(acc, 'gestion', p)}
                                 disabled={paying === acc.id}
-                                className="w-full text-left px-3 py-1.5 mb-1 rounded-lg text-xs font-bold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50"
+                                className="w-full text-left px-3 py-2 mb-1.5 rounded-lg text-xs font-bold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex justify-between items-center"
                               >
-                                {p === 'mois' ? '📅 Mensuel' : p === 'an' ? '📆 Annuel' : '🏆 5 ans'} —{' '}
-                                {prix[acc.id].gestionInterne[p].toLocaleString('fr-GN')} GNF
+                                <span>{p === 'mois' ? '📅 Mensuel' : p === 'an' ? '📆 Annuel' : '🏆 5 ans'}</span>
+                                <span>{prix[acc.id].gestionInterne[p].toLocaleString('fr-GN')} GNF</span>
                               </button>
                             ))}
                           </div>
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-400">Chargement des prix...</div>
+                        <div className="text-xs text-gray-400 animate-pulse">Chargement des prix...</div>
                       )}
                       {paying === acc.id && (
                         <p className="text-xs text-blue-600 mt-2 text-center">⏳ Redirection vers le paiement...</p>

@@ -604,7 +604,11 @@ router.get('/admin/pending', authenticate, requireAdminOrSectorAdmin, async (req
 router.get('/admin/tenants', authenticate, requireAdmin, async (req, res) => {
   try {
     const tenants = await sequelize.query(
-      `SELECT * FROM management_tenants WHERE is_active = true ORDER BY type, name`,
+      `SELECT mt.*, pa.id as professional_account_id, pa.description, pa.address, pa.city, pa.phone, pa.email, pa.photo
+       FROM management_tenants mt
+       LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
+       WHERE mt.is_active = true
+       ORDER BY mt.type, mt.name`,
       { type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, tenants });

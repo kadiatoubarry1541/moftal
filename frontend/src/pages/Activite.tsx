@@ -1,11 +1,118 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import {
+  Sprout, Beef, Fish, ShoppingBag, Hammer, Car, GraduationCap,
+  Stethoscope, Building2, Monitor, HardHat, Wrench, UtensilsCrossed,
+  Scissors, Zap, Droplets, Shield, Banknote, Radio, Newspaper,
+  BookOpen, Home, Sunset, Globe, LucideIcon,
+  // Nouvelles icônes
+  Pill, Baby, Brain, Microscope, Scale, Calculator, Camera, Dumbbell,
+  ChefHat, Leaf, Package, Briefcase, TrendingUp, ArrowLeftRight,
+  Palette, Hotel, Languages, School, Flame, Snowflake, PaintBucket,
+  Layers, HeartHandshake, Syringe, Building
+} from 'lucide-react';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { hideIncrement } from '../utils/formatNumeroH';
 import { getUserGeoContext } from '../utils/proximity';
 import { isAdmin } from '../utils/auth';
+
+// Noms interdits — aucun groupe ne peut être créé avec ces termes
+const BLOCKED_ACTIVITY_TERMS = [
+  'musique', 'chanteur', 'chanteuse', 'danseur', 'danseuse',
+  'artiste', 'prostitué', 'prostituée', 'escort',
+];
+
+function isActivityBlocked(name: string): boolean {
+  const lower = name.toLowerCase();
+  return BLOCKED_ACTIVITY_TERMS.some(term => lower.includes(term));
+}
+
+// Mapping activité → icône Lucide
+const ACTIVITY_ICONS: Record<string, LucideIcon> = {
+  // Santé & Médecine
+  'Santé':                    Stethoscope,
+  'Médecin':                  Stethoscope,
+  'Infirmier/Infirmière':     Syringe,
+  'Pharmacien':               Pill,
+  'Sage-femme':               Baby,
+  'Dentiste':                 Stethoscope,
+  'Psychologue/Thérapeute':   Brain,
+  'Kiné/Physiothérapeute':    Dumbbell,
+  'Vétérinaire':              Beef,
+  'Opticien':                 Monitor,
+  // Éducation
+  'Élève':                    School,
+  'Étudiant':                 BookOpen,
+  'Enseignement':             GraduationCap,
+  'Professeur/Formateur':     GraduationCap,
+  'Chercheur/Scientifique':   Microscope,
+  // Droit, Finance & Admin
+  'Administration':           Building2,
+  'Avocat/Juriste':           Scale,
+  'Comptable/Auditeur':       Calculator,
+  'Économiste':               TrendingUp,
+  'Banque/Finance':           Banknote,
+  'Assurance':                Shield,
+  'Agent immobilier':         Building,
+  'Notaire/Huissier':         Scale,
+  // Numérique & Tech
+  'Informatique':             Monitor,
+  'Développeur/Programmeur':  Monitor,
+  'Graphiste/Designer':       Palette,
+  'Cybersécurité':            Shield,
+  'Télécommunications':       Radio,
+  // BTP & Artisanat
+  'Construction':             HardHat,
+  'Maçonnerie':               HardHat,
+  'Menuiserie':               Hammer,
+  'Électricité':              Zap,
+  'Plomberie':                Droplets,
+  'Soudure/Métallurgie':      Flame,
+  'Climatisation/Froid':      Snowflake,
+  'Peinture en bâtiment':     PaintBucket,
+  'Carrelage':                Layers,
+  'Mécanique':                Wrench,
+  'Artisanat':                Hammer,
+  'Couture':                  Scissors,
+  // Commerce & Échanges
+  'Commerce':                 ShoppingBag,
+  'Import/Export':            ArrowLeftRight,
+  'Marketing/Communication':  TrendingUp,
+  'Transport':                Car,
+  'Logistique':               Package,
+  'Journalisme':              Newspaper,
+  'Sécurité':                 Shield,
+  // Alimentation
+  'Agriculture':              Sprout,
+  'Maraîchage':               Leaf,
+  'Élevage':                  Beef,
+  'Pêche':                    Fish,
+  'Boulangerie/Pâtisserie':   ChefHat,
+  'Restauration':             UtensilsCrossed,
+  'Agroalimentaire':          ShoppingBag,
+  // Services
+  'Coiffure':                 Scissors,
+  'Hôtellerie/Tourisme':      Hotel,
+  'Photographie/Vidéo':       Camera,
+  'Sport/Coach sportif':      Dumbbell,
+  'Ingénierie':               Wrench,
+  'Architecture':             Building2,
+  'Environnement/Écologie':   Leaf,
+  'Travail social':           HeartHandshake,
+  'Imam/Prédicateur':         BookOpen,
+  'Traducteur/Interprète':    Languages,
+  // Statut
+  'Sans emploi':              Home,
+  'Retraité':                 Sunset,
+  'Autre':                    Globe,
+};
+
+function ActivityIcon({ name, size = 22 }: { name: string; size?: number }) {
+  const Icon = ACTIVITY_ICONS[name] || Globe;
+  return <Icon size={size} strokeWidth={1.8} />;
+}
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -83,6 +190,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   const [groups, setGroups] = useState<ActivityGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ActivityGroup | null>(null);
   const [isLoadingGroup, setIsLoadingGroup] = useState(false);
+  const [blockedActivity, setBlockedActivity] = useState(false);
   const [activityMessages, setActivityMessages] = useState<any[]>([]);
   const messagesEndRefActivity = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -337,6 +445,16 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     // Utilise le nom réel de l'activité, ou un nom générique par défaut (ex : admin sans activités renseignées)
     const activityName = getActivityName(activeTab)
       || (activeTab === 'Activité1' ? 'Activité 1' : activeTab === 'Activité2' ? 'Activité 2' : 'Activité 3');
+
+    // Bloquer les activités interdites — aucun groupe ne sera créé ou affiché
+    if (isActivityBlocked(activityName)) {
+      setBlockedActivity(true);
+      setGroups([]);
+      setSelectedGroup(null);
+      setIsLoadingGroup(false);
+      return;
+    }
+    setBlockedActivity(false);
 
     try {
       const token = getToken();
@@ -747,9 +865,9 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
               // boutons (il a besoin de tout connaître), avec un libellé
               // par défaut sur les emplacements non renseignés.
               const allTabs = [
-                { id: 'Activité1' as const, defaultLabel: 'Activité 1', icon: '🌐' },
-                { id: 'Activité2' as const, defaultLabel: 'Activité 2', icon: '👥' },
-                { id: 'Activité3' as const, defaultLabel: 'Activité 3', icon: '🤝' }
+                { id: 'Activité1' as const, defaultLabel: 'Activité 1' },
+                { id: 'Activité2' as const, defaultLabel: 'Activité 2' },
+                { id: 'Activité3' as const, defaultLabel: 'Activité 3' }
               ];
 
               const filteredTabs = isAdmin(userData)
@@ -764,20 +882,24 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                 );
               }
 
-              return filteredTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-amber-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  <span className="text-base sm:text-lg">{tab.icon}</span>
-                  <span className="text-center leading-tight">{getActivityName(tab.id) || tab.defaultLabel}</span>
-                </button>
-              ));
+              return filteredTabs.map((tab) => {
+                const activityName = getActivityName(tab.id) || tab.defaultLabel;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
+                      isActive
+                        ? 'bg-amber-500 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <ActivityIcon name={activityName} size={20} />
+                    <span className="text-center leading-tight">{activityName}</span>
+                  </button>
+                );
+              });
             })()}
           </nav>
         </div>
@@ -804,7 +926,22 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                 </button>
               </div>
 
-              <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ minHeight: '500px', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+              {/* Message de rejet activité interdite */}
+              {blockedActivity && (
+                <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6 text-center">
+                  <div className="text-5xl mb-3">🚫</div>
+                  <h3 className="font-black text-red-700 text-lg mb-2">Activité rejetée</h3>
+                  <p className="text-red-600 text-sm mb-1">
+                    Cette activité n'est pas autorisée sur la plateforme.
+                  </p>
+                  <p className="text-red-500 text-xs">
+                    Les activités liées à la musique, chant, danse ou prostitution sont entièrement interdites.
+                    Veuillez choisir une autre activité dans votre profil.
+                  </p>
+                </div>
+              )}
+
+              {!blockedActivity && <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ minHeight: '500px', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
                 {/* Zone de messages */}
                 <div className="flex-1 overflow-y-auto bg-gray-100 p-4" style={{ minHeight: '300px', maxHeight: 'calc(70vh - 200px)' }}>
                   {isLoadingGroup ? (
@@ -968,7 +1105,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                     )}
                   </div>
                 )}
-              </div>
+              </div>}
             </div>
 
         {/* Section publiants validés */}

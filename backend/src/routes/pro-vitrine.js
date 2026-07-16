@@ -6,6 +6,26 @@ import { sequelize } from '../../config/database.js';
 
 const router = express.Router();
 
+const MASTER_ADMIN = 'G7C7P7R7E7F7 7';
+
+// G7 peut gérer n'importe quel compte, le propriétaire gère le sien
+function canManage(account, userId) {
+  return account.ownerNumeroH === userId || userId === MASTER_ADMIN;
+}
+
+// ─── COMPTE PAR TENANT CODE (admin ou propriétaire) ──────────────────
+// GET /api/pro-vitrine/by-tenant/:tenantCode/account
+router.get('/by-tenant/:tenantCode/account', authenticate, async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findOne({ where: { tenant_code: req.params.tenantCode } });
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    res.json({ success: true, account });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // ─── ENDPOINT PUBLIC PAR TENANT CODE ─────────────────────────────────
 // GET /api/pro-vitrine/by-tenant/:tenantCode/publications (pour les vitrines)
 router.get('/by-tenant/:tenantCode/publications', async (req, res) => {
@@ -41,12 +61,12 @@ router.get('/:id/publications', async (req, res) => {
   }
 });
 
-// POST /api/pro-vitrine/:id/publications  (propriétaire)
+// POST /api/pro-vitrine/:id/publications  (propriétaire ou G7)
 router.post('/:id/publications', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (account.ownerNumeroH !== req.userId) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const { type, titre, contenu, image, video, prix, disponible } = req.body;
     if (!titre?.trim()) return res.status(400).json({ success: false, message: 'Titre requis' });
@@ -67,12 +87,12 @@ router.post('/:id/publications', authenticate, async (req, res) => {
   }
 });
 
-// PUT /api/pro-vitrine/:id/publications/:pubId  (propriétaire)
+// PUT /api/pro-vitrine/:id/publications/:pubId  (propriétaire ou G7)
 router.put('/:id/publications/:pubId', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (account.ownerNumeroH !== req.userId) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const pub = await ProPublication.findByPk(req.params.pubId);
     if (!pub) return res.status(404).json({ success: false, message: 'Publication non trouvée' });
@@ -93,12 +113,12 @@ router.put('/:id/publications/:pubId', authenticate, async (req, res) => {
   }
 });
 
-// DELETE /api/pro-vitrine/:id/publications/:pubId  (propriétaire)
+// DELETE /api/pro-vitrine/:id/publications/:pubId  (propriétaire ou G7)
 router.delete('/:id/publications/:pubId', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (account.ownerNumeroH !== req.userId) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const pub = await ProPublication.findByPk(req.params.pubId);
     if (!pub) return res.status(404).json({ success: false, message: 'Publication non trouvée' });
@@ -112,12 +132,12 @@ router.delete('/:id/publications/:pubId', authenticate, async (req, res) => {
 
 // ─── PUBLICATION INFOS VITRINE ────────────────────────────────────────
 
-// PUT /api/pro-vitrine/:id/publish-info  (propriétaire — publie sur la vitrine)
+// PUT /api/pro-vitrine/:id/publish-info  (propriétaire ou G7 — publie sur la vitrine)
 router.put('/:id/publish-info', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (account.ownerNumeroH !== req.userId) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const { name, description, address, city, country, phone, email, services, specialties, photo } = req.body;
 

@@ -696,7 +696,7 @@ export default function AdminDashboard() {
                   <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 flex flex-col items-center justify-center text-center gap-2">
                     <span className="text-3xl">🔒</span>
                     <p className="text-sm font-semibold text-gray-700">Statistiques réservées</p>
-                    <p className="text-xs text-gray-500">Les données chiffrées (abonnés, familles, vivants…) sont visibles uniquement avec l'autorisation du compte G7.</p>
+                    <p className="text-xs text-gray-500">Les données chiffrées (abonnés, familles, vivants…) sont réservées à l'administration principale.</p>
                   </div>
                 ) : (
                 <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
@@ -1412,7 +1412,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🏥</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Clinique Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-CLIN · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-CLIN</p>
                       </div>
                     </div>
                     <div className="bg-emerald-50 px-5 py-3 text-sm text-emerald-800 border-b border-emerald-100">
@@ -1435,7 +1435,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🎓</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">École Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-ECO · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-ECO</p>
                       </div>
                     </div>
                     <div className="bg-amber-50 px-5 py-3 text-sm text-amber-800 border-b border-amber-100">
@@ -1458,7 +1458,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🕌</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Mosquée Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-MSQ · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-MSQ</p>
                       </div>
                     </div>
                     <div className="bg-green-50 px-5 py-3 text-sm text-green-800 border-b border-green-100">
@@ -1481,7 +1481,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">📖</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Madrasa Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-MDS · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-MDS</p>
                       </div>
                     </div>
                     <div className="bg-cyan-50 px-5 py-3 text-sm text-cyan-800 border-b border-cyan-100">
@@ -1504,7 +1504,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🏪</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Commerce Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-COM · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-COM</p>
                       </div>
                     </div>
                     <div className="bg-orange-50 px-5 py-3 text-sm text-orange-800 border-b border-orange-100">
@@ -1527,7 +1527,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🏢</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Entreprise Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-ENT · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-ENT</p>
                       </div>
                     </div>
                     <div className="bg-indigo-50 px-5 py-3 text-sm text-indigo-800 border-b border-indigo-100">
@@ -1550,7 +1550,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🕋</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Réseau Imam Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-IMAM · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-IMAM</p>
                       </div>
                     </div>
                     <div className="bg-violet-50 px-5 py-3 text-sm text-violet-800 border-b border-violet-100">
@@ -1573,7 +1573,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🤝</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">ONG Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-NGO · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-NGO</p>
                       </div>
                     </div>
                     <div className="bg-rose-50 px-5 py-3 text-sm text-rose-800 border-b border-rose-100">
@@ -1596,7 +1596,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">📰</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Journalistes Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-JOUR · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-JOUR</p>
                       </div>
                     </div>
                     <div className="bg-red-50 px-5 py-3 text-sm text-red-800 border-b border-red-100">
@@ -1619,7 +1619,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🔬</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Scientifiques Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-SCIEN · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-SCIEN</p>
                       </div>
                     </div>
                     <div className="bg-indigo-50 px-5 py-3 text-sm text-indigo-800 border-b border-indigo-100">
@@ -1642,7 +1642,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🚚</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Fournisseurs Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-FOUR · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-FOUR</p>
                       </div>
                     </div>
                     <div className="bg-cyan-50 px-5 py-3 text-sm text-cyan-800 border-b border-cyan-100">
@@ -1665,7 +1665,7 @@ export default function AdminDashboard() {
                       <span className="text-4xl">🛡️</span>
                       <div className="text-white">
                         <h3 className="font-bold text-base">Sécurité Référence Admin</h3>
-                        <p className="text-xs opacity-75">Code : DEMO-REF-SECU · Accès exclusif G7</p>
+                        <p className="text-xs opacity-75">Code : DEMO-REF-SECU</p>
                       </div>
                     </div>
                     <div className="bg-slate-50 px-5 py-3 text-sm text-slate-700 border-b border-slate-200">
@@ -1908,7 +1908,7 @@ function MoftalPayAdminSection({ token, apiBase }: { token: string; apiBase: str
       {/* Titre */}
       <div>
         <h2 className="text-2xl font-black text-gray-900">💰 Moftal Pay</h2>
-        <p className="text-blue-600 text-xs font-bold">Système de paiement interne Moftal — Vue super admin G7</p>
+        <p className="text-blue-600 text-xs font-bold">Système de paiement interne Moftal — Vue administration</p>
       </div>
 
       {/* Sous-onglets */}

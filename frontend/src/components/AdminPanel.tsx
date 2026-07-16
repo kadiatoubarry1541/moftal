@@ -227,7 +227,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
               ? 'bg-purple-50 text-purple-700' 
               : 'bg-emerald-50 text-emerald-700'
           }`}>
-            {isMasterAdmin ? '👑 Super Admin' : 'Admin'}
+            {isMasterAdmin ? '👑 Admin' : 'Admin'}
           </span>
           {isMasterAdmin && (
             <span className="inline-flex items-center rounded-full bg-yellow-50 px-2 py-0.5 text-yellow-700">

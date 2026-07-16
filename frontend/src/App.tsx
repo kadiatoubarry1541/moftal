@@ -68,6 +68,7 @@ const EchangeNourriture = lazy(() => import("./pages/EchangeNourriture"));
 const EchangeMedicament = lazy(() => import("./pages/EchangeMedicament"));
 const EchangeSecondaire = lazy(() => import("./pages/EchangeSecondaire"));
 const EchangeTertiaire = lazy(() => import("./pages/EchangeTertiaire"));
+const EchangeQuaternaire = lazy(() => import("./pages/EchangeQuaternaire"));
 const EchangePublier = lazy(() => import("./pages/EchangePublier"));
 const Science = lazy(() => import("./pages/Science"));
 const Zaka = lazy(() => import("./pages/Zaka"));
@@ -658,6 +659,7 @@ function App() {
             <Route path="/echange/medicament" element={<EchangeMedicament />} />
           <Route path="/echange/secondaire" element={<EchangeSecondaire />} />
           <Route path="/echange/tertiaire" element={<EchangeTertiaire />} />
+          <Route path="/echange/quaternaire" element={<EchangeQuaternaire />} />
           <Route path="/echange/publier" element={<EchangePublier />} />
           <Route path="/ia-sc" element={<ProfesseurIA />} />
           <Route path="/professeur-ia" element={<ProfesseurIA />} />

@@ -74,7 +74,7 @@ export default function EchangeSecondaire() {
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [activeStyleTab, setActiveStyleTab] = useState<'mode' | 'numerique' | 'vehicules' | 'textile'>('mode');
+  const [activeStyleTab, setActiveStyleTab] = useState<'mode' | 'machinerie' | 'vehicules' | 'textile'>('mode');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
   const navigate = useNavigate();
 
@@ -469,18 +469,20 @@ export default function EchangeSecondaire() {
                title.includes('velo') || title.includes('auto') || title.includes('berline') ||
                title.includes('suv') || title.includes('4x4');
       });
-    } else if (activeStyleTab === 'numerique') {
+    } else if (activeStyleTab === 'machinerie') {
       return products.filter(p => {
         if (!p) return false;
         const cat = ((p.subcategory || p.category) || '').toLowerCase();
         const title = (p.title || '').toLowerCase();
-        return cat.includes('téléphone') || cat.includes('telephone') || cat.includes('phone') || cat.includes('électronique') ||
-               cat.includes('electronique') || cat.includes('ordinateur') || cat.includes('pc') || cat.includes('tablette') ||
-               cat.includes('laptop') || cat.includes('numérique') || cat.includes('numerique') ||
-               title.includes('téléphone') || title.includes('smartphone') || title.includes('mobile') ||
-               title.includes('iphone') || title.includes('samsung') || title.includes('huawei') ||
-               title.includes('ordinateur') || title.includes('pc') || title.includes('laptop') ||
-               title.includes('tablette') || title.includes('ipad') || title.includes('macbook');
+        return cat.includes('machine') || cat.includes('machinerie') || cat.includes('équipement') ||
+               cat.includes('equipement') || cat.includes('outil') || cat.includes('générateur') ||
+               cat.includes('generateur') || cat.includes('moteur') || cat.includes('industriel') ||
+               title.includes('machine à coudre') || title.includes('générateur') || title.includes('groupe électrogène') ||
+               title.includes('pompe') || title.includes('compresseur') || title.includes('perceuse') ||
+               title.includes('soudure') || title.includes('tracteur') || title.includes('moteur') ||
+               title.includes('outillage') || title.includes('équipement') || title.includes('industriel') ||
+               title.includes('réfrigérateur') || title.includes('congélateur') || title.includes('climatiseur') ||
+               title.includes('machine à laver') || title.includes('électroménager');
       });
     }
     // Si aucun filtre ne correspond, retourner tous les produits
@@ -526,9 +528,9 @@ export default function EchangeSecondaire() {
         <div className="bg-white dark:bg-gray-800 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <span className="text-5xl">🛍️</span>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-900 dark:text-white">Style &amp; Numérique — Produits &amp; Services digitaux</p>
+            <p className="font-bold text-gray-900 dark:text-white">Industrie — Mode, Textile, Véhicules &amp; Machinerie</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Vêtements, guides numériques, formations, templates. Contactez-nous pour toute commande.
+              Vêtements, tissus, véhicules, machines à coudre, générateurs. Contactez-nous pour toute commande.
             </p>
           </div>
           <a
@@ -545,7 +547,7 @@ export default function EchangeSecondaire() {
         <div className="flex flex-col items-center text-center gap-2">
           <span className="text-5xl">🛍️</span>
           <h1 className="text-2xl font-bold">Secteur Secondaire</h1>
-          <p className="text-blue-100 text-sm">Électronique, mode, textile, véhicules, machinerie</p>
+          <p className="text-blue-100 text-sm">Mode, textile, véhicules, machines et équipements industriels</p>
         </div>
         {products.length > 0 && (
           <div className="mt-5">
@@ -603,14 +605,14 @@ export default function EchangeSecondaire() {
             🚗 Véhicules
           </button>
           <button
-            onClick={() => setActiveStyleTab('numerique')}
+            onClick={() => setActiveStyleTab('machinerie')}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeStyleTab === 'numerique'
+              activeStyleTab === 'machinerie'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            💻 Numérique
+            ⚙️ Machinerie
           </button>
         </div>
 
@@ -687,11 +689,15 @@ export default function EchangeSecondaire() {
                   <option value="Camion">Camion</option>
                   <option value="Autre véhicule">Autre véhicule</option>
                 </optgroup>
-                <optgroup label="💻 Numérique">
-                  <option value="Téléphone">Téléphone</option>
-                  <option value="Ordinateur">Ordinateur</option>
-                  <option value="Tablette">Tablette</option>
-                  <option value="Électronique">Électronique</option>
+                <optgroup label="⚙️ Machinerie &amp; Équipements">
+                  <option value="Machine à coudre">Machine à coudre</option>
+                  <option value="Générateur">Générateur / Groupe électrogène</option>
+                  <option value="Pompe à eau">Pompe à eau</option>
+                  <option value="Compresseur">Compresseur / Outillage</option>
+                  <option value="Électroménager">Électroménager (frigo, clim…)</option>
+                  <option value="Machine industrielle">Machine industrielle</option>
+                  <option value="Tracteur / Engin">Tracteur / Engin agricole</option>
+                  <option value="Autre équipement">Autre équipement</option>
                 </optgroup>
                 <optgroup label="Autres">
                   <option value="Machinerie">Machinerie</option>
