@@ -302,9 +302,9 @@ router.post('/register', validateUser, async (req, res) => {
     // Bloquer G0–G90 : générations réservées à l'admin
     const generationDemandee = req.body.generation || 'G1';
     if (isReservedGeneration(generationDemandee)) {
-      return res.status(403).json({
+      return res.status(400).json({
         success: false,
-        message: 'Ce numéro de génération est réservé. Vous ne pouvez pas vous inscrire avec cette valeur.'
+        message: 'Ce numéro est impossible. Notre plateforme existe depuis 2025, aucun vivant ne peut avoir ce numéro.'
       });
     }
 
@@ -629,7 +629,7 @@ router.post('/forgot-password/verify', [
       return res.status(403).json({ success: false, message: 'Ce compte ne peut pas réinitialiser un mot de passe.' });
     }
     if (isReservedGeneration(user.generation)) {
-      return res.status(403).json({ success: false, message: 'Ce compte ne dispose pas de la fonction mot de passe oublié.' });
+      return res.status(400).json({ success: false, message: 'Ce numéro est impossible. Notre plateforme existe depuis 2025, aucun vivant ne peut avoir ce numéro.' });
     }
 
     // Vérification parent (facultative — si fournie, elle doit correspondre)
