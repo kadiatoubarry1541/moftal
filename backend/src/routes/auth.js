@@ -16,6 +16,15 @@ import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEma
 
 const router = Router();
 
+// G0–G90 sont des générations réservées à l'admin uniquement
+function isReservedGeneration(generation) {
+  if (!generation) return false;
+  const match = String(generation).match(/^G(\d+)$/i);
+  if (!match) return false;
+  const num = parseInt(match[1], 10);
+  return num >= 0 && num <= 90;
+}
+
 // Toutes les données utilisateur proviennent uniquement de la base de données PostgreSQL.
 
 // Fonction pour créer un utilisateur de test en base (optionnel, au démarrage)
@@ -289,6 +298,15 @@ router.post('/register', validateUser, async (req, res) => {
 
     // Extraire les données nécessaires
     const { numeroH, email, password } = req.body;
+
+    // Bloquer G0–G90 : générations réservées à l'admin
+    const generationDemandee = req.body.generation || 'G1';
+    if (isReservedGeneration(generationDemandee)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Ce numéro de génération est réservé. Vous ne pouvez pas vous inscrire avec cette valeur.'
+      });
+    }
 
     // Hasher le mot de passe
     const saltRounds = config.BCRYPT_ROUNDS;
@@ -609,6 +627,9 @@ router.post('/forgot-password/verify', [
     }
     if (user.type === 'defunt' || user.isDeceased) {
       return res.status(403).json({ success: false, message: 'Ce compte ne peut pas réinitialiser un mot de passe.' });
+    }
+    if (isReservedGeneration(user.generation)) {
+      return res.status(403).json({ success: false, message: 'Ce compte ne dispose pas de la fonction mot de passe oublié.' });
     }
 
     // Vérification parent (facultative — si fournie, elle doit correspondre)
