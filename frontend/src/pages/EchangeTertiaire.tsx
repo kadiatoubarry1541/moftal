@@ -40,44 +40,18 @@ function buildImageUrl(path: string | undefined): string | undefined {
   return `${API_ORIGIN}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-type MateriauxTab = 'tous' | 'gros_oeuvre' | 'finition' | 'plomberie' | 'electricite';
+type MateriauxTab = 'tous' | 'meubles' | 'electromenager' | 'ustensiles' | 'gros_oeuvre' | 'finition' | 'plomberie' | 'electricite' | 'outils';
 
-const MATERIAUX_TABS: { key: MateriauxTab; icon: string; label: string; desc: string; keywords: string[] }[] = [
-  {
-    key: 'tous',
-    icon: '🏗️',
-    label: 'Tous',
-    desc: 'Tous les matériaux disponibles',
-    keywords: [],
-  },
-  {
-    key: 'gros_oeuvre',
-    icon: '🧱',
-    label: 'Gros œuvre',
-    desc: 'Ciment, fer, tôle, bois, parpaing',
-    keywords: ['ciment', 'fer', 'tôle', 'bois', 'parpaing', 'béton', 'brique', 'sable', 'gravier', 'acier', 'charpente', 'fondation', 'dalle'],
-  },
-  {
-    key: 'finition',
-    icon: '🎨',
-    label: 'Finition',
-    desc: 'Carrelage, peinture, menuiserie',
-    keywords: ['carrelage', 'faïence', 'peinture', 'enduit', 'plâtre', 'menuiserie', 'porte', 'fenêtre', 'aluminium', 'vitrage', 'faux plafond', 'revêtement'],
-  },
-  {
-    key: 'plomberie',
-    icon: '🚿',
-    label: 'Plomberie',
-    desc: 'Tuyaux, robinets, sanitaires',
-    keywords: ['plomberie', 'tuyau', 'robinet', 'sanitaire', 'wc', 'lavabo', 'douche', 'réservoir', 'pompe', 'forage', 'château d\'eau', 'pvc'],
-  },
-  {
-    key: 'electricite',
-    icon: '⚡',
-    label: 'Électricité',
-    desc: 'Câbles, interrupteurs, panneaux solaires',
-    keywords: ['câble', 'cable', 'électricité', 'electricite', 'interrupteur', 'prise', 'tableau', 'disjoncteur', 'fil', 'gaine', 'panneau solaire', 'onduleur'],
-  },
+const MATERIAUX_TABS: { key: MateriauxTab; emoji: string; label: string; keywords: string[] }[] = [
+  { key: 'tous',          emoji: '🏠', label: 'Tous',          keywords: [] },
+  { key: 'meubles',       emoji: '🛋️', label: 'Meubles',       keywords: ['meuble','table','chaise','lit','armoire','canapé','canape','bureau','étagère','etagere','commode','dressing','bibliothèque'] },
+  { key: 'electromenager',emoji: '❄️', label: 'Électroménager', keywords: ['réfrigérateur','refrigerateur','frigo','climatiseur','clim','machine à laver','congélateur','congelateur','four','mixeur','cuisinière','cuisiniere','ventilateur','électroménager'] },
+  { key: 'ustensiles',    emoji: '🍳', label: 'Ustensiles',    keywords: ['casserole','marmite','poêle','poele','vaisselle','assiette','bol','verre','couteau','ustensile','service de table','bassine','seau','bouilloire'] },
+  { key: 'gros_oeuvre',   emoji: '🧱', label: 'Gros œuvre',   keywords: ['ciment','fer','tôle','tole','bois','parpaing','béton','beton','brique','sable','gravier','acier','charpente','dalle','zinc'] },
+  { key: 'finition',      emoji: '🎨', label: 'Finition',      keywords: ['carrelage','faïence','faienc','peinture','enduit','plâtre','platre','menuiserie','porte','fenêtre','fenetre','aluminium','vitrage','faux plafond','revêtement'] },
+  { key: 'plomberie',     emoji: '🚿', label: 'Plomberie',     keywords: ['plomberie','tuyau','robinet','sanitaire','wc','lavabo','douche','réservoir','reservoir','forage','château d\'eau','pvc','évier'] },
+  { key: 'electricite',   emoji: '⚡', label: 'Électricité',   keywords: ['câble','cable','électricité','electricite','interrupteur','prise','tableau','disjoncteur','fil','gaine','panneau solaire','onduleur','groupe électrogène'] },
+  { key: 'outils',        emoji: '🔧', label: 'Outils',        keywords: ['outil','marteau','perceuse','clé','cle','vis','clou','boulon','serrure','quincaillerie','scie','tournevis','pince','niveau'] },
 ];
 
 export default function EchangeTertiaire() {
@@ -202,10 +176,15 @@ export default function EchangeTertiaire() {
         setNewProduct({ title: '', description: '', category: '', price: 0, currency: 'FG', condition: 'neuf', location: '', images: [], videos: [], photoForAudio: null, audio30s: null });
         loadData();
       } else {
-        alert("Erreur lors de la publication de l'annonce");
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 403) {
+          alert("⛔ " + (errData.message || "Votre compte vendeur Moftal (secteur Maison & Construction) doit être approuvé par un administrateur avant de pouvoir publier."));
+        } else {
+          alert("Erreur lors de la publication de l'annonce : " + (errData.message || res.status));
+        }
       }
     } catch {
-      alert("Erreur lors de la publication de l'annonce");
+      alert("Erreur de connexion. Vérifiez votre connexion internet et réessayez.");
     }
   };
 
@@ -269,38 +248,44 @@ export default function EchangeTertiaire() {
       {/* Header Tertiaire */}
       <div className="bg-gradient-to-r from-amber-600 to-yellow-600 rounded-xl p-6 mb-6 text-white shadow-lg">
         <div className="flex flex-col items-center text-center gap-2">
-          <span className="text-5xl">🧱</span>
-          <h1 className="text-2xl font-bold">Secteur Tertiaire — Matériaux</h1>
+          <div className="flex gap-2 text-4xl">
+            <span>🛋️</span><span>❄️</span><span>🧱</span><span>🔧</span>
+          </div>
+          <h1 className="text-2xl font-bold">Maison & Construction</h1>
           <p className="text-amber-100 text-sm">
-            Achetez et vendez ciment, fer, tôle, bois, carrelage et tous les matériaux de construction
+            Meubles · Électroménager · Ustensiles · Matériaux · Outils
           </p>
         </div>
       </div>
 
-      {/* Onglets */}
+      {/* Onglets visuels */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
-          {MATERIAUX_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 ${
-                activeTab === tab.key
-                  ? 'bg-amber-600 text-white shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-700'
-              }`}
-            >
-              <span className="text-xl">{tab.icon}</span>
-              <span>{tab.label}</span>
-              <span className={`text-xs ${activeTab === tab.key ? 'opacity-80' : 'opacity-60'}`}>{tab.desc}</span>
-            </button>
-          ))}
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Que cherches-tu ?</p>
+        <div className="overflow-x-auto pb-2 -mx-1">
+          <div className="flex gap-2 px-1 min-w-max">
+            {MATERIAUX_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 min-w-[60px] ${
+                  activeTab === tab.key
+                    ? 'bg-amber-600 text-white shadow-lg scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-amber-50 hover:text-amber-700'
+                }`}
+              >
+                <span className="text-2xl">{tab.emoji}</span>
+                <span className="text-center leading-tight">{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
         {userData && (
-          <PublierAnnonceButtons
-            onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
-            title="Vendre des matériaux"
-          />
+          <div className="mt-3">
+            <PublierAnnonceButtons
+              onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
+              title="Vendre un article"
+            />
+          </div>
         )}
       </div>
 
@@ -324,7 +309,7 @@ export default function EchangeTertiaire() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8 mb-8">
           <div className="flex items-center gap-4 mb-6">
             <button onClick={() => { setPublishMode(null); setShowCreateProduct(false); }} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">←</button>
-            <span className="text-2xl">{currentTab.icon}</span>
+            <span className="text-2xl">{currentTab.emoji}</span>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               {publishMode === 'ecrit' && 'Publier par écrit (champs + photo)'}
               {publishMode === 'photo_audio' && 'Publier par photo + audio'}
@@ -468,10 +453,9 @@ export default function EchangeTertiaire() {
 
       {/* Titre section active */}
       <div className="mb-4 flex items-center gap-3">
-        <span className="text-2xl">{currentTab.icon}</span>
+        <span className="text-2xl">{currentTab.emoji}</span>
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">{currentTab.label}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{currentTab.desc}</p>
         </div>
       </div>
 
@@ -479,7 +463,7 @@ export default function EchangeTertiaire() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full text-center py-14 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800">
-            <span className="text-6xl block mb-4">{currentTab.icon}</span>
+            <span className="text-6xl block mb-4">{currentTab.emoji}</span>
             <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
               Aucune annonce dans <strong>{currentTab.label}</strong> pour le moment.
             </p>
@@ -506,7 +490,7 @@ export default function EchangeTertiaire() {
                 </div>
               ) : (
                 <div className="w-full h-48 bg-amber-50 dark:bg-amber-900/20 flex flex-col items-center justify-center gap-2">
-                  <span className="text-5xl">{currentTab.icon}</span>
+                  <span className="text-5xl">{currentTab.emoji}</span>
                   <p className="text-xs text-gray-400">Pas encore de photo</p>
                 </div>
               )}

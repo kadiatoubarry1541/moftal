@@ -59,6 +59,17 @@ function buildImageUrl(p: string | undefined): string | undefined {
   return `${API_ORIGIN}${p.startsWith('/') ? '' : '/'}${p}`;
 }
 
+const PRIMAIRE_TABS = [
+  { key: 'tous',     emoji: '🛍️', label: 'Tous',     keywords: [] },
+  { key: 'cereales', emoji: '🌾', label: 'Céréales', keywords: ['riz','maïs','mais','mil','manioc','sorgho','fonio','farine','blé','ble','igname','céréale','patate'] },
+  { key: 'legumes',  emoji: '🥬', label: 'Légumes',  keywords: ['tomate','oignon','piment','gombo','aubergine','légume','legume','carotte','chou','haricot','concombre','ciboulette','épinard'] },
+  { key: 'fruits',   emoji: '🍌', label: 'Fruits',   keywords: ['mangue','orange','banane','papaye','ananas','citron','fruit','avocat','goyave','noix','coco','pastèque'] },
+  { key: 'animaux',  emoji: '🐓', label: 'Animaux',  keywords: ['bœuf','boeuf','mouton','chèvre','chevre','poulet','pintade','lapin','porc','vache','agneau','volaille','bétail','betail','dinde','canard','oie'] },
+  { key: 'poissons', emoji: '🐟', label: 'Poissons', keywords: ['poisson','crevette','tilapia','capitaine','mulet','silure','carpe','maquereau','sardine','thon','mer','fruits de mer'] },
+  { key: 'plantes',  emoji: '🌿', label: 'Plantes',  keywords: ['plante','herbe','médicinal','medicinal','racine','écorce','feuille','gingembre','ail','persil','basilic','menthe','kinkeliba'] },
+  { key: 'huiles',   emoji: '🫙', label: 'Huiles',   keywords: ['huile','palme','arachide','sésame','sesame','sel','épice','epice','condiment','soumbara','piment sec','cube maggi','lait'] },
+] as const;
+
 export default function EchangePrimaire() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
@@ -72,7 +83,7 @@ export default function EchangePrimaire() {
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const [selectedSupplier] = useState<Supplier | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<'aliments'>('aliments');
+  const [activeSubTab, setActiveSubTab] = useState<'tous'|'cereales'|'legumes'|'fruits'|'animaux'|'poissons'|'plantes'|'huiles'>('tous');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
 
   const navigate = useNavigate();
@@ -295,11 +306,16 @@ export default function EchangePrimaire() {
         });
         loadData();
       } else {
-        alert('Erreur lors de la publication du produit');
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 403) {
+          alert("⛔ " + (errData.message || "Votre compte vendeur Moftal (secteur Alimentation & Vivant) doit être approuvé par un administrateur avant de pouvoir publier."));
+        } else {
+          alert("Erreur lors de la publication du produit : " + (errData.message || res.status));
+        }
       }
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de la publication du produit');
+      alert("Erreur de connexion. Vérifiez votre connexion internet et réessayez.");
     }
   };
 
@@ -396,22 +412,15 @@ export default function EchangePrimaire() {
 
   // Fonction pour filtrer les produits selon l'onglet actif
   const getFilteredProducts = () => {
-    if (!products || !Array.isArray(products)) {
-      return [];
-    }
-    
-    if (activeSubTab === 'aliments') {
-      return products.filter(p => {
-        if (!p) return false;
-        const cat = (p.category || '').toLowerCase();
-        const title = (p.title || '').toLowerCase();
-        return cat.includes('aliment') || cat.includes('nourriture') || cat.includes('riz') || cat.includes('huile') || 
-               title.includes('riz') || title.includes('huile') || title.includes('maïs') || title.includes('manioc') || 
-               title.includes('céréale') || title.includes('légumineuse');
-      });
-    }
-    // Si aucun filtre ne correspond, retourner tous les produits
-    return products || [];
+    if (!products || !Array.isArray(products)) return [];
+    if (activeSubTab === 'tous') return products;
+    const tab = PRIMAIRE_TABS.find(t => t.key === activeSubTab);
+    if (!tab || tab.keywords.length === 0) return products;
+    return products.filter(p => {
+      if (!p) return false;
+      const text = `${p.title} ${p.category} ${p.description}`.toLowerCase();
+      return (tab.keywords as readonly string[]).some(k => text.includes(k));
+    });
   };
 
   if (loading) {
@@ -476,29 +485,40 @@ export default function EchangePrimaire() {
         </div>
       </div>
 
-      {/* Navigation sous-sections : Aliments + Restauration */}
-      <div className="bg-white rounded-xl shadow border border-gray-200 p-4 mb-6">
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <button
-            onClick={() => setActiveSubTab('aliments')}
-            className="px-3 py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 bg-green-600 text-white shadow-lg"
-          >
-            <span className="text-xl">🍚</span>
-            <span>Aliments</span>
-          </button>
+      {/* Navigation sous-catégories visuelles */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Que cherches-tu ?</p>
+        <div className="overflow-x-auto pb-2 -mx-1">
+          <div className="flex gap-2 px-1 min-w-max">
+            {PRIMAIRE_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveSubTab(tab.key as any)}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 min-w-[60px] ${
+                  activeSubTab === tab.key
+                    ? 'bg-green-600 text-white shadow-lg scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-50 hover:text-green-700'
+                }`}
+              >
+                <span className="text-2xl">{tab.emoji}</span>
+                <span className="text-center leading-tight">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-xs text-gray-400">
+            {PRIMAIRE_TABS.find(t => t.key === activeSubTab)?.key === 'tous'
+              ? 'Tous les produits alimentaires'
+              : `Produits : ${PRIMAIRE_TABS.find(t => t.key === activeSubTab)?.label}`}
+          </p>
           <button
             onClick={() => navigate('/echange/nourriture')}
-            className="px-3 py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 bg-orange-500 text-white hover:bg-orange-600"
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-semibold hover:bg-orange-600"
           >
-            <span className="text-xl">🍽️</span>
-            <span>Restauration</span>
-            <span className="text-xs opacity-80">→ Voir les restaurants</span>
+            <span>🍽️</span>
+            <span>Restaurants</span>
           </button>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-gray-500">
-            Riz, huiles, maïs, manioc et produits alimentaires
-          </p>
         </div>
       </div>
 
@@ -815,10 +835,10 @@ export default function EchangePrimaire() {
       <div className="mb-8 rounded-2xl shadow-lg border-2 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 p-6">
         <div className="mb-6">
           <h2 className="text-3xl font-bold mb-2 text-green-800">
-            🍚 Aliments
+            {PRIMAIRE_TABS.find(t => t.key === activeSubTab)?.emoji} {PRIMAIRE_TABS.find(t => t.key === activeSubTab)?.label}
           </h2>
           <p className="text-sm text-green-600">
-            Riz, huiles, maïs, manioc et autres aliments
+            {getFilteredProducts().length} produit{getFilteredProducts().length !== 1 ? 's' : ''} disponible{getFilteredProducts().length !== 1 ? 's' : ''}
           </p>
         </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

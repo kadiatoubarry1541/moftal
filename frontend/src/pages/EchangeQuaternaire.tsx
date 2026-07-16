@@ -40,44 +40,15 @@ function buildImageUrl(path: string | undefined): string | undefined {
   return `${API_ORIGIN}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-type TechTab = 'tous' | 'telephones' | 'ordinateurs' | 'tv' | 'accessoires';
+type TechTab = 'tous' | 'telephones' | 'ordinateurs' | 'tv' | 'accessoires' | 'vehicules';
 
-const TECH_TABS: { key: TechTab; icon: string; label: string; desc: string; keywords: string[] }[] = [
-  {
-    key: 'tous',
-    icon: '📦',
-    label: 'Tous',
-    desc: 'Tous les appareils',
-    keywords: [],
-  },
-  {
-    key: 'telephones',
-    icon: '📱',
-    label: 'Téléphones',
-    desc: 'Smartphones, téléphones, SIM',
-    keywords: ['téléphone', 'telephone', 'smartphone', 'mobile', 'iphone', 'samsung', 'huawei', 'tecno', 'infinix', 'itel', 'xiaomi', 'oppo', 'vivo', 'android', 'sim'],
-  },
-  {
-    key: 'ordinateurs',
-    icon: '💻',
-    label: 'Ordinateurs',
-    desc: 'Laptops, PC, tablettes',
-    keywords: ['ordinateur', 'laptop', 'pc', 'tablette', 'ipad', 'macbook', 'dell', 'hp', 'lenovo', 'asus', 'acer', 'chromebook', 'desktop', 'bureau'],
-  },
-  {
-    key: 'tv',
-    icon: '📺',
-    label: 'TV & Photo',
-    desc: 'Télévisions, appareils photo, caméras',
-    keywords: ['télévision', 'television', 'tv', 'écran', 'ecran', 'appareil photo', 'caméra', 'camera', 'projecteur', 'hifi', 'sono', 'enceinte', 'home cinéma'],
-  },
-  {
-    key: 'accessoires',
-    icon: '🎧',
-    label: 'Accessoires',
-    desc: 'Écouteurs, chargeurs, coques, câbles',
-    keywords: ['écouteur', 'ecouteur', 'casque', 'chargeur', 'coque', 'câble', 'cable', 'batterie', 'powerbank', 'clé usb', 'souris', 'clavier', 'imprimante', 'disque dur', 'flash'],
-  },
+const TECH_TABS: { key: TechTab; emoji: string; label: string; keywords: string[] }[] = [
+  { key: 'tous',        emoji: '📦', label: 'Tous',        keywords: [] },
+  { key: 'telephones',  emoji: '📱', label: 'Téléphones',  keywords: ['téléphone','telephone','smartphone','mobile','iphone','samsung','huawei','tecno','infinix','itel','xiaomi','oppo','vivo','android','sim'] },
+  { key: 'ordinateurs', emoji: '💻', label: 'Ordinateurs', keywords: ['ordinateur','laptop','pc','tablette','ipad','macbook','dell','hp','lenovo','asus','acer','chromebook','desktop'] },
+  { key: 'tv',          emoji: '📺', label: 'TV & Son',    keywords: ['télévision','television','tv','écran','ecran','appareil photo','caméra','camera','projecteur','hifi','sono','enceinte','home cinéma','drone'] },
+  { key: 'accessoires', emoji: '🎧', label: 'Accessoires', keywords: ['écouteur','ecouteur','casque','chargeur','coque','câble','cable','batterie','powerbank','clé usb','souris','clavier','imprimante','disque dur','flash'] },
+  { key: 'vehicules',   emoji: '🚗', label: 'Véhicules',   keywords: ['voiture','moto','véhicule','vehicule','scooter','vélo','velo','camion','auto','4x4','suv','berline','pick-up','taxi','pièce auto','pneu'] },
 ];
 
 export default function EchangeQuaternaire() {
@@ -202,10 +173,15 @@ export default function EchangeQuaternaire() {
         setNewProduct({ title: '', description: '', category: '', price: 0, currency: 'FG', condition: 'bon', location: '', images: [], videos: [], photoForAudio: null, audio30s: null });
         loadData();
       } else {
-        alert("Erreur lors de la publication de l'annonce");
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 403) {
+          alert("⛔ " + (errData.message || "Votre compte vendeur Moftal (secteur Technologie & Véhicules) doit être approuvé par un administrateur avant de pouvoir publier."));
+        } else {
+          alert("Erreur lors de la publication de l'annonce : " + (errData.message || res.status));
+        }
       }
     } catch {
-      alert("Erreur lors de la publication de l'annonce");
+      alert("Erreur de connexion. Vérifiez votre connexion internet et réessayez.");
     }
   };
 
@@ -270,37 +246,41 @@ export default function EchangeQuaternaire() {
       <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-xl p-6 mb-6 text-white shadow-lg">
         <div className="flex flex-col items-center text-center gap-2">
           <span className="text-5xl">📱</span>
-          <h1 className="text-2xl font-bold">Secteur Quaternaire — Numérique</h1>
+          <h1 className="text-2xl font-bold">Technologie & Véhicules</h1>
           <p className="text-violet-100 text-sm">
-            Achetez et vendez téléphones, ordinateurs, tablettes, TV et accessoires électroniques
+            Téléphones · Ordinateurs · TV · Voitures · Motos · Accessoires
           </p>
         </div>
       </div>
 
-      {/* Onglets */}
+      {/* Onglets visuels */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
-          {TECH_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-3 rounded-xl text-sm font-semibold transition-all flex flex-col items-center gap-1 ${
-                activeTab === tab.key
-                  ? 'bg-violet-600 text-white shadow-lg'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-900/20 hover:text-violet-700'
-              }`}
-            >
-              <span className="text-xl">{tab.icon}</span>
-              <span>{tab.label}</span>
-              <span className={`text-xs ${activeTab === tab.key ? 'opacity-80' : 'opacity-60'}`}>{tab.desc}</span>
-            </button>
-          ))}
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Que cherches-tu ?</p>
+        <div className="overflow-x-auto pb-2 -mx-1">
+          <div className="flex gap-2 px-1 min-w-max">
+            {TECH_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 min-w-[60px] ${
+                  activeTab === tab.key
+                    ? 'bg-violet-600 text-white shadow-lg scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-violet-50 hover:text-violet-700'
+                }`}
+              >
+                <span className="text-2xl">{tab.emoji}</span>
+                <span className="text-center leading-tight">{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
         {userData && (
-          <PublierAnnonceButtons
-            onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
-            title="Vendre un appareil"
-          />
+          <div className="mt-3">
+            <PublierAnnonceButtons
+              onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
+              title="Vendre un article"
+            />
+          </div>
         )}
       </div>
 
@@ -314,7 +294,7 @@ export default function EchangeQuaternaire() {
             >
               ←
             </button>
-            <span className="text-2xl">{currentTab.icon}</span>
+            <span className="text-2xl">{currentTab.emoji}</span>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               {publishMode === 'ecrit' && 'Publier par écrit (champs + photo)'}
               {publishMode === 'photo_audio' && 'Publier par photo + audio'}
@@ -368,6 +348,15 @@ export default function EchangeQuaternaire() {
                   <option value="Souris / Clavier">Souris / Clavier</option>
                   <option value="Imprimante / Scanner">Imprimante / Scanner</option>
                   <option value="Disque dur">Disque dur externe</option>
+                </optgroup>
+                <optgroup label="🚗 Véhicules">
+                  <option value="Voiture">Voiture / Auto</option>
+                  <option value="Moto">Moto / Scooter</option>
+                  <option value="Vélo">Vélo</option>
+                  <option value="Camion">Camion / Pickup</option>
+                  <option value="Taxi">Taxi</option>
+                  <option value="Pièce auto">Pièce auto / Mécanique</option>
+                  <option value="Pneu">Pneu / Jante</option>
                 </optgroup>
               </select>
             </div>
@@ -488,10 +477,9 @@ export default function EchangeQuaternaire() {
 
       {/* Titre section active */}
       <div className="mb-4 flex items-center gap-3">
-        <span className="text-2xl">{currentTab.icon}</span>
+        <span className="text-2xl">{currentTab.emoji}</span>
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">{currentTab.label}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{currentTab.desc}</p>
         </div>
       </div>
 
@@ -499,7 +487,7 @@ export default function EchangeQuaternaire() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full text-center py-14 bg-violet-50 dark:bg-violet-900/10 rounded-2xl border border-violet-200 dark:border-violet-800">
-            <span className="text-6xl block mb-4">{currentTab.icon}</span>
+            <span className="text-6xl block mb-4">{currentTab.emoji}</span>
             <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
               Aucune annonce dans <strong>{currentTab.label}</strong> pour le moment.
             </p>
@@ -526,7 +514,7 @@ export default function EchangeQuaternaire() {
                 </div>
               ) : (
                 <div className="w-full h-48 bg-violet-50 dark:bg-violet-900/20 flex flex-col items-center justify-center gap-2">
-                  <span className="text-5xl">{currentTab.icon}</span>
+                  <span className="text-5xl">{currentTab.emoji}</span>
                   <p className="text-xs text-gray-400">Pas encore de photo</p>
                 </div>
               )}

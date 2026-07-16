@@ -131,7 +131,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
       <div className="flex items-center justify-between mb-4 pt-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Échanges</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Les 4 secteurs économiques</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Choisis ta catégorie</p>
         </div>
         <button className="w-9 h-9 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
           <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,10 +148,15 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             onClick={() => navigate('/echange/primaire')}
             className="w-full bg-green-600 hover:bg-green-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
           >
-            <span className="text-3xl">🌾</span>
+            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
+              <span className="flex items-center justify-center text-lg leading-none">🌾</span>
+              <span className="flex items-center justify-center text-lg leading-none">🐓</span>
+              <span className="flex items-center justify-center text-lg leading-none">🥬</span>
+              <span className="flex items-center justify-center text-lg leading-none">🐟</span>
+            </div>
             <div className="text-left">
-              <p className="font-bold text-base">Primaire</p>
-              <p className="text-xs opacity-90">Agriculture, aliments, élevage, pêche</p>
+              <p className="font-bold text-base">Alimentation & Vivant</p>
+              <p className="text-xs opacity-90">Céréales · Légumes · Animaux · Poissons</p>
             </div>
             <span className="ml-auto text-lg opacity-70">›</span>
           </button>
@@ -189,10 +194,15 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             onClick={() => navigate('/echange/secondaire')}
             className="w-full bg-blue-600 hover:bg-blue-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
           >
-            <span className="text-3xl">🏭</span>
+            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
+              <span className="flex items-center justify-center text-lg leading-none">👗</span>
+              <span className="flex items-center justify-center text-lg leading-none">👟</span>
+              <span className="flex items-center justify-center text-lg leading-none">👜</span>
+              <span className="flex items-center justify-center text-lg leading-none">💄</span>
+            </div>
             <div className="text-left">
-              <p className="font-bold text-base">Secondaire</p>
-              <p className="text-xs opacity-90">Mode, textile, véhicules, machinerie</p>
+              <p className="font-bold text-base">Mode & Beauté</p>
+              <p className="text-xs opacity-90">Habits · Chaussures · Sacs · Cosmétiques</p>
             </div>
             <span className="ml-auto text-lg opacity-70">›</span>
           </button>
@@ -230,10 +240,15 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             onClick={() => navigate('/echange/tertiaire')}
             className="w-full bg-amber-600 hover:bg-amber-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
           >
-            <span className="text-3xl">🧱</span>
+            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
+              <span className="flex items-center justify-center text-lg leading-none">🛋️</span>
+              <span className="flex items-center justify-center text-lg leading-none">❄️</span>
+              <span className="flex items-center justify-center text-lg leading-none">🧱</span>
+              <span className="flex items-center justify-center text-lg leading-none">🔧</span>
+            </div>
             <div className="text-left">
-              <p className="font-bold text-base">Tertiaire</p>
-              <p className="text-xs opacity-90">Matériaux : ciment, fer, tôle, bois, carrelage</p>
+              <p className="font-bold text-base">Maison & Construction</p>
+              <p className="text-xs opacity-90">Meubles · Électroménager · Matériaux · Outils</p>
             </div>
             <span className="ml-auto text-lg opacity-70">›</span>
           </button>
@@ -271,10 +286,15 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             onClick={() => navigate('/echange/quaternaire')}
             className="w-full bg-violet-600 hover:bg-violet-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
           >
-            <span className="text-3xl">💻</span>
+            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
+              <span className="flex items-center justify-center text-lg leading-none">📱</span>
+              <span className="flex items-center justify-center text-lg leading-none">💻</span>
+              <span className="flex items-center justify-center text-lg leading-none">📺</span>
+              <span className="flex items-center justify-center text-lg leading-none">🚗</span>
+            </div>
             <div className="text-left">
-              <p className="font-bold text-base">Quaternaire</p>
-              <p className="text-xs opacity-90">Téléphones, ordinateurs, TV, accessoires</p>
+              <p className="font-bold text-base">Technologie & Véhicules</p>
+              <p className="text-xs opacity-90">Téléphones · Ordinateurs · TV · Voitures</p>
             </div>
             <span className="ml-auto text-lg opacity-70">›</span>
           </button>

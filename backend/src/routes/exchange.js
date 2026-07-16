@@ -113,7 +113,7 @@ router.post('/register-vendor', async (req, res) => {
     if (!nomBoutique || !secteur) {
       return res.status(400).json({ success: false, message: 'Nom de boutique et secteur obligatoires.' });
     }
-    if (!['primaire', 'secondaire', 'tertiaire'].includes(secteur)) {
+    if (!['primaire', 'secondaire', 'tertiaire', 'quaternaire'].includes(secteur)) {
       return res.status(400).json({ success: false, message: 'Secteur invalide.' });
     }
 
@@ -314,7 +314,7 @@ router.post('/products', upload.array('images', 10), async (req, res) => {
 
 // @route   POST /api/exchange/primaire/products
 // @desc    Créer un produit primaire
-// @access  Vendeur professionnel approuvé ou Admin
+// @access  Vendeur Moftal approuvé (secteur primaire) ou Admin
 router.post('/primaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
@@ -322,17 +322,16 @@ router.post('/primaire/products', upload.any(), async (req, res) => {
     const estAdmin = isGlobalAdmin(user);
     const userNumeroH = user?.numeroH || req.userId;
 
-    // Vérification : seul un vendeur Moftal approuvé sur le secteur primaire peut publier ici
     if (!estAdmin) {
       const [vendorOk] = await sequelize.query(
-        `SELECT id FROM professional_accounts
-         WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='primaire' LIMIT 1`,
+        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='primaire' LIMIT 1`,
         { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
       ).catch(() => []);
       if (!vendorOk) {
-        return res.status(403).json({ success: false, message: 'Accès refusé. Seuls les vendeurs Moftal approuvés (secteur primaire) peuvent publier ici.' });
+        return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Alimentation) doit être approuvé par un administrateur.' });
       }
     }
+
     const sousCategorieNormalisee = (category || '').toLowerCase().trim();
 
     // Si c'est du riz ou de l'huile publié par l'admin → marqué Moftal (apparaît en 1er)
@@ -389,12 +388,24 @@ router.post('/primaire/products', upload.any(), async (req, res) => {
 
 // @route   POST /api/exchange/secondaire/products
 // @desc    Créer un produit secondaire
-// @access  Authentifié
+// @access  Vendeur Moftal approuvé (secteur secondaire) ou Admin
 router.post('/secondaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
-    
+
     const user = req.user;
+    const estAdmin = isGlobalAdmin(user);
+    const userNumeroH = user?.numeroH || req.userId;
+
+    if (!estAdmin) {
+      const [vendorOk] = await sequelize.query(
+        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='secondaire' LIMIT 1`,
+        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+      ).catch(() => []);
+      if (!vendorOk) {
+        return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Mode & Beauté) doit être approuvé par un administrateur.' });
+      }
+    }
 
     const imageUrls = (req.files || [])
       .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
@@ -442,12 +453,24 @@ router.post('/secondaire/products', upload.any(), async (req, res) => {
 
 // @route   POST /api/exchange/tertiaire/products
 // @desc    Créer un produit tertiaire
-// @access  Authentifié
+// @access  Vendeur Moftal approuvé (secteur tertiaire) ou Admin
 router.post('/tertiaire/products', upload.any(), async (req, res) => {
   try {
     const { title, description, category, price, currency, condition, location } = req.body;
-    
+
     const user = req.user;
+    const estAdmin = isGlobalAdmin(user);
+    const userNumeroH = user?.numeroH || req.userId;
+
+    if (!estAdmin) {
+      const [vendorOk] = await sequelize.query(
+        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='tertiaire' LIMIT 1`,
+        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+      ).catch(() => []);
+      if (!vendorOk) {
+        return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Maison & Construction) doit être approuvé par un administrateur.' });
+      }
+    }
 
     const imageUrls = (req.files || [])
       .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
@@ -489,6 +512,97 @@ router.post('/tertiaire/products', upload.any(), async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la création du produit tertiaire'
+    });
+  }
+});
+
+// @route   GET /api/exchange/quaternaire/products
+// @desc    Récupérer tous les produits quaternaires (technologie & véhicules)
+// @access  Authentifié
+router.get('/quaternaire/products', async (req, res) => {
+  try {
+    const products = await ExchangeProduct.findAll({
+      where: {
+        isActive: true,
+        category: 'quaternaire'
+      },
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      products
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des produits quaternaires:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des produits quaternaires'
+    });
+  }
+});
+
+// @route   POST /api/exchange/quaternaire/products
+// @desc    Créer un produit quaternaire (technologie & véhicules)
+// @access  Vendeur Moftal approuvé (secteur quaternaire) ou Admin
+router.post('/quaternaire/products', upload.any(), async (req, res) => {
+  try {
+    const { title, description, category, price, currency, condition, location } = req.body;
+
+    const user = req.user;
+    const estAdmin = isGlobalAdmin(user);
+    const userNumeroH = user?.numeroH || req.userId;
+
+    if (!estAdmin) {
+      const [vendorOk] = await sequelize.query(
+        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='quaternaire' LIMIT 1`,
+        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+      ).catch(() => []);
+      if (!vendorOk) {
+        return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Technologie & Véhicules) doit être approuvé par un administrateur.' });
+      }
+    }
+
+    const imageUrls = (req.files || [])
+      .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
+      .map(file => `/uploads/${file.filename}`);
+
+    const videoUrls = (req.files || [])
+      .filter(file => file.fieldname && file.fieldname.startsWith('video_'))
+      .map(file => `/uploads/${file.filename}`);
+
+    const audioUrls = (req.files || [])
+      .filter(file => file.fieldname && file.fieldname.startsWith('audio_'))
+      .map(file => `/uploads/${file.filename}`);
+
+    const product = await ExchangeProduct.create({
+      title,
+      description,
+      category: 'quaternaire',
+      subcategory: category,
+      price: parseFloat(price),
+      currency: currency || 'FG',
+      condition,
+      location,
+      images: imageUrls,
+      videos: videoUrls,
+      audio: audioUrls,
+      numeroH: user.numeroH,
+      createdBy: user.numeroH,
+      isActive: true,
+      isAvailable: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Produit quaternaire créé avec succès',
+      product
+    });
+  } catch (error) {
+    console.error('Erreur lors de la création du produit quaternaire:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la création du produit quaternaire'
     });
   }
 });

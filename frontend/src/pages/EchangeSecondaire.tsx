@@ -61,6 +61,20 @@ function buildImageUrl(p: string | undefined): string | undefined {
   return `${API_ORIGIN}${p.startsWith('/') ? '' : '/'}${p}`;
 }
 
+const SECONDAIRE_TABS = [
+  { key: 'tous',       emoji: '🛍️', label: 'Tous',       keywords: [] },
+  { key: 'femme',      emoji: '👗', label: 'Femme',      keywords: ['femme','robe','jupe','tailleur','boubou femme','soutien','lingerie','pagn'] },
+  { key: 'homme',      emoji: '👔', label: 'Homme',      keywords: ['homme','chemise','pantalon','costume','boubou homme','djellaba','grand boubou','veste','cravate'] },
+  { key: 'enfant',     emoji: '👶', label: 'Enfant',     keywords: ['enfant','bébé','bebe','garçon','fille','scolaire','école','cartable'] },
+  { key: 'chaussures', emoji: '👟', label: 'Chaussures', keywords: ['chaussure','basket','sandale','talon','soulier','botte','sneaker','mocassin','ballerine','tong'] },
+  { key: 'sacs',       emoji: '👜', label: 'Sacs',       keywords: ['sac','valise','bagage','portefeuille','ceinture','maroquinerie'] },
+  { key: 'bijoux',     emoji: '💍', label: 'Bijoux',     keywords: ['bijou','montre','collier','bracelet','bague','boucle','or','argent','fantaisie','alliance'] },
+  { key: 'beaute',     emoji: '💄', label: 'Beauté',     keywords: ['cosmétique','cosmetique','crème','creme','parfum','maquillage','rouge à lèvres','fond de teint','savon','perruque','cheveux','lotion','vernis'] },
+  { key: 'textile',    emoji: '🧵', label: 'Textile',    keywords: ['tissu','textile','coton','wax','bazin','soie','fil','broderie','dentelle','pagne','laine','mousseline'] },
+  { key: 'vehicules',  emoji: '🚗', label: 'Véhicules',  keywords: ['voiture','moto','véhicule','vehicule','scooter','vélo','velo','camion','auto','4x4','suv','berline','pick-up','taxi'] },
+  { key: 'machines',   emoji: '⚙️', label: 'Machines',   keywords: ['machine','générateur','generateur','groupe électrogène','pompe','moteur','tracteur','compresseur','soudure','industriel','perceuse'] },
+] as const;
+
 export default function EchangeSecondaire() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
@@ -74,7 +88,7 @@ export default function EchangeSecondaire() {
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [activeStyleTab, setActiveStyleTab] = useState<'mode' | 'machinerie' | 'vehicules' | 'textile'>('mode');
+  const [activeStyleTab, setActiveStyleTab] = useState<'tous'|'femme'|'homme'|'enfant'|'chaussures'|'sacs'|'bijoux'|'beaute'|'textile'|'vehicules'|'machines'>('tous');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
   const navigate = useNavigate();
 
@@ -326,11 +340,16 @@ export default function EchangeSecondaire() {
         });
         loadData();
       } else {
-        alert('Erreur lors de la création du produit');
+        const errData = await response.json().catch(() => ({}));
+        if (response.status === 403) {
+          alert("⛔ " + (errData.message || "Votre compte vendeur Moftal (secteur Mode & Beauté) doit être approuvé par un administrateur avant de pouvoir publier."));
+        } else {
+          alert("Erreur lors de la création du produit : " + (errData.message || response.status));
+        }
       }
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de la création du produit');
+      alert("Erreur de connexion. Vérifiez votre connexion internet et réessayez.");
     }
   };
 
@@ -425,68 +444,16 @@ export default function EchangeSecondaire() {
 
   const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.numeroH === 'G0C0P0R0E0F0 0';
 
-  // Fonction pour filtrer les produits selon l'onglet actif
   const getFilteredProducts = () => {
-    if (!products || !Array.isArray(products)) {
-      return [];
-    }
-    
-    if (activeStyleTab === 'textile') {
-      return products.filter(p => {
-        if (!p) return false;
-        const cat = ((p.subcategory || p.category) || '').toLowerCase();
-        const title = (p.title || '').toLowerCase();
-        return cat.includes('textile') || cat.includes('tissu') || cat.includes('coton') || cat.includes('fibre') ||
-               cat.includes('couture') || cat.includes('filature') || cat.includes('broderie') ||
-               title.includes('textile') || title.includes('tissu') || title.includes('coton') ||
-               title.includes('soie') || title.includes('lin') || title.includes('laine') ||
-               title.includes('broderie') || title.includes('couture') || title.includes('filature') ||
-               title.includes('fil ') || title.includes('tisser') || title.includes('toile');
-      });
-    } else if (activeStyleTab === 'mode') {
-      return products.filter(p => {
-        if (!p) return false;
-        const cat = ((p.subcategory || p.category) || '').toLowerCase();
-        const title = (p.title || '').toLowerCase();
-        return cat.includes('vêtement') || cat.includes('vetement') || cat.includes('habillement') ||
-               cat.includes('chaussure') || cat.includes('sac') || cat.includes('accessoire') || cat.includes('mode') ||
-               title.includes('vêtement') || title.includes('chemise') || title.includes('pantalon') || title.includes('robe') ||
-               title.includes('t-shirt') || title.includes('pull') || title.includes('jupe') ||
-               title.includes('chaussure') || title.includes('basket') || title.includes('soulier') ||
-               title.includes('sneaker') || title.includes('sandale') ||
-               title.includes('sac') || title.includes('accessoire') || title.includes('valise') || title.includes('bagage');
-      });
-    } else if (activeStyleTab === 'vehicules') {
-      return products.filter(p => {
-        if (!p) return false;
-        const cat = ((p.subcategory || p.category) || '').toLowerCase();
-        const title = (p.title || '').toLowerCase();
-        return cat.includes('véhicule') || cat.includes('vehicule') || cat.includes('voiture') || cat.includes('moto') ||
-               cat.includes('scooter') || cat.includes('vélo') || cat.includes('velo') || cat.includes('camion') ||
-               cat.includes('auto') || cat.includes('transport') ||
-               title.includes('véhicule') || title.includes('voiture') || title.includes('moto') ||
-               title.includes('camion') || title.includes('scooter') || title.includes('vélo') ||
-               title.includes('velo') || title.includes('auto') || title.includes('berline') ||
-               title.includes('suv') || title.includes('4x4');
-      });
-    } else if (activeStyleTab === 'machinerie') {
-      return products.filter(p => {
-        if (!p) return false;
-        const cat = ((p.subcategory || p.category) || '').toLowerCase();
-        const title = (p.title || '').toLowerCase();
-        return cat.includes('machine') || cat.includes('machinerie') || cat.includes('équipement') ||
-               cat.includes('equipement') || cat.includes('outil') || cat.includes('générateur') ||
-               cat.includes('generateur') || cat.includes('moteur') || cat.includes('industriel') ||
-               title.includes('machine à coudre') || title.includes('générateur') || title.includes('groupe électrogène') ||
-               title.includes('pompe') || title.includes('compresseur') || title.includes('perceuse') ||
-               title.includes('soudure') || title.includes('tracteur') || title.includes('moteur') ||
-               title.includes('outillage') || title.includes('équipement') || title.includes('industriel') ||
-               title.includes('réfrigérateur') || title.includes('congélateur') || title.includes('climatiseur') ||
-               title.includes('machine à laver') || title.includes('électroménager');
-      });
-    }
-    // Si aucun filtre ne correspond, retourner tous les produits
-    return products || [];
+    if (!products || !Array.isArray(products)) return [];
+    if (activeStyleTab === 'tous') return products;
+    const tab = SECONDAIRE_TABS.find(t => t.key === activeStyleTab);
+    if (!tab || tab.keywords.length === 0) return products;
+    return products.filter(p => {
+      if (!p) return false;
+      const text = `${p.title} ${p.category} ${p.description} ${p.subcategory || ''}`.toLowerCase();
+      return (tab.keywords as readonly string[]).some(k => text.includes(k));
+    });
   };
 
   if (loading) {
@@ -571,52 +538,28 @@ export default function EchangeSecondaire() {
         )}
       </div>
 
-      {/* Navigation Style */}
-      <div className="bg-white rounded-lg shadow border border-gray-200 p-4 mb-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-          <button
-            onClick={() => setActiveStyleTab('mode')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeStyleTab === 'mode'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            👗 Mode
-          </button>
-          <button
-            onClick={() => setActiveStyleTab('textile')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeStyleTab === 'textile'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            🧵 Textile
-          </button>
-          <button
-            onClick={() => setActiveStyleTab('vehicules')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeStyleTab === 'vehicules'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            🚗 Véhicules
-          </button>
-          <button
-            onClick={() => setActiveStyleTab('machinerie')}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeStyleTab === 'machinerie'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            ⚙️ Machinerie
-          </button>
+      {/* Navigation sous-catégories visuelles */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Que cherches-tu ?</p>
+        <div className="overflow-x-auto pb-2 -mx-1">
+          <div className="flex gap-2 px-1 min-w-max">
+            {SECONDAIRE_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveStyleTab(tab.key as any)}
+                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-all flex-shrink-0 min-w-[60px] ${
+                  activeStyleTab === tab.key
+                    ? 'bg-blue-600 text-white shadow-lg scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+              >
+                <span className="text-2xl">{tab.emoji}</span>
+                <span className="text-center leading-tight">{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
             <PublierAnnonceButtons
               onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
@@ -626,10 +569,10 @@ export default function EchangeSecondaire() {
           {isAdmin && (
             <button
               onClick={() => setSelectedSupplier({} as Supplier)}
-              className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all flex items-center gap-2 shrink-0"
+              className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all flex items-center gap-2 shrink-0 text-sm font-semibold"
             >
               <span>⚙️</span>
-              <span className="font-semibold">Gérer Fournisseurs</span>
+              <span>Gérer Fournisseurs</span>
             </button>
           )}
         </div>
