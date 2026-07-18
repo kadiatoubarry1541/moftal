@@ -13,10 +13,24 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/logo-moftal.svg" />
-    <link rel="apple-touch-icon" href="/logo-moftal.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-moftal-192.png" />
+    <link rel="apple-touch-icon" href="/icon-moftal-512.png" />
 
-    <!-- PWA manifest -->
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- PWA manifest — choisi immédiatement selon la route, avant que React charge -->
+    <link rel="manifest" href="/manifest.webmanifest" id="pwa-manifest" />
+    <script>
+      (function(){
+        try {
+          var p = window.location.pathname;
+          var link = document.getElementById('pwa-manifest');
+          if (p.startsWith('/info-wallou')) {
+            link.href = '/manifest-info-moftal.webmanifest';
+          } else if (p.startsWith('/professeur-ia')) {
+            link.href = '/manifest-ia-education-moftal.webmanifest';
+          }
+        } catch(e) {}
+      })();
+    </script>
 
     <!-- Preload LCP -->
     <link rel="preload" as="image" href="/logo-moftal.svg" type="image/svg+xml" fetchpriority="high" />

@@ -28,6 +28,10 @@
 /sw.js
   Cache-Control: no-cache, no-store, must-revalidate
 
-# PWA manifest : cache court
+# PWA manifests : cache court (tous les manifests)
 /manifest.webmanifest
+  Cache-Control: public, max-age=3600
+/manifest-info-moftal.webmanifest
+  Cache-Control: public, max-age=3600
+/manifest-ia-education-moftal.webmanifest
   Cache-Control: public, max-age=3600
