@@ -257,12 +257,17 @@ function App() {
           const local = getSessionUser();
           const merged = { ...local, ...data.user };
           setCurrentUser(merged);
+          // Sauvegarder le nouveau token renouvelé si le backend en fournit un
+          if (data.token) {
+            localStorage.setItem("token", data.token);
+          }
           try {
             const raw = localStorage.getItem("session_user");
             if (raw) {
               const parsed = JSON.parse(raw);
               if (parsed.userData) parsed.userData = { ...parsed.userData, ...data.user };
               else Object.assign(parsed, data.user);
+              if (data.token) parsed.token = data.token;
               localStorage.setItem("session_user", JSON.stringify(parsed));
             }
           } catch {}
@@ -309,6 +314,9 @@ function App() {
     }
   }, [pathname]);
   const isGestionMode = pathname.startsWith("/gestion");
+  const isMoftalPayMode =
+    pathname === "/compte-famille" ||
+    pathname === "/moftal-pay-pro";
   const isVitrineMode =
     pathname.startsWith("/clinique/") ||
     pathname.startsWith("/commerce/") ||
@@ -332,7 +340,7 @@ function App() {
     pathname.startsWith("/artisan/") ||
     pathname.startsWith("/producteur/");
   const isProfilPage = pathname === '/moi/profil';
-  const isFullscreenPage = isGestionMode || isVitrineMode || isProfilPage;
+  const isFullscreenPage = isGestionMode || isVitrineMode || isProfilPage || isMoftalPayMode;
   const isHome = pathname === "/";
   const isPublicPage = isHome ||
     pathname === "/login" ||

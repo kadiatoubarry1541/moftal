@@ -985,6 +985,17 @@ export default function GestionInterne() {
 
   return (
     <div>
+      {/* Header Gestion Interne — identité propre, séparée de l'app principale */}
+      <div style={{ background:"linear-gradient(135deg,#3b0764,#4c1d95)", padding:"0 16px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 12px rgba(59,7,100,0.4)" }}>
+        <button onClick={() => navigate(-1)} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.8)", fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", gap:6, padding:"8px 12px", borderRadius:8, transition:"all 0.15s" }}
+          onMouseEnter={e => (e.currentTarget.style.background="rgba(255,255,255,0.1)")}
+          onMouseLeave={e => (e.currentTarget.style.background="none")}>
+          ← Retour
+        </button>
+        <img src="/logo-gestion-interne.svg" alt="Gestion Interne" style={{ height:40, width:"auto" }} />
+        <div style={{ width:80 }} />
+      </div>
+
       <div style={{ maxWidth:700, margin:"0 auto", padding:"4px 20px 0" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 

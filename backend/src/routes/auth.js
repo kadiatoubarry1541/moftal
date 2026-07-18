@@ -843,7 +843,13 @@ router.get('/me', authenticate, async (req, res) => {
     }
     const userWithoutPassword = { ...user.dataValues };
     delete userWithoutPassword.password;
-    res.json({ success: true, user: userWithoutPassword });
+    // Renouvelle le token à chaque visite pour maintenir la session active
+    const newToken = jwt.sign(
+      { userId: user.numeroH, numeroH: user.numeroH },
+      config.JWT_SECRET,
+      { expiresIn: '90d' }
+    );
+    res.json({ success: true, user: userWithoutPassword, token: newToken });
   } catch (error) {
     console.error('Erreur GET /auth/me:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });

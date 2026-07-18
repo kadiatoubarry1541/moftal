@@ -281,16 +281,36 @@ export default function CompteFamille() {
   const peutVoirBudget = userAge >= 18 || compte?.estAdmin;
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#f0f4ff' }}>
-      <div className="text-center">
-        <div className="text-4xl mb-3">💰</div>
-        <p className="text-gray-500">Chargement du compte famille...</p>
+    <div className="min-h-screen flex flex-col" style={{ background: '#0d2040' }}>
+      <div style={{ background:"linear-gradient(135deg,#0d2040,#1e3a5f)", padding:"0 16px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
+        <button onClick={() => navigate(-1)} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.8)", fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", gap:6, padding:"8px 12px", borderRadius:8 }}>
+          ← Retour
+        </button>
+        <img src="/logo-moftal-pay.svg" alt="Moftal Pay" style={{ height:40, width:"auto" }} />
+        <div style={{ width:80 }} />
+      </div>
+      <div className="flex-1 flex items-center justify-center" style={{ background: '#f0f4ff' }}>
+        <div className="text-center">
+          <div className="text-4xl mb-3">💰</div>
+          <p className="text-gray-500">Chargement du compte famille...</p>
+        </div>
       </div>
     </div>
   );
 
   return (
     <div className="min-h-screen pb-10" style={{ background: '#f0f4ff' }}>
+
+      {/* Header Moftal Pay */}
+      <div style={{ background:"linear-gradient(135deg,#0d2040,#1e3a5f)", padding:"0 16px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 12px rgba(0,0,0,0.3)" }}>
+        <button onClick={() => navigate(-1)} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.8)", fontSize:14, cursor:"pointer", display:"flex", alignItems:"center", gap:6, padding:"8px 12px", borderRadius:8, transition:"all 0.15s" }}
+          onMouseEnter={e => (e.currentTarget.style.background="rgba(255,255,255,0.1)")}
+          onMouseLeave={e => (e.currentTarget.style.background="none")}>
+          ← Retour
+        </button>
+        <img src="/logo-moftal-pay.svg" alt="Moftal Pay" style={{ height:40, width:"auto" }} />
+        <div style={{ width:80 }} />
+      </div>
 
       {/* Reçu modal */}
       {reçu && (
