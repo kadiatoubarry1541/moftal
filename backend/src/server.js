@@ -1586,6 +1586,11 @@ async function initAllTables() {
       END $$;
     `).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "sub_sector" "enum_professional_accounts_sub_sector";`).catch(() => {});
+    // "quaternaire" (Technologie & Véhicules) et "nourriture" (Restaurants) utilisés par
+    // exchange.js mais absents du CREATE TYPE d'origine — sans ça, l'inscription vendeur
+    // échoue au niveau base de données (valeur enum invalide).
+    await sequelize.query(`ALTER TYPE "enum_professional_accounts_sub_sector" ADD VALUE IF NOT EXISTS 'quaternaire';`).catch(() => {});
+    await sequelize.query(`ALTER TYPE "enum_professional_accounts_sub_sector" ADD VALUE IF NOT EXISTS 'nourriture';`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "billing_info" JSONB;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "is_trial" BOOLEAN DEFAULT true;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "granted_to_sub_admin" BOOLEAN DEFAULT false;`).catch(() => {});

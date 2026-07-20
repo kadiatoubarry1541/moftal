@@ -11,7 +11,7 @@ import { FamilyTree } from '../models/additional.js';
 import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 
 const router = Router();
@@ -628,7 +628,7 @@ router.post('/forgot-password/verify', [
     if (user.type === 'defunt' || user.isDeceased) {
       return res.status(403).json({ success: false, message: 'Ce compte ne peut pas réinitialiser un mot de passe.' });
     }
-    if (isReservedGeneration(user.generation)) {
+    if (!MASTER_ADMIN_NUMEROS.includes(user.numeroH) && isReservedGeneration(user.generation)) {
       return res.status(400).json({ success: false, message: 'Ce numéro est impossible. Notre plateforme existe depuis 2025, aucun vivant ne peut avoir ce numéro.' });
     }
 
@@ -672,18 +672,18 @@ router.post('/forgot-password/verify', [
       { expiresIn: '10m' }
     );
 
-    // Envoi du code par email si l'utilisateur a une adresse email
+    // Envoi du code par email si l'utilisateur a une adresse email — on attend le
+    // résultat réel avant de répondre, pour ne jamais annoncer "envoyé" à tort.
     let emailSent = false;
     let maskedEmail = null;
     if (user.email) {
       maskedEmail = maskEmail(user.email);
       const fullName = `${user.prenom || ''} ${user.nomFamille || ''}`.trim() || user.numeroH;
-      sendPasswordOtpEmail({
+      emailSent = await sendPasswordOtpEmail({
         to: user.email,
         toName: fullName,
         code: otpCode,
-      }).then(() => {}).catch(err => console.error('sendPasswordOtpEmail:', err.message));
-      emailSent = true;
+      }).catch(err => { console.error('sendPasswordOtpEmail:', err.message); return false; });
     }
 
     res.json({ success: true, otpToken, emailSent, maskedEmail });
@@ -718,9 +718,14 @@ router.post('/forgot-password/verify-code', [
     if (payload.code !== code.trim()) {
       return res.status(400).json({ success: false, message: 'Code incorrect. Vérifiez le code reçu par email.' });
     }
-    // Code correct → générer le token de réinitialisation
+    const user = await User.findByNumeroH(payload.numeroH);
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Compte introuvable.' });
+    }
+    // Code correct → générer le token de réinitialisation, lié à l'état actuel du
+    // compte (pwv) pour qu'il devienne invalide dès qu'il a servi une fois.
     const resetToken = jwt.sign(
-      { numeroH: payload.numeroH, purpose: 'forgot_password' },
+      { numeroH: payload.numeroH, purpose: 'forgot_password', pwv: new Date(user.updatedAt).getTime() },
       config.JWT_SECRET,
       { expiresIn: '15m' }
     );
@@ -757,6 +762,11 @@ router.post('/forgot-password/reset', [
     const user = await User.findByNumeroH(payload.numeroH);
     if (!user) {
       return res.status(400).json({ success: false, message: 'Compte introuvable.' });
+    }
+    // Le lien/token n'est valable qu'une seule fois : s'il a déjà servi (le compte a
+    // changé depuis), on le refuse même s'il n'a pas encore expiré.
+    if (payload.pwv !== undefined && payload.pwv !== new Date(user.updatedAt).getTime()) {
+      return res.status(400).json({ success: false, message: 'Ce lien a déjà été utilisé. Recommencez la procédure « Mot de passe oublié ».' });
     }
     user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
     await user.save();
@@ -1075,16 +1085,50 @@ router.put('/me/tree-hidden', authenticate, async (req, res) => {
   }
 });
 
+// @route   PUT /api/auth/change-password
+// @desc    Changer son mot de passe depuis son compte (mot de passe actuel requis)
+// @access  Private
+router.put('/change-password', authenticate, [
+  body('currentPassword').notEmpty().withMessage('Mot de passe actuel requis'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Le nouveau mot de passe doit contenir au moins 6 caractères')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Données invalides', errors: errors.array() });
+    }
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findByNumeroH(req.user.numeroH);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ success: false, message: 'Mot de passe actuel incorrect' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
+    await user.save();
+
+    res.json({ success: true, message: 'Mot de passe modifié avec succès.' });
+  } catch (error) {
+    console.error('Erreur lors du changement de mot de passe:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // @route   DELETE /api/auth/account
-// @desc    Supprimer son propre compte (confirmation par email requis)
+// @desc    Supprimer son propre compte (confirmation par mot de passe requise)
 // @access  Private
 router.delete('/account', authenticate, async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email || typeof email !== 'string' || !email.trim()) {
+    const { password } = req.body;
+    if (!password || typeof password !== 'string' || !password.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Votre adresse email est requise pour confirmer la suppression'
+        message: 'Votre mot de passe est requis pour confirmer la suppression'
       });
     }
 
@@ -1104,11 +1148,12 @@ router.delete('/account', authenticate, async (req, res) => {
       });
     }
 
-    // Vérifier que l'email fourni correspond bien au compte
-    if (!user.email || user.email.toLowerCase().trim() !== email.toLowerCase().trim()) {
+    // Vérifier que le mot de passe fourni correspond bien au compte
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
       return res.status(401).json({
         success: false,
-        message: 'L\'adresse email ne correspond pas à votre compte'
+        message: 'Mot de passe incorrect'
       });
     }
 

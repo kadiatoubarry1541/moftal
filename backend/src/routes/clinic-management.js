@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ async function verifyTenant(req, res, next) {
     const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code AND owner_numero_h = :n LIMIT 1`, { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT });
     if (!tenant) return res.status(403).json({ success: false, message: 'Accès refusé à cet espace clinique.' });
     req.tenant = tenant;
-    next();
+    return enforceGestionAccess(req, res, next);
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

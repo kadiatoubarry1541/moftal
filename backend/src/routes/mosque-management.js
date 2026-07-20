@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ async function verifyTenant(req, res, next) {
     if (ownerTenant) {
       req.tenant = ownerTenant;
       req.imamRang = 0; // 0 = propriétaire / imam principal
-      return next();
+      return enforceGestionAccess(req, res, next);
     }
 
     // Vérifier si l'utilisateur est un cheikh imam enregistré (rang 1, 2 ou 3)
@@ -45,7 +46,7 @@ async function verifyTenant(req, res, next) {
       );
       req.tenant = isTenant;
       req.imamRang = imam?.rang || 1;
-      return next();
+      return enforceGestionAccess(req, res, next);
     }
 
     return res.status(403).json({ success: false, message: 'Accès refusé à cet espace mosquée.' });

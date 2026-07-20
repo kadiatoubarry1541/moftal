@@ -2400,7 +2400,7 @@ export default function EspacePro() {
                             <p className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{pub.titre}</p>
                             {pub.contenu && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">{pub.contenu}</p>}
                             {pub.prix && <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-1">💰 {pub.prix}</p>}
-                            <p className="text-xs text-gray-400 mt-1">{new Date(pub.created_at).toLocaleDateString('fr-FR')}</p>
+                            <p className="text-xs text-gray-400 mt-1">{new Date(pub.createdAt || pub.created_at).toLocaleDateString('fr-FR')}</p>
                           </div>
                           {pub.video && (
                             <video src={pub.video} className="w-20 h-16 object-cover rounded-xl flex-shrink-0 border border-purple-200 dark:border-purple-700" muted playsInline preload="metadata" />

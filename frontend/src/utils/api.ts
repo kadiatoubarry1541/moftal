@@ -275,6 +275,24 @@ export const api = {
     return { success: true, message: data.message }
   },
 
+  // Changer son mot de passe depuis son compte (mot de passe actuel requis)
+  async changePassword(currentPassword: string, newPassword: string) {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ currentPassword, newPassword })
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      return { success: false, message: data.message || 'Erreur lors du changement de mot de passe' }
+    }
+    return { success: true, message: data.message }
+  },
+
   // Supprimer son propre compte (mot de passe requis)
   async deleteAccount(password: string) {
     const token = localStorage.getItem('token')

@@ -95,7 +95,9 @@ router.put('/:id/publications/:pubId', authenticate, async (req, res) => {
     if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const pub = await ProPublication.findByPk(req.params.pubId);
-    if (!pub) return res.status(404).json({ success: false, message: 'Publication non trouvée' });
+    if (!pub || String(pub.professionalAccountId) !== String(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Publication non trouvée' });
+    }
 
     const { type, titre, contenu, image, video, prix, disponible } = req.body;
     await pub.update({
@@ -121,7 +123,9 @@ router.delete('/:id/publications/:pubId', authenticate, async (req, res) => {
     if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const pub = await ProPublication.findByPk(req.params.pubId);
-    if (!pub) return res.status(404).json({ success: false, message: 'Publication non trouvée' });
+    if (!pub || String(pub.professionalAccountId) !== String(req.params.id)) {
+      return res.status(404).json({ success: false, message: 'Publication non trouvée' });
+    }
 
     await pub.update({ isActive: false });
     res.json({ success: true });

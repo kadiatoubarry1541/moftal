@@ -9,6 +9,7 @@
 import express from 'express';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ async function verifyTenant(req, res, next) {
       return res.status(403).json({ message: 'Accès réservé au directeur.' });
     }
     req.tenant = tenant;
-    next();
+    return enforceGestionAccess(req, res, next);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -66,14 +67,14 @@ async function verifyMember(req, res, next) {
     if (!tenants.length) return res.status(404).json({ message: 'Institut introuvable.' });
     const tenant = tenants[0];
     if (tenant.owner_numero_h === userId) {
-      req.tenant = tenant; req.memberRole = 'directeur'; return next();
+      req.tenant = tenant; req.memberRole = 'directeur'; return enforceGestionAccess(req, res, next);
     }
     const [members] = await sequelize.query(
       `SELECT * FROM madrasa_members WHERE tenant_code = :tc AND numero_h = :uid AND is_active = true`,
       { replacements: { tc: tenantCode, uid: userId } }
     );
     if (!members.length) return res.status(403).json({ message: 'Vous n\'êtes pas membre de cet institut.' });
-    req.tenant = tenant; req.memberRole = members[0].role; next();
+    req.tenant = tenant; req.memberRole = members[0].role; return enforceGestionAccess(req, res, next);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

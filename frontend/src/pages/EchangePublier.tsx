@@ -5,7 +5,7 @@ import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 
 type PublishMode = 'ecrit' | 'photo_audio' | 'video';
-type Level = 'primaire' | 'secondaire' | 'tertiaire';
+type Level = 'primaire' | 'secondaire' | 'tertiaire' | 'quaternaire';
 
 interface UserData {
   numeroH: string;
@@ -17,6 +17,7 @@ interface UserData {
 const CATEGORIES_PRIMAIRE = ['Alimentation', 'Aliments', 'Textile', 'Agriculture', 'Artisanat', 'Matières Premières', 'Autre'];
 const CATEGORIES_SECONDAIRE = ['Électronique', 'Machinerie', 'Équipements', 'Véhicules', 'Autre'];
 const CATEGORIES_TERTIAIRE = ['Maison à louer', 'Matériaux de construction', 'Services', 'Autre'];
+const CATEGORIES_QUATERNAIRE = ['Téléphones', 'Ordinateurs', 'TV & Son', 'Accessoires', 'Véhicules', 'Autre'];
 
 const MODES = [
   {
@@ -93,7 +94,7 @@ export default function EchangePublier() {
   const imgGalleryRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  const categories = level === 'primaire' ? CATEGORIES_PRIMAIRE : level === 'secondaire' ? CATEGORIES_SECONDAIRE : CATEGORIES_TERTIAIRE;
+  const categories = level === 'primaire' ? CATEGORIES_PRIMAIRE : level === 'secondaire' ? CATEGORIES_SECONDAIRE : level === 'tertiaire' ? CATEGORIES_TERTIAIRE : CATEGORIES_QUATERNAIRE;
 
   useEffect(() => {
     const session = localStorage.getItem('session_user');
@@ -254,8 +255,8 @@ export default function EchangePublier() {
                 {/* Niveau */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Niveau de marché</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['primaire', 'secondaire', 'tertiaire'] as Level[]).map(l => (
+                  <div className="grid grid-cols-4 gap-2">
+                    {(['primaire', 'secondaire', 'tertiaire', 'quaternaire'] as Level[]).map(l => (
                       <button key={l} onClick={() => { setLevel(l); setProduct(p => ({ ...p, category: '' })); }}
                         className={`py-2 rounded-xl text-sm font-semibold border-2 transition-colors capitalize ${level === l ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
                         {l}

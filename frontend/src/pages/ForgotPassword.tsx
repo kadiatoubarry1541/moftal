@@ -161,6 +161,10 @@ export function ForgotPassword() {
               <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
                 Un code à 6 chiffres a été envoyé à <strong>{emailInfo.masked}</strong>. Saisissez-le ci-dessous.
               </div>
+            ) : emailInfo?.masked ? (
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-200">
+                Identité vérifiée, mais l'envoi de l'email à <strong>{emailInfo.masked}</strong> a échoué pour le moment. Veuillez réessayer dans quelques minutes.
+              </div>
             ) : (
               <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-200">
                 Identité vérifiée. Aucun email associé à ce compte — veuillez contacter un administrateur.

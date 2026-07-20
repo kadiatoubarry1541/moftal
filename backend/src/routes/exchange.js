@@ -113,7 +113,7 @@ router.post('/register-vendor', async (req, res) => {
     if (!nomBoutique || !secteur) {
       return res.status(400).json({ success: false, message: 'Nom de boutique et secteur obligatoires.' });
     }
-    if (!['primaire', 'secondaire', 'tertiaire', 'quaternaire'].includes(secteur)) {
+    if (!['primaire', 'secondaire', 'tertiaire', 'quaternaire', 'nourriture'].includes(secteur)) {
       return res.status(400).json({ success: false, message: 'Secteur invalide.' });
     }
 
@@ -603,6 +603,97 @@ router.post('/quaternaire/products', upload.any(), async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la création du produit quaternaire'
+    });
+  }
+});
+
+// @route   GET /api/exchange/nourriture/products
+// @desc    Récupérer tous les produits de restauration (plats, repas à emporter, traiteurs)
+// @access  Authentifié
+router.get('/nourriture/products', async (req, res) => {
+  try {
+    const products = await ExchangeProduct.findAll({
+      where: {
+        isActive: true,
+        category: 'nourriture'
+      },
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      products
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des produits de restauration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des produits de restauration'
+    });
+  }
+});
+
+// @route   POST /api/exchange/nourriture/products
+// @desc    Créer un produit de restauration
+// @access  Vendeur Moftal approuvé (secteur nourriture) ou Admin
+router.post('/nourriture/products', upload.any(), async (req, res) => {
+  try {
+    const { title, description, category, price, currency, condition, location } = req.body;
+
+    const user = req.user;
+    const estAdmin = isGlobalAdmin(user);
+    const userNumeroH = user?.numeroH || req.userId;
+
+    if (!estAdmin) {
+      const [vendorOk] = await sequelize.query(
+        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='nourriture' LIMIT 1`,
+        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+      ).catch(() => []);
+      if (!vendorOk) {
+        return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Restaurants) doit être approuvé par un administrateur.' });
+      }
+    }
+
+    const imageUrls = (req.files || [])
+      .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
+      .map(file => `/uploads/${file.filename}`);
+
+    const videoUrls = (req.files || [])
+      .filter(file => file.fieldname && file.fieldname.startsWith('video_'))
+      .map(file => `/uploads/${file.filename}`);
+
+    const audioUrls = (req.files || [])
+      .filter(file => file.fieldname && file.fieldname.startsWith('audio_'))
+      .map(file => `/uploads/${file.filename}`);
+
+    const product = await ExchangeProduct.create({
+      title,
+      description,
+      category: 'nourriture',
+      subcategory: category,
+      price: parseFloat(price),
+      currency: currency || 'FG',
+      condition,
+      location,
+      images: imageUrls,
+      videos: videoUrls,
+      audio: audioUrls,
+      numeroH: user.numeroH,
+      createdBy: user.numeroH,
+      isActive: true,
+      isAvailable: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Produit de restauration créé avec succès',
+      product
+    });
+  } catch (error) {
+    console.error('Erreur lors de la création du produit de restauration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la création du produit de restauration'
     });
   }
 });

@@ -10,6 +10,7 @@ import {
   sendSubscriptionReceipt,
   sendSubscriptionRenewedEmail,
 } from '../services/emailService.js';
+import { getGestionInterneAccess } from '../middleware/gestionAccessGuard.js';
 
 // ─── RÈGLE GÉNÉRALE : hors Afrique = toujours le DOUBLE du tarif Afrique ──────
 
@@ -305,38 +306,18 @@ router.get('/prix-compte-pro', authenticate, async (req, res) => {
  */
 router.get('/acces-gestion-interne', authenticate, async (req, res) => {
   try {
-    // Chercher un compte professionnel approuvé
-    const proAccount = await ProfessionalAccount.findOne({
-      where: { ownerNumeroH: req.user.numeroH, status: 'approved', isActive: true },
-      order: [['approvedAt', 'DESC']]
-    });
+    const access = await getGestionInterneAccess(req.user.numeroH);
+    const proAccount = access.proAccount;
 
     if (!proAccount) {
       return res.json({ success: true, aAcces: false, mode: 'aucun_compte', message: 'Aucun compte professionnel approuvé.' });
     }
 
-    // Vérifier l'essai gratuit (1 mois depuis l'approbation)
     const maintenant = new Date();
-    const approvedAt = proAccount.approvedAt ? new Date(proAccount.approvedAt) : null;
-    const finEssai = approvedAt ? new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
-    const enEssai = finEssai ? finEssai > maintenant : false;
-
-    // Vérifier si Gestion Interne payée (nouveau système colonne gestionInterneValidUntil)
-    const giValidUntil = proAccount.gestionInterneValidUntil
-      ? new Date(proAccount.gestionInterneValidUntil)
-      : null;
-    const giPayee = giValidUntil && giValidUntil > maintenant;
-
-    // Vérifier aussi l'ancien système (paiement à vie)
-    const paiementVie = await Payment.findOne({
-      where: { payerNumeroH: req.user.numeroH, purpose: 'gestion_interne_vie', status: 'completed' }
-    });
-
-    const aAcces = enEssai || giPayee || !!paiementVie;
-    const joursRestants = enEssai && finEssai
-      ? Math.max(0, Math.ceil((finEssai.getTime() - maintenant.getTime()) / (1000 * 60 * 60 * 24)))
-      : giValidUntil && giPayee
-      ? Math.max(0, Math.ceil((giValidUntil.getTime() - maintenant.getTime()) / (1000 * 60 * 60 * 24)))
+    const joursRestants = access.aAcces && access.validUntil
+      ? Math.max(0, Math.ceil((access.validUntil.getTime() - maintenant.getTime()) / (1000 * 60 * 60 * 24)))
+      : access.aAcces && access.giValidUntil
+      ? Math.max(0, Math.ceil((access.giValidUntil.getTime() - maintenant.getTime()) / (1000 * 60 * 60 * 24)))
       : 0;
 
     const secteur = getSecteur(proAccount.type);
@@ -344,11 +325,11 @@ router.get('/acces-gestion-interne', authenticate, async (req, res) => {
 
     res.json({
       success: true,
-      aAcces,
-      mode: paiementVie ? 'vie' : giPayee ? 'paye' : enEssai ? 'essai' : 'expire',
+      aAcces: access.aAcces,
+      mode: access.mode,
       joursRestants,
-      finEssai,
-      finGestionInterne: giValidUntil,
+      finEssai: proAccount.isTrial ? access.validUntil : null,
+      finGestionInterne: access.giValidUntil,
       prixVie: 3000000,
       prixMois: prixGI.mois,
       prixAn: prixGI.an,
