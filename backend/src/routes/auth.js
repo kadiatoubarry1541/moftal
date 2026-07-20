@@ -11,7 +11,7 @@ import { FamilyTree } from '../models/additional.js';
 import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 
 const router = Router();
@@ -628,7 +628,7 @@ router.post('/forgot-password/verify', [
     if (user.type === 'defunt' || user.isDeceased) {
       return res.status(403).json({ success: false, message: 'Ce compte ne peut pas réinitialiser un mot de passe.' });
     }
-    if (isReservedGeneration(user.generation)) {
+    if (!MASTER_ADMIN_NUMEROS.includes(user.numeroH) && isReservedGeneration(user.generation)) {
       return res.status(400).json({ success: false, message: 'Ce numéro est impossible. Notre plateforme existe depuis 2025, aucun vivant ne peut avoir ce numéro.' });
     }
 

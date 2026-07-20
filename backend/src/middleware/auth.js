@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import { config } from '../../config.js';
 
 // NumeroH des comptes administrateurs spéciaux
-const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
+export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
 
 // Alias pour authenticateToken (compatibilité)
 export const authenticateToken = async (req, res, next) => {

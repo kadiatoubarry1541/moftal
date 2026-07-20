@@ -346,18 +346,15 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
           </h1>
         </div>
 
-        {/* Bannière 3 mois gratuits */}
+        {/* Bannière lancement du service */}
         <div className="mb-6 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-4 text-white shadow-md">
-          <div className="text-4xl flex-shrink-0">🎁</div>
+          <div className="text-4xl flex-shrink-0">🚀</div>
           <div className="flex-1 min-w-0">
-            <div className="font-extrabold text-lg leading-tight">3 mois gratuits d'essai</div>
+            <div className="font-extrabold text-lg leading-tight">Lancez votre service sur Moftal</div>
             <div className="text-sm text-orange-100 mt-0.5">
-              Inscrivez-vous aujourd'hui — aucun paiement requis pour commencer.
-              Votre compte sera visible dès validation par l'administration.
+              Remplissez ce formulaire pour proposer votre activité. Votre compte sera visible dès validation par l'administration,
+              et toutes les informations utiles vous attendront dans votre tableau de bord.
             </div>
-          </div>
-          <div className="flex-shrink-0 bg-white/20 rounded-xl px-3 py-1.5 text-sm font-bold">
-            Gratuit
           </div>
         </div>
 
@@ -446,7 +443,7 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
                     <li>✅ App installée sur vos appareils</li>
                     <li>✅ Connexion continue avec vos clients</li>
                   </ul>
-                  <div className="mt-3 text-xs font-bold text-orange-600 dark:text-orange-400">3 mois gratuits · puis abonnement</div>
+                  <div className="mt-3 text-xs font-bold text-orange-600 dark:text-orange-400">Formule complète — tous les outils de gestion</div>
                 </button>
 
               </div>
