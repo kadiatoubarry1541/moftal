@@ -36,6 +36,16 @@ const APERÇU_QUATERNAIRE: PreviewProduct[] = [
   { id: '2', title: 'Laptop HP 15 pouces', price: 6500000, currency: 'FG' },
 ];
 
+const APERÇU_NOURRITURE: PreviewProduct[] = [
+  { id: '1', title: 'Poulet braisé + attiéké', price: 25000, currency: 'FG' },
+  { id: '2', title: 'Plat du jour — Riz sauce graine', price: 20000, currency: 'FG' },
+];
+
+const APERÇU_MEDICAMENT: PreviewProduct[] = [
+  { id: '1', title: 'Paracétamol 500mg (boîte)', price: 5000, currency: 'FG' },
+  { id: '2', title: 'Amoxicilline 500mg', price: 12000, currency: 'FG' },
+];
+
 function buildImageUrl(path: string | undefined): string | undefined {
   if (!path) return undefined;
   if (path.startsWith('http')) return path;
@@ -320,6 +330,90 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             <button
               onClick={() => navigate('/echange/quaternaire')}
               className="mt-3 w-full py-2 text-sm font-medium text-violet-600 hover:text-violet-700 border border-violet-300 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
+            >
+              Voir tout →
+            </button>
+          </div>
+        </div>
+
+        {/* ── RESTAURANTS / NOURRITURE ── */}
+        <div className="rounded-xl border-2 border-orange-200 bg-gradient-to-b from-orange-50 to-white dark:from-orange-900/20 dark:to-gray-900 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+          <button
+            onClick={() => navigate('/echange/nourriture')}
+            className="w-full bg-orange-600 hover:bg-orange-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
+          >
+            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
+              <span className="flex items-center justify-center text-lg leading-none">🍽️</span>
+              <span className="flex items-center justify-center text-lg leading-none">🍲</span>
+              <span className="flex items-center justify-center text-lg leading-none">🥘</span>
+              <span className="flex items-center justify-center text-lg leading-none">🍢</span>
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-base">Restaurants</p>
+              <p className="text-xs opacity-90">Plats du jour · Repas à emporter · Traiteurs</p>
+            </div>
+            <span className="ml-auto text-lg opacity-70">›</span>
+          </button>
+          <div className="p-4">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des produits</p>
+            <div className="space-y-2">
+              {APERÇU_NOURRITURE.map((p) => (
+                <div key={p.id} className="flex gap-3 rounded-lg overflow-hidden bg-white dark:bg-gray-800/50 border border-orange-100 dark:border-orange-800/50">
+                  <div className="w-16 h-16 flex-shrink-0 bg-orange-100 dark:bg-orange-900/30 rounded-l-lg overflow-hidden">
+                    <ApercuImage src={p.imageUrl} alt={p.title} placeholder="🍽️" />
+                  </div>
+                  <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{p.title}</p>
+                    <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">{p.price.toLocaleString()} {p.currency}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => navigate('/echange/nourriture')}
+              className="mt-3 w-full py-2 text-sm font-medium text-orange-600 hover:text-orange-700 border border-orange-300 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+            >
+              Voir tout →
+            </button>
+          </div>
+        </div>
+
+        {/* ── PHARMACIE / MÉDICAMENT ── */}
+        <div className="rounded-xl border-2 border-teal-200 bg-gradient-to-b from-teal-50 to-white dark:from-teal-900/20 dark:to-gray-900 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+          <button
+            onClick={() => navigate('/echange/medicament')}
+            className="w-full bg-teal-600 hover:bg-teal-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
+          >
+            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
+              <span className="flex items-center justify-center text-lg leading-none">💊</span>
+              <span className="flex items-center justify-center text-lg leading-none">🩹</span>
+              <span className="flex items-center justify-center text-lg leading-none">🌡️</span>
+              <span className="flex items-center justify-center text-lg leading-none">⚕️</span>
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-base">Pharmacie</p>
+              <p className="text-xs opacity-90">Médicaments · Matériel médical · Hygiène</p>
+            </div>
+            <span className="ml-auto text-lg opacity-70">›</span>
+          </button>
+          <div className="p-4">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des produits</p>
+            <div className="space-y-2">
+              {APERÇU_MEDICAMENT.map((p) => (
+                <div key={p.id} className="flex gap-3 rounded-lg overflow-hidden bg-white dark:bg-gray-800/50 border border-teal-100 dark:border-teal-800/50">
+                  <div className="w-16 h-16 flex-shrink-0 bg-teal-100 dark:bg-teal-900/30 rounded-l-lg overflow-hidden">
+                    <ApercuImage src={p.imageUrl} alt={p.title} placeholder="💊" />
+                  </div>
+                  <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{p.title}</p>
+                    <p className="text-sm font-semibold text-teal-600 dark:text-teal-400">{p.price.toLocaleString()} {p.currency}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => navigate('/echange/medicament')}
+              className="mt-3 w-full py-2 text-sm font-medium text-teal-600 hover:text-teal-700 border border-teal-300 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
             >
               Voir tout →
             </button>
