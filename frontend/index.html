@@ -16,17 +16,28 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-moftal-192.png" />
     <link rel="apple-touch-icon" href="/icon-moftal-512.png" />
 
-    <!-- PWA manifest — choisi immédiatement selon la route, avant que React charge -->
+    <!-- PWA manifest — choisi immédiatement selon la route, avant que React charge.
+         Doit rester un <script> synchrone dans le <head> (pas dans main.tsx, chargé en
+         module différé) : sinon le navigateur a déjà évalué l'installabilité avec le
+         manifest par défaut "Moftal" avant que la réécriture n'ait lieu, et c'est
+         l'app principale qui s'installe au lieu de l'espace de gestion du pro. -->
     <link rel="manifest" href="/manifest.webmanifest" id="pwa-manifest" />
     <script>
       (function(){
         try {
           var p = window.location.pathname;
           var link = document.getElementById('pwa-manifest');
+          var origin = encodeURIComponent(window.location.origin);
+          var proMatch = p.match(/^\/espace-pro\/([^/]+)/);
+          var gestionMatch = p.match(/^\/gestion-[^/]+\/([^/]+)/);
           if (p.startsWith('/info-wallou')) {
             link.href = '/manifest-info-moftal.webmanifest';
           } else if (p.startsWith('/professeur-ia')) {
             link.href = '/manifest-ia-education-moftal.webmanifest';
+          } else if (proMatch) {
+            link.href = '/api/professionals/pro-manifest/' + proMatch[1] + '?origin=' + origin;
+          } else if (gestionMatch) {
+            link.href = '/api/professionals/pro-manifest/by-tenant/' + gestionMatch[1] + '?startUrl=' + encodeURIComponent(p) + '&origin=' + origin;
           }
         } catch(e) {}
       })();
