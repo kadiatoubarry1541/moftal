@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 
-const API = "http://localhost:5002";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
 const TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
   clinic:          { label: "Clinique / Hôpital",        icon: "🏥", color: "#1a8f1a" },
