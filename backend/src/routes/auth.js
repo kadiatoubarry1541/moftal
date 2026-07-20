@@ -1076,15 +1076,15 @@ router.put('/me/tree-hidden', authenticate, async (req, res) => {
 });
 
 // @route   DELETE /api/auth/account
-// @desc    Supprimer son propre compte (confirmation par email requis)
+// @desc    Supprimer son propre compte (confirmation par mot de passe requise)
 // @access  Private
 router.delete('/account', authenticate, async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email || typeof email !== 'string' || !email.trim()) {
+    const { password } = req.body;
+    if (!password || typeof password !== 'string' || !password.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Votre adresse email est requise pour confirmer la suppression'
+        message: 'Votre mot de passe est requis pour confirmer la suppression'
       });
     }
 
@@ -1104,11 +1104,12 @@ router.delete('/account', authenticate, async (req, res) => {
       });
     }
 
-    // Vérifier que l'email fourni correspond bien au compte
-    if (!user.email || user.email.toLowerCase().trim() !== email.toLowerCase().trim()) {
+    // Vérifier que le mot de passe fourni correspond bien au compte
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
       return res.status(401).json({
         success: false,
-        message: 'L\'adresse email ne correspond pas à votre compte'
+        message: 'Mot de passe incorrect'
       });
     }
 
