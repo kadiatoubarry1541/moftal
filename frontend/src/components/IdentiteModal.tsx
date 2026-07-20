@@ -38,6 +38,13 @@ export default function IdentiteModal({
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showLang, setShowLang] = useState(false);
   const navigate = useNavigate();
@@ -331,8 +338,22 @@ export default function IdentiteModal({
           </div>
         )}
 
-        {/* Zone « Supprimer le compte » en bas, à part */}
-        <div className="mt-6 pt-4 border-t border-gray-200">
+        {/* Zone « Sécurité du compte » en bas, à part */}
+        <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              setShowPasswordModal(true);
+              setCurrentPassword("");
+              setNewPassword("");
+              setConfirmNewPassword("");
+              setPasswordError("");
+              setPasswordSuccess("");
+            }}
+            className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+          >
+            🔒 Changer mon mot de passe
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -346,6 +367,98 @@ export default function IdentiteModal({
             🗑️ Supprimer définitivement mon compte
           </button>
         </div>
+
+        {/* Modal changement de mot de passe */}
+        {showPasswordModal && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center p-4 bg-black/40 rounded-xl" onClick={() => !passwordLoading && setShowPasswordModal(false)}>
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold text-slate-800">Changer mon mot de passe</h3>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe actuel</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(""); }}
+                  placeholder="Votre mot de passe actuel"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={passwordLoading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setPasswordError(""); }}
+                  placeholder="Au moins 6 caractères"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={passwordLoading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmer le nouveau mot de passe</label>
+                <input
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => { setConfirmNewPassword(e.target.value); setPasswordError(""); }}
+                  placeholder="Retapez le nouveau mot de passe"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={passwordLoading}
+                />
+              </div>
+              {passwordError && (
+                <p className="text-sm text-red-600">{passwordError}</p>
+              )}
+              {passwordSuccess && (
+                <p className="text-sm text-green-600">{passwordSuccess}</p>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => !passwordLoading && setShowPasswordModal(false)}
+                  className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium"
+                  disabled={passwordLoading}
+                >
+                  Fermer
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!currentPassword.trim()) {
+                      setPasswordError("Veuillez saisir votre mot de passe actuel.");
+                      return;
+                    }
+                    if (newPassword.length < 6) {
+                      setPasswordError("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+                      return;
+                    }
+                    if (newPassword !== confirmNewPassword) {
+                      setPasswordError("Les deux mots de passe ne correspondent pas.");
+                      return;
+                    }
+                    setPasswordLoading(true);
+                    setPasswordError("");
+                    setPasswordSuccess("");
+                    const result = await api.changePassword(currentPassword, newPassword);
+                    setPasswordLoading(false);
+                    if (result.success) {
+                      setPasswordSuccess("Mot de passe modifié avec succès.");
+                      setCurrentPassword("");
+                      setNewPassword("");
+                      setConfirmNewPassword("");
+                    } else {
+                      setPasswordError(result.message || "Erreur lors du changement de mot de passe.");
+                    }
+                  }}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium disabled:opacity-50"
+                  disabled={passwordLoading}
+                >
+                  {passwordLoading ? "Modification…" : "Changer le mot de passe"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal suppression de compte */}
         {showDeleteModal && (

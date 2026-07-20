@@ -672,18 +672,18 @@ router.post('/forgot-password/verify', [
       { expiresIn: '10m' }
     );
 
-    // Envoi du code par email si l'utilisateur a une adresse email
+    // Envoi du code par email si l'utilisateur a une adresse email — on attend le
+    // résultat réel avant de répondre, pour ne jamais annoncer "envoyé" à tort.
     let emailSent = false;
     let maskedEmail = null;
     if (user.email) {
       maskedEmail = maskEmail(user.email);
       const fullName = `${user.prenom || ''} ${user.nomFamille || ''}`.trim() || user.numeroH;
-      sendPasswordOtpEmail({
+      emailSent = await sendPasswordOtpEmail({
         to: user.email,
         toName: fullName,
         code: otpCode,
-      }).then(() => {}).catch(err => console.error('sendPasswordOtpEmail:', err.message));
-      emailSent = true;
+      }).catch(err => { console.error('sendPasswordOtpEmail:', err.message); return false; });
     }
 
     res.json({ success: true, otpToken, emailSent, maskedEmail });
@@ -718,9 +718,14 @@ router.post('/forgot-password/verify-code', [
     if (payload.code !== code.trim()) {
       return res.status(400).json({ success: false, message: 'Code incorrect. Vérifiez le code reçu par email.' });
     }
-    // Code correct → générer le token de réinitialisation
+    const user = await User.findByNumeroH(payload.numeroH);
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Compte introuvable.' });
+    }
+    // Code correct → générer le token de réinitialisation, lié à l'état actuel du
+    // compte (pwv) pour qu'il devienne invalide dès qu'il a servi une fois.
     const resetToken = jwt.sign(
-      { numeroH: payload.numeroH, purpose: 'forgot_password' },
+      { numeroH: payload.numeroH, purpose: 'forgot_password', pwv: new Date(user.updatedAt).getTime() },
       config.JWT_SECRET,
       { expiresIn: '15m' }
     );
@@ -757,6 +762,11 @@ router.post('/forgot-password/reset', [
     const user = await User.findByNumeroH(payload.numeroH);
     if (!user) {
       return res.status(400).json({ success: false, message: 'Compte introuvable.' });
+    }
+    // Le lien/token n'est valable qu'une seule fois : s'il a déjà servi (le compte a
+    // changé depuis), on le refuse même s'il n'a pas encore expiré.
+    if (payload.pwv !== undefined && payload.pwv !== new Date(user.updatedAt).getTime()) {
+      return res.status(400).json({ success: false, message: 'Ce lien a déjà été utilisé. Recommencez la procédure « Mot de passe oublié ».' });
     }
     user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
     await user.save();
@@ -1071,6 +1081,40 @@ router.put('/me/tree-hidden', authenticate, async (req, res) => {
     res.json({ success: true, treeHidden: list, message: 'Liste mise à jour' });
   } catch (error) {
     console.error('Erreur PUT tree-hidden:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// @route   PUT /api/auth/change-password
+// @desc    Changer son mot de passe depuis son compte (mot de passe actuel requis)
+// @access  Private
+router.put('/change-password', authenticate, [
+  body('currentPassword').notEmpty().withMessage('Mot de passe actuel requis'),
+  body('newPassword').isLength({ min: 6 }).withMessage('Le nouveau mot de passe doit contenir au moins 6 caractères')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Données invalides', errors: errors.array() });
+    }
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findByNumeroH(req.user.numeroH);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+    }
+
+    const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ success: false, message: 'Mot de passe actuel incorrect' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
+    await user.save();
+
+    res.json({ success: true, message: 'Mot de passe modifié avec succès.' });
+  } catch (error) {
+    console.error('Erreur lors du changement de mot de passe:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

@@ -63,7 +63,7 @@ export default function EchangeNourriture() {
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showVendorRegistration, setShowVendorRegistration] = useState(false);
-  const [newVendor, setNewVendor] = useState({ nomBoutique: '', description: '', secteur: 'primaire', telephone: '', ville: '' });
+  const [newVendor, setNewVendor] = useState({ nomBoutique: '', description: '', secteur: 'nourriture', telephone: '', ville: '' });
   const [vendorSubmitting, setVendorSubmitting] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const navigate = useNavigate();
@@ -113,8 +113,8 @@ export default function EchangeNourriture() {
       });
       if (res.ok) {
         const data = await res.json();
-        // Peut publier ici seulement si secteur primaire approuvé (ou admin)
-        const canPublishHere = data.isAdmin || (data.isVendor && (data.sector === 'primaire' || !data.sector));
+        // Peut publier ici seulement si secteur nourriture (Restaurants) approuvé (ou admin)
+        const canPublishHere = data.isAdmin || (data.isVendor && data.sector === 'nourriture');
         setCanPublish(canPublishHere);
         if (data.accountName) setVendorName(data.accountName);
         if (data.hasPendingRequest) setHasPendingRequest(true);
@@ -160,9 +160,9 @@ export default function EchangeNourriture() {
       setLoading(true);
       
       const token = localStorage.getItem("token");
-      
-      // Charger les produits primaires
-      const productsEndpoint = `${config.API_BASE_URL}/exchange/primaire/products`;
+
+      // Charger les produits de restauration (secteur dédié "nourriture")
+      const productsEndpoint = `${config.API_BASE_URL}/exchange/nourriture/products`;
       const productsResponse = await fetch(productsEndpoint, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -191,7 +191,6 @@ export default function EchangeNourriture() {
       formData.append('title', newProduct.title);
       formData.append('description', newProduct.description);
       formData.append('category', newProduct.category);
-      formData.append('level', 'primaire');
       formData.append('price', newProduct.price.toString());
       formData.append('currency', newProduct.currency);
       formData.append('condition', newProduct.condition);
@@ -213,7 +212,7 @@ export default function EchangeNourriture() {
       if (newProduct.audio30s) formData.append('audio_0', newProduct.audio30s);
 
       const token = localStorage.getItem("token");
-      const endpoint = `${config.API_BASE_URL}/exchange/primaire/products`;
+      const endpoint = `${config.API_BASE_URL}/exchange/nourriture/products`;
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -251,20 +250,12 @@ export default function EchangeNourriture() {
 
   const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.numeroH === 'G0C0P0R0E0F0 0';
 
-  // Fonction pour filtrer les produits selon l'onglet actif
+  // Les produits viennent déjà filtrés par le backend (category: 'nourriture')
   const getFilteredProducts = () => {
     if (!products || !Array.isArray(products)) {
       return [];
     }
-    
-    return products.filter(p => {
-      if (!p) return false;
-      const cat = (p.category || '').toLowerCase();
-      const title = (p.title || '').toLowerCase();
-      return cat.includes('aliment') || cat.includes('nourriture') || cat.includes('riz') || cat.includes('huile') || 
-             title.includes('riz') || title.includes('huile') || title.includes('maïs') || title.includes('manioc') || 
-             title.includes('céréale') || title.includes('légumineuse');
-    });
+    return products.filter(Boolean);
   };
 
   if (loading) {
@@ -584,23 +575,8 @@ export default function EchangeNourriture() {
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-            <p className="text-sm text-amber-800 font-medium">Choisissez votre secteur de vente :</p>
-            <div className="grid grid-cols-3 gap-3 mt-3">
-              {[
-                { val: 'primaire', label: 'Secteur Primaire', desc: 'Aliments, agriculture, matières premières' },
-                { val: 'secondaire', label: 'Secteur Secondaire', desc: 'Électronique, vêtements, produits manufacturés' },
-                { val: 'tertiaire', label: 'Secteur Tertiaire', desc: 'Services, immobilier, matériaux de construction' },
-              ].map(s => (
-                <button
-                  key={s.val}
-                  onClick={() => setNewVendor({ ...newVendor, secteur: s.val })}
-                  className={`p-3 rounded-xl border-2 text-left transition-colors ${newVendor.secteur === s.val ? 'border-amber-500 bg-amber-100' : 'border-gray-200 hover:border-amber-300'}`}
-                >
-                  <p className="font-semibold text-sm text-gray-800">{s.label}</p>
-                  <p className="text-xs text-gray-500 mt-1">{s.desc}</p>
-                </button>
-              ))}
-            </div>
+            <p className="text-sm text-amber-800 font-medium">Secteur de vente : Restaurants</p>
+            <p className="text-xs text-amber-700 mt-1">Plats du jour, repas à emporter, traiteurs. Votre demande sera examinée pour ce secteur.</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

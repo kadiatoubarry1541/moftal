@@ -184,17 +184,17 @@ async function sendMailerSend({ to, toName = '', subject, htmlContent }) {
 // ─── OTP : Gmail → MailerSend (REST, rapide) → Brevo (ultime secours) ───────
 
 async function sendOtp({ to, toName, subject, htmlContent }) {
-  if (!to) return;
+  if (!to) return false;
   const sent = await sendGmail({ to, toName, subject, htmlContent });
-  if (!sent) {
-    console.warn('⚠️  Gmail indisponible — bascule MailerSend pour OTP');
-    const sentMailerSend = await sendMailerSend({ to, toName, subject, htmlContent });
-    if (!sentMailerSend) {
-      console.warn('⚠️  MailerSend indisponible — bascule Brevo pour OTP');
-      const sentBrevo = await sendBrevo({ to, toName, subject, htmlContent });
-      if (!sentBrevo) await notifyAdminEmailFailure({ to, subject });
-    }
-  }
+  if (sent) return true;
+  console.warn('⚠️  Gmail indisponible — bascule MailerSend pour OTP');
+  const sentMailerSend = await sendMailerSend({ to, toName, subject, htmlContent });
+  if (sentMailerSend) return true;
+  console.warn('⚠️  MailerSend indisponible — bascule Brevo pour OTP');
+  const sentBrevo = await sendBrevo({ to, toName, subject, htmlContent });
+  if (sentBrevo) return true;
+  await notifyAdminEmailFailure({ to, subject });
+  return false;
 }
 
 // ─── Bienvenue : MailerSend → Brevo (secours) ────────────────────────────────
@@ -248,7 +248,7 @@ export async function sendPasswordOtpEmail({ to, toName = '', code }) {
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
       <p style="color:#9ca3af;font-size:11px;text-align:center;">© Moftal — ${new Date().getFullYear()}</p>
     </div>`;
-  await sendOtp({ to, toName, subject, htmlContent });
+  return sendOtp({ to, toName, subject, htmlContent });
 }
 
 // ─── Lien de réinitialisation (Gmail → Brevo secours) ────────────────────────
@@ -272,7 +272,7 @@ export async function sendPasswordResetEmail({ to, toName = '', resetToken }) {
       <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
       <p style="color:#9ca3af;font-size:11px;text-align:center;">© Moftal — ${new Date().getFullYear()}</p>
     </div>`;
-  await sendOtp({ to, toName, subject, htmlContent });
+  return sendOtp({ to, toName, subject, htmlContent });
 }
 
 // ─── Bienvenue à l'inscription (Brevo → MailerSend secours) ──────────────────
