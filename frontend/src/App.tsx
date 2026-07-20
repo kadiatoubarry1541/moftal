@@ -8,6 +8,7 @@ import { config } from "./config/api";
 import DefaultAvatar from "./assets/default-avatar.svg";
 import NotificationBell from "./components/NotificationBell";
 import InstallAppButton from "./components/InstallAppButton";
+import GestionPaymentGate from "./components/GestionPaymentGate";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
 
@@ -352,6 +353,7 @@ function App() {
   const showFullHeader = !isLoggedIn || isHome;
   return (
     <div className={!isFullscreenPage ? "bg-gray-900 min-h-screen" : ""}>
+    <GestionPaymentGate />
     <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-screen' : ''}${isHome ? ' h-screen overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine */}
       {/* ══ MASTHEAD STICKY — Logo + Carte Profil + Navigation (reste collé en haut comme Facebook) ══ */}

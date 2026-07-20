@@ -7,6 +7,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ async function verifyTenant(req, res, next) {
     );
     if (!tenant) return res.status(403).json({ success: false, message: 'Accès refusé à cet espace beauté.' });
     req.tenant = tenant;
-    next();
+    return enforceGestionAccess(req, res, next);
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 }
 

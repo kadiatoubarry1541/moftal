@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ async function verifyTenant(req, res, next) {
     );
     if (!tenant) return res.status(403).json({ success: false, message: 'Accès refusé.' });
     tenant.logo_url = tenant.logo_url || tenant.pa_photo || null;
-    req.tenant = tenant; next();
+    req.tenant = tenant; return enforceGestionAccess(req, res, next);
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 }
 

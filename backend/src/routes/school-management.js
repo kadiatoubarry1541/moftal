@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ async function verifyTenant(req, res, next) {
     const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code AND owner_numero_h = :n LIMIT 1`, { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT });
     if (!tenant) return res.status(403).json({ success: false, message: 'Accès refusé à cet espace école.' });
     req.tenant = tenant;
-    next();
+    return enforceGestionAccess(req, res, next);
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 }
 
@@ -274,7 +275,7 @@ async function verifyMember(req, res, next) {
     req.tenant = tenant;
     if (tenant.owner_numero_h === req.userId) {
       req.member = { role: 'directeur', numero_h: req.userId };
-      return next();
+      return enforceGestionAccess(req, res, next);
     }
     const [member] = await sequelize.query(
       `SELECT * FROM school_members WHERE tenant_code=:code AND numero_h=:n AND is_active=true LIMIT 1`,
@@ -282,7 +283,7 @@ async function verifyMember(req, res, next) {
     );
     if (!member) return res.status(403).json({ success: false, message: 'Vous n\'êtes pas membre de cet établissement.' });
     req.member = member;
-    next();
+    return enforceGestionAccess(req, res, next);
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 }
 
