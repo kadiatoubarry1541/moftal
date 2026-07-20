@@ -306,11 +306,11 @@ export default function EchangePrimaire() {
         });
         loadData();
       } else {
-        const errData = await res.json().catch(() => ({}));
-        if (res.status === 403) {
+        const errData = await response.json().catch(() => ({}));
+        if (response.status === 403) {
           alert("⛔ " + (errData.message || "Votre compte vendeur Moftal (secteur Alimentation & Vivant) doit être approuvé par un administrateur avant de pouvoir publier."));
         } else {
-          alert("Erreur lors de la publication du produit : " + (errData.message || res.status));
+          alert("Erreur lors de la publication du produit : " + (errData.message || response.status));
         }
       }
     } catch (error) {
