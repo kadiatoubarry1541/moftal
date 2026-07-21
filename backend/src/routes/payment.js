@@ -534,87 +534,75 @@ router.get('/prix-activation', authenticate, (req, res) => {
 });
 
 /**
+ * Calcule le montant réel côté serveur pour un objet de paiement donné —
+ * ne JAMAIS faire confiance au montant envoyé par le frontend, que ce soit
+ * pour FedaPay ou Djomy. Retourne { amount } ou { error: message }.
+ */
+export async function computeAmountForPurpose(purpose, relatedId, user) {
+  const pays = user?.pays || '';
+  let amount = null;
+
+  if (purpose === 'activation_famille') amount = getPrixActivation(pays);
+  if (purpose === 'acces_reci') amount = getPrixReci(pays);
+  // Pass Info Moftal mensuel ou annuel
+  if (purpose === 'publication_outil_mois') amount = getPrixInfoMoftal(pays, 'mois');
+  if (purpose === 'publication_outil_an' || purpose === 'publication_outil_pass') amount = getPrixInfoMoftal(pays, 'an');
+  if (purpose === 'subscription_ia_mois') amount = getPrixIA(pays, 'mois');
+  if (purpose === 'subscription_ia_an') amount = getPrixIA(pays, 'an');
+  // Abonnement Bibliothèque Inspir (lire les livres)
+  if (purpose === 'subscription_livres_an') amount = getPrixLivres(pays);
+  // Achat de points Galerie Familiale (relatedId = nombre de points ex: '10', '20', '100', '210')
+  if (purpose === 'galerie_points') {
+    const nbPoints = parseInt(relatedId);
+    const pack = PACKS_POINTS_GALERIE[nbPoints];
+    if (!pack) return { error: 'Pack de points invalide. Choisir : 10, 20, 100 ou 210 points.' };
+    amount = estAfricain(pays) ? pack.afrique : pack.horsAfrique;
+  }
+  // Ancien abonnement mensuel simple (compatibilité)
+  if (purpose === 'subscription_pro') amount = getPrixAbonnementPro(pays);
+
+  // ── Visibilité seulement (profil public) — relatedId = ID du compte pro ──
+  if (['visibilite_mois', 'visibilite_an', 'visibilite_5ans'].includes(purpose)) {
+    const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
+    if (!proAcc) return { error: 'Compte professionnel requis.' };
+    const periode = purpose === 'visibilite_mois' ? 'mois' : purpose === 'visibilite_an' ? 'an' : 'cinqAns';
+    amount = getPrixVisibilite(proAcc.type, periode, pays);
+  }
+
+  // ── Gestion Interne (inclut visibilité) ───────────────────────────────────
+  if (['gestion_mois', 'gestion_an', 'gestion_5ans'].includes(purpose)) {
+    const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
+    if (!proAcc) return { error: 'Compte professionnel requis.' };
+    const periode = purpose === 'gestion_mois' ? 'mois' : purpose === 'gestion_an' ? 'an' : 'cinqAns';
+    amount = getPrixGestionInterne(proAcc.type, periode, pays);
+  }
+
+  // Gestion Interne à vie (ancienne formule — compatibilité)
+  if (purpose === 'gestion_interne_vie') amount = 3000000;
+
+  // Publication d'annonce de formation — relatedId = durée choisie en jours
+  if (purpose === 'publication_formation') {
+    amount = estAfricain(pays) ? PRIX_PUBLICATION_FORMATION_AFRIQUE : PRIX_PUBLICATION_FORMATION_HORS_AFRIQUE;
+  }
+
+  if (!amount || !purpose) return { error: 'Montant et objet requis' };
+  return { amount };
+}
+
+/**
  * POST /api/payment/initiate
  * Initier un paiement via FedaPay
  */
 router.post('/initiate', authenticate, async (req, res) => {
   try {
-    let { amount, currency = 'GNF', purpose, relatedId, description } = req.body;
+    let { currency = 'GNF', purpose, relatedId, description } = req.body;
     const user = req.user;
 
-    // ── Force TOUJOURS le bon prix côté serveur — le frontend ne décide pas ──
-    // Hors Afrique = double. L'utilisateur ne peut pas tricher en envoyant un faux montant.
-    const pays = user?.pays || '';
-    if (purpose === 'activation_famille') {
-      amount = getPrixActivation(pays);
+    const priced = await computeAmountForPurpose(purpose, relatedId, user);
+    if (priced.error) {
+      return res.status(400).json({ success: false, message: priced.error });
     }
-    if (purpose === 'acces_reci') {
-      amount = getPrixReci(pays);
-    }
-    // Pass Info Moftal mensuel ou annuel
-    if (purpose === 'publication_outil_mois') {
-      amount = getPrixInfoMoftal(pays, 'mois');
-    }
-    if (purpose === 'publication_outil_an' || purpose === 'publication_outil_pass') {
-      amount = getPrixInfoMoftal(pays, 'an');
-    }
-    if (purpose === 'subscription_ia_mois') {
-      amount = getPrixIA(pays, 'mois');
-    }
-    if (purpose === 'subscription_ia_an') {
-      amount = getPrixIA(pays, 'an');
-    }
-    // Abonnement Bibliothèque Inspir (lire les livres)
-    if (purpose === 'subscription_livres_an') {
-      amount = getPrixLivres(pays);
-    }
-    // Achat de points Galerie Familiale (relatedId = nombre de points ex: '10', '20', '100', '210')
-    if (purpose === 'galerie_points') {
-      const nbPoints = parseInt(relatedId);
-      const pack = PACKS_POINTS_GALERIE[nbPoints];
-      if (!pack) {
-        return res.status(400).json({ success: false, message: 'Pack de points invalide. Choisir : 10, 20, 100 ou 210 points.' });
-      }
-      amount = estAfricain(pays) ? pack.afrique : pack.horsAfrique;
-    }
-    // Ancien abonnement mensuel simple (compatibilité)
-    if (purpose === 'subscription_pro') {
-      amount = getPrixAbonnementPro(pays);
-    }
-
-    // ── Visibilité seulement (profil public) ──────────────────────────────────
-    // relatedId = ID du compte professionnel (pour déterminer le secteur)
-    if (['visibilite_mois', 'visibilite_an', 'visibilite_5ans'].includes(purpose)) {
-      const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
-      if (!proAcc) return res.status(400).json({ success: false, message: 'Compte professionnel requis.' });
-      const periode = purpose === 'visibilite_mois' ? 'mois' : purpose === 'visibilite_an' ? 'an' : 'cinqAns';
-      amount = getPrixVisibilite(proAcc.type, periode, pays);
-    }
-
-    // ── Gestion Interne (inclut visibilité) ───────────────────────────────────
-    if (['gestion_mois', 'gestion_an', 'gestion_5ans'].includes(purpose)) {
-      const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
-      if (!proAcc) return res.status(400).json({ success: false, message: 'Compte professionnel requis.' });
-      const periode = purpose === 'gestion_mois' ? 'mois' : purpose === 'gestion_an' ? 'an' : 'cinqAns';
-      amount = getPrixGestionInterne(proAcc.type, periode, pays);
-    }
-
-    // Gestion Interne à vie (ancienne formule — compatibilité)
-    if (purpose === 'gestion_interne_vie') {
-      amount = 3000000;
-    }
-
-    // Publication d'annonce de formation
-    // relatedId = durée choisie en jours ('7', '14', '21', '30')
-    if (purpose === 'publication_formation') {
-      amount = estAfricain(pays)
-        ? PRIX_PUBLICATION_FORMATION_AFRIQUE
-        : PRIX_PUBLICATION_FORMATION_HORS_AFRIQUE;
-    }
-
-    if (!amount || !purpose) {
-      return res.status(400).json({ success: false, message: 'Montant et objet requis' });
-    }
+    const amount = priced.amount;
 
     if (!FEDAPAY_SECRET_KEY) {
       return res.status(503).json({
@@ -786,7 +774,7 @@ const TENANT_PREFIX = {
   artisan: 'ARTI', mairie: 'MAIR',
 };
 
-async function handlePostPayment(payment) {
+export async function handlePostPayment(payment) {
   try {
     if (payment.purpose === 'subscription_pro' && payment.relatedId) {
       const now = new Date();

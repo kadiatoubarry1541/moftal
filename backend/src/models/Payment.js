@@ -13,8 +13,14 @@ const Payment = sequelize.define('Payment', {
     unique: true,
     allowNull: false,
   },
-  // Référence externe de la transaction (passerelle de paiement)
+  // Référence externe de la transaction (passerelle de paiement) — champ historique, plus utilisé
   flwRef: {
+    type: DataTypes.STRING(200),
+    allowNull: true,
+  },
+  // Référence de la transaction chez le prestataire de paiement (FedaPay, Djomy...)
+  // utilisée pour retrouver le paiement depuis le webhook.
+  gatewayRef: {
     type: DataTypes.STRING(200),
     allowNull: true,
   },
@@ -42,9 +48,10 @@ const Payment = sequelize.define('Payment', {
     type: DataTypes.STRING(100),
     allowNull: true,
   },
-  // Statut : pending | success | failed | cancelled
+  // Statut : pending | completed | failed | cancelled
+  // (le code applicatif utilise partout 'completed' pour un paiement réussi)
   status: {
-    type: DataTypes.ENUM('pending', 'success', 'failed', 'cancelled'),
+    type: DataTypes.ENUM('pending', 'completed', 'success', 'failed', 'cancelled'),
     defaultValue: 'pending',
   },
   // Méthode de paiement utilisée

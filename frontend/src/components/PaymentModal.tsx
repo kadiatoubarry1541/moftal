@@ -47,7 +47,7 @@ const METHODS = [
 
 export default function PaymentModal({
   isOpen, onClose, onSuccess,
-  amount, currency = 'GNF', purpose, description,
+  amount, currency = 'GNF', purpose, relatedId, description,
 }: PaymentModalProps) {
   const [step, setStep]       = useState<Step>('choose');
   const [method, setMethod]   = useState<PayMethod | null>(null);
@@ -120,7 +120,8 @@ export default function PaymentModal({
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            amount,
+            purpose,
+            relatedId,
             allowedPaymentMethods: ['CARD', 'OM', 'MOMO', 'PAYCARD'],
             description,
             reference: ref,
@@ -129,7 +130,9 @@ export default function PaymentModal({
         const data = await res.json();
         const url  = data.redirectUrl || data.paymentUrl || data.url || data.data?.redirectUrl;
         if (data.success && url) {
+          const id = data.transactionId || data.data?.transactionId || data.id || '';
           window.open(url, '_blank');
+          setTxId(id);
           setTxRef(ref);
           setStep('waiting');
         } else {
@@ -142,7 +145,8 @@ export default function PaymentModal({
           body: JSON.stringify({
             paymentMethod: method,
             payerPhone: phone,
-            amount,
+            purpose,
+            relatedId,
             description,
             reference: ref,
           }),
