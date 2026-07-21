@@ -60,15 +60,15 @@ export const PRIX_NGO = { mois: 1000, an: 10000, cinqAns: 40000 };
 // ─── Visibilité seulement (profil public sur la plateforme) ──────────────────
 //                          Petit       Grand
 export const PRIX_VISIBILITE = {
-  petit: { mois:   25000, an:  250000, cinqAns: 1000000 },
-  grand: { mois:   50000, an:  500000, cinqAns: 2000000 },
+  petit: { mois:   15000, an:  240000, cinqAns:  990000 },
+  grand: { mois:   40000, an:  490000, cinqAns: 1990000 },
 };
 
 // ─── Gestion Interne (inclut visibilité automatiquement) ─────────────────────
 //                          Petit       Grand
 export const PRIX_GESTION_INTERNE = {
-  petit: { mois:   50000, an:  500000, cinqAns: 2000000 },
-  grand: { mois:   80000, an:  750000, cinqAns: 3000000 },
+  petit: { mois:   40000, an:  490000, cinqAns: 1990000 },
+  grand: { mois:   70000, an:  740000, cinqAns: 2990000 },
 };
 
 // ─── Abonnement Bibliothèque (lire les livres publiés sur Inspir) ─────────────
