@@ -506,19 +506,12 @@ export default function EchangePrimaire() {
             ))}
           </div>
         </div>
-        <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="mt-3">
           <p className="text-xs text-gray-400">
             {PRIMAIRE_TABS.find(t => t.key === activeSubTab)?.key === 'tous'
               ? 'Tous les produits alimentaires'
               : `Produits : ${PRIMAIRE_TABS.find(t => t.key === activeSubTab)?.label}`}
           </p>
-          <button
-            onClick={() => navigate('/echange/nourriture')}
-            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-semibold hover:bg-orange-600"
-          >
-            <span>🍽️</span>
-            <span>Restaurants</span>
-          </button>
         </div>
       </div>
 
