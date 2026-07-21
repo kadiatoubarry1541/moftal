@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { config } from '../config/api';
+import { BackToMoftalBadge, reconcileInstalledFlag } from '../components/InstallAppButton';
 
 interface Message {
   text: string;
@@ -90,21 +91,38 @@ export default function ProfesseurIA() {
     const originalHref = link?.href;
     if (link) link.href = '/manifest-ia-education-moftal.webmanifest';
 
-    if (window.matchMedia('(display-mode: standalone)').matches) setPwaInstalled(true);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    const alreadyInstalled = standalone || localStorage.getItem('iaEducationInstalled') === '1';
+    setPwaInstalled(alreadyInstalled);
+    if (alreadyInstalled && !standalone) reconcileInstalledFlag('iaEducationInstalled', setPwaInstalled);
 
-    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      // Le navigateur propose d'installer → il ne considère pas l'app comme installée
+      // (ex: désinstallée depuis la dernière visite). On corrige l'état local.
+      localStorage.removeItem('iaEducationInstalled');
+      setPwaInstalled(false);
+    };
+    const onInstalled = () => { localStorage.setItem('iaEducationInstalled', '1'); setPwaInstalled(true); };
     window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => setPwaInstalled(true));
+    window.addEventListener('appinstalled', onInstalled);
 
     return () => {
       if (link && originalHref) link.href = originalHref;
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', onInstalled);
     };
   }, []);
 
   const handleInstallPwa = async () => {
     if (!installPrompt) return;
     await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      localStorage.setItem('iaEducationInstalled', '1');
+      setPwaInstalled(true);
+    }
     setInstallPrompt(null);
   };
 
@@ -424,14 +442,15 @@ export default function ProfesseurIA() {
         </nav>
 
         {/* Retour */}
-        <div className="px-3 pb-4 border-t border-gray-200 pt-3">
+        <div className="px-3 pb-4 border-t border-gray-200 pt-3 flex items-center gap-2">
           <button
             onClick={() => navigate('/education')}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
+            className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Retour Éducation
           </button>
+          <BackToMoftalBadge />
         </div>
 
         </div>{/* fin min-w wrapper */}

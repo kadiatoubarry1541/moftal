@@ -49,6 +49,9 @@ export default defineConfig(({ mode }) => {
           scope: "/",
           start_url: "/",
           lang: "fr",
+          related_applications: [
+            { platform: "webapp", url: "https://moftal.com/manifest.webmanifest" },
+          ],
           icons: [
             {
               src: "/logo-moftal.svg",

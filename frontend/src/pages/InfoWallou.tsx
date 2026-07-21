@@ -1,5 +1,6 @@
 ﻿import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { BackToMoftalBadge, reconcileInstalledFlag } from "../components/InstallAppButton";
 
 type CardType =
   | "mariage" | "bapteme" | "deces" | "reunion_physique" | "reunion_ligne" | "sante"
@@ -1697,21 +1698,38 @@ export default function InfoWallou() {
     const originalHref = link?.href;
     if (link) link.href = '/manifest-info-moftal.webmanifest';
 
-    if (window.matchMedia('(display-mode: standalone)').matches) setPwaInstalled(true);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    const alreadyInstalled = standalone || localStorage.getItem('infoMoftalInstalled') === '1';
+    setPwaInstalled(alreadyInstalled);
+    if (alreadyInstalled && !standalone) reconcileInstalledFlag('infoMoftalInstalled', setPwaInstalled);
 
-    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      // Le navigateur propose d'installer → il ne considère pas l'app comme installée
+      // (ex: désinstallée depuis la dernière visite). On corrige l'état local.
+      localStorage.removeItem('infoMoftalInstalled');
+      setPwaInstalled(false);
+    };
+    const onInstalled = () => { localStorage.setItem('infoMoftalInstalled', '1'); setPwaInstalled(true); };
     window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => setPwaInstalled(true));
+    window.addEventListener('appinstalled', onInstalled);
 
     return () => {
       if (link && originalHref) link.href = originalHref;
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', onInstalled);
     };
   }, []);
 
   const handleInstallPwa = async () => {
     if (!installPrompt) return;
     await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      localStorage.setItem('infoMoftalInstalled', '1');
+      setPwaInstalled(true);
+    }
     setInstallPrompt(null);
   };
 
@@ -1926,6 +1944,9 @@ export default function InfoWallou() {
               Application installée
             </span>
           )}
+          <div className="mt-3">
+            <BackToMoftalBadge />
+          </div>
 
           {/* Badge points / statut freemium */}
           <div className="mt-4 flex items-center gap-3">
