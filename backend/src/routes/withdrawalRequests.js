@@ -5,28 +5,6 @@ import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const FEDAPAY_SECRET = process.env.FEDAPAY_SECRET_KEY || '';
-const FEDAPAY_API    = process.env.FEDAPAY_ENV === 'production'
-  ? 'https://api.fedapay.com/v1'
-  : 'https://sandbox-api.fedapay.com/v1';
-
-async function fedapayRequest(method, endpoint, body = null) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-  try {
-    const opts = {
-      method,
-      headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET}`, 'Content-Type': 'application/json' },
-      signal: controller.signal
-    };
-    if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(`${FEDAPAY_API}${endpoint}`, opts);
-    return res.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 const router = express.Router();
 router.use(authenticate);
 
@@ -248,21 +226,6 @@ router.put('/admin/:id/valider', async (req, res) => {
     const montantNet = montant - commission;
     const numOM = demande.coordonneesPaiement;
 
-    // Déclencher le payout FedaPay vers Orange Money
-    let payoutId = null;
-    if (FEDAPAY_SECRET && numOM) {
-      const payoutRes = await fedapayRequest('POST', '/payouts', {
-        amount:   montantNet,
-        currency: { iso: 'GNF' },
-        mode:     'om',
-        customer: {
-          email:        `${demande.ownerNumeroH}@moftal.app`,
-          phone_number: { number: numOM, country: 'GN' }
-        }
-      });
-      payoutId = payoutRes?.v1?.payout?.id || null;
-    }
-
     // Débiter le wallet du professionnel
     const wallet = await ProfessionalWallet.findOne({ where: { proAccountId: demande.proAccountId } });
     if (wallet) {
@@ -292,12 +255,11 @@ router.put('/admin/:id/valider', async (req, res) => {
       description:         demande.motif || 'Retrait professionnel validé',
       proNom:              demande.proAccountName,
       logoUrl:             demande.proLogoUrl,
-      payoutId
     };
 
     res.json({
       success: true,
-      message: `Retrait de ${montantNet.toLocaleString()} GNF envoyé vers Orange Money ${numOM} pour ${demande.proAccountName}. (Commission 1% : ${commission.toLocaleString()} GNF)`,
+      message: `Demande validée. Envoyez manuellement ${montantNet.toLocaleString()} GNF vers Orange Money ${numOM} pour ${demande.proAccountName}. (Commission 1% : ${commission.toLocaleString()} GNF)`,
       reçu: reçuData
     });
   } catch (err) {

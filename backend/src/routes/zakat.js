@@ -143,7 +143,7 @@ router.get('/mon-compte', async (req, res) => {
 });
 
 // POST /api/zakat/deposer — le donateur dépose de l'argent dans son compte Zakat
-// En mode démo : dépôt direct. En production : FedaPay doit appeler ce endpoint après paiement.
+// ⚠️ Aucune vérification de paiement réel n'est faite ici — dépôt direct sur simple appel.
 router.post('/deposer', async (req, res) => {
   try {
     const { montant, fedapayRef } = req.body;

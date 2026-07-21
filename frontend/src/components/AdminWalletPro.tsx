@@ -71,7 +71,7 @@ export function AdminWalletPro({ token, apiBase }: Props) {
         <h2 className="text-xl font-bold text-gray-800">💼 Moftal Pay — Comptes Professionnels</h2>
         <p className="text-blue-600 text-xs font-bold">Comptes Moftal Pay des professionnels</p>
         <p className="text-sm text-gray-500 mt-1">
-          Tous les comptes Moftal Pay actifs — retraits Orange Money uniquement via FedaPay.
+          Tous les comptes Moftal Pay actifs — retraits Orange Money traités manuellement après validation admin.
         </p>
       </div>
 

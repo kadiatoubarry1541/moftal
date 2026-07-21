@@ -376,14 +376,14 @@ const SITE_KNOWLEDGE = [
     links: [{ label: 'Page Santé', path: '/sante' }, { label: 'Ma Famille', path: '/famille' }]
   },
 
-  // ── LENGOPAY / PAIEMENT EXTERNE ────────────────────────────────────────────
+  // ── DJOMY / PAIEMENT EXTERNE ────────────────────────────────────────────
   {
     keywords: [
-      'lengopay', 'fedapay', 'paiement externe', 'argent reel', 'vrai argent',
+      'djomy', 'paiement externe', 'argent reel', 'vrai argent',
       'paiement securise', 'paiement sécurisé', 'comment payer', 'moyen de paiement',
       'mobile money', 'orange money', 'mtn money', 'wave', 'virement'
     ],
-    response: `**Comment fonctionne le paiement sur Moftal ?** 💳\n\n**Principe important :**\n🔒 Moftal est une **simulation** — l'argent réel ne transite pas directement sur le site\n\n**Lengopay — Partenaire de paiement :**\n→ Les transactions réelles sont gérées par **Lengopay**\n→ Système externe sécurisé\n→ Accepte les moyens de paiement locaux\n\n**Moyens de paiement acceptés :**\n📱 Mobile Money (Orange Money, MTN...)\n💳 Virements bancaires\n💵 Autres méthodes via Lengopay\n\n**Tarifs Moftal :**\n🌳 Arbre 5 ans : 100 000 GNF\n🎓 Professeur IA : 5 000 GNF/mois ou 50 000 GNF/an\n💼 Compte Pro standard : 500 000 GNF/an\n❤️ ONG : 10 000 GNF/an`,
+    response: `**Comment fonctionne le paiement sur Moftal ?** 💳\n\n**Djomy — Partenaire de paiement :**\n→ Toutes les transactions réelles sont gérées par **Djomy**\n→ Système sécurisé, argent réel\n→ Accepte les moyens de paiement locaux\n\n**Moyens de paiement acceptés :**\n📱 Orange Money, MTN MoMo\n💳 Carte bancaire (Visa/Mastercard)\n\n**Tarifs Moftal :**\n🌳 Arbre 5 ans : 100 000 GNF\n🎓 Professeur IA : 5 000 GNF/mois ou 50 000 GNF/an\n💼 Compte Pro standard : 500 000 GNF/an\n❤️ ONG : 10 000 GNF/an`,
     links: [{ label: 'Mon Compte', path: '/compte' }]
   },
 

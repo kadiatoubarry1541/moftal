@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getDeviseUtilisateur, formaterMontant, type DeviseInfo } from '../utils/currency';
 import { ReçuTransaction } from '../components/ReçuTransaction';
+import PaymentModal from '../components/PaymentModal';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -31,7 +32,6 @@ function calculerAge(dateNaissance: string | undefined): number {
 
 export default function CompteFamille() {
   const navigate = useNavigate();
-  const location = useLocation();
   const devise: DeviseInfo = getDeviseUtilisateur();
 
   const [compte, setCompte] = useState<any>(null);
@@ -46,7 +46,7 @@ export default function CompteFamille() {
 
   // Dépôt
   const [montantDepot, setMontantDepot] = useState('');
-  const [loadingDepot, setLoadingDepot] = useState(false);
+  const [showDepotPayment, setShowDepotPayment] = useState(false);
 
   // Paiement (admins seulement, santé + nourriture uniquement)
   const [showRepartition, setShowRepartition] = useState(false);
@@ -81,23 +81,6 @@ export default function CompteFamille() {
     if (dn) setUserAge(calculerAge(dn));
   }, []);
 
-  // Détecter le retour FedaPay après paiement (?paiement=succes ou echec)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const statut = params.get('paiement');
-    const montantParam = params.get('montant');
-    if (statut === 'succes') {
-      charger();
-      if (montantParam) {
-        alert(`Dépôt de ${parseInt(montantParam).toLocaleString('fr-GN')} GNF enregistré avec succès.`);
-      }
-      // Nettoyer les params de l'URL
-      navigate('/compte-famille', { replace: true });
-    } else if (statut === 'echec') {
-      alert('Le paiement a échoué ou a été annulé. Aucun débit effectué.');
-      navigate('/compte-famille', { replace: true });
-    }
-  }, [location.search]);
 
   useEffect(() => { charger(); }, []);
 
@@ -110,7 +93,7 @@ export default function CompteFamille() {
       const d = await r.json();
       if (!d.success) {
         setMsgErreur(d.message || 'Erreur lors du chargement.');
-        return;
+        return d;
       }
       setNbMembres(d.nbMembres || 0);
       if (d.existe) {
@@ -123,6 +106,7 @@ export default function CompteFamille() {
           setMsgErreur(d.message);
         }
       }
+      return d;
     } catch {
       setMsgErreur('Impossible de contacter le serveur.');
     } finally {
@@ -130,54 +114,28 @@ export default function CompteFamille() {
     }
   }
 
-  async function deposer() {
+  function deposer() {
     const montant = parseInt(montantDepot);
     if (!montant || montant < 1000) return alert('Montant minimum : 1 000 GNF');
-    setLoadingDepot(true);
-    try {
-      // Étape 1 : essayer de passer par FedaPay (production)
-      const rFeda = await fetch(`${API}/api/moftal-pay/initier-depot`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ montant, type: 'famille' })
-      });
-      const dFeda = await rFeda.json();
+    setShowDepotPayment(true);
+  }
 
-      if (dFeda.paymentUrl) {
-        // FedaPay configuré → rediriger vers la page de paiement
-        window.location.href = dFeda.paymentUrl;
-        return;
-      }
-
-      // Étape 2 : FedaPay non configuré (mode démo) → dépôt direct
-      if (dFeda.demo || !dFeda.success) {
-        const r = await fetch(`${API}/api/family-fund/deposer`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ montant })
-        });
-        const d = await r.json();
-        if (d.success) {
-          setMontantDepot('');
-          const session = JSON.parse(localStorage.getItem('session_user') || '{}');
-          const u = session.userData || session;
-          setReçu({
-            id: Date.now().toString(),
-            type: 'depot',
-            montant,
-            date: new Date().toISOString(),
-            acteurNom: `${u?.prenom || ''} ${u?.nomFamille || ''}`.trim(),
-            nomFamille: compte?.nomFamille,
-            repartition: d.repartition,
-          });
-          charger();
-        } else {
-          alert(d.message);
-        }
-      }
-    } catch {
-      alert('Erreur de connexion au serveur.');
-    } finally { setLoadingDepot(false); }
+  async function onDepotSuccess() {
+    setShowDepotPayment(false);
+    setMontantDepot('');
+    const d = await charger();
+    const derniere = d?.transactions?.[0];
+    const session = JSON.parse(localStorage.getItem('session_user') || '{}');
+    const u = session.userData || session;
+    setReçu({
+      id: derniere?.id || Date.now().toString(),
+      type: 'depot',
+      montant: derniere?.montant ?? parseInt(montantDepot),
+      date: derniere?.created_at || new Date().toISOString(),
+      acteurNom: `${u?.prenom || ''} ${u?.nomFamille || ''}`.trim(),
+      nomFamille: compte?.nomFamille,
+      repartition: derniere?.repartition,
+    });
   }
 
   async function payer() {
@@ -328,6 +286,16 @@ export default function CompteFamille() {
           onClose={() => setReçu(null)}
         />
       )}
+
+      <PaymentModal
+        isOpen={showDepotPayment}
+        onClose={() => setShowDepotPayment(false)}
+        onSuccess={onDepotSuccess}
+        amount={parseInt(montantDepot) || 0}
+        purpose="wallet_depot_famille"
+        relatedId={montantDepot}
+        description="Dépôt compte famille Moftal Pay"
+      />
 
       {/* Header */}
       <div className="w-full py-8 px-4 text-center" style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
@@ -544,10 +512,10 @@ export default function CompteFamille() {
                   min="1000"
                   className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
                 />
-                <button onClick={deposer} disabled={loadingDepot}
+                <button onClick={deposer}
                   className="px-5 py-2.5 rounded-xl text-white font-bold text-sm disabled:opacity-50"
                   style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
-                  {loadingDepot ? '...' : 'Déposer'}
+                  Déposer
                 </button>
               </div>
             </div>
@@ -616,7 +584,7 @@ export default function CompteFamille() {
                   <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100 space-y-3">
                     <h3 className="font-bold text-gray-900">Paiement vers un professionnel</h3>
                     <p className="text-xs text-blue-700 font-semibold bg-blue-50 rounded-lg px-3 py-2">
-                      💸 Transfert interne <strong>100% gratuit</strong> — aucun frais FedaPay
+                      💸 Transfert interne <strong>100% gratuit</strong> — aucun frais
                     </p>
 
                     {/* Catégorie */}

@@ -4,6 +4,9 @@ import Payment from '../models/Payment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
 import { FamilyTree } from '../models/additional.js';
+import FamilyFund from '../models/FamilyFund.js';
+import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
+import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import { sequelize } from '../../config/database.js';
 import { Op } from 'sequelize';
 import {
@@ -568,6 +571,16 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     amount = estAfricain(pays) ? PRIX_PUBLICATION_FORMATION_AFRIQUE : PRIX_PUBLICATION_FORMATION_HORS_AFRIQUE;
   }
 
+  // Dépôt Moftal Pay (compte famille ou wallet pro) — montant choisi par l'utilisateur
+  // lui-même pour recharger son propre compte. relatedId = montant demandé (en GNF).
+  if (purpose === 'wallet_depot_famille' || purpose === 'wallet_depot_pro') {
+    const montantDepot = parseInt(relatedId, 10);
+    if (!montantDepot || montantDepot < 1000) {
+      return { error: 'Montant minimum de dépôt : 1 000 GNF.' };
+    }
+    amount = montantDepot;
+  }
+
   if (!amount || !purpose) return { error: 'Montant et objet requis' };
   return { amount };
 }
@@ -620,6 +633,22 @@ const TENANT_PREFIX = {
   restaurant: 'REST', transport: 'TRANS', beauty: 'BEAU',
   artisan: 'ARTI', mairie: 'MAIR',
 };
+
+// Commission plateforme (1%) prélevée sur chaque dépôt externe Moftal Pay
+const TAUX_COMMISSION_PLATEFORME = 0.01;
+
+function calculerCommissionPlateforme(montantBrut) {
+  const commission = Math.round(montantBrut * TAUX_COMMISSION_PLATEFORME);
+  return { commission, montantNet: montantBrut - commission };
+}
+
+async function enregistrerCommissionPlateforme(sourceType, sourceRef, montantBrut, commission, payeurNumeroH) {
+  await sequelize.query(
+    `INSERT INTO platform_commissions (source_type, source_ref, montant_brut, taux, commission, payeur_numero_h)
+     VALUES (:sourceType, :sourceRef, :brut, :taux, :commission, :payeur)`,
+    { replacements: { sourceType, sourceRef, brut: montantBrut, taux: TAUX_COMMISSION_PLATEFORME * 100, commission, payeur: payeurNumeroH } }
+  ).catch(e => console.warn('Commission log:', e.message));
+}
 
 export async function handlePostPayment(payment) {
   try {
@@ -782,6 +811,59 @@ export async function handlePostPayment(payment) {
           activationPaiementRef: payment.txRef,
         });
         console.log(`✅ Arbre familial activé — famille "${tree.familyName}" | txRef: ${payment.txRef}`);
+      }
+    }
+
+    // ── Dépôt Moftal Pay — compte famille (commission plateforme 1%) ────
+    if (payment.purpose === 'wallet_depot_famille') {
+      const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
+      const user = await User.findOne({ where: { numeroH: payment.payerNumeroH } });
+      const fund = user?.nomFamille
+        ? await FamilyFund.findOne({ where: { nomFamille: { [Op.iLike]: user.nomFamille.trim() }, isActive: true } })
+        : null;
+      if (fund) {
+        const repartition = FamilyFund.repartir(montantNet);
+        await fund.update({
+          solde_reserve:    Number(fund.solde_reserve)    + repartition.reserve,
+          solde_sante:      Number(fund.solde_sante)      + repartition.sante,
+          solde_nourriture: Number(fund.solde_nourriture) + repartition.nourriture,
+          solde_urgence:    Number(fund.solde_urgence)    + repartition.urgence,
+          solde_projet:     Number(fund.solde_projet)     + repartition.projet,
+          total_depose:     Number(fund.total_depose)     + montantNet,
+        });
+        await FamilyFundTransaction.create({
+          fundId: fund.id, acteurNumeroH: payment.payerNumeroH,
+          acteurNom: `${user?.prenom || ''} ${user?.nomFamille || ''}`.trim(),
+          type: 'depot', montant: montantNet, repartition, fedapayRef: payment.txRef, statut: 'confirme',
+          description: `Dépôt Moftal Pay — ${montantNet.toLocaleString()} GNF (${Number(payment.amount).toLocaleString()} - commission 1% : ${commission.toLocaleString()} GNF) — réf: ${payment.txRef}`
+        });
+        await enregistrerCommissionPlateforme('depot_famille', payment.txRef, payment.amount, commission, payment.payerNumeroH);
+        console.log(`✅ Dépôt compte famille — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
+      } else {
+        console.warn(`⚠️ Dépôt wallet_depot_famille sans compte famille trouvé pour ${payment.payerNumeroH}`);
+      }
+    }
+
+    // ── Dépôt Moftal Pay — wallet professionnel (commission plateforme 1%) ──
+    if (payment.purpose === 'wallet_depot_pro') {
+      const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
+      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: payment.payerNumeroH, status: 'approved' } });
+      if (proAccount) {
+        let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });
+        if (!wallet) {
+          wallet = await ProfessionalWallet.create({
+            proAccountId: proAccount.id, ownerNumeroH: payment.payerNumeroH,
+            nomPro: proAccount.name, typePro: proAccount.type,
+          });
+        }
+        await wallet.update({
+          solde:     Number(wallet.solde)     + montantNet,
+          totalRecu: Number(wallet.totalRecu) + montantNet,
+        });
+        await enregistrerCommissionPlateforme('depot_pro', payment.txRef, payment.amount, commission, payment.payerNumeroH);
+        console.log(`✅ Dépôt wallet pro — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
+      } else {
+        console.warn(`⚠️ Dépôt wallet_depot_pro sans compte professionnel approuvé pour ${payment.payerNumeroH}`);
       }
     }
   } catch (err) {

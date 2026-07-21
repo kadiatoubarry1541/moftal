@@ -4,61 +4,14 @@ import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
-import Payment from '../models/Payment.js';
-import User from '../models/User.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
 
-// Commission prélevée par la plateforme sur chaque dépôt externe (via FedaPay)
+// Commission prélevée par la plateforme sur chaque dépôt externe (via Djomy)
 // Les transferts internes (famille → pro) sont GRATUITS — pas de commission
 const TAUX_COMMISSION_PLATEFORME = 0.01; // 1%
 
-function calculerCommission(montantBrut) {
-  const commission = Math.round(montantBrut * TAUX_COMMISSION_PLATEFORME);
-  return { commission, montantNet: montantBrut - commission };
-}
-
-async function enregistrerCommission(sourceType, sourceRef, montantBrut, commission, payeurNumeroH) {
-  await sequelize.query(
-    `INSERT INTO platform_commissions (source_type, source_ref, montant_brut, taux, commission, payeur_numero_h)
-     VALUES (:sourceType, :sourceRef, :brut, :taux, :commission, :payeur)`,
-    { replacements: { sourceType, sourceRef, brut: montantBrut, taux: TAUX_COMMISSION_PLATEFORME * 100, commission, payeur: payeurNumeroH } }
-  ).catch(e => console.warn('Commission log:', e.message));
-}
-
 const router = express.Router();
-// Note : authenticate est appliqué par route, pas globalement,
-// car /callback est appelé par FedaPay (serveur externe sans JWT).
-
-const FEDAPAY_SECRET = process.env.FEDAPAY_SECRET_KEY || '';
-const FEDAPAY_API    = process.env.FEDAPAY_ENV === 'production'
-  ? 'https://api.fedapay.com/v1'
-  : 'https://sandbox-api.fedapay.com/v1';
-const BACKEND_URL    = process.env.BACKEND_URL || 'http://localhost:5002';
-const FRONTEND_URL   = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-// ─────────────────────────────────────────
-// UTILITAIRE — appel FedaPay avec timeout 30s
-// ─────────────────────────────────────────
-async function fedapayRequest(method, endpoint, body = null) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-  try {
-    const opts = {
-      method,
-      headers: {
-        'Authorization': `Bearer ${FEDAPAY_SECRET}`,
-        'Content-Type': 'application/json'
-      },
-      signal: controller.signal
-    };
-    if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(`${FEDAPAY_API}${endpoint}`, opts);
-    return res.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 // ─────────────────────────────────────────
 // GET /api/moftal-pay/mon-moftal-pay-pro
@@ -107,6 +60,7 @@ router.get('/mon-moftal-pay-pro', authenticate, async (req, res) => {
       success: true,
       comptePro: {
         id:             comptePro.id,
+        proAccountId:   proAccount.id,
         nomPro:         comptePro.nomPro,
         typePro:        comptePro.typePro,
         solde:          Number(comptePro.solde),
@@ -122,180 +76,11 @@ router.get('/mon-moftal-pay-pro', authenticate, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────
-// POST /api/moftal-pay/initier-depot
-// Initie un dépôt via FedaPay → retourne un lien de paiement
-// ─────────────────────────────────────────
-router.post('/initier-depot', authenticate, async (req, res) => {
-  try {
-    const { montant, type } = req.body;
-    // type = 'famille' (dépôt compte famille) ou 'pro' (dépôt wallet pro)
-    const { numeroH, email, prenom, nomFamille } = req.user;
-
-    if (!montant || montant < 1000) {
-      return res.status(400).json({ success: false, message: 'Montant minimum : 1 000 GNF' });
-    }
-
-    if (!FEDAPAY_SECRET) {
-      return res.status(503).json({
-        success: false,
-        message: 'Moftal Pay : clé FedaPay non configurée. Ajoutez FEDAPAY_SECRET_KEY dans config.env',
-        demo: true
-      });
-    }
-
-    // Créer la transaction FedaPay
-    const txRef = `MOFTAL-${type?.toUpperCase() || 'DEP'}-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
-
-    const fedaRes = await fedapayRequest('POST', '/transactions', {
-      description: `Moftal Pay — Dépôt ${type === 'famille' ? 'compte famille' : 'wallet pro'} Moftal`,
-      amount: montant,
-      currency: { iso: 'GNF' },
-      callback_url: `${BACKEND_URL}/api/moftal-pay/callback?ref=${encodeURIComponent(txRef)}&type=${encodeURIComponent(type || 'famille')}&numeroH=${encodeURIComponent(numeroH)}`,
-      customer: {
-        email: email || `${numeroH}@moftal.app`,
-        firstname: prenom || '',
-        lastname: nomFamille || '',
-      }
-    });
-
-    if (!fedaRes?.v1?.transaction) {
-      return res.status(500).json({ success: false, message: 'Erreur FedaPay. Réessayez.' });
-    }
-
-    const transactionId = fedaRes.v1.transaction.id;
-
-    // Générer le lien de paiement
-    const tokenRes = await fedapayRequest('POST', `/transactions/${transactionId}/token`);
-    const paymentUrl = tokenRes?.v1?.token?.url;
-
-    if (!paymentUrl) {
-      return res.status(500).json({ success: false, message: 'Impossible de générer le lien FedaPay.' });
-    }
-
-    res.json({
-      success: true,
-      paymentUrl,
-      transactionId,
-      txRef,
-      montant,
-      message: 'Lien de paiement généré. Redirigez l\'utilisateur vers cette URL.'
-    });
-  } catch (err) {
-    console.error('moftal-pay/initier-depot:', err);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
-  }
-});
-
-// ─────────────────────────────────────────
-// GET /api/moftal-pay/callback
-// FedaPay appelle cette URL après paiement
-// ─────────────────────────────────────────
-router.get('/callback', async (req, res) => {
-  try {
-    const { ref, type, numeroH, id: transactionId, status } = req.query;
-
-    if (status !== 'approved') {
-      return res.redirect(`${FRONTEND_URL}/compte-famille?paiement=echec`);
-    }
-
-    // Vérifier la transaction auprès de FedaPay
-    const fedaRes = await fedapayRequest('GET', `/transactions/${transactionId}`);
-    const transaction = fedaRes?.v1?.transaction;
-
-    if (!transaction || transaction.status !== 'approved') {
-      return res.redirect(`${FRONTEND_URL}/compte-famille?paiement=echec`);
-    }
-
-    const montant = transaction.amount;
-    const user = await User.findOne({ where: { numeroH } });
-
-    if (type === 'famille') {
-      // Idempotence : si cette transaction FedaPay a déjà été traitée, ne pas re-créditer
-      const dejaTraite = await FamilyFundTransaction.findOne({
-        where: { fedapayRef: String(transactionId), statut: 'confirme' }
-      });
-      if (dejaTraite) {
-        return res.redirect(`${FRONTEND_URL}/compte-famille?paiement=succes`);
-      }
-
-      // Prélèvement commission plateforme (1%) sur le dépôt externe
-      const { commission, montantNet } = calculerCommission(montant);
-
-      // Créditer le compte famille avec le montant net (après commission)
-      const fund = await FamilyFund.findOne({
-        where: { nomFamille: { [Op.iLike]: user?.nomFamille?.trim() }, isActive: true }
-      });
-      if (fund) {
-        const repartition = FamilyFund.repartir(montantNet);
-        await fund.update({
-          solde_reserve:    Number(fund.solde_reserve)    + repartition.reserve,
-          solde_sante:      Number(fund.solde_sante)      + repartition.sante,
-          solde_nourriture: Number(fund.solde_nourriture) + repartition.nourriture,
-          solde_urgence:    Number(fund.solde_urgence)    + repartition.urgence,
-          solde_projet:     Number(fund.solde_projet)     + repartition.projet,
-          total_depose:     Number(fund.total_depose)     + montantNet,
-        });
-        await FamilyFundTransaction.create({
-          fundId: fund.id, acteurNumeroH: numeroH,
-          acteurNom: `${user?.prenom || ''} ${user?.nomFamille || ''}`.trim(),
-          type: 'depot', montant: montantNet, repartition, fedapayRef: String(transactionId), statut: 'confirme',
-          description: `Dépôt via Moftal Pay — ${montantNet.toLocaleString()} GNF (${montant.toLocaleString()} - commission 1% : ${commission.toLocaleString()} GNF) — FedaPay #${transactionId}`
-        });
-        await enregistrerCommission('depot_famille', String(transactionId), montant, commission, numeroH);
-      }
-      return res.redirect(`${FRONTEND_URL}/compte-famille?paiement=succes&montant=${montantNet}`);
-    }
-
-    if (type === 'pro') {
-      // Idempotence : si cette transaction FedaPay a déjà crédité un wallet pro, ne pas re-créditer
-      const dejaTraitePro = await Payment.findOne({
-        where: { gatewayRef: String(transactionId), purpose: 'wallet_depot_pro', status: 'completed' }
-      });
-      if (dejaTraitePro) {
-        return res.redirect(`${FRONTEND_URL}/moftal-pay-pro?paiement=succes`);
-      }
-
-      // Prélèvement commission plateforme (1%) sur le dépôt externe
-      const { commission: commPro, montantNet: montantNetPro } = calculerCommission(montant);
-
-      // Créditer le wallet professionnel avec le montant net (après commission)
-      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: numeroH } });
-      if (proAccount) {
-        let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });
-        if (!wallet) {
-          wallet = await ProfessionalWallet.create({
-            proAccountId: proAccount.id, ownerNumeroH: numeroH,
-            nomPro: proAccount.name, typePro: proAccount.type
-          });
-        }
-        await wallet.update({
-          solde:      Number(wallet.solde)      + montantNetPro,
-          totalRecu:  Number(wallet.totalRecu)  + montantNetPro,
-        });
-
-        await enregistrerCommission('depot_pro', String(transactionId), montant, commPro, numeroH);
-
-        // Enregistrer pour l'idempotence future (empêche tout re-crédit)
-        await Payment.create({
-          txRef:        ref || `MOFTAL-PRO-${transactionId}`,
-          payerNumeroH: numeroH,
-          amount:       montantNetPro,
-          currency:     'GNF',
-          purpose:      'wallet_depot_pro',
-          status:       'completed',
-          gatewayRef:   String(transactionId),
-        }).catch(e => console.warn('MoftalPay — log wallet_depot_pro:', e.message));
-      }
-      return res.redirect(`${FRONTEND_URL}/moftal-pay-pro?paiement=succes&montant=${montantNetPro}`);
-    }
-
-    res.redirect(`${FRONTEND_URL}?paiement=succes`);
-  } catch (err) {
-    console.error('moftal-pay/callback:', err);
-    res.redirect(`${FRONTEND_URL}/compte-famille?paiement=erreur`);
-  }
-});
+// Les dépôts (compte famille et wallet pro) passent désormais par Djomy :
+// le frontend appelle directement /api/djomy/initiate ou /api/djomy/gateway
+// avec purpose='wallet_depot_famille' ou 'wallet_depot_pro' (voir PaymentModal).
+// Le crédit du compte est effectué par handlePostPayment (payment.js) une fois
+// le paiement confirmé — plus besoin de route de callback dédiée ici.
 
 // ─────────────────────────────────────────
 // POST /api/moftal-pay/retrait-pro
@@ -309,129 +94,6 @@ router.post('/retrait-pro', authenticate, async (req, res) => {
     redirect: '/api/withdrawal-requests'
   });
 });
-
-// ─────────────────────────────────────────
-// (ANCIEN CODE RETRAIT — conservé en référence, non utilisé)
-// ─────────────────────────────────────────
-async function _ancienRetraitPro(req, res) {
-  try {
-    const { montant, numeroOrangeMoney, description } = req.body;
-    const { numeroH } = req.user;
-
-    if (!montant || montant < 5000) {
-      return res.status(400).json({ success: false, message: 'Montant minimum de retrait : 5 000 GNF' });
-    }
-
-    const proAccount = await ProfessionalAccount.findOne({
-      where: { ownerNumeroH: numeroH, status: 'approved' }
-    });
-    if (!proAccount) {
-      return res.status(403).json({ success: false, message: 'Compte professionnel actif requis.' });
-    }
-
-    // ── Conditions spécifiques aux cliniques ────────────────────────────────
-    if (proAccount.type === 'clinic') {
-      const unAnAvant = new Date();
-      unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
-      const ancienDunAn = new Date(proAccount.createdAt) <= unAnAvant;
-
-      // Gestion interne = a déjà accepté au moins 1 rendez-vous sur la plateforme
-      const [[{ nb_rdv }]] = await sequelize.query(
-        `SELECT COUNT(*)::INT AS nb_rdv FROM appointments
-         WHERE professional_account_id = :proId AND status = 'accepted'`,
-        { replacements: { proId: proAccount.id } }
-      );
-      const aGestionInterne = Number(nb_rdv) >= 10;
-
-      // 5 employés minimum = abonnements actifs liés à ce compte (approximation)
-      const [[{ nb_employes }]] = await sequelize.query(
-        `SELECT COUNT(*)::INT AS nb_employes FROM professional_accounts
-         WHERE owner_numero_h = :numeroH AND status = 'approved' AND is_active = true`,
-        { replacements: { numeroH } }
-      ).catch(() => [[{ nb_employes: 0 }]]);
-      const aCinqEmployes = Number(nb_employes) >= 5;
-
-      if (!ancienDunAn && !aGestionInterne && !aCinqEmployes) {
-        return res.status(403).json({
-          success: false,
-          message: 'Retrait clinique refusé. Conditions requises (au moins 1) : ' +
-            '(1) être sur la plateforme depuis 1 an, ' +
-            '(2) avoir une gestion interne active (rendez-vous acceptés), ' +
-            '(3) avoir 5 employés minimum.',
-          conditions: { ancienDunAn, aGestionInterne, aCinqEmployes }
-        });
-      }
-    }
-
-    const wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });
-    if (!wallet || Number(wallet.solde) < montant) {
-      return res.status(400).json({
-        success: false,
-        message: `Solde insuffisant. Disponible : ${Number(wallet?.solde || 0).toLocaleString()} GNF`
-      });
-    }
-
-    // Utiliser le numéro enregistré si non fourni
-    const numOM = numeroOrangeMoney || wallet.orangeMoneyNumero;
-    if (!numOM) {
-      return res.status(400).json({ success: false, message: 'Numéro Orange Money requis.' });
-    }
-
-    // ── Commission plateforme 1% sur le retrait ─────────────────────────────
-    const { commission: commRetrait, montantNet: montantAEnvoyer } = calculerCommission(montant);
-
-    if (!FEDAPAY_SECRET) {
-      // Mode démo sans FedaPay configuré
-      await wallet.update({
-        solde:             Number(wallet.solde)        - montant,
-        totalRetire:       Number(wallet.totalRetire)  + montant,
-        orangeMoneyNumero: numOM
-      });
-      await enregistrerCommission('retrait_pro', `DEMO-${Date.now()}`, montant, commRetrait, numeroH);
-      return res.json({
-        success: true,
-        demo: true,
-        montantEnvoye:   montantAEnvoyer,
-        commission:      commRetrait,
-        message: `[DÉMO] Retrait de ${montantAEnvoyer.toLocaleString()} GNF vers ${numOM} (commission plateforme 1% : ${commRetrait.toLocaleString()} GNF déduite).`
-      });
-    }
-
-    // Envoi réel via FedaPay Payout — seulement le montant net (après commission)
-    const payoutRes = await fedapayRequest('POST', '/payouts', {
-      amount:   montantAEnvoyer,
-      currency: { iso: 'GNF' },
-      mode:     'om',
-      customer: {
-        email:    `${numeroH}@moftal.app`,
-        phone_number: { number: numOM, country: 'GN' }
-      }
-    });
-
-    if (!payoutRes?.v1?.payout) {
-      return res.status(500).json({ success: false, message: 'Erreur FedaPay Payout. Réessayez.' });
-    }
-
-    await wallet.update({
-      solde:             Number(wallet.solde)       - montant,
-      totalRetire:       Number(wallet.totalRetire) + montant,
-      orangeMoneyNumero: numOM
-    });
-
-    await enregistrerCommission('retrait_pro', String(payoutRes.v1.payout.id), montant, commRetrait, numeroH);
-
-    res.json({
-      success: true,
-      montantEnvoye:   montantAEnvoyer,
-      commission:      commRetrait,
-      message: `Retrait de ${montantAEnvoyer.toLocaleString()} GNF envoyé vers Orange Money ${numOM}. (Commission plateforme 1% : ${commRetrait.toLocaleString()} GNF)`,
-      payoutId: payoutRes.v1.payout.id
-    });
-  } catch (err) {
-    console.error('moftal-pay/retrait-pro:', err);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
-  }
-}
 
 // ─────────────────────────────────────────
 // POST /api/moftal-pay/paiement-interne
