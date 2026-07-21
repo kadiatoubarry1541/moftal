@@ -49,6 +49,16 @@ self.addEventListener('fetch', (event: FetchEvent) => {
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
+// À chaque nouvelle version du SW qui prend le relais, on vide le cache de
+// pages (pages-cache) : sans ça, un utilisateur avec une connexion lente peut
+// continuer à voir une page mise en cache il y a plusieurs jours (jusqu'à 7j)
+// même après plusieurs nouveaux déploiements, car NetworkFirst ne retombe sur
+// le réseau que si le cache est absent ou expiré — jamais "juste parce qu'il y
+// a une nouvelle version".
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(caches.delete('pages-cache'))
+})
+
 // Navigation SPA : NetworkFirst — essaie toujours le réseau en priorité.
 // Si réseau indisponible → sert index.html depuis le cache (app fonctionne quand même).
 // Ainsi l'app s'ouvre toujours, que ce soit /espace-pro/:id, /gestion-*, ou la home.
@@ -58,7 +68,9 @@ registerRoute(
       cacheName: 'pages-cache',
       networkTimeoutSeconds: 5, // 5s max d'attente réseau, sinon bascule sur le cache
       plugins: [
-        new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 7 * 24 * 60 * 60 })
+        // maxAgeSeconds court : filet de sécurité en plus du vidage sur activate() —
+        // borne le risque de page périmée à 1 jour max, pas 7.
+        new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 24 * 60 * 60 })
       ]
     }),
     { denylist: [/\/api\//, /\/uploads\//] }
