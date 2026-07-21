@@ -29,9 +29,6 @@ const config = {
   // Resend — secours final (3 000 emails/mois)
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
 
-  // ── FedaPay ───────────────────────────────────────────────────────────────
-  FEDAPAY_SECRET_KEY: process.env.FEDAPAY_SECRET_KEY || '',
-  FEDAPAY_ENV: process.env.FEDAPAY_ENV || 'sandbox', // 'sandbox' pour tests, 'live' pour production
   BACKEND_URL: process.env.BACKEND_URL || 'http://localhost:5002',
 };
 

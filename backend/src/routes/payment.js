@@ -208,23 +208,6 @@ function getPrixActivation(pays) {
 
 const router = express.Router();
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const FEDAPAY_SECRET_KEY = process.env.FEDAPAY_SECRET_KEY || '';
-const FEDAPAY_ENV = process.env.FEDAPAY_ENV || 'sandbox'; // 'sandbox' ou 'live'
-const FEDAPAY_BASE = FEDAPAY_ENV === 'live'
-  ? 'https://api.fedapay.com/v1'
-  : 'https://sandbox.fedapay.com/v1';
-const FEDAPAY_CHECKOUT = FEDAPAY_ENV === 'live'
-  ? 'https://checkout.fedapay.com'
-  : 'https://sandbox-checkout.fedapay.com';
-
-// Génère une référence unique
-function generateTxRef(purpose) {
-  const ts = Date.now();
-  const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `ADAM-${purpose.toUpperCase()}-${ts}-${rand}`;
-}
-
 /**
  * GET /api/payment/acces-outils
  * Vérifie si l'utilisateur a un pass Info Moftal actif (mensuel ou annuel)
@@ -535,8 +518,8 @@ router.get('/prix-activation', authenticate, (req, res) => {
 
 /**
  * Calcule le montant réel côté serveur pour un objet de paiement donné —
- * ne JAMAIS faire confiance au montant envoyé par le frontend, que ce soit
- * pour FedaPay ou Djomy. Retourne { amount } ou { error: message }.
+ * ne JAMAIS faire confiance au montant envoyé par le frontend.
+ * Retourne { amount } ou { error: message }.
  */
 export async function computeAmountForPurpose(purpose, relatedId, user) {
   const pays = user?.pays || '';
@@ -588,142 +571,6 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
   if (!amount || !purpose) return { error: 'Montant et objet requis' };
   return { amount };
 }
-
-/**
- * POST /api/payment/initiate
- * Initier un paiement via FedaPay
- */
-router.post('/initiate', authenticate, async (req, res) => {
-  try {
-    let { currency = 'GNF', purpose, relatedId, description } = req.body;
-    const user = req.user;
-
-    const priced = await computeAmountForPurpose(purpose, relatedId, user);
-    if (priced.error) {
-      return res.status(400).json({ success: false, message: priced.error });
-    }
-    const amount = priced.amount;
-
-    if (!FEDAPAY_SECRET_KEY) {
-      return res.status(503).json({
-        success: false,
-        message: 'Paiement bientôt disponible. Contactez l\'administrateur.',
-      });
-    }
-
-    const txRef = generateTxRef(purpose);
-
-    // Créer la transaction FedaPay
-    const fedaRes = await fetch(`${FEDAPAY_BASE}/transactions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${FEDAPAY_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        description: description || purpose,
-        amount,
-        currency: { iso: currency },
-        customer: {
-          firstname: user.prenom || '',
-          lastname: user.nomFamille || '',
-          email: user.email || '',
-        },
-        callback_url: `${process.env.BACKEND_URL || ''}/api/payment/fedapay/webhook`,
-        return_url: `${FRONTEND_URL}/paiement/resultat?txRef=${txRef}`,
-      }),
-    });
-
-    if (!fedaRes.ok) {
-      const errData = await fedaRes.json().catch(() => ({}));
-      console.error('FedaPay erreur création:', errData);
-      return res.status(502).json({ success: false, message: 'Erreur FedaPay, réessayez.' });
-    }
-
-    const fedaData = await fedaRes.json();
-    const transactionId = fedaData?.v1?.transaction?.id;
-
-    if (!transactionId) {
-      return res.status(502).json({ success: false, message: 'Réponse FedaPay invalide.' });
-    }
-
-    // Obtenir le token de paiement
-    const tokenRes = await fetch(`${FEDAPAY_BASE}/transactions/${transactionId}/token`, {
-      method: 'GET',
-      headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET_KEY}` },
-    });
-
-    const tokenData = await tokenRes.json();
-    const token = tokenData?.v1?.token?.token;
-
-    const paymentUrl = `${FEDAPAY_CHECKOUT}/?token=${token}`;
-
-    // Sauvegarder la transaction en base
-    await Payment.create({
-      txRef,
-      payerNumeroH: user.numeroH,
-      amount,
-      currency,
-      purpose,
-      relatedId: relatedId || null,
-      status: 'pending',
-      gatewayRef: String(transactionId),
-    });
-
-    return res.json({ success: true, txRef, paymentUrl });
-  } catch (err) {
-    console.error('Erreur initiation paiement:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur' });
-  }
-});
-
-/**
- * POST /api/payment/fedapay/webhook
- * Notification automatique de FedaPay après paiement
- */
-router.post('/fedapay/webhook', async (req, res) => {
-  try {
-    const event = req.body;
-    const transaction = event?.data?.object;
-
-    if (!transaction?.id) return res.sendStatus(200);
-
-    const transactionId = String(transaction.id);
-
-    // Re-vérifier le statut DIRECTEMENT auprès de l'API FedaPay
-    // Ne jamais faire confiance au corps du webhook seul (peut être falsifié)
-    if (FEDAPAY_SECRET_KEY) {
-      try {
-        const fedaRes = await fetch(`${FEDAPAY_BASE}/transactions/${transactionId}`, {
-          headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET_KEY}` }
-        });
-        const fedaData = await fedaRes.json();
-        const txReel = fedaData?.v1?.transaction;
-
-        if (!txReel || txReel.status !== 'approved') {
-          return res.sendStatus(200);
-        }
-      } catch (fedaErr) {
-        console.error('Webhook — re-vérification FedaPay échouée:', fedaErr.message);
-        return res.sendStatus(200);
-      }
-    } else if (!transaction.approved) {
-      return res.sendStatus(200);
-    }
-
-    const payment = await Payment.findOne({ where: { gatewayRef: transactionId } });
-    if (payment && payment.status !== 'completed') {
-      payment.status = 'completed';
-      await payment.save();
-      await handlePostPayment(payment);
-    }
-
-    return res.sendStatus(200);
-  } catch (err) {
-    console.error('Webhook FedaPay erreur:', err);
-    return res.sendStatus(200);
-  }
-});
 
 /**
  * GET /api/payment/verify/:txRef
