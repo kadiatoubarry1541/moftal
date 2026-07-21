@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { getSessionUser } from '../utils/auth'
+import PaymentModal from '../components/PaymentModal'
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
 
@@ -20,7 +21,6 @@ const DUREES = [
 
 export default function PublierFormation() {
   const navigate = useNavigate()
-  const location = useLocation()
   const token = localStorage.getItem('token')
 
   const [prix, setPrix] = useState<number | null>(null)
@@ -28,6 +28,8 @@ export default function PublierFormation() {
   const [loading, setLoading] = useState(false)
   const [mesAnnonces, setMesAnnonces] = useState<any[]>([])
   const [onglet, setOnglet] = useState<'publier' | 'mes-annonces'>('publier')
+  const [showPayment, setShowPayment] = useState(false)
+  const [annonceId, setAnnonceId] = useState('')
 
   const [form, setForm] = useState({
     titre:       '',
@@ -47,13 +49,6 @@ export default function PublierFormation() {
   useEffect(() => {
     const user = getSessionUser()
     if (!user) { navigate('/login'); return }
-
-    // Retour FedaPay
-    const params = new URLSearchParams(location.search)
-    if (params.get('paiement') === 'succes') {
-      alert('Paiement confirmé ! Votre formation est maintenant publiée.')
-      navigate('/publier-formation', { replace: true })
-    }
 
     // Charger les prix et mes annonces
     Promise.all([
@@ -89,24 +84,9 @@ export default function PublierFormation() {
       const d1 = await r1.json()
       if (!d1.success) { setErreur(d1.message || 'Erreur.'); return; }
 
-      // Étape 2 : initier le paiement FedaPay
-      const r2 = await fetch(`${API}/api/payment/initiate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount:      prix,
-          currency:    'GNF',
-          purpose:     'publication_formation',
-          relatedId:   d1.annonceId,
-          description: `Publication formation : ${form.titre}`,
-        }),
-      })
-      const d2 = await r2.json()
-      if (d2.paymentUrl) {
-        window.location.href = d2.paymentUrl
-      } else {
-        setErreur(d2.message || 'Impossible d\'initier le paiement.')
-      }
+      // Étape 2 : paiement — l'annonce reste en attente jusqu'à confirmation
+      setAnnonceId(d1.annonceId)
+      setShowPayment(true)
     } catch {
       setErreur('Erreur de connexion.')
     } finally {
@@ -342,6 +322,24 @@ export default function PublierFormation() {
           </div>
         )}
       </div>
+
+      {showPayment && prix && (
+        <PaymentModal
+          isOpen={showPayment}
+          onClose={() => setShowPayment(false)}
+          onSuccess={() => {
+            setShowPayment(false)
+            alert('Paiement confirmé ! Votre formation est maintenant publiée.')
+            setOnglet('mes-annonces')
+            chargerMesAnnonces()
+          }}
+          amount={prix}
+          currency="GNF"
+          purpose="publication_formation"
+          relatedId={annonceId}
+          description={`Publication formation : ${form.titre}`}
+        />
+      )}
     </div>
   )
 }

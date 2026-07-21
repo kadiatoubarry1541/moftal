@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import Activite from "./Activite";
 import { AddPersonModal } from "../components/AddPersonModal";
+import PaymentModal from "../components/PaymentModal";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 
@@ -340,6 +341,8 @@ export default function GestionInterne() {
   const [search, setSearch]             = useState("");
   const [accesGI, setAccesGI]           = useState<any>(null);
   const [payGILoading, setPayGILoading] = useState(false);
+  const [showGIPayment, setShowGIPayment] = useState(false);
+  const [periodeGI, setPeriodeGI] = useState<"mois" | "an" | "cinqAns">("mois");
   const [showPaywall, setShowPaywall]   = useState(false);
   const [tabOverride, setTabOverride]   = useState<"pro" | "activite" | null>(null);
   const [connectModal, setConnectModal] = useState<{ accountId: number; name: string } | null>(null);
@@ -384,27 +387,12 @@ export default function GestionInterne() {
 
   // ─── FONCTIONS PAIEMENT ─────────────────────────────────────────────────────
 
-  async function payerGestionInterne(periode: "mois" | "an" | "cinqAns") {
-    setPayGILoading(true);
-    try {
-      const purposeMap = { mois: "gestion_mois", an: "gestion_an", cinqAns: "gestion_5ans" };
-      const prixMap = { mois: accesGI?.prixMois, an: accesGI?.prixAn, cinqAns: accesGI?.prixCinqAns };
-      const r = await fetch("/api/payment/initiate", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: prixMap[periode] || 0,
-          currency: "GNF",
-          purpose: purposeMap[periode],
-          relatedId: accesGI?.proId,
-          description: `Gestion Interne ${periode === "mois" ? "mensuel" : periode === "an" ? "annuel" : "5 ans"}`,
-        }),
-      });
-      const d = await r.json();
-      if (d.paymentUrl) window.location.href = d.paymentUrl;
-      else alert(d.message || "Impossible de lancer le paiement.");
-    } catch { alert("Erreur de connexion."); }
-    finally { setPayGILoading(false); }
+  const purposeMapGI = { mois: "gestion_mois", an: "gestion_an", cinqAns: "gestion_5ans" } as const;
+  const prixMapGI = () => ({ mois: accesGI?.prixMois, an: accesGI?.prixAn, cinqAns: accesGI?.prixCinqAns });
+
+  function payerGestionInterne(periode: "mois" | "an" | "cinqAns") {
+    setPeriodeGI(periode);
+    setShowGIPayment(true);
   }
 
   // ─── NAVIGATION VERS GESTION EXTERNE ────────────────────────────────────────
@@ -1150,6 +1138,22 @@ export default function GestionInterne() {
           onChange={form => setProfilModal(prev => prev ? { ...prev, form } : null)}
           onSubmit={submitProfil}
           onClose={() => setProfilModal(null)}
+        />
+      )}
+      {showGIPayment && (
+        <PaymentModal
+          isOpen={showGIPayment}
+          onClose={() => setShowGIPayment(false)}
+          onSuccess={() => {
+            setShowGIPayment(false);
+            fetch("/api/payment/acces-gestion-interne", { headers: { Authorization: `Bearer ${token}` } })
+              .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {});
+          }}
+          amount={prixMapGI()[periodeGI] || 0}
+          currency="GNF"
+          purpose={purposeMapGI[periodeGI]}
+          relatedId={accesGI?.proId}
+          description={`Gestion Interne ${periodeGI === "mois" ? "mensuel" : periodeGI === "an" ? "annuel" : "5 ans"}`}
         />
       )}
     </div>
