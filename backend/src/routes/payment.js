@@ -571,9 +571,10 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     amount = estAfricain(pays) ? PRIX_PUBLICATION_FORMATION_AFRIQUE : PRIX_PUBLICATION_FORMATION_HORS_AFRIQUE;
   }
 
-  // Dépôt Moftal Pay (compte famille ou wallet pro) — montant choisi par l'utilisateur
-  // lui-même pour recharger son propre compte. relatedId = montant demandé (en GNF).
-  if (purpose === 'wallet_depot_famille' || purpose === 'wallet_depot_pro') {
+  // Dépôt Moftal Pay (compte famille, wallet pro ou compte Zakat) — montant choisi
+  // par l'utilisateur lui-même pour recharger son propre compte. relatedId = montant
+  // demandé (en GNF).
+  if (purpose === 'wallet_depot_famille' || purpose === 'wallet_depot_pro' || purpose === 'wallet_depot_zakat') {
     const montantDepot = parseInt(relatedId, 10);
     if (!montantDepot || montantDepot < 1000) {
       return { error: 'Montant minimum de dépôt : 1 000 GNF.' };
@@ -865,6 +866,27 @@ export async function handlePostPayment(payment) {
       } else {
         console.warn(`⚠️ Dépôt wallet_depot_pro sans compte professionnel approuvé pour ${payment.payerNumeroH}`);
       }
+    }
+
+    // ── Dépôt compte Zakat — pas de commission plateforme (argent religieux) ──
+    if (payment.purpose === 'wallet_depot_zakat') {
+      const user = await User.findOne({ where: { numeroH: payment.payerNumeroH } });
+      const nom = `${user?.prenom || ''} ${user?.nomFamille || ''}`.trim();
+      await sequelize.query(`
+        INSERT INTO zakat_comptes_donateurs (numero_h, nom_donateur, created_at, updated_at)
+        VALUES (:numeroH, :nom, NOW(), NOW())
+        ON CONFLICT (numero_h) DO NOTHING
+      `, { replacements: { numeroH: payment.payerNumeroH, nom } });
+      await sequelize.query(`
+        UPDATE zakat_comptes_donateurs
+        SET solde = solde + :m, total_depose = total_depose + :m, updated_at = NOW()
+        WHERE numero_h = :numeroH
+      `, { replacements: { m: payment.amount, numeroH: payment.payerNumeroH } });
+      await sequelize.query(`
+        INSERT INTO zakat_operations (type, de_numero_h, de_nom, montant, currency, description, statut, created_at)
+        VALUES ('depot', :numeroH, :nom, :m, 'GNF', :desc, 'confirme', NOW())
+      `, { replacements: { numeroH: payment.payerNumeroH, nom, m: payment.amount, desc: `Dépôt Zakat de ${Number(payment.amount).toLocaleString()} GNF — réf: ${payment.txRef}` } });
+      console.log(`✅ Dépôt Zakat — ${Number(payment.amount).toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
     }
   } catch (err) {
     console.error('Erreur handlePostPayment:', err);

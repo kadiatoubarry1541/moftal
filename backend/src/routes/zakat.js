@@ -142,49 +142,10 @@ router.get('/mon-compte', async (req, res) => {
   }
 });
 
-// POST /api/zakat/deposer — le donateur dépose de l'argent dans son compte Zakat
-// ⚠️ Aucune vérification de paiement réel n'est faite ici — dépôt direct sur simple appel.
-router.post('/deposer', async (req, res) => {
-  try {
-    const { montant, fedapayRef } = req.body;
-    const { numeroH, prenom, nomFamille } = req.user;
-
-    if (!montant || isNaN(parseFloat(montant)) || parseFloat(montant) <= 0) {
-      return res.status(400).json({ success: false, message: 'Montant invalide.' });
-    }
-
-    const m = parseFloat(parseFloat(montant).toFixed(2));
-    const nom = `${prenom || ''} ${nomFamille || ''}`.trim();
-
-    // Créer le compte si besoin
-    await sequelize.query(`
-      INSERT INTO zakat_comptes_donateurs (numero_h, nom_donateur, created_at, updated_at)
-      VALUES (:numeroH, :nom, NOW(), NOW())
-      ON CONFLICT (numero_h) DO NOTHING
-    `, { replacements: { numeroH, nom } });
-
-    // Créditer le solde
-    await sequelize.query(`
-      UPDATE zakat_comptes_donateurs
-      SET solde = solde + :m, total_depose = total_depose + :m, updated_at = NOW()
-      WHERE numero_h = :numeroH
-    `, { replacements: { m, numeroH } });
-
-    // Enregistrer l'opération
-    await sequelize.query(`
-      INSERT INTO zakat_operations (type, de_numero_h, de_nom, montant, currency, description, statut, created_at)
-      VALUES ('depot', :numeroH, :nom, :m, 'GNF', :desc, 'confirme', NOW())
-    `, { replacements: { numeroH, nom, m, desc: fedapayRef ? `Dépôt via FedaPay #${fedapayRef}` : `Dépôt de ${m.toLocaleString('fr-GN')} GNF` } });
-
-    res.json({
-      success: true,
-      message: `${m.toLocaleString('fr-GN')} GNF ajoutés à votre compte Zakat.`,
-      nouveauSolde: m,
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
+// Le dépôt Zakat passe désormais par Djomy : le frontend (Zaka.tsx) appelle
+// /api/djomy/initiate ou /api/djomy/gateway avec purpose='wallet_depot_zakat'.
+// Le crédit du compte est effectué par handlePostPayment (payment.js) une fois
+// le paiement confirmé — voir /api/zakat/mon-compte pour lire le solde à jour.
 
 // POST /api/zakat/donner-au-pauvre/:poorId — envoyer de l'argent à un pauvre
 // INTERNE — gratuit — pas de FedaPay
