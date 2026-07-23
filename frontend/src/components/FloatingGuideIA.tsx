@@ -492,15 +492,18 @@ export function FloatingGuideIA() {
   const navigate = useNavigate();
   const location = useLocation();
   // Terre ADAM a sa propre barre fixe en bas (les 5 niveaux) — on remonte le
-  // bouton flottant pour ne pas se superposer avec elle. On prend le plus
-  // grand des deux : la hauteur réellement mesurée par TerreAdam.tsx
-  // (--moftal-bottom-bar-height, +10px d'air), OU un minimum garanti de 100px —
-  // ce plancher fixe assure un espacement correct même si la mesure dynamique
-  // n'est pas encore appliquée (ex : ancienne version encore en cache côté
-  // navigateur).
-  const extraBottomOffset = location.pathname === '/terre-adam'
-    ? 'max(calc(var(--moftal-bottom-bar-height, 0px) + 10px), 100px)'
+  // bouton flottant pour ne pas se superposer avec elle, sans non plus le
+  // faire remonter trop haut (il ne doit pas recouvrir la zone de chat).
+  // On prend le plus grand des deux : la hauteur réellement mesurée par
+  // TerreAdam.tsx (--moftal-bottom-bar-height, +10px d'air), OU un minimum
+  // garanti de 70px (proche de la vraie hauteur de la barre) — un filet de
+  // sécurité léger, pas un grand plancher qui pousserait le bouton trop haut.
+  const isTerreAdam = location.pathname === '/terre-adam';
+  const extraBottomOffset = isTerreAdam
+    ? 'max(calc(var(--moftal-bottom-bar-height, 0px) + 10px), 70px)'
     : '0px';
+  // Collé plus près du bord droit sur cette page (moins de marge qu'ailleurs).
+  const rightMargin = isTerreAdam ? '0.5rem' : '1.5rem';
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
@@ -558,7 +561,7 @@ export function FloatingGuideIA() {
         className="fixed z-[60] flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 select-none"
         style={{
           bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${extraBottomOffset})`,
-          right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
+          right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
           width: 60, height: 60,
           background: 'linear-gradient(135deg,#1a8f1a 0%,#156315 50%,#0f4b0f 100%)',
           boxShadow: open
@@ -577,7 +580,7 @@ export function FloatingGuideIA() {
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
             bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 68px + ${extraBottomOffset})`,
-            right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
+            right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
             background: 'linear-gradient(135deg,#1a8f1a,#156315)',
             whiteSpace: 'nowrap',
             opacity: 0.9,
@@ -593,7 +596,7 @@ export function FloatingGuideIA() {
           className="fixed z-[59] flex flex-col rounded-2xl overflow-hidden"
           style={{
             bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 72px + ${extraBottomOffset})`,
-            right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
+            right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',
             background: '#fff',
