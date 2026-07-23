@@ -341,7 +341,11 @@ function App() {
     pathname.startsWith("/artisan/") ||
     pathname.startsWith("/producteur/");
   const isProfilPage = pathname === '/moi/profil';
-  const isFullscreenPage = isGestionMode || isVitrineMode || isProfilPage || isMoftalPayMode;
+  // Applis autonomes avec leur propre écran, logo et bouton d'installation —
+  // le header/nav de l'app principale ne doit pas se superposer (pas de double
+  // bouton "Installer", chacune reste une app à part comme Messenger/Facebook).
+  const isStandaloneAppPage = pathname.startsWith('/professeur-ia') || pathname.startsWith('/info-wallou');
+  const isFullscreenPage = isGestionMode || isVitrineMode || isProfilPage || isMoftalPayMode || isStandaloneAppPage;
   const isHome = pathname === "/";
   const isPublicPage = isHome ||
     pathname === "/login" ||
@@ -793,8 +797,9 @@ function App() {
         </div>
       )}
 
-      {/* Footer site principal — masqué en mode Espace Gestion */}
-      {!isGestionMode && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
+      {/* Footer site principal — masqué en mode Espace Gestion, sur les applis autonomes,
+          et sur Terre ADAM qui a sa propre barre fixe en bas (les 5 niveaux) */}
+      {!isGestionMode && !isStandaloneAppPage && pathname !== '/terre-adam' && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
         <div className="mx-auto px-6 text-center">
           <p className="text-gray-300 text-sm mb-2">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
@@ -811,8 +816,8 @@ function App() {
         </div>
       </footer>}
 
-      {/* Assistant IA Guide — masqué en mode gestion */}
-      {!isGestionMode && guideReady && (
+      {/* Assistant IA Guide — masqué en mode gestion et sur les applis autonomes */}
+      {!isGestionMode && !isStandaloneAppPage && guideReady && (
         <Suspense fallback={null}>
           <FloatingGuideIA />
         </Suspense>

@@ -36,11 +36,6 @@ const APERÇU_QUATERNAIRE: PreviewProduct[] = [
   { id: '2', title: 'Laptop HP 15 pouces', price: 6500000, currency: 'FG' },
 ];
 
-const APERÇU_NOURRITURE: PreviewProduct[] = [
-  { id: '1', title: 'Poulet braisé + attiéké', price: 25000, currency: 'FG' },
-  { id: '2', title: 'Plat du jour — Riz sauce graine', price: 20000, currency: 'FG' },
-];
-
 const APERÇU_MEDICAMENT: PreviewProduct[] = [
   { id: '1', title: 'Paracétamol 500mg (boîte)', price: 5000, currency: 'FG' },
   { id: '2', title: 'Amoxicilline 500mg', price: 12000, currency: 'FG' },
@@ -72,7 +67,6 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
   const [previewSecondaire, setPreviewSecondaire] = useState<PreviewProduct[]>(APERÇU_SECONDAIRE);
   const [previewTertiaire, setPreviewTertiaire] = useState<PreviewProduct[]>(APERÇU_TERTIAIRE);
   const [previewQuaternaire, setPreviewQuaternaire] = useState<PreviewProduct[]>(APERÇU_QUATERNAIRE);
-  const [previewNourriture, setPreviewNourriture] = useState<PreviewProduct[]>(APERÇU_NOURRITURE);
   const [loadingPreview, setLoadingPreview] = useState(true);
 
   useEffect(() => {
@@ -88,12 +82,11 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
         const headers: HeadersInit = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        const [resP, resS, resT, resQ, resN] = await Promise.all([
+        const [resP, resS, resT, resQ] = await Promise.all([
           fetch(`${config.API_BASE_URL}/exchange/primaire/products`, { headers }),
           fetch(`${config.API_BASE_URL}/exchange/secondaire/products`, { headers }),
           fetch(`${config.API_BASE_URL}/exchange/tertiaire/products`, { headers }),
           fetch(`${config.API_BASE_URL}/exchange/quaternaire/products`, { headers }),
-          fetch(`${config.API_BASE_URL}/exchange/nourriture/products`, { headers }),
         ]);
 
         if (resP.ok) {
@@ -127,14 +120,6 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             imageUrl: buildImageUrl(p.images?.[0]),
           }));
           if (list.length) setPreviewQuaternaire(list);
-        }
-        if (resN.ok) {
-          const data = await resN.json();
-          const list = (data.products || []).slice(0, 2).map((p: any) => ({
-            id: p.id, title: p.title, price: Number(p.price), currency: p.currency || 'FG',
-            imageUrl: buildImageUrl(p.images?.[0]),
-          }));
-          if (list.length) setPreviewNourriture(list);
         }
       } catch {
         // Garder les aperçus par défaut
@@ -340,52 +325,6 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             <button
               onClick={() => navigate('/echange/quaternaire')}
               className="mt-3 w-full py-2 text-sm font-medium text-violet-600 hover:text-violet-700 border border-violet-300 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
-            >
-              Voir tout →
-            </button>
-          </div>
-        </div>
-
-        {/* ── RESTAURANTS / NOURRITURE ── */}
-        <div className="rounded-xl border-2 border-orange-200 bg-gradient-to-b from-orange-50 to-white dark:from-orange-900/20 dark:to-gray-900 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-          <button
-            onClick={() => navigate('/echange/nourriture')}
-            className="w-full bg-orange-600 hover:bg-orange-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
-          >
-            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
-              <span className="flex items-center justify-center text-lg leading-none">🍽️</span>
-              <span className="flex items-center justify-center text-lg leading-none">🍲</span>
-              <span className="flex items-center justify-center text-lg leading-none">🥘</span>
-              <span className="flex items-center justify-center text-lg leading-none">🍢</span>
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-base">Restaurants</p>
-              <p className="text-xs opacity-90">Plats du jour · Repas à emporter · Traiteurs</p>
-            </div>
-            <span className="ml-auto text-lg opacity-70">›</span>
-          </button>
-          <div className="p-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des produits</p>
-            {loadingPreview ? (
-              <p className="text-sm text-gray-400">Chargement…</p>
-            ) : (
-              <div className="space-y-2">
-                {previewNourriture.map((p) => (
-                  <div key={p.id} className="flex gap-3 rounded-lg overflow-hidden bg-white dark:bg-gray-800/50 border border-orange-100 dark:border-orange-800/50">
-                    <div className="w-16 h-16 flex-shrink-0 bg-orange-100 dark:bg-orange-900/30 rounded-l-lg overflow-hidden">
-                      <ApercuImage src={p.imageUrl} alt={p.title} placeholder="🍽️" />
-                    </div>
-                    <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{p.title}</p>
-                      <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">{p.price.toLocaleString()} {p.currency}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => navigate('/echange/nourriture')}
-              className="mt-3 w-full py-2 text-sm font-medium text-orange-600 hover:text-orange-700 border border-orange-300 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
             >
               Voir tout →
             </button>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 // ─── Base de connaissance complète du site Moftal ─────────────────────────────
 const SITE_KNOWLEDGE = [
@@ -213,8 +213,8 @@ const SITE_KNOWLEDGE = [
       'vendre', 'marche', 'marché', 'boutique', 'article', 'offre', 'demande',
       'primaire', 'secondaire', 'tertiaire', 'alimentation', 'pharmacie'
     ],
-    response: `**La Page Échanges** 🛒\n\nPlateforme de commerce et d'échanges entre membres :\n\n**Catégories disponibles :**\n🥗 **Nourriture** — Aliments, produits frais, alimentation\n💊 **Médicaments** — Produits pharmaceutiques, santé\n🌱 **Primaire** — Matières premières, agriculture, élevage\n🔧 **Secondaire** — Industrie, transformation, artisanat\n💼 **Tertiaire** — Services professionnels, conseil\n\n**Comment publier une annonce :**\n1️⃣ Allez sur la page Échanges\n2️⃣ Cliquez sur **"Publier une annonce"**\n3️⃣ Choisissez la catégorie\n4️⃣ Ajoutez titre, description, photo, prix\n5️⃣ Publiez !\n\n**Comment acheter :**\n→ Parcourez les annonces\n→ Contactez le vendeur\n→ Effectuez la transaction\n\n💡 Les annonces sont visibles par tous les membres Moftal`,
-    links: [{ label: 'Tous les échanges', path: '/echange' }, { label: 'Publier une annonce', path: '/echange/publier' }, { label: 'Nourriture', path: '/echange/nourriture' }]
+    response: `**La Page Échanges** 🛒\n\nPlateforme de commerce et d'échanges entre membres :\n\n**Catégories disponibles :**\n💊 **Médicaments** — Produits pharmaceutiques, santé\n🌱 **Primaire** — Matières premières, agriculture, élevage\n🔧 **Secondaire** — Industrie, transformation, artisanat\n💼 **Tertiaire** — Services professionnels, conseil\n📱 **Quaternaire** — Technologie, véhicules\n\n**Comment publier une annonce :**\n1️⃣ Allez sur la page Échanges\n2️⃣ Cliquez sur **"Publier une annonce"**\n3️⃣ Choisissez la catégorie\n4️⃣ Ajoutez titre, description, photo, prix\n5️⃣ Publiez !\n\n**Comment acheter :**\n→ Parcourez les annonces\n→ Contactez le vendeur\n→ Effectuez la transaction\n\n💡 Les annonces sont visibles par tous les membres Moftal\n\nℹ️ Pour les restaurants, rendez-vous plutôt dans **Services → Restaurant**.`,
+    links: [{ label: 'Tous les échanges', path: '/echange' }, { label: 'Publier une annonce', path: '/echange/publier' }]
   },
 
   // ── SOLIDARITÉ / ONG ──────────────────────────────────────────────────────
@@ -376,14 +376,14 @@ const SITE_KNOWLEDGE = [
     links: [{ label: 'Page Santé', path: '/sante' }, { label: 'Ma Famille', path: '/famille' }]
   },
 
-  // ── LENGOPAY / PAIEMENT EXTERNE ────────────────────────────────────────────
+  // ── DJOMY / PAIEMENT EXTERNE ────────────────────────────────────────────
   {
     keywords: [
-      'lengopay', 'fedapay', 'paiement externe', 'argent reel', 'vrai argent',
+      'djomy', 'paiement externe', 'argent reel', 'vrai argent',
       'paiement securise', 'paiement sécurisé', 'comment payer', 'moyen de paiement',
       'mobile money', 'orange money', 'mtn money', 'wave', 'virement'
     ],
-    response: `**Comment fonctionne le paiement sur Moftal ?** 💳\n\n**Principe important :**\n🔒 Moftal est une **simulation** — l'argent réel ne transite pas directement sur le site\n\n**Lengopay — Partenaire de paiement :**\n→ Les transactions réelles sont gérées par **Lengopay**\n→ Système externe sécurisé\n→ Accepte les moyens de paiement locaux\n\n**Moyens de paiement acceptés :**\n📱 Mobile Money (Orange Money, MTN...)\n💳 Virements bancaires\n💵 Autres méthodes via Lengopay\n\n**Tarifs Moftal :**\n🌳 Arbre 5 ans : 100 000 GNF\n🎓 Professeur IA : 5 000 GNF/mois ou 50 000 GNF/an\n💼 Compte Pro standard : 500 000 GNF/an\n❤️ ONG : 10 000 GNF/an`,
+    response: `**Comment fonctionne le paiement sur Moftal ?** 💳\n\n**Djomy — Partenaire de paiement :**\n→ Toutes les transactions réelles sont gérées par **Djomy**\n→ Système sécurisé, argent réel\n→ Accepte les moyens de paiement locaux\n\n**Moyens de paiement acceptés :**\n📱 Orange Money, MTN MoMo\n💳 Carte bancaire (Visa/Mastercard)\n\n**Tarifs Moftal :**\n🌳 Arbre 5 ans : 100 000 GNF\n🎓 Professeur IA : 5 000 GNF/mois ou 50 000 GNF/an\n💼 Compte Pro standard : 500 000 GNF/an\n❤️ ONG : 10 000 GNF/an`,
     links: [{ label: 'Mon Compte', path: '/compte' }]
   },
 
@@ -490,6 +490,10 @@ export function FloatingGuideIA() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  // Terre ADAM a sa propre barre fixe en bas (les 5 niveaux) — on remonte le
+  // bouton flottant pour ne pas se superposer avec elle.
+  const extraBottomOffset = location.pathname === '/terre-adam' ? 64 : 0;
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
@@ -546,7 +550,7 @@ export function FloatingGuideIA() {
         onClick={() => setOpen(o => !o)}
         className="fixed z-[60] flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 select-none"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)',
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${extraBottomOffset}px)`,
           right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
           width: 60, height: 60,
           background: 'linear-gradient(135deg,#1a8f1a 0%,#156315 50%,#0f4b0f 100%)',
@@ -565,7 +569,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 68px)',
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 68px + ${extraBottomOffset}px)`,
             right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
             background: 'linear-gradient(135deg,#1a8f1a,#156315)',
             whiteSpace: 'nowrap',
@@ -581,7 +585,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] flex flex-col rounded-2xl overflow-hidden"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 72px)',
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 72px + ${extraBottomOffset}px)`,
             right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',

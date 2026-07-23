@@ -40,6 +40,43 @@ function isIOS() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
+// Vérifie auprès du navigateur (Chrome/Edge/Android uniquement — API absente sur
+// iOS Safari et Firefox) si l'app est toujours réellement installée. Si le drapeau
+// local dit "installée" mais que le navigateur ne la voit plus, on le corrige pour
+// faire réapparaître le bouton Installer.
+export async function reconcileInstalledFlag(storageKey: string | null, setInstalled: (v: boolean) => void) {
+  if (!storageKey) return;
+  const nav = navigator as any;
+  if (typeof nav.getInstalledRelatedApps !== "function") return;
+  try {
+    const related = await nav.getInstalledRelatedApps();
+    if (!related || related.length === 0) {
+      localStorage.removeItem(storageKey);
+      setInstalled(false);
+    }
+  } catch { /* silencieux */ }
+}
+
+// Petit logo Moftal cliquable pour revenir au site principal — jamais un bouton de
+// navigation complet : chaque app (Gestion Interne, IA Education, Info Moftal) reste
+// une app à part entière, comme Messenger et Facebook.
+export function BackToMoftalBadge() {
+  return (
+    <a
+      href="https://moftal.com/"
+      title="Retour au site principal Moftal"
+      style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 34, height: 34, borderRadius: 10, background: "#ffffff",
+        border: "1.5px solid #e2e8f0", boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+        flexShrink: 0,
+      }}
+    >
+      <img src="/logo-moftal.svg" alt="Moftal" style={{ width: 20, height: 20 }} />
+    </a>
+  );
+}
+
 // ─── Composant ──────────────────────────────────────────────────────────────
 
 export default function InstallAppButton({ name, logoUrl, themeColor, color, label }: Props = {}) {
@@ -78,6 +115,7 @@ function MainAppInstallButton() {
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
     setInstalled(standalone);
+    if (!standalone) reconcileInstalledFlag("mainAppInstalled", setInstalled);
 
     // Récupérer le prompt déjà capturé dans main.tsx
     const existing = (window as any).__pwaInstallPrompt;
@@ -87,12 +125,17 @@ function MainAppInstallButton() {
       e.preventDefault();
       (window as any).__pwaInstallPrompt = e;
       setPrompt(e as BeforeInstallPromptEvent);
+      // Le navigateur propose d'installer → il ne considère pas l'app comme installée
+      // (ex: elle a été désinstallée depuis la dernière visite). On corrige l'état local.
+      localStorage.removeItem("mainAppInstalled");
+      setInstalled(false);
     };
     const onReady = () => {
       const p = (window as any).__pwaInstallPrompt;
       if (p) setPrompt(p);
     };
     const onInstalled = () => {
+      localStorage.setItem("mainAppInstalled", "1");
       setInstalled(true);
       setPrompt(null);
     };
@@ -162,7 +205,10 @@ function MainAppInstallButton() {
     try {
       await prompt.prompt();
       const { outcome } = await prompt.userChoice;
-      if (outcome === "accepted") setInstalled(true);
+      if (outcome === "accepted") {
+        localStorage.setItem("mainAppInstalled", "1");
+        setInstalled(true);
+      }
     } finally {
       setPrompt(null);
       (window as any).__pwaInstallPrompt = null;
@@ -211,6 +257,10 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
     const alreadyInstalled = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
     setInstalled(alreadyInstalled);
+    // Pas de reconcileInstalledFlag ici : le manifest de chaque tenant est généré
+    // dynamiquement (URL différente selon l'origine/le startUrl), donc getInstalledRelatedApps()
+    // ne peut pas s'y référencer de façon fiable. On se fie uniquement à la réapparition
+    // d'un beforeinstallprompt (juste en dessous) pour détecter une désinstallation.
 
     const existing = (window as any).__pwaGestionPrompt;
     if (existing) setPrompt(existing);
@@ -219,6 +269,10 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       e.preventDefault();
       (window as any).__pwaGestionPrompt = e;
       setPrompt(e as BeforeInstallPromptEvent);
+      // Le navigateur propose d'installer → il ne considère pas cette espace comme
+      // installé (ex: désinstallé depuis la dernière visite). On corrige l'état local.
+      if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
+      setInstalled(false);
     };
     const onReady = () => {
       const p = (window as any).__pwaGestionPrompt;
@@ -266,14 +320,17 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   if (installed) {
     return (
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
-        <span style={{ fontSize: 15 }}>✅</span> Application installée
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
+          <span style={{ fontSize: 15 }}>✅</span> Application installée
+        </div>
+        <BackToMoftalBadge />
       </div>
     );
   }
 
   return (
-    <>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
       <button
         onClick={handleInstall}
         disabled={installing}
@@ -282,11 +339,12 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
         <span style={{ fontSize: 16 }}>{installing ? "⏳" : "📲"}</span>
         {installing ? "Installation…" : (label || "Installer")}
       </button>
+      <BackToMoftalBadge />
       {showToast && (
         <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "#1e293b", color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
           📲 Appuyez sur l'icône d'installation dans la barre du navigateur
         </div>
       )}
-    </>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import PaymentModal from "../components/PaymentModal";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -97,6 +98,9 @@ export default function MesComptesPro() {
   const [loading, setLoading]     = useState(true);
   const [paying, setPaying]       = useState<string | null>(null); // id du compte en cours de paiement
   const [payError, setPayError]   = useState<string | null>(null);
+  const [payModal, setPayModal] = useState<{
+    accountId: string; amount: number; purpose: string; description: string;
+  } | null>(null);
 
   // Prix par compte (chargés dynamiquement depuis le backend)
   const [prix, setPrix] = useState<Record<string, any>>({});
@@ -134,42 +138,24 @@ export default function MesComptesPro() {
     }
   };
 
-  const handlePay = async (acc: ProAccount, mode: 'visibilite' | 'gestion', periode: 'mois' | 'an' | 'cinqAns') => {
+  const handlePay = (acc: ProAccount, mode: 'visibilite' | 'gestion', periode: 'mois' | 'an' | 'cinqAns') => {
     setPayError(null);
-    setPaying(acc.id);
-    try {
-      const purposeMap = {
-        visibilite: { mois: 'visibilite_mois', an: 'visibilite_an', cinqAns: 'visibilite_5ans' },
-        gestion:    { mois: 'gestion_mois',    an: 'gestion_an',    cinqAns: 'gestion_5ans' },
-      };
-      const purpose = purposeMap[mode][periode];
-      const p = prix[acc.id];
-      const montant = p ? p[mode === 'visibilite' ? 'visibilite' : 'gestionInterne'][periode] : 0;
-      const periodeLabel = periode === 'mois' ? 'mensuel' : periode === 'an' ? 'annuel' : '5 ans';
-      const modeLabel = mode === 'visibilite' ? 'Visibilité' : 'Gestion Interne';
+    const purposeMap = {
+      visibilite: { mois: 'visibilite_mois', an: 'visibilite_an', cinqAns: 'visibilite_5ans' },
+      gestion:    { mois: 'gestion_mois',    an: 'gestion_an',    cinqAns: 'gestion_5ans' },
+    };
+    const purpose = purposeMap[mode][periode];
+    const p = prix[acc.id];
+    const montant = p ? p[mode === 'visibilite' ? 'visibilite' : 'gestionInterne'][periode] : 0;
+    const periodeLabel = periode === 'mois' ? 'mensuel' : periode === 'an' ? 'annuel' : '5 ans';
+    const modeLabel = mode === 'visibilite' ? 'Visibilité' : 'Gestion Interne';
 
-      const res = await fetch(`${API}/api/payment/initiate`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount:      montant,
-          currency:    "GNF",
-          purpose,
-          relatedId:   acc.id,
-          description: `${modeLabel} ${periodeLabel} — ${acc.name}`,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else {
-        setPayError(data.message || "Impossible d'initier le paiement. Réessayez.");
-      }
-    } catch {
-      setPayError("Erreur de connexion. Vérifiez votre connexion internet.");
-    } finally {
-      setPaying(null);
-    }
+    setPayModal({
+      accountId: acc.id,
+      amount: montant,
+      purpose,
+      description: `${modeLabel} ${periodeLabel} — ${acc.name}`,
+    });
   };
 
   return (
@@ -427,6 +413,22 @@ export default function MesComptesPro() {
           </button>
         </div>
       </div>
+
+      {payModal && (
+        <PaymentModal
+          isOpen={!!payModal}
+          onClose={() => setPayModal(null)}
+          onSuccess={() => {
+            setPayModal(null);
+            loadAccounts();
+          }}
+          amount={payModal.amount}
+          currency="GNF"
+          purpose={payModal.purpose}
+          relatedId={payModal.accountId}
+          description={payModal.description}
+        />
+      )}
     </div>
   );
 }

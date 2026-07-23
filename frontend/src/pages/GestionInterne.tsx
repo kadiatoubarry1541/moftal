@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import Activite from "./Activite";
 import { AddPersonModal } from "../components/AddPersonModal";
+import PaymentModal from "../components/PaymentModal";
 
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 
@@ -340,6 +341,8 @@ export default function GestionInterne() {
   const [search, setSearch]             = useState("");
   const [accesGI, setAccesGI]           = useState<any>(null);
   const [payGILoading, setPayGILoading] = useState(false);
+  const [showGIPayment, setShowGIPayment] = useState(false);
+  const [periodeGI, setPeriodeGI] = useState<"mois" | "an" | "cinqAns" | "vie">("mois");
   const [showPaywall, setShowPaywall]   = useState(false);
   const [tabOverride, setTabOverride]   = useState<"pro" | "activite" | null>(null);
   const [connectModal, setConnectModal] = useState<{ accountId: number; name: string } | null>(null);
@@ -384,27 +387,12 @@ export default function GestionInterne() {
 
   // ─── FONCTIONS PAIEMENT ─────────────────────────────────────────────────────
 
-  async function payerGestionInterne(periode: "mois" | "an" | "cinqAns") {
-    setPayGILoading(true);
-    try {
-      const purposeMap = { mois: "gestion_mois", an: "gestion_an", cinqAns: "gestion_5ans" };
-      const prixMap = { mois: accesGI?.prixMois, an: accesGI?.prixAn, cinqAns: accesGI?.prixCinqAns };
-      const r = await fetch("/api/payment/initiate", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: prixMap[periode] || 0,
-          currency: "GNF",
-          purpose: purposeMap[periode],
-          relatedId: accesGI?.proId,
-          description: `Gestion Interne ${periode === "mois" ? "mensuel" : periode === "an" ? "annuel" : "5 ans"}`,
-        }),
-      });
-      const d = await r.json();
-      if (d.paymentUrl) window.location.href = d.paymentUrl;
-      else alert(d.message || "Impossible de lancer le paiement.");
-    } catch { alert("Erreur de connexion."); }
-    finally { setPayGILoading(false); }
+  const purposeMapGI = { mois: "gestion_mois", an: "gestion_an", cinqAns: "gestion_5ans", vie: "gestion_interne_vie" } as const;
+  const prixMapGI = () => ({ mois: accesGI?.prixMois, an: accesGI?.prixAn, cinqAns: accesGI?.prixCinqAns, vie: accesGI?.prixVie });
+
+  function payerGestionInterne(periode: "mois" | "an" | "cinqAns" | "vie") {
+    setPeriodeGI(periode);
+    setShowGIPayment(true);
   }
 
   // ─── NAVIGATION VERS GESTION EXTERNE ────────────────────────────────────────
@@ -556,12 +544,20 @@ export default function GestionInterne() {
   const BandeauAcces = () => {
     if (userIsAdmin || !accesGI?.aAcces) return null;
     if (accesGI.mode === "vie") return (
-      <div style={{ background:"#f0fdf0", border:"1px solid #86efac", borderRadius:10, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
-        <span style={{ fontSize:20 }}>♾️</span>
-        <p style={{ margin:0, fontSize:13, color:"#0f4b0f", fontWeight:700 }}>
-          Gestion Interne à vie — Visibilité + Rendez-vous + Gestion complète, débloqués définitivement.
-        </p>
-      </div>
+      <>
+        <div style={{ background:"#f0fdf0", border:"1px solid #86efac", borderRadius:10, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:20 }}>♾️</span>
+          <p style={{ margin:0, fontSize:13, color:"#0f4b0f", fontWeight:700 }}>
+            Gestion Interne à vie — Visibilité + Rendez-vous + Gestion complète, débloqués définitivement.
+          </p>
+        </div>
+        <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:10, padding:"10px 16px", marginBottom:16, display:"flex", alignItems:"flex-start", gap:10 }}>
+          <span style={{ fontSize:20 }}>ℹ️</span>
+          <p style={{ margin:0, fontSize:12.5, color:"#92400e", lineHeight:1.5 }}>
+            <strong>À venir :</strong> l'utilisation de l'outil de paiement Moftal deviendra obligatoire pour recevoir l'argent de vos clients via votre Gestion Interne. Ce n'est pas encore activé — vous serez informé avant tout changement.
+          </p>
+        </div>
+      </>
     );
     if (accesGI.mode === "essai") return (
       <div style={{ background:"#eff6ff", border:"1px solid #93c5fd", borderRadius:10, padding:"12px 16px", marginBottom:16 }}>
@@ -633,6 +629,7 @@ export default function GestionInterne() {
             { periode: "mois"    as const, label: "Mensuel", prix: accesGI?.prixMois },
             { periode: "an"      as const, label: "Annuel",  prix: accesGI?.prixAn,      badge: "2 mois offerts" },
             { periode: "cinqAns" as const, label: "5 ans",   prix: accesGI?.prixCinqAns, badge: "1 an offert"    },
+            { periode: "vie"     as const, label: "À vie",   prix: accesGI?.prixVie,     badge: "Une seule fois" },
           ]).map(opt => (
             <button key={opt.periode} onClick={() => payerGestionInterne(opt.periode)} disabled={payGILoading}
               style={{ width:"100%", padding:"12px 16px", background:"white", color:"#1e3a5f", border:"none", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:800, opacity: payGILoading ? 0.6 : 1, display:"flex", justifyContent:"space-between", alignItems:"center", transition:"opacity 0.15s", boxSizing:"border-box" }}>
@@ -1150,6 +1147,22 @@ export default function GestionInterne() {
           onChange={form => setProfilModal(prev => prev ? { ...prev, form } : null)}
           onSubmit={submitProfil}
           onClose={() => setProfilModal(null)}
+        />
+      )}
+      {showGIPayment && (
+        <PaymentModal
+          isOpen={showGIPayment}
+          onClose={() => setShowGIPayment(false)}
+          onSuccess={() => {
+            setShowGIPayment(false);
+            fetch("/api/payment/acces-gestion-interne", { headers: { Authorization: `Bearer ${token}` } })
+              .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {});
+          }}
+          amount={prixMapGI()[periodeGI] || 0}
+          currency="GNF"
+          purpose={purposeMapGI[periodeGI]}
+          relatedId={accesGI?.proId}
+          description={`Gestion Interne ${periodeGI === "mois" ? "mensuel" : periodeGI === "an" ? "annuel" : periodeGI === "cinqAns" ? "5 ans" : "à vie"}`}
         />
       )}
     </div>

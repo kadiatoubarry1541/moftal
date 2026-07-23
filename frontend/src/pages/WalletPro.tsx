@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser } from '../utils/auth';
+import PaymentModal from '../components/PaymentModal';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
 interface CompteMoftalPayPro {
   id: string;
+  proAccountId: string;
   nomPro: string;
   typePro: string;
   solde: number;
@@ -27,13 +29,13 @@ interface Transaction {
 }
 
 const TYPE_FR: Record<string, string> = {
-  depot_fedapay: 'Dépôt FedaPay',
+  depot: 'Dépôt',
   paiement_interne: 'Paiement famille',
   retrait: 'Retrait Orange Money',
 };
 
 const TYPE_ICON: Record<string, string> = {
-  depot_fedapay: '⬆️',
+  depot: '⬆️',
   paiement_interne: '💸',
   retrait: '⬇️',
 };
@@ -62,10 +64,10 @@ export default function WalletPro() {
   const [retraitLoading, setRetraitLoading] = useState(false);
   const [retraitMsg, setRetraitMsg] = useState('');
 
-  // Dépôt FedaPay (pour tester / recharger son propre wallet pro)
+  // Dépôt (recharger son propre wallet pro via Djomy)
   const [showDepot, setShowDepot] = useState(false);
   const [montantDepot, setMontantDepot] = useState('');
-  const [depotLoading, setDepotLoading] = useState(false);
+  const [showDepotPayment, setShowDepotPayment] = useState(false);
 
   useEffect(() => {
     if (!user || !token) { navigate('/login'); return; }
@@ -95,17 +97,25 @@ export default function WalletPro() {
 
   async function demanderRetrait(e: React.FormEvent) {
     e.preventDefault();
+    if (!wallet?.proAccountId) {
+      setRetraitMsg('Compte professionnel introuvable.');
+      return;
+    }
     setRetraitLoading(true);
     setRetraitMsg('');
     try {
-      const r = await fetch(`${API}/api/moftal-pay/retrait-pro`, {
+      const r = await fetch(`${API}/api/withdrawal-requests`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ montant: parseInt(montantRetrait), numeroOrangeMoney: numeroOM || undefined }),
+        body: JSON.stringify({
+          proAccountId: wallet.proAccountId,
+          montant: parseInt(montantRetrait),
+          coordonneesPaiement: numeroOM || wallet.orangeMoneyNumero || undefined,
+        }),
       });
       const d = await r.json();
       if (d.success) {
-        setRetraitMsg(d.message || 'Retrait initié avec succès');
+        setRetraitMsg(d.message || 'Demande de retrait envoyée avec succès');
         setMontantRetrait('');
         setNumeroOM('');
         charger();
@@ -119,26 +129,17 @@ export default function WalletPro() {
     }
   }
 
-  async function initierDepot(e: React.FormEvent) {
+  function initierDepot(e: React.FormEvent) {
     e.preventDefault();
-    setDepotLoading(true);
-    try {
-      const r = await fetch(`${API}/api/moftal-pay/initier-depot`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ montant: parseInt(montantDepot), type: 'pro' }),
-      });
-      const d = await r.json();
-      if (d.paymentUrl) {
-        window.location.href = d.paymentUrl;
-      } else {
-        alert(d.message || 'Impossible d\'initier le dépôt');
-      }
-    } catch {
-      alert('Erreur de connexion');
-    } finally {
-      setDepotLoading(false);
-    }
+    const montant = parseInt(montantDepot);
+    if (!montant || montant < 1000) { alert('Montant minimum : 1 000 GNF'); return; }
+    setShowDepotPayment(true);
+  }
+
+  function onDepotSuccess() {
+    setShowDepotPayment(false);
+    setMontantDepot('');
+    charger();
   }
 
   const fmt = (n: number) => n.toLocaleString('fr-GN') + ' FG';
@@ -255,24 +256,24 @@ export default function WalletPro() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
             <h3 className="font-bold text-gray-800 mb-1">Déposer de l'argent</h3>
             <p className="text-gray-400 text-xs mb-4">
-              Rechargez votre wallet via FedaPay (Orange Money, carte bancaire). Des frais FedaPay s'appliquent.
+              Rechargez votre wallet via Orange Money, MTN MoMo ou carte bancaire.
             </p>
             <form onSubmit={initierDepot} className="space-y-3">
               <div>
                 <label className="text-xs font-bold text-gray-600 block mb-1">Montant (FG)</label>
                 <input
-                  type="number" min="5000" step="1000" required
+                  type="number" min="1000" step="1000" required
                   value={montantDepot} onChange={e => setMontantDepot(e.target.value)}
                   placeholder="Ex: 50000"
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
                 />
-                <p className="text-xs text-gray-400 mt-1">Minimum : 5 000 FG</p>
+                <p className="text-xs text-gray-400 mt-1">Minimum : 1 000 FG</p>
               </div>
               <button
-                type="submit" disabled={depotLoading}
+                type="submit"
                 className="w-full py-3 rounded-xl font-bold text-white text-sm disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)' }}>
-                {depotLoading ? 'Redirection...' : '⬆️ Payer via FedaPay →'}
+                ⬆️ Payer →
               </button>
             </form>
           </div>
@@ -283,7 +284,7 @@ export default function WalletPro() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
             <h3 className="font-bold text-gray-800 mb-1">Retirer vers Orange Money</h3>
             <p className="text-gray-400 text-xs mb-4">
-              Les retraits passent par FedaPay Payout. Des frais FedaPay s'appliquent sur les retraits.
+              Votre demande sera examinée par un administrateur avant l'envoi de l'argent.
             </p>
             <form onSubmit={demanderRetrait} className="space-y-3">
               <div>
@@ -332,7 +333,7 @@ export default function WalletPro() {
               <p className="font-bold text-blue-900 text-sm">Paiements internes — Gratuits</p>
               <p className="text-blue-700 text-xs mt-0.5 leading-relaxed">
                 Les familles Moftal peuvent vous payer directement depuis leur Moftal Pay familial.
-                Ces transferts sont <strong>100% gratuits</strong> et instantanés — aucun frais FedaPay.
+                Ces transferts sont <strong>100% gratuits</strong> et instantanés.
               </p>
             </div>
           </div>
@@ -394,6 +395,16 @@ export default function WalletPro() {
           ← Retour à mon espace professionnel
         </button>
       </div>
+
+      <PaymentModal
+        isOpen={showDepotPayment}
+        onClose={() => setShowDepotPayment(false)}
+        onSuccess={onDepotSuccess}
+        amount={parseInt(montantDepot) || 0}
+        purpose="wallet_depot_pro"
+        relatedId={montantDepot}
+        description="Dépôt Moftal Pay Pro"
+      />
     </div>
   );
 }

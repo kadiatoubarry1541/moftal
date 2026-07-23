@@ -5,9 +5,8 @@ import { sequelize } from '../../config/database.js';
  * Moftal Pay — Wallet Professionnel
  * Chaque compte professionnel (clinique, école, ONG...) a son propre wallet.
  * - Reçoit les paiements internes depuis les comptes famille
- * - Peut retirer vers Orange Money / banque via FedaPay
+ * - Peut demander un retrait vers Orange Money / banque (validé manuellement par un admin)
  * - Les transferts internes sont GRATUITS
- * - Seuls les retraits externes passent par FedaPay (frais FedaPay)
  */
 class ProfessionalWallet extends Model {}
 

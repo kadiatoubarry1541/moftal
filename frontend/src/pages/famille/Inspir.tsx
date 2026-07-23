@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../../config/api';
 import { VideoRecorder } from '../../components/VideoRecorder';
+import PaymentModal from '../../components/PaymentModal';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || 'http://localhost:5002';
 
@@ -67,6 +68,7 @@ export default function Inspir() {
   const [livreAuteur, setLivreAuteur] = useState('');
   const [sendingLivre, setSendingLivre] = useState(false);
   const [achatLivresLoading, setAchatLivresLoading] = useState(false);
+  const [showLivresPayment, setShowLivresPayment] = useState(false);
 
   // Form state
   const [content, setContent] = useState('');
@@ -141,26 +143,8 @@ export default function Inspir() {
   }, [userData, aAccesLivres, mediaTab]);
 
   // Acheter l'abonnement bibliothèque
-  const acheterAbonnementLivres = async () => {
-    setAchatLivresLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_ORIGIN}/api/payment/initiate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ purpose: 'subscription_livres_an', description: 'Abonnement Bibliothèque Inspir — 1 an' }),
-      });
-      const data = await res.json();
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else {
-        alert(data.message || 'Erreur lors de l\'initiation du paiement.');
-      }
-    } catch {
-      alert('Erreur réseau. Vérifiez que le backend est démarré.');
-    } finally {
-      setAchatLivresLoading(false);
-    }
+  const acheterAbonnementLivres = () => {
+    setShowLivresPayment(true);
   };
 
   // Publier un livre
@@ -422,7 +406,7 @@ export default function Inspir() {
                     style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}>
                     {achatLivresLoading ? 'Redirection vers le paiement...' : `📚 S'abonner pour ${prixLivres.toLocaleString()} GNF/an`}
                   </button>
-                  <p className="text-gray-400 text-xs">Paiement sécurisé via FedaPay · Orange Money · Wave</p>
+                  <p className="text-gray-400 text-xs">Paiement sécurisé · Orange Money · MTN MoMo · Carte</p>
                 </div>
               </div>
             ) : (
@@ -755,6 +739,21 @@ export default function Inspir() {
         )}
 
       </div>
+
+      {showLivresPayment && (
+        <PaymentModal
+          isOpen={showLivresPayment}
+          onClose={() => setShowLivresPayment(false)}
+          onSuccess={() => {
+            setShowLivresPayment(false);
+            setAAccesLivres(true);
+          }}
+          amount={prixLivres}
+          currency="GNF"
+          purpose="subscription_livres_an"
+          description="Abonnement Bibliothèque Inspir — 1 an"
+        />
+      )}
     </div>
   );
 }

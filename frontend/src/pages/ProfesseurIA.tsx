@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { config } from '../config/api';
+import { BackToMoftalBadge, reconcileInstalledFlag } from '../components/InstallAppButton';
+import PaymentModal from '../components/PaymentModal';
 
 interface Message {
   text: string;
@@ -81,6 +83,33 @@ export default function ProfesseurIA() {
 
   const navigate = useNavigate();
 
+  // === ABONNEMENT PROFESSEUR IA ===
+  const [iaAcces, setIaAcces] = useState<{ aAcces: boolean; expireAt: string | null; type: string | null } | null>(null);
+  const [iaPrix, setIaPrix] = useState<{ mois: number; an: number } | null>(null);
+  const [showIAPayment, setShowIAPayment] = useState(false);
+  const [periodeIA, setPeriodeIA] = useState<'mois' | 'an'>('mois');
+  const [blocageIA, setBlocageIA] = useState('');
+
+  const chargerAccesIA = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${config.API_BASE_URL}/payment/acces-ia`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.success) setIaAcces({ aAcces: d.aAcces, expireAt: d.expireAt, type: d.type }); })
+      .catch(() => {});
+    fetch(`${config.API_BASE_URL}/payment/prix-ia`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.success) setIaPrix({ mois: d.mois, an: d.an }); })
+      .catch(() => {});
+  };
+
+  useEffect(() => { chargerAccesIA(); }, []);
+
+  const ouvrirAbonnementIA = (periode: 'mois' | 'an') => {
+    setPeriodeIA(periode);
+    setShowIAPayment(true);
+  };
+
   // PWA : manifest indépendant pour IA Education Moftal
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [pwaInstalled, setPwaInstalled] = useState(false);
@@ -90,21 +119,38 @@ export default function ProfesseurIA() {
     const originalHref = link?.href;
     if (link) link.href = '/manifest-ia-education-moftal.webmanifest';
 
-    if (window.matchMedia('(display-mode: standalone)').matches) setPwaInstalled(true);
+    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    const alreadyInstalled = standalone || localStorage.getItem('iaEducationInstalled') === '1';
+    setPwaInstalled(alreadyInstalled);
+    if (alreadyInstalled && !standalone) reconcileInstalledFlag('iaEducationInstalled', setPwaInstalled);
 
-    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); };
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      // Le navigateur propose d'installer → il ne considère pas l'app comme installée
+      // (ex: désinstallée depuis la dernière visite). On corrige l'état local.
+      localStorage.removeItem('iaEducationInstalled');
+      setPwaInstalled(false);
+    };
+    const onInstalled = () => { localStorage.setItem('iaEducationInstalled', '1'); setPwaInstalled(true); };
     window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => setPwaInstalled(true));
+    window.addEventListener('appinstalled', onInstalled);
 
     return () => {
       if (link && originalHref) link.href = originalHref;
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', onInstalled);
     };
   }, []);
 
   const handleInstallPwa = async () => {
     if (!installPrompt) return;
     await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      localStorage.setItem('iaEducationInstalled', '1');
+      setPwaInstalled(true);
+    }
     setInstallPrompt(null);
   };
 
@@ -178,8 +224,9 @@ export default function ProfesseurIA() {
         } else if (data.code === 'MESSAGE_TROP_LONG') {
           msg = '✂️ Message trop long — sans abonnement, la limite est **700 caractères**. Raccourcissez votre question.';
         } else if (data.code === 'ABONNEMENT_REQUIS') {
-          msg = '📚 Un abonnement est nécessaire pour continuer. Rendez-vous sur la page Éducation IA pour vous abonner.';
+          msg = '📚 Un abonnement est nécessaire pour continuer.';
         }
+        if (data.code === 'QUOTA_GRATUIT_ATTEINT' || data.code === 'ABONNEMENT_REQUIS') setBlocageIA(msg);
         setMessages(prev => [...prev, { text: msg, isUser: false, timestamp: new Date() }]);
       } else {
         setMessages(prev => [...prev, { text: '⚠️ Une erreur s\'est produite. Réessayez dans quelques instants.', isUser: false, timestamp: new Date() }]);
@@ -223,8 +270,9 @@ export default function ProfesseurIA() {
         if (data.code === 'QUOTA_GRATUIT_ATTEINT') {
           msg = '⏰ Vous avez utilisé vos 3 questions gratuites aujourd\'hui. Revenez demain ou abonnez-vous pour un accès illimité.';
         } else if (data.code === 'ABONNEMENT_REQUIS') {
-          msg = '📚 Un abonnement est nécessaire pour continuer. Rendez-vous sur /ia-education pour vous abonner.';
+          msg = '📚 Un abonnement est nécessaire pour continuer.';
         }
+        if (data.code === 'QUOTA_GRATUIT_ATTEINT' || data.code === 'ABONNEMENT_REQUIS') setBlocageIA(msg);
         setExerciceQuestion(msg);
         setShowSelector(true);
       } else {
@@ -423,15 +471,47 @@ export default function ProfesseurIA() {
           </button>
         </nav>
 
+        {/* Abonnement Professeur IA */}
+        <div className="px-3 pb-3">
+          {iaAcces?.aAcces ? (
+            <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200">
+              <p className="text-[11px] font-bold text-emerald-700">✅ Abonné ({iaAcces.type})</p>
+              {iaAcces.expireAt && (
+                <p className="text-[10px] text-emerald-600">Jusqu'au {new Date(iaAcces.expireAt).toLocaleDateString('fr-FR')}</p>
+              )}
+            </div>
+          ) : (
+            <div className="px-3 py-2.5 rounded-xl bg-cyan-50 border border-cyan-200">
+              <p className="text-[11px] font-bold text-cyan-800 mb-1.5">📚 3 questions gratuites/jour</p>
+              <p className="text-[10px] text-cyan-700 mb-2">Abonnez-vous pour un accès illimité</p>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => ouvrirAbonnementIA('mois')}
+                  className="flex-1 px-2 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-[10px] font-bold rounded-lg transition-colors"
+                >
+                  {iaPrix ? `${iaPrix.mois.toLocaleString()} GNF/mois` : '...'}
+                </button>
+                <button
+                  onClick={() => ouvrirAbonnementIA('an')}
+                  className="flex-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition-colors"
+                >
+                  {iaPrix ? `${iaPrix.an.toLocaleString()} GNF/an` : '...'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Retour */}
-        <div className="px-3 pb-4 border-t border-gray-200 pt-3">
+        <div className="px-3 pb-4 border-t border-gray-200 pt-3 flex items-center gap-2">
           <button
             onClick={() => navigate('/education')}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
+            className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Retour Éducation
           </button>
+          <BackToMoftalBadge />
         </div>
 
         </div>{/* fin min-w wrapper */}
@@ -837,6 +917,38 @@ export default function ProfesseurIA() {
         )}
       </div>
       </div>
+
+      {/* Bandeau de blocage — quota atteint / abonnement requis */}
+      {blocageIA && !iaAcces?.aAcces && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t-2 border-cyan-400 shadow-2xl px-4 py-3 flex flex-wrap items-center gap-3 justify-center">
+          <p className="text-sm font-semibold text-gray-800">{blocageIA}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => ouvrirAbonnementIA('mois')}
+              className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold rounded-lg transition-colors"
+            >
+              S'abonner {iaPrix ? `— ${iaPrix.mois.toLocaleString()} GNF/mois` : ''}
+            </button>
+            <button
+              onClick={() => setBlocageIA('')}
+              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-lg transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {iaPrix && (
+        <PaymentModal
+          isOpen={showIAPayment}
+          onClose={() => setShowIAPayment(false)}
+          onSuccess={() => { setShowIAPayment(false); setBlocageIA(''); chargerAccesIA(); }}
+          amount={periodeIA === 'mois' ? iaPrix.mois : iaPrix.an}
+          purpose={periodeIA === 'mois' ? 'subscription_ia_mois' : 'subscription_ia_an'}
+          description={`Abonnement Professeur IA — ${periodeIA === 'mois' ? '1 mois' : '1 an'}`}
+        />
+      )}
     </div>
   );
 }

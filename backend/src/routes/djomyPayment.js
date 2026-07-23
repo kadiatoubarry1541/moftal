@@ -1,6 +1,8 @@
 import express from 'express';
 import crypto from 'crypto';
 import { authenticate } from '../middleware/auth.js';
+import Payment from '../models/Payment.js';
+import { computeAmountForPurpose, handlePostPayment } from './payment.js';
 
 const router = express.Router();
 
@@ -39,6 +41,16 @@ function formatPhone(phone) {
   return `00224${clean}`;
 }
 
+// Complète le paiement (marque 'completed' + débloque ce qui a été acheté) une seule fois,
+// même si le webhook ET le polling de statut arrivent tous les deux — évite de doubler
+// l'action (ex: ajouter les points deux fois) pour un même paiement.
+async function completeIfNeeded(payment) {
+  if (!payment || payment.status === 'completed') return;
+  payment.status = 'completed';
+  await payment.save();
+  await handlePostPayment(payment);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/djomy/initiate
 // Paiement direct sans redirection (Orange Money, MTN MoMo)
@@ -46,12 +58,13 @@ function formatPhone(phone) {
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/initiate', authenticate, async (req, res) => {
   try {
-    const { paymentMethod, payerPhone, amount, description, reference } = req.body;
+    const { paymentMethod, payerPhone, purpose, relatedId, description } = req.body;
+    const user = req.user;
 
-    if (!paymentMethod || !payerPhone || !amount || amount <= 0) {
+    if (!paymentMethod || !payerPhone || !purpose) {
       return res.status(400).json({
         success: false,
-        message: 'paymentMethod, payerPhone et amount sont requis.'
+        message: 'paymentMethod, payerPhone et purpose sont requis.'
       });
     }
 
@@ -63,19 +76,26 @@ router.post('/initiate', authenticate, async (req, res) => {
       });
     }
 
+    // Ne jamais faire confiance à un montant envoyé par le frontend — recalculé ici.
+    const priced = await computeAmountForPurpose(purpose, relatedId, user);
+    if (priced.error) {
+      return res.status(400).json({ success: false, message: priced.error });
+    }
+    const amount = priced.amount;
+
     const token = await getBearerToken();
-    const ref = reference || `MF-${Date.now()}`;
+    const ref = `MF-${purpose}-${Date.now()}`;
 
     const payload = {
       paymentMethod,
       payerIdentifier: formatPhone(payerPhone),
-      amount:   Number(amount),
+      amount,
       countryCode: 'GN',
       description: description || 'Paiement Moftal',
       merchantPaymentReference: ref,
       returnUrl:  'https://moftal.com/payment/success',
       cancelUrl:  'https://moftal.com/payment/cancel',
-      metadata:   { userId: req.user.numeroH, ref }
+      metadata:   { userId: user.numeroH, ref }
     };
 
     const djomyRes = await fetch(`${DJOMY_BASE_URL}/v1/payments`, {
@@ -91,7 +111,19 @@ router.post('/initiate', authenticate, async (req, res) => {
     const data = await djomyRes.json();
 
     if (djomyRes.ok) {
-      res.json({ success: true, reference: ref, ...data });
+      const transactionId = String(data.transactionId || data.data?.transactionId || data.id || ref);
+      await Payment.create({
+        txRef: ref,
+        payerNumeroH: user.numeroH,
+        amount,
+        currency: 'GNF',
+        purpose,
+        relatedId: relatedId || null,
+        status: 'pending',
+        gatewayRef: transactionId,
+        paymentMethod,
+      });
+      res.json({ success: true, reference: ref, transactionId, ...data });
     } else {
       res.status(djomyRes.status).json({
         success: false,
@@ -112,17 +144,25 @@ router.post('/initiate', authenticate, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/gateway', authenticate, async (req, res) => {
   try {
-    const { amount, payerPhone, allowedPaymentMethods, description, reference } = req.body;
+    const { payerPhone, allowedPaymentMethods, purpose, relatedId, description } = req.body;
+    const user = req.user;
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ success: false, message: 'amount est requis.' });
+    if (!purpose) {
+      return res.status(400).json({ success: false, message: 'purpose est requis.' });
     }
 
+    // Ne jamais faire confiance à un montant envoyé par le frontend — recalculé ici.
+    const priced = await computeAmountForPurpose(purpose, relatedId, user);
+    if (priced.error) {
+      return res.status(400).json({ success: false, message: priced.error });
+    }
+    const amount = priced.amount;
+
     const token = await getBearerToken();
-    const ref   = reference || `MF-${Date.now()}`;
+    const ref   = `MF-${purpose}-${Date.now()}`;
 
     const payload = {
-      amount:   Number(amount),
+      amount,
       countryCode: 'GN',
       payerNumber: formatPhone(payerPhone || '600000000'),
       allowedPaymentMethods: allowedPaymentMethods || ['OM', 'MOMO', 'CARD', 'PAYCARD'],
@@ -130,7 +170,7 @@ router.post('/gateway', authenticate, async (req, res) => {
       merchantPaymentReference: ref,
       returnUrl:  'https://moftal.com/payment/success',
       cancelUrl:  'https://moftal.com/payment/cancel',
-      metadata:   { userId: req.user.numeroH, ref }
+      metadata:   { userId: user.numeroH, ref }
     };
 
     const djomyRes = await fetch(`${DJOMY_BASE_URL}/v1/payments/gateway`, {
@@ -146,7 +186,20 @@ router.post('/gateway', authenticate, async (req, res) => {
     const data = await djomyRes.json();
 
     if (djomyRes.ok) {
-      res.json({ success: true, reference: ref, ...data });
+      const transactionId = String(data.transactionId || data.data?.transactionId || data.id || ref);
+      await Payment.create({
+        txRef: ref,
+        payerNumeroH: user.numeroH,
+        amount,
+        currency: 'GNF',
+        purpose,
+        relatedId: relatedId || null,
+        status: 'pending',
+        gatewayRef: transactionId,
+        paymentMethod: 'CARD',
+      });
+      const redirectUrl = data.redirectUrl || data.paymentUrl || data.url || data.data?.redirectUrl;
+      res.json({ success: true, reference: ref, transactionId, redirectUrl, ...data });
     } else {
       res.status(djomyRes.status).json({
         success: false,
@@ -162,7 +215,9 @@ router.post('/gateway', authenticate, async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/djomy/status/:transactionId
-// Vérifier le statut d'un paiement
+// Vérifier le statut d'un paiement — complète aussi le paiement si Djomy confirme
+// un succès et qu'il n'a pas encore été débloqué (filet de sécurité si le webhook
+// n'est pas encore arrivé ou a échoué).
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/status/:transactionId', authenticate, async (req, res) => {
   try {
@@ -179,6 +234,15 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
     );
 
     const data = await djomyRes.json();
+    const status = data.status || data.data?.status || '';
+
+    if (djomyRes.ok && status === 'SUCCESS') {
+      const payment = await Payment.findOne({
+        where: { gatewayRef: req.params.transactionId, payerNumeroH: req.user.numeroH }
+      });
+      await completeIfNeeded(payment);
+    }
+
     res.json({ success: djomyRes.ok, ...data });
   } catch (err) {
     console.error('djomy/status:', err);
@@ -202,14 +266,22 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       return res.status(400).json({ error: 'Signature invalide' });
     }
 
-    const event = typeof req.body === 'object' ? req.body : JSON.parse(bodyStr);
+    const event = typeof req.body === 'object' && !Buffer.isBuffer(req.body) ? req.body : JSON.parse(bodyStr);
     console.log('📩 Djomy webhook:', event.eventType, '| transaction:', event.data?.transactionId);
 
     if (event.eventType === 'payment.success') {
-      const { transactionId, paidAmount, merchantPaymentReference, paymentMethod, currency } = event.data;
+      const { transactionId, paidAmount, merchantPaymentReference, paymentMethod, currency } = event.data || {};
       console.log(`✅ Paiement Djomy réussi: ${paidAmount} ${currency} via ${paymentMethod} — réf: ${merchantPaymentReference}`);
-      // La mise à jour de la base de données se fait selon la référence marchande (merchantPaymentReference)
-      // qui correspond à l'action déclenchée (abonnement, activation arbre, etc.)
+
+      const payment = transactionId
+        ? await Payment.findOne({ where: { gatewayRef: String(transactionId) } })
+        : (merchantPaymentReference ? await Payment.findOne({ where: { txRef: merchantPaymentReference } }) : null);
+
+      if (!payment) {
+        console.warn('djomy/webhook: paiement introuvable pour', transactionId, merchantPaymentReference);
+      } else {
+        await completeIfNeeded(payment);
+      }
     }
 
     if (event.eventType === 'payment.failed') {

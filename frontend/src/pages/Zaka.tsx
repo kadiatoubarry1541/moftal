@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAdmin } from '../utils/auth';
+import PaymentModal from '../components/PaymentModal';
 
 interface UserData {
   numeroH: string;
@@ -188,7 +189,7 @@ export default function Zaka() {
   // Compte Zakat du donateur
   const [monCompteZakat, setMonCompteZakat] = useState<{ solde: number; totalDepose: number; totalDonne: number } | null>(null);
   const [montantDepotZakat, setMontantDepotZakat] = useState('');
-  const [loadingDepotZakat, setLoadingDepotZakat] = useState(false);
+  const [showDepotZakatPayment, setShowDepotZakatPayment] = useState(false);
   const [formations, setFormations] = useState<Formation[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -301,26 +302,16 @@ export default function Zaka() {
     } catch { /* non bloquant */ }
   };
 
-  const deposerDansCompteZakat = async () => {
+  const deposerDansCompteZakat = () => {
     const montant = parseInt(montantDepotZakat);
     if (!montant || montant < 1000) return alert('Montant minimum : 1 000 GNF');
-    setLoadingDepotZakat(true);
-    try {
-      const token = localStorage.getItem("token");
-      const r = await fetch('/api/zakat/deposer', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ montant })
-      });
-      const d = await r.json();
-      if (d.success) {
-        setMontantDepotZakat('');
-        alert(d.message);
-        loadMonCompteZakat();
-      } else {
-        alert(d.message || 'Erreur lors du dépôt');
-      }
-    } finally { setLoadingDepotZakat(false); }
+    setShowDepotZakatPayment(true);
+  };
+
+  const onDepotZakatSuccess = () => {
+    setShowDepotZakatPayment(false);
+    setMontantDepotZakat('');
+    loadMonCompteZakat();
   };
   
   const loadCommunities = async () => {
@@ -1149,10 +1140,9 @@ export default function Zaka() {
                 />
                 <button
                   onClick={deposerDansCompteZakat}
-                  disabled={loadingDepotZakat}
                   className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm disabled:opacity-50 transition-colors"
                 >
-                  {loadingDepotZakat ? '...' : 'Déposer'}
+                  Déposer
                 </button>
               </div>
             </div>
@@ -2036,6 +2026,15 @@ export default function Zaka() {
         </div>
       )}
 
+      <PaymentModal
+        isOpen={showDepotZakatPayment}
+        onClose={() => setShowDepotZakatPayment(false)}
+        onSuccess={onDepotZakatSuccess}
+        amount={parseInt(montantDepotZakat) || 0}
+        purpose="wallet_depot_zakat"
+        relatedId={montantDepotZakat}
+        description="Dépôt compte Zakat"
+      />
     </div>
   );
 }

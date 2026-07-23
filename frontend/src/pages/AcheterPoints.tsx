@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link, useLocation } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { getSessionUser } from '../utils/auth'
+import PaymentModal from '../components/PaymentModal'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
 
@@ -18,26 +19,18 @@ interface PointsInfo {
 
 export default function AcheterPoints() {
   const navigate = useNavigate()
-  const location = useLocation()
   const token = localStorage.getItem('token')
 
   const [pointsInfo, setPointsInfo] = useState<PointsInfo | null>(null)
   const [packs, setPacks] = useState<Pack[]>([])
   const [zone, setZone] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [payLoading, setPayLoading] = useState<number | null>(null)
+  const [selectedPack, setSelectedPack] = useState<Pack | null>(null)
+  const [showPayment, setShowPayment] = useState(false)
 
   useEffect(() => {
     const user = getSessionUser()
     if (!user) { navigate('/login'); return }
-
-    // Détecter retour FedaPay
-    const params = new URLSearchParams(location.search)
-    if (params.get('paiement') === 'succes') {
-      alert('Paiement confirmé ! Vos points ont été ajoutés. Ils sont valables 1 mois.')
-      navigate('/acheter-points', { replace: true })
-    }
-
     charger()
   }, [navigate, token])
 
@@ -71,31 +64,9 @@ export default function AcheterPoints() {
     finally { setLoading(false) }
   }
 
-  async function acheterPack(pack: Pack) {
-    setPayLoading(pack.points)
-    try {
-      const r = await fetch(`${API_BASE}/api/payment/initiate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: pack.prix,
-          currency: 'GNF',
-          purpose: 'galerie_points',
-          relatedId: String(pack.points),
-          description: `${pack.points} points galerie — valables 1 mois`,
-        }),
-      })
-      const d = await r.json()
-      if (d.paymentUrl) {
-        window.location.href = d.paymentUrl
-      } else {
-        alert(d.message || 'Impossible de lancer le paiement. Réessayez.')
-      }
-    } catch {
-      alert('Erreur de connexion.')
-    } finally {
-      setPayLoading(null)
-    }
+  function acheterPack(pack: Pack) {
+    setSelectedPack(pack)
+    setShowPayment(true)
   }
 
   const fmt = (n: number) => n.toLocaleString('fr-GN') + ' GNF'
@@ -174,7 +145,7 @@ export default function AcheterPoints() {
           <div className="px-6 py-4 border-b border-gray-100">
             <h3 className="font-bold text-gray-800">Choisissez votre pack — valable 1 mois</h3>
             <p className="text-xs text-indigo-600 font-semibold mt-1">📷 1 point = 1 photo &nbsp;·&nbsp; 🎥 3 points = 1 vidéo</p>
-            <p className="text-xs text-gray-400 mt-0.5">Paiement via Orange Money, Wave ou carte bancaire (FedaPay)</p>
+            <p className="text-xs text-gray-400 mt-0.5">Paiement via Orange Money, MTN MoMo ou carte bancaire</p>
           </div>
 
           {loading ? (
@@ -185,7 +156,7 @@ export default function AcheterPoints() {
                 <button
                   key={pack.points}
                   onClick={() => acheterPack(pack)}
-                  disabled={payLoading !== null}
+                  disabled={showPayment}
                   className={`relative rounded-2xl p-4 text-center border-2 transition-all disabled:opacity-60 hover:scale-105 ${
                     pack.popular
                       ? 'border-indigo-500 bg-indigo-600 text-white shadow-lg'
@@ -211,7 +182,7 @@ export default function AcheterPoints() {
                     {pack.points} photos · {Math.floor(pack.points / 3)} vidéos
                   </p>
 
-                  {payLoading === pack.points && (
+                  {showPayment && selectedPack?.points === pack.points && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-2xl">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     </div>
@@ -247,6 +218,23 @@ export default function AcheterPoints() {
           </Link>
         </div>
       </div>
+
+      {selectedPack && (
+        <PaymentModal
+          isOpen={showPayment}
+          onClose={() => setShowPayment(false)}
+          onSuccess={() => {
+            setShowPayment(false)
+            alert('Paiement confirmé ! Vos points ont été ajoutés. Ils sont valables 1 mois.')
+            charger()
+          }}
+          amount={selectedPack.prix}
+          currency="GNF"
+          purpose="galerie_points"
+          relatedId={String(selectedPack.points)}
+          description={`${selectedPack.points} points galerie — valables 1 mois`}
+        />
+      )}
     </div>
   )
 }

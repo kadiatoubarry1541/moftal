@@ -9,10 +9,16 @@ export default function PWAUpdatePrompt() {
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
       if (!registration) return;
-      // Vérifier les mises à jour en arrière-plan toutes les 60 secondes
-      setInterval(() => {
-        registration.update().catch(() => {});
-      }, 60_000);
+      const checkForUpdate = () => registration.update().catch(() => {});
+
+      // Vérifier tout de suite (l'utilisateur n'attend pas 60s pour une 1ère vérification)
+      checkForUpdate();
+      // Puis en arrière-plan toutes les 60 secondes
+      setInterval(checkForUpdate, 60_000);
+      // Et dès que l'onglet redevient actif (retour après une pause, changement d'onglet…)
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") checkForUpdate();
+      });
     },
   });
 

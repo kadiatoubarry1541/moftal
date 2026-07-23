@@ -1591,6 +1591,15 @@ async function initAllTables() {
     // échoue au niveau base de données (valeur enum invalide).
     await sequelize.query(`ALTER TYPE "enum_professional_accounts_sub_sector" ADD VALUE IF NOT EXISTS 'quaternaire';`).catch(() => {});
     await sequelize.query(`ALTER TYPE "enum_professional_accounts_sub_sector" ADD VALUE IF NOT EXISTS 'nourriture';`).catch(() => {});
+    // payments.status : le code applicatif utilise 'completed' partout, mais l'enum créé
+    // à l'origine ne contenait que pending/success/failed/cancelled — un paiement réussi
+    // ne pouvait donc jamais être enregistré comme complété (erreur silencieuse).
+    await sequelize.query(`ALTER TYPE "enum_payments_status" ADD VALUE IF NOT EXISTS 'completed';`).catch(() => {});
+    // gatewayRef : utilisé par le code (FedaPay, Djomy) pour retrouver un paiement depuis
+    // le webhook, mais absent de la table créée à l'origine — le webhook ne retrouvait donc
+    // jamais le paiement et ne débloquait jamais ce que le client venait de payer.
+    await sequelize.query(`ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "gateway_ref" VARCHAR(200);`).catch(() => {});
+    await sequelize.query(`CREATE INDEX IF NOT EXISTS "idx_payments_gateway_ref" ON "payments" ("gateway_ref");`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "billing_info" JSONB;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "is_trial" BOOLEAN DEFAULT true;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "granted_to_sub_admin" BOOLEAN DEFAULT false;`).catch(() => {});

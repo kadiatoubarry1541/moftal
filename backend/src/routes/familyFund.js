@@ -6,11 +6,6 @@ import User from '../models/User.js';
 import { FamilyTree } from '../models/additional.js';
 import { Op } from 'sequelize';
 
-const FEDAPAY_SECRET = process.env.FEDAPAY_SECRET_KEY || '';
-const FEDAPAY_API = process.env.FEDAPAY_ENV === 'production'
-  ? 'https://api.fedapay.com/v1'
-  : 'https://sandbox-api.fedapay.com/v1';
-
 // Vérifie si l'utilisateur est l'un des 3 admins du fonds (gérant1, gérant2 ou conseiller)
 function estAdmin(fund, numeroH) {
   return fund.gerant1NumeroH === numeroH
@@ -242,111 +237,10 @@ router.post('/creer', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────
-// POST /api/family-fund/deposer
-// Dépose de l'argent → répartition automatique 50/30/10/5/5
-// ─────────────────────────────────────────────
-router.post('/deposer', async (req, res) => {
-  try {
-    const { montant, fedapayRef } = req.body;
-    const { numeroH, nomFamille, prenom, nomFamilleDisplay } = req.user;
-
-    if (!montant || montant <= 0) {
-      return res.status(400).json({ success: false, message: 'Montant invalide.' });
-    }
-
-    // Référence FedaPay obligatoire — les dépôts doivent venir d'un vrai paiement
-    if (!fedapayRef) {
-      return res.status(400).json({
-        success: false,
-        message: 'Référence de paiement FedaPay manquante. Utilisez le bouton "Déposer" officiel pour initier un paiement.'
-      });
-    }
-
-    // Idempotence : refuser si ce paiement FedaPay a déjà été traité
-    const dejaTraite = await FamilyFundTransaction.findOne({
-      where: { fedapayRef: String(fedapayRef) }
-    });
-    if (dejaTraite) {
-      return res.status(400).json({
-        success: false,
-        message: 'Ce paiement a déjà été enregistré sur votre compte famille.'
-      });
-    }
-
-    // Vérifier auprès de FedaPay que ce paiement est réel et approuvé
-    if (FEDAPAY_SECRET) {
-      try {
-        const fedaRes = await fetch(`${FEDAPAY_API}/transactions/${fedapayRef}`, {
-          headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET}` }
-        });
-        const fedaData = await fedaRes.json();
-        const tx = fedaData?.v1?.transaction;
-
-        if (!tx || tx.status !== 'approved') {
-          return res.status(400).json({
-            success: false,
-            message: 'Paiement FedaPay non approuvé. Veuillez réessayer ou contacter le support.'
-          });
-        }
-
-        // Vérifier que le montant déclaré correspond au montant réel
-        if (Math.abs(Number(tx.amount) - Number(montant)) > 1) {
-          return res.status(400).json({
-            success: false,
-            message: `Montant incorrect : FedaPay indique ${tx.amount} GNF, pas ${montant} GNF.`
-          });
-        }
-      } catch (fedaErr) {
-        console.error('Vérification FedaPay /deposer:', fedaErr.message);
-        return res.status(503).json({
-          success: false,
-          message: 'Impossible de vérifier le paiement auprès de FedaPay. Réessayez dans quelques instants.'
-        });
-      }
-    }
-
-    const fund = await FamilyFund.findOne({
-      where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true }
-    });
-    if (!fund) {
-      return res.status(404).json({ success: false, message: 'Compte famille introuvable. Créez-en un d\'abord.' });
-    }
-
-    const repartition = FamilyFund.repartir(montant);
-
-    // Mise à jour des soldes
-    await fund.update({
-      solde_reserve:    Number(fund.solde_reserve)    + repartition.reserve,
-      solde_sante:      Number(fund.solde_sante)      + repartition.sante,
-      solde_nourriture: Number(fund.solde_nourriture) + repartition.nourriture,
-      solde_urgence:    Number(fund.solde_urgence)    + repartition.urgence,
-      solde_projet:     Number(fund.solde_projet)     + repartition.projet,
-      total_depose:     Number(fund.total_depose)     + montant,
-    });
-
-    await FamilyFundTransaction.create({
-      fundId:       fund.id,
-      acteurNumeroH: numeroH,
-      acteurNom:    `${prenom || ''} ${nomFamilleDisplay || nomFamille || ''}`.trim(),
-      type:         'depot',
-      montant,
-      description:  `Dépôt de ${montant.toLocaleString()} GNF`,
-      repartition,
-      fedapayRef:   fedapayRef || null,
-      statut:       'confirme'
-    });
-
-    res.json({
-      success: true,
-      message: `Dépôt de ${montant.toLocaleString()} GNF enregistré.`,
-      repartition,
-    });
-  } catch (err) {
-    console.error('family-fund/deposer:', err);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
-  }
-});
+// Les dépôts passent désormais par Djomy : le frontend (CompteFamille.tsx)
+// appelle /api/djomy/initiate ou /api/djomy/gateway avec purpose='wallet_depot_famille'.
+// Le crédit du compte est effectué par handlePostPayment (payment.js) une fois
+// le paiement confirmé — voir /api/family-fund/mon-compte pour lire le solde à jour.
 
 // ─────────────────────────────────────────────
 // POST /api/family-fund/payer

@@ -4,6 +4,9 @@ import Payment from '../models/Payment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
 import { FamilyTree } from '../models/additional.js';
+import FamilyFund from '../models/FamilyFund.js';
+import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
+import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import { sequelize } from '../../config/database.js';
 import { Op } from 'sequelize';
 import {
@@ -60,15 +63,15 @@ export const PRIX_NGO = { mois: 1000, an: 10000, cinqAns: 40000 };
 // ─── Visibilité seulement (profil public sur la plateforme) ──────────────────
 //                          Petit       Grand
 export const PRIX_VISIBILITE = {
-  petit: { mois:   25000, an:  250000, cinqAns: 1000000 },
-  grand: { mois:   50000, an:  500000, cinqAns: 2000000 },
+  petit: { mois:   15000, an:  240000, cinqAns:  990000 },
+  grand: { mois:   40000, an:  490000, cinqAns: 1990000 },
 };
 
 // ─── Gestion Interne (inclut visibilité automatiquement) ─────────────────────
 //                          Petit       Grand
 export const PRIX_GESTION_INTERNE = {
-  petit: { mois:   50000, an:  500000, cinqAns: 2000000 },
-  grand: { mois:   80000, an:  750000, cinqAns: 3000000 },
+  petit: { mois:   40000, an:  490000, cinqAns: 1990000 },
+  grand: { mois:   70000, an:  740000, cinqAns: 2990000 },
 };
 
 // ─── Abonnement Bibliothèque (lire les livres publiés sur Inspir) ─────────────
@@ -207,23 +210,6 @@ function getPrixActivation(pays) {
 }
 
 const router = express.Router();
-
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const FEDAPAY_SECRET_KEY = process.env.FEDAPAY_SECRET_KEY || '';
-const FEDAPAY_ENV = process.env.FEDAPAY_ENV || 'sandbox'; // 'sandbox' ou 'live'
-const FEDAPAY_BASE = FEDAPAY_ENV === 'live'
-  ? 'https://api.fedapay.com/v1'
-  : 'https://sandbox.fedapay.com/v1';
-const FEDAPAY_CHECKOUT = FEDAPAY_ENV === 'live'
-  ? 'https://checkout.fedapay.com'
-  : 'https://sandbox-checkout.fedapay.com';
-
-// Génère une référence unique
-function generateTxRef(purpose) {
-  const ts = Date.now();
-  const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `ADAM-${purpose.toUpperCase()}-${ts}-${rand}`;
-}
 
 /**
  * GET /api/payment/acces-outils
@@ -534,208 +520,71 @@ router.get('/prix-activation', authenticate, (req, res) => {
 });
 
 /**
- * POST /api/payment/initiate
- * Initier un paiement via FedaPay
+ * Calcule le montant réel côté serveur pour un objet de paiement donné —
+ * ne JAMAIS faire confiance au montant envoyé par le frontend.
+ * Retourne { amount } ou { error: message }.
  */
-router.post('/initiate', authenticate, async (req, res) => {
-  try {
-    let { amount, currency = 'GNF', purpose, relatedId, description } = req.body;
-    const user = req.user;
+export async function computeAmountForPurpose(purpose, relatedId, user) {
+  const pays = user?.pays || '';
+  let amount = null;
 
-    // ── Force TOUJOURS le bon prix côté serveur — le frontend ne décide pas ──
-    // Hors Afrique = double. L'utilisateur ne peut pas tricher en envoyant un faux montant.
-    const pays = user?.pays || '';
-    if (purpose === 'activation_famille') {
-      amount = getPrixActivation(pays);
-    }
-    if (purpose === 'acces_reci') {
-      amount = getPrixReci(pays);
-    }
-    // Pass Info Moftal mensuel ou annuel
-    if (purpose === 'publication_outil_mois') {
-      amount = getPrixInfoMoftal(pays, 'mois');
-    }
-    if (purpose === 'publication_outil_an' || purpose === 'publication_outil_pass') {
-      amount = getPrixInfoMoftal(pays, 'an');
-    }
-    if (purpose === 'subscription_ia_mois') {
-      amount = getPrixIA(pays, 'mois');
-    }
-    if (purpose === 'subscription_ia_an') {
-      amount = getPrixIA(pays, 'an');
-    }
-    // Abonnement Bibliothèque Inspir (lire les livres)
-    if (purpose === 'subscription_livres_an') {
-      amount = getPrixLivres(pays);
-    }
-    // Achat de points Galerie Familiale (relatedId = nombre de points ex: '10', '20', '100', '210')
-    if (purpose === 'galerie_points') {
-      const nbPoints = parseInt(relatedId);
-      const pack = PACKS_POINTS_GALERIE[nbPoints];
-      if (!pack) {
-        return res.status(400).json({ success: false, message: 'Pack de points invalide. Choisir : 10, 20, 100 ou 210 points.' });
-      }
-      amount = estAfricain(pays) ? pack.afrique : pack.horsAfrique;
-    }
-    // Ancien abonnement mensuel simple (compatibilité)
-    if (purpose === 'subscription_pro') {
-      amount = getPrixAbonnementPro(pays);
-    }
-
-    // ── Visibilité seulement (profil public) ──────────────────────────────────
-    // relatedId = ID du compte professionnel (pour déterminer le secteur)
-    if (['visibilite_mois', 'visibilite_an', 'visibilite_5ans'].includes(purpose)) {
-      const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
-      if (!proAcc) return res.status(400).json({ success: false, message: 'Compte professionnel requis.' });
-      const periode = purpose === 'visibilite_mois' ? 'mois' : purpose === 'visibilite_an' ? 'an' : 'cinqAns';
-      amount = getPrixVisibilite(proAcc.type, periode, pays);
-    }
-
-    // ── Gestion Interne (inclut visibilité) ───────────────────────────────────
-    if (['gestion_mois', 'gestion_an', 'gestion_5ans'].includes(purpose)) {
-      const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
-      if (!proAcc) return res.status(400).json({ success: false, message: 'Compte professionnel requis.' });
-      const periode = purpose === 'gestion_mois' ? 'mois' : purpose === 'gestion_an' ? 'an' : 'cinqAns';
-      amount = getPrixGestionInterne(proAcc.type, periode, pays);
-    }
-
-    // Gestion Interne à vie (ancienne formule — compatibilité)
-    if (purpose === 'gestion_interne_vie') {
-      amount = 3000000;
-    }
-
-    // Publication d'annonce de formation
-    // relatedId = durée choisie en jours ('7', '14', '21', '30')
-    if (purpose === 'publication_formation') {
-      amount = estAfricain(pays)
-        ? PRIX_PUBLICATION_FORMATION_AFRIQUE
-        : PRIX_PUBLICATION_FORMATION_HORS_AFRIQUE;
-    }
-
-    if (!amount || !purpose) {
-      return res.status(400).json({ success: false, message: 'Montant et objet requis' });
-    }
-
-    if (!FEDAPAY_SECRET_KEY) {
-      return res.status(503).json({
-        success: false,
-        message: 'Paiement bientôt disponible. Contactez l\'administrateur.',
-      });
-    }
-
-    const txRef = generateTxRef(purpose);
-
-    // Créer la transaction FedaPay
-    const fedaRes = await fetch(`${FEDAPAY_BASE}/transactions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${FEDAPAY_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        description: description || purpose,
-        amount,
-        currency: { iso: currency },
-        customer: {
-          firstname: user.prenom || '',
-          lastname: user.nomFamille || '',
-          email: user.email || '',
-        },
-        callback_url: `${process.env.BACKEND_URL || ''}/api/payment/fedapay/webhook`,
-        return_url: `${FRONTEND_URL}/paiement/resultat?txRef=${txRef}`,
-      }),
-    });
-
-    if (!fedaRes.ok) {
-      const errData = await fedaRes.json().catch(() => ({}));
-      console.error('FedaPay erreur création:', errData);
-      return res.status(502).json({ success: false, message: 'Erreur FedaPay, réessayez.' });
-    }
-
-    const fedaData = await fedaRes.json();
-    const transactionId = fedaData?.v1?.transaction?.id;
-
-    if (!transactionId) {
-      return res.status(502).json({ success: false, message: 'Réponse FedaPay invalide.' });
-    }
-
-    // Obtenir le token de paiement
-    const tokenRes = await fetch(`${FEDAPAY_BASE}/transactions/${transactionId}/token`, {
-      method: 'GET',
-      headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET_KEY}` },
-    });
-
-    const tokenData = await tokenRes.json();
-    const token = tokenData?.v1?.token?.token;
-
-    const paymentUrl = `${FEDAPAY_CHECKOUT}/?token=${token}`;
-
-    // Sauvegarder la transaction en base
-    await Payment.create({
-      txRef,
-      payerNumeroH: user.numeroH,
-      amount,
-      currency,
-      purpose,
-      relatedId: relatedId || null,
-      status: 'pending',
-      gatewayRef: String(transactionId),
-    });
-
-    return res.json({ success: true, txRef, paymentUrl });
-  } catch (err) {
-    console.error('Erreur initiation paiement:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur' });
+  if (purpose === 'activation_famille') amount = getPrixActivation(pays);
+  if (purpose === 'acces_reci') amount = getPrixReci(pays);
+  // Pass Info Moftal mensuel ou annuel
+  if (purpose === 'publication_outil_mois') amount = getPrixInfoMoftal(pays, 'mois');
+  if (purpose === 'publication_outil_an' || purpose === 'publication_outil_pass') amount = getPrixInfoMoftal(pays, 'an');
+  if (purpose === 'subscription_ia_mois') amount = getPrixIA(pays, 'mois');
+  if (purpose === 'subscription_ia_an') amount = getPrixIA(pays, 'an');
+  // Abonnement Bibliothèque Inspir (lire les livres)
+  if (purpose === 'subscription_livres_an') amount = getPrixLivres(pays);
+  // Achat de points Galerie Familiale (relatedId = nombre de points ex: '10', '20', '100', '210')
+  if (purpose === 'galerie_points') {
+    const nbPoints = parseInt(relatedId);
+    const pack = PACKS_POINTS_GALERIE[nbPoints];
+    if (!pack) return { error: 'Pack de points invalide. Choisir : 10, 20, 100 ou 210 points.' };
+    amount = estAfricain(pays) ? pack.afrique : pack.horsAfrique;
   }
-});
+  // Ancien abonnement mensuel simple (compatibilité)
+  if (purpose === 'subscription_pro') amount = getPrixAbonnementPro(pays);
 
-/**
- * POST /api/payment/fedapay/webhook
- * Notification automatique de FedaPay après paiement
- */
-router.post('/fedapay/webhook', async (req, res) => {
-  try {
-    const event = req.body;
-    const transaction = event?.data?.object;
-
-    if (!transaction?.id) return res.sendStatus(200);
-
-    const transactionId = String(transaction.id);
-
-    // Re-vérifier le statut DIRECTEMENT auprès de l'API FedaPay
-    // Ne jamais faire confiance au corps du webhook seul (peut être falsifié)
-    if (FEDAPAY_SECRET_KEY) {
-      try {
-        const fedaRes = await fetch(`${FEDAPAY_BASE}/transactions/${transactionId}`, {
-          headers: { 'Authorization': `Bearer ${FEDAPAY_SECRET_KEY}` }
-        });
-        const fedaData = await fedaRes.json();
-        const txReel = fedaData?.v1?.transaction;
-
-        if (!txReel || txReel.status !== 'approved') {
-          return res.sendStatus(200);
-        }
-      } catch (fedaErr) {
-        console.error('Webhook — re-vérification FedaPay échouée:', fedaErr.message);
-        return res.sendStatus(200);
-      }
-    } else if (!transaction.approved) {
-      return res.sendStatus(200);
-    }
-
-    const payment = await Payment.findOne({ where: { gatewayRef: transactionId } });
-    if (payment && payment.status !== 'completed') {
-      payment.status = 'completed';
-      await payment.save();
-      await handlePostPayment(payment);
-    }
-
-    return res.sendStatus(200);
-  } catch (err) {
-    console.error('Webhook FedaPay erreur:', err);
-    return res.sendStatus(200);
+  // ── Visibilité seulement (profil public) — relatedId = ID du compte pro ──
+  if (['visibilite_mois', 'visibilite_an', 'visibilite_5ans'].includes(purpose)) {
+    const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
+    if (!proAcc) return { error: 'Compte professionnel requis.' };
+    const periode = purpose === 'visibilite_mois' ? 'mois' : purpose === 'visibilite_an' ? 'an' : 'cinqAns';
+    amount = getPrixVisibilite(proAcc.type, periode, pays);
   }
-});
+
+  // ── Gestion Interne (inclut visibilité) ───────────────────────────────────
+  if (['gestion_mois', 'gestion_an', 'gestion_5ans'].includes(purpose)) {
+    const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
+    if (!proAcc) return { error: 'Compte professionnel requis.' };
+    const periode = purpose === 'gestion_mois' ? 'mois' : purpose === 'gestion_an' ? 'an' : 'cinqAns';
+    amount = getPrixGestionInterne(proAcc.type, periode, pays);
+  }
+
+  // Gestion Interne à vie (ancienne formule — compatibilité)
+  if (purpose === 'gestion_interne_vie') amount = 3000000;
+
+  // Publication d'annonce de formation — relatedId = durée choisie en jours
+  if (purpose === 'publication_formation') {
+    amount = estAfricain(pays) ? PRIX_PUBLICATION_FORMATION_AFRIQUE : PRIX_PUBLICATION_FORMATION_HORS_AFRIQUE;
+  }
+
+  // Dépôt Moftal Pay (compte famille, wallet pro ou compte Zakat) — montant choisi
+  // par l'utilisateur lui-même pour recharger son propre compte. relatedId = montant
+  // demandé (en GNF).
+  if (purpose === 'wallet_depot_famille' || purpose === 'wallet_depot_pro' || purpose === 'wallet_depot_zakat') {
+    const montantDepot = parseInt(relatedId, 10);
+    if (!montantDepot || montantDepot < 1000) {
+      return { error: 'Montant minimum de dépôt : 1 000 GNF.' };
+    }
+    amount = montantDepot;
+  }
+
+  if (!amount || !purpose) return { error: 'Montant et objet requis' };
+  return { amount };
+}
 
 /**
  * GET /api/payment/verify/:txRef
@@ -786,7 +635,23 @@ const TENANT_PREFIX = {
   artisan: 'ARTI', mairie: 'MAIR',
 };
 
-async function handlePostPayment(payment) {
+// Commission plateforme (1%) prélevée sur chaque dépôt externe Moftal Pay
+const TAUX_COMMISSION_PLATEFORME = 0.01;
+
+function calculerCommissionPlateforme(montantBrut) {
+  const commission = Math.round(montantBrut * TAUX_COMMISSION_PLATEFORME);
+  return { commission, montantNet: montantBrut - commission };
+}
+
+async function enregistrerCommissionPlateforme(sourceType, sourceRef, montantBrut, commission, payeurNumeroH) {
+  await sequelize.query(
+    `INSERT INTO platform_commissions (source_type, source_ref, montant_brut, taux, commission, payeur_numero_h)
+     VALUES (:sourceType, :sourceRef, :brut, :taux, :commission, :payeur)`,
+    { replacements: { sourceType, sourceRef, brut: montantBrut, taux: TAUX_COMMISSION_PLATEFORME * 100, commission, payeur: payeurNumeroH } }
+  ).catch(e => console.warn('Commission log:', e.message));
+}
+
+export async function handlePostPayment(payment) {
   try {
     if (payment.purpose === 'subscription_pro' && payment.relatedId) {
       const now = new Date();
@@ -948,6 +813,80 @@ async function handlePostPayment(payment) {
         });
         console.log(`✅ Arbre familial activé — famille "${tree.familyName}" | txRef: ${payment.txRef}`);
       }
+    }
+
+    // ── Dépôt Moftal Pay — compte famille (commission plateforme 1%) ────
+    if (payment.purpose === 'wallet_depot_famille') {
+      const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
+      const user = await User.findOne({ where: { numeroH: payment.payerNumeroH } });
+      const fund = user?.nomFamille
+        ? await FamilyFund.findOne({ where: { nomFamille: { [Op.iLike]: user.nomFamille.trim() }, isActive: true } })
+        : null;
+      if (fund) {
+        const repartition = FamilyFund.repartir(montantNet);
+        await fund.update({
+          solde_reserve:    Number(fund.solde_reserve)    + repartition.reserve,
+          solde_sante:      Number(fund.solde_sante)      + repartition.sante,
+          solde_nourriture: Number(fund.solde_nourriture) + repartition.nourriture,
+          solde_urgence:    Number(fund.solde_urgence)    + repartition.urgence,
+          solde_projet:     Number(fund.solde_projet)     + repartition.projet,
+          total_depose:     Number(fund.total_depose)     + montantNet,
+        });
+        await FamilyFundTransaction.create({
+          fundId: fund.id, acteurNumeroH: payment.payerNumeroH,
+          acteurNom: `${user?.prenom || ''} ${user?.nomFamille || ''}`.trim(),
+          type: 'depot', montant: montantNet, repartition, fedapayRef: payment.txRef, statut: 'confirme',
+          description: `Dépôt Moftal Pay — ${montantNet.toLocaleString()} GNF (${Number(payment.amount).toLocaleString()} - commission 1% : ${commission.toLocaleString()} GNF) — réf: ${payment.txRef}`
+        });
+        await enregistrerCommissionPlateforme('depot_famille', payment.txRef, payment.amount, commission, payment.payerNumeroH);
+        console.log(`✅ Dépôt compte famille — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
+      } else {
+        console.warn(`⚠️ Dépôt wallet_depot_famille sans compte famille trouvé pour ${payment.payerNumeroH}`);
+      }
+    }
+
+    // ── Dépôt Moftal Pay — wallet professionnel (commission plateforme 1%) ──
+    if (payment.purpose === 'wallet_depot_pro') {
+      const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
+      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: payment.payerNumeroH, status: 'approved' } });
+      if (proAccount) {
+        let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });
+        if (!wallet) {
+          wallet = await ProfessionalWallet.create({
+            proAccountId: proAccount.id, ownerNumeroH: payment.payerNumeroH,
+            nomPro: proAccount.name, typePro: proAccount.type,
+          });
+        }
+        await wallet.update({
+          solde:     Number(wallet.solde)     + montantNet,
+          totalRecu: Number(wallet.totalRecu) + montantNet,
+        });
+        await enregistrerCommissionPlateforme('depot_pro', payment.txRef, payment.amount, commission, payment.payerNumeroH);
+        console.log(`✅ Dépôt wallet pro — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
+      } else {
+        console.warn(`⚠️ Dépôt wallet_depot_pro sans compte professionnel approuvé pour ${payment.payerNumeroH}`);
+      }
+    }
+
+    // ── Dépôt compte Zakat — pas de commission plateforme (argent religieux) ──
+    if (payment.purpose === 'wallet_depot_zakat') {
+      const user = await User.findOne({ where: { numeroH: payment.payerNumeroH } });
+      const nom = `${user?.prenom || ''} ${user?.nomFamille || ''}`.trim();
+      await sequelize.query(`
+        INSERT INTO zakat_comptes_donateurs (numero_h, nom_donateur, created_at, updated_at)
+        VALUES (:numeroH, :nom, NOW(), NOW())
+        ON CONFLICT (numero_h) DO NOTHING
+      `, { replacements: { numeroH: payment.payerNumeroH, nom } });
+      await sequelize.query(`
+        UPDATE zakat_comptes_donateurs
+        SET solde = solde + :m, total_depose = total_depose + :m, updated_at = NOW()
+        WHERE numero_h = :numeroH
+      `, { replacements: { m: payment.amount, numeroH: payment.payerNumeroH } });
+      await sequelize.query(`
+        INSERT INTO zakat_operations (type, de_numero_h, de_nom, montant, currency, description, statut, created_at)
+        VALUES ('depot', :numeroH, :nom, :m, 'GNF', :desc, 'confirme', NOW())
+      `, { replacements: { numeroH: payment.payerNumeroH, nom, m: payment.amount, desc: `Dépôt Zakat de ${Number(payment.amount).toLocaleString()} GNF — réf: ${payment.txRef}` } });
+      console.log(`✅ Dépôt Zakat — ${Number(payment.amount).toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
     }
   } catch (err) {
     console.error('Erreur handlePostPayment:', err);

@@ -14,6 +14,7 @@ import {
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
 import { AudioRecorder } from '../components/AudioRecorder';
+import PaymentModal from '../components/PaymentModal';
 import { hideIncrement } from '../utils/formatNumeroH';
 import { getUserGeoContext } from '../utils/proximity';
 import { isAdmin } from '../utils/auth';
@@ -303,6 +304,8 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   const [outilsPayLoading, setOutilsPayLoading] = useState(false);
   const [showOutilsModal, setShowOutilsModal] = useState(false);
   const [prixInfoMoftal, setPrixInfoMoftal] = useState<{ mois: number; an: number } | null>(null);
+  const [showPaymentOutils, setShowPaymentOutils] = useState(false);
+  const [periodeOutils, setPeriodeOutils] = useState<'mois' | 'an'>('mois');
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -705,26 +708,9 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     }
   };
 
-  const payerOutils = async (periode: 'mois' | 'an') => {
-    setOutilsPayLoading(true);
-    try {
-      const session = localStorage.getItem("session_user");
-      const token = session ? (JSON.parse(session).token || localStorage.getItem('token')) : localStorage.getItem('token');
-      const purpose = periode === 'mois' ? 'publication_outil_mois' : 'publication_outil_an';
-      const prix = periode === 'mois' ? (prixInfoMoftal?.mois ?? 5000) : (prixInfoMoftal?.an ?? 50000);
-      const r = await fetch(`${API_BASE_URL.replace('/api', '')}/api/payment/initiate`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: prix, currency: 'GNF', purpose,
-          description: `Pass Info Moftal — ${prix.toLocaleString('fr-GN')} GNF/${periode === 'mois' ? 'mois' : 'an'}`
-        }),
-      });
-      const d = await r.json();
-      if (d.success && d.paymentUrl) { window.location.href = d.paymentUrl; }
-      else alert(d.message || 'Erreur. Réessayez.');
-    } catch { alert('Erreur de connexion.'); }
-    finally { setOutilsPayLoading(false); }
+  const payerOutils = (periode: 'mois' | 'an') => {
+    setPeriodeOutils(periode);
+    setShowPaymentOutils(true);
   };
 
   const sendTool = async () => {
@@ -1169,9 +1155,25 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
 
         {outilsPayLoading && <p className="text-sm text-blue-500 mb-2">⏳ Redirection vers le paiement...</p>}
         <button onClick={() => setShowOutilsModal(false)} className="w-full py-2 text-sm text-gray-400 hover:text-gray-600">Annuler</button>
-        <p className="text-xs text-gray-300 mt-2">Paiement sécurisé via FedaPay</p>
+        <p className="text-xs text-gray-300 mt-2">Paiement sécurisé · Orange Money · MTN MoMo · Carte</p>
       </div>
     </div>
+  )}
+
+  {showPaymentOutils && (
+    <PaymentModal
+      isOpen={showPaymentOutils}
+      onClose={() => setShowPaymentOutils(false)}
+      onSuccess={() => {
+        setShowPaymentOutils(false);
+        setShowOutilsModal(false);
+        setOutilsAcces(true);
+      }}
+      amount={periodeOutils === 'mois' ? (prixInfoMoftal?.mois ?? 5000) : (prixInfoMoftal?.an ?? 50000)}
+      currency="GNF"
+      purpose={periodeOutils === 'mois' ? 'publication_outil_mois' : 'publication_outil_an'}
+      description={`Pass Info Moftal — par ${periodeOutils === 'mois' ? 'mois' : 'an'}`}
+    />
   )}
     </>
   );
