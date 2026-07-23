@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 // ─── Base de connaissance complète du site Moftal ─────────────────────────────
 const SITE_KNOWLEDGE = [
@@ -490,6 +490,10 @@ export function FloatingGuideIA() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  // Terre ADAM a sa propre barre fixe en bas (les 5 niveaux) — on remonte le
+  // bouton flottant pour ne pas se superposer avec elle.
+  const extraBottomOffset = location.pathname === '/terre-adam' ? 64 : 0;
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
@@ -546,7 +550,7 @@ export function FloatingGuideIA() {
         onClick={() => setOpen(o => !o)}
         className="fixed z-[60] flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 select-none"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)',
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${extraBottomOffset}px)`,
           right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
           width: 60, height: 60,
           background: 'linear-gradient(135deg,#1a8f1a 0%,#156315 50%,#0f4b0f 100%)',
@@ -565,7 +569,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 68px)',
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 68px + ${extraBottomOffset}px)`,
             right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
             background: 'linear-gradient(135deg,#1a8f1a,#156315)',
             whiteSpace: 'nowrap',
@@ -581,7 +585,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] flex flex-col rounded-2xl overflow-hidden"
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 72px)',
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 72px + ${extraBottomOffset}px)`,
             right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',

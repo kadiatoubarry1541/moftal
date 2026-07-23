@@ -130,7 +130,6 @@ export default function TerreAdam() {
   type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3' | 'sous-prefecture' | 'prefecture';
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
@@ -594,51 +593,43 @@ export default function TerreAdam() {
         ];
         const current = navTabs.find(t => t.id === activeTab);
         return (
-          <div className="bg-white flex items-center justify-between px-4 py-3">
-            <h1 className="text-2xl font-bold text-gray-900">Terre ADAM</h1>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMenuOpen(v => !v)}
-                className="flex flex-col items-center justify-center gap-[4px] w-9 h-9 rounded-full bg-black hover:bg-gray-800 active:bg-gray-700 transition"
-                aria-label="Menu"
-              >
-                <span className="block w-[5px] h-[5px] rounded-full bg-white" />
-                <span className="block w-[5px] h-[5px] rounded-full bg-white" />
-                <span className="block w-[5px] h-[5px] rounded-full bg-white" />
-              </button>
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-11 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 min-w-[200px]">
-                    {navTabs.map((tab, i) => (
-                      <div key={tab.id}>
-                        {i === 1 && <div className="border-t border-gray-100 my-1" />}
-                        <button
-                          type="button"
-                          onClick={() => { setActiveTab(tab.id as any); setMenuOpen(false); }}
-                          className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition ${
-                            activeTab === tab.id
-                              ? 'text-emerald-600 font-bold bg-emerald-50'
-                              : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className="text-lg">{tab.icon}</span>
-                          <span className="flex-1 text-left truncate">{tab.label}</span>
-                          {activeTab === tab.id && <span className="text-emerald-500">✓</span>}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
+          <>
+            {/* En-tête : titre + badge du niveau actif (le choix se fait en bas) */}
+            <div className="bg-white flex items-center justify-between px-4 py-3">
+              <h1 className="text-2xl font-bold text-gray-900">Terre ADAM</h1>
+              {current && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-full px-3 py-1.5">
+                  <span className="text-sm">{current.icon}</span>
+                  <span className="truncate max-w-[140px]">{current.label}</span>
+                </span>
               )}
             </div>
-          </div>
+
+            {/* Barre fixe en bas : les 5 niveaux propres à Terre ADAM */}
+            <div
+              className="fixed left-0 right-0 bottom-0 z-40 bg-white border-t border-gray-200 flex shadow-[0_-6px_16px_rgba(0,0,0,0.06)]"
+              style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            >
+              {navTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition ${
+                    activeTab === tab.id ? 'text-emerald-600' : 'text-gray-400'
+                  }`}
+                >
+                  <span className={`text-lg transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
+                  <span className="truncate max-w-[64px]">{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
         );
       })()}
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 pb-4">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 pb-4" style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 16px)' }}>
         {/* 1. Résidence */}
         {activeTab === 'lieux' && (
           <div className="space-y-3">

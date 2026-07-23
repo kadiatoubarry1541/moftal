@@ -797,8 +797,9 @@ function App() {
         </div>
       )}
 
-      {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes */}
-      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
+      {/* Footer site principal — masqué en mode Espace Gestion, sur les applis autonomes,
+          et sur Terre ADAM qui a sa propre barre fixe en bas (les 5 niveaux) */}
+      {!isGestionMode && !isStandaloneAppPage && pathname !== '/terre-adam' && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
         <div className="mx-auto px-6 text-center">
           <p className="text-gray-300 text-sm mb-2">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
