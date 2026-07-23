@@ -195,7 +195,7 @@ function ZakaMuslimOnly() {
 
 const FAVORI_PAGES = [
   { id: "famille",    label: "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
-  { id: "terre-adam", label: "Terre Adam", icon: "🌍",       path: "/compte" },
+  { id: "terre-adam", label: "Terre Adam", icon: "🌍",       path: "/terre-adam" },
   { id: "services",   label: "Services",   icon: "💼",       path: "/services" },
   { id: "echanges",   label: "Échanges",   icon: "🛒",       path: "/echange" },
 ];
@@ -499,14 +499,11 @@ function App() {
               <div className="grid grid-cols-4 px-1 py-1">
                 {([
                   { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
-                  { id: "terre-adam", label: t('nav.terre_adam') || "Terre ADAM", icon: "🌍",  path: "/compte"  },
+                  { id: "terre-adam", label: t('nav.terre_adam') || "Terre ADAM", icon: "🌍",  path: "/terre-adam"  },
                   { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: null,  path: "/echange" },
                   { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",  path: "/services"},
                 ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => {
-                  const isActive =
-                    item.id === "terre-adam"
-                      ? pathname === "/compte" || pathname === "/terre-adam"
-                      : pathname === item.path || pathname.startsWith(item.path + "/");
+                  const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
                   return (
                     <button
                       key={item.id}
