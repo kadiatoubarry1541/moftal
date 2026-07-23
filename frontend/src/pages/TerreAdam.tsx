@@ -131,6 +131,25 @@ export default function TerreAdam() {
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const scopeBarRef = useRef<HTMLDivElement>(null);
+
+  // Publie la vraie hauteur mesurée de la barre en bas (en px, sécurité d'écran
+  // incluse) comme variable CSS globale — le bouton flottant Guide IA la lit
+  // pour se positionner exactement au-dessus, sans jamais la recouvrir.
+  useEffect(() => {
+    const el = scopeBarRef.current;
+    if (!el) return;
+    const publish = () => {
+      document.documentElement.style.setProperty('--moftal-bottom-bar-height', `${el.offsetHeight}px`);
+    };
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--moftal-bottom-bar-height');
+    };
+  }, []);
   
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
   const [tabLabels, setTabLabels] = useState<string>('Quartier');
@@ -607,6 +626,7 @@ export default function TerreAdam() {
 
             {/* Barre fixe en bas : les 5 niveaux propres à Terre ADAM */}
             <div
+              ref={scopeBarRef}
               className="fixed left-0 right-0 bottom-0 z-40 bg-white border-t border-gray-200 flex shadow-[0_-6px_16px_rgba(0,0,0,0.06)]"
               style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
