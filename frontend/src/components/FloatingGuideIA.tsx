@@ -492,16 +492,14 @@ export function FloatingGuideIA() {
   const navigate = useNavigate();
   const location = useLocation();
   // Terre ADAM a sa propre barre fixe en bas (les 5 niveaux) — on remonte le
-  // bouton flottant pour ne pas se superposer avec elle, sans non plus le
-  // faire remonter trop haut (il ne doit pas recouvrir la zone de chat).
-  // On prend le plus grand des deux : la hauteur réellement mesurée par
-  // TerreAdam.tsx (--moftal-bottom-bar-height, +10px d'air), OU un minimum
-  // garanti de 70px (proche de la vraie hauteur de la barre) — un filet de
-  // sécurité léger, pas un grand plancher qui pousserait le bouton trop haut.
+  // bouton flottant pour ne pas se superposer avec elle. Valeur fixe (82px),
+  // réglée après plusieurs essais en conditions réelles : 70px touchait encore
+  // "Mondial", 100px faisait flotter le bouton trop haut. On abandonne la
+  // mesure dynamique (--moftal-bottom-bar-height) pour cette position — son
+  // comportement en production n'était pas fiable — au profit d'un chiffre
+  // simple et prévisible à ajuster au besoin.
   const isTerreAdam = location.pathname === '/terre-adam';
-  const extraBottomOffset = isTerreAdam
-    ? 'max(calc(var(--moftal-bottom-bar-height, 0px) + 10px), 70px)'
-    : '0px';
+  const extraBottomOffset = isTerreAdam ? '82px' : '0px';
   // Collé plus près du bord droit sur cette page (moins de marge qu'ailleurs).
   const rightMargin = isTerreAdam ? '0.5rem' : '1.5rem';
 
