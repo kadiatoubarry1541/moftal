@@ -491,15 +491,16 @@ export function FloatingGuideIA() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  // Terre ADAM a sa propre barre fixe en bas (les 5 niveaux) — on remonte le
-  // bouton flottant pour ne pas se superposer avec elle, en plus petit et
-  // plus bas que sur le reste du site pour rester discret à cet endroit précis.
-  const isTerreAdam = location.pathname === '/terre-adam';
-  const extraBottomOffset = isTerreAdam ? '40px' : '0px';
-  // Collé plus près du bord droit sur cette page (moins de marge qu'ailleurs).
-  const rightMargin = isTerreAdam ? '0.5rem' : '1.5rem';
-  const buttonSize = isTerreAdam ? 46 : 60;
-  const iconSize = isTerreAdam ? 22 : 28;
+  // Terre ADAM et Famille ont chacune leur propre barre fixe en bas — on
+  // remonte le bouton flottant pour ne pas se superposer avec elle, en plus
+  // petit et plus bas que sur le reste du site pour rester discret à ces
+  // deux endroits précis.
+  const hasOwnBottomBar = location.pathname === '/terre-adam' || location.pathname === '/famille';
+  const extraBottomOffset = hasOwnBottomBar ? '40px' : '0px';
+  // Collé plus près du bord droit sur ces pages (moins de marge qu'ailleurs).
+  const rightMargin = hasOwnBottomBar ? '0.5rem' : '1.5rem';
+  const buttonSize = hasOwnBottomBar ? 46 : 60;
+  const iconSize = hasOwnBottomBar ? 22 : 28;
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
@@ -571,7 +572,7 @@ export function FloatingGuideIA() {
       </button>
 
       {/* ── Tooltip ── */}
-      {!open && !isTerreAdam && (
+      {!open && !hasOwnBottomBar && (
         <div
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
