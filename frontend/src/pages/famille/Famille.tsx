@@ -18,10 +18,8 @@ const MENU_ITEMS: { id: TabId; emoji: string; label: string }[] = [
 
 export default function Famille() {
   const [activeTab, setActiveTab] = useState<TabId>('heritage')
-  const [menuOpen, setMenuOpen]   = useState(false)
   const [user, setUser]           = useState<any>(null)
   const contentRef                = useRef<HTMLDivElement>(null)
-  const menuRef                   = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
@@ -29,19 +27,8 @@ export default function Famille() {
     if (u?.numeroH) setUser(u)
   }, [])
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    if (menuOpen) document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [menuOpen])
-
   const handleSelect = (tab: TabId) => {
     setActiveTab(tab)
-    setMenuOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
     contentRef.current?.scrollTo({ top: 0 })
   }
@@ -57,70 +44,26 @@ export default function Famille() {
         {/* Titre + section active */}
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-gray-900">Famille</h1>
-          {activeTab !== 'heritage' && current && (
-            <span className="text-sm text-emerald-600 font-semibold">
-              · {current.emoji} {current.label}
+          {current && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-full px-3 py-1.5">
+              <span className="text-sm">{current.emoji}</span>
+              <span>{current.label}</span>
             </span>
           )}
         </div>
 
-        {/* Boutons droite */}
-        <div className="flex items-center gap-2">
-
-          {user && isAdmin(user) && (
-            <Link
-              to="/famille/admin"
-              className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition"
-            >
-              👑 Admin
-            </Link>
-          )}
-
-          {/* ⋮ Menu 3 points */}
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(v => !v)}
-              className="flex flex-col items-center justify-center gap-[4px] p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 transition"
-              aria-label="Menu"
-            >
-              <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
-              <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
-              <span className="block w-[5px] h-[5px] rounded-full bg-gray-600" />
-            </button>
-
-            {/* Dropdown */}
-            {menuOpen && (
-              <div className="absolute right-0 top-12 z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 min-w-[180px]">
-                {MENU_ITEMS.map((item, i) => (
-                  <div key={item.id}>
-                    {i === 1 && <div className="border-t border-gray-100 my-1" />}
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(item.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition ${
-                        activeTab === item.id
-                          ? 'text-emerald-600 font-bold bg-emerald-50'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="text-lg">{item.emoji}</span>
-                      <span className="flex-1 text-left">{item.label}</span>
-                      {activeTab === item.id && (
-                        <span className="text-emerald-500 text-base">✓</span>
-                      )}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-        </div>
+        {user && isAdmin(user) && (
+          <Link
+            to="/famille/admin"
+            className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition"
+          >
+            👑 Admin
+          </Link>
+        )}
       </div>
 
       {/* ── Contenu ── */}
-      <div ref={contentRef}>
+      <div ref={contentRef} style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 16px)' }}>
         <Suspense fallback={
           <div className="flex items-center justify-center py-20">
             <div className="h-9 w-9 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -131,6 +74,26 @@ export default function Famille() {
           {activeTab === 'recit'      && <RecitTab />}
           {activeTab === 'solidarite' && <SolidariteTab />}
         </Suspense>
+      </div>
+
+      {/* ── Barre fixe en bas : les 4 sections de Famille ── */}
+      <div
+        className="fixed left-0 right-0 bottom-0 z-40 bg-white border-t border-gray-200 flex shadow-[0_-6px_16px_rgba(0,0,0,0.06)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        {MENU_ITEMS.map(item => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => handleSelect(item.id)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition ${
+              activeTab === item.id ? 'text-emerald-600' : 'text-gray-400'
+            }`}
+          >
+            <span className={`text-lg transition-transform ${activeTab === item.id ? 'scale-110' : ''}`}>{item.emoji}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
       </div>
 
     </div>
