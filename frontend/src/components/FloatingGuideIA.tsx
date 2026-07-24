@@ -492,16 +492,14 @@ export function FloatingGuideIA() {
   const navigate = useNavigate();
   const location = useLocation();
   // Terre ADAM a sa propre barre fixe en bas (les 5 niveaux) — on remonte le
-  // bouton flottant pour ne pas se superposer avec elle. Valeur fixe (82px),
-  // réglée après plusieurs essais en conditions réelles : 70px touchait encore
-  // "Mondial", 100px faisait flotter le bouton trop haut. On abandonne la
-  // mesure dynamique (--moftal-bottom-bar-height) pour cette position — son
-  // comportement en production n'était pas fiable — au profit d'un chiffre
-  // simple et prévisible à ajuster au besoin.
+  // bouton flottant pour ne pas se superposer avec elle, en plus petit et
+  // plus bas que sur le reste du site pour rester discret à cet endroit précis.
   const isTerreAdam = location.pathname === '/terre-adam';
-  const extraBottomOffset = isTerreAdam ? '82px' : '0px';
+  const extraBottomOffset = isTerreAdam ? '60px' : '0px';
   // Collé plus près du bord droit sur cette page (moins de marge qu'ailleurs).
   const rightMargin = isTerreAdam ? '0.5rem' : '1.5rem';
+  const buttonSize = isTerreAdam ? 46 : 60;
+  const iconSize = isTerreAdam ? 22 : 28;
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
@@ -560,14 +558,14 @@ export function FloatingGuideIA() {
         style={{
           bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${extraBottomOffset})`,
           right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
-          width: 60, height: 60,
+          width: buttonSize, height: buttonSize,
           background: 'linear-gradient(135deg,#1a8f1a 0%,#156315 50%,#0f4b0f 100%)',
           boxShadow: open
             ? '0 8px 32px rgba(34,167,34,0.7)'
             : '0 8px 32px rgba(34,167,34,0.45)',
         }}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}>
+        <svg xmlns="http://www.w3.org/2000/svg" width={iconSize} height={iconSize} fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </button>
@@ -577,7 +575,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
-            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 68px + ${extraBottomOffset})`,
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${buttonSize + 8}px + ${extraBottomOffset})`,
             right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
             background: 'linear-gradient(135deg,#1a8f1a,#156315)',
             whiteSpace: 'nowrap',
@@ -593,7 +591,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] flex flex-col rounded-2xl overflow-hidden"
           style={{
-            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + 72px + ${extraBottomOffset})`,
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${buttonSize + 12}px + ${extraBottomOffset})`,
             right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',
