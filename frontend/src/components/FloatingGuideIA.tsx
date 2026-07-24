@@ -495,7 +495,7 @@ export function FloatingGuideIA() {
   // bouton flottant pour ne pas se superposer avec elle, en plus petit et
   // plus bas que sur le reste du site pour rester discret à cet endroit précis.
   const isTerreAdam = location.pathname === '/terre-adam';
-  const extraBottomOffset = isTerreAdam ? '60px' : '0px';
+  const extraBottomOffset = isTerreAdam ? '40px' : '0px';
   // Collé plus près du bord droit sur cette page (moins de marge qu'ailleurs).
   const rightMargin = isTerreAdam ? '0.5rem' : '1.5rem';
   const buttonSize = isTerreAdam ? 46 : 60;
@@ -571,7 +571,7 @@ export function FloatingGuideIA() {
       </button>
 
       {/* ── Tooltip ── */}
-      {!open && (
+      {!open && !isTerreAdam && (
         <div
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
