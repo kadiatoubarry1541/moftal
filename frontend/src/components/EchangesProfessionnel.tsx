@@ -160,7 +160,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               <span className="flex items-center justify-center text-lg leading-none">🐟</span>
             </div>
             <div className="text-left">
-              <p className="font-bold text-base">Alimentation & Vivant</p>
+              <p className="font-bold text-base">Primaire</p>
               <p className="text-xs opacity-90">Céréales · Légumes · Animaux · Poissons</p>
             </div>
             <span className="ml-auto text-lg opacity-70">›</span>
@@ -206,7 +206,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               <span className="flex items-center justify-center text-lg leading-none">💄</span>
             </div>
             <div className="text-left">
-              <p className="font-bold text-base">Mode & Beauté</p>
+              <p className="font-bold text-base">Secondaire</p>
               <p className="text-xs opacity-90">Habits · Chaussures · Sacs · Cosmétiques</p>
             </div>
             <span className="ml-auto text-lg opacity-70">›</span>
@@ -252,7 +252,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               <span className="flex items-center justify-center text-lg leading-none">🔧</span>
             </div>
             <div className="text-left">
-              <p className="font-bold text-base">Maison & Construction</p>
+              <p className="font-bold text-base">Tertiaire</p>
               <p className="text-xs opacity-90">Meubles · Électroménager · Matériaux · Outils</p>
             </div>
             <span className="ml-auto text-lg opacity-70">›</span>
@@ -298,7 +298,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               <span className="flex items-center justify-center text-lg leading-none">🚗</span>
             </div>
             <div className="text-left">
-              <p className="font-bold text-base">Technologie & Véhicules</p>
+              <p className="font-bold text-base">Quaternaire</p>
               <p className="text-xs opacity-90">Téléphones · Ordinateurs · TV · Voitures</p>
             </div>
             <span className="ml-auto text-lg opacity-70">›</span>
