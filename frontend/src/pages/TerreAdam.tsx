@@ -1009,10 +1009,10 @@ export default function TerreAdam() {
                                     onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
                                     onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); setShowCategoryGrid(false); } }}
                                     placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.icon || ''} ${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
-                                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
+                                    className="flex-1 min-w-0 px-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
                                   />
                                 ) : newMessage.messageType === 'audio' ? (
-                                  <div className="flex-1">
+                                  <div className="flex-1 min-w-0">
                                     {newMessage.mediaFile ? (
                                       <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
                                         <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
@@ -1038,7 +1038,7 @@ export default function TerreAdam() {
                                         setNewMessage({...newMessage, messageType: detectedType, mediaFile: file});
                                       } else setNewMessage({...newMessage, mediaFile: null});
                                     }}
-                                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm"
+                                    className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm"
                                   />
                                 )}
                                 {newMessage.messageType !== 'audio' && (
