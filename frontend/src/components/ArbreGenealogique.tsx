@@ -635,21 +635,31 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
       {/* Vue arbre généalogique — style MyHeritage : couleurs par genre, dates, boutons "+" */}
 
-      {/* ── Contrôles de zoom ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+      {/* ── Contrôles de zoom : une seule barre compacte, rattachée — le rouge est réservé aux défunts ── */}
+      <div className="flex items-center justify-end gap-2 mb-2.5 flex-wrap">
+        <div className="inline-flex items-center rounded-full border border-gray-200 bg-white shadow-sm overflow-hidden shrink-0">
+          <button
+            type="button"
+            onClick={() => setZoom(z => Math.max(0.25, +(z - 0.1).toFixed(1)))}
+            className="w-9 h-9 shrink-0 flex items-center justify-center text-gray-600 font-bold text-lg leading-none active:bg-gray-100"
+          >−</button>
+          <span className="px-2 min-w-[44px] shrink-0 text-center text-xs font-bold text-gray-700">{Math.round(zoom * 100)}%</span>
+          <button
+            type="button"
+            onClick={() => setZoom(z => Math.min(2.0, +(z + 0.1).toFixed(1)))}
+            className="w-9 h-9 shrink-0 flex items-center justify-center text-emerald-600 font-bold text-lg leading-none active:bg-gray-100"
+          >+</button>
+        </div>
         <button
-          onClick={() => setZoom(z => Math.min(2.0, +(z + 0.1).toFixed(1)))}
-          style={{ padding: '5px 16px', borderRadius: 8, border: '1px solid #16a34a', background: '#16a34a', color: 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>+</button>
-        <span style={{ minWidth: 52, textAlign: 'center', fontWeight: 'bold', fontSize: 14, color: '#374151' }}>{Math.round(zoom * 100)}%</span>
-        <button
-          onClick={() => setZoom(z => Math.max(0.25, +(z - 0.1).toFixed(1)))}
-          style={{ padding: '5px 16px', borderRadius: 8, border: '1px solid #dc2626', background: '#dc2626', color: 'white', fontWeight: 'bold', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>−</button>
-        <button
+          type="button"
           onClick={() => setZoom(1.0)}
-          style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #9ca3af', background: '#f9fafb', color: '#374151', fontSize: 12, cursor: 'pointer' }}>↺ Normal</button>
+          className="shrink-0 h-9 px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm active:bg-gray-50"
+        >↺ Normal</button>
         <button
+          type="button"
           onClick={() => setZoom(0.55)}
-          style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #3b82f6', background: '#eff6ff', color: '#1d4ed8', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>🔍 Vue globale</button>
+          className="shrink-0 h-9 px-3 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 shadow-sm active:bg-blue-100"
+        >🔍 Vue globale</button>
       </div>
 
       <div className="tree-view-horizontal" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '78vh' }}>
