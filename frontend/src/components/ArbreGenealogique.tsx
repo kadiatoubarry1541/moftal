@@ -752,7 +752,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           {/* ── G-1 : Grands-parents ── */}
           {familyMembers.some(m => m.generation === 'G-1') && (
             <g className="generation-g-1">
-              {renderNodeShape('HOMME', gppX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpp || null))}
+              {renderNodeShape((gpp?.genre as any) || 'HOMME', gppX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpp || null))}
               <circle cx={gppX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
               {gpp?.photo && <image href={gpp.photo} x={gppX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gpp)"/>}
               <defs><clipPath id="c-gpp"><circle cx={gppX+26} cy={75} r={20}/></clipPath></defs>
@@ -761,7 +761,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gppX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gpp?.numeroH||''}</text>
               <line x1={gppX+NW} y1={75} x2={gmpX} y2={75} stroke="#A0522D" strokeWidth={2}/>
 
-              {renderNodeShape('FEMME', gmpX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmp || null))}
+              {renderNodeShape((gmp?.genre as any) || 'FEMME', gmpX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmp || null))}
               <circle cx={gmpX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
               {gmp?.photo && <image href={gmp.photo} x={gmpX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gmp)"/>}
               <defs><clipPath id="c-gmp"><circle cx={gmpX+26} cy={75} r={20}/></clipPath></defs>
@@ -771,7 +771,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               {/* Verticale couple paternel → père G0 : au centre du gap entre gpp et gmp */}
               <line x1={pMidX} y1={75} x2={pMidX} y2={190} stroke="#A0522D" strokeWidth={2}/>
 
-              {renderNodeShape('HOMME', gpmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpm || null))}
+              {renderNodeShape((gpm?.genre as any) || 'HOMME', gpmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpm || null))}
               <circle cx={gpmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
               {gpm?.photo && <image href={gpm.photo} x={gpmX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gpm)"/>}
               <defs><clipPath id="c-gpm"><circle cx={gpmX+26} cy={75} r={20}/></clipPath></defs>
@@ -780,7 +780,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gpmX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gpm?.numeroH||''}</text>
               <line x1={gpmX+NW} y1={75} x2={gmmX} y2={75} stroke="#A0522D" strokeWidth={2}/>
 
-              {renderNodeShape('FEMME', gmmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmm || null))}
+              {renderNodeShape((gmm?.genre as any) || 'FEMME', gmmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmm || null))}
               <circle cx={gmmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
               {gmm?.photo && <image href={gmm.photo} x={gmmX+6} y={55} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-gmm)"/>}
               <defs><clipPath id="c-gmm"><circle cx={gmmX+26} cy={75} r={20}/></clipPath></defs>
@@ -799,7 +799,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
           {/* ── G0 : Parents ── */}
           <g className="generation-g0">
-            {renderNodeShape('HOMME', pX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='pere')||null))}
+            {renderNodeShape((pereMember?.genre as any) || 'HOMME', pX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='pere')||null))}
             <circle cx={pX+26} cy={225} r={20} fill="#CD853F" opacity="0.25"/>
             {familyMembers.find(m=>m.relation==='pere')?.photo && <image href={familyMembers.find(m=>m.relation==='pere')?.photo} x={pX+6} y={205} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-pere)"/>}
             <defs><clipPath id="c-pere"><circle cx={pX+26} cy={225} r={20}/></clipPath></defs>
@@ -810,7 +810,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <line x1={pX+NW} y1={225} x2={mX} y2={225} stroke="#CD853F" strokeWidth={2}/>
             <text x={pmMidX} y={217} textAnchor="middle" fontSize={11} fill="#FF9800" fontWeight="bold">Conjoints</text>
 
-            {renderNodeShape('FEMME', mX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='mere')||null))}
+            {renderNodeShape((mereMember?.genre as any) || 'FEMME', mX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='mere')||null))}
             <circle cx={mX+26} cy={225} r={20} fill="#CD853F" opacity="0.25"/>
             {familyMembers.find(m=>m.relation==='mere')?.photo && <image href={familyMembers.find(m=>m.relation==='mere')?.photo} x={mX+6} y={205} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-mere)"/>}
             <defs><clipPath id="c-mere"><circle cx={mX+26} cy={225} r={20}/></clipPath></defs>

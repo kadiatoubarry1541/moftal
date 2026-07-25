@@ -182,6 +182,12 @@ export default function FamilleAdmin() {
           <span className="text-3xl">👑</span>
           Vue Admin – Toutes les liaisons
         </h1>
+        <Link
+          to="/famille/admin/arbres"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+        >
+          🌳 Toutes les familles
+        </Link>
       </div>
 
       {loading && (
