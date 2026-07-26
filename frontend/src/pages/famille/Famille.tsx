@@ -71,25 +71,8 @@ export default function Famille() {
         )}
       </div>
 
-      {/* ── Contenu ── */}
-      <div ref={contentRef} style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 16px)' }}>
-        <Suspense fallback={
-          <div className="flex items-center justify-center py-20">
-            <div className="h-9 w-9 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        }>
-          {activeTab === 'heritage'   && <HeritageTab />}
-          {activeTab === 'amitie'     && <AmitieTab />}
-          {activeTab === 'recit'      && <RecitTab />}
-          {activeTab === 'solidarite' && <SolidariteTab />}
-        </Suspense>
-      </div>
-
-      {/* ── Barre fixe en bas : les 4 sections de Famille ── */}
-      <div
-        className="fixed left-0 right-0 bottom-0 z-40 bg-white border-t border-gray-200 flex shadow-[0_-6px_16px_rgba(0,0,0,0.06)]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
+      {/* ── Les 4 sections de Famille — en haut, sous le titre ── */}
+      <div className="bg-white border-b border-gray-100 flex">
         {MENU_ITEMS.map(item => (
           <button
             key={item.id}
@@ -103,6 +86,20 @@ export default function Famille() {
             <span>{item.label}</span>
           </button>
         ))}
+      </div>
+
+      {/* ── Contenu ── */}
+      <div ref={contentRef}>
+        <Suspense fallback={
+          <div className="flex items-center justify-center py-20">
+            <div className="h-9 w-9 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
+          {activeTab === 'heritage'   && <HeritageTab />}
+          {activeTab === 'amitie'     && <AmitieTab />}
+          {activeTab === 'recit'      && <RecitTab />}
+          {activeTab === 'solidarite' && <SolidariteTab />}
+        </Suspense>
       </div>
 
     </div>
