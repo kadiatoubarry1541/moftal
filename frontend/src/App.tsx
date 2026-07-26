@@ -326,7 +326,7 @@ function App() {
       {!isFullscreenPage && (
         <div ref={mastheadRef} className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm safe-area-inset-top">
 
-          {/* Ligne 1 : Logo + Activité + Cloche */}
+          {/* Ligne 1 : Logo + Carte profil (compacte) + Cloche */}
           <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 py-1">
             <div className="flex items-center justify-between gap-2">
               {/* Gauche : Logo */}
@@ -340,8 +340,50 @@ function App() {
                 )}
               </div>
 
+              {/* Milieu : Carte profil compacte — entre le logo et la cloche */}
+              {isAccueilConnecte && currentUser && (
+                <button
+                  onClick={() => navigate("/moi/profil")}
+                  className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  {(() => {
+                    const photoUrl = getPhotoUrl(
+                      currentUser.photo || currentUser.manPhoto || currentUser.familyPhoto
+                    );
+                    return photoUrl ? (
+                      <img
+                        src={photoUrl}
+                        alt="Photo de profil"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-emerald-400 flex-shrink-0"
+                        onError={(e) => { (e.target as HTMLImageElement).src = DefaultAvatar; }}
+                      />
+                    ) : (
+                      <img src={DefaultAvatar} alt="Avatar" className="w-10 h-10 rounded-full flex-shrink-0" />
+                    );
+                  })()}
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
+                      {currentUser.prenom} {currentUser.nomFamille}
+                    </p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">
+                      {isAdmin(currentUser) ? 'Administrateur' : 'Utilisateur'} · {getNumeroHForDisplay(currentUser.numeroH, true, false)}
+                    </p>
+                  </div>
+                  {isMasterAdmin(currentUser) && (
+                    <span
+                      role="button"
+                      onClick={(e) => { e.stopPropagation(); navigate("/admin"); }}
+                      className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm transition-colors flex-shrink-0"
+                      aria-label="Administration"
+                    >
+                      👑
+                    </span>
+                  )}
+                </button>
+              )}
+
               {/* Droite : Cloche + Langue */}
-              <div className="flex items-center gap-2 justify-end min-h-[44px]">
+              <div className="flex items-center gap-2 justify-end min-h-[44px] flex-shrink-0">
                 {isAccueilConnecte && !pathname.startsWith("/espace-pro") && <InstallAppButton />}
                 {isAccueilConnecte && <NotificationBell />}
                 {(!isLoggedIn || isHome) && (
@@ -390,64 +432,6 @@ function App() {
               </div>
             </div>
           </div>
-
-          {/* Ligne 2 : Carte Profil complète — visible uniquement sur la page d'accueil */}
-          {isAccueilConnecte && currentUser && (
-            <div className="px-3 pt-1 pb-2 border-t border-gray-100 dark:border-gray-800">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-3">
-                <div className="flex items-start gap-3">
-                  {/* Avatar cliquable → Mon Profil */}
-                  {(() => {
-                    const photoUrl = getPhotoUrl(
-                      currentUser.photo || currentUser.manPhoto || currentUser.familyPhoto
-                    );
-                    return (
-                      <button onClick={() => navigate("/moi/profil")} className="flex-shrink-0 focus:outline-none">
-                        {photoUrl ? (
-                          <img
-                            src={photoUrl}
-                            alt="Photo de profil"
-                            className="w-20 h-20 rounded-full object-cover border-2 border-emerald-400"
-                            onError={(e) => { (e.target as HTMLImageElement).src = DefaultAvatar; }}
-                          />
-                        ) : (
-                          <img
-                            src={DefaultAvatar}
-                            alt="Avatar"
-                            className="w-20 h-20 rounded-full"
-                          />
-                        )}
-                      </button>
-                    );
-                  })()}
-
-                  {/* Infos à droite de la photo */}
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 leading-tight">
-                      {currentUser.prenom} {currentUser.nomFamille}
-                    </h2>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        {isAdmin(currentUser) ? 'Administrateur' : 'Utilisateur'}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                        NuméroH : {getNumeroHForDisplay(currentUser.numeroH, true, false)}
-                      </span>
-                    </div>
-                    {isMasterAdmin(currentUser) && (
-                      <button
-                        onClick={() => navigate("/admin")}
-                        className="mt-2 w-9 h-9 flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-700 text-white text-base transition-colors"
-                        aria-label="Administration"
-                      >
-                        👑
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Ligne 3 : Navigation (Famille / Terre ADAM / Activité / Échanges / Services) — visible uniquement sur la page d'accueil */}
           {isAccueilConnecte && (
