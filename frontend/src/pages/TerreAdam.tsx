@@ -618,7 +618,7 @@ export default function TerreAdam() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => navigate('/')}
+                  onClick={() => navigate('/compte')}
                   aria-label="Retour à l'accueil"
                   className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold shrink-0"
                 >
