@@ -119,21 +119,6 @@ export default function IdentiteModal({
                       overflowY: 'auto',
                     }}
                   >
-                    {/* Page d'accueil */}
-                    {userData?.numeroH && (
-                      <button
-                        onClick={() => {
-                          localStorage.removeItem(`moftal_favori_${userData.numeroH}`);
-                          window.dispatchEvent(new CustomEvent('open-favori-modal'));
-                          setShowSettings(false);
-                          onClose();
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors border-b border-gray-100"
-                      >
-                        <span>⭐</span>
-                        <span>Changer ma page d'accueil</span>
-                      </button>
-                    )}
                     {/* Langue de l'application */}
                     <div className="border-b border-gray-100">
                       <button

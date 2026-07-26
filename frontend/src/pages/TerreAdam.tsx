@@ -613,9 +613,19 @@ export default function TerreAdam() {
         const current = navTabs.find(t => t.id === activeTab);
         return (
           <>
-            {/* En-tête : titre + badge du niveau actif (le choix se fait en bas) */}
+            {/* En-tête : retour + titre + badge du niveau actif (le choix se fait en bas) */}
             <div className="bg-white flex items-center justify-between px-4 py-3">
-              <h1 className="text-2xl font-bold text-gray-900">Terre ADAM</h1>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  aria-label="Retour à l'accueil"
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold shrink-0"
+                >
+                  ←
+                </button>
+                <h1 className="text-2xl font-bold text-gray-900">Terre ADAM</h1>
+              </div>
               {current && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-full px-3 py-1.5">
                   <span className="text-sm">{current.icon}</span>
