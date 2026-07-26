@@ -194,15 +194,6 @@ function ZakaMuslimOnly() {
   return <Zaka />;
 }
 
-const FAVORI_PAGES = [
-  { id: "famille",    label: "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
-  { id: "terre-adam", label: "Terre Adam", icon: "🌍",       path: "/terre-adam" },
-  { id: "services",   label: "Services",   icon: "💼",       path: "/services" },
-  { id: "echanges",   label: "Échanges",   icon: "🛒",       path: "/echange" },
-];
-
-function getFavoriKey(numeroH: string) { return `moftal_favori_${numeroH}`; }
-
 function App() {
   const { lang, setLang, t } = useI18n();
   const location = useLocation();
@@ -211,7 +202,6 @@ function App() {
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   const mastheadRef = useRef<HTMLDivElement>(null);
-  const [showFavoriModal, setShowFavoriModal] = useState(false);
 
   useEffect(() => {
     if (!langOpen) return;
@@ -290,31 +280,6 @@ function App() {
     setCurrentUser(getSessionUser());
   }, [pathname]);
 
-  // Afficher le choix du favori à la première connexion
-  useEffect(() => {
-    if (!isLoggedIn || !currentUser?.numeroH) return;
-    const favori = localStorage.getItem(getFavoriKey(currentUser.numeroH));
-    if (!favori) setShowFavoriModal(true);
-  }, [isLoggedIn]);
-
-  // Écouter l'événement "ouvrir la modal favori" depuis n'importe quelle page
-  useEffect(() => {
-    const handler = () => setShowFavoriModal(true);
-    window.addEventListener('open-favori-modal', handler);
-    return () => window.removeEventListener('open-favori-modal', handler);
-  }, []);
-
-  // Rediriger vers la page favorite après connexion
-  useEffect(() => {
-    if (!currentUser?.numeroH) return;
-    const state = location.state as { fromLogin?: boolean } | null;
-    if (pathname === '/compte' && state?.fromLogin) {
-      const favori = localStorage.getItem(getFavoriKey(currentUser.numeroH));
-      if (favori && favori !== '/compte') {
-        navigate(favori, { replace: true });
-      }
-    }
-  }, [pathname]);
   const isGestionMode = pathname.startsWith("/gestion");
   const isMoftalPayMode =
     pathname === "/compte-famille" ||
@@ -842,40 +807,6 @@ function App() {
           className: "dark:bg-gray-800 dark:text-gray-100",
         }}
       />
-
-      {/* Modal choix page favorite — première connexion */}
-      {showFavoriModal && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <div className="text-center mb-5">
-              <div className="text-4xl mb-3">⭐</div>
-              <h2 className="text-xl font-bold text-gray-900">Votre page d'accueil</h2>
-              <p className="text-sm text-gray-500 mt-1">Quelle page voulez-vous voir en premier quand vous vous connectez ?</p>
-            </div>
-            <div className="flex flex-col gap-3">
-              {FAVORI_PAGES.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    if (currentUser?.numeroH) {
-                      localStorage.setItem(getFavoriKey(currentUser.numeroH), item.path);
-                    }
-                    setShowFavoriModal(false);
-                    navigate(item.path);
-                  }}
-                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl border-2 border-gray-100 hover:border-emerald-400 hover:bg-emerald-50 transition-all text-left"
-                >
-                  <span className="text-2xl">{item.icon}</span>
-                  <span className="font-semibold text-gray-800">{item.label}</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
     </div>

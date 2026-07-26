@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { isAdmin } from '../../utils/auth'
 import HeritageTab from './Arbre'
 
@@ -17,6 +17,7 @@ const MENU_ITEMS: { id: TabId; emoji: string; label: string }[] = [
 ]
 
 export default function Famille() {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabId>('heritage')
   const [user, setUser]           = useState<any>(null)
   const contentRef                = useRef<HTMLDivElement>(null)
@@ -43,6 +44,14 @@ export default function Famille() {
 
         {/* Titre + section active */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label="Retour à l'accueil"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold shrink-0"
+          >
+            ←
+          </button>
           <h1 className="text-2xl font-bold text-gray-900">Famille</h1>
           {current && (
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-full px-3 py-1.5">

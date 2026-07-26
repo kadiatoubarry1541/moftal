@@ -134,9 +134,19 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 pt-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Échanges</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Choisis ta catégorie</p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label="Retour à l'accueil"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold shrink-0"
+          >
+            ←
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Échanges</h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Choisis ta catégorie</p>
+          </div>
         </div>
         <button className="w-9 h-9 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
           <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
