@@ -313,6 +313,9 @@ function App() {
   const isStandaloneAppPage = pathname.startsWith('/professeur-ia') || pathname.startsWith('/info-wallou');
   const isFullscreenPage = isGestionMode || isVitrineMode || isProfilPage || isMoftalPayMode || isStandaloneAppPage;
   const isHome = pathname === "/";
+  // Après connexion, "/" redirige aussitôt vers "/compte" (voir Home.tsx) — c'est donc
+  // "/compte" qui est la vraie page d'accueil vue par les utilisateurs connectés.
+  const isAccueilConnecte = isLoggedIn && (pathname === "/" || pathname === "/compte");
   const showFullHeader = !isLoggedIn || isHome;
   return (
     <div className={!isFullscreenPage ? "bg-gray-900 min-h-screen" : ""}>
@@ -328,7 +331,7 @@ function App() {
             <div className="flex items-center justify-between gap-2">
               {/* Gauche : Logo */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                {isLoggedIn && isHome && (
+                {isAccueilConnecte && (
                   <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
                     <div style={{ background: "white", borderRadius: 10, padding: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <img src="/logo-moftal.svg" alt="Moftal" width="56" height="56" style={{ width: 56, height: 56, display: "block" }}/>
@@ -339,14 +342,14 @@ function App() {
 
               {/* Droite : Activité + Cloche + Langue */}
               <div className="flex items-center gap-2 justify-end min-h-[44px]">
-                {isLoggedIn && isHome && (
+                {isAccueilConnecte && (
                   <button onClick={() => navigate('/gestion-interne?tab=activite')} className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all border-none cursor-pointer shadow-sm">
                     <span className="text-base">🎯</span>
                     <span className="text-xs font-semibold text-gray-700">{t('header.manage_pro')}</span>
                   </button>
                 )}
-                {isLoggedIn && isHome && !pathname.startsWith("/espace-pro") && <InstallAppButton />}
-                {isLoggedIn && isHome && <NotificationBell />}
+                {isAccueilConnecte && !pathname.startsWith("/espace-pro") && <InstallAppButton />}
+                {isAccueilConnecte && <NotificationBell />}
                 {(!isLoggedIn || isHome) && (
                   <div ref={langRef} className="relative">
                     <button
@@ -395,7 +398,7 @@ function App() {
           </div>
 
           {/* Ligne 2 : Carte Profil complète — visible uniquement sur la page d'accueil */}
-          {isLoggedIn && isHome && currentUser && (
+          {isAccueilConnecte && currentUser && (
             <div className="px-3 pt-1 pb-2 border-t border-gray-100 dark:border-gray-800">
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-3">
                 <div className="flex items-start gap-3">
@@ -453,7 +456,7 @@ function App() {
           )}
 
           {/* Ligne 3 : Navigation (Famille / Terre ADAM / Échanges / Services) — visible uniquement sur la page d'accueil */}
-          {isLoggedIn && isHome && (
+          {isAccueilConnecte && (
             <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <div className="grid grid-cols-4 px-1 py-1">
                 {([
