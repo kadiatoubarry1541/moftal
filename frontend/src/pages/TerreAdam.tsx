@@ -131,26 +131,6 @@ export default function TerreAdam() {
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const scopeBarRef = useRef<HTMLDivElement>(null);
-
-  // Publie la vraie hauteur mesurée de la barre en bas (en px, sécurité d'écran
-  // incluse) comme variable CSS globale — le bouton flottant Guide IA la lit
-  // pour se positionner exactement au-dessus, sans jamais la recouvrir.
-  useEffect(() => {
-    const el = scopeBarRef.current;
-    if (!el) return;
-    const publish = () => {
-      document.documentElement.style.setProperty('--moftal-bottom-bar-height', `${el.offsetHeight}px`);
-    };
-    publish();
-    const observer = new ResizeObserver(publish);
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-      document.documentElement.style.removeProperty('--moftal-bottom-bar-height');
-    };
-  }, []);
-  
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
   const [tabLabels, setTabLabels] = useState<string>('Quartier');
   
@@ -613,7 +593,7 @@ export default function TerreAdam() {
         const current = navTabs.find(t => t.id === activeTab);
         return (
           <>
-            {/* En-tête : retour + titre + badge du niveau actif (le choix se fait en bas) */}
+            {/* En-tête : retour + titre + badge du niveau actif */}
             <div className="bg-white flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
                 <button
@@ -634,12 +614,8 @@ export default function TerreAdam() {
               )}
             </div>
 
-            {/* Barre fixe en bas : les 5 niveaux propres à Terre ADAM */}
-            <div
-              ref={scopeBarRef}
-              className="fixed left-0 right-0 bottom-0 z-40 bg-white border-t border-gray-200 flex shadow-[0_-6px_16px_rgba(0,0,0,0.06)]"
-              style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-            >
+            {/* Les 5 niveaux propres à Terre ADAM — en haut, sous le titre */}
+            <div className="bg-white border-t border-gray-200 flex">
               {navTabs.map(tab => (
                 <button
                   key={tab.id}
@@ -659,7 +635,7 @@ export default function TerreAdam() {
       })()}
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 pb-4" style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 16px)' }}>
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 pb-4">
         {/* 1. Résidence */}
         {activeTab === 'lieux' && (
           <div className="space-y-3">

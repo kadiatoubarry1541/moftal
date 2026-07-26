@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // ─── Base de connaissance complète du site Moftal ─────────────────────────────
 const SITE_KNOWLEDGE = [
@@ -490,17 +490,9 @@ export function FloatingGuideIA() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const location = useLocation();
-  // Terre ADAM, Famille et l'accueil (/compte) ont une barre fixe en bas — on
-  // remonte le bouton flottant pour ne pas se superposer avec elle, en plus
-  // petit et plus bas que sur le reste du site pour rester discret à ces
-  // endroits précis.
-  const hasOwnBottomBar = location.pathname === '/terre-adam' || location.pathname === '/famille' || location.pathname === '/compte';
-  const extraBottomOffset = hasOwnBottomBar ? '40px' : '0px';
-  // Collé plus près du bord droit sur ces pages (moins de marge qu'ailleurs).
-  const rightMargin = hasOwnBottomBar ? '0.5rem' : '1.5rem';
-  const buttonSize = hasOwnBottomBar ? 46 : 60;
-  const iconSize = hasOwnBottomBar ? 22 : 28;
+  const rightMargin = '1.5rem';
+  const buttonSize = 60;
+  const iconSize = 28;
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
@@ -557,7 +549,7 @@ export function FloatingGuideIA() {
         onClick={() => setOpen(o => !o)}
         className="fixed z-[60] flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 select-none"
         style={{
-          bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${extraBottomOffset})`,
+          bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem)`,
           right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
           width: buttonSize, height: buttonSize,
           background: 'linear-gradient(135deg,#1a8f1a 0%,#156315 50%,#0f4b0f 100%)',
@@ -572,11 +564,11 @@ export function FloatingGuideIA() {
       </button>
 
       {/* ── Tooltip ── */}
-      {!open && !hasOwnBottomBar && (
+      {!open && (
         <div
           className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
           style={{
-            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${buttonSize + 8}px + ${extraBottomOffset})`,
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${buttonSize + 8}px)`,
             right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
             background: 'linear-gradient(135deg,#1a8f1a,#156315)',
             whiteSpace: 'nowrap',
@@ -592,7 +584,7 @@ export function FloatingGuideIA() {
         <div
           className="fixed z-[59] flex flex-col rounded-2xl overflow-hidden"
           style={{
-            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${buttonSize + 12}px + ${extraBottomOffset})`,
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${buttonSize + 12}px)`,
             right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',
