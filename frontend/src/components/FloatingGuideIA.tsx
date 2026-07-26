@@ -491,11 +491,11 @@ export function FloatingGuideIA() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  // Terre ADAM et Famille ont chacune leur propre barre fixe en bas — on
+  // Terre ADAM, Famille et l'accueil (/compte) ont une barre fixe en bas — on
   // remonte le bouton flottant pour ne pas se superposer avec elle, en plus
   // petit et plus bas que sur le reste du site pour rester discret à ces
-  // deux endroits précis.
-  const hasOwnBottomBar = location.pathname === '/terre-adam' || location.pathname === '/famille';
+  // endroits précis.
+  const hasOwnBottomBar = location.pathname === '/terre-adam' || location.pathname === '/famille' || location.pathname === '/compte';
   const extraBottomOffset = hasOwnBottomBar ? '40px' : '0px';
   // Collé plus près du bord droit sur ces pages (moins de marge qu'ailleurs).
   const rightMargin = hasOwnBottomBar ? '0.5rem' : '1.5rem';

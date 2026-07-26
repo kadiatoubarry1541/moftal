@@ -455,42 +455,6 @@ function App() {
             </div>
           )}
 
-          {/* Ligne 3 : Navigation (Famille / Terre ADAM / Échanges / Services) — visible uniquement sur la page d'accueil */}
-          {isAccueilConnecte && (
-            <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-              <div className="grid grid-cols-4 px-1 py-1">
-                {([
-                  { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
-                  { id: "terre-adam", label: t('nav.terre_adam') || "Terre ADAM", icon: "🌍",  path: "/terre-adam"  },
-                  { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: null,  path: "/echange" },
-                  { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",  path: "/services"},
-                ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => {
-                  const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => navigate(item.path)}
-                      className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all ${
-                        isActive
-                          ? "bg-blue-100 ring-1 ring-blue-300"
-                          : "hover:bg-gray-50"
-                      }`}
-                    >
-                      {item.id === "echanges"
-                        ? <SalesIcon size={20} className={isActive ? "text-blue-600" : "text-gray-500"} />
-                        : <span className="text-lg leading-none">{item.icon}</span>
-                      }
-                      <span className={`text-[9px] font-medium ${isActive ? "text-blue-700" : "text-gray-600"}`}>
-                        {item.label}
-                      </span>
-                      {isActive && <span className="w-3 h-0.5 rounded-full bg-blue-600" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
         </div>
       )}
 
@@ -551,7 +515,7 @@ function App() {
       )}
 
       {/* Main content - plein écran, chaque page gère son propre container */}
-      <main className="w-full flex-1" style={{ overflowX: 'clip' }}>
+      <main className="w-full flex-1" style={{ overflowX: 'clip', paddingBottom: isAccueilConnecte ? 'calc(64px + env(safe-area-inset-bottom, 0px))' : undefined }}>
         <Suspense fallback={<LoadingBar />}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -758,8 +722,8 @@ function App() {
       )}
 
       {/* Footer site principal — masqué en mode Espace Gestion, sur les applis autonomes,
-          et sur Terre ADAM / Famille qui ont chacune leur propre barre fixe en bas */}
-      {!isGestionMode && !isStandaloneAppPage && pathname !== '/terre-adam' && pathname !== '/famille' && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
+          sur Terre ADAM / Famille (leur propre barre fixe en bas), et sur l'accueil (barre de navigation fixe en bas) */}
+      {!isGestionMode && !isStandaloneAppPage && pathname !== '/terre-adam' && pathname !== '/famille' && !isAccueilConnecte && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
         <div className="mx-auto px-6 text-center">
           <p className="text-gray-300 text-sm mb-2">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
@@ -775,6 +739,40 @@ function App() {
           </div>
         </div>
       </footer>}
+
+      {/* Barre de navigation fixe en bas — uniquement sur l'accueil (comme WhatsApp) */}
+      {isAccueilConnecte && (
+        <div
+          className="fixed left-0 right-0 bottom-0 z-40 bg-white border-t border-gray-200 flex shadow-[0_-6px_16px_rgba(0,0,0,0.06)]"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          {([
+            { id: "accueil",    label: "Accueil",                        icon: "🏠",  path: "/compte" },
+            { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
+            { id: "terre-adam", label: t('nav.terre_adam') || "Terre ADAM", icon: "🌍",  path: "/terre-adam" },
+            { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: null,  path: "/echange" },
+            { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",  path: "/services" },
+          ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => {
+            const isActive = item.id === "accueil";
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition ${
+                  isActive ? 'text-emerald-600' : 'text-gray-400'
+                }`}
+              >
+                {item.id === "echanges"
+                  ? <SalesIcon size={20} className={isActive ? "text-emerald-600" : "text-gray-400"} />
+                  : <span className={`text-lg transition-transform ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
+                }
+                <span className="truncate max-w-[64px]">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Assistant IA Guide — masqué en mode gestion et sur les applis autonomes */}
       {!isGestionMode && !isStandaloneAppPage && guideReady && (
