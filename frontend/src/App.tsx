@@ -340,14 +340,8 @@ function App() {
                 )}
               </div>
 
-              {/* Droite : Activité + Cloche + Langue */}
+              {/* Droite : Cloche + Langue */}
               <div className="flex items-center gap-2 justify-end min-h-[44px]">
-                {isAccueilConnecte && (
-                  <button onClick={() => navigate('/gestion-interne?tab=activite')} className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl bg-gray-100 hover:bg-gray-200 active:scale-95 transition-all border-none cursor-pointer shadow-sm">
-                    <span className="text-base">🎯</span>
-                    <span className="text-xs font-semibold text-gray-700">{t('header.manage_pro')}</span>
-                  </button>
-                )}
                 {isAccueilConnecte && !pathname.startsWith("/espace-pro") && <InstallAppButton />}
                 {isAccueilConnecte && <NotificationBell />}
                 {(!isLoggedIn || isHome) && (
@@ -455,39 +449,31 @@ function App() {
             </div>
           )}
 
-          {/* Ligne 3 : Navigation (Accueil / Famille / Terre ADAM / Échanges / Services) — visible uniquement sur la page d'accueil */}
+          {/* Ligne 3 : Navigation (Famille / Terre ADAM / Activité / Échanges / Services) — visible uniquement sur la page d'accueil */}
           {isAccueilConnecte && (
             <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <div className="grid grid-cols-5 px-1 py-1">
                 {([
-                  { id: "accueil",    label: "Accueil",                        icon: "🏠",  path: "/compte" },
-                  { id: "famille",    label: t('nav.famille')    || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
-                  { id: "terre-adam", label: t('nav.terre_adam') || "Terre ADAM", icon: "🌍",  path: "/terre-adam" },
-                  { id: "echanges",   label: t('nav.echanges')   || "Échanges",   icon: null,  path: "/echange" },
-                  { id: "services",   label: t('nav.services')   || "Services",   icon: "💼",  path: "/services" },
-                ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => {
-                  const isActive = item.id === "accueil";
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => navigate(item.path)}
-                      className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all ${
-                        isActive
-                          ? "bg-blue-100 ring-1 ring-blue-300"
-                          : "hover:bg-gray-50"
-                      }`}
-                    >
-                      {item.id === "echanges"
-                        ? <SalesIcon size={20} className={isActive ? "text-blue-600" : "text-gray-500"} />
-                        : <span className="text-lg leading-none">{item.icon}</span>
-                      }
-                      <span className={`text-[9px] font-medium ${isActive ? "text-blue-700" : "text-gray-600"}`}>
-                        {item.label}
-                      </span>
-                      {isActive && <span className="w-3 h-0.5 rounded-full bg-blue-600" />}
-                    </button>
-                  );
-                })}
+                  { id: "famille",    label: t('nav.famille')      || "Famille",    icon: "👨‍👩‍👧‍👦", path: "/famille" },
+                  { id: "terre-adam", label: t('nav.terre_adam')   || "Terre ADAM", icon: "🌍",  path: "/terre-adam" },
+                  { id: "activite",   label: t('header.manage_pro') || "Activité",  icon: "🎯",  path: "/gestion-interne?tab=activite" },
+                  { id: "echanges",   label: t('nav.echanges')     || "Échanges",   icon: null,  path: "/echange" },
+                  { id: "services",   label: t('nav.services')     || "Services",   icon: "💼",  path: "/services" },
+                ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(item.path)}
+                    className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all hover:bg-gray-50"
+                  >
+                    {item.id === "echanges"
+                      ? <SalesIcon size={20} className="text-gray-500" />
+                      : <span className="text-lg leading-none">{item.icon}</span>
+                    }
+                    <span className="text-[9px] font-medium text-gray-600">
+                      {item.label}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
