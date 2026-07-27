@@ -320,9 +320,11 @@ function App() {
     <div className={!isFullscreenPage ? "bg-gray-900 min-h-screen" : ""}>
     <GestionPaymentGate />
     <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-screen' : ''}${isHome ? ' h-screen overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
-      {/* Header site principal — masqué en mode Espace Gestion ou Vitrine */}
+      {/* Header site principal — masqué en mode Espace Gestion ou Vitrine, et sur les
+          pages qui n'ont rien à y afficher (Famille/Terre ADAM/Échanges/Services ont
+          leur propre en-tête) : sinon la barre restait affichée vide, blanche. */}
       {/* ══ MASTHEAD STICKY — Logo + Carte Profil + Navigation (reste collé en haut comme Facebook) ══ */}
-      {!isFullscreenPage && (
+      {!isFullscreenPage && (isAccueilConnecte || showFullHeader) && (
         <div ref={mastheadRef} className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm safe-area-inset-top">
 
           {/* Ligne 1 : Logo + Carte profil (compacte) + Cloche */}
