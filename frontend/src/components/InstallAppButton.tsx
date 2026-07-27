@@ -12,6 +12,9 @@ interface Props {
   themeColor?: string;
   color?: string;
   label?: string;
+  // "icon" (rond compact, par défaut) ou "banner" (rangée pleine largeur,
+  // utilisée dans le panneau de notifications)
+  variant?: "icon" | "banner";
 }
 
 // ─── Utilitaires ────────────────────────────────────────────────────────────
@@ -79,7 +82,7 @@ export function BackToMoftalBadge() {
 
 // ─── Composant ──────────────────────────────────────────────────────────────
 
-export default function InstallAppButton({ name, logoUrl, themeColor, color, label }: Props = {}) {
+export default function InstallAppButton({ name, logoUrl, themeColor, color, label, variant = "icon" }: Props = {}) {
 
   const onGestionPage = isGestionPage();
 
@@ -87,7 +90,7 @@ export default function InstallAppButton({ name, logoUrl, themeColor, color, lab
   // MODE 1 — PAGE D'ACCUEIL : installer l'application Moftal principale
   // ══════════════════════════════════════════════════════════════════════════
   if (!onGestionPage) {
-    return <MainAppInstallButton />;
+    return <MainAppInstallButton variant={variant} />;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -105,7 +108,8 @@ export default function InstallAppButton({ name, logoUrl, themeColor, color, lab
 
 // ─── Bouton installation app principale (page d'accueil) ────────────────────
 
-function MainAppInstallButton() {
+function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner" }) {
+  const isBanner = variant === "banner";
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -152,15 +156,17 @@ function MainAppInstallButton() {
 
   const [showIOSCard, setShowIOSCard] = useState(false);
 
-  if (installed) return (
-    <div
-      title="Application installée"
-      aria-label="Application installée"
-      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, minWidth: 44, minHeight: 44, background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: "50%", fontSize: 18 }}
-    >
-      ✅
-    </div>
-  );
+  if (installed) {
+    if (!isBanner) return null;
+    return (
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#f0fdf4", color: "#166534", borderBottom: "1px solid #f0f0f0" }}
+      >
+        <span style={{ fontSize: 18 }}>✅</span>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>Application installée</span>
+      </div>
+    );
+  }
 
   if (!prompt) {
     if (!isIOS()) return null;
@@ -170,9 +176,20 @@ function MainAppInstallButton() {
           onClick={() => setShowIOSCard(true)}
           title="Installer l'application"
           aria-label="Installer l'application"
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, minWidth: 44, minHeight: 44, background: "#1a8f1a", color: "white", border: "none", borderRadius: "50%", fontSize: 20, cursor: "pointer", boxShadow: "0 4px 14px rgba(26,143,26,0.35)" }}
+          style={isBanner
+            ? { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "#f0fdf4", border: "none", borderBottom: "1px solid #f0f0f0", cursor: "pointer", textAlign: "left" }
+            : { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, minWidth: 44, minHeight: 44, background: "#1a8f1a", color: "white", border: "none", borderRadius: "50%", fontSize: 20, cursor: "pointer", boxShadow: "0 4px 14px rgba(26,143,26,0.35)" }
+          }
         >
-          📲
+          {isBanner ? (
+            <>
+              <span style={{ fontSize: 22 }}>📲</span>
+              <span>
+                <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#166534" }}>Installer l'application</span>
+                <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>Application mobile gratuite</span>
+              </span>
+            </>
+          ) : "📲"}
         </button>
         {showIOSCard && (
           <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setShowIOSCard(false); }}>
@@ -228,17 +245,30 @@ function MainAppInstallButton() {
       disabled={loading}
       title={loading ? "Installation…" : "Installer l'application"}
       aria-label={loading ? "Installation…" : "Installer l'application"}
-      style={{
-        display: "inline-flex", alignItems: "center", justifyContent: "center",
-        width: 44, height: 44, minWidth: 44, minHeight: 44,
-        background: "#1a8f1a", color: "white",
-        border: "none", borderRadius: "50%",
-        fontSize: 20, cursor: "pointer",
-        boxShadow: "0 4px 14px rgba(26,143,26,0.35)",
-        opacity: loading ? 0.75 : 1,
-      }}
+      style={isBanner
+        ? { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "#f0fdf4", border: "none", borderBottom: "1px solid #f0f0f0", cursor: loading ? "default" : "pointer", textAlign: "left", opacity: loading ? 0.75 : 1 }
+        : {
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 44, height: 44, minWidth: 44, minHeight: 44,
+            background: "#1a8f1a", color: "white",
+            border: "none", borderRadius: "50%",
+            fontSize: 20, cursor: "pointer",
+            boxShadow: "0 4px 14px rgba(26,143,26,0.35)",
+            opacity: loading ? 0.75 : 1,
+          }
+      }
     >
-      {loading ? "⏳" : "📲"}
+      {isBanner ? (
+        <>
+          <span style={{ fontSize: 22 }}>{loading ? "⏳" : "📲"}</span>
+          <span>
+            <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#166534" }}>
+              {loading ? "Installation…" : "Installer l'application"}
+            </span>
+            <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>Application mobile gratuite</span>
+          </span>
+        </>
+      ) : (loading ? "⏳" : "📲")}
     </button>
   );
 }
