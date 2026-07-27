@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getSocket } from "../services/socket";
+import InstallAppButton from "./InstallAppButton";
 
 interface Notification {
   id: string;
@@ -293,6 +294,9 @@ export default function NotificationBell() {
               </button>
             )}
           </div>
+
+          {/* Installer l'application — proposé en haut du panneau plutôt que dans le bandeau du haut */}
+          <InstallAppButton variant="banner" />
 
           {/* Liste scrollable */}
           <div className="overflow-y-auto flex-1 bg-white">

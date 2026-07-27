@@ -7,7 +7,6 @@ import { getSessionUser, isAdmin, isMasterAdmin, getPhotoUrl, getNumeroHForDispl
 import { config } from "./config/api";
 import DefaultAvatar from "./assets/default-avatar.svg";
 import NotificationBell from "./components/NotificationBell";
-import InstallAppButton from "./components/InstallAppButton";
 import GestionPaymentGate from "./components/GestionPaymentGate";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
@@ -384,7 +383,6 @@ function App() {
 
               {/* Droite : Cloche + Langue */}
               <div className="flex items-center gap-2 justify-end min-h-[44px] flex-shrink-0">
-                {isAccueilConnecte && !pathname.startsWith("/espace-pro") && <InstallAppButton />}
                 {isAccueilConnecte && <NotificationBell />}
                 {(!isLoggedIn || isHome) && (
                   <div ref={langRef} className="relative">
