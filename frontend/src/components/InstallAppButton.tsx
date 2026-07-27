@@ -153,8 +153,12 @@ function MainAppInstallButton() {
   const [showIOSCard, setShowIOSCard] = useState(false);
 
   if (installed) return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
-      <span>✅</span> Application installée
+    <div
+      title="Application installée"
+      aria-label="Application installée"
+      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, minWidth: 44, minHeight: 44, background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: "50%", fontSize: 18 }}
+    >
+      ✅
     </div>
   );
 
@@ -164,9 +168,11 @@ function MainAppInstallButton() {
       <>
         <button
           onClick={() => setShowIOSCard(true)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(26,143,26,0.35)" }}
+          title="Installer l'application"
+          aria-label="Installer l'application"
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, minWidth: 44, minHeight: 44, background: "#1a8f1a", color: "white", border: "none", borderRadius: "50%", fontSize: 20, cursor: "pointer", boxShadow: "0 4px 14px rgba(26,143,26,0.35)" }}
         >
-          <span style={{ fontSize: 20 }}>📲</span> Installer l'application
+          📲
         </button>
         {showIOSCard && (
           <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setShowIOSCard(false); }}>
@@ -220,18 +226,19 @@ function MainAppInstallButton() {
     <button
       onClick={handleInstall}
       disabled={loading}
+      title={loading ? "Installation…" : "Installer l'application"}
+      aria-label={loading ? "Installation…" : "Installer l'application"}
       style={{
-        display: "inline-flex", alignItems: "center", gap: 8,
-        padding: "12px 24px",
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: 44, height: 44, minWidth: 44, minHeight: 44,
         background: "#1a8f1a", color: "white",
-        border: "none", borderRadius: 12,
-        fontSize: 15, fontWeight: 800, cursor: "pointer",
+        border: "none", borderRadius: "50%",
+        fontSize: 20, cursor: "pointer",
         boxShadow: "0 4px 14px rgba(26,143,26,0.35)",
         opacity: loading ? 0.75 : 1,
       }}
     >
-      <span style={{ fontSize: 20 }}>{loading ? "⏳" : "📲"}</span>
-      {loading ? "Installation…" : "Installer l'application"}
+      {loading ? "⏳" : "📲"}
     </button>
   );
 }

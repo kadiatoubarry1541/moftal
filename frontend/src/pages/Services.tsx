@@ -99,20 +99,20 @@ export default function Services({ onClose }: ServicesProps = {}) {
   ]
 
   return (
-    <div className="max-w-md mx-auto px-4 pb-4">
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3 pt-3">
-        <div className="flex items-center gap-2">
+    <>
+      {/* Header (style Espace Gestion) */}
+      <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+      <div className="max-w-md mx-auto flex items-center justify-between" style={{ padding: '6px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button
             type="button"
             onClick={() => navigate('/compte')}
             aria-label="Retour à l'accueil"
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold shrink-0"
+            style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 26, fontWeight: 300, lineHeight: 1, opacity: 0.9 }}
           >
-            ←
+            ‹
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Services</h1>
+          <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>💼 Services</h1>
         </div>
         {numeroH && (
           <FavorisDropdown
@@ -139,7 +139,9 @@ export default function Services({ onClose }: ServicesProps = {}) {
           </FavorisDropdown>
         )}
       </div>
+      </header>
 
+    <div className="max-w-md mx-auto px-4 pb-4 pt-3">
       {/* Bouton créer un compte pro */}
       <button
         type="button"
@@ -157,5 +159,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
       </div>
 
     </div>
+    </>
   )
 }

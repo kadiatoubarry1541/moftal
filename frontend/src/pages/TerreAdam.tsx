@@ -592,45 +592,48 @@ export default function TerreAdam() {
         ];
         const current = navTabs.find(t => t.id === activeTab);
         return (
-          <>
-            {/* En-tête : retour + titre + badge du niveau actif */}
-            <div className="bg-white flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-2">
+          <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
+            {/* Retour + titre + badge du niveau actif */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <button
                   type="button"
                   onClick={() => navigate('/compte')}
                   aria-label="Retour à l'accueil"
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold shrink-0"
+                  style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 26, fontWeight: 300, lineHeight: 1, opacity: 0.9 }}
                 >
-                  ←
+                  ‹
                 </button>
-                <h1 className="text-2xl font-bold text-gray-900">Terre ADAM</h1>
+                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>🌍 Terre ADAM</h1>
               </div>
               {current && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-full px-3 py-1.5">
-                  <span className="text-sm">{current.icon}</span>
-                  <span className="truncate max-w-[140px]">{current.label}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
+                  <span>{current.icon}</span>
+                  <span className="truncate max-w-[100px]">{current.label}</span>
                 </span>
               )}
             </div>
 
-            {/* Les 5 niveaux propres à Terre ADAM — en haut, sous le titre */}
-            <div className="bg-white border-t border-gray-200 flex">
+            {/* Les 5 niveaux propres à Terre ADAM — dans la même barre */}
+            <div className="flex" style={{ padding: '0 6px 6px' }}>
               {navTabs.map(tab => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition ${
-                    activeTab === tab.id ? 'text-emerald-600' : 'text-gray-400'
-                  }`}
+                  className="flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition"
+                  style={{
+                    borderRadius: 10,
+                    background: activeTab === tab.id ? '#1a8f1a' : 'rgba(255,255,255,0.06)',
+                    color: activeTab === tab.id ? 'white' : '#94a3b8',
+                  }}
                 >
                   <span className={`text-lg transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
                   <span className="truncate max-w-[64px]">{tab.label}</span>
                 </button>
               ))}
             </div>
-          </>
+          </header>
         );
       })()}
 
