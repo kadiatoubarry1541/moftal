@@ -347,7 +347,7 @@ function App() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 {isAccueilConnecte && (
                   <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
-                    <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #e2e8f0" }}>
+                    <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <img src="/logo-moftal.svg" alt="Moftal" width="66" height="66" style={{ width: 66, height: 66, display: "block" }}/>
                     </div>
                   </Link>
