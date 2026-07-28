@@ -377,24 +377,25 @@ function App() {
                     <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
                       {currentUser.prenom} {currentUser.nomFamille}
                     </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">
-                      {getNumeroHForDisplay(currentUser.numeroH, true, false)}
-                    </p>
+                    {profileLogos.length > 0 ? (
+                      <div className="flex items-center gap-1 mt-0.5" title="Logos attribués">
+                        {profileLogos.slice(0, 3).map(ul => (
+                          <span
+                            key={ul.id}
+                            title={ul.logo.name}
+                            className="w-5 h-5 flex items-center justify-center rounded-full text-[10px] flex-shrink-0"
+                            style={{ background: `${ul.logo.color}22`, border: `1.5px solid ${ul.logo.color}` }}
+                          >
+                            {ul.logo.icon}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">
+                        {getNumeroHForDisplay(currentUser.numeroH, true, false)}
+                      </p>
+                    )}
                   </div>
-                  {profileLogos.length > 0 && (
-                    <div className="flex items-center gap-1 flex-shrink-0" title="Logos attribués">
-                      {profileLogos.slice(0, 3).map(ul => (
-                        <span
-                          key={ul.id}
-                          title={ul.logo.name}
-                          className="w-6 h-6 flex items-center justify-center rounded-full text-xs flex-shrink-0"
-                          style={{ background: `${ul.logo.color}22`, border: `1.5px solid ${ul.logo.color}` }}
-                        >
-                          {ul.logo.icon}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                   {isMasterAdmin(currentUser) && (
                     <span
                       role="button"
