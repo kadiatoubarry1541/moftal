@@ -234,6 +234,7 @@ function App() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(getSessionUser);
   const isLoggedIn = currentUser !== null;
+  const [profileLogos, setProfileLogos] = useState<{ id: string; logo: { icon: string; name: string; color: string } }[]>([]);
 
   // Charger le profil depuis la base de données à chaque connexion
   useEffect(() => {
@@ -278,6 +279,18 @@ function App() {
   useEffect(() => {
     setCurrentUser(getSessionUser());
   }, [pathname]);
+
+  // Logos/badges attribués par les admins (limite de 3) — affichés sur la carte de profil compacte
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token || !currentUser?.numeroH) { setProfileLogos([]); return; }
+    fetch(`${config.API_BASE_URL}/logos/my-logos`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.success) setProfileLogos(data.logos || []); })
+      .catch(() => {});
+  }, [currentUser?.numeroH]);
 
   const isGestionMode = pathname.startsWith("/gestion");
   const isMoftalPayMode =
@@ -335,7 +348,7 @@ function App() {
                 {isAccueilConnecte && (
                   <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
                     <div style={{ background: "white", borderRadius: 10, padding: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <img src="/logo-moftal.svg" alt="Moftal" width="56" height="56" style={{ width: 56, height: 56, display: "block" }}/>
+                      <img src="/logo-moftal.svg" alt="Moftal" width="66" height="66" style={{ width: 66, height: 66, display: "block" }}/>
                     </div>
                   </Link>
                 )}
@@ -355,11 +368,11 @@ function App() {
                       <img
                         src={photoUrl}
                         alt="Photo de profil"
-                        className="w-10 h-10 rounded-full object-cover border-2 border-emerald-400 flex-shrink-0"
+                        className="w-[78px] h-[78px] rounded-full object-cover border-2 border-emerald-400 flex-shrink-0"
                         onError={(e) => { (e.target as HTMLImageElement).src = DefaultAvatar; }}
                       />
                     ) : (
-                      <img src={DefaultAvatar} alt="Avatar" className="w-10 h-10 rounded-full flex-shrink-0" />
+                      <img src={DefaultAvatar} alt="Avatar" className="w-[78px] h-[78px] rounded-full flex-shrink-0" />
                     );
                   })()}
                   <div className="min-w-0">
@@ -367,9 +380,23 @@ function App() {
                       {currentUser.prenom} {currentUser.nomFamille}
                     </p>
                     <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">
-                      {isAdmin(currentUser) ? 'Administrateur' : 'Utilisateur'} · {getNumeroHForDisplay(currentUser.numeroH, true, false)}
+                      {getNumeroHForDisplay(currentUser.numeroH, true, false)}
                     </p>
                   </div>
+                  {profileLogos.length > 0 && (
+                    <div className="flex items-center gap-1 flex-shrink-0" title="Logos attribués">
+                      {profileLogos.slice(0, 3).map(ul => (
+                        <span
+                          key={ul.id}
+                          title={ul.logo.name}
+                          className="w-6 h-6 flex items-center justify-center rounded-full text-xs flex-shrink-0"
+                          style={{ background: `${ul.logo.color}22`, border: `1.5px solid ${ul.logo.color}` }}
+                        >
+                          {ul.logo.icon}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {isMasterAdmin(currentUser) && (
                     <span
                       role="button"
