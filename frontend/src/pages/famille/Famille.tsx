@@ -67,6 +67,24 @@ export default function Famille() {
             </button>
             <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>👨‍👩‍👧‍👦 Famille</h1>
 
+            {current && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
+                <span>{current.emoji}</span>
+                <span>{current.label}</span>
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {user && isAdmin(user) && (
+              <Link
+                to="/famille/admin"
+                className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition flex-shrink-0"
+              >
+                👑 Admin
+              </Link>
+            )}
+
             {/* Menu ☰ — Amitié / Récit / Solidarité (Héritage reste la page principale) */}
             <div ref={menuRef} style={{ position: 'relative' }}>
               <button
@@ -78,7 +96,7 @@ export default function Famille() {
                 ☰
               </button>
               {menuOpen && (
-                <div style={{ position: 'absolute', top: 38, left: 0, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', overflow: 'hidden', zIndex: 50, minWidth: 160 }}>
+                <div style={{ position: 'absolute', top: 38, right: 0, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', overflow: 'hidden', zIndex: 50, minWidth: 160 }}>
                   {DRAWER_ITEMS.map(item => (
                     <button
                       key={item.id}
@@ -99,23 +117,7 @@ export default function Famille() {
                 </div>
               )}
             </div>
-
-            {current && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
-                <span>{current.emoji}</span>
-                <span>{current.label}</span>
-              </span>
-            )}
           </div>
-
-          {user && isAdmin(user) && (
-            <Link
-              to="/famille/admin"
-              className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition flex-shrink-0"
-            >
-              👑 Admin
-            </Link>
-          )}
         </div>
       </header>
 

@@ -347,7 +347,7 @@ function App() {
               <div className="flex items-center gap-2 flex-shrink-0">
                 {isAccueilConnecte && (
                   <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
-                    <div style={{ background: "white", borderRadius: 10, padding: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #e2e8f0" }}>
                       <img src="/logo-moftal.svg" alt="Moftal" width="66" height="66" style={{ width: 66, height: 66, display: "block" }}/>
                     </div>
                   </Link>
@@ -358,7 +358,7 @@ function App() {
               {isAccueilConnecte && currentUser && (
                 <button
                   onClick={() => navigate("/moi/profil")}
-                  className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                  className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
                 >
                   {(() => {
                     const photoUrl = getPhotoUrl(
