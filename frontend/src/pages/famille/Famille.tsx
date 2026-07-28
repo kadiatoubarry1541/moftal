@@ -16,11 +16,25 @@ const MENU_ITEMS: { id: TabId; emoji: string; label: string }[] = [
   { id: 'solidarite', emoji: '🤝', label: 'Solidarité' },
 ]
 
+// Héritage reste la page principale — les 3 autres sont dans le menu ☰
+const DRAWER_ITEMS = MENU_ITEMS.filter(m => m.id !== 'heritage')
+
 export default function Famille() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<TabId>('heritage')
   const [user, setUser]           = useState<any>(null)
+  const [menuOpen, setMenuOpen]   = useState(false)
   const contentRef                = useRef<HTMLDivElement>(null)
+  const menuRef                   = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [menuOpen])
 
   useEffect(() => {
     const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
@@ -52,6 +66,7 @@ export default function Famille() {
               ‹
             </button>
             <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>👨‍👩‍👧‍👦 Famille</h1>
+
             {current && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
                 <span>{current.emoji}</span>
@@ -60,34 +75,49 @@ export default function Famille() {
             )}
           </div>
 
-          {user && isAdmin(user) && (
-            <Link
-              to="/famille/admin"
-              className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition flex-shrink-0"
-            >
-              👑 Admin
-            </Link>
-          )}
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {user && isAdmin(user) && (
+              <Link
+                to="/famille/admin"
+                className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition flex-shrink-0"
+              >
+                👑 Admin
+              </Link>
+            )}
 
-        {/* Les 4 sections de Famille — dans la même barre */}
-        <div className="flex" style={{ padding: '0 6px 6px' }}>
-          {MENU_ITEMS.map(item => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleSelect(item.id)}
-              className="flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition"
-              style={{
-                borderRadius: 10,
-                background: activeTab === item.id ? '#1a8f1a' : 'rgba(255,255,255,0.06)',
-                color: activeTab === item.id ? 'white' : '#94a3b8',
-              }}
-            >
-              <span className={`text-lg transition-transform ${activeTab === item.id ? 'scale-110' : ''}`}>{item.emoji}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
+            {/* Menu ☰ — Amitié / Récit / Solidarité (Héritage reste la page principale) */}
+            <div ref={menuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(o => !o)}
+                aria-label="Autres sections de Famille"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' }}
+              >
+                ☰
+              </button>
+              {menuOpen && (
+                <div style={{ position: 'absolute', top: 38, right: 0, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', overflow: 'hidden', zIndex: 50, minWidth: 160 }}>
+                  {DRAWER_ITEMS.map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => { handleSelect(item.id); setMenuOpen(false) }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px',
+                        border: 'none', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', textAlign: 'left',
+                        background: activeTab === item.id ? '#f0fdf4' : 'white',
+                        color: activeTab === item.id ? '#166534' : '#1f2937',
+                        fontSize: 13, fontWeight: 700,
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>{item.emoji}</span>
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
