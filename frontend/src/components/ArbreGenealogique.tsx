@@ -759,7 +759,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gppX+54} y={66} fontSize={11} fontWeight="bold" fill="#2c5530">Père</text>
               <text x={gppX+54} y={80} fontSize={11} fill="#555">{gpp?.prenom||'Grand-père'}</text>
               <text x={gppX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gpp?.numeroH||''}</text>
-              <line x1={gppX+NW} y1={75} x2={gmpX} y2={75} stroke="#A0522D" strokeWidth={2}/>
+              <line x1={gppX+NW} y1={75} x2={gmpX} y2={75} stroke="#1a8f1a" strokeWidth={2}/>
 
               {renderNodeShape((gmp?.genre as any) || 'FEMME', gmpX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmp || null))}
               <circle cx={gmpX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
@@ -769,7 +769,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gmpX+54} y={80} fontSize={11} fill="#555">{gmp?.prenom||'Grand-mère'}</text>
               <text x={gmpX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gmp?.numeroH||''}</text>
               {/* Verticale couple paternel → père G0 : au centre du gap entre gpp et gmp */}
-              <line x1={pMidX} y1={75} x2={pMidX} y2={190} stroke="#A0522D" strokeWidth={2}/>
+              <line x1={pMidX} y1={75} x2={pMidX} y2={190} stroke="#1a8f1a" strokeWidth={2}/>
 
               {renderNodeShape((gpm?.genre as any) || 'HOMME', gpmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gpm || null))}
               <circle cx={gpmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
@@ -778,7 +778,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gpmX+54} y={66} fontSize={11} fontWeight="bold" fill="#2c5530">Père</text>
               <text x={gpmX+54} y={80} fontSize={11} fill="#555">{gpm?.prenom||'Grand-père'}</text>
               <text x={gpmX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gpm?.numeroH||''}</text>
-              <line x1={gpmX+NW} y1={75} x2={gmmX} y2={75} stroke="#A0522D" strokeWidth={2}/>
+              <line x1={gpmX+NW} y1={75} x2={gmmX} y2={75} stroke="#1a8f1a" strokeWidth={2}/>
 
               {renderNodeShape((gmm?.genre as any) || 'FEMME', gmmX, 40, NW, NH, '#A0522D', 3, 'white', () => setSelectedMember(gmm || null))}
               <circle cx={gmmX+26} cy={75} r={20} fill="#A0522D" opacity="0.25"/>
@@ -788,7 +788,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               <text x={gmmX+54} y={80} fontSize={11} fill="#555">{gmm?.prenom||'Grand-mère'}</text>
               <text x={gmmX+54} y={94} fontSize={10} fill="#A0522D" fontWeight="bold">{gmm?.numeroH||''}</text>
               {/* Verticale couple maternel → mère G0 : au centre du gap entre gpm et gmm */}
-              <line x1={mMidX} y1={75} x2={mMidX} y2={190} stroke="#A0522D" strokeWidth={2}/>
+              <line x1={mMidX} y1={75} x2={mMidX} y2={190} stroke="#1a8f1a" strokeWidth={2}/>
 
               {renderPlusButton(gppX+80, 35, 'G-père paternel', 'grand-pere')}
               {renderPlusButton(gmpX+80, 35, 'G-mère paternelle', 'grand-mere')}
@@ -807,7 +807,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <text x={pX+54} y={230} fontSize={11} fill="#555">{familyMembers.find(m=>m.relation==='pere')?.prenom||userData.prenomPere||'Père'}</text>
             <text x={pX+54} y={244} fontSize={10} fill="#CD853F" fontWeight="bold">{familyMembers.find(m=>m.relation==='pere')?.numeroH||userData.numeroHPere||''}</text>
 
-            <line x1={pX+NW} y1={225} x2={mX} y2={225} stroke="#CD853F" strokeWidth={2}/>
+            <line x1={pX+NW} y1={225} x2={mX} y2={225} stroke="#1a8f1a" strokeWidth={2}/>
             <text x={pmMidX} y={217} textAnchor="middle" fontSize={11} fill="#FF9800" fontWeight="bold">Conjoints</text>
 
             {renderNodeShape((mereMember?.genre as any) || 'FEMME', mX, 190, NW, NH, '#CD853F', 3, 'white', () => setSelectedMember(familyMembers.find(m=>m.relation==='mere')||null))}
@@ -818,15 +818,15 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <text x={mX+54} y={230} fontSize={11} fill="#555">{familyMembers.find(m=>m.relation==='mere')?.prenom||userData.prenomMere||'Mère'}</text>
             <text x={mX+54} y={244} fontSize={10} fill="#CD853F" fontWeight="bold">{familyMembers.find(m=>m.relation==='mere')?.numeroH||userData.numeroHMere||''}</text>
 
-            <line x1={pmMidX} y1={260} x2={pmMidX} y2={310} stroke="#CD853F" strokeWidth={2}/>
+            <line x1={pmMidX} y1={260} x2={pmMidX} y2={310} stroke="#1a8f1a" strokeWidth={2}/>
             {renderPlusButton(pX+80, 215, 'Lier père', 'pere')}
             {renderPlusButton(mX+80, 215, 'Lier mère', 'mere')}
           </g>
 
           {/* Barre horizontale G1 couvrant tous les nœuds */}
-          <line x1={g1BarL} y1={310} x2={g1BarR} y2={310} stroke="#4CAF50" strokeWidth={2}/>
+          <line x1={g1BarL} y1={310} x2={g1BarR} y2={310} stroke="#1a8f1a" strokeWidth={2}/>
           {/* Branches descendantes vers chaque nœud G1 */}
-          {g1Xs.map((x, i) => <line key={`b1-${i}`} x1={x+NW/2} y1={310} x2={x+NW/2} y2={350} stroke="#4CAF50" strokeWidth={2}/>)}
+          {g1Xs.map((x, i) => <line key={`b1-${i}`} x1={x+NW/2} y1={310} x2={x+NW/2} y2={350} stroke="#1a8f1a" strokeWidth={2}/>)}
 
           {/* ── G1 : Fratrie DYNAMIQUE + VOUS + Conjoint ── */}
           <g className="generation-g1">
@@ -874,7 +874,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             {/* Conjoint */}
             {hasConjoint && (
               <>
-                <line x1={vousX+NW} y1={385} x2={conjX} y2={385} stroke="#4CAF50" strokeWidth={2}/>
+                <line x1={vousX+NW} y1={385} x2={conjX} y2={385} stroke="#1a8f1a" strokeWidth={2}/>
                 <text x={Math.round((vousX+NW+conjX)/2)} y={377} textAnchor="middle" fontSize={10} fill="#FF9800" fontWeight="bold">♥</text>
                 {renderNodeShape(
                   (userData.conjointGenre?.toUpperCase()==='FEMME' ? 'FEMME' : 'HOMME') as 'HOMME'|'FEMME'|'AUTRE',
@@ -947,12 +947,12 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             return (
               <>
                 {/* Verticale G2→barre G3 */}
-                <line x1={g2CenterX} y1={560} x2={g2CenterX} y2={600} stroke="#059669" strokeWidth={2}/>
+                <line x1={g2CenterX} y1={560} x2={g2CenterX} y2={600} stroke="#1a8f1a" strokeWidth={2}/>
                 {/* Barre horizontale G3 */}
-                <line x1={g3BarL} y1={600} x2={g3BarR} y2={600} stroke="#059669" strokeWidth={2}/>
+                <line x1={g3BarL} y1={600} x2={g3BarR} y2={600} stroke="#1a8f1a" strokeWidth={2}/>
                 {/* Branches descendantes vers chaque petit-enfant */}
                 {g3Xs.map((x, i) => (
-                  <line key={`b3-${i}`} x1={x + NW / 2} y1={600} x2={x + NW / 2} y2={G3_Y} stroke="#059669" strokeWidth={2}/>
+                  <line key={`b3-${i}`} x1={x + NW / 2} y1={600} x2={x + NW / 2} y2={G3_Y} stroke="#1a8f1a" strokeWidth={2}/>
                 ))}
                 <g className="generation-g3">
                   {g3Members.map((gc, i) => (
