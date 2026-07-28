@@ -348,7 +348,7 @@ function App() {
                 {isAccueilConnecte && (
                   <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
                     <div style={{ background: "white", borderRadius: 10, padding: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <img src="/logo-moftal.svg" alt="Moftal" width="56" height="56" style={{ width: 56, height: 56, display: "block" }}/>
+                      <img src="/logo-moftal.svg" alt="Moftal" width="66" height="66" style={{ width: 66, height: 66, display: "block" }}/>
                     </div>
                   </Link>
                 )}
@@ -368,11 +368,11 @@ function App() {
                       <img
                         src={photoUrl}
                         alt="Photo de profil"
-                        className="w-10 h-10 rounded-full object-cover border-2 border-emerald-400 flex-shrink-0"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 flex-shrink-0"
                         onError={(e) => { (e.target as HTMLImageElement).src = DefaultAvatar; }}
                       />
                     ) : (
-                      <img src={DefaultAvatar} alt="Avatar" className="w-10 h-10 rounded-full flex-shrink-0" />
+                      <img src={DefaultAvatar} alt="Avatar" className="w-12 h-12 rounded-full flex-shrink-0" />
                     );
                   })()}
                   <div className="min-w-0">
