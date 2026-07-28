@@ -341,15 +341,13 @@ function App() {
         <div ref={mastheadRef} className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm safe-area-inset-top">
 
           {/* Ligne 1 : Logo + Carte profil (compacte) + Cloche */}
-          <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 py-1">
+          <div className="max-w-7xl mx-auto pl-1.5 pr-3 xs:pr-4 sm:pr-6 py-1">
             <div className="flex items-center justify-between gap-2">
               {/* Gauche : Logo */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {isAccueilConnecte && (
                   <Link to="/" className="flex-shrink-0 hover:opacity-80 transition-opacity" aria-label="Accueil">
-                    <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <img src="/logo-moftal.svg" alt="Moftal" width="66" height="66" style={{ width: 66, height: 66, display: "block" }}/>
-                    </div>
+                    <img src="/logo-moftal.svg" alt="Moftal" width="66" height="66" style={{ width: 66, height: 66, display: "block" }}/>
                   </Link>
                 )}
               </div>
