@@ -368,11 +368,11 @@ function App() {
                       <img
                         src={photoUrl}
                         alt="Photo de profil"
-                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 flex-shrink-0"
+                        className="w-[78px] h-[78px] rounded-full object-cover border-2 border-emerald-400 flex-shrink-0"
                         onError={(e) => { (e.target as HTMLImageElement).src = DefaultAvatar; }}
                       />
                     ) : (
-                      <img src={DefaultAvatar} alt="Avatar" className="w-12 h-12 rounded-full flex-shrink-0" />
+                      <img src={DefaultAvatar} alt="Avatar" className="w-[78px] h-[78px] rounded-full flex-shrink-0" />
                     );
                   })()}
                   <div className="min-w-0">
