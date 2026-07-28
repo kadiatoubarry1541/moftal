@@ -382,7 +382,7 @@ function App() {
                     </p>
                   </div>
                   {profileLogos.length > 0 && (
-                    <div className="flex items-center gap-1 flex-shrink-0" title="Logos attribués">
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-auto" title="Logos attribués">
                       {profileLogos.slice(0, 3).map(ul => (
                         <span
                           key={ul.id}
