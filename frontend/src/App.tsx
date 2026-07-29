@@ -213,8 +213,10 @@ function App() {
     return () => document.removeEventListener("mousedown", handle);
   }, [langOpen]);
 
+  // Le sous-menu Famille doit toujours être ouvert quand on arrive sur
+  // l'Accueil (c'est la page d'accueil), et fermé sur les autres pages.
   useEffect(() => {
-    setFamilyMenuOpen(false);
+    setFamilyMenuOpen(pathname === "/" || pathname === "/compte");
   }, [pathname]);
 
   // Différer le FloatingGuideIA après le premier rendu pour réduire le TBT initial
