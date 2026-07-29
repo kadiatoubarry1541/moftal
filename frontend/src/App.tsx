@@ -491,10 +491,11 @@ function App() {
               </div>
 
               {/* Sous-menu Famille — s'ouvre directement ici, sans changer de page.
-                  Fond vert + en-tête pour bien montrer que c'est la page Famille qui est
-                  ouverte, tout en laissant la ligne d'icônes accessible pour aller ailleurs. */}
+                  Fond blanc + fin trait vert (couleur exacte du logo) en haut pour bien
+                  montrer que c'est la page Famille qui est ouverte, tout en laissant la
+                  ligne d'icônes accessible pour aller ailleurs. */}
               {familyMenuOpen && (
-                <div className="border-t-2 border-emerald-500 bg-emerald-50">
+                <div className="border-t-2 border-emerald-500 bg-white">
                   <p className="flex items-center gap-1.5 px-4 pt-3 text-xs font-bold text-emerald-800">
                     <span>👨‍👩‍👧‍👦</span>
                     <span>Famille</span>
