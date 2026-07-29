@@ -580,8 +580,11 @@ function App() {
         </header>
       )}
 
-      {/* Main content - plein écran, chaque page gère son propre container */}
-      <main className="w-full flex-1" style={{ overflowX: 'clip' }}>
+      {/* Main content - plein écran, chaque page gère son propre container.
+          Pas de flex-1 sur l'Accueil connecté : sinon le pied de page est
+          étiré tout en bas de l'écran, avec un grand vide inutile au-dessus
+          quand le contenu (barre Famille/Terre ADAM/…) est court. */}
+      <main className={`w-full${isAccueilConnecte ? '' : ' flex-1'}`} style={{ overflowX: 'clip' }}>
         <Suspense fallback={<LoadingBar />}>
         <Routes>
           <Route path="/" element={<Home />} />
