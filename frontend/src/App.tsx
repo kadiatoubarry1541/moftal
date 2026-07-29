@@ -492,7 +492,7 @@ function App() {
 
               {/* Sous-menu Famille — s'ouvre directement ici, sans changer de page */}
               {familyMenuOpen && (
-                <div className="grid grid-cols-4 gap-2 px-2 pb-2">
+                <div className="grid grid-cols-2 gap-3 p-4 pt-6 max-w-md mx-auto">
                   {([
                     { id: "heritage",   emoji: "🌳", label: "Héritage"   },
                     { id: "amitie",     emoji: "💕", label: "Amitié"     },
@@ -502,10 +502,10 @@ function App() {
                     <button
                       key={item.id}
                       onClick={() => { setFamilyMenuOpen(false); navigate("/famille", { state: { tab: item.id } }); }}
-                      className="flex flex-col items-center gap-1 rounded-xl border border-gray-200 bg-white px-1 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
                     >
-                      <span className="text-xl leading-none">{item.emoji}</span>
-                      <span className="text-[10px] font-bold text-gray-900 text-center">{item.label}</span>
+                      <span className="text-3xl leading-none">{item.emoji}</span>
+                      <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
                     </button>
                   ))}
                 </div>
