@@ -198,7 +198,7 @@ export default function Arbre() {
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'hub' | 'arbre' | 'arbre-conjoint' | 'echanges' | 'foyer'>('hub')
+  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges' | 'foyer'>('echanges')
   const [foyerSection, setFoyerSection] = useState<'parents' | 'enfants' | 'femme' | 'homme' | null>('parents')
   const { t } = useI18n()
 
@@ -894,66 +894,76 @@ const enhancedUser: UserData = useMemo(() => {
     <div className="max-w-6xl mx-auto px-4 pb-6">
 
       {/* En-tête */}
-      <div className="flex items-center gap-2 pt-2 pb-1">
-        {activeTab !== 'hub' && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('hub')}
-            aria-label="Retour"
-            className="text-2xl leading-none text-gray-500 hover:text-gray-700 px-1"
-          >
-            ‹
-          </button>
-        )}
+      <div className="flex items-center pt-2 pb-1">
         <h1 className="text-2xl font-bold text-gray-900">Héritage</h1>
       </div>
 
-      {/* Menu principal — 6 boutons égaux, rien n'est ouvert par défaut */}
-      {activeTab === 'hub' && (
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <button type="button" onClick={() => setActiveTab('echanges')}
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+      {/* Navigation — une seule ligne compacte, 6 boutons */}
+      <div className="bg-white border-b border-gray-200 mb-4">
+        <nav className="flex" role="tablist">
+
+          <button type="button" role="tab" aria-selected={activeTab === 'echanges'}
+            onClick={() => setActiveTab('echanges')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
+              activeTab === 'echanges'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
           >
-            <span className="text-2xl leading-none">💬</span>
-            <span className="text-xs font-bold text-gray-900 text-center">Messages</span>
+            <span className="text-lg leading-none">💬</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Messages</span>
           </button>
 
-          <button type="button" onClick={() => setActiveTab('foyer')}
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+          <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
+            onClick={() => setActiveTab('foyer')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
+              activeTab === 'foyer'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
           >
-            <span className="text-2xl leading-none">🏠</span>
-            <span className="text-xs font-bold text-gray-900 text-center">Foyer</span>
+            <span className="text-lg leading-none">🏠</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Foyer</span>
           </button>
 
-          <button type="button" onClick={() => navigate('/probleme')}
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+          <button type="button"
+            onClick={() => navigate('/probleme')}
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            <span className="text-2xl leading-none">🚨</span>
-            <span className="text-xs font-bold text-gray-900 text-center">Problèmes</span>
+            <span className="text-lg leading-none">🚨</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Problèmes</span>
           </button>
 
-          <button type="button" onClick={openGallery}
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+          <button type="button"
+            onClick={openGallery}
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            <span className="text-2xl leading-none">📷</span>
-            <span className="text-xs font-bold text-gray-900 text-center">Galerie</span>
+            <span className="text-lg leading-none">📷</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Galerie</span>
           </button>
 
-          <button type="button" onClick={goToMairie}
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+          <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
+            onClick={() => setActiveTab('arbre')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
+              activeTab === 'arbre'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
           >
-            <span className="text-2xl leading-none">🏛️</span>
-            <span className="text-xs font-bold text-gray-900 text-center">Mairie</span>
+            <span className="text-lg leading-none">🌳</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Arbre</span>
           </button>
 
-          <button type="button" onClick={() => setActiveTab('arbre')}
-            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+          <button type="button"
+            onClick={goToMairie}
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            <span className="text-2xl leading-none">🌳</span>
-            <span className="text-xs font-bold text-gray-900 text-center">Arbre</span>
+            <span className="text-lg leading-none">🏛️</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Mairie</span>
           </button>
-        </div>
-      )}
+
+        </nav>
+      </div>
 
         {activeTab === 'arbre-conjoint' && partner && (
           <>
