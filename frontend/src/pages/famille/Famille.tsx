@@ -16,25 +16,11 @@ const MENU_ITEMS: { id: TabId; emoji: string; label: string }[] = [
   { id: 'solidarite', emoji: '🤝', label: 'Solidarité' },
 ]
 
-// Héritage reste la page principale — les 3 autres sont dans le menu ☰
-const DRAWER_ITEMS = MENU_ITEMS.filter(m => m.id !== 'heritage')
-
 export default function Famille() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<TabId>('heritage')
+  const [activeTab, setActiveTab] = useState<TabId | null>(null)
   const [user, setUser]           = useState<any>(null)
-  const [menuOpen, setMenuOpen]   = useState(false)
   const contentRef                = useRef<HTMLDivElement>(null)
-  const menuRef                   = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const onClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onClickOutside)
-    return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [menuOpen])
 
   useEffect(() => {
     const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
@@ -59,8 +45,8 @@ export default function Famille() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               type="button"
-              onClick={() => navigate('/compte')}
-              aria-label="Retour à l'accueil"
+              onClick={() => activeTab ? setActiveTab(null) : navigate('/compte')}
+              aria-label="Retour"
               style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 26, fontWeight: 300, lineHeight: 1, opacity: 0.9 }}
             >
               ‹
@@ -84,55 +70,38 @@ export default function Famille() {
                 👑 Admin
               </Link>
             )}
-
-            {/* Menu ☰ — Amitié / Récit / Solidarité (Héritage reste la page principale) */}
-            <div ref={menuRef} style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setMenuOpen(o => !o)}
-                aria-label="Autres sections de Famille"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' }}
-              >
-                ☰
-              </button>
-              {menuOpen && (
-                <div style={{ position: 'absolute', top: 38, right: 0, background: 'white', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', overflow: 'hidden', zIndex: 50, minWidth: 160 }}>
-                  {DRAWER_ITEMS.map(item => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => { handleSelect(item.id); setMenuOpen(false) }}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px',
-                        border: 'none', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', textAlign: 'left',
-                        background: activeTab === item.id ? '#f0fdf4' : 'white',
-                        color: activeTab === item.id ? '#166534' : '#1f2937',
-                        fontSize: 13, fontWeight: 700,
-                      }}
-                    >
-                      <span style={{ fontSize: 16 }}>{item.emoji}</span>
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </header>
 
       {/* ── Contenu ── */}
       <div ref={contentRef}>
-        <Suspense fallback={
-          <div className="flex items-center justify-center py-20">
-            <div className="h-9 w-9 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        {activeTab === null ? (
+          <div className="grid grid-cols-2 gap-3 p-4 max-w-2xl mx-auto">
+            {MENU_ITEMS.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelect(item.id)}
+                className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+              >
+                <span className="text-3xl leading-none">{item.emoji}</span>
+                <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
+              </button>
+            ))}
           </div>
-        }>
-          {activeTab === 'heritage'   && <HeritageTab />}
-          {activeTab === 'amitie'     && <AmitieTab />}
-          {activeTab === 'recit'      && <RecitTab />}
-          {activeTab === 'solidarite' && <SolidariteTab />}
-        </Suspense>
+        ) : (
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-20">
+              <div className="h-9 w-9 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          }>
+            {activeTab === 'heritage'   && <HeritageTab />}
+            {activeTab === 'amitie'     && <AmitieTab />}
+            {activeTab === 'recit'      && <RecitTab />}
+            {activeTab === 'solidarite' && <SolidariteTab />}
+          </Suspense>
+        )}
       </div>
 
     </div>
