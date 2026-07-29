@@ -490,24 +490,32 @@ function App() {
                 ))}
               </div>
 
-              {/* Sous-menu Famille — s'ouvre directement ici, sans changer de page */}
+              {/* Sous-menu Famille — s'ouvre directement ici, sans changer de page.
+                  Fond vert + en-tête pour bien montrer que c'est la page Famille qui est
+                  ouverte, tout en laissant la ligne d'icônes accessible pour aller ailleurs. */}
               {familyMenuOpen && (
-                <div className="grid grid-cols-2 gap-3 p-4 pt-6 max-w-md mx-auto">
-                  {([
-                    { id: "heritage",   emoji: "🌳", label: "Héritage"   },
-                    { id: "amitie",     emoji: "💕", label: "Amitié"     },
-                    { id: "recit",      emoji: "📜", label: "Récit"      },
-                    { id: "solidarite", emoji: "🤝", label: "Solidarité" },
-                  ] as { id: string; emoji: string; label: string }[]).map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => { setFamilyMenuOpen(false); navigate("/famille", { state: { tab: item.id } }); }}
-                      className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
-                    >
-                      <span className="text-3xl leading-none">{item.emoji}</span>
-                      <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
-                    </button>
-                  ))}
+                <div className="border-t-2 border-emerald-500 bg-emerald-50">
+                  <p className="flex items-center gap-1.5 px-4 pt-3 text-xs font-bold text-emerald-800">
+                    <span>👨‍👩‍👧‍👦</span>
+                    <span>Famille</span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 p-4 max-w-md mx-auto">
+                    {([
+                      { id: "heritage",   emoji: "🌳", label: "Héritage"   },
+                      { id: "amitie",     emoji: "💕", label: "Amitié"     },
+                      { id: "recit",      emoji: "📜", label: "Récit"      },
+                      { id: "solidarite", emoji: "🤝", label: "Solidarité" },
+                    ] as { id: string; emoji: string; label: string }[]).map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => { setFamilyMenuOpen(false); navigate("/famille", { state: { tab: item.id } }); }}
+                        className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+                      >
+                        <span className="text-3xl leading-none">{item.emoji}</span>
+                        <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
