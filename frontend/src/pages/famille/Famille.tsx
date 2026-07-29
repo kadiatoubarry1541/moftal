@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { isAdmin } from '../../utils/auth'
 import HeritageTab from './Arbre'
 
@@ -16,9 +16,15 @@ const MENU_ITEMS: { id: TabId; emoji: string; label: string }[] = [
   { id: 'solidarite', emoji: '🤝', label: 'Solidarité' },
 ]
 
+const VALID_TAB_IDS = MENU_ITEMS.map(m => m.id)
+
 export default function Famille() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<TabId | null>(null)
+  const location = useLocation()
+  const initialTab = (location.state as { tab?: string } | null)?.tab
+  const [activeTab, setActiveTab] = useState<TabId | null>(
+    VALID_TAB_IDS.includes(initialTab as TabId) ? (initialTab as TabId) : null
+  )
   const [user, setUser]           = useState<any>(null)
   const contentRef                = useRef<HTMLDivElement>(null)
 
