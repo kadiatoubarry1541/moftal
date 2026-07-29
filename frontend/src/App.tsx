@@ -199,7 +199,8 @@ function App() {
   const { pathname } = location;
   const [guideReady, setGuideReady] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const [familyMenuOpen, setFamilyMenuOpen] = useState(false);
+  // Ouvert par défaut : la page Famille est la page d'accueil.
+  const [familyMenuOpen, setFamilyMenuOpen] = useState(true);
   const langRef = useRef<HTMLDivElement>(null);
   const mastheadRef = useRef<HTMLDivElement>(null);
 
@@ -582,10 +583,9 @@ function App() {
       )}
 
       {/* Main content - plein écran, chaque page gère son propre container.
-          Pas de flex-1 sur l'Accueil connecté : sinon le pied de page est
-          étiré tout en bas de l'écran, avec un grand vide inutile au-dessus
-          quand le contenu (barre Famille/Terre ADAM/…) est court. */}
-      <main className={`w-full${isAccueilConnecte ? '' : ' flex-1'}`} style={{ overflowX: 'clip' }}>
+          flex-1 colle le pied de page en bas de l'écran quand le contenu est
+          court (pas de grand vide à traverser en scrollant pour l'atteindre). */}
+      <main className="w-full flex-1" style={{ overflowX: 'clip' }}>
         <Suspense fallback={<LoadingBar />}>
         <Routes>
           <Route path="/" element={<Home />} />
