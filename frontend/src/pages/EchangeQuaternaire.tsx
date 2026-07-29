@@ -234,7 +234,7 @@ export default function EchangeQuaternaire() {
             </p>
           </div>
           <a
-            href="mailto:lontal.profestionnelles@gmail.com"
+            href="mailto:support@moftal.com"
             className="flex-shrink-0 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-semibold transition-colors"
           >
             Nous contacter

@@ -22,7 +22,7 @@ export const CONDITIONS = [
   {
     num: 1,
     titre: 'Identification de la plateforme',
-    texte: "La plateforme Moftal (« Moftal ») est exploitée par son fondateur, entrepreneur individuel enregistré en République de Guinée (RCCM Conakry). Pour tout contact : moftal.contact@gmail.com. En créant un compte, vous concluez un accord juridiquement contraignant avec Moftal.",
+    texte: "La plateforme Moftal (« Moftal ») est exploitée par son fondateur, entrepreneur individuel enregistré en République de Guinée (RCCM Conakry). Pour tout contact : support@moftal.com. En créant un compte, vous concluez un accord juridiquement contraignant avec Moftal.",
   },
   {
     num: 2,
@@ -47,12 +47,12 @@ export const CONDITIONS = [
   {
     num: 6,
     titre: 'Protection des mineurs',
-    texte: "Les enfants de moins de 18 ans ne peuvent pas créer de compte personnel. Leurs informations ne peuvent apparaître dans un arbre généalogique que si un parent ou tuteur légal les a ajoutées. Tout compte d'un mineur détecté sera immédiatement suspendu. Si vous avez connaissance d'un mineur sans supervision sur la plateforme, signalez-le à moftal.contact@gmail.com.",
+    texte: "Les enfants de moins de 18 ans ne peuvent pas créer de compte personnel. Leurs informations ne peuvent apparaître dans un arbre généalogique que si un parent ou tuteur légal les a ajoutées. Tout compte d'un mineur détecté sera immédiatement suspendu. Si vous avez connaissance d'un mineur sans supervision sur la plateforme, signalez-le à support@moftal.com.",
   },
   {
     num: 7,
     titre: 'Liberté & Contrôle de vos données personnelles',
-    texte: "Tout utilisateur actif (NumeroH) a le droit à tout moment de : (1) consulter ses données personnelles, (2) les corriger ou les modifier, (3) demander la suppression de son compte actif en écrivant à moftal.contact@gmail.com — traité dans un délai de 30 jours. Important : ce droit s'applique uniquement aux comptes actifs des personnes vivantes. Les identités mémorielles des défunts (NumeroHD) dans l'arbre généalogique ne peuvent pas être supprimées car elles appartiennent à l'histoire familiale collective de l'humanité et sont protégées par le droit mémoriel. Si un défunt a été ajouté par erreur, seule une correction d'identité est possible sur demande écrite d'un membre de la famille.",
+    texte: "Tout utilisateur actif (NumeroH) a le droit à tout moment de : (1) consulter ses données personnelles, (2) les corriger ou les modifier, (3) demander la suppression de son compte actif en écrivant à support@moftal.com — traité dans un délai de 30 jours. Important : ce droit s'applique uniquement aux comptes actifs des personnes vivantes. Les identités mémorielles des défunts (NumeroHD) dans l'arbre généalogique ne peuvent pas être supprimées car elles appartiennent à l'histoire familiale collective de l'humanité et sont protégées par le droit mémoriel. Si un défunt a été ajouté par erreur, seule une correction d'identité est possible sur demande écrite d'un membre de la famille.",
   },
   {
     num: 8,

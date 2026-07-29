@@ -32,7 +32,7 @@ export default function PolitiqueConfidentialite() {
             Elle est hébergée sur des serveurs internationaux sécurisés.
           </p>
           <p className="mt-2">
-            Contact : <strong>alphadjomodiza@gmail.com</strong>
+            Contact : <strong>support@moftal.com</strong>
           </p>
         </Section>
 
@@ -88,7 +88,7 @@ export default function PolitiqueConfidentialite() {
             <li><strong>Droit de retrait</strong> : vous pouvez retirer votre consentement à tout moment</li>
           </ul>
           <p className="mt-2 text-sm text-gray-600">
-            Pour exercer ces droits, contactez-nous à <strong>alphadjomodiza@gmail.com</strong>
+            Pour exercer ces droits, contactez-nous à <strong>support@moftal.com</strong>
           </p>
         </Section>
 
@@ -145,7 +145,7 @@ export default function PolitiqueConfidentialite() {
           <p className="text-sm text-gray-700">
             Pour toute question sur vos données personnelles :
           </p>
-          <p className="font-bold text-green-700 mt-1">alphadjomodiza@gmail.com</p>
+          <p className="font-bold text-green-700 mt-1">support@moftal.com</p>
         </div>
 
         <button
