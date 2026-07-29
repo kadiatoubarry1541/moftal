@@ -793,8 +793,10 @@ function App() {
         </div>
       )}
 
-      {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes */}
-      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
+      {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes.
+          Padding du bas augmenté pour laisser la place au bouton flottant "Guide IA"
+          (toujours affiché avec le footer) : sinon il recouvre le texte du footer. */}
+      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-4" style={{ paddingBottom: 'calc(max(1rem, env(safe-area-inset-bottom, 0px)) + 88px)' }}>
         <div className="mx-auto px-6 text-center">
           <p className="text-gray-300 text-sm mb-2">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
