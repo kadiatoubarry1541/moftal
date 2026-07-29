@@ -893,6 +893,38 @@ const enhancedUser: UserData = useMemo(() => {
       <div className="bg-white border-b border-gray-200 mb-4">
         <nav className="flex" role="tablist">
 
+          <button type="button" role="tab" aria-selected={activeTab === 'echanges'}
+            onClick={() => setActiveTab('echanges')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
+              activeTab === 'echanges'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <span className="text-lg leading-none">💬</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Messages</span>
+          </button>
+
+          <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
+            onClick={() => setActiveTab('foyer')}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
+              activeTab === 'foyer'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <span className="text-lg leading-none">🏠</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Foyer</span>
+          </button>
+
+          <button type="button"
+            onClick={() => navigate('/probleme')}
+            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <span className="text-lg leading-none">🚨</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Problèmes</span>
+          </button>
+
           <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
             onClick={() => setActiveTab('arbre')}
             className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
@@ -956,8 +988,6 @@ const enhancedUser: UserData = useMemo(() => {
 
         {activeTab === 'arbre' && (
           <>
-            <h2 className="text-2xl font-bold mb-4">🌳 Héritage</h2>
-
             {/* ─── Numéro de sang familial ─── */}
             {treeInfo?.familyCode ? (
               <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 mb-4 flex items-center gap-3">
@@ -1048,32 +1078,8 @@ const enhancedUser: UserData = useMemo(() => {
               </div>
             )}
 
-            {/* ─── Messages, Foyer, Problèmes, Galerie, Mairie — toutes en petites cartes ─── */}
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => setActiveTab('echanges')}
-                className="flex flex-col items-start gap-1 rounded-xl border border-gray-200 bg-white px-2 py-2 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left shadow-sm"
-              >
-                <span className="text-lg">💬</span>
-                <p className="text-xs font-bold text-gray-900">Messages</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('foyer')}
-                className="flex flex-col items-start gap-1 rounded-xl border border-gray-200 bg-white px-2 py-2 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left shadow-sm"
-              >
-                <span className="text-lg">🏠</span>
-                <p className="text-xs font-bold text-gray-900">Foyer</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/probleme')}
-                className="flex flex-col items-start gap-1 rounded-xl border border-gray-200 bg-white px-2 py-2 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left shadow-sm"
-              >
-                <span className="text-lg">🚨</span>
-                <p className="text-xs font-bold text-gray-900">Problèmes</p>
-              </button>
+            {/* ─── Galerie + Mairie côte à côte ─── */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
               <button
                 type="button"
                 onClick={openGallery}
