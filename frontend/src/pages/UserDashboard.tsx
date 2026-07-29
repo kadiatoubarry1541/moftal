@@ -71,7 +71,9 @@ export function UserDashboard() {
 
   // L'accueil ne contient que les boutons et la carte de profil (dans le bandeau
   // du haut) — le contenu de chaque section n'apparaît qu'après y être entré.
-  return <div className="user-dashboard bg-gray-50 dark:bg-gray-900 min-h-screen" />;
+  // Pas de min-h-screen ici : cette coquille est vide, elle ne doit pas
+  // réserver toute la hauteur de l'écran et repousser le pied de page.
+  return <div className="user-dashboard bg-gray-50 dark:bg-gray-900" />;
 }
 
 export default UserDashboard;
