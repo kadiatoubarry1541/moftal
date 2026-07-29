@@ -199,6 +199,7 @@ function App() {
   const { pathname } = location;
   const [guideReady, setGuideReady] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [familyMenuOpen, setFamilyMenuOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
   const mastheadRef = useRef<HTMLDivElement>(null);
 
@@ -210,6 +211,10 @@ function App() {
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
   }, [langOpen]);
+
+  useEffect(() => {
+    setFamilyMenuOpen(false);
+  }, [pathname]);
 
   // Différer le FloatingGuideIA après le premier rendu pour réduire le TBT initial
   useEffect(() => {
@@ -471,8 +476,8 @@ function App() {
                 ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => navigate(item.path)}
-                    className="flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all hover:bg-gray-50"
+                    onClick={() => item.id === "famille" ? setFamilyMenuOpen(o => !o) : navigate(item.path)}
+                    className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all hover:bg-gray-50 ${item.id === "famille" && familyMenuOpen ? "bg-gray-100" : ""}`}
                   >
                     {item.id === "echanges"
                       ? <SalesIcon size={20} className="text-gray-500" />
@@ -484,6 +489,27 @@ function App() {
                   </button>
                 ))}
               </div>
+
+              {/* Sous-menu Famille — s'ouvre directement ici, sans changer de page */}
+              {familyMenuOpen && (
+                <div className="grid grid-cols-4 gap-2 px-2 pb-2">
+                  {([
+                    { id: "heritage",   emoji: "🌳", label: "Héritage"   },
+                    { id: "amitie",     emoji: "💕", label: "Amitié"     },
+                    { id: "recit",      emoji: "📜", label: "Récit"      },
+                    { id: "solidarite", emoji: "🤝", label: "Solidarité" },
+                  ] as { id: string; emoji: string; label: string }[]).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => { setFamilyMenuOpen(false); navigate("/famille", { state: { tab: item.id } }); }}
+                      className="flex flex-col items-center gap-1 rounded-xl border border-gray-200 bg-white px-1 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                    >
+                      <span className="text-xl leading-none">{item.emoji}</span>
+                      <span className="text-[10px] font-bold text-gray-900 text-center">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
