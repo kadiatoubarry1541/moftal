@@ -198,7 +198,7 @@ export default function Arbre() {
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges' | 'foyer'>('echanges')
+  const [activeTab, setActiveTab] = useState<'hub' | 'arbre' | 'arbre-conjoint' | 'echanges' | 'foyer'>('hub')
   const [foyerSection, setFoyerSection] = useState<'parents' | 'enfants' | 'femme' | 'homme' | null>('parents')
   const { t } = useI18n()
 
@@ -689,6 +689,15 @@ const enhancedUser: UserData = useMemo(() => {
     loadSharedGallery()
   }
 
+  const goToMairie = () => {
+    const session = JSON.parse(localStorage.getItem('session_user') || '{}')
+    const u = session.userData || session
+    const ville = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || ''
+    const params = new URLSearchParams({ type: 'mairie' })
+    if (ville) params.set('city', ville)
+    navigate(`/liste-professionnels?${params.toString()}`)
+  }
+
   const uploadToSharedGallery = async (file: File) => {
     try {
       setUploading(true)
@@ -885,77 +894,66 @@ const enhancedUser: UserData = useMemo(() => {
     <div className="max-w-6xl mx-auto px-4 pb-6">
 
       {/* En-tête */}
-      <div className="flex items-center pt-2 pb-1">
+      <div className="flex items-center gap-2 pt-2 pb-1">
+        {activeTab !== 'hub' && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('hub')}
+            aria-label="Retour"
+            className="text-2xl leading-none text-gray-500 hover:text-gray-700 px-1"
+          >
+            ‹
+          </button>
+        )}
         <h1 className="text-2xl font-bold text-gray-900">Héritage</h1>
       </div>
 
-      {/* Navigation — style Facebook plat */}
-      <div className="bg-white border-b border-gray-200 mb-4">
-        <nav className="flex" role="tablist">
-
-          <button type="button" role="tab" aria-selected={activeTab === 'echanges'}
-            onClick={() => setActiveTab('echanges')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'echanges'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
+      {/* Menu principal — 6 boutons égaux, rien n'est ouvert par défaut */}
+      {activeTab === 'hub' && (
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <button type="button" onClick={() => setActiveTab('echanges')}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
           >
-            <span className="text-lg leading-none">💬</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Messages</span>
+            <span className="text-2xl leading-none">💬</span>
+            <span className="text-xs font-bold text-gray-900 text-center">Messages</span>
           </button>
 
-          <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
-            onClick={() => setActiveTab('foyer')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'foyer'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
+          <button type="button" onClick={() => setActiveTab('foyer')}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
           >
-            <span className="text-lg leading-none">🏠</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Foyer</span>
+            <span className="text-2xl leading-none">🏠</span>
+            <span className="text-xs font-bold text-gray-900 text-center">Foyer</span>
           </button>
 
-          <button type="button"
-            onClick={() => navigate('/probleme')}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
+          <button type="button" onClick={() => navigate('/probleme')}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
           >
-            <span className="text-lg leading-none">🚨</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Problèmes</span>
+            <span className="text-2xl leading-none">🚨</span>
+            <span className="text-xs font-bold text-gray-900 text-center">Problèmes</span>
           </button>
 
-          <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
-            onClick={() => setActiveTab('arbre')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'arbre'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
+          <button type="button" onClick={openGallery}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
           >
-            <span className="text-lg leading-none">🌳</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Arbre</span>
+            <span className="text-2xl leading-none">📷</span>
+            <span className="text-xs font-bold text-gray-900 text-center">Galerie</span>
           </button>
 
-          {partner && (
-            <button type="button" role="tab" aria-selected={activeTab === 'arbre-conjoint'}
-              onClick={() => setActiveTab('arbre-conjoint')}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-                activeTab === 'arbre-conjoint'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {partner.photo
-                ? <img src={partner.photo} alt={partner.prenom} className="w-5 h-5 rounded-full object-cover" />
-                : <span className="text-lg leading-none">💑</span>
-              }
-              <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{partner.prenom}</span>
-            </button>
-          )}
+          <button type="button" onClick={goToMairie}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+          >
+            <span className="text-2xl leading-none">🏛️</span>
+            <span className="text-xs font-bold text-gray-900 text-center">Mairie</span>
+          </button>
 
-        </nav>
-      </div>
+          <button type="button" onClick={() => setActiveTab('arbre')}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-2 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+          >
+            <span className="text-2xl leading-none">🌳</span>
+            <span className="text-xs font-bold text-gray-900 text-center">Arbre</span>
+          </button>
+        </div>
+      )}
 
         {activeTab === 'arbre-conjoint' && partner && (
           <>
@@ -988,6 +986,20 @@ const enhancedUser: UserData = useMemo(() => {
 
         {activeTab === 'arbre' && (
           <>
+            {partner && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('arbre-conjoint')}
+                className="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-pink-600 hover:text-pink-700"
+              >
+                {partner.photo
+                  ? <img src={partner.photo} alt={partner.prenom} className="w-5 h-5 rounded-full object-cover" />
+                  : <span>💑</span>
+                }
+                Voir l'arbre de {partner.prenom}
+              </button>
+            )}
+
             {/* ─── Numéro de sang familial ─── */}
             {treeInfo?.familyCode ? (
               <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 mb-4 flex items-center gap-3">
@@ -1077,33 +1089,6 @@ const enhancedUser: UserData = useMemo(() => {
                 )}
               </div>
             )}
-
-            {/* ─── Galerie + Mairie côte à côte ─── */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button
-                type="button"
-                onClick={openGallery}
-                className="flex flex-col items-start gap-1 rounded-xl border border-gray-200 bg-white px-2 py-2 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left shadow-sm"
-              >
-                <span className="text-lg">📷</span>
-                <p className="text-xs font-bold text-gray-900">Galerie</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const session = JSON.parse(localStorage.getItem('session_user') || '{}')
-                  const u = session.userData || session
-                  const ville = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || ''
-                  const params = new URLSearchParams({ type: 'mairie' })
-                  if (ville) params.set('city', ville)
-                  navigate(`/liste-professionnels?${params.toString()}`)
-                }}
-                className="flex flex-col items-start gap-1 rounded-xl border border-gray-200 bg-white px-2 py-2 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left shadow-sm"
-              >
-                <span className="text-lg">🏛️</span>
-                <p className="text-xs font-bold text-gray-900">Mairie</p>
-              </button>
-            </div>
 
             {/* ─── Filtre vivants / décédés ─── */}
             {treeInfo && (
