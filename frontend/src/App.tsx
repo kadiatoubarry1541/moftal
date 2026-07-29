@@ -793,8 +793,10 @@ function App() {
         </div>
       )}
 
-      {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes */}
-      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white py-4 safe-area-inset-bottom">
+      {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes.
+          Padding du bas augmenté pour laisser la place au bouton flottant "Guide IA"
+          (toujours affiché avec le footer) : sinon il recouvre le texte du footer. */}
+      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-4" style={{ paddingBottom: 'calc(max(1rem, env(safe-area-inset-bottom, 0px)) + 88px)' }}>
         <div className="mx-auto px-6 text-center">
           <p className="text-gray-300 text-sm mb-2">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
@@ -807,6 +809,12 @@ function App() {
               </svg>
               {t('footer.conditions')}
             </Link>
+            <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-sm underline transition-colors inline-flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              support@moftal.com
+            </a>
           </div>
         </div>
       </footer>}
