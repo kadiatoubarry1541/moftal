@@ -338,9 +338,13 @@ function App() {
   const isAccueilConnecte = isLoggedIn && (pathname === "/" || pathname === "/compte");
   const showFullHeader = !isLoggedIn || isHome;
   return (
-    <div className={!isFullscreenPage ? "bg-gray-900 min-h-screen" : ""}>
+    {/* min-h-dvh (pas min-h-screen) : sur mobile, 100vh ne suit pas la barre
+        d'adresse qui apparaît/disparaît, ce qui laissait un grand vide entre
+        le pied de page et le vrai bas de l'écran. dvh suit la hauteur réelle
+        visible. */}
+    <div className={!isFullscreenPage ? "bg-gray-900 min-h-dvh" : ""}>
     <GestionPaymentGate />
-    <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-screen' : ''}${isHome ? ' h-screen overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
+    <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-dvh' : ''}${isHome ? ' h-dvh overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine, et sur les
           pages qui n'ont rien à y afficher (Famille/Terre ADAM/Échanges/Services ont
           leur propre en-tête) : sinon la barre restait affichée vide, blanche. */}
@@ -794,28 +798,32 @@ function App() {
       )}
 
       {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes.
-          Padding du bas augmenté pour laisser la place au bouton flottant "Guide IA"
-          (toujours affiché avec le footer) : sinon il recouvre le texte du footer. */}
-      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-4" style={{ paddingBottom: 'calc(max(1rem, env(safe-area-inset-bottom, 0px)) + 88px)' }}>
-        <div className="mx-auto px-6 text-center">
-          <p className="text-gray-300 text-sm mb-2">
+          Compact, chaque information sur sa propre ligne. Une marge à droite
+          (pr-24) réserve la place du bouton flottant "Guide IA" sans avoir
+          besoin d'un grand vide sous le footer : le texte ne passe jamais
+          dessous. */}
+      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}>
+        <div className="mx-auto pl-6 pr-24 text-center space-y-2">
+          <p className="text-gray-300 text-sm">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
             {" · "}{t('footer.tagline')}{" · "}{t('footer.system')}
           </p>
-          <div className="flex items-center justify-center gap-5 flex-wrap">
+          <p>
             <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-sm underline transition-colors inline-flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               {t('footer.conditions')}
             </Link>
+          </p>
+          <p>
             <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-sm underline transition-colors inline-flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              support@moftal.com
+              Contact : support@moftal.com
             </a>
-          </div>
+          </p>
         </div>
       </footer>}
 
