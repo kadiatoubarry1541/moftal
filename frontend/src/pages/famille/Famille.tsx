@@ -51,8 +51,8 @@ export default function Famille() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               type="button"
-              onClick={() => activeTab ? setActiveTab(null) : navigate('/compte')}
-              aria-label="Retour"
+              onClick={() => navigate('/compte')}
+              aria-label="Retour à l'accueil"
               style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 26, fontWeight: 300, lineHeight: 1, opacity: 0.9 }}
             >
               ‹
