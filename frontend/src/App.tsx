@@ -540,7 +540,7 @@ function App() {
             <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
               <button
                 onClick={() => navigate(-1 as any)}
-                style={{ background: "none", color: "white", border: "none", padding: "2px 2px", cursor: "pointer", fontSize: 26, fontWeight: 300, lineHeight: 1, flexShrink: 0, opacity: 0.9 }}
+                style={{ background: "none", color: "white", border: "none", padding: "2px 2px", cursor: "pointer", fontSize: 34, fontWeight: 700, lineHeight: 1, flexShrink: 0, opacity: 1 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = "0.9"; }}
               >
