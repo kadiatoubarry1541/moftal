@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { isAdmin } from '../utils/auth';
 import PaymentModal from '../components/PaymentModal';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -383,7 +385,7 @@ export default function Zaka() {
   const loadFormations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/education/formations?category=religieux', {
+      const response = await fetch(`${API_BASE}/api/education/formations?category=religieux`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -405,7 +407,7 @@ export default function Zaka() {
   const loadStages = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/education/stages?category=religieux', {
+      const response = await fetch(`${API_BASE}/api/education/stages?category=religieux`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -427,7 +429,7 @@ export default function Zaka() {
   const loadCourses = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/education/courses?category=religieux', {
+      const response = await fetch(`${API_BASE}/api/education/courses?category=religieux`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -449,7 +451,7 @@ export default function Zaka() {
   const loadMyRegistrations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/education/my-registrations', {
+      const response = await fetch(`${API_BASE}/api/education/my-registrations`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -468,7 +470,7 @@ export default function Zaka() {
   const loadMyStageRequests = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/education/my-stage-requests', {
+      const response = await fetch(`${API_BASE}/api/education/my-stage-requests`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -487,7 +489,7 @@ export default function Zaka() {
   const loadMyProgress = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/education/my-progress', {
+      const response = await fetch(`${API_BASE}/api/education/my-progress`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -506,7 +508,7 @@ export default function Zaka() {
   const loadMyCertificates = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/education/my-certificates', {
+      const response = await fetch(`${API_BASE}/api/education/my-certificates`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -553,7 +555,7 @@ export default function Zaka() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/education/formations/${selectedFormation.id}/register`, {
+      const response = await fetch(`${API_BASE}/api/education/formations/${selectedFormation.id}/register`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -584,7 +586,7 @@ export default function Zaka() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/education/stages/${selectedStage.id}/request`, {
+      const response = await fetch(`${API_BASE}/api/education/stages/${selectedStage.id}/request`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

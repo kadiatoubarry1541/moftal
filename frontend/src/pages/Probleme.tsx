@@ -123,7 +123,7 @@ export default function Probleme() {
       try {
         setLoadingMedia(true);
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5002/api/family/problems/media", {
+        const res = await fetch(`${API}/api/family/problems/media`, {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
           },
@@ -149,7 +149,7 @@ export default function Probleme() {
       const formData = new FormData();
       formData.append("media", file);
       formData.append("description", description);
-      const res = await fetch("http://localhost:5002/api/family/problems/media", {
+      const res = await fetch(`${API}/api/family/problems/media`, {
         method: "POST",
         headers: {
           Authorization: token ? `Bearer ${token}` : "",

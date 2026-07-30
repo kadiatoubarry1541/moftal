@@ -219,7 +219,7 @@ export default function AdminDashboard() {
     setCouplesLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5002/api/couple/admin/all-links", {
+      const res = await fetch(`${API_BASE}/api/couple/admin/all-links`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
     setPcLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5002/api/parent-child/admin/all-links", {
+      const res = await fetch(`${API_BASE}/api/parent-child/admin/all-links`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
     setFamiliesLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5002/api/admin/families", {
+      const res = await fetch(`${API_BASE}/api/admin/families`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();

@@ -689,7 +689,7 @@ export default function AdminBadges() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/page-admins/${id}`, {
+      const response = await fetch(`${config.API_BASE_URL}/page-admins/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

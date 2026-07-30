@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
+
 interface ProAccount {
   id: string;
   type: string;
@@ -68,7 +70,7 @@ export default function PrendreRendezVous() {
 
   const loadAccount = async () => {
     try {
-      const res = await fetch(`http://localhost:5002/api/professionals/detail/${id}`);
+      const res = await fetch(`${API_BASE}/api/professionals/detail/${id}`);
       const data = await res.json();
       if (data.success) setAccount(data.account);
     } catch (err) {
@@ -85,7 +87,7 @@ export default function PrendreRendezVous() {
     setSending(true);
     setError("");
     try {
-      const res = await fetch("http://localhost:5002/api/appointments/book", {
+      const res = await fetch(`${API_BASE}/api/appointments/book`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -122,7 +124,7 @@ export default function PrendreRendezVous() {
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const res = await fetch("http://localhost:5002/api/appointments/book", {
+        const res = await fetch(`${API_BASE}/api/appointments/book`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({

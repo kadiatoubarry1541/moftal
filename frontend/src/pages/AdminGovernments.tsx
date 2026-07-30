@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSessionUser, isAdmin } from '../utils/auth';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -120,7 +122,7 @@ export default function AdminGovernments() {
   const loadGovernments = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/governments?active=true', {
+      const response = await fetch(`${API_BASE}/api/governments?active=true`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -140,7 +142,7 @@ export default function AdminGovernments() {
   const loadGovernmentDetails = async (id: number) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/governments/${id}`, {
+      const response = await fetch(`${API_BASE}/api/governments/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -158,7 +160,7 @@ export default function AdminGovernments() {
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/admin/users', {
+      const response = await fetch(`${API_BASE}/api/admin/users`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -181,7 +183,7 @@ export default function AdminGovernments() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/governments', {
+      const response = await fetch(`${API_BASE}/api/governments`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -215,7 +217,7 @@ export default function AdminGovernments() {
     try {
       const token = localStorage.getItem("token");
       const selectedRole = ROLES.find(r => r.value === newMember.role);
-      const response = await fetch(`http://localhost:5002/api/governments/${selectedGovernment.id}/members`, {
+      const response = await fetch(`${API_BASE}/api/governments/${selectedGovernment.id}/members`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -251,7 +253,7 @@ export default function AdminGovernments() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/governments/${selectedGovernment.id}/members/${memberId}`, {
+      const response = await fetch(`${API_BASE}/api/governments/${selectedGovernment.id}/members/${memberId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

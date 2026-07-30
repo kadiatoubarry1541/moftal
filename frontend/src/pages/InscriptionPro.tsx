@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
+
 const PRO_TYPES = [
   { id: "clinic",          label: "Clinique / Hôpital",              icon: "🏥", desc: "Recevez et gérez les rendez-vous des patients" },
   { id: "health_worker",   label: "Médecin / Agent de santé",        icon: "👨‍⚕️", desc: "Publiez vos consultations et services médicaux individuels" },
@@ -151,7 +153,7 @@ export default function InscriptionPro() {
     try {
       const token = localStorage.getItem('token');
       const r = await fetch(
-        `http://localhost:5002/api/professionals/verifier-nom?nom=${encodeURIComponent(nom)}`,
+        `${API_BASE}/api/professionals/verifier-nom?nom=${encodeURIComponent(nom)}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const d = await r.json();
@@ -277,7 +279,7 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
         }
       }
 
-      const res = await fetch("http://localhost:5002/api/professionals/register", {
+      const res = await fetch(`${API_BASE}/api/professionals/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
