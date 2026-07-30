@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
 const DOMAINES = [
   { id: 'agriculture',    label: 'Agriculture',           emoji: '🌾', color: '#156315', bg: '#f0fdf0', desc: 'Production locale, irrigation, coopératives agricoles' },
   { id: 'habitat',        label: 'Habitat & Logement',    emoji: '🏗️', color: '#0891b2', bg: '#ecfeff', desc: 'Construction, matériaux locaux, planification urbaine' },
@@ -46,7 +48,7 @@ export default function DeveloppementSection({ scope, location, locationName }: 
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(
-        `http://localhost:5002/api/developpement/stats?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
+        `${API_BASE}/api/developpement/stats?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.ok) {
@@ -62,7 +64,7 @@ export default function DeveloppementSection({ scope, location, locationName }: 
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(
-        `http://localhost:5002/api/developpement/mes-dons?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
+        `${API_BASE}/api/developpement/mes-dons?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.ok) {
@@ -77,7 +79,7 @@ export default function DeveloppementSection({ scope, location, locationName }: 
     setDonLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5002/api/developpement/donate', {
+      const res = await fetch(`${API_BASE}/api/developpement/donate`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...donForm, scope, location })

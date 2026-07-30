@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
+
 interface ProAccount {
   id: string;
   type: string;
@@ -52,7 +54,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
   const loadAccounts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:5002/api/professionals/approved?type=${type}`);
+      const res = await fetch(`${API_BASE}/api/professionals/approved?type=${type}`);
       const data = await res.json();
       if (data.success) setRawAccounts(data.accounts || []);
     } catch (error) {

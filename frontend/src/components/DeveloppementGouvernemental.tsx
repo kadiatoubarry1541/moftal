@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
 const DOMAINES_MAP: Record<string, { emoji: string; color: string }> = {
   agriculture:    { emoji: '🌾', color: '#156315' },
   habitat:        { emoji: '🏗️', color: '#0891b2' },
@@ -82,7 +84,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const [sigEnvoye, setSigEnvoye] = useState(false);
 
   const token = () => localStorage.getItem('token');
-  const api = (path: string) => `http://localhost:5002/api/developpement${path}`;
+  const api = (path: string) => `${API_BASE}/api/developpement${path}`;
   const qs = `scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`;
 
   useEffect(() => {

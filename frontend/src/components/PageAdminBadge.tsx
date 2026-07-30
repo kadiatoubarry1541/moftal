@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
 interface PageAdminData {
   id: number;
   pagePath: string;
@@ -30,7 +32,7 @@ export default function PageAdminBadge({ pagePath, currentUserNumeroH }: PageAdm
     try {
       // Nettoyer le pagePath pour l'API
       const cleanPath = pagePath.replace(/^\//, '');
-      const response = await fetch(`http://localhost:5002/api/page-admins/page/${cleanPath}`);
+      const response = await fetch(`${API_BASE}/api/page-admins/page/${cleanPath}`);
       
       if (response.ok) {
         const data = await response.json();

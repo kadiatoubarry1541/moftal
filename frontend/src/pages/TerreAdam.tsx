@@ -12,6 +12,8 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import DeveloppementSection from '../components/DeveloppementSection';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -285,7 +287,7 @@ export default function TerreAdam() {
     // de ces champs (ex: connexions effectuées avant une mise à jour de l'app).
     const token = localStorage.getItem("token");
     if (token) {
-      fetch('http://localhost:5002/api/auth/me', {
+      fetch(`${API_BASE}/api/auth/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => (res.ok ? res.json() : null))
@@ -344,7 +346,7 @@ export default function TerreAdam() {
     try {
       // Admin avec filtre "Tout voir" : tous les groupes
       if (isAdmin && filterScope === 'all') {
-        const response = await fetch(`http://localhost:5002/api/residences/groups?location=`, {
+        const response = await fetch(`${API_BASE}/api/residences/groups?location=`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
         const data = await response.json();
@@ -372,7 +374,7 @@ export default function TerreAdam() {
       const seenIds = new Set<string>();
       for (const loc of quartiersToLoad) {
         const normalizedLoc = normalizeLoc(loc);
-        const response = await fetch(`http://localhost:5002/api/residences/groups?location=${encodeURIComponent(normalizedLoc)}`, {
+        const response = await fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(normalizedLoc)}`, {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         });
         const data = await response.json();
@@ -400,7 +402,7 @@ export default function TerreAdam() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/residences/groups/${selectedGroup.id}/messages`, {
+      const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -483,7 +485,7 @@ export default function TerreAdam() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/residences/groups/${selectedGroup.id}/messages`, {
+      const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -537,7 +539,7 @@ export default function TerreAdam() {
       if (newMessage.mediaFile) formData.append('media', newMessage.mediaFile);
 
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/residences/groups/${selectedGroup.id}/messages`, {
+      const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -888,7 +890,7 @@ export default function TerreAdam() {
                                 const canalData = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === (msg.category || 'information'));
                                 const categoryData = QUARTIER_CATEGORIES.find(c => c.id === (msg.category || 'information'));
                                 const colors = getCanalColors(canalData?.color || 'blue');
-                                const toMediaUrl = (url: string) => url.startsWith('http') ? url : `http://localhost:5002${url.startsWith('/') ? url : '/' + url}`;
+                                const toMediaUrl = (url: string) => url.startsWith('http') ? url : `${API_BASE}${url.startsWith('/') ? url : '/' + url}`;
                                 return (
                                   <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[82%] rounded-2xl shadow-sm overflow-hidden border-2 bg-white ${

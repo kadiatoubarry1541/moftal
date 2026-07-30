@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { hideIncrement } from '../utils/formatNumeroH';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -124,7 +126,7 @@ export default function BasseGuinee() {
   const loadGroups = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/regions/groups?region=Basse-Guinée', {
+      const response = await fetch(`${API_BASE}/api/regions/groups?region=Basse-Guinée`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -145,7 +147,7 @@ export default function BasseGuinee() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/regions/groups/${selectedGroup.id}/messages`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${selectedGroup.id}/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -163,7 +165,7 @@ export default function BasseGuinee() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/regions/groups/${selectedGroup.id}/check-permission`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${selectedGroup.id}/check-permission`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -183,7 +185,7 @@ export default function BasseGuinee() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/regions/groups/${selectedGroup.id}/permissions`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${selectedGroup.id}/permissions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -223,7 +225,7 @@ export default function BasseGuinee() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/regions/groups/${selectedGroup.id}/messages`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -286,7 +288,7 @@ export default function BasseGuinee() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/regions/groups/${selectedGroup.id}/permissions`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${selectedGroup.id}/permissions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -313,7 +315,7 @@ export default function BasseGuinee() {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5002/api/regions/groups/${selectedGroup.id}/permissions/${numeroH}`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${selectedGroup.id}/permissions/${numeroH}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -378,7 +380,7 @@ export default function BasseGuinee() {
   const createEvent = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/regions/basse-guinee/events', {
+      const response = await fetch(`${API_BASE}/api/regions/basse-guinee/events`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -404,7 +406,7 @@ export default function BasseGuinee() {
   const createAnnouncement = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('http://localhost:5002/api/regions/basse-guinee/announcements', {
+      const response = await fetch(`${API_BASE}/api/regions/basse-guinee/announcements`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -863,21 +865,21 @@ export default function BasseGuinee() {
                         )}
                         {msg.messageType === 'image' && msg.mediaUrl && (
                           <img
-                            src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
+                            src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_BASE}${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
                             alt="Image"
                             className="max-w-full h-auto rounded-lg mb-1"
                           />
                       )}
                         {msg.messageType === 'video' && msg.mediaUrl && (
                           <video
-                            src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
+                            src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_BASE}${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
                             controls
                             className="max-w-full h-auto rounded-lg mb-1"
                           />
                       )}
                         {msg.messageType === 'audio' && msg.mediaUrl && (
                           <audio
-                            src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `http://localhost:5002${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
+                            src={msg.mediaUrl.startsWith('http') ? msg.mediaUrl : `${API_BASE}${msg.mediaUrl.startsWith('/') ? msg.mediaUrl : '/' + msg.mediaUrl}`}
                             controls
                             className="w-full mb-1"
                           />

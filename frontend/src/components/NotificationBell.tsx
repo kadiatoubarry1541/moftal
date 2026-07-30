@@ -4,6 +4,8 @@ import toast from "react-hot-toast";
 import { getSocket } from "../services/socket";
 import InstallAppButton from "./InstallAppButton";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
+
 interface Notification {
   id: string;
   type: string;
@@ -68,7 +70,7 @@ async function setupPushNotifications() {
   try {
     const token = localStorage.getItem("token");
     if (!token) return;
-    const res = await fetch("http://localhost:5002/api/push/vapid-key", {
+    const res = await fetch(`${API_BASE}/api/push/vapid-key`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await res.json();
@@ -78,7 +80,7 @@ async function setupPushNotifications() {
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
     }
-    await fetch("http://localhost:5002/api/push/subscribe", {
+    await fetch(`${API_BASE}/api/push/subscribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(subscription.toJSON())
@@ -188,7 +190,7 @@ export default function NotificationBell() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const res = await fetch("http://localhost:5002/api/notifications", {
+      const res = await fetch(`${API_BASE}/api/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -203,7 +205,7 @@ export default function NotificationBell() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const res = await fetch("http://localhost:5002/api/notifications/unread-count", {
+      const res = await fetch(`${API_BASE}/api/notifications/unread-count`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -214,7 +216,7 @@ export default function NotificationBell() {
   const markAllRead = async () => {
     try {
       const token = localStorage.getItem("token");
-      await fetch("http://localhost:5002/api/notifications/mark-all-read", {
+      await fetch(`${API_BASE}/api/notifications/mark-all-read`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -227,7 +229,7 @@ export default function NotificationBell() {
     if (!notif.isRead) {
       try {
         const token = localStorage.getItem("token");
-        await fetch(`http://localhost:5002/api/notifications/mark-read/${notif.id}`, {
+        await fetch(`${API_BASE}/api/notifications/mark-read/${notif.id}`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -371,7 +373,7 @@ function NotifItem({ notif, onNavigate, navigate, setOpen, setNotifications, set
     e.stopPropagation();
     try {
       const token = localStorage.getItem("token");
-      await fetch(`http://localhost:5002/api/notifications/mark-read/${notif.id}`, {
+      await fetch(`${API_BASE}/api/notifications/mark-read/${notif.id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -386,7 +388,7 @@ function NotifItem({ notif, onNavigate, navigate, setOpen, setNotifications, set
     e.stopPropagation();
     try {
       const token = localStorage.getItem("token");
-      await fetch(`http://localhost:5002/api/notifications/mark-read/${notif.id}`, {
+      await fetch(`${API_BASE}/api/notifications/mark-read/${notif.id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
