@@ -337,11 +337,10 @@ function App() {
   // "/compte" qui est la vraie page d'accueil vue par les utilisateurs connectés.
   const isAccueilConnecte = isLoggedIn && (pathname === "/" || pathname === "/compte");
   const showFullHeader = !isLoggedIn || isHome;
+  // min-h-dvh (pas min-h-screen) : sur mobile, 100vh ne suit pas la barre
+  // d'adresse qui apparaît/disparaît, ce qui laissait un grand vide entre
+  // le pied de page et le vrai bas de l'écran. dvh suit la hauteur réelle visible.
   return (
-    {/* min-h-dvh (pas min-h-screen) : sur mobile, 100vh ne suit pas la barre
-        d'adresse qui apparaît/disparaît, ce qui laissait un grand vide entre
-        le pied de page et le vrai bas de l'écran. dvh suit la hauteur réelle
-        visible. */}
     <div className={!isFullscreenPage ? "bg-gray-900 min-h-dvh" : ""}>
     <GestionPaymentGate />
     <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-dvh' : ''}${isHome ? ' h-dvh overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
