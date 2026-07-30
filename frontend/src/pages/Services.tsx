@@ -108,7 +108,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
             type="button"
             onClick={() => navigate('/compte')}
             aria-label="Retour à l'accueil"
-            style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 26, fontWeight: 300, lineHeight: 1, opacity: 0.9 }}
+            style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
           >
             ‹
           </button>
