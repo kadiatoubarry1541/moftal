@@ -491,8 +491,6 @@ export function FloatingGuideIA() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const rightMargin = '1.5rem';
-  const buttonSize = 60;
-  const iconSize = 28;
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
@@ -543,48 +541,30 @@ export function FloatingGuideIA() {
 
   return (
     <>
-      {/* ── Bouton flottant ── */}
+      {/* ── Bouton — reste dans le pied de page, ne flotte plus sur le reste du site ── */}
       <button
         aria-label="Assistant IA - Guide du site"
         onClick={() => setOpen(o => !o)}
-        className="fixed z-[60] flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 select-none"
+        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-white transition-all hover:scale-105 active:scale-95 select-none"
         style={{
-          bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem)`,
-          right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
-          width: buttonSize, height: buttonSize,
           background: 'linear-gradient(135deg,#1a8f1a 0%,#156315 50%,#0f4b0f 100%)',
           boxShadow: open
-            ? '0 8px 32px rgba(34,167,34,0.7)'
-            : '0 8px 32px rgba(34,167,34,0.45)',
+            ? '0 4px 16px rgba(34,167,34,0.6)'
+            : '0 4px 16px rgba(34,167,34,0.35)',
         }}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width={iconSize} height={iconSize} fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}>
+        <svg xmlns="http://www.w3.org/2000/svg" width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
+        Guide IA
       </button>
 
-      {/* ── Tooltip ── */}
-      {!open && (
-        <div
-          className="fixed z-[59] px-3 py-1 rounded-xl text-xs font-semibold text-white pointer-events-none"
-          style={{
-            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${buttonSize + 8}px)`,
-            right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
-            background: 'linear-gradient(135deg,#1a8f1a,#156315)',
-            whiteSpace: 'nowrap',
-            opacity: 0.9,
-          }}
-        >
-          Guide IA
-        </div>
-      )}
-
-      {/* ── Panel chat ── */}
+      {/* ── Panel chat — reste en survol fixe pour rester utilisable en scrollant ── */}
       {open && (
         <div
           className="fixed z-[59] flex flex-col rounded-2xl overflow-hidden"
           style={{
-            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem + ${buttonSize + 12}px)`,
+            bottom: `calc(env(safe-area-inset-bottom, 0px) + 1.5rem)`,
             right: `calc(env(safe-area-inset-right, 0px) + ${rightMargin})`,
             width: 'min(400px, calc(100vw - 2rem))',
             height: 'min(600px, calc(100vh - 120px))',
