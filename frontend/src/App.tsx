@@ -797,15 +797,13 @@ function App() {
       )}
 
       {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes.
-          Compact, chaque information sur sa propre ligne. Une marge à droite
-          (pr-24) réserve la place du bouton flottant "Guide IA" sans avoir
-          besoin d'un grand vide sous le footer : le texte ne passe jamais
-          dessous. */}
+          Compact, chaque information sur sa propre ligne. Le bouton "Guide IA"
+          vit ici, dans le footer — il ne flotte plus sur le reste du site. */}
       {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}>
-        <div className="mx-auto pl-6 pr-24 text-center space-y-0.5">
+        <div className="mx-auto px-6 text-center space-y-0.5">
           <p className="text-gray-300 text-[11px]">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
-            {" · "}{t('footer.tagline')}
+            {" · "}{t('footer.tagline')}{" · "}{t('footer.system')}
           </p>
           <p>
             <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-[11px] underline transition-colors">
@@ -817,15 +815,15 @@ function App() {
               {t('footer.conditions')}
             </Link>
           </p>
+          {guideReady && (
+            <p className="pt-1">
+              <Suspense fallback={null}>
+                <FloatingGuideIA />
+              </Suspense>
+            </p>
+          )}
         </div>
       </footer>}
-
-      {/* Assistant IA Guide — masqué en mode gestion et sur les applis autonomes */}
-      {!isGestionMode && !isStandaloneAppPage && guideReady && (
-        <Suspense fallback={null}>
-          <FloatingGuideIA />
-        </Suspense>
-      )}
 
       {/* Toast Notifications */}
       <Toaster
