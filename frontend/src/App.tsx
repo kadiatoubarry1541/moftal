@@ -816,7 +816,7 @@ function App() {
             </Link>
           </p>
           {guideReady && (
-            <p className="pt-1">
+            <p className="pt-3">
               <Suspense fallback={null}>
                 <FloatingGuideIA />
               </Suspense>
