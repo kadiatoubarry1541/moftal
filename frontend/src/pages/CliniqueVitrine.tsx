@@ -39,6 +39,7 @@ export default function CliniqueVitrine() {
   const [clinic, setClinic] = useState<any>(null);
   const [staff, setStaff] = useState<any[]>([]);
   const [services, setServices] = useState<string[]>([]);
+  const [hasPharmacy, setHasPharmacy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPatient, setIsPatient] = useState<boolean | null>(null);
@@ -52,11 +53,13 @@ export default function CliniqueVitrine() {
       fetch(`${API_BASE}/clinic-public/${code}`).then(r => r.json()),
       fetch(`${API_BASE}/clinic-public/${code}/staff`).then(r => r.json()),
       fetch(`${API_BASE}/clinic-public/${code}/services`).then(r => r.json()),
-    ]).then(([c, s, sv]) => {
+      fetch(`${API_BASE}/clinic-public/${code}/pharmacy-status`).then(r => r.json()),
+    ]).then(([c, s, sv, ph]) => {
       if (c.success) setClinic(c.clinic);
       else setError(c.message || "Clinique introuvable");
       if (s.success) setStaff(s.staff);
       if (sv.success) setServices(sv.services);
+      if (ph.success) setHasPharmacy(ph.hasPharmacy);
     }).catch(() => setError("Impossible de charger la clinique."))
       .finally(() => setLoading(false));
   }, [tenantCode]);
@@ -313,7 +316,9 @@ export default function CliniqueVitrine() {
         </section>
       )}
 
-      {/* ── PHARMACIE ─────────────────────────────────────────────────────────── */}
+      {/* ── PHARMACIE — affichée seulement si la clinique a réellement alimenté
+          son stock en Gestion Interne, pas un texte générique fixe ── */}
+      {hasPharmacy && (
       <section style={{ background: "white", padding: "60px 20px", borderTop: "1px solid #f1f5f9" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", background: `linear-gradient(135deg,${TEAL_DARK},${TEAL})`, borderRadius: 20, padding: "36px 40px", color: "white" }}>
@@ -340,6 +345,7 @@ export default function CliniqueVitrine() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── POURQUOI NOUS ─────────────────────────────────────────────────────── */}
       <section style={{ background: `linear-gradient(135deg,${TEAL_DARK},${TEAL})`, padding: "60px 20px", color: "white" }}>
