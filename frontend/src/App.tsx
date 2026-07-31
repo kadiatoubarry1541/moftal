@@ -816,11 +816,11 @@ function App() {
             </Link>
           </p>
           {guideReady && (
-            <p className="pt-3">
+            <div className="pt-3 flex justify-end">
               <Suspense fallback={null}>
                 <FloatingGuideIA />
               </Suspense>
-            </p>
+            </div>
           )}
         </div>
       </footer>}
