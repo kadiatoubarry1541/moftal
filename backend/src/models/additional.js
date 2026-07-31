@@ -176,7 +176,7 @@ export const FamilyTree = sequelize.define('FamilyTree', {
   activationPaiementRef: {
     type: DataTypes.STRING,
     allowNull: true,
-    comment: 'Référence du paiement d\'activation (txRef FedaPay)'
+    comment: 'Référence du paiement d\'activation (txRef Djomy)'
   }
 }, {
   tableName: 'family_trees',

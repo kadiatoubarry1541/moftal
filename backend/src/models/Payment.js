@@ -18,7 +18,7 @@ const Payment = sequelize.define('Payment', {
     type: DataTypes.STRING(200),
     allowNull: true,
   },
-  // Référence de la transaction chez le prestataire de paiement (FedaPay, Djomy...)
+  // Référence de la transaction chez le prestataire de paiement (Djomy)
   // utilisée pour retrouver le paiement depuis le webhook.
   gatewayRef: {
     type: DataTypes.STRING(200),
