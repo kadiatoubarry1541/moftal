@@ -803,7 +803,9 @@ function App() {
         <div className="mx-auto px-6 text-center space-y-0.5">
           <p className="text-gray-300 text-[11px]">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
-            {" · "}{t('footer.tagline')}{" · "}{t('footer.system')}
+            {" · "}{t('footer.tagline')}
+            <br />
+            {t('footer.system')}
           </p>
           <p>
             <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-[11px] underline transition-colors">
