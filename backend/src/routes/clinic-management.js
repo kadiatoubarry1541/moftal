@@ -330,7 +330,7 @@ router.put('/:tenantCode/invoices/:id', authenticate, verifyTenant, async (req, 
 
 // ─── PHARMACIE : STOCK ──────────────────────────────────────────────────────
 
-async function ensurePharmacyTable() {
+export async function ensurePharmacyTable() {
   await sequelize.query(`
     CREATE TABLE IF NOT EXISTS clinic_pharmacy_stock (
       id               SERIAL PRIMARY KEY,

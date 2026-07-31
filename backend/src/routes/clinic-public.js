@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { ensurePharmacyTable } from './clinic-management.js';
 
 const router = express.Router();
 
@@ -53,6 +54,22 @@ router.get('/:tenantCode/services', async (req, res) => {
     );
     const services = rows.map(r => r.service).filter(Boolean);
     res.json({ success: true, services });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// GET /api/clinic-public/:tenantCode/pharmacy-status — la clinique a-t-elle une pharmacie active ?
+// Ne renvoie qu'un oui/non (aucun détail de stock, réservé à la Gestion Interne).
+router.get('/:tenantCode/pharmacy-status', async (req, res) => {
+  try {
+    const { tenantCode } = req.params;
+    await ensurePharmacyTable();
+    const [row] = await sequelize.query(
+      `SELECT COUNT(*) as c FROM clinic_pharmacy_stock WHERE tenant_code = :code`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, hasPharmacy: Number(row?.c || 0) > 0 });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
