@@ -286,7 +286,18 @@ export default function NotificationBell() {
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-5 pb-3 bg-white border-b border-gray-100 flex-shrink-0">
-            <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">Notifications</h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Fermer les notifications"
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0"
+              >
+                <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">Notifications</h3>
+            </div>
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}

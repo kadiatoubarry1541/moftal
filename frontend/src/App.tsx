@@ -66,7 +66,6 @@ const HistoireHumanite = lazy(() => import("./pages/HistoireHumanite"));
 const EchangesProfessionnel = lazy(() => import("./components/EchangesProfessionnel").then(m => ({ default: m.EchangesProfessionnel })));
 const EchangePrimaire = lazy(() => import("./pages/EchangePrimaire"));
 const EchangeNourriture = lazy(() => import("./pages/EchangeNourriture"));
-const EchangeMedicament = lazy(() => import("./pages/EchangeMedicament"));
 const EchangeSecondaire = lazy(() => import("./pages/EchangeSecondaire"));
 const EchangeTertiaire = lazy(() => import("./pages/EchangeTertiaire"));
 const EchangeQuaternaire = lazy(() => import("./pages/EchangeQuaternaire"));
@@ -669,7 +668,6 @@ function App() {
             <Route path="/echange" element={<EchangesProfessionnel />} />
           <Route path="/echange/primaire" element={<EchangePrimaire />} />
             <Route path="/echange/nourriture" element={<EchangeNourriture />} />
-            <Route path="/echange/medicament" element={<EchangeMedicament />} />
           <Route path="/echange/secondaire" element={<EchangeSecondaire />} />
           <Route path="/echange/tertiaire" element={<EchangeTertiaire />} />
           <Route path="/echange/quaternaire" element={<EchangeQuaternaire />} />
