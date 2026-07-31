@@ -505,7 +505,7 @@ router.get('/admin/transactions/:fundId', async (req, res) => {
 
 // ─────────────────────────────────────────────
 // POST /api/family-fund/admin/depot-test
-// Admin G7 : crédite un compte famille directement (test sans FedaPay)
+// Admin G7 : crédite un compte famille directement (test sans passer par Djomy)
 // ─────────────────────────────────────────────
 router.post('/admin/depot-test', async (req, res) => {
   try {

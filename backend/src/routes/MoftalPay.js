@@ -277,7 +277,7 @@ router.get('/admin/comptes-pro', authenticate, async (req, res) => {
 
 // ─────────────────────────────────────────
 // POST /api/moftal-pay/admin/depot-test
-// Admin G7 : crédite un compte Moftal Pay Pro directement (test sans FedaPay)
+// Admin G7 : crédite un compte Moftal Pay Pro directement (test sans passer par Djomy)
 // ─────────────────────────────────────────
 router.post('/admin/depot-test', authenticate, async (req, res) => {
   try {

@@ -64,7 +64,7 @@ FamilyFundTransaction.init({
     allowNull: true,
     comment: 'Pour les dépôts : {reserve, sante, nourriture, urgence, projet}'
   },
-  // Référence FedaPay
+  // Référence de paiement (colonne fedapay_ref conservée pour compatibilité avec les données existantes)
   fedapayRef: {
     type: DataTypes.STRING,
     allowNull: true,

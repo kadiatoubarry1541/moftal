@@ -148,7 +148,7 @@ router.get('/mon-compte', async (req, res) => {
 // le paiement confirmé — voir /api/zakat/mon-compte pour lire le solde à jour.
 
 // POST /api/zakat/donner-au-pauvre/:poorId — envoyer de l'argent à un pauvre
-// INTERNE — gratuit — pas de FedaPay
+// INTERNE — gratuit — pas de passerelle de paiement
 router.post('/donner-au-pauvre/:poorId', async (req, res) => {
   try {
     const { montant, description } = req.body;
@@ -254,7 +254,7 @@ router.get('/mon-solde-pauvre', async (req, res) => {
 });
 
 // POST /api/zakat/payer-professionnel — pauvre paie une clinique ou un fournisseur
-// INTERNE — gratuit — pas de FedaPay
+// INTERNE — gratuit — pas de passerelle de paiement
 router.post('/payer-professionnel', async (req, res) => {
   try {
     const { montant, proAccountId, type, description } = req.body;

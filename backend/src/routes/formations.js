@@ -108,7 +108,7 @@ router.get('/prix', authenticate, (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/formations/preparer
-// Prof crée l'annonce EN ATTENTE puis paie via FedaPay
+// Prof crée l'annonce EN ATTENTE puis paie via Djomy
 // Retourne l'id de l'annonce pour le paiement
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/preparer', authenticate, async (req, res) => {

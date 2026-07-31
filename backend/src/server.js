@@ -1595,7 +1595,7 @@ async function initAllTables() {
     // à l'origine ne contenait que pending/success/failed/cancelled — un paiement réussi
     // ne pouvait donc jamais être enregistré comme complété (erreur silencieuse).
     await sequelize.query(`ALTER TYPE "enum_payments_status" ADD VALUE IF NOT EXISTS 'completed';`).catch(() => {});
-    // gatewayRef : utilisé par le code (FedaPay, Djomy) pour retrouver un paiement depuis
+    // gatewayRef : utilisé par le code (Djomy) pour retrouver un paiement depuis
     // le webhook, mais absent de la table créée à l'origine — le webhook ne retrouvait donc
     // jamais le paiement et ne débloquait jamais ce que le client venait de payer.
     await sequelize.query(`ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "gateway_ref" VARCHAR(200);`).catch(() => {});

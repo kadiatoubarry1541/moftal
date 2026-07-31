@@ -801,25 +801,19 @@ function App() {
           (pr-24) réserve la place du bouton flottant "Guide IA" sans avoir
           besoin d'un grand vide sous le footer : le texte ne passe jamais
           dessous. */}
-      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-3" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}>
-        <div className="mx-auto pl-6 pr-24 text-center space-y-1">
-          <p className="text-gray-300 text-xs">
+      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}>
+        <div className="mx-auto pl-6 pr-24 text-center space-y-0.5">
+          <p className="text-gray-300 text-[11px]">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
             {" · "}{t('footer.tagline')}
           </p>
           <p>
-            <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-xs underline transition-colors inline-flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
+            <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-[11px] underline transition-colors">
               Contact : support@moftal.com
             </a>
           </p>
           <p>
-            <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-xs underline transition-colors inline-flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+            <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-[11px] underline transition-colors">
               {t('footer.conditions')}
             </Link>
           </p>
