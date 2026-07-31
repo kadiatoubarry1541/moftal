@@ -799,7 +799,7 @@ function App() {
       {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes.
           Compact, chaque information sur sa propre ligne. Le bouton "Guide IA"
           vit ici, dans le footer — il ne flotte plus sur le reste du site. */}
-      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}>
+      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-2" style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom, 0px))' }}>
         <div className="mx-auto px-6 text-center space-y-0.5">
           <p className="text-gray-300 text-[11px]">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
@@ -812,18 +812,16 @@ function App() {
               Contact : support@moftal.com
             </a>
           </p>
-          <p>
+          <div className="flex items-center justify-between pt-0.5">
             <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-[11px] underline transition-colors">
               {t('footer.conditions')}
             </Link>
-          </p>
-          {guideReady && (
-            <div className="pt-3 flex justify-end">
+            {guideReady && (
               <Suspense fallback={null}>
                 <FloatingGuideIA />
               </Suspense>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </footer>}
 
