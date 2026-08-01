@@ -384,10 +384,13 @@ function App() {
                     );
                   })()}
                   <div className="min-w-0 self-start pt-0.5">
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
-                      {currentUser.prenom} {currentUser.nomFamille}
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight break-words">
+                      {currentUser.prenom}
                     </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight break-words">
+                      {currentUser.nomFamille}
+                    </p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono break-words">
                       {getNumeroHForDisplay(currentUser.numeroH, true, false)}
                     </p>
                     {profileLogos.length > 0 && (
