@@ -383,28 +383,31 @@ function App() {
                       <img src={DefaultAvatar} alt="Avatar" className="w-[78px] h-[78px] rounded-full flex-shrink-0" />
                     );
                   })()}
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
-                      {currentUser.prenom} {currentUser.nomFamille}
+                  <div className="min-w-0 self-start pt-0.5">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight break-words">
+                      {currentUser.prenom}
                     </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight break-words">
+                      {currentUser.nomFamille}
+                    </p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono break-words">
                       {getNumeroHForDisplay(currentUser.numeroH, true, false)}
                     </p>
+                    {profileLogos.length > 0 && (
+                      <div className="flex items-center gap-1 mt-1" title="Logos attribués">
+                        {profileLogos.slice(0, 3).map(ul => (
+                          <span
+                            key={ul.id}
+                            title={ul.logo.name}
+                            className="w-6 h-6 flex items-center justify-center rounded-full text-xs flex-shrink-0"
+                            style={{ background: `${ul.logo.color}22`, border: `1.5px solid ${ul.logo.color}` }}
+                          >
+                            {ul.logo.icon}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {profileLogos.length > 0 && (
-                    <div className="flex items-center gap-1 flex-shrink-0 ml-auto" title="Logos attribués">
-                      {profileLogos.slice(0, 3).map(ul => (
-                        <span
-                          key={ul.id}
-                          title={ul.logo.name}
-                          className="w-6 h-6 flex items-center justify-center rounded-full text-xs flex-shrink-0"
-                          style={{ background: `${ul.logo.color}22`, border: `1.5px solid ${ul.logo.color}` }}
-                        >
-                          {ul.logo.icon}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                   {isMasterAdmin(currentUser) && (
                     <span
                       role="button"
@@ -481,7 +484,7 @@ function App() {
                 ] as { id: string; label: string; icon: string | null; path: string }[]).map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => item.id === "famille" ? setFamilyMenuOpen(o => !o) : navigate(item.path)}
+                    onClick={() => item.id === "famille" ? setFamilyMenuOpen(true) : navigate(item.path)}
                     className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all hover:bg-gray-50 ${item.id === "famille" && familyMenuOpen ? "bg-gray-100" : ""}`}
                   >
                     {item.id === "echanges"
@@ -797,21 +800,21 @@ function App() {
       {/* Footer site principal — masqué en mode Espace Gestion et sur les applis autonomes.
           Compact, chaque information sur sa propre ligne. Le bouton "Guide IA"
           vit ici, dans le footer — il ne flotte plus sur le reste du site. */}
-      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-2" style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom, 0px))' }}>
+      {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-1.5" style={{ paddingBottom: 'max(0.2rem, env(safe-area-inset-bottom, 0px))' }}>
         <div className="mx-auto px-6 text-center space-y-0.5">
-          <p className="text-gray-300 text-[11px]">
+          <p className="text-gray-300 text-[10px]">
             <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
             {" · "}{t('footer.tagline')}
             <br />
             {t('footer.system')}
           </p>
           <p>
-            <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-[11px] underline transition-colors">
+            <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-[10px] underline transition-colors">
               Contact : support@moftal.com
             </a>
           </p>
           <div className="flex items-center justify-between pt-0.5">
-            <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-[11px] underline transition-colors">
+            <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-[10px] underline transition-colors">
               {t('footer.conditions')}
             </Link>
             {guideReady && (
