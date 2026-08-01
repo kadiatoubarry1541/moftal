@@ -13,7 +13,6 @@ export function Login() {
   const [loading, setLoading] = useState(false)
   const [slowServer, setSlowServer] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
-  const [retryCountdown, setRetryCountdown] = useState(0)
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useI18n()
@@ -57,7 +56,6 @@ export function Login() {
     setError('')
     setIsNetworkError(false)
     setSlowServer(false)
-    setRetryCountdown(0)
     if (!numeroH || !password) {
       setError(t('login.error_required'))
       return
@@ -78,7 +76,6 @@ export function Login() {
       } else if (result?.networkError) {
         setIsNetworkError(true)
         setError(result.message || 'Serveur inaccessible. Réessayez dans quelques instants.')
-        setRetryCountdown(10)
       } else {
         if (result?.numeroHExists) {
           setError('Mot de passe incorrect.')
@@ -92,24 +89,10 @@ export function Login() {
       setSlowServer(false)
       setIsNetworkError(true)
       setError('Serveur inaccessible. Réessayez dans quelques instants.')
-      setRetryCountdown(10)
     } finally {
       setLoading(false)
     }
   }
-
-  // Compte à rebours avant reconnexion automatique
-  useEffect(() => {
-    if (retryCountdown <= 0) return
-    const timer = setTimeout(() => {
-      if (retryCountdown === 1) {
-        onSubmit()
-      } else {
-        setRetryCountdown(c => c - 1)
-      }
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [retryCountdown])
 
   return (
     <>
@@ -198,7 +181,7 @@ export function Login() {
                 <div className="flex items-center gap-3 pl-7">
                   <button
                     type="button"
-                    onClick={() => { setRetryCountdown(0); onSubmit() }}
+                    onClick={() => onSubmit()}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-orange-600 hover:bg-orange-700 text-white transition-colors"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -206,11 +189,6 @@ export function Login() {
                     </svg>
                     Réessayer
                   </button>
-                  {retryCountdown > 0 && (
-                    <span className="text-xs text-orange-600 dark:text-orange-400">
-                      Nouvelle tentative automatique dans {retryCountdown}s…
-                    </span>
-                  )}
                 </div>
               </>
             ) : (
