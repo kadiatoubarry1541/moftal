@@ -218,7 +218,7 @@ export const api = {
         networkError: true,
         message: isAbort
           ? 'Connexion trop lente. Vérifiez votre connexion et réessayez.'
-          : 'Serveur momentanément indisponible. Veuillez réessayer dans quelques instants.'
+          : 'Le site est momentanément indisponible. Consultez plus tard.'
       }
     }
   },
