@@ -68,6 +68,12 @@ ResidenceGroup.init({
     allowNull: false,
     comment: 'NumeroH de l\'administrateur du Organisation'
   },
+  logoUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'logo_url',
+    comment: 'URL du logo du groupe, uploadé par son administrateur'
+  },
   isActive: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
