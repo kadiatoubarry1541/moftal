@@ -94,20 +94,21 @@ const SITE_KNOWLEDGE = [
       'famille', 'familial', 'page famille', 'espace famille', 'hub famille',
       'menu famille', 'section famille', 'onglet famille'
     ],
-    response: `**La Page Famille** 👨‍👩‍👧‍👦\n\nC'est le **cœur de Moftal** ! La page Famille donne accès à tout votre univers familial :\n\n🌳 **Mon Arbre Généalogique** — Visualisez et construisez votre arbre\n👨‍👩 **Mes Parents** — Père, mère et leurs informations\n👶 **Mes Enfants** — Gérez vos enfants\n💑 **Mon Partenaire** — Conjoint(e) et messagerie privée\n❤️ **Mes Amours** — Messagerie chiffrée avec votre conjoint(e)\n📸 **Galerie Famille** — Albums photos partagés\n🏠 **Compte Famille** — Créé automatiquement dès 5 membres\n\n**La Page Famille est accessible depuis le menu principal.**`,
-    links: [{ label: 'Ma Famille', path: '/famille' }, { label: 'Mon Arbre', path: '/famille/moi/arbre' }]
+    response: `**La Page Famille** 👨‍👩‍👧‍👦\n\nDepuis l'Accueil, en tapant sur "Famille", vous voyez **4 gros boutons** :\n\n🌳 **Héritage** — votre arbre généalogique et tout ce qui concerne votre lignée\n💕 **Amitié** — vos relations et échanges avec vos proches\n📜 **Récit** — l'histoire et les témoignages de votre famille\n🤝 **Solidarité** — entraide entre membres de la famille\n\n**Aucune section ne s'ouvre automatiquement** : vous appuyez sur celle que vous voulez.`,
+    links: [{ label: 'Ma Famille', path: '/famille' }]
   },
 
-  // ── ARBRE GÉNÉALOGIQUE ─────────────────────────────────────────────────────
+  // ── HÉRITAGE (ARBRE + MESSAGES + FOYER + GALERIE + MAIRIE) ──────────────────
   {
     keywords: [
-      'arbre', 'genealogique', 'généalogique', 'arbre familial', 'ascendance',
-      'descendance', 'lignee', 'lignée', 'ancetres', 'ancêtres', 'generations',
-      'générations', 'arbre genea', 'genealogie', 'généalogie', 'construire arbre',
-      'creer arbre', 'voir arbre', 'afficher arbre', 'visualiser famille'
+      'heritage', 'héritage', 'page heritage', 'page héritage', 'arbre', 'genealogique',
+      'généalogique', 'arbre familial', 'ascendance', 'descendance', 'lignee', 'lignée',
+      'ancetres', 'ancêtres', 'generations', 'générations', 'arbre genea', 'genealogie',
+      'généalogie', 'construire arbre', 'creer arbre', 'voir arbre', 'afficher arbre',
+      'visualiser famille', 'foyer', 'mairie', 'galerie famille', 'messages famille'
     ],
-    response: `**L'Arbre Généalogique** 🌳\n\nVisualisez et construisez votre arbre familial sur Moftal :\n\n**Comment ajouter des membres :**\n👨 **Ajouter un père/mère** → Bouton "+" dans la section Parents\n👶 **Ajouter un enfant** → Bouton "+" dans la section Enfants\n💑 **Ajouter un(e) conjoint(e)** → Section Partenaire\n\n**Activation de l'arbre :**\n💰 L'arbre complet s'active pour **100 000 GNF / 5 ans**\n→ Options disponibles : 5 / 10 / 15 / 20 ans\n→ Sans activation, les fonctions restent limitées\n\n**Compte Famille automatique :**\n→ Dès que vous ajoutez **5 membres** dans l'arbre, un **Compte Famille** est créé automatiquement\n→ Vous recevez un **Numéro Sang** (ex: F2S1) — identifiant unique de votre lignée\n\n**Voir votre arbre :**\n→ Famille → Mon Arbre Généalogique`,
-    links: [{ label: 'Mon Arbre Généalogique', path: '/famille/moi/arbre' }, { label: 'Ma Famille', path: '/famille' }]
+    response: `**Héritage** 🌳\n\nEn ouvrant "Héritage" depuis la page Famille, vous arrivez directement sur **Messages**, et 6 boutons sont disponibles sur une seule ligne :\n\n💬 **Messages** — messagerie familiale (ouvert par défaut)\n🏠 **Foyer** — informations sur votre foyer\n🚨 **Problèmes** — signaler un problème\n📷 **Galerie** — photos partagées de la famille\n🌳 **Arbre** — votre arbre généalogique (numéro de sang, chefs de lignée, membres)\n🏛️ **Mairie** — professionnels de mairie près de chez vous\n\n**Activation de l'arbre :**\n💰 100 000 GNF pour 5 ans (options : 5/10/15/20 ans)\n\n**Compte Famille automatique** dès 5 membres dans l'arbre, avec un **Numéro Sang** unique (ex : F2S1).`,
+    links: [{ label: 'Ma Famille', path: '/famille' }]
   },
 
   // ── COMPTE FAMILLE & NUMÉRO SANG ──────────────────────────────────────────
@@ -130,7 +131,7 @@ const SITE_KNOWLEDGE = [
       'message femme', 'private message', 'couple message', 'discuter conjoint',
       'envoyer message', 'tchat prive', 'tchat privé'
     ],
-    response: `**Mes Amours — Messagerie Privée Couple** ❤️\n\n"Mes Amours" est la **messagerie privée** entre vous et votre conjoint(e) sur Moftal.\n\n**Fonctionnalités :**\n💬 Échange de messages privés\n🖼️ Partage de photos\n🔒 Conversation privée (accessible uniquement au couple)\n\n**Comment y accéder :**\n→ Page Famille → Mes Amours\n→ Ou depuis votre profil partenaire\n\n**Prérequis :**\n→ Avoir un(e) partenaire lié(e) dans votre arbre familial\n→ Le/la partenaire doit avoir un compte Moftal actif`,
+    response: `**Mes Amours — Messagerie Privée Couple** ❤️\n\n"Mes Amours" est la **messagerie privée** entre vous et votre conjoint(e) sur Moftal.\n\n**Fonctionnalités :**\n💬 Échange de messages privés\n🖼️ Partage de photos et stories\n🔒 Conversation privée (accessible uniquement au couple)\n\n**Comment y accéder :**\n→ Depuis l'Accueil → Famille → **Amitié**\n\n**Prérequis :**\n→ Avoir un(e) partenaire lié(e) dans votre arbre familial\n→ Le/la partenaire doit avoir un compte Moftal actif`,
     links: [{ label: 'Mes Amours', path: '/famille/mes-amours' }, { label: 'Ma Famille', path: '/famille' }]
   },
 
@@ -279,7 +280,21 @@ const SITE_KNOWLEDGE = [
       'géographie', 'region', 'répartition', 'repartition', 'membres monde',
       'ou vivent', 'où vivent', 'statistiques membres', 'map', 'carte monde'
     ],
-    response: `**La Page Terre Adam** 🌍\n\nVisualisez la répartition mondiale des membres Moftal :\n\n🗺️ **Carte interactive** des pays et régions\n📍 Découvrez où vivent les membres de la communauté\n🌐 **Statistiques** : nombre de membres par pays et région\n🌍 Couverture mondiale des Enfants d'Adam\n\n💡 Plus vous ajoutez des membres dans votre arbre, plus la carte s'enrichit !`,
+    response: `**La Page Terre Adam** 🌍\n\nVisualisez la répartition mondiale des membres Moftal :\n\n🗺️ **Carte interactive** des pays et régions\n📍 Découvrez où vivent les membres de la communauté\n🌐 **Statistiques** : nombre de membres par pays et région\n🌍 Couverture mondiale des Enfants d'Adam\n\n💬 Dans l'onglet **"Lieux"**, chaque utilisateur a aussi accès aux discussions de son **quartier de résidence** (Résidence 1, 2, 3) : urgences, informations, fêtes, réunions...\n\n💡 Plus vous ajoutez des membres dans votre arbre, plus la carte s'enrichit !`,
+    links: [{ label: 'Terre Adam', path: '/terre-adam' }]
+  },
+
+  // ── CHATS DE QUARTIER / RÉSIDENCE ─────────────────────────────────────────
+  {
+    keywords: [
+      'quartier', 'chat residence', 'chat résidence', 'chats de residence',
+      'chats de résidence', 'messagerie residence', 'messagerie résidence',
+      'groupe quartier', 'discussion quartier', 'residence 1', 'residence 2',
+      'residence 3', 'résidence 1', 'résidence 2', 'résidence 3',
+      'urgence quartier', 'reunion quartier', 'réunion quartier',
+      'fete quartier', 'fête quartier', 'voisinage', 'voisins'
+    ],
+    response: `**Discussions de quartier (Résidence)** 🏘️\n\nDans **Terre Adam → onglet "Lieux"**, chaque membre peut rejoindre les discussions de son quartier de résidence, réparties en plusieurs catégories :\n\n🚨 **Urgences** — alertes du quartier\nℹ️ **Informations** — actualités locales\n🎉 **Fêtes & Événements** — célébrations du quartier\n👥 **Réunions** — assemblées de quartier\n\nVous pouvez avoir jusqu'à **3 quartiers de résidence** (Résidence 1, 2, 3) selon les lieux renseignés dans votre profil, chacun avec ses propres discussions.\n\n⚠️ Les niveaux plus larges (sous-préfecture, préfecture, région, pays) affichent uniquement des actualités et projets — pas de messagerie, réservée au niveau quartier.`,
     links: [{ label: 'Terre Adam', path: '/terre-adam' }]
   },
 
@@ -290,7 +305,7 @@ const SITE_KNOWLEDGE = [
       'ajouter photo', 'voir photos', 'album famille', 'photos partagees',
       'photos partagées'
     ],
-    response: `**La Galerie Famille** 📸\n\nPartagez et consultez vos photos de famille en privé :\n\n🖼️ Créez des **albums photos familiaux**\n📤 **Partagez des photos** avec vos proches membres\n👨‍👩‍👧 Photos accessibles aux membres de votre famille\n🔒 Espace privé — accessible uniquement à votre famille\n\n**Comment ajouter des photos :**\n1️⃣ Famille → Galerie Famille\n2️⃣ Cliquez sur "Ajouter"\n3️⃣ Sélectionnez vos photos\n4️⃣ Publiez dans l'album`,
+    response: `**La Galerie Famille** 📸\n\nPartagez et consultez vos photos de famille en privé :\n\n🖼️ Créez des **albums photos familiaux**\n📤 **Partagez des photos et vidéos** avec vos proches membres\n👨‍👩‍👧 Photos accessibles aux membres de votre famille\n🔒 Espace privé — accessible uniquement à votre famille\n\n**Comment ajouter des photos :**\n1️⃣ Accueil → Famille → Héritage → **Galerie**\n2️⃣ Cliquez sur "＋ Ajouter"\n3️⃣ Sélectionnez vos photos ou vidéos\n4️⃣ Publiez dans l'album`,
     links: [{ label: 'Galerie Famille', path: '/galerie-famille' }, { label: 'Ma Famille', path: '/famille' }]
   },
 
@@ -326,7 +341,7 @@ const SITE_KNOWLEDGE = [
       'ajouter soeur', 'frere', 'sœur', 'soeur', 'cousin', 'oncle', 'tante',
       'grand-parent', 'grandparent', 'grand parent'
     ],
-    response: `**Ajouter des membres dans votre Famille** 👪\n\n**Comment ajouter des proches :**\n\n👨‍👩 **Parents (père/mère) :**\n→ Famille → Mes Parents → Ajouter\n→ Entrez le Numéro H du parent (s'il a un compte)\n→ Ou créez un profil sans compte Moftal\n\n👶 **Enfants :**\n→ Famille → Mes Enfants → Ajouter\n→ Entrez le Numéro H de l'enfant\n\n💑 **Conjoint(e) :**\n→ Famille → Mon Partenaire → Ajouter\n→ Entrez le Numéro H du/de la conjoint(e)\n\n**Important :**\n→ Dès **5 membres** dans l'arbre : Compte Famille créé automatiquement\n→ Les membres liés voient votre profil dans leur arbre\n→ Demandez leur Numéro H à vos proches pour les lier`,
+    response: `**Ajouter des membres dans votre Famille** 👪\n\n**Comment ajouter des proches :**\n\n1️⃣ Accueil → Famille → Héritage → **Arbre**\n2️⃣ Sur le schéma de l'arbre, appuyez sur le bouton **"＋"** à côté de la position voulue (Père, Mère, Conjoint(e), Enfant, Frère, Sœur...)\n3️⃣ Entrez le **Numéro H** de la personne (si elle a déjà un compte)\n→ Ou créez un profil sans compte Moftal si elle n'est pas encore inscrite\n\n**Important :**\n→ Dès **5 membres** dans l'arbre : Compte Famille créé automatiquement\n→ Les membres liés voient votre profil dans leur arbre\n→ Demandez leur Numéro H à vos proches pour les lier`,
     links: [{ label: 'Ma Famille', path: '/famille' }, { label: 'Mon Arbre', path: '/famille/moi/arbre' }]
   },
 
@@ -349,8 +364,19 @@ const SITE_KNOWLEDGE = [
       'je commence', 'nouveau sur', 'premiere visite', 'première visite',
       'perdu', 'debutant', 'débutant', 'pas compris', 'comprend pas'
     ],
-    response: `**Bienvenue sur Moftal !** 🌟\n\nJe suis votre **Guide IA officiel** — posez-moi n'importe quelle question sur le site !\n\n**Pour bien démarrer :**\n\n1️⃣ **Créer votre compte** → Choisissez Vivant ou Défunt\n2️⃣ **Vous connecter** avec votre **Numéro H** (votre identifiant unique)\n3️⃣ **Compléter votre profil** → Page Identité\n4️⃣ **Construire votre arbre familial** → Page Famille\n5️⃣ **Découvrir les services** → Santé, Échanges, Éducation, Science...\n\n**Questions fréquentes que je peux répondre :**\n🆔 C'est quoi le Numéro H ?\n🌳 Comment construire mon arbre familial ?\n🏥 Comment prendre un rendez-vous médical ?\n💼 Comment créer un compte professionnel ?\n💰 Quels sont les tarifs de Moftal ?\n\nPosez votre question ! 💬`,
+    response: `**Bienvenue sur Moftal !** 🌟\n\nJe suis votre **Guide IA officiel** — posez-moi n'importe quelle question sur le site !\n\n**Pour bien démarrer :**\n\n1️⃣ **Créer votre compte** → Choisissez Vivant ou Défunt\n2️⃣ **Vous connecter** avec votre **Numéro H** (votre identifiant unique)\n3️⃣ **Compléter votre profil** → Page Identité\n4️⃣ **Ouvrir "Famille"** depuis l'Accueil → Héritage, Amitié, Récit, Solidarité\n5️⃣ **Découvrir les services** → Terre ADAM, Activité, Échanges, Services\n\n**Questions fréquentes que je peux répondre :**\n🆔 C'est quoi le Numéro H ?\n🌳 Comment construire mon arbre familial ?\n🏥 Comment prendre un rendez-vous médical ?\n💼 Comment créer un compte professionnel ?\n💰 Quels sont les tarifs de Moftal ?\n📧 Comment contacter le support ?\n\nPosez votre question ! 💬`,
     links: [{ label: 'Créer un compte', path: '/choix' }, { label: 'Se connecter', path: '/login' }]
+  },
+
+  // ── CONTACT / SUPPORT ────────────────────────────────────────────────────────
+  {
+    keywords: [
+      'contact', 'contacter', 'support', 'aide humaine', 'joindre', 'ecrire a moftal',
+      'écrire à moftal', 'email support', 'assistance', 'parler a quelqu\'un',
+      'reclamation', 'réclamation', 'signaler probleme', 'signaler un probleme'
+    ],
+    response: `**Contacter Moftal** 📧\n\nPour toute question, problème ou réclamation, écrivez à :\n\n✉️ **support@moftal.com**\n\nVous trouverez aussi ce contact tout en bas de chaque page, dans le pied de page du site.\n\nSi votre question concerne l'utilisation du site (comment faire quelque chose), je peux souvent vous répondre directement ici — n'hésitez pas à me demander !`,
+    links: []
   },
 
   // ── PROBLÈMES TECHNIQUES ────────────────────────────────────────────────────
@@ -360,7 +386,7 @@ const SITE_KNOWLEDGE = [
       'ne fonctionne pas', 'bloque', 'bloqué', 'page blanche', 'chargement',
       'lent', 'lente', 'impossible', 'echec', 'échec', 'connexion impossible'
     ],
-    response: `**Problème technique ?** 🔧\n\n**Solutions rapides :**\n\n🔄 **Rechargez la page** (F5 ou tirer vers le bas sur mobile)\n\n🌐 **Vérifiez votre connexion internet**\n\n🧹 **Videz le cache :** Paramètres navigateur → Effacer les données\n\n🔓 **Déconnectez-vous et reconnectez-vous** avec votre Numéro H\n\n**Erreurs fréquentes :**\n❌ "Numéro H incorrect" → Vérifiez le format : H-XXXXX (avec le H majuscule et le tiret)\n❌ "Session expirée" → Reconnectez-vous\n❌ "Erreur serveur" → Réessayez dans quelques minutes\n\n**Si le problème persiste :**\n→ Notez le message d'erreur exact\n→ Contactez le support Moftal`,
+    response: `**Problème technique ?** 🔧\n\n**Solutions rapides :**\n\n🔄 **Rechargez la page** (F5 ou tirer vers le bas sur mobile)\n\n🌐 **Vérifiez votre connexion internet**\n\n🧹 **Videz le cache :** Paramètres navigateur → Effacer les données\n\n🔓 **Déconnectez-vous et reconnectez-vous** avec votre Numéro H\n\n**Erreurs fréquentes :**\n❌ "Numéro H incorrect" → Vérifiez le format exact de votre NumeroH (ex : G96C1P1R1E1F2 1)\n❌ "Session expirée" → Reconnectez-vous\n❌ "Le site est momentanément indisponible" → Le serveur redémarre, patientez quelques instants puis réessayez\n\n**Si le problème persiste :**\n→ Notez le message d'erreur exact\n→ Contactez le support : support@moftal.com`,
     links: [{ label: 'Se connecter', path: '/login' }, { label: 'Mon Compte', path: '/compte' }]
   },
 
@@ -372,7 +398,7 @@ const SITE_KNOWLEDGE = [
       'témoignage', 'ecrire histoire', 'écrire histoire', 'rdv ecrit',
       'rendez-vous ecrit', 'rendez-vous écrit', 'consultation ecrite'
     ],
-    response: `**L'Enregistrement Écrit** 📝\n\n**Pour les Rendez-vous :**\nChoisissez "Écrit" lors de la prise de RDV pour :\n✍️ Décrire votre problème ou demande par écrit\n📅 Choisir une date et heure préférées\n🏥 Sélectionner un service spécifique\n\n**Pour votre Histoire Personnelle :**\n→ Rédigez votre témoignage, votre histoire de vie\n→ Visible dans votre profil et votre arbre généalogique\n→ Transmis aux générations futures\n\n**Comment accéder :**\n→ Santé → Choisir un professionnel → Type "Écrit"\n→ Famille → Mon Histoire`,
+    response: `**L'Enregistrement Écrit** 📝\n\n**Pour les Rendez-vous :**\nChoisissez "Écrit" lors de la prise de RDV pour :\n✍️ Décrire votre problème ou demande par écrit\n📅 Choisir une date et heure préférées\n🏥 Sélectionner un service spécifique\n\n**Pour votre Histoire Personnelle :**\n→ Rédigez votre témoignage, votre histoire de vie\n→ Visible dans votre profil et votre arbre généalogique\n→ Transmis aux générations futures\n\n**Comment accéder :**\n→ Santé → Choisir un professionnel → Type "Écrit"\n→ Accueil → Famille → Récit`,
     links: [{ label: 'Page Santé', path: '/sante' }, { label: 'Ma Famille', path: '/famille' }]
   },
 
@@ -394,7 +420,7 @@ const SITE_KNOWLEDGE = [
       'décès', 'difference vivant defunt', 'choisir type compte',
       'type compte', 'quel type', 'vivant ou defunt', 'vivant ou défunt'
     ],
-    response: `**Compte Vivant vs Compte Défunt** 🌿🕊️\n\n**Compte Vivant :**\n👤 Pour vous-même, une personne vivante\n🆔 Reçoit un **Numéro H** (format H-XXXXX)\n✅ Accès complet à tous les services\n💬 Peut se connecter et interagir\n\n**Compte Défunt :**\n🕊️ Pour un proche décédé — compte mémoriel\n🆔 Reçoit un **Numéro HD** (format HD-XXXXX)\n📸 Conserve photos, informations et histoire\n👨‍👩‍👧 Géré par un proche vivant\n🌳 Intégré dans l'arbre généalogique familial\n\n**Lequel choisir ?**\n→ **Vous êtes vivant ?** → Compte Vivant\n→ **Pour honorer un proche décédé ?** → Compte Défunt`,
+    response: `**Compte Vivant vs Compte Défunt** 🌿🕊️\n\n**Compte Vivant :**\n👤 Pour vous-même, une personne vivante\n🆔 Reçoit un **Numéro H** (ex : G96C1P1R1E1F2 1)\n✅ Accès complet à tous les services\n💬 Peut se connecter et interagir\n\n**Compte Défunt :**\n🕊️ Pour un proche décédé — compte mémoriel\n🆔 Reçoit un **Numéro HD** (format HD-XXXXX)\n📸 Conserve photos, informations et histoire\n👨‍👩‍👧 Géré par un proche vivant\n🌳 Intégré dans l'arbre généalogique familial\n\n**Lequel choisir ?**\n→ **Vous êtes vivant ?** → Compte Vivant\n→ **Pour honorer un proche décédé ?** → Compte Défunt`,
     links: [{ label: 'Créer un compte Vivant', path: '/inscription-vivant' }, { label: 'Créer un compte Défunt', path: '/inscription-defunt' }]
   },
 ];
