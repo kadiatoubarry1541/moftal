@@ -31,6 +31,8 @@ interface ResidenceGroup {
   members: UserData[] | string[];
   posts?: any[];
   isActive?: boolean;
+  admin?: string;
+  logoUrl?: string | null;
   createdBy?: string;
   createdAt?: string;
 }
@@ -139,6 +141,7 @@ export default function TerreAdam() {
   // États pour le système de messagerie
   const [groups, setGroups] = useState<ResidenceGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ResidenceGroup | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [messages, setMessages] = useState<ResidenceMessage[]>([]);
   const [newMessage, setNewMessage] = useState({
     content: '',
@@ -397,9 +400,36 @@ export default function TerreAdam() {
   };
 
 
+  const handleLogoUpload = async (file: File) => {
+    if (!selectedGroup) return;
+    setUploadingLogo(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append('logo', file);
+      const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/logo`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSelectedGroup(prev => prev ? { ...prev, logoUrl: data.logoUrl } : prev);
+        setGroups(prev => prev.map(g => g.id === selectedGroup.id ? { ...g, logoUrl: data.logoUrl } : g));
+      } else {
+        alert(data.message || "Impossible de changer le logo");
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'upload du logo:', error);
+      alert("Erreur réseau lors de l'envoi du logo");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   const loadMessages = async () => {
     if (!selectedGroup) return;
-    
+
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/messages`, {
@@ -767,9 +797,42 @@ export default function TerreAdam() {
                           {/* En-tête : nom du quartier + membres + sélecteur admin */}
                           <div className="bg-gray-800 text-white flex-shrink-0">
                             <div className="px-4 py-3 flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
-                                {(selectedGroup.title || selectedGroup.name || '?').charAt(0).toUpperCase()}
-                              </div>
+                              {(() => {
+                                const canEditLogo = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
+                                const logoSrc = selectedGroup.logoUrl
+                                  ? (selectedGroup.logoUrl.startsWith('http') ? selectedGroup.logoUrl : `${API_BASE}${selectedGroup.logoUrl}`)
+                                  : null;
+                                return (
+                                  <label
+                                    className={`relative w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-base flex-shrink-0 overflow-hidden ${canEditLogo ? 'cursor-pointer' : ''}`}
+                                    title={canEditLogo ? 'Changer le logo du quartier' : undefined}
+                                  >
+                                    {logoSrc ? (
+                                      <img src={logoSrc} alt="Logo du quartier" className="w-full h-full object-cover" />
+                                    ) : (
+                                      (selectedGroup.title || selectedGroup.name || '?').charAt(0).toUpperCase()
+                                    )}
+                                    {canEditLogo && (
+                                      <>
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none">
+                                          {uploadingLogo ? '…' : '📷'}
+                                        </div>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          disabled={uploadingLogo}
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) handleLogoUpload(file);
+                                            e.target.value = '';
+                                          }}
+                                        />
+                                      </>
+                                    )}
+                                  </label>
+                                );
+                              })()}
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-bold text-sm truncate">{selectedGroup.title || selectedGroup.name}</h3>
                                 <p className="text-xs text-gray-400 mt-0.5">

@@ -7,8 +7,26 @@ import ResidenceGroup from '../models/ResidenceGroup.js';
 import ResidenceMessage from '../models/ResidenceMessage.js';
 import User from '../models/User.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { sequelize } from '../config/database.js';
 
 const router = express.Router();
+
+// S'assure que la colonne logo_url existe (au cas où le déploiement n'a pas pu
+// altérer la table automatiquement — voir clinic-management.js pour le même principe)
+let logoColumnEnsured = false;
+async function ensureLogoColumn() {
+  if (logoColumnEnsured) return;
+  try {
+    await sequelize.query('ALTER TABLE residence_groups ADD COLUMN IF NOT EXISTS logo_url VARCHAR(255)');
+    logoColumnEnsured = true;
+  } catch (e) {
+    console.warn('ensureLogoColumn:', e.message);
+  }
+}
+
+function isPlatformAdmin(user) {
+  return !!(user && (user.role === 'admin' || user.role === 'super-admin' || user.isMasterAdmin || user.canViewAll));
+}
 
 // Normalise un nom de lieu : minuscule + sans accents → "TÉLIKO" = "teliko" = "Teliko"
 function normalizeLoc(str) {
@@ -41,7 +59,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
   fileFilter: (req, file, cb) => {
@@ -49,6 +67,33 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Seuls les fichiers image, vidéo et audio sont autorisés'), false);
+    }
+  }
+});
+
+// Configuration multer dédiée au logo de groupe (image uniquement, plus léger)
+const logoStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = 'uploads/residences/logos';
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, `logo-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const uploadLogo = multer({
+  storage: logoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Seules les images sont autorisées pour le logo'), false);
     }
   }
 });
@@ -61,6 +106,7 @@ router.use(authenticate);
 // @access  Authentifié
 router.get('/groups', async (req, res) => {
   try {
+    await ensureLogoColumn();
     const { location } = req.query;
 
     // Normaliser : minuscule + sans accents → "TÉLIKO" = "teliko" = "Téliko" → même groupe
@@ -117,6 +163,7 @@ router.get('/groups', async (req, res) => {
 // @access  Admin
 router.post('/groups', requireAdmin, async (req, res) => {
   try {
+    await ensureLogoColumn();
     const { location, title, description, settings } = req.body;
     const normalizedLocation = location ? normalizeLoc(location) : location;
 
@@ -148,8 +195,9 @@ router.post('/groups', requireAdmin, async (req, res) => {
 // @access  Authentifié
 router.post('/groups/:id/join', async (req, res) => {
   try {
+    await ensureLogoColumn();
     const { id } = req.params;
-    
+
     const group = await ResidenceGroup.findByPk(id);
     if (!group) {
       return res.status(404).json({
@@ -195,9 +243,10 @@ router.post('/groups/:id/join', async (req, res) => {
 // @access  Authentifié
 router.post('/groups/:id/messages', upload.single('media'), async (req, res) => {
   try {
+    await ensureLogoColumn();
     const { id } = req.params;
     const { content, messageType, category = 'information' } = req.body;
-    
+
     const group = await ResidenceGroup.findByPk(id);
     if (!group) {
       return res.status(404).json({
@@ -250,9 +299,10 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
 // @access  Authentifié
 router.get('/groups/:id/messages', async (req, res) => {
   try {
+    await ensureLogoColumn();
     const { id } = req.params;
     const { limit = 50, offset = 0 } = req.query;
-    
+
     const group = await ResidenceGroup.findByPk(id);
     if (!group) {
       return res.status(404).json({
@@ -325,6 +375,63 @@ router.get('/stats', requireAdmin, async (req, res) => {
       success: false,
       message: 'Erreur serveur lors de la récupération des statistiques'
     });
+  }
+});
+
+// @route   POST /api/residences/groups/:id/logo
+// @desc    Uploader ou remplacer le logo d'un groupe de quartier
+// @access  Admin du groupe (le premier habitant à l'avoir rejoint) ou admin Moftal
+router.post('/groups/:id/logo', uploadLogo.single('logo'), async (req, res) => {
+  try {
+    await ensureLogoColumn();
+    const { id } = req.params;
+
+    const group = await ResidenceGroup.findByPk(id);
+    if (!group) {
+      return res.status(404).json({ success: false, message: 'Groupe non trouvé' });
+    }
+
+    if (!isPlatformAdmin(req.user) && group.admin !== req.user.numeroH) {
+      return res.status(403).json({ success: false, message: 'Seul l\'administrateur de ce groupe peut changer le logo' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Aucune image envoyée' });
+    }
+
+    const logoUrl = `/uploads/residences/logos/${req.file.filename}`;
+    await group.update({ logoUrl });
+
+    res.json({ success: true, message: 'Logo mis à jour', logoUrl });
+  } catch (error) {
+    console.error('Erreur lors de l\'upload du logo:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de l\'upload du logo' });
+  }
+});
+
+// @route   DELETE /api/residences/groups/:id/logo
+// @desc    Retirer le logo d'un groupe (revenir à l'icône par défaut)
+// @access  Admin du groupe ou admin Moftal
+router.delete('/groups/:id/logo', async (req, res) => {
+  try {
+    await ensureLogoColumn();
+    const { id } = req.params;
+
+    const group = await ResidenceGroup.findByPk(id);
+    if (!group) {
+      return res.status(404).json({ success: false, message: 'Groupe non trouvé' });
+    }
+
+    if (!isPlatformAdmin(req.user) && group.admin !== req.user.numeroH) {
+      return res.status(403).json({ success: false, message: 'Seul l\'administrateur de ce groupe peut retirer le logo' });
+    }
+
+    await group.update({ logoUrl: null });
+
+    res.json({ success: true, message: 'Logo retiré' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du logo:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 
