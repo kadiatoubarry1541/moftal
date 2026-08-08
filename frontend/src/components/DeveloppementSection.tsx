@@ -32,6 +32,8 @@ export default function DeveloppementSection({ scope, location, locationName, is
   const [totalCollecte, setTotalCollecte] = useState(0);
   const [parDomaine, setParDomaine] = useState<Record<string, number>>({});
   const [nbDonneurs, setNbDonneurs] = useState(0);
+  const [projets, setProjets] = useState<any[]>([]);
+  const [loadingProjets, setLoadingProjets] = useState(true);
   const [activeDomaine, setActiveDomaine] = useState<string | null>(null);
   const [showDon, setShowDon] = useState(false);
   const [showMesDons, setShowMesDons] = useState(false);
@@ -46,8 +48,20 @@ export default function DeveloppementSection({ scope, location, locationName, is
   });
 
   useEffect(() => {
-    if (location) { loadStats(); loadLogo(); }
+    if (location) { loadStats(); loadLogo(); loadProjets(); }
   }, [scope, location]);
+
+  const loadProjets = async () => {
+    setLoadingProjets(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(
+        `${API_BASE}/api/developpement/projets?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) { const d = await res.json(); setProjets(d.projets || []); }
+    } catch {} finally { setLoadingProjets(false); }
+  };
 
   const loadLogo = async () => {
     try {
@@ -249,10 +263,46 @@ export default function DeveloppementSection({ scope, location, locationName, is
                   💚 {fmt(parDomaine[dom.id])} collectés pour ce domaine
                 </p>
               )}
-              <div className="bg-slate-50 rounded-lg p-4 text-center">
-                <p className="text-slate-500 text-sm font-medium">Aucun projet enregistré pour l'instant</p>
-                <p className="text-slate-400 text-xs mt-1">Les projets soumis et approuvés apparaîtront ici</p>
-              </div>
+              {(() => {
+                const projetsDomaine = projets.filter(p => p.domaine === dom.id);
+                if (loadingProjets) {
+                  return (
+                    <div className="flex justify-center py-4">
+                      <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin" />
+                    </div>
+                  );
+                }
+                if (projetsDomaine.length === 0) {
+                  return (
+                    <div className="bg-slate-50 rounded-lg p-4 text-center">
+                      <p className="text-slate-500 text-sm font-medium">Aucun projet enregistré pour l'instant</p>
+                      <p className="text-slate-400 text-xs mt-1">Les projets soumis et approuvés apparaîtront ici</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-2">
+                    {projetsDomaine.map((p: any) => {
+                      const statutInfo: Record<string, { label: string; bg: string; text: string }> = {
+                        annonce:   { label: 'Annoncé',   bg: 'bg-blue-100',  text: 'text-blue-700' },
+                        en_cours:  { label: 'En cours',  bg: 'bg-amber-100', text: 'text-amber-700' },
+                        termine:   { label: 'Terminé',   bg: 'bg-green-100', text: 'text-green-700' },
+                        abandonne: { label: 'Abandonné', bg: 'bg-red-100',   text: 'text-red-700' },
+                      };
+                      const si = statutInfo[p.statut] || statutInfo.annonce;
+                      return (
+                        <div key={p.id} className="bg-slate-50 rounded-lg p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-slate-800 text-sm">{p.titre}</p>
+                            <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${si.bg} ${si.text}`}>{si.label}</span>
+                          </div>
+                          {p.description && <p className="text-slate-500 text-xs mt-1">{p.description}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
@@ -262,12 +312,12 @@ export default function DeveloppementSection({ scope, location, locationName, is
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-white rounded-xl p-3 border text-center">
           <div className="text-lg mb-0.5">📋</div>
-          <div className="font-bold text-slate-800 text-base">0</div>
+          <div className="font-bold text-slate-800 text-base">{projets.filter(p => p.statut === 'en_cours').length}</div>
           <div className="text-slate-500 text-[10px]">En cours</div>
         </div>
         <div className="bg-white rounded-xl p-3 border text-center">
           <div className="text-lg mb-0.5">✅</div>
-          <div className="font-bold text-slate-800 text-base">0</div>
+          <div className="font-bold text-slate-800 text-base">{projets.filter(p => p.statut === 'termine').length}</div>
           <div className="text-slate-500 text-[10px]">Terminés</div>
         </div>
         <div className="bg-green-50 rounded-xl p-3 border border-green-200 text-center cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setShowDon(true)}>
