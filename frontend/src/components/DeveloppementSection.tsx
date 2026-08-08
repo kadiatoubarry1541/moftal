@@ -21,9 +21,14 @@ interface Props {
   scope: string;
   location: string;
   locationName: string;
+  isJournalist?: boolean;
+  isAdmin?: boolean;
 }
 
-export default function DeveloppementSection({ scope, location, locationName }: Props) {
+export default function DeveloppementSection({ scope, location, locationName, isJournalist, isAdmin }: Props) {
+  const canPublish = !!(isJournalist || isAdmin);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [totalCollecte, setTotalCollecte] = useState(0);
   const [parDomaine, setParDomaine] = useState<Record<string, number>>({});
   const [nbDonneurs, setNbDonneurs] = useState(0);
@@ -41,8 +46,41 @@ export default function DeveloppementSection({ scope, location, locationName }: 
   });
 
   useEffect(() => {
-    if (location) loadStats();
+    if (location) { loadStats(); loadLogo(); }
   }, [scope, location]);
+
+  const loadLogo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(
+        `${API_BASE}/api/developpement/logo?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) { const d = await res.json(); setLogoUrl(d.logoUrl || null); }
+    } catch {}
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('logo', file);
+      formData.append('scope', scope);
+      formData.append('location', location);
+      const res = await fetch(`${API_BASE}/api/developpement/logo`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const d = await res.json();
+      if (d.success) {
+        setLogoUrl(d.logoUrl);
+      } else {
+        alert(d.message || 'Impossible de changer le logo');
+      }
+    } catch { alert('Erreur réseau lors de l\'envoi du logo'); } finally { setUploadingLogo(false); }
+  };
 
   const loadStats = async () => {
     try {
@@ -107,10 +145,42 @@ export default function DeveloppementSection({ scope, location, locationName }: 
       {/* Bannière caisse */}
       <div className="bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl p-4 text-white">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <p className="text-green-100 text-xs font-medium">Caisse de développement — {locationName}</p>
-            <p className="text-2xl font-extrabold mt-0.5">{fmt(totalCollecte)}</p>
-            <p className="text-green-100 text-xs mt-0.5">{nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''}</p>
+          <div className="flex items-center gap-3">
+            {(logoUrl || canPublish) && (
+              <label
+                className={`relative w-11 h-11 rounded-full bg-white/20 flex items-center justify-center overflow-hidden flex-shrink-0 ${canPublish ? 'cursor-pointer' : ''}`}
+                title={canPublish ? `Changer le logo de ${locationName}` : undefined}
+              >
+                {logoUrl ? (
+                  <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-lg">🏛️</span>
+                )}
+                {canPublish && (
+                  <>
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none">
+                      {uploadingLogo ? '…' : '📷'}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleLogoUpload(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </>
+                )}
+              </label>
+            )}
+            <div>
+              <p className="text-green-100 text-xs font-medium">Caisse de développement — {locationName}</p>
+              <p className="text-2xl font-extrabold mt-0.5">{fmt(totalCollecte)}</p>
+              <p className="text-green-100 text-xs mt-0.5">{nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''}</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
