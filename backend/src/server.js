@@ -2614,10 +2614,21 @@ app.use('/api/developpement', developpementRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  // Requête triviale à la base pour empêcher Neon (plan gratuit) de suspendre
+  // son compute par inactivité — sans ça, le ping de garde ne réveillait que
+  // le serveur Node, jamais la base, qui restait la vraie source de lenteur.
+  let dbConnected = false;
+  try {
+    await sequelize.query('SELECT 1');
+    dbConnected = true;
+  } catch (e) {
+    console.warn('Health check DB:', e.message);
+  }
   res.json({
     success: true,
     message: 'Serveur fonctionnel',
+    dbConnected,
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
