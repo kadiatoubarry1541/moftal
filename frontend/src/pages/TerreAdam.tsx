@@ -1137,7 +1137,7 @@ export default function TerreAdam() {
                           <span className="text-lg">🏛️</span>
                           <h3 className="font-bold text-gray-800 text-sm">{name}</h3>
                         </div>
-                        <DeveloppementSection scope="sous-prefecture" location={loc} locationName={name} />
+                        <DeveloppementSection scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} />
                       </div>
                     );
                   })()}

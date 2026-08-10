@@ -83,6 +83,10 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const [sigLoading, setSigLoading] = useState(false);
   const [sigEnvoye, setSigEnvoye] = useState(false);
 
+  // Logo du lieu (pas d'admin local à ces niveaux → réservé aux journalistes/admins)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
   const token = () => localStorage.getItem('token');
   const api = (path: string) => `${API_BASE}/api/developpement${path}`;
   const qs = `scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`;
@@ -90,8 +94,37 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   useEffect(() => {
     loadActualites();
     loadProjets();
+    loadLogo();
     if (canPublish) loadSignalements();
   }, [scope, location]);
+
+  const loadLogo = async () => {
+    try {
+      const res = await fetch(api(`/logo?${qs}`), { headers: { Authorization: `Bearer ${token()}` } });
+      if (res.ok) { const d = await res.json(); setLogoUrl(d.logoUrl || null); }
+    } catch {}
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+      formData.append('scope', scope);
+      formData.append('location', location);
+      const res = await fetch(api('/logo'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token()}` },
+        body: formData
+      });
+      const d = await res.json();
+      if (d.success) {
+        setLogoUrl(d.logoUrl);
+      } else {
+        alert(d.message || 'Impossible de changer le logo');
+      }
+    } catch { alert('Erreur réseau lors de l\'envoi du logo'); } finally { setUploadingLogo(false); }
+  };
 
   const loadActualites = async () => {
     setLoadingActu(true);
@@ -212,6 +245,41 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
 
   return (
     <div className="space-y-3">
+
+      {/* Logo du lieu */}
+      {(logoUrl || canPublish) && (
+        <div className="flex items-center gap-2">
+          <label
+            className={`relative w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 ${canPublish ? 'cursor-pointer' : ''}`}
+            title={canPublish ? `Changer le logo de ${locationName}` : undefined}
+          >
+            {logoUrl ? (
+              <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg">🏛️</span>
+            )}
+            {canPublish && (
+              <>
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none text-white">
+                  {uploadingLogo ? '…' : '📷'}
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingLogo}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file);
+                    e.target.value = '';
+                  }}
+                />
+              </>
+            )}
+          </label>
+          <span className="text-sm font-semibold text-gray-700 truncate">{locationName}</span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
