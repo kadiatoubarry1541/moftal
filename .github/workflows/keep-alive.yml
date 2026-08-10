@@ -1,12 +1,12 @@
 name: Keep backend alive
 
-# Ping le serveur backend toutes les 10 minutes pour l'empêcher de se mettre
-# en veille (plan gratuit Render : le serveur s'endort après 15 minutes sans
-# visiteur, et met 30-60s à redémarrer au prochain visiteur — d'où les
-# erreurs "Serveur momentanément indisponible").
+# Ping /api/health toutes les 4 minutes. Ce endpoint interroge maintenant
+# aussi la base de données (voir server.js) — nécessaire car la base Neon
+# (plan gratuit) suspend son compute après ~5 minutes d'inactivité, même
+# si le serveur web Render (plan Starter) ne s'endort plus lui-même.
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/4 * * * *'
   workflow_dispatch:
 
 jobs:
