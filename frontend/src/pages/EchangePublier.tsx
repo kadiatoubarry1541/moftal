@@ -132,6 +132,12 @@ export default function EchangePublier() {
   const handleSubmit = async () => {
     if (!validate()) { showToast('Veuillez corriger les champs manquants.', 'error'); return; }
     setSubmitting(true);
+
+    // Empêche le bouton de rester bloqué indéfiniment si la connexion coupe pendant l'envoi
+    // (photo/audio/vidéo peuvent être lourds sur une connexion lente).
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+
     try {
       const formData = new FormData();
       formData.append('title', product.title.trim() || (publishMode === 'photo_audio' ? 'Annonce audio' : 'Annonce vidéo'));
@@ -151,16 +157,25 @@ export default function EchangePublier() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (res.ok) {
         showToast('Produit publié avec succès !', 'success');
         setTimeout(() => navigate('/echange'), 1500);
       } else {
-        showToast('Erreur lors de la publication. Réessayez.', 'error');
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || 'Erreur lors de la publication. Réessayez.', 'error');
       }
-    } catch {
-      showToast('Erreur réseau. Vérifiez votre connexion.', 'error');
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      showToast(
+        err?.name === 'AbortError'
+          ? "L'envoi a pris trop de temps. Vérifiez votre connexion et réessayez."
+          : 'Erreur réseau. Vérifiez votre connexion.',
+        'error'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -417,10 +432,38 @@ export default function EchangePublier() {
                     <p className="text-sm font-bold text-gray-800">Message vocal <span className="text-gray-400 font-normal text-xs">10 s max</span></p>
                     {product.audio30s && <span className="ml-auto text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">✓ Prêt</span>}
                   </div>
-                  <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
-                    const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
-                    setProduct(p => ({ ...p, audio30s: file }));
-                  }} />
+                  {product.audio30s ? (
+                    <div className="flex items-center gap-3">
+                      <audio src={URL.createObjectURL(product.audio30s)} controls className="flex-1" />
+                      <button onClick={() => setProduct(p => ({ ...p, audio30s: null }))}
+                        className="text-xs text-red-500 hover:text-red-700 font-medium flex-shrink-0">Supprimer</button>
+                    </div>
+                  ) : (
+                    <>
+                      <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
+                        const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
+                        setProduct(p => ({ ...p, audio30s: file }));
+                      }} />
+                      <div className="flex items-center gap-3 my-1">
+                        <div className="flex-1 h-px bg-gray-200" />
+                        <span className="text-xs text-gray-400 font-medium">ou</span>
+                        <div className="flex-1 h-px bg-gray-200" />
+                      </div>
+                      <div>
+                        <input type="file" id="audio-device" accept="audio/*" className="hidden"
+                          onChange={e => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            setProduct(p => ({ ...p, audio30s: f }));
+                            e.target.value = '';
+                          }} />
+                        <label htmlFor="audio-device"
+                          className="flex items-center justify-center gap-2 w-full py-3 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl cursor-pointer transition-colors">
+                          🎧 Importer depuis l'appareil
+                        </label>
+                      </div>
+                    </>
+                  )}
                   {errors.audio30s && <p className="text-xs text-red-500">{errors.audio30s}</p>}
                 </div>
               </div>
