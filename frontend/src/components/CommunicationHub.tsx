@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { getSocket, disconnectSocket } from '../services/socket'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -19,24 +20,15 @@ const ALBUM_LABELS: Record<string, { label: string; emoji: string }> = {
   deces: { label: 'Deuil', emoji: '🕊️' },
 }
 
-interface Message {
+interface FamilyMessage {
   id: string
-  sender: string
-  senderName: string
-  content: string
-  type: 'text' | 'image' | 'video' | 'audio'
-  timestamp: Date
-  fileUrl?: string
-  isRead: boolean
-}
-
-interface User {
   numeroH: string
-  prenom: string
-  nomFamille: string
-  photo?: string
-  isOnline: boolean
-  lastSeen?: Date
+  authorName?: string
+  content: string
+  messageType?: 'text' | 'image' | 'video' | 'audio'
+  mediaUrl?: string | null
+  created_at?: string
+  createdAt?: string
 }
 
 interface CommunicationHubProps {
@@ -52,82 +44,68 @@ export function CommunicationHub({ userData, showGroups = true, showBroadcast = 
   const [galleryLoading, setGalleryLoading] = useState(false)
   const [galleryFilter, setGalleryFilter] = useState<string>('all')
   const [galleryLightbox, setGalleryLightbox] = useState<GalleryItem | null>(null)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<FamilyMessage[]>([])
+  const [loadingMessages, setLoadingMessages] = useState(true)
   const [newMessage, setNewMessage] = useState('')
-  const [users, setUsers] = useState<User[]>([])
+  const [isSending, setIsSending] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
-  // const [audioChunks, setAudioChunks] = useState<Blob[]>([])
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    loadUsers()
-    if (selectedUser) {
-      loadMessages(selectedUser.numeroH)
-    }
-  }, [selectedUser])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  const loadUsers = async () => {
-    // Simuler le chargement des utilisateurs
-    const mockUsers: User[] = [
-      {
-        numeroH: 'G1C1P2R1E1F1 1',
-        prenom: 'Fatoumata',
-        nomFamille: 'Diallo',
-        isOnline: true,
-        lastSeen: new Date()
-      },
-      {
-        numeroH: 'G1C1P2R1E2F2 1',
-        prenom: 'Moussa',
-        nomFamille: 'Barry',
-        isOnline: false,
-        lastSeen: new Date(Date.now() - 3600000) // Il y a 1 heure
-      },
-      {
-        numeroH: 'G1C1P2R1E3F3 1',
-        prenom: 'Aminata',
-        nomFamille: 'Sow',
-        isOnline: true,
-        lastSeen: new Date()
-      }
-    ]
-    setUsers(mockUsers)
-  }
-
-  const loadMessages = async (numeroH: string) => {
-    // Simuler le chargement des messages
-    const mockMessages: Message[] = [
-      {
-        id: '1',
-        sender: numeroH,
-        senderName: 'Fatoumata Diallo',
-        content: 'Bonjour, comment allez-vous ?',
-        type: 'text',
-        timestamp: new Date(Date.now() - 3600000),
-        isRead: true
-      },
-      {
-        id: '2',
-        sender: userData.numeroH,
-        senderName: userData.prenom + ' ' + userData.nomFamille,
-        content: 'Très bien merci, et vous ?',
-        type: 'text',
-        timestamp: new Date(Date.now() - 3500000),
-        isRead: true
-      }
-    ]
-    setMessages(mockMessages)
-  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  const loadMessages = useCallback(async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    setLoadingMessages(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/family-tree/messages`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setMessages((data.messages || []).slice().reverse())
+        setTimeout(scrollToBottom, 150)
+      }
+    } catch {
+      // non bloquant
+    } finally {
+      setLoadingMessages(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'messages') loadMessages()
+  }, [activeTab, loadMessages])
+
+  // Socket.io : messages en temps réel de toute la famille
+  useEffect(() => {
+    const familyName = userData?.nomFamille
+    if (!familyName || !userData?.numeroH || activeTab !== 'messages') return
+
+    const socket = getSocket()
+    socket.emit('join-family', familyName)
+
+    const onFamilyMsg = (msg: FamilyMessage) => {
+      setMessages(prev => {
+        if (prev.find(m => m.id === msg.id)) return prev
+        return [...prev, msg]
+      })
+      setTimeout(scrollToBottom, 100)
+    }
+
+    socket.on('family-message', onFamilyMsg)
+    return () => { socket.off('family-message', onFamilyMsg) }
+  }, [userData?.nomFamille, userData?.numeroH, activeTab])
+
+  useEffect(() => {
+    return () => { disconnectSocket() }
+  }, [])
 
   const loadGallery = useCallback(async () => {
     const token = localStorage.getItem('token')
@@ -150,124 +128,163 @@ export function CommunicationHub({ userData, showGroups = true, showBroadcast = 
     if (activeTab === 'galerie') loadGallery()
   }, [activeTab, loadGallery])
 
-  const sendGalleryPhotoToChat = (item: GalleryItem) => {
-    if (!selectedUser) return
-    const message: Message = {
-      id: Date.now().toString(),
-      sender: userData.numeroH,
-      senderName: userData.prenom + ' ' + userData.nomFamille,
-      content: `Photo de la galerie (${ALBUM_LABELS[item.album]?.label || item.album})`,
-      type: item.type === 'video' ? 'video' : 'image',
-      timestamp: new Date(),
-      fileUrl: item.url,
-      isRead: false,
+  const sendGalleryPhotoToChat = async (item: GalleryItem) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    try {
+      const res = await fetch(`${API_BASE}/api/family-tree/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: `Photo de la galerie (${ALBUM_LABELS[item.album]?.label || item.album})`,
+          messageType: item.type === 'video' ? 'video' : 'image',
+          mediaUrl: item.url,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success && data.message) {
+        setMessages(prev => {
+          if (prev.find(m => m.id === data.message.id)) return prev
+          return [...prev, data.message]
+        })
+        setActiveTab('messages')
+        setTimeout(scrollToBottom, 100)
+      }
+    } catch {
+      // non bloquant
     }
-    setMessages(prev => [...prev, message])
-    setActiveTab('messages')
   }
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedUser) return
-
-    const message: Message = {
-      id: Date.now().toString(),
-      sender: userData.numeroH,
-      senderName: userData.prenom + ' ' + userData.nomFamille,
-      content: newMessage,
-      type: 'text',
-      timestamp: new Date(),
-      isRead: false
-    }
-
-    setMessages(prev => [...prev, message])
-    setNewMessage('')
-  }
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file || !selectedUser) return
-
-    const fileType = file.type.startsWith('image/') ? 'image' : 
-                    file.type.startsWith('video/') ? 'video' : 'audio'
-
-    const message: Message = {
-      id: Date.now().toString(),
-      sender: userData.numeroH,
-      senderName: userData.prenom + ' ' + userData.nomFamille,
-      content: `Fichier ${fileType}: ${file.name}`,
-      type: fileType as any,
-      timestamp: new Date(),
-      fileUrl: URL.createObjectURL(file),
-      isRead: false
-    }
-
-    setMessages(prev => [...prev, message])
-  }
-
-  const startAudioRecording = async () => {
+    if (!newMessage.trim() || isSending) return
+    const token = localStorage.getItem('token')
+    if (!token) return
+    setIsSending(true)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
-      const chunks: Blob[] = []
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data)
-        }
+      const res = await fetch(`${API_BASE}/api/family-tree/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newMessage.trim(), messageType: 'text' }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success && data.message) {
+        setMessages(prev => {
+          if (prev.find(m => m.id === data.message.id)) return prev
+          return [...prev, data.message]
+        })
+        setNewMessage('')
+        setTimeout(scrollToBottom, 100)
+      } else {
+        alert(data.message || 'Erreur lors de l\'envoi du message')
       }
-
-      recorder.onstop = () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/wav' })
-        const audioUrl = URL.createObjectURL(audioBlob)
-        
-        const message: Message = {
-          id: Date.now().toString(),
-          sender: userData.numeroH,
-          senderName: userData.prenom + ' ' + userData.nomFamille,
-          content: 'Message vocal',
-          type: 'audio',
-          timestamp: new Date(),
-          fileUrl: audioUrl,
-          isRead: false
-        }
-
-        setMessages(prev => [...prev, message])
-        // setAudioChunks([])
-      }
-
-      recorder.start()
-      setMediaRecorder(recorder)
-      setIsRecording(true)
-    } catch (error) {
-      console.error('Erreur lors de l\'enregistrement audio:', error)
+    } catch {
+      alert('Erreur de connexion au serveur')
+    } finally {
+      setIsSending(false)
     }
   }
 
-  const stopAudioRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop()
-      setIsRecording(false)
-    }
-  }
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('fr-FR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+  // Vérifie la durée d'un fichier vidéo ou audio avant envoi (max 30s)
+  const checkMediaDuration = (file: File): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const isVideo = file.type.startsWith('video/')
+      const isAudio = file.type.startsWith('audio/')
+      if (!isVideo && !isAudio) { resolve(true); return }
+      const el = isVideo ? document.createElement('video') : document.createElement('audio')
+      const url = URL.createObjectURL(file)
+      el.src = url
+      el.onloadedmetadata = () => {
+        URL.revokeObjectURL(url)
+        if (el.duration > 30) {
+          alert(`⏱️ Durée maximale : 30 secondes.\nVotre fichier dure ${Math.round(el.duration)}s.`)
+          resolve(false)
+        } else {
+          resolve(true)
+        }
+      }
+      el.onerror = () => { URL.revokeObjectURL(url); resolve(true) }
     })
   }
 
-  const getOnlineStatus = (user: User) => {
-    if (user.isOnline) return 'En ligne'
-    if (user.lastSeen) {
-      const diff = Date.now() - user.lastSeen.getTime()
-      const minutes = Math.floor(diff / 60000)
-      if (minutes < 60) return `Il y a ${minutes} min`
-      const hours = Math.floor(minutes / 60)
-      if (hours < 24) return `Il y a ${hours}h`
-      return `Il y a ${Math.floor(hours / 24)}j`
+  const sendMediaMessage = useCallback(async (file: File) => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    const ok = await checkMediaDuration(file)
+    if (!ok) return
+    setIsSending(true)
+    try {
+      const formData = new FormData()
+      formData.append('media', file)
+      const res = await fetch(`${API_BASE}/api/family-tree/messages/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok && data.success && data.message) {
+        setMessages(prev => {
+          if (prev.find(m => m.id === data.message.id)) return prev
+          return [...prev, data.message]
+        })
+        setTimeout(scrollToBottom, 100)
+      } else {
+        alert(data.message || 'Erreur envoi média')
+      }
+    } catch {
+      alert('Erreur de connexion au serveur')
+    } finally {
+      setIsSending(false)
     }
-    return 'Hors ligne'
+  }, [])
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    sendMediaMessage(file)
+    event.target.value = ''
+  }
+
+  const startAudioRecording = useCallback(async () => {
+    if (isRecording) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      audioChunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const file = new File([blob], `vocal-${Date.now()}.webm`, { type: 'audio/webm' })
+        await sendMediaMessage(file)
+        setRecordingSeconds(0)
+      }
+      mr.start(200)
+      mediaRecorderRef.current = mr
+      setIsRecording(true)
+      let secs = 0
+      recordingTimerRef.current = setInterval(() => {
+        secs++
+        setRecordingSeconds(secs)
+        if (secs >= 30) stopAudioRecording()
+      }, 1000)
+    } catch {
+      alert('Impossible d\'accéder au microphone')
+    }
+  }, [isRecording, sendMediaMessage])
+
+  const stopAudioRecording = useCallback(() => {
+    if (!isRecording) return
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null }
+    mediaRecorderRef.current?.stop()
+    setIsRecording(false)
+  }, [isRecording])
+
+  const formatTime = (iso?: string) => {
+    if (!iso) return ''
+    return new Date(iso).toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   return (
@@ -322,129 +339,114 @@ export function CommunicationHub({ userData, showGroups = true, showBroadcast = 
 
       <div className="hub-content">
         {activeTab === 'messages' && (
-          <div className="messages-container">
-            <div className="users-sidebar">
-              <h4>Utilisateurs</h4>
-              <div className="users-list">
-                {users.map(user => (
-                  <div 
-                    key={user.numeroH}
-                    className={`user-item ${selectedUser?.numeroH === user.numeroH ? 'selected' : ''}`}
-                    onClick={() => setSelectedUser(user)}
-                  >
-                    <div className="user-avatar">
-                      {user.photo ? (
-                        <img src={user.photo} alt="Avatar" />
-                      ) : (
-                        <div className="avatar-placeholder">
-                          {user.prenom.charAt(0)}
-                        </div>
-                      )}
-                      <div className={`online-indicator ${user.isOnline ? 'online' : 'offline'}`}></div>
-                    </div>
-                    <div className="user-info">
-                      <h5>{user.prenom} {user.nomFamille}</h5>
-                      <p className="user-status">{getOnlineStatus(user)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="chat-area">
-              {selectedUser ? (
-                <>
-                  <div className="chat-header">
-                    <div className="chat-user-info">
-                      <div className="user-avatar">
-                        {selectedUser.photo ? (
-                          <img src={selectedUser.photo} alt="Avatar" />
-                        ) : (
-                          <div className="avatar-placeholder">
-                            {selectedUser.prenom.charAt(0)}
-                          </div>
-                        )}
-                        <div className={`online-indicator ${selectedUser.isOnline ? 'online' : 'offline'}`}></div>
-                      </div>
-                      <div>
-                        <h4>{selectedUser.prenom} {selectedUser.nomFamille}</h4>
-                        <p>{getOnlineStatus(selectedUser)}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="messages-list">
-                    {messages.map(message => (
-                      <div 
-                        key={message.id}
-                        className={`message ${message.sender === userData.numeroH ? 'sent' : 'received'}`}
-                      >
-                        <div className="message-content">
-                          {message.type === 'text' && (
-                            <p>{message.content}</p>
-                          )}
-                          {message.type === 'image' && message.fileUrl && (
-                            <img src={message.fileUrl} alt="Image" className="message-image" />
-                          )}
-                          {message.type === 'video' && message.fileUrl && (
-                            <video src={message.fileUrl} controls className="message-video" />
-                          )}
-                          {message.type === 'audio' && message.fileUrl && (
-                            <audio src={message.fileUrl} controls className="message-audio" />
-                          )}
-                        </div>
-                        <div className="message-meta">
-                          <span className="message-time">{formatTime(message.timestamp)}</span>
-                          {message.sender !== userData.numeroH && (
-                            <span className="message-sender">{message.senderName}</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                  </div>
-
-                  <div className="message-input">
-                    <div className="input-actions">
-                      <label className="file-upload-btn">
-                        📷
-                        <input 
-                          type="file" 
-                          accept="image/*,video/*,audio/*" 
-                          onChange={handleFileUpload}
-                          style={{ display: 'none' }}
-                        />
-                      </label>
-                      <button 
-                        className={`audio-btn ${isRecording ? 'recording' : ''}`}
-                        onMouseDown={startAudioRecording}
-                        onMouseUp={stopAudioRecording}
-                        onMouseLeave={stopAudioRecording}
-                      >
-                        🎤
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Tapez votre message..."
-                      onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    />
-                    <button 
-                      className="send-btn"
-                      onClick={sendMessage}
-                      disabled={!newMessage.trim()}
-                    >
-                      Envoyer
-                    </button>
-                  </div>
-                </>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '420px', background: '#f3f4f6' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+              {loadingMessages ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280', fontSize: '13px' }}>
+                  Chargement des messages...
+                </div>
+              ) : messages.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#6b7280', fontSize: '13px', gap: '4px', textAlign: 'center' }}>
+                  <p>Aucun message pour le moment.</p>
+                  <p>Soyez le premier à écrire à votre famille.</p>
+                </div>
               ) : (
-                <div className="no-chat-selected">
-                  <p>Sélectionnez un utilisateur pour commencer à discuter</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {messages.map(message => {
+                    const isMe = message.numeroH === userData.numeroH
+                    return (
+                      <div key={message.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                        <div style={{
+                          maxWidth: '75%',
+                          padding: '8px 12px',
+                          borderRadius: '16px',
+                          background: isMe ? '#22a722' : 'white',
+                          color: isMe ? 'white' : '#111827',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                        }}>
+                          {!isMe && (
+                            <p style={{ fontSize: '11px', fontWeight: 700, opacity: 0.8, marginBottom: '2px' }}>
+                              {message.authorName || 'Membre de la famille'}
+                            </p>
+                          )}
+                          {(message.messageType === 'text' || !message.messageType) && (
+                            <p style={{ fontSize: '14px', whiteSpace: 'pre-line', margin: 0 }}>{message.content}</p>
+                          )}
+                          {message.mediaUrl && message.messageType === 'image' && (
+                            <img src={message.mediaUrl} alt="" style={{ marginTop: '4px', borderRadius: '8px', maxHeight: '220px', objectFit: 'cover', width: '100%' }} />
+                          )}
+                          {message.mediaUrl && message.messageType === 'video' && (
+                            <video src={message.mediaUrl} controls style={{ marginTop: '4px', borderRadius: '8px', maxHeight: '220px', width: '100%' }} />
+                          )}
+                          {message.mediaUrl && message.messageType === 'audio' && (
+                            <audio src={message.mediaUrl} controls style={{ marginTop: '4px', width: '100%' }} />
+                          )}
+                          <p style={{ fontSize: '10px', marginTop: '4px', marginBottom: 0, opacity: 0.7 }}>
+                            {formatTime(message.createdAt || message.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
+            </div>
+
+            <div style={{ borderTop: '1px solid #e5e7eb', background: '#fafafa', padding: '10px' }}>
+              {isRecording && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '12px', color: '#dc2626', fontWeight: 600 }}>
+                  🎤 {recordingSeconds}s / 30s — relâchez pour envoyer
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'white', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '18px' }} title="Envoyer une photo ou vidéo">
+                  📷
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Tapez votre message..."
+                  onKeyDown={(e) => { if (e.key === 'Enter') sendMessage() }}
+                  style={{ flex: 1, minWidth: 0, padding: '8px 14px', borderRadius: '999px', border: '1px solid #d1d5db', fontSize: '14px' }}
+                />
+                <button
+                  type="button"
+                  onMouseDown={startAudioRecording}
+                  onMouseUp={stopAudioRecording}
+                  onMouseLeave={stopAudioRecording}
+                  onTouchStart={(e) => { e.preventDefault(); startAudioRecording() }}
+                  onTouchEnd={(e) => { e.preventDefault(); stopAudioRecording() }}
+                  disabled={isSending}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+                    background: isRecording ? '#ef4444' : 'white',
+                    border: isRecording ? 'none' : '1px solid #e5e7eb',
+                    color: isRecording ? 'white' : '#6b7280',
+                  }}
+                  title="Maintenir pour enregistrer un message vocal"
+                >
+                  🎤
+                </button>
+                {newMessage.trim() && (
+                  <button
+                    type="button"
+                    onClick={sendMessage}
+                    disabled={isSending}
+                    style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#16a34a', color: 'white', border: 'none', fontSize: '16px' }}
+                  >
+                    ➤
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -728,24 +730,22 @@ export function CommunicationHub({ userData, showGroups = true, showBroadcast = 
                   <p style={{ color: 'white', fontSize: '13px', fontWeight: '600', margin: 0 }}>
                     {ALBUM_LABELS[galleryLightbox.album]?.emoji} {ALBUM_LABELS[galleryLightbox.album]?.label} — {galleryLightbox.uploaderName}
                   </p>
-                  {selectedUser && (
-                    <button
-                      onClick={() => {
-                        sendGalleryPhotoToChat(galleryLightbox)
-                        setGalleryLightbox(null)
-                      }}
-                      style={{
-                        padding: '8px 20px',
-                        background: 'linear-gradient(135deg, #6366f1, #9333ea)',
-                        color: 'white', border: 'none',
-                        borderRadius: '20px', cursor: 'pointer',
-                        fontSize: '13px', fontWeight: '700',
-                        boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
-                      }}
-                    >
-                      Envoyer à {selectedUser.prenom}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      sendGalleryPhotoToChat(galleryLightbox)
+                      setGalleryLightbox(null)
+                    }}
+                    style={{
+                      padding: '8px 20px',
+                      background: 'linear-gradient(135deg, #6366f1, #9333ea)',
+                      color: 'white', border: 'none',
+                      borderRadius: '20px', cursor: 'pointer',
+                      fontSize: '13px', fontWeight: '700',
+                      boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
+                    }}
+                  >
+                    Envoyer à la famille
+                  </button>
                   <button
                     onClick={() => setGalleryLightbox(null)}
                     style={{

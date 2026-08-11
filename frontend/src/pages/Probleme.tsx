@@ -1,6 +1,5 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Etat } from "../components/Etat";
 import { ReçuTransaction } from "../components/ReçuTransaction";
 
 interface UserData {
@@ -427,11 +426,6 @@ export default function Probleme() {
             onClose={() => setMoftalReçu(null)}
           />
         )}
-
-        {/* Tableau de bord des états (familial + santé) */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-          <Etat userData={userData} />
-        </div>
       </div>
     </div>
   );

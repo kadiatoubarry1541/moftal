@@ -157,7 +157,6 @@ const UserDashboard = lazy(() => import("./pages/UserDashboard"));
 const Activite1 = lazy(() => import("./pages/Activite1"));
 const Activite2 = lazy(() => import("./pages/Activite2"));
 const Activite3 = lazy(() => import("./pages/Activite3"));
-const ZakaEtDons = lazy(() => import("./pages/ZakaEtDons"));
 const GuideEntrepreneur = lazy(() => import("./pages/GuideEntrepreneur"));
 const LivresDeDieu = lazy(() => import("./pages/LivresDeDieu"));
 const Reflechissons = lazy(() => import("./pages/Reflechissons"));
@@ -635,7 +634,6 @@ function App() {
           <Route path="/dons" element={<Navigate to="/" replace />} />
           <Route path="/donations" element={<Donations />} />
           <Route path="/zaka" element={<ZakaMuslimOnly />} />
-          <Route path="/zaka-et-dons" element={<ZakaEtDons />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/badges" element={<AdminBadges />} />
           <Route path="/admin/moderation" element={<AdminModeration />} />

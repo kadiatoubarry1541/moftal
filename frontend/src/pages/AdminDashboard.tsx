@@ -1885,6 +1885,11 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-teal-900">Vérifier la base de données</div>
                   <div className="text-xs text-teal-700">Preuve en chiffres réels que les données sont bien enregistrées</div>
                 </button>
+                <button onClick={() => navigate("/admin/governments")} className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl p-5 text-left transition-colors">
+                  <div className="text-2xl mb-2">🏛️</div>
+                  <div className="font-semibold text-indigo-900">Gouvernements</div>
+                  <div className="text-xs text-indigo-700">Créer et gérer les gouvernements et leurs membres</div>
+                </button>
                 <button onClick={() => navigate("/famille")} className="bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl p-5 text-left transition-colors">
                   <div className="text-2xl mb-2">🌳</div>
                   <div className="font-semibold text-green-900">Arbre Généalogique</div>

@@ -270,18 +270,29 @@ export default function Solidarite() {
   const loadDonations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/zakat/donations`, {
+      const response = await fetch(`${API_URL}/api/zakat/mes-dons`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
-        // Filtrer uniquement les dons (sadaqah), pas la zakat
-        const allDonations = data.donations || [];
-        setDonations(allDonations.filter((d: any) => !d.donationType || d.donationType === 'sadaqah'));
+        const dons: Donation[] = (data.dons || []).map((d: any, i: number) => ({
+          id: String(i),
+          donor: userData?.numeroH || '',
+          donorName: d.de_nom,
+          recipient: '',
+          recipientName: d.vers_nom,
+          amount: parseFloat(d.montant),
+          currency: d.currency,
+          type: 'money',
+          description: d.description,
+          status: d.statut === 'confirme' ? 'completed' : 'pending',
+          createdAt: d.created_at,
+        }));
+        setDonations(dons);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des dons:', error);
@@ -305,32 +316,26 @@ export default function Solidarite() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/zakat/make-donation`, {
+      const response = await fetch(`${API_URL}/api/zakat/donner-au-pauvre/${selectedPoorPerson.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          donor: userData?.numeroH,
-          donorName: `${userData?.prenom} ${userData?.nomFamille}`,
-          recipient: selectedPoorPerson.id,
-          recipientName: `${selectedPoorPerson.prenom} ${selectedPoorPerson.nomFamille}`,
-          amount: parseFloat(donationForm.amount),
-          currency: donationForm.currency,
-          type: donationForm.type,
+          montant: parseFloat(donationForm.amount),
           description: donationForm.description,
-          donationType: 'sadaqah' // Toujours sadaqah pour cette page
         })
       });
-      
-      if (response.ok) {
-        alert('Don effectué avec succès !');
+
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        alert(data.message || 'Don effectué avec succès !');
         setShowDonationForm(false);
         loadDonations();
         loadPoorPeople();
       } else {
-        alert('Erreur lors du don');
+        alert(data.message || 'Erreur lors du don');
       }
     } catch (error) {
       console.error('Erreur lors du don:', error);
