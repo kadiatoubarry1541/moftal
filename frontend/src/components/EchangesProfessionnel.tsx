@@ -82,6 +82,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
   });
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const [activeSection, setActiveSection] = useState<string>('primaire');
+  const [canPublish, setCanPublish] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Charge les produits réels de chaque catégorie (mêmes routes que les pages détaillées)
@@ -95,6 +96,13 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
     const token = getToken();
     const headers: HeadersInit = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    // Le bouton "Publier" ne doit être visible que pour un vendeur déjà approuvé (ou un admin) —
+    // pas pour quelqu'un qui se ferait refuser sa publication à la fin.
+    fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.success) setCanPublish(!!(data.isVendor || data.isAdmin)); })
+      .catch(() => {});
 
     SECTIONS.forEach(async (section) => {
       try {
@@ -153,13 +161,15 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               <p style={{ color: '#94a3b8', fontSize: 11, margin: 0 }}>Fais défiler pour tout voir</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/echange/publier')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#22a722', border: 'none', borderRadius: 10, padding: '8px 12px', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
-          >
-            ＋ Publier
-          </button>
+          {canPublish && (
+            <button
+              type="button"
+              onClick={() => navigate('/echange/publier')}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#22a722', border: 'none', borderRadius: 10, padding: '8px 12px', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
+            >
+              ＋ Publier
+            </button>
+          )}
         </div>
 
         {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir */}
