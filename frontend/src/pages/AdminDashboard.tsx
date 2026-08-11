@@ -23,6 +23,8 @@ interface ProfessionalAccount {
   ownerNumeroH: string;
   status: string;
   created_at: string;
+  /** Secteur précis pour les demandes vendeur Échange (primaire/secondaire/tertiaire/quaternaire/nourriture) */
+  subSector?: string | null;
   /** Justificatif d'activité : visible par l'admin uniquement pour accepter/refuser */
   justificatifDocument?: string | null;
   /** Statut d'abonnement côté paiement */
@@ -463,6 +465,15 @@ export default function AdminDashboard() {
     producer: { label: "Entreprise de production", icon: "🏭" },
     broker: { label: "Démarcheur / Location", icon: "🏘️" },
     scientist: { label: "Scientifique/Chercheur", icon: "🔬" },
+    moftal_vendor: { label: "Vendeur Échange", icon: "🛍️" },
+  };
+
+  const SECTEUR_LABELS: Record<string, string> = {
+    primaire: "Primaire",
+    secondaire: "Secondaire",
+    tertiaire: "Tertiaire",
+    quaternaire: "Quaternaire",
+    nourriture: "Nourriture",
   };
 
   if (loading) {
@@ -1089,7 +1100,11 @@ export default function AdminDashboard() {
                             <div className="text-2xl">{typeLabels[pro.type]?.icon || "📄"}</div>
                             <div className="flex-1 min-w-0">
                               <div className="font-bold text-gray-900 text-sm">{pro.name}</div>
-                              <div className="text-xs text-gray-500">{typeLabels[pro.type]?.label || pro.type} • {pro.city || "?"}</div>
+                              <div className="text-xs text-gray-500">
+                                {typeLabels[pro.type]?.label || pro.type}
+                                {pro.subSector && ` (${SECTEUR_LABELS[pro.subSector] || pro.subSector})`}
+                                {" • "}{pro.city || "?"}
+                              </div>
                               <div className="text-xs text-red-600 font-medium mt-0.5">
                                 Propriétaire : {pro.ownerNumeroH}
                                 {expiry && <span className="ml-2">· Expiré le {expiry.toLocaleDateString("fr-FR")}</span>}
@@ -1132,7 +1147,11 @@ export default function AdminDashboard() {
                       <div className="text-3xl">{typeLabels[pro.type]?.icon || "📄"}</div>
                       <div className="flex-1 min-w-0">
                         <div className="font-bold text-gray-900">{pro.name}</div>
-                        <div className="text-sm text-gray-600">{typeLabels[pro.type]?.label || pro.type} • {pro.city || "?"}, {pro.country || ""}</div>
+                        <div className="text-sm text-gray-600">
+                          {typeLabels[pro.type]?.label || pro.type}
+                          {pro.subSector && ` (${SECTEUR_LABELS[pro.subSector] || pro.subSector})`}
+                          {" • "}{pro.city || "?"}, {pro.country || ""}
+                        </div>
                         <div className="text-xs text-gray-400 mt-1">
                           Propriétaire: {pro.ownerNumeroH} • {new Date(pro.created_at).toLocaleDateString("fr-FR")}
                         </div>
