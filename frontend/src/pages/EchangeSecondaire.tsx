@@ -143,7 +143,7 @@ export default function EchangeSecondaire() {
     if (token) {
       fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers: { Authorization: `Bearer ${token}` } })
         .then(res => res.ok ? res.json() : null)
-        .then(data => { if (data?.success) setCanPublish(!!(data.isVendor || data.isAdmin)); })
+        .then(data => { if (data?.success) setCanPublish(!!(data.isAdmin || data.approvedSectors?.includes('secondaire'))); })
         .catch(() => {});
     }
   }, []);

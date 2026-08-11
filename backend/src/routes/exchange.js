@@ -65,40 +65,38 @@ router.use(authenticate);
 // ========== VENDEURS MARKETPLACE MOFTAL ==========
 
 // @route   GET /api/exchange/vendor-status
-// @desc    Vérifie si l'utilisateur est un vendeur Moftal approuvé, retourne son secteur
+// @desc    Vérifie si l'utilisateur est un vendeur Moftal approuvé — un secteur à la fois,
+//          un vendeur peut avoir plusieurs comptes vendeur (un par secteur), chacun approuvé séparément
 // @access  Authentifié
 router.get('/vendor-status', async (req, res) => {
   try {
     const userNumeroH = req.user?.numeroH || req.userId;
-    if (!userNumeroH) return res.json({ success: true, isVendor: false });
+    if (!userNumeroH) return res.json({ success: true, isVendor: false, approvedSectors: [], pendingSectors: [] });
 
-    if (isGlobalAdmin(req.user)) return res.json({ success: true, isVendor: true, isAdmin: true });
+    if (isGlobalAdmin(req.user)) {
+      return res.json({ success: true, isVendor: true, isAdmin: true, approvedSectors: ['primaire', 'secondaire', 'tertiaire', 'quaternaire'], pendingSectors: [] });
+    }
 
-    const [account] = await sequelize.query(
-      `SELECT id, name, sub_sector, status FROM professional_accounts
-       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' LIMIT 1`,
+    const accounts = await sequelize.query(
+      `SELECT sub_sector, status, name FROM professional_accounts
+       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status IN ('approved', 'pending')`,
       { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
     );
 
-    if (account) {
-      return res.json({ success: true, isVendor: true, sector: account.sub_sector, accountName: account.name });
-    }
+    const approvedSectors = accounts.filter(a => a.status === 'approved').map(a => a.sub_sector);
+    const pendingSectors = accounts.filter(a => a.status === 'pending').map(a => a.sub_sector);
+    const accountName = accounts.find(a => a.status === 'approved')?.name;
 
-    // Vérifier si une demande est en attente
-    const [pending] = await sequelize.query(
-      `SELECT id, sub_sector FROM professional_accounts
-       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='pending' LIMIT 1`,
-      { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
-    );
-
-    if (pending) {
-      return res.json({ success: true, isVendor: false, hasPendingRequest: true, pendingSector: pending.sub_sector });
-    }
-
-    return res.json({ success: true, isVendor: false });
+    return res.json({
+      success: true,
+      isVendor: approvedSectors.length > 0,
+      approvedSectors,
+      pendingSectors,
+      accountName,
+    });
   } catch (e) {
     console.error('vendor-status error:', e);
-    res.json({ success: true, isVendor: false });
+    res.json({ success: true, isVendor: false, approvedSectors: [], pendingSectors: [] });
   }
 });
 
@@ -117,17 +115,18 @@ router.post('/register-vendor', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Secteur invalide.' });
     }
 
-    // Vérifier qu'il n'a pas déjà une demande en cours ou un compte approuvé
+    // Vérifier qu'il n'a pas déjà une demande en cours ou un compte approuvé POUR CE SECTEUR
+    // (un vendeur peut demander plusieurs secteurs séparément — chacun approuvé indépendamment)
     const [existing] = await sequelize.query(
-      `SELECT id, status FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' LIMIT 1`,
-      { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
+      `SELECT id, status FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND sub_sector=:secteur LIMIT 1`,
+      { replacements: { n: userNumeroH, secteur }, type: sequelize.QueryTypes.SELECT }
     );
     if (existing) {
       const msg = existing.status === 'approved'
-        ? 'Vous avez déjà un compte vendeur Moftal approuvé.'
+        ? 'Vous avez déjà un compte vendeur Moftal approuvé pour ce secteur.'
         : existing.status === 'pending'
-          ? 'Votre demande est déjà en cours d\'examen. Veuillez patienter.'
-          : 'Une demande existe déjà pour ce compte.';
+          ? 'Votre demande pour ce secteur est déjà en cours d\'examen. Veuillez patienter.'
+          : 'Une demande existe déjà pour ce secteur.';
       return res.status(409).json({ success: false, message: msg });
     }
 

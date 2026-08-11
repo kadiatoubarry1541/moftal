@@ -105,7 +105,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
     // pas pour quelqu'un qui se ferait refuser sa publication à la fin.
     fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers })
       .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data?.success) setCanPublish(!!(data.isVendor || data.isAdmin)); })
+      .then(data => { if (data?.success) setCanPublish(!!(data.isAdmin || data.approvedSectors?.length)); })
       .catch(() => {});
 
     SECTIONS.forEach(async (section) => {
