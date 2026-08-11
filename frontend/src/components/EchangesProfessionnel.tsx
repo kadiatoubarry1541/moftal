@@ -226,9 +226,9 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               </button>
 
               {loading ? (
-                <div className="flex gap-3 overflow-hidden">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {[1, 2].map(i => (
-                    <div key={i} className="h-48 w-40 flex-shrink-0 bg-gray-100 rounded-xl animate-pulse" />
+                    <div key={i} className="h-48 bg-gray-100 rounded-xl animate-pulse" />
                   ))}
                 </div>
               ) : products.length === 0 ? (
@@ -236,13 +236,13 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                   <p className="text-sm text-gray-500">Aucun produit pour l'instant dans {section.label}</p>
                 </div>
               ) : (
-                <div className="flex gap-3 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {products.map(product => (
                     <button
                       key={product.id}
                       type="button"
                       onClick={() => setSelectedProduct(product)}
-                      className="text-left rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 w-40"
+                      className="text-left rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                     >
                       <div className="w-full h-36 bg-gray-100 relative">
                         {product.images?.[0] ? (
