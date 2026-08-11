@@ -5,6 +5,7 @@ import { sortAnyByProximity, anyProximityLabel, getUserGeoContext, requestGPS, t
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
+import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
 
 interface UserData {
   numeroH: string;
@@ -570,14 +571,16 @@ export default function EchangeSecondaire() {
           </div>
         </div>
         <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
-          {canPublish && (
-            <div className="flex-1">
+          <div className="flex-1">
+            {canPublish ? (
               <PublierAnnonceButtons
                 onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
                 title="Publier une annonce"
               />
-            </div>
-          )}
+            ) : (
+              <DevenirVendeurButton secteur="secondaire" />
+            )}
+          </div>
           {isAdmin && (
             <button
               onClick={() => setSelectedSupplier({} as Supplier)}

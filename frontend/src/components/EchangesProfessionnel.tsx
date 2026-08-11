@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
+import { DevenirVendeurButton } from './DevenirVendeurButton';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -161,7 +162,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               <p style={{ color: '#94a3b8', fontSize: 11, margin: 0 }}>Fais défiler pour tout voir</p>
             </div>
           </div>
-          {canPublish && (
+          {canPublish ? (
             <button
               type="button"
               onClick={() => navigate('/echange/publier')}
@@ -169,6 +170,10 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             >
               ＋ Publier
             </button>
+          ) : (
+            <DevenirVendeurButton
+              className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 rounded-lg px-3 py-2 text-white font-bold text-xs flex-shrink-0"
+            />
           )}
         </div>
 

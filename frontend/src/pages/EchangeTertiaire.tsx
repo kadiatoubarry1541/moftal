@@ -5,6 +5,7 @@ import { sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext 
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
+import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -289,12 +290,16 @@ export default function EchangeTertiaire() {
             ))}
           </div>
         </div>
-        {userData && canPublish && (
+        {userData && (
           <div className="mt-3">
-            <PublierAnnonceButtons
-              onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
-              title="Vendre un article"
-            />
+            {canPublish ? (
+              <PublierAnnonceButtons
+                onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
+                title="Vendre un article"
+              />
+            ) : (
+              <DevenirVendeurButton secteur="tertiaire" />
+            )}
           </div>
         )}
       </div>
