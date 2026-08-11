@@ -1,40 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
-interface PreviewProduct {
+interface ExchangeProduct {
   id: string;
   title: string;
+  description?: string;
+  category?: string;
   price: number;
   currency: string;
-  imageUrl?: string;
+  images?: string[];
+  condition?: 'neuf' | 'bon' | 'moyen' | 'usé';
+  location?: string;
+  sellerName?: string;
+  contactInfo?: { phone?: string };
 }
 
 interface EchangesProfessionnelProps {
   userData?: any;
 }
-
-const APERÇU_PRIMAIRE: PreviewProduct[] = [
-  { id: '1', title: 'Riz Local Premium', price: 15000, currency: 'FG' },
-  { id: '2', title: 'Huile de Palme Artisanale', price: 8000, currency: 'FG' },
-];
-
-const APERÇU_SECONDAIRE: PreviewProduct[] = [
-  { id: '1', title: 'Machine à Coudre Industrielle', price: 1200000, currency: 'FG' },
-  { id: '2', title: 'Générateur Diesel 5KVA', price: 2500000, currency: 'FG' },
-];
-
-const APERÇU_TERTIAIRE: PreviewProduct[] = [
-  { id: '1', title: 'Ciment Portland 50kg', price: 85000, currency: 'FG' },
-  { id: '2', title: 'Tôles ondulées (lot de 10)', price: 120000, currency: 'FG' },
-];
-
-const APERÇU_QUATERNAIRE: PreviewProduct[] = [
-  { id: '1', title: 'Samsung Galaxy A54', price: 3500000, currency: 'FG' },
-  { id: '2', title: 'Laptop HP 15 pouces', price: 6500000, currency: 'FG' },
-];
 
 function buildImageUrl(path: string | undefined): string | undefined {
   if (!path) return undefined;
@@ -42,28 +28,63 @@ function buildImageUrl(path: string | undefined): string | undefined {
   return `${API_ORIGIN}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-function ApercuImage({ src, alt, placeholder }: { src?: string; alt: string; placeholder: string }) {
-  const [failed, setFailed] = useState(false);
-  const showImg = src && !failed;
-  return (
-    <div className="w-full h-full flex items-center justify-center overflow-hidden bg-inherit">
-      {showImg ? (
-        <img src={src} alt={alt} className="w-full h-full object-cover" onError={() => setFailed(true)} />
-      ) : (
-        <span className="text-2xl" aria-hidden>{placeholder}</span>
-      )}
-    </div>
-  );
-}
+const SECTIONS = [
+  {
+    id: 'primaire',
+    label: 'Primaire',
+    subtitle: 'Céréales · Légumes · Animaux · Poissons',
+    icons: ['🌾', '🐓', '🥬', '🐟'],
+    color: 'green',
+    placeholder: '🌾',
+    path: '/echange/primaire',
+  },
+  {
+    id: 'secondaire',
+    label: 'Secondaire',
+    subtitle: 'Habits · Chaussures · Sacs · Cosmétiques',
+    icons: ['👗', '👟', '👜', '💄'],
+    color: 'blue',
+    placeholder: '🏭',
+    path: '/echange/secondaire',
+  },
+  {
+    id: 'tertiaire',
+    label: 'Tertiaire',
+    subtitle: 'Meubles · Électroménager · Matériaux · Outils',
+    icons: ['🛋️', '❄️', '🧱', '🔧'],
+    color: 'amber',
+    placeholder: '🧱',
+    path: '/echange/tertiaire',
+  },
+  {
+    id: 'quaternaire',
+    label: 'Quaternaire',
+    subtitle: 'Téléphones · Ordinateurs · TV · Voitures',
+    icons: ['📱', '💻', '📺', '🚗'],
+    color: 'violet',
+    placeholder: '💻',
+    path: '/echange/quaternaire',
+  },
+] as const;
+
+const COLOR_CLASSES: Record<string, { bg: string; border: string; text: string }> = {
+  green:  { bg: 'bg-green-600',  border: 'border-green-200',  text: 'text-green-600' },
+  blue:   { bg: 'bg-blue-600',   border: 'border-blue-200',   text: 'text-blue-600' },
+  amber:  { bg: 'bg-amber-600',  border: 'border-amber-200',  text: 'text-amber-600' },
+  violet: { bg: 'bg-violet-600', border: 'border-violet-200', text: 'text-violet-600' },
+};
 
 export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelProps) {
   const navigate = useNavigate();
-  const [previewPrimaire, setPreviewPrimaire] = useState<PreviewProduct[]>(APERÇU_PRIMAIRE);
-  const [previewSecondaire, setPreviewSecondaire] = useState<PreviewProduct[]>(APERÇU_SECONDAIRE);
-  const [previewTertiaire, setPreviewTertiaire] = useState<PreviewProduct[]>(APERÇU_TERTIAIRE);
-  const [previewQuaternaire, setPreviewQuaternaire] = useState<PreviewProduct[]>(APERÇU_QUATERNAIRE);
-  const [loadingPreview, setLoadingPreview] = useState(true);
+  const [productsBySection, setProductsBySection] = useState<Record<string, ExchangeProduct[]>>({});
+  const [loadingBySection, setLoadingBySection] = useState<Record<string, boolean>>({
+    primaire: true, secondaire: true, tertiaire: true, quaternaire: true,
+  });
+  const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
+  const [activeSection, setActiveSection] = useState<string>('primaire');
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // Charge les produits réels de chaque catégorie (mêmes routes que les pages détaillées)
   useEffect(() => {
     const getToken = () => {
       try {
@@ -72,62 +93,50 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
       } catch { return null; }
     };
     const token = getToken();
-    const loadPreviews = async () => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    SECTIONS.forEach(async (section) => {
       try {
-        const headers: HeadersInit = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const [resP, resS, resT, resQ] = await Promise.all([
-          fetch(`${config.API_BASE_URL}/exchange/primaire/products`, { headers }),
-          fetch(`${config.API_BASE_URL}/exchange/secondaire/products`, { headers }),
-          fetch(`${config.API_BASE_URL}/exchange/tertiaire/products`, { headers }),
-          fetch(`${config.API_BASE_URL}/exchange/quaternaire/products`, { headers }),
-        ]);
-
-        if (resP.ok) {
-          const data = await resP.json();
-          const list = (data.products || []).slice(0, 2).map((p: any) => ({
-            id: p.id, title: p.title, price: Number(p.price), currency: p.currency || 'FG',
-            imageUrl: buildImageUrl(p.images?.[0]),
-          }));
-          if (list.length) setPreviewPrimaire(list);
-        }
-        if (resS.ok) {
-          const data = await resS.json();
-          const list = (data.products || []).slice(0, 2).map((p: any) => ({
-            id: p.id, title: p.title, price: Number(p.price), currency: p.currency || 'FG',
-            imageUrl: buildImageUrl(p.images?.[0]),
-          }));
-          if (list.length) setPreviewSecondaire(list);
-        }
-        if (resT.ok) {
-          const data = await resT.json();
-          const list = (data.products || []).slice(0, 2).map((p: any) => ({
-            id: p.id, title: p.title, price: Number(p.price), currency: p.currency || 'FG',
-            imageUrl: buildImageUrl(p.images?.[0]),
-          }));
-          if (list.length) setPreviewTertiaire(list);
-        }
-        if (resQ.ok) {
-          const data = await resQ.json();
-          const list = (data.products || []).slice(0, 2).map((p: any) => ({
-            id: p.id, title: p.title, price: Number(p.price), currency: p.currency || 'FG',
-            imageUrl: buildImageUrl(p.images?.[0]),
-          }));
-          if (list.length) setPreviewQuaternaire(list);
+        const res = await fetch(`${config.API_BASE_URL}/exchange/${section.id}/products`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setProductsBySection(prev => ({ ...prev, [section.id]: data.products || [] }));
         }
       } catch {
-        // Garder les aperçus par défaut
+        // Garder vide, la section affichera "aucun produit"
       } finally {
-        setLoadingPreview(false);
+        setLoadingBySection(prev => ({ ...prev, [section.id]: false }));
       }
-    };
-    loadPreviews();
+    });
   }, []);
+
+  // Le raccourci actif suit toujours la section réellement visible à l'écran
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.id.replace('section-', ''));
+      },
+      { rootMargin: '-120px 0px -55% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+    SECTIONS.forEach(section => {
+      const el = sectionRefs.current[section.id];
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <>
-      {/* Header (style Espace Gestion) */}
+      {/* Header + raccourcis — jamais besoin de quitter cette page */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -141,206 +150,146 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             </button>
             <div>
               <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>🔄 Échanges</h1>
-              <p style={{ color: '#94a3b8', fontSize: 11, margin: 0 }}>Choisis ta catégorie</p>
+              <p style={{ color: '#94a3b8', fontSize: 11, margin: 0 }}>Fais défiler pour tout voir</p>
             </div>
           </div>
-          <button style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '50%' }}>
-            <svg className="w-5 h-5" style={{ color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+          <button
+            type="button"
+            onClick={() => navigate('/echange/publier')}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#22a722', border: 'none', borderRadius: 10, padding: '8px 12px', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
+          >
+            ＋ Publier
           </button>
+        </div>
+
+        {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir */}
+        <div className="flex gap-1.5" style={{ padding: '0 8px 8px' }}>
+          {SECTIONS.map(section => {
+            const c = COLOR_CLASSES[section.color];
+            const active = activeSection === section.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => scrollToSection(section.id)}
+                className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 text-[10px] font-bold transition rounded-lg ${
+                  active ? c.bg + ' text-white' : 'bg-white/10 text-gray-300'
+                }`}
+              >
+                <span className="text-base leading-none">{section.icons[0]}</span>
+                <span className="truncate max-w-[60px]">{section.label}</span>
+              </button>
+            );
+          })}
         </div>
       </header>
 
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-4">
-
-        {/* ── SECTEUR PRIMAIRE ── */}
-        <div className="rounded-xl border-2 border-green-200 bg-gradient-to-b from-green-50 to-white dark:from-green-900/20 dark:to-gray-900 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-          <button
-            onClick={() => navigate('/echange/primaire')}
-            className="w-full bg-green-600 hover:bg-green-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
-          >
-            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
-              <span className="flex items-center justify-center text-lg leading-none">🌾</span>
-              <span className="flex items-center justify-center text-lg leading-none">🐓</span>
-              <span className="flex items-center justify-center text-lg leading-none">🥬</span>
-              <span className="flex items-center justify-center text-lg leading-none">🐟</span>
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-base">Primaire</p>
-              <p className="text-xs opacity-90">Céréales · Légumes · Animaux · Poissons</p>
-            </div>
-            <span className="ml-auto text-lg opacity-70">›</span>
-          </button>
-          <div className="p-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des produits</p>
-            {loadingPreview ? (
-              <p className="text-sm text-gray-400">Chargement…</p>
-            ) : (
-              <div className="space-y-2">
-                {previewPrimaire.map((p) => (
-                  <div key={p.id} className="flex gap-3 rounded-lg overflow-hidden bg-white dark:bg-gray-800/50 border border-green-100 dark:border-green-800/50">
-                    <div className="w-16 h-16 flex-shrink-0 bg-green-100 dark:bg-green-900/30 rounded-l-lg overflow-hidden">
-                      <ApercuImage src={p.imageUrl} alt={p.title} placeholder="🌾" />
-                    </div>
-                    <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{p.title}</p>
-                      <p className="text-sm font-semibold text-green-600 dark:text-green-400">{p.price.toLocaleString()} {p.currency}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => navigate('/echange/primaire')}
-              className="mt-3 w-full py-2 text-sm font-medium text-green-600 hover:text-green-700 border border-green-300 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+      {/* Une seule page qui défile — les 4 catégories se suivent, jamais besoin de sortir */}
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 pb-8">
+        {SECTIONS.map(section => {
+          const c = COLOR_CLASSES[section.color];
+          const products = productsBySection[section.id] || [];
+          const loading = loadingBySection[section.id];
+          return (
+            <div
+              key={section.id}
+              id={`section-${section.id}`}
+              ref={el => { sectionRefs.current[section.id] = el; }}
+              className="scroll-mt-[112px] pt-5"
             >
-              Voir tout →
-            </button>
-          </div>
-        </div>
-
-        {/* ── SECTEUR SECONDAIRE ── */}
-        <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-b from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-          <button
-            onClick={() => navigate('/echange/secondaire')}
-            className="w-full bg-blue-600 hover:bg-blue-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
-          >
-            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
-              <span className="flex items-center justify-center text-lg leading-none">👗</span>
-              <span className="flex items-center justify-center text-lg leading-none">👟</span>
-              <span className="flex items-center justify-center text-lg leading-none">👜</span>
-              <span className="flex items-center justify-center text-lg leading-none">💄</span>
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-base">Secondaire</p>
-              <p className="text-xs opacity-90">Habits · Chaussures · Sacs · Cosmétiques</p>
-            </div>
-            <span className="ml-auto text-lg opacity-70">›</span>
-          </button>
-          <div className="p-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des produits</p>
-            {loadingPreview ? (
-              <p className="text-sm text-gray-400">Chargement…</p>
-            ) : (
-              <div className="space-y-2">
-                {previewSecondaire.map((p) => (
-                  <div key={p.id} className="flex gap-3 rounded-lg overflow-hidden bg-white dark:bg-gray-800/50 border border-blue-100 dark:border-blue-800/50">
-                    <div className="w-16 h-16 flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-l-lg overflow-hidden">
-                      <ApercuImage src={p.imageUrl} alt={p.title} placeholder="🏭" />
-                    </div>
-                    <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{p.title}</p>
-                      <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{p.price.toLocaleString()} {p.currency}</p>
-                    </div>
-                  </div>
-                ))}
+              {/* Titre de section — repère visuel constant, comme les raccourcis en haut */}
+              <div className={`${c.bg} rounded-xl p-3 flex items-center gap-3 text-white mb-3`}>
+                <div className="grid grid-cols-2 gap-0.5 w-12 h-12 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
+                  {section.icons.map((ic, i) => (
+                    <span key={i} className="flex items-center justify-center text-base leading-none">{ic}</span>
+                  ))}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-base">{section.label}</p>
+                  <p className="text-xs opacity-90 truncate">{section.subtitle}</p>
+                </div>
               </div>
-            )}
-            <button
-              onClick={() => navigate('/echange/secondaire')}
-              className="mt-3 w-full py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-            >
-              Voir tout →
-            </button>
-          </div>
-        </div>
 
-        {/* ── SECTEUR TERTIAIRE ── */}
-        <div className="rounded-xl border-2 border-amber-200 bg-gradient-to-b from-amber-50 to-white dark:from-amber-900/20 dark:to-gray-900 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-          <button
-            onClick={() => navigate('/echange/tertiaire')}
-            className="w-full bg-amber-600 hover:bg-amber-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
-          >
-            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
-              <span className="flex items-center justify-center text-lg leading-none">🛋️</span>
-              <span className="flex items-center justify-center text-lg leading-none">❄️</span>
-              <span className="flex items-center justify-center text-lg leading-none">🧱</span>
-              <span className="flex items-center justify-center text-lg leading-none">🔧</span>
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-base">Tertiaire</p>
-              <p className="text-xs opacity-90">Meubles · Électroménager · Matériaux · Outils</p>
-            </div>
-            <span className="ml-auto text-lg opacity-70">›</span>
-          </button>
-          <div className="p-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des produits</p>
-            {loadingPreview ? (
-              <p className="text-sm text-gray-400">Chargement…</p>
-            ) : (
-              <div className="space-y-2">
-                {previewTertiaire.map((p) => (
-                  <div key={p.id} className="flex gap-3 rounded-lg overflow-hidden bg-white dark:bg-gray-800/50 border border-amber-100 dark:border-amber-800/50">
-                    <div className="w-16 h-16 flex-shrink-0 bg-amber-100 dark:bg-amber-900/30 rounded-l-lg overflow-hidden">
-                      <ApercuImage src={p.imageUrl} alt={p.title} placeholder="🧱" />
-                    </div>
-                    <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{p.title}</p>
-                      <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">{p.price.toLocaleString()} {p.currency}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => navigate('/echange/tertiaire')}
-              className="mt-3 w-full py-2 text-sm font-medium text-amber-600 hover:text-amber-700 border border-amber-300 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-            >
-              Voir tout →
-            </button>
-          </div>
-        </div>
+              {loading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[1, 2].map(i => (
+                    <div key={i} className="h-40 bg-gray-100 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className={`rounded-xl border-2 ${c.border} bg-gray-50 p-6 text-center`}>
+                  <p className="text-sm text-gray-500">Aucun produit pour l'instant dans {section.label}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {products.map(product => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => setSelectedProduct(product)}
+                      className={`text-left rounded-xl overflow-hidden bg-white border ${c.border} shadow-sm hover:shadow-md transition-shadow`}
+                    >
+                      <div className="w-full h-28 bg-gray-100">
+                        {product.images?.[0] ? (
+                          <img src={buildImageUrl(product.images[0])} alt={product.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-3xl">{section.placeholder}</div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{product.title}</p>
+                        <p className={`text-sm font-bold ${c.text}`}>{product.price?.toLocaleString()} {product.currency}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-        {/* ── SECTEUR QUATERNAIRE ── */}
-        <div className="rounded-xl border-2 border-violet-200 bg-gradient-to-b from-violet-50 to-white dark:from-violet-900/20 dark:to-gray-900 overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-          <button
-            onClick={() => navigate('/echange/quaternaire')}
-            className="w-full bg-violet-600 hover:bg-violet-700 p-4 transition-all cursor-pointer text-white flex items-center gap-3"
-          >
-            <div className="grid grid-cols-2 gap-0.5 w-14 h-14 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
-              <span className="flex items-center justify-center text-lg leading-none">📱</span>
-              <span className="flex items-center justify-center text-lg leading-none">💻</span>
-              <span className="flex items-center justify-center text-lg leading-none">📺</span>
-              <span className="flex items-center justify-center text-lg leading-none">🚗</span>
+              <button
+                type="button"
+                onClick={() => navigate(section.path)}
+                className={`mt-3 w-full py-2 text-sm font-medium ${c.text} border ${c.border} rounded-lg hover:bg-gray-50 transition-colors`}
+              >
+                🔍 Filtres et sous-catégories — {section.label}
+              </button>
             </div>
-            <div className="text-left">
-              <p className="font-bold text-base">Quaternaire</p>
-              <p className="text-xs opacity-90">Téléphones · Ordinateurs · TV · Voitures</p>
-            </div>
-            <span className="ml-auto text-lg opacity-70">›</span>
-          </button>
-          <div className="p-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Aperçu des produits</p>
-            {loadingPreview ? (
-              <p className="text-sm text-gray-400">Chargement…</p>
-            ) : (
-              <div className="space-y-2">
-                {previewQuaternaire.map((p) => (
-                  <div key={p.id} className="flex gap-3 rounded-lg overflow-hidden bg-white dark:bg-gray-800/50 border border-violet-100 dark:border-violet-800/50">
-                    <div className="w-16 h-16 flex-shrink-0 bg-violet-100 dark:bg-violet-900/30 rounded-l-lg overflow-hidden">
-                      <ApercuImage src={p.imageUrl} alt={p.title} placeholder="💻" />
-                    </div>
-                    <div className="flex-1 min-w-0 py-2 pr-2 flex flex-col justify-center">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{p.title}</p>
-                      <p className="text-sm font-semibold text-violet-600 dark:text-violet-400">{p.price.toLocaleString()} {p.currency}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => navigate('/echange/quaternaire')}
-              className="mt-3 w-full py-2 text-sm font-medium text-violet-600 hover:text-violet-700 border border-violet-300 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
-            >
-              Voir tout →
-            </button>
-          </div>
-        </div>
-
+          );
+        })}
       </div>
-    </div>
+
+      {/* Modal de contact — même logique que sur les pages détaillées */}
+      {selectedProduct && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          onClick={() => setSelectedProduct(null)}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Contacter le vendeur</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="font-bold text-gray-900">{selectedProduct.title}</p>
+                {selectedProduct.sellerName && <p className="text-sm text-gray-600">{selectedProduct.sellerName}</p>}
+              </div>
+              <p className="text-xl font-bold text-green-600">
+                {selectedProduct.price?.toLocaleString()} {selectedProduct.currency}
+              </p>
+              <p className="text-sm text-gray-600">
+                📞 {selectedProduct.contactInfo?.phone || 'Non renseigné'}
+              </p>
+              {selectedProduct.location && (
+                <p className="text-sm text-gray-600">📍 {selectedProduct.location}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedProduct(null)}
+              className="mt-6 w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
