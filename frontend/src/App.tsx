@@ -803,7 +803,10 @@ function App() {
       {!isGestionMode && !isStandaloneAppPage && <footer className="bg-gray-900 text-white pt-0.5" style={{ paddingBottom: 'max(0.1rem, env(safe-area-inset-bottom, 0px))' }}>
         <div className="mx-auto px-6 text-center space-y-0">
           <p className="text-gray-300 text-[9px] leading-tight">
-            <span style={{ color: "#22a722" }} className="font-bold">{t('footer.copy')}</span>
+            <span style={{ color: "#22a722" }} className="font-bold inline-flex items-center gap-[3px] align-middle">
+              <img src="/logo-moftal.svg" alt="" width={9} height={9} style={{ display: "inline-block", borderRadius: "50%" }} />
+              {t('footer.copy').replace('©', '').trim()}
+            </span>
             {" · "}{t('footer.tagline')}
             <br />
             {t('footer.system')}
