@@ -804,7 +804,9 @@ function App() {
         <div className="mx-auto px-6 text-center space-y-0">
           <p className="text-gray-300 text-[9px] leading-tight">
             <span style={{ color: "#22a722" }} className="font-bold inline-flex items-center gap-[3px] align-middle">
-              <img src="/logo-moftal.svg" alt="" width={11} height={11} style={{ display: "inline-block", objectFit: "contain" }} />
+              <span style={{ background: "white", borderRadius: 4, padding: 1.5, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                <img src="/logo-moftal.svg" alt="" width={9} height={9} style={{ display: "block", objectFit: "contain" }} />
+              </span>
               {t('footer.copy').replace('©', '').trim()}
             </span>
             {" · "}{t('footer.tagline')}
