@@ -43,6 +43,11 @@ export const PRIX_IA_HORS_AFRIQUE_AN   = 100000; // GNF/an  (double)
 export const PRIX_PUBLICATION_FORMATION_AFRIQUE      = 10000; // GNF
 export const PRIX_PUBLICATION_FORMATION_HORS_AFRIQUE = 20000; // GNF (double)
 
+// ─── Publicité (bandeau qui défile — page Famille) ───────────────────────────
+// 30 jours de visibilité par paiement, approuvée par un admin avant paiement
+export const PRIX_PUBLICITE_AFRIQUE      = 10000; // GNF/mois
+export const PRIX_PUBLICITE_HORS_AFRIQUE = 20000; // GNF/mois (double)
+
 // ─── Pass Galerie Familiale ───────────────────────────────────────────────────
 export const PRIX_GALERIE_AFRIQUE_MOIS      =  5000; // GNF/mois
 export const PRIX_GALERIE_AFRIQUE_AN        = 50000; // GNF/an
@@ -571,6 +576,19 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     amount = estAfricain(pays) ? PRIX_PUBLICATION_FORMATION_AFRIQUE : PRIX_PUBLICATION_FORMATION_HORS_AFRIQUE;
   }
 
+  // Publicité (bandeau Famille) — relatedId = id de la publicité, doit être approuvée par un admin
+  if (purpose === 'publication_pub') {
+    if (!relatedId) return { error: 'Publicité requise.' };
+    const [pub] = await sequelize.query(
+      `SELECT id, numero_h, statut FROM publicites WHERE id = :id LIMIT 1`,
+      { replacements: { id: relatedId }, type: sequelize.QueryTypes.SELECT }
+    ).catch(() => [null]);
+    if (!pub) return { error: 'Publicité introuvable.' };
+    if (pub.numero_h !== user?.numeroH) return { error: 'Cette publicité ne vous appartient pas.' };
+    if (pub.statut !== 'approuve') return { error: 'Cette publicité doit être approuvée par un administrateur avant paiement.' };
+    amount = estAfricain(pays) ? PRIX_PUBLICITE_AFRIQUE : PRIX_PUBLICITE_HORS_AFRIQUE;
+  }
+
   // Dépôt Moftal Pay (compte famille, wallet pro ou compte Zakat) — montant choisi
   // par l'utilisateur lui-même pour recharger son propre compte. relatedId = montant
   // demandé (en GNF).
@@ -751,6 +769,18 @@ export async function handlePostPayment(payment) {
         { replacements: { ref: payment.txRef, id: payment.relatedId } }
       ).catch(() => {});
       console.log(`✅ Annonce formation activée — id: ${payment.relatedId} | txRef: ${payment.txRef}`);
+    }
+
+    // ── Publicité (bandeau Famille) — active 30 jours à partir du paiement ──
+    if (payment.purpose === 'publication_pub' && payment.relatedId) {
+      const expireLe = new Date();
+      expireLe.setDate(expireLe.getDate() + 30);
+      await sequelize.query(
+        `UPDATE publicites SET is_active = true, expire_le = :expireLe, payment_ref = :ref
+         WHERE id = :id AND numero_h = :numeroH`,
+        { replacements: { expireLe, ref: payment.txRef, id: payment.relatedId, numeroH: payment.payerNumeroH } }
+      ).catch(() => {});
+      console.log(`✅ Publicité activée — id: ${payment.relatedId} | expire: ${expireLe.toLocaleDateString()}`);
     }
 
     // ── Pass Info Moftal (mensuel ou annuel) ─────────────────────────

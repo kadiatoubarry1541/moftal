@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { isAdmin } from '../../utils/auth'
+import { AdCarousel } from '../../components/AdCarousel'
 import HeritageTab from './Arbre'
 
 const AmitieTab     = lazy(() => import('./MesAmours'))
@@ -96,6 +97,9 @@ export default function Famille() {
               </button>
             ))}
           </div>
+        ) : null}
+        {activeTab === null ? (
+          <AdCarousel />
         ) : (
           <Suspense fallback={
             <div className="flex items-center justify-center py-20">

@@ -1856,6 +1856,11 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-red-900">Contrôle IA</div>
                   <div className="text-xs text-red-700">Détecter et supprimer les images inappropriées (nudité)</div>
                 </button>
+                <button onClick={() => navigate("/admin/publicites")} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-5 text-left transition-colors">
+                  <div className="text-2xl mb-2">📣</div>
+                  <div className="font-semibold text-emerald-900">Publicités</div>
+                  <div className="text-xs text-emerald-700">Approuver ou refuser les publicités proposées</div>
+                </button>
                 <button onClick={() => navigate("/famille")} className="bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl p-5 text-left transition-colors">
                   <div className="text-2xl mb-2">🌳</div>
                   <div className="font-semibold text-green-900">Arbre Généalogique</div>

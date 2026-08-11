@@ -82,6 +82,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
     { to: '/reseau',                                   emoji: '🔗', label: 'Réseau',       bg: 'bg-purple-100' },
     { to: '/vendeurs',                                 emoji: '🛍️', label: 'Vendeurs',     bg: 'bg-sky-100'    },
     { to: '/producteurs',                              emoji: '🌾', label: 'Producteurs',  bg: 'bg-lime-100'   },
+    { to: '/publicite',                                emoji: '📣', label: 'Publicité',    bg: 'bg-emerald-100'},
   ]
 
   const toggleFavorite = (to: string) => {

@@ -84,6 +84,7 @@ import racinesRoutes from './routes/racines.js';
 import zakatRoutes from './routes/zakat.js';
 import formationsRoutes from './routes/formations.js';
 import developpementRoutes from './routes/developpement.js';
+import publicitesRoutes from './routes/publicites.js';
 import Payment from './models/Payment.js';
 import { handleUploadError } from './middleware/upload.js';
 import { config } from '../config.js';
@@ -2611,6 +2612,7 @@ app.use('/api/racines', racinesRoutes);
 app.use('/api/zakat', zakatRoutes);
 app.use('/api/formations', formationsRoutes);
 app.use('/api/developpement', developpementRoutes);
+app.use('/api/publicites', publicitesRoutes);
 app.use('/api', additionalRoutes);
 
 // Route de test

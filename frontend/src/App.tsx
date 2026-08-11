@@ -85,6 +85,8 @@ const GalerieFamily = lazy(() => import("./pages/GalerieFamily"));
 const CompteFamille = lazy(() => import("./pages/CompteFamille"));
 const MoftalPayPro = lazy(() => import("./pages/WalletPro"));
 const PublierFormation = lazy(() => import("./pages/PublierFormation"));
+const Publicite = lazy(() => import("./pages/Publicite"));
+const AdminPublicites = lazy(() => import("./pages/AdminPublicites"));
 const InfoWallou = lazy(() => import("./pages/InfoWallou"));
 const ConditionsUtilisation = lazy(() => import("./pages/ConditionsUtilisation"));
 const PolitiqueConfidentialite = lazy(() => import("./pages/PolitiqueConfidentialite"));
@@ -691,6 +693,8 @@ function App() {
           <Route path="/compte-famille" element={<CompteFamille />} />
           <Route path="/moftal-pay-pro" element={<MoftalPayPro />} />
           <Route path="/publier-formation" element={<PublierFormation />} />
+          <Route path="/publicite" element={<Publicite />} />
+          <Route path="/admin/publicites" element={<AdminPublicites />} />
           <Route path="/info-wallou" element={<InfoWallou />} />
           <Route path="/conditions-utilisation" element={<ConditionsUtilisation />} />
           <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />
