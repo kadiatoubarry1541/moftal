@@ -818,9 +818,11 @@ function App() {
               {t('footer.conditions')}
             </Link>
             {guideReady && (
-              <Suspense fallback={null}>
-                <FloatingGuideIA />
-              </Suspense>
+              <div className="-mt-2">
+                <Suspense fallback={null}>
+                  <FloatingGuideIA />
+                </Suspense>
+              </div>
             )}
           </div>
         </div>
