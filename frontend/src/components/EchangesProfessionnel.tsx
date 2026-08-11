@@ -10,6 +10,7 @@ interface ExchangeProduct {
   title: string;
   description?: string;
   category?: string;
+  subcategory?: string;
   price: number;
   currency: string;
   images?: string[];
@@ -213,19 +214,21 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               ref={el => { sectionRefs.current[section.id] = el; }}
               className="scroll-mt-[112px] pt-5"
             >
-              {/* Titre de section — simple, noir sur blanc, comme dans la galerie */}
-              <div className="flex items-center gap-2 mb-3">
+              {/* Titre de section — icône + nom + flèche pour voir plus, comme Makiti */}
+              <button
+                type="button"
+                onClick={() => navigate(section.path)}
+                className="flex items-center gap-2 mb-3 w-full text-left"
+              >
                 <span className="text-lg leading-none">{section.icons[0]}</span>
-                <div className="min-w-0">
-                  <p className="font-bold text-base text-gray-900">{section.label}</p>
-                  <p className="text-xs text-gray-500 truncate">{section.subtitle}</p>
-                </div>
-              </div>
+                <p className="font-bold text-base text-gray-900 flex-1">{section.label}</p>
+                <span className="text-xl text-gray-400 leading-none">›</span>
+              </button>
 
               {loading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="flex gap-3 overflow-hidden">
                   {[1, 2].map(i => (
-                    <div key={i} className="h-40 bg-gray-100 rounded-xl animate-pulse" />
+                    <div key={i} className="h-48 w-40 flex-shrink-0 bg-gray-100 rounded-xl animate-pulse" />
                   ))}
                 </div>
               ) : products.length === 0 ? (
@@ -233,15 +236,15 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                   <p className="text-sm text-gray-500">Aucun produit pour l'instant dans {section.label}</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="flex gap-3 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
                   {products.map(product => (
                     <button
                       key={product.id}
                       type="button"
                       onClick={() => setSelectedProduct(product)}
-                      className="text-left rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                      className="text-left rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex-shrink-0 w-40"
                     >
-                      <div className="w-full h-28 bg-gray-100 relative">
+                      <div className="w-full h-36 bg-gray-100 relative">
                         {product.images?.[0] ? (
                           <img src={buildImageUrl(product.images[0])} alt={product.title} className="w-full h-full object-cover" />
                         ) : product.videos?.[0] ? (
@@ -252,27 +255,20 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                             </div>
                           </>
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl">{section.placeholder}</div>
+                          <div className="w-full h-full flex items-center justify-center text-4xl">{section.placeholder}</div>
                         )}
                       </div>
-                      <div className="p-2">
-                        <p className="text-xs font-semibold text-gray-900 truncate">{product.title}</p>
+                      <div className="p-2.5">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{product.title}</p>
+                        {product.subcategory && <p className="text-xs text-gray-500 truncate">{product.subcategory}</p>}
                         {product.price > 0 && (
-                          <p className="text-sm font-bold text-gray-900">{product.price.toLocaleString()} {product.currency}</p>
+                          <p className="text-sm font-bold mt-1" style={{ color: '#1a8f1a' }}>{product.price.toLocaleString()} {product.currency}</p>
                         )}
                       </div>
                     </button>
                   ))}
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={() => navigate(section.path)}
-                className="mt-3 w-full py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                🔍 Filtres et sous-catégories — {section.label}
-              </button>
             </div>
           );
         })}
