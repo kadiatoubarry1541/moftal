@@ -149,16 +149,12 @@ const BasseGuinee = lazy(() => import("./pages/BasseGuinee"));
 const HauteGuinee = lazy(() => import("./pages/HauteGuinee"));
 const FoutaDjallon = lazy(() => import("./pages/FoutaDjallon"));
 const GuineeForestiere = lazy(() => import("./pages/GuineeForestiere"));
-const Femmes = lazy(() => import("./pages/Femmes"));
-const Hommes = lazy(() => import("./pages/Hommes"));
-const Communaute = lazy(() => import("./pages/Communaute"));
 const TrouverProfesseur = lazy(() => import("./pages/TrouverProfesseur"));
 const UserDashboard = lazy(() => import("./pages/UserDashboard"));
 const Activite1 = lazy(() => import("./pages/Activite1"));
 const Activite2 = lazy(() => import("./pages/Activite2"));
 const Activite3 = lazy(() => import("./pages/Activite3"));
 const GuideEntrepreneur = lazy(() => import("./pages/GuideEntrepreneur"));
-const LivresDeDieu = lazy(() => import("./pages/LivresDeDieu"));
 const Reflechissons = lazy(() => import("./pages/Reflechissons"));
 const Donations = lazy(() => import("./pages/Donations").then(m => ({ default: m.Donations })));
 const InscriptionFormation = lazy(() => import("./pages/InscriptionFormation"));
@@ -766,10 +762,6 @@ function App() {
           <Route path="/fouta-djallon"     element={<FoutaDjallon />} />
           <Route path="/guinee-forestiere" element={<GuineeForestiere />} />
           {/* Communauté */}
-          <Route path="/communaute"        element={<Communaute />} />
-          <Route path="/femmes"            element={<Femmes />} />
-          <Route path="/hommes"            element={<Hommes />} />
-          <Route path="/livres-de-dieu"    element={<LivresDeDieu />} />
           <Route path="/reflechissons"     element={<Reflechissons />} />
           {/* Services professionnels */}
           <Route path="/trouver-professeur"  element={<TrouverProfesseur />} />
