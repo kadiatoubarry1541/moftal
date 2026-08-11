@@ -7,6 +7,7 @@ interface Publicite {
   numero_h: string;
   nom: string;
   image_url: string;
+  lien?: string;
   statut: "en_attente" | "approuve" | "refuse";
   raison_refus?: string;
   expire_le?: string;
@@ -142,6 +143,7 @@ export default function AdminPublicites() {
                     </div>
                     <p className="text-sm font-semibold text-gray-800">{p.nom || p.numero_h}</p>
                     <p className="text-xs text-gray-400">{p.numero_h}</p>
+                    {p.lien && <p className="text-xs text-blue-500 truncate mt-0.5">🔗 {p.lien}</p>}
                     {p.statut === "refuse" && p.raison_refus && (
                       <p className="text-xs text-red-500 mt-1">Raison : {p.raison_refus}</p>
                     )}
