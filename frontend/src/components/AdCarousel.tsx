@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { config } from '../config/api'
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || ''
@@ -6,9 +7,11 @@ const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || ''
 interface Pub {
   id: string
   image_url: string
+  lien?: string | null
 }
 
 export function AdCarousel() {
+  const navigate = useNavigate()
   const [pubs, setPubs] = useState<Pub[]>([])
   const [active, setActive] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -32,6 +35,12 @@ export function AdCarousel() {
 
   const imgUrl = (path: string) => (path.startsWith('http') ? path : `${API_ORIGIN}${path}`)
 
+  const goTo = (lien?: string | null) => {
+    if (!lien) return
+    if (lien.startsWith('http')) window.open(lien, '_blank', 'noopener,noreferrer')
+    else navigate(lien)
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 pb-6">
       <div className="relative rounded-2xl overflow-hidden bg-gray-100" style={{ aspectRatio: '16 / 7' }}>
@@ -40,8 +49,9 @@ export function AdCarousel() {
             key={pub.id}
             src={imgUrl(pub.image_url)}
             alt=""
+            onClick={() => goTo(pub.lien)}
             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
-            style={{ opacity: i === active ? 1 : 0 }}
+            style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
           />
         ))}
       </div>

@@ -18,6 +18,7 @@ async function ensurePublicitesTable() {
         "numero_h"      VARCHAR(50)   NOT NULL,
         "nom"           VARCHAR(200)  DEFAULT '',
         "image_url"     VARCHAR(500)  NOT NULL,
+        "lien"          VARCHAR(500),
         "statut"        VARCHAR(20)   NOT NULL DEFAULT 'en_attente',
         "raison_refus"  TEXT,
         "approuve_par"  VARCHAR(50),
@@ -30,6 +31,8 @@ async function ensurePublicitesTable() {
     `);
     await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_pub_numero_h ON "publicites" ("numero_h");`).catch(() => {});
     await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_pub_actives ON "publicites" ("is_active", "expire_le");`).catch(() => {});
+    // Ajoute la colonne "lien" si la table existait déjà avant son introduction
+    await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "lien" VARCHAR(500);`).catch(() => {});
   } catch (err) {
     console.warn('⚠️ ensurePublicitesTable:', err.message);
   }
@@ -70,7 +73,7 @@ const upload = multer({
 router.get('/actives', async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
-      SELECT id, image_url
+      SELECT id, image_url, lien
       FROM publicites
       WHERE is_active = true AND statut = 'approuve' AND expire_le >= NOW()
       ORDER BY created_at DESC
@@ -107,12 +110,13 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
     }
     const nom = `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim();
     const imageUrl = `/uploads/publicites/${req.file.filename}`;
+    const lien = (req.body.lien || '').toString().trim().slice(0, 500) || null;
 
     const [[pub]] = await sequelize.query(`
-      INSERT INTO publicites (numero_h, nom, image_url, statut, is_active, created_at)
-      VALUES (:numeroH, :nom, :imageUrl, 'en_attente', false, NOW())
+      INSERT INTO publicites (numero_h, nom, image_url, lien, statut, is_active, created_at)
+      VALUES (:numeroH, :nom, :imageUrl, :lien, 'en_attente', false, NOW())
       RETURNING id
-    `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl } });
+    `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } });
 
     res.json({
       success: true,
@@ -131,7 +135,7 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
 router.get('/mes-publicites', authenticate, async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
-      SELECT id, image_url, statut, raison_refus, expire_le, is_active,
+      SELECT id, image_url, lien, statut, raison_refus, expire_le, is_active,
         (is_active = true AND expire_le >= NOW()) AS en_ligne,
         created_at
       FROM publicites

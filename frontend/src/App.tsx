@@ -87,6 +87,7 @@ const MoftalPayPro = lazy(() => import("./pages/WalletPro"));
 const PublierFormation = lazy(() => import("./pages/PublierFormation"));
 const Publicite = lazy(() => import("./pages/Publicite"));
 const AdminPublicites = lazy(() => import("./pages/AdminPublicites"));
+const AdminDiagnostic = lazy(() => import("./pages/AdminDiagnostic"));
 const InfoWallou = lazy(() => import("./pages/InfoWallou"));
 const ConditionsUtilisation = lazy(() => import("./pages/ConditionsUtilisation"));
 const PolitiqueConfidentialite = lazy(() => import("./pages/PolitiqueConfidentialite"));
@@ -695,6 +696,7 @@ function App() {
           <Route path="/publier-formation" element={<PublierFormation />} />
           <Route path="/publicite" element={<Publicite />} />
           <Route path="/admin/publicites" element={<AdminPublicites />} />
+          <Route path="/admin/diagnostic" element={<AdminDiagnostic />} />
           <Route path="/info-wallou" element={<InfoWallou />} />
           <Route path="/conditions-utilisation" element={<ConditionsUtilisation />} />
           <Route path="/politique-confidentialite" element={<PolitiqueConfidentialite />} />

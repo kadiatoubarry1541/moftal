@@ -24,6 +24,7 @@ export default function Publicite() {
   const [showPayment, setShowPayment] = useState(false)
   const [payingId, setPayingId] = useState('')
   const [image, setImage] = useState<File | null>(null)
+  const [lien, setLien] = useState('')
   const [erreur, setErreur] = useState('')
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function Publicite() {
     try {
       const formData = new FormData()
       formData.append('image', image)
+      if (lien.trim()) formData.append('lien', lien.trim())
 
       const r = await fetch(`${API}/api/publicites/soumettre`, {
         method: 'POST',
@@ -65,6 +67,7 @@ export default function Publicite() {
       if (!d.success) { setErreur(d.message || 'Erreur.'); return }
 
       setImage(null)
+      setLien('')
       if (fileRef.current) fileRef.current.value = ''
       alert('Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer.')
       setOnglet('mes-publicites')
@@ -142,6 +145,16 @@ export default function Publicite() {
                 {image && (
                   <img src={URL.createObjectURL(image)} alt="Aperçu" className="mt-3 w-full max-h-48 object-cover rounded-xl border border-gray-200" />
                 )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Lien <span className="font-normal text-gray-400">(optionnel)</span>
+                </label>
+                <input type="text" value={lien} onChange={e => setLien(e.target.value)}
+                  placeholder="Ex : /echange ou https://..."
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                <p className="text-xs text-gray-400 mt-1">Si quelqu'un appuie sur votre publicité, il sera dirigé vers ce lien.</p>
               </div>
 
               {erreur && (

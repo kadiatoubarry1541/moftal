@@ -324,6 +324,72 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// @route   GET /api/admin/diagnostic-donnees
+// @desc    Preuve concrète que les données sont bien enregistrées dans la vraie
+//          base de données — comptages réels de chaque table du site
+// @access  Admin
+router.get('/diagnostic-donnees', async (req, res) => {
+  const compter = async (sql) => {
+    try {
+      const [[row]] = await sequelize.query(sql);
+      return Number(row?.c || 0);
+    } catch {
+      return null; // table absente ou erreur — signalé comme "indisponible", pas comme 0
+    }
+  };
+
+  try {
+    const [
+      utilisateurs,
+      produitsPrimaire,
+      produitsSecondaire,
+      produitsTertiaire,
+      produitsQuaternaire,
+      publicitesTotal,
+      publicitesEnAttente,
+      publicitesEnLigne,
+      comptesProTotal,
+      comptesProApprouves,
+      comptesProEnAttente,
+      paiementsReussis,
+      residenceGroupes,
+      formationsAnnonces,
+    ] = await Promise.all([
+      compter(`SELECT COUNT(*) c FROM users`),
+      compter(`SELECT COUNT(*) c FROM exchange_products WHERE category = 'primaire'`),
+      compter(`SELECT COUNT(*) c FROM exchange_products WHERE category = 'secondaire'`),
+      compter(`SELECT COUNT(*) c FROM exchange_products WHERE category = 'tertiaire'`),
+      compter(`SELECT COUNT(*) c FROM exchange_products WHERE category = 'quaternaire'`),
+      compter(`SELECT COUNT(*) c FROM publicites`),
+      compter(`SELECT COUNT(*) c FROM publicites WHERE statut = 'en_attente'`),
+      compter(`SELECT COUNT(*) c FROM publicites WHERE is_active = true AND expire_le >= NOW()`),
+      compter(`SELECT COUNT(*) c FROM professional_accounts`),
+      compter(`SELECT COUNT(*) c FROM professional_accounts WHERE status = 'approved'`),
+      compter(`SELECT COUNT(*) c FROM professional_accounts WHERE status = 'pending'`),
+      compter(`SELECT COUNT(*) c FROM payments WHERE status = 'completed'`),
+      compter(`SELECT COUNT(*) c FROM residence_groups`),
+      compter(`SELECT COUNT(*) c FROM formation_annonces`),
+    ]);
+
+    res.json({
+      success: true,
+      verifieLe: new Date().toISOString(),
+      donnees: {
+        utilisateurs,
+        produits: { primaire: produitsPrimaire, secondaire: produitsSecondaire, tertiaire: produitsTertiaire, quaternaire: produitsQuaternaire },
+        publicites: { total: publicitesTotal, enAttente: publicitesEnAttente, enLigne: publicitesEnLigne },
+        comptesPro: { total: comptesProTotal, approuves: comptesProApprouves, enAttente: comptesProEnAttente },
+        paiementsReussis,
+        residenceGroupes,
+        formationsAnnonces,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur diagnostic-donnees:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // @route   GET /api/admin/families
 // @desc    Récupérer toutes les familles avec leurs membres
 // @access  Admin
