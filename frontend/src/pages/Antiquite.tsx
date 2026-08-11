@@ -66,7 +66,7 @@ export default function Antiquite() {
   const loadSections = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/history/antiquite/sections', {
+      const response = await fetch('/api/history/sections?category=antiquite', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -199,7 +199,7 @@ Plusieurs villes guinéennes sont devenues des centres commerciaux importants :
   const createSection = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/history/antiquite/sections', {
+      const response = await fetch('/api/history/sections', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -207,6 +207,7 @@ Plusieurs villes guinéennes sont devenues des centres commerciaux importants :
         },
         body: JSON.stringify({
           ...newSection,
+          category: 'antiquite',
           createdBy: userData?.numeroH
         })
       });

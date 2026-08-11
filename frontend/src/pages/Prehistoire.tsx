@@ -66,7 +66,7 @@ export default function Prehistoire() {
   const loadSections = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/history/prehistoire/sections', {
+      const response = await fetch('/api/history/sections?category=prehistoire', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -173,7 +173,7 @@ Ces outils témoignent de l'adaptation des populations aux changements climatiqu
   const createSection = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/history/prehistoire/sections', {
+      const response = await fetch('/api/history/sections', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -181,6 +181,7 @@ Ces outils témoignent de l'adaptation des populations aux changements climatiqu
         },
         body: JSON.stringify({
           ...newSection,
+          category: 'prehistoire',
           createdBy: userData?.numeroH
         })
       });
