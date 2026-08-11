@@ -31,14 +31,36 @@ export function AdCarousel() {
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [pubs.length])
 
-  if (pubs.length === 0) return null
-
   const imgUrl = (path: string) => (path.startsWith('http') ? path : `${API_ORIGIN}${path}`)
 
   const goTo = (lien?: string | null) => {
     if (!lien) return
     if (lien.startsWith('http')) window.open(lien, '_blank', 'noopener,noreferrer')
     else navigate(lien)
+  }
+
+  if (pubs.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 pb-6">
+        <button
+          type="button"
+          onClick={() => navigate('/publicite')}
+          className="w-full rounded-2xl overflow-hidden text-left transition-transform active:scale-[0.99]"
+          style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
+        >
+          <div className="flex items-center gap-4 px-5 py-6">
+            <div className="text-4xl flex-shrink-0">📣</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-black text-base">Annoncez votre activité ici</p>
+              <p className="text-amber-50 text-xs mt-0.5">Touchez toute la communauté Moftal</p>
+            </div>
+            <div className="flex-shrink-0 bg-white/20 rounded-full px-3 py-1.5 text-white text-xs font-bold">
+              Publier →
+            </div>
+          </div>
+        </button>
+      </div>
+    )
   }
 
   return (
