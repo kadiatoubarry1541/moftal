@@ -1880,6 +1880,11 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-emerald-900">Publicités</div>
                   <div className="text-xs text-emerald-700">Approuver ou refuser les publicités proposées</div>
                 </button>
+                <button onClick={() => navigate("/gestion-fournisseur/RIZ-MOFTAL-ADMIN")} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl p-5 text-left transition-colors">
+                  <div className="text-2xl mb-2">🌾</div>
+                  <div className="font-semibold text-amber-900">Marché Riz</div>
+                  <div className="text-xs text-amber-700">Prix, stock et commandes de riz des familles</div>
+                </button>
                 <button onClick={() => navigate("/admin/diagnostic")} className="bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl p-5 text-left transition-colors">
                   <div className="text-2xl mb-2">🗄️</div>
                   <div className="font-semibold text-teal-900">Vérifier la base de données</div>

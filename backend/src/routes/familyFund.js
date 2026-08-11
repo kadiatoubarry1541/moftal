@@ -5,6 +5,11 @@ import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import User from '../models/User.js';
 import { FamilyTree } from '../models/additional.js';
 import { Op } from 'sequelize';
+import { sequelize } from '../config/database.js';
+
+// Tenant fournisseur dédié à l'admin pour la vente de riz aux familles
+// (géré via /gestion-fournisseur/RIZ-MOFTAL-ADMIN, accessible au master admin)
+export const RIZ_TENANT_CODE = 'RIZ-MOFTAL-ADMIN';
 
 // Vérifie si l'utilisateur est l'un des 3 admins du fonds (gérant1, gérant2 ou conseiller)
 function estAdmin(fund, numeroH) {
@@ -317,6 +322,127 @@ router.post('/payer', async (req, res) => {
     });
   } catch (err) {
     console.error('family-fund/payer:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /api/family-fund/riz-info
+// Infos publiques (prix, stock) sur le riz vendu par l'admin
+// ─────────────────────────────────────────────
+router.get('/riz-info', async (req, res) => {
+  try {
+    const [produit] = await sequelize.query(
+      `SELECT * FROM supplier_products WHERE tenant_code=:code AND nom ILIKE '%riz%' AND is_active=true ORDER BY id DESC LIMIT 1`,
+      { replacements: { code: RIZ_TENANT_CODE }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!produit) {
+      return res.json({ success: true, disponible: false });
+    }
+    res.json({
+      success: true,
+      disponible: Number(produit.stock) > 0,
+      nom: produit.nom,
+      prixParSac: Number(produit.prix_detail),
+      stock: Number(produit.stock),
+      unite: produit.unite
+    });
+  } catch (err) {
+    console.error('family-fund/riz-info:', err);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /api/family-fund/acheter-riz
+// Achat de riz (sacs) auprès de l'admin, payé depuis le budget nourriture
+// ─────────────────────────────────────────────
+router.post('/acheter-riz', async (req, res) => {
+  try {
+    const { nombreSacs } = req.body;
+    const { numeroH, nomFamille } = req.user;
+
+    const sacs = parseInt(nombreSacs);
+    if (!sacs || sacs < 1) {
+      return res.status(400).json({ success: false, message: 'Indiquez un nombre de sacs valide.' });
+    }
+
+    const fund = await FamilyFund.findOne({
+      where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true }
+    });
+    if (!fund) return res.status(404).json({ success: false, message: 'Compte famille introuvable.' });
+
+    if (!estAdmin(fund, numeroH)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Seuls les 2 gérants élus ou le Conseiller (doyen de l\'arbre) peuvent effectuer des paiements.'
+      });
+    }
+
+    const [produit] = await sequelize.query(
+      `SELECT * FROM supplier_products WHERE tenant_code=:code AND nom ILIKE '%riz%' AND is_active=true ORDER BY id DESC LIMIT 1`,
+      { replacements: { code: RIZ_TENANT_CODE }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!produit) {
+      return res.status(404).json({ success: false, message: 'Le riz n\'est pas disponible pour le moment.' });
+    }
+    if (Number(produit.stock) < sacs) {
+      return res.status(400).json({ success: false, message: `Stock insuffisant. Disponible : ${produit.stock} sac(s).` });
+    }
+
+    const prixParSac = Number(produit.prix_detail);
+    const montant = prixParSac * sacs;
+
+    const soldeActuel = Number(fund.solde_nourriture);
+    if (soldeActuel < montant) {
+      return res.status(400).json({
+        success: false,
+        message: `Solde alimentation insuffisant. Disponible : ${soldeActuel.toLocaleString()} GNF, requis : ${montant.toLocaleString()} GNF.`
+      });
+    }
+
+    await fund.update({
+      solde_nourriture: soldeActuel - montant,
+      total_depense: Number(fund.total_depense) + montant,
+    });
+
+    await sequelize.query(
+      `UPDATE supplier_products SET stock = stock - :sacs WHERE tenant_code=:code AND id=:id`,
+      { replacements: { sacs, code: RIZ_TENANT_CODE, id: produit.id } }
+    );
+
+    await sequelize.query(
+      `INSERT INTO supplier_orders (tenant_code, client_nom, montant_total, statut, notes)
+       VALUES (:code, :clientNom, :montant, 'en_attente', :notes)`,
+      {
+        replacements: {
+          code: RIZ_TENANT_CODE,
+          clientNom: `Famille ${fund.nomFamille}`,
+          montant,
+          notes: `${sacs} sac(s) de riz — commande via Moftal Pay`
+        }
+      }
+    );
+
+    await FamilyFundTransaction.create({
+      fundId: fund.id,
+      acteurNumeroH: numeroH,
+      acteurNom: req.user.prenom || '',
+      type: 'paiement_nourriture',
+      montant,
+      beneficiaireNom: 'Riz Moftal (Admin)',
+      description: `${sacs} sac(s) de riz`,
+      statut: 'confirme'
+    });
+
+    res.json({
+      success: true,
+      message: `Commande de ${sacs} sac(s) de riz confirmée. L'administrateur vous livrera après réception du paiement.`,
+      montant,
+      nouveauSolde: soldeActuel - montant
+    });
+  } catch (err) {
+    console.error('family-fund/acheter-riz:', err);
     res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 });

@@ -48,25 +48,22 @@ export default function CompteFamille() {
   const [montantDepot, setMontantDepot] = useState('');
   const [showDepotPayment, setShowDepotPayment] = useState(false);
 
-  // Paiement (admins seulement, santé + nourriture uniquement)
   const [showRepartition, setShowRepartition] = useState(false);
-  const [showPaiement, setShowPaiement] = useState(false);
-  const [typePaiement, setTypePaiement] = useState('paiement_sante');
-  const [montantPaiement, setMontantPaiement] = useState('');
-  const [beneficiaire, setBeneficiaire] = useState('');
-  const [contact, setContact] = useState('');
-  const [raison, setRaison] = useState('');
-  const [loadingPaiement, setLoadingPaiement] = useState(false);
 
-  // Paiement direct vers un professionnel (Moftal Pay interne)
+  // Paiement direct vers une clinique/hôpital vérifié (Moftal Pay interne, santé uniquement)
   const [showPayerPro, setShowPayerPro] = useState(false);
   const [rechercheProQ, setRechercheProQ] = useState('');
   const [proResults, setProResults] = useState<any[]>([]);
   const [proSelectionne, setProSelectionne] = useState<any>(null);
   const [montantPayerPro, setMontantPayerPro] = useState('');
-  const [categoriePro, setCategoriePro] = useState<'sante' | 'nourriture'>('sante');
   const [descriptionPayerPro, setDescriptionPayerPro] = useState('');
   const [loadingPayerPro, setLoadingPayerPro] = useState(false);
+
+  // Achat de riz auprès de l'admin (budget nourriture)
+  const [rizInfo, setRizInfo] = useState<any>(null);
+  const [showAcheterRiz, setShowAcheterRiz] = useState(false);
+  const [nombreSacs, setNombreSacs] = useState('');
+  const [loadingRiz, setLoadingRiz] = useState(false);
 
   // Reçu à afficher après opération
   const [reçu, setReçu] = useState<any>(null);
@@ -83,6 +80,13 @@ export default function CompteFamille() {
 
 
   useEffect(() => { charger(); }, []);
+
+  useEffect(() => {
+    fetch(`${API}/api/family-fund/riz-info`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setRizInfo(d); })
+      .catch(() => {});
+  }, []);
 
   async function charger() {
     try {
@@ -138,43 +142,37 @@ export default function CompteFamille() {
     });
   }
 
-  async function payer() {
-    const montant = parseInt(montantPaiement);
-    if (!montant || montant < 100) return alert('Montant invalide');
-    if (!beneficiaire) return alert('Indiquez le bénéficiaire');
-    if (!['paiement_sante', 'paiement_nourriture'].includes(typePaiement)) {
-      return alert('Seuls les transferts vers Santé et Alimentation sont autorisés.');
-    }
-    setLoadingPaiement(true);
+  async function acheterRiz() {
+    const sacs = parseInt(nombreSacs);
+    if (!sacs || sacs < 1) return alert('Indiquez un nombre de sacs valide');
+    setLoadingRiz(true);
     try {
-      const r = await fetch(`${API}/api/family-fund/payer`, {
+      const r = await fetch(`${API}/api/family-fund/acheter-riz`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: typePaiement, montant, beneficiaireNom: beneficiaire, beneficiaireContact: contact, description: raison })
+        body: JSON.stringify({ nombreSacs: sacs })
       });
       const d = await r.json();
       if (d.success) {
-        setShowPaiement(false);
-        setMontantPaiement(''); setBeneficiaire(''); setContact(''); setRaison('');
-        // Afficher le reçu
+        setShowAcheterRiz(false);
+        setNombreSacs('');
         const session = JSON.parse(localStorage.getItem('session_user') || '{}');
         const u = session.userData || session;
         setReçu({
           id: Date.now().toString(),
-          type: typePaiement,
-          montant,
+          type: 'paiement_nourriture',
+          montant: d.montant,
           date: new Date().toISOString(),
           acteurNom: `${u?.prenom || ''} ${u?.nomFamille || ''}`.trim(),
-          beneficiaireNom: beneficiaire,
-          beneficiaireContact: contact,
-          description: raison,
+          beneficiaireNom: 'Riz Moftal (Admin)',
+          description: `${sacs} sac(s) de riz`,
           nomFamille: compte?.nomFamille,
         });
         charger();
       } else {
         alert(d.message);
       }
-    } finally { setLoadingPaiement(false); }
+    } finally { setLoadingRiz(false); }
   }
 
   async function rechercherPros(q: string) {
@@ -187,7 +185,7 @@ export default function CompteFamille() {
       });
       const d = await r.json();
       const filtres = (d.accounts || []).filter((a: any) =>
-        ['clinic', 'supplier'].includes(a.type) && a.status === 'approved'
+        a.type === 'clinic' && a.status === 'approved'
       );
       setProResults(filtres);
     } catch { setProResults([]); }
@@ -205,7 +203,7 @@ export default function CompteFamille() {
         body: JSON.stringify({
           montant,
           proAccountId: proSelectionne.id,
-          categorie: categoriePro,
+          categorie: 'sante',
           description: descriptionPayerPro || `Paiement famille → ${proSelectionne.name}`
         })
       });
@@ -218,7 +216,7 @@ export default function CompteFamille() {
         const u = session.userData || session;
         setReçu({
           id: Date.now().toString(),
-          type: categoriePro === 'sante' ? 'paiement_sante' : 'paiement_nourriture',
+          type: 'paiement_sante',
           montant,
           date: new Date().toISOString(),
           acteurNom: `${u?.prenom || ''} ${u?.nomFamille || ''}`.trim(),
@@ -520,102 +518,27 @@ export default function CompteFamille() {
               </div>
             </div>
 
-            {/* ─── Paiement : admins + santé/nourriture seulement ─── */}
-            {compte.estAdmin && peutVoirBudget && (
-              <>
-                <button onClick={() => setShowPaiement(!showPaiement)}
-                  className="w-full py-3 rounded-2xl text-white font-bold text-sm"
-                  style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
-                  {showPaiement ? '✕ Annuler' : '💸 Effectuer un paiement'}
-                </button>
-
-                {showPaiement && (
-                  <div className="bg-white rounded-2xl p-5 shadow-sm border border-green-100 space-y-3">
-                    <h3 className="font-bold text-gray-900">Nouveau paiement</h3>
-                    <p className="text-xs text-green-700 font-semibold bg-green-50 rounded-lg px-3 py-1.5">
-                      👑 Réservé aux administrateurs · Santé et Alimentation uniquement
-                    </p>
-
-                    {/* Seulement santé et nourriture pour les familles */}
-                    <select value={typePaiement} onChange={e => setTypePaiement(e.target.value)}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none">
-                      <option value="paiement_sante">🏥 Santé (30%)</option>
-                      <option value="paiement_nourriture">🌾 Alimentation (10%)</option>
-                    </select>
-
-                    <input type="number" value={montantPaiement} onChange={e => setMontantPaiement(e.target.value)}
-                      placeholder="Montant en GNF" min="100"
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
-
-                    <input type="text" value={beneficiaire} onChange={e => setBeneficiaire(e.target.value)}
-                      placeholder="Bénéficiaire (clinique, fournisseur...)"
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
-
-                    <input type="text" value={contact} onChange={e => setContact(e.target.value)}
-                      placeholder="Orange Money ou compte du bénéficiaire"
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none" />
-
-                    <textarea value={raison} onChange={e => setRaison(e.target.value)}
-                      placeholder="Raison du paiement (ex: hospitalisation de Mamadou Barry)"
-                      rows={2}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none resize-none" />
-
-                    <button onClick={payer} disabled={loadingPaiement}
-                      className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50"
-                      style={{ background: 'linear-gradient(135deg,#1a8f1a,#156315)' }}>
-                      {loadingPaiement ? 'Traitement...' : 'Confirmer le paiement'}
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* ─── Payer un professionnel Moftal (admins, santé ou alimentation) ─── */}
+            {/* ─── Payer une clinique/hôpital vérifié (admins, budget santé) ─── */}
             {compte.estAdmin && peutVoirBudget && (
               <>
                 <button
-                  onClick={() => { setShowPayerPro(!showPayerPro); setShowPaiement(false); }}
+                  onClick={() => { setShowPayerPro(!showPayerPro); setShowAcheterRiz(false); }}
                   className="w-full py-3 rounded-2xl text-white font-bold text-sm"
                   style={{ background: 'linear-gradient(135deg,#0ea5e9,#2563eb)' }}>
-                  {showPayerPro ? '✕ Annuler' : '🏥 Payer un professionnel Moftal'}
+                  {showPayerPro ? '✕ Annuler' : '🏥 Payer une clinique / hôpital'}
                 </button>
 
                 {showPayerPro && (
                   <div className="bg-white rounded-2xl p-5 shadow-sm border border-blue-100 space-y-3">
-                    <h3 className="font-bold text-gray-900">Paiement vers un professionnel</h3>
+                    <h3 className="font-bold text-gray-900">Paiement vers une clinique</h3>
                     <p className="text-xs text-blue-700 font-semibold bg-blue-50 rounded-lg px-3 py-2">
-                      💸 Transfert interne <strong>100% gratuit</strong> — aucun frais
+                      💸 Transfert interne <strong>100% gratuit</strong> · Budget santé : {compte.soldes.sante.toLocaleString()} FG
                     </p>
-
-                    {/* Catégorie */}
-                    <div>
-                      <label className="text-xs font-bold text-gray-600 block mb-1">Budget utilisé</label>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setCategoriePro('sante')}
-                          className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
-                            categoriePro === 'sante'
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                              : 'border-gray-200 text-gray-500'
-                          }`}>
-                          🏥 Santé ({compte.soldes.sante.toLocaleString()} FG)
-                        </button>
-                        <button
-                          onClick={() => setCategoriePro('nourriture')}
-                          className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
-                            categoriePro === 'nourriture'
-                              ? 'border-amber-500 bg-amber-50 text-amber-700'
-                              : 'border-gray-200 text-gray-500'
-                          }`}>
-                          🌾 Aliment. ({compte.soldes.nourriture.toLocaleString()} FG)
-                        </button>
-                      </div>
-                    </div>
 
                     {/* Recherche */}
                     <div>
                       <label className="text-xs font-bold text-gray-600 block mb-1">
-                        Chercher une {categoriePro === 'sante' ? 'clinique / médecin' : 'épicerie / fournisseur'}
+                        Chercher une clinique / hôpital vérifié
                       </label>
                       <input
                         type="text"
@@ -632,19 +555,14 @@ export default function CompteFamille() {
                         {proResults.map(pro => (
                           <button
                             key={pro.id}
-                            onClick={() => {
-                              setProSelectionne(pro);
-                              setProResults([]);
-                              if (pro.type === 'clinic') setCategoriePro('sante');
-                              else if (pro.type === 'supplier') setCategoriePro('nourriture');
-                            }}
+                            onClick={() => { setProSelectionne(pro); setProResults([]); }}
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 text-left transition-colors">
                             <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center text-lg">
-                              {pro.photo ? <img src={pro.photo} className="w-full h-full object-cover" alt="" /> : (pro.type === 'clinic' ? '🏥' : '🛒')}
+                              {pro.photo ? <img src={pro.photo} className="w-full h-full object-cover" alt="" /> : '🏥'}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-gray-800 truncate">{pro.name}</p>
-                              <p className="text-xs text-gray-400">{pro.type === 'clinic' ? 'Santé' : 'Alimentation'} · {pro.city || ''}</p>
+                              <p className="text-xs text-gray-400">Santé · {pro.city || ''}</p>
                             </div>
                             <span className="text-blue-500 text-xs font-bold">Choisir →</span>
                           </button>
@@ -653,14 +571,14 @@ export default function CompteFamille() {
                     )}
 
                     {rechercheProQ.length >= 2 && proResults.length === 0 && !proSelectionne && (
-                      <p className="text-xs text-gray-400 text-center py-2">Aucun professionnel Moftal trouvé pour "{rechercheProQ}"</p>
+                      <p className="text-xs text-gray-400 text-center py-2">Aucune clinique Moftal trouvée pour "{rechercheProQ}"</p>
                     )}
 
                     {/* Pro sélectionné */}
                     {proSelectionne && (
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
                         <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-white flex items-center justify-center text-xl">
-                          {proSelectionne.photo ? <img src={proSelectionne.photo} className="w-full h-full object-cover" alt="" /> : (proSelectionne.type === 'clinic' ? '🏥' : '🛒')}
+                          {proSelectionne.photo ? <img src={proSelectionne.photo} className="w-full h-full object-cover" alt="" /> : '🏥'}
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-black text-blue-900">{proSelectionne.name}</p>
@@ -690,7 +608,7 @@ export default function CompteFamille() {
                         type="text"
                         value={descriptionPayerPro}
                         onChange={e => setDescriptionPayerPro(e.target.value)}
-                        placeholder="Ex: Consultation médicale Aminata, achat vivres"
+                        placeholder="Ex: Consultation médicale Aminata"
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
                       />
                     </div>
@@ -702,6 +620,62 @@ export default function CompteFamille() {
                       style={{ background: 'linear-gradient(135deg,#0ea5e9,#2563eb)' }}>
                       {loadingPayerPro ? 'Traitement...' : `💸 Envoyer ${montantPayerPro ? parseInt(montantPayerPro).toLocaleString() + ' FG' : ''} → ${proSelectionne?.name || '...'}`}
                     </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ─── Acheter du riz auprès de l'admin (budget nourriture) ─── */}
+            {compte.estAdmin && peutVoirBudget && (
+              <>
+                <button
+                  onClick={() => { setShowAcheterRiz(!showAcheterRiz); setShowPayerPro(false); }}
+                  className="w-full py-3 rounded-2xl text-white font-bold text-sm"
+                  style={{ background: 'linear-gradient(135deg,#d97706,#92400e)' }}>
+                  {showAcheterRiz ? '✕ Annuler' : '🌾 Acheter du riz'}
+                </button>
+
+                {showAcheterRiz && (
+                  <div className="bg-white rounded-2xl p-5 shadow-sm border border-amber-100 space-y-3">
+                    <h3 className="font-bold text-gray-900">Achat de riz</h3>
+                    <p className="text-xs text-amber-700 font-semibold bg-amber-50 rounded-lg px-3 py-2">
+                      🌾 Vendu directement par l'administrateur · Budget alimentation : {compte.soldes.nourriture.toLocaleString()} FG
+                    </p>
+
+                    {!rizInfo || !rizInfo.disponible ? (
+                      <p className="text-sm text-gray-500 text-center py-3">
+                        Le riz n'est pas disponible pour le moment. Réessayez plus tard.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+                          <span className="text-sm font-semibold text-amber-900">Prix par sac</span>
+                          <span className="font-black text-amber-900">{Number(rizInfo.prixParSac).toLocaleString()} GNF</span>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-gray-600 block mb-1">Nombre de sacs</label>
+                          <input
+                            type="number" min="1" step="1"
+                            value={nombreSacs}
+                            onChange={e => setNombreSacs(e.target.value)}
+                            placeholder="Ex: 2"
+                            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none focus:border-amber-400"
+                          />
+                        </div>
+                        {nombreSacs && parseInt(nombreSacs) > 0 && (
+                          <p className="text-sm text-gray-600 text-center">
+                            Total : <strong>{(parseInt(nombreSacs) * Number(rizInfo.prixParSac)).toLocaleString()} GNF</strong>
+                          </p>
+                        )}
+                        <button
+                          onClick={acheterRiz}
+                          disabled={loadingRiz || !nombreSacs || parseInt(nombreSacs) < 1}
+                          className="w-full py-3 rounded-xl text-white font-bold text-sm disabled:opacity-50 transition-all"
+                          style={{ background: 'linear-gradient(135deg,#d97706,#92400e)' }}>
+                          {loadingRiz ? 'Traitement...' : 'Confirmer la commande'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </>
