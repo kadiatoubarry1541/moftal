@@ -647,7 +647,7 @@ export default function TerreAdam() {
             </div>
 
             {/* Les 5 niveaux propres à Terre ADAM — dans la même barre */}
-            <div className="flex" style={{ padding: '0 6px 6px' }}>
+            <div className="flex gap-1.5" style={{ padding: '0 6px 6px' }}>
               {navTabs.map(tab => (
                 <button
                   key={tab.id}
