@@ -84,6 +84,7 @@ export default function EchangeSecondaire() {
   const products = useMemo(() => sortAnyByProximity(rawProducts, userGeo), [rawProducts, userGeo]);
   const suppliers = useMemo(() => sortAnyByProximity(rawSuppliers, userGeo), [rawSuppliers, userGeo]);
   const [loading, setLoading] = useState(true);
+  const [canPublish, setCanPublish] = useState(false);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
@@ -135,6 +136,15 @@ export default function EchangeSecondaire() {
       } catch { /* pas connecté */ }
     }
     loadData();
+
+    // Le bouton "Publier" ne doit être visible que pour un vendeur déjà approuvé (ou un admin)
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data?.success) setCanPublish(!!(data.isVendor || data.isAdmin)); })
+        .catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -560,12 +570,14 @@ export default function EchangeSecondaire() {
           </div>
         </div>
         <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1">
-            <PublierAnnonceButtons
-              onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
-              title="Publier une annonce"
-            />
-          </div>
+          {canPublish && (
+            <div className="flex-1">
+              <PublierAnnonceButtons
+                onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
+                title="Publier une annonce"
+              />
+            </div>
+          )}
           {isAdmin && (
             <button
               onClick={() => setSelectedSupplier({} as Supplier)}

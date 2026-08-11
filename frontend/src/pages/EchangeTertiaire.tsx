@@ -61,6 +61,7 @@ export default function EchangeTertiaire() {
   const [gpsActive, setGpsActive] = useState(false);
   const products = useMemo(() => sortAnyByProximity(rawProducts, userGeo), [rawProducts, userGeo]);
   const [loading, setLoading] = useState(true);
+  const [canPublish, setCanPublish] = useState(false);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const [activeTab, setActiveTab] = useState<MateriauxTab>('tous');
@@ -91,6 +92,15 @@ export default function EchangeTertiaire() {
       } catch { /* pas connecté */ }
     }
     loadData();
+
+    // Le bouton "Publier" ne doit être visible que pour un vendeur déjà approuvé (ou un admin)
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data?.success) setCanPublish(!!(data.isVendor || data.isAdmin)); })
+        .catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -279,7 +289,7 @@ export default function EchangeTertiaire() {
             ))}
           </div>
         </div>
-        {userData && (
+        {userData && canPublish && (
           <div className="mt-3">
             <PublierAnnonceButtons
               onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}

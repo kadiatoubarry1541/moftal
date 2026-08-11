@@ -79,6 +79,7 @@ export default function EchangePrimaire() {
   const products = useMemo(() => sortAnyByProximity(rawProducts, userGeo), [rawProducts, userGeo]);
   const suppliers = useMemo(() => sortAnyByProximity(rawSuppliers, userGeo), [rawSuppliers, userGeo]);
   const [loading, setLoading] = useState(true);
+  const [canPublish, setCanPublish] = useState(false);
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
@@ -131,6 +132,15 @@ export default function EchangePrimaire() {
       } catch { /* pas connecté */ }
     }
     loadData();
+
+    // Le bouton "Publier" ne doit être visible que pour un vendeur déjà approuvé (ou un admin)
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data?.success) setCanPublish(!!(data.isVendor || data.isAdmin)); })
+        .catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -521,7 +531,9 @@ export default function EchangePrimaire() {
           <h2 className="text-lg font-bold text-gray-900">🍚 Aliments</h2>
         </div>
         <div className="flex items-center gap-2">
-          <PublierAnnonceButtons onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }} />
+          {canPublish && (
+            <PublierAnnonceButtons onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }} />
+          )}
           {isAdmin && (
             <button onClick={() => setSelectedSupplier({} as Supplier)}
               className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-semibold">
