@@ -813,16 +813,14 @@ function App() {
               Contact : support@moftal.com
             </a>
           </p>
-          <div className="flex items-center justify-between">
+          <div className="flex items-end justify-between">
             <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
               {t('footer.conditions')}
             </Link>
             {guideReady && (
-              <div className="-mt-2">
-                <Suspense fallback={null}>
-                  <FloatingGuideIA />
-                </Suspense>
-              </div>
+              <Suspense fallback={null}>
+                <FloatingGuideIA />
+              </Suspense>
             )}
           </div>
         </div>
