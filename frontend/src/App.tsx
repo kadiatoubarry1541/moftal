@@ -10,6 +10,7 @@ import NotificationBell from "./components/NotificationBell";
 import GestionPaymentGate from "./components/GestionPaymentGate";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
+import { AdCarousel } from "./components/AdCarousel";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
@@ -523,6 +524,7 @@ function App() {
                       </button>
                     ))}
                   </div>
+                  <AdCarousel />
                 </div>
               )}
             </div>
