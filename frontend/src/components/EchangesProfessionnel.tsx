@@ -13,6 +13,8 @@ interface ExchangeProduct {
   price: number;
   currency: string;
   images?: string[];
+  videos?: string[];
+  audio?: string[];
   condition?: 'neuf' | 'bon' | 'moyen' | 'usé';
   location?: string;
   sellerName?: string;
@@ -244,16 +246,25 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                       onClick={() => setSelectedProduct(product)}
                       className={`text-left rounded-xl overflow-hidden bg-white border ${c.border} shadow-sm hover:shadow-md transition-shadow`}
                     >
-                      <div className="w-full h-28 bg-gray-100">
+                      <div className="w-full h-28 bg-gray-100 relative">
                         {product.images?.[0] ? (
                           <img src={buildImageUrl(product.images[0])} alt={product.title} className="w-full h-full object-cover" />
+                        ) : product.videos?.[0] ? (
+                          <>
+                            <video src={buildImageUrl(product.videos[0])} className="w-full h-full object-cover" muted playsInline />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                              <span className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center text-sm">▶️</span>
+                            </div>
+                          </>
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-3xl">{section.placeholder}</div>
                         )}
                       </div>
                       <div className="p-2">
                         <p className="text-xs font-semibold text-gray-800 truncate">{product.title}</p>
-                        <p className={`text-sm font-bold ${c.text}`}>{product.price?.toLocaleString()} {product.currency}</p>
+                        {product.price > 0 && (
+                          <p className={`text-sm font-bold ${c.text}`}>{product.price.toLocaleString()} {product.currency}</p>
+                        )}
                       </div>
                     </button>
                   ))}
@@ -278,16 +289,27 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={() => setSelectedProduct(null)}
         >
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {selectedProduct.images?.[0] && (
+              <img src={buildImageUrl(selectedProduct.images[0])} alt={selectedProduct.title} className="w-full h-48 object-cover rounded-xl mb-4" />
+            )}
+            {!selectedProduct.images?.[0] && selectedProduct.videos?.[0] && (
+              <video src={buildImageUrl(selectedProduct.videos[0])} controls className="w-full h-48 object-cover rounded-xl mb-4 bg-black" />
+            )}
+            {selectedProduct.audio?.[0] && (
+              <audio src={buildImageUrl(selectedProduct.audio[0])} controls className="w-full mb-4" />
+            )}
             <h3 className="text-lg font-bold text-gray-900 mb-4">Contacter le vendeur</h3>
             <div className="space-y-3">
               <div>
                 <p className="font-bold text-gray-900">{selectedProduct.title}</p>
                 {selectedProduct.sellerName && <p className="text-sm text-gray-600">{selectedProduct.sellerName}</p>}
               </div>
-              <p className="text-xl font-bold text-green-600">
-                {selectedProduct.price?.toLocaleString()} {selectedProduct.currency}
-              </p>
+              {selectedProduct.price > 0 && (
+                <p className="text-xl font-bold text-green-600">
+                  {selectedProduct.price.toLocaleString()} {selectedProduct.currency}
+                </p>
+              )}
               <p className="text-sm text-gray-600">
                 📞 {selectedProduct.contactInfo?.phone || 'Non renseigné'}
               </p>
