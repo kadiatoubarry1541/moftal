@@ -79,6 +79,8 @@ export default function EchangePublier() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [publishMode, setPublishMode] = useState<PublishMode | null>(validMode);
   const [level, setLevel] = useState<Level>('primaire');
+  const [approvedSectors, setApprovedSectors] = useState<Level[]>([]);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [product, setProduct] = useState({
     title: '', description: '', category: '',
     price: '', currency: 'FG', condition: 'bon', location: '',
@@ -106,7 +108,20 @@ export default function EchangePublier() {
       setUserData(user);
     } catch {
       navigate('/login');
+      return;
     }
+
+    const token = localStorage.getItem('token');
+    fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!data?.success) return;
+        setIsAdminUser(!!data.isAdmin);
+        const sectors = (data.approvedSectors || []) as Level[];
+        setApprovedSectors(sectors);
+        if (sectors.length > 0) setLevel(sectors[0]);
+      })
+      .catch(() => {});
   }, [navigate]);
 
   const showToast = (message: string, type: 'error' | 'success') => setToast({ message, type });
@@ -259,25 +274,42 @@ export default function EchangePublier() {
         {publishMode && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
+            {/* Secteur — visible pour tous les modes, limité aux secteurs où vous êtes approuvé */}
+            <div className="p-6 sm:p-8 pb-0">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Secteur</label>
+              <div className="grid grid-cols-4 gap-2">
+                {(['primaire', 'secondaire', 'tertiaire', 'quaternaire'] as Level[]).map(l => {
+                  const allowed = isAdminUser || approvedSectors.includes(l);
+                  return (
+                    <button
+                      key={l}
+                      disabled={!allowed}
+                      onClick={() => { setLevel(l); setProduct(p => ({ ...p, category: '' })); }}
+                      title={allowed ? undefined : `Non approuvé pour ${l}`}
+                      className={`py-2 rounded-xl text-sm font-semibold border-2 transition-colors capitalize ${
+                        !allowed
+                          ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                          : level === l
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  );
+                })}
+              </div>
+              {!isAdminUser && approvedSectors.length === 0 && (
+                <p className="mt-2 text-xs text-red-500">Vous n'êtes approuvé pour aucun secteur pour l'instant.</p>
+              )}
+            </div>
+
             {/* ── Mode 1 : Par écrit ── */}
             {publishMode === 'ecrit' && (
               <div className="p-6 sm:p-8 space-y-5">
                 <div className="pb-4 border-b border-gray-100">
                   <h2 className="text-lg font-bold text-gray-800">Détails du produit</h2>
                   <p className="text-xs text-gray-400 mt-0.5">Les champs marqués * sont obligatoires</p>
-                </div>
-
-                {/* Niveau */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Niveau de marché</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(['primaire', 'secondaire', 'tertiaire', 'quaternaire'] as Level[]).map(l => (
-                      <button key={l} onClick={() => { setLevel(l); setProduct(p => ({ ...p, category: '' })); }}
-                        className={`py-2 rounded-xl text-sm font-semibold border-2 transition-colors capitalize ${level === l ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Titre */}
