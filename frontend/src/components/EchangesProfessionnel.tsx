@@ -204,7 +204,6 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
       {/* Une seule page qui défile — les 4 catégories se suivent, jamais besoin de sortir */}
       <div className="max-w-3xl mx-auto px-3 sm:px-4 pb-8">
         {SECTIONS.map(section => {
-          const c = COLOR_CLASSES[section.color];
           const products = productsBySection[section.id] || [];
           const loading = loadingBySection[section.id];
           return (
@@ -214,16 +213,12 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               ref={el => { sectionRefs.current[section.id] = el; }}
               className="scroll-mt-[112px] pt-5"
             >
-              {/* Titre de section — repère visuel constant, comme les raccourcis en haut */}
-              <div className={`${c.bg} rounded-xl p-3 flex items-center gap-3 text-white mb-3`}>
-                <div className="grid grid-cols-2 gap-0.5 w-12 h-12 flex-shrink-0 bg-white/20 rounded-xl p-1.5">
-                  {section.icons.map((ic, i) => (
-                    <span key={i} className="flex items-center justify-center text-base leading-none">{ic}</span>
-                  ))}
-                </div>
+              {/* Titre de section — simple, noir sur blanc, comme dans la galerie */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg leading-none">{section.icons[0]}</span>
                 <div className="min-w-0">
-                  <p className="font-bold text-base">{section.label}</p>
-                  <p className="text-xs opacity-90 truncate">{section.subtitle}</p>
+                  <p className="font-bold text-base text-gray-900">{section.label}</p>
+                  <p className="text-xs text-gray-500 truncate">{section.subtitle}</p>
                 </div>
               </div>
 
@@ -234,7 +229,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                   ))}
                 </div>
               ) : products.length === 0 ? (
-                <div className={`rounded-xl border-2 ${c.border} bg-gray-50 p-6 text-center`}>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
                   <p className="text-sm text-gray-500">Aucun produit pour l'instant dans {section.label}</p>
                 </div>
               ) : (
@@ -244,7 +239,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                       key={product.id}
                       type="button"
                       onClick={() => setSelectedProduct(product)}
-                      className={`text-left rounded-xl overflow-hidden bg-white border ${c.border} shadow-sm hover:shadow-md transition-shadow`}
+                      className="text-left rounded-xl overflow-hidden bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                     >
                       <div className="w-full h-28 bg-gray-100 relative">
                         {product.images?.[0] ? (
@@ -261,9 +256,9 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                         )}
                       </div>
                       <div className="p-2">
-                        <p className="text-xs font-semibold text-gray-800 truncate">{product.title}</p>
+                        <p className="text-xs font-semibold text-gray-900 truncate">{product.title}</p>
                         {product.price > 0 && (
-                          <p className={`text-sm font-bold ${c.text}`}>{product.price.toLocaleString()} {product.currency}</p>
+                          <p className="text-sm font-bold text-gray-900">{product.price.toLocaleString()} {product.currency}</p>
                         )}
                       </div>
                     </button>
@@ -274,7 +269,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               <button
                 type="button"
                 onClick={() => navigate(section.path)}
-                className={`mt-3 w-full py-2 text-sm font-medium ${c.text} border ${c.border} rounded-lg hover:bg-gray-50 transition-colors`}
+                className="mt-3 w-full py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 🔍 Filtres et sous-catégories — {section.label}
               </button>
