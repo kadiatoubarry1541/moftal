@@ -5,7 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 
-const BASE = (code: string) => `/api/scientist-mgmt/${code}`;
+const BASE = (code: string) => `${config.API_BASE_URL}/scientist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 type Tab = "dashboard" | "members" | "publications" | "projects" | "announcements";
