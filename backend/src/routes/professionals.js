@@ -189,15 +189,15 @@ router.post('/register', authenticate, async (req, res) => {
       status: 'pending'
     });
 
-    // L'admin global approuve tout le monde : personne n'approuve pour lui.
+    // Seul le compte maître (les 7) a tous les droits : personne ne l'approuve.
     // Ses propres créations sont donc publiées immédiatement, sans attente.
-    if (isGlobalAdmin(req.user)) {
+    if (isSuperAdmin7(req.user)) {
       await finalizeApproval(account, req.userId);
     }
 
     res.status(201).json({
       success: true,
-      message: isGlobalAdmin(req.user)
+      message: isSuperAdmin7(req.user)
         ? 'Compte créé et publié.'
         : 'Inscription envoyée. En attente de validation par l\'administrateur.',
       account: sanitizeAccountForPublic(account)
