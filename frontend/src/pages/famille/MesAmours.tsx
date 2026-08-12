@@ -96,7 +96,7 @@ export default function MesAmours() {
   });
 
   // Modes d'ajout d'ami
-  const [addMode, setAddMode] = useState<'numeroh' | 'phone' | 'qr' | 'ecrit' | 'video'>('numeroh');
+  const [addMode, setAddMode] = useState<'numeroh' | 'phone' | 'email' | 'qr' | 'ecrit' | 'video'>('numeroh');
   // Écrit
   const [ecritPrenom, setEcritPrenom] = useState('');
   const [ecritNom, setEcritNom] = useState('');
@@ -111,6 +111,11 @@ export default function MesAmours() {
   const [phoneResult, setPhoneResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
   const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
   const [phoneSearchError, setPhoneSearchError] = useState('');
+
+  const [emailInput, setEmailInput] = useState('');
+  const [emailResult, setEmailResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
+  const [emailSearchLoading, setEmailSearchLoading] = useState(false);
+  const [emailSearchError, setEmailSearchError] = useState('');
   const [qrSubMode, setQrSubMode] = useState<'show' | 'scan'>('show');
   const [qrScannerActive, setQrScannerActive] = useState(false);
   const [qrScannedUser, setQrScannedUser] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
@@ -513,6 +518,52 @@ export default function MesAmours() {
       setPhoneSearchError('Erreur de connexion');
     } finally {
       setPhoneSearchLoading(false);
+    }
+  };
+
+  const searchByEmail = async () => {
+    if (!emailInput.trim()) return;
+    setEmailSearchLoading(true);
+    setEmailSearchError('');
+    setEmailResult(null);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/friends/search-by-email?email=${encodeURIComponent(emailInput.trim())}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setEmailResult(data.user);
+      } else {
+        setEmailSearchError(data.message || 'Aucun utilisateur trouvé');
+      }
+    } catch {
+      setEmailSearchError('Erreur de connexion');
+    } finally {
+      setEmailSearchLoading(false);
+    }
+  };
+
+  const sendFriendFromEmailResult = async () => {
+    if (!emailResult) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/friends/send-request`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUser: emailResult.numeroH, message: addFriendForm.message?.trim() || undefined })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setShowAddFriend(false);
+        setEmailInput(''); setEmailResult(null);
+        setAddFriendForm(f => ({ ...f, message: '' }));
+        alert('Demande envoyée !');
+      } else {
+        setEmailSearchError(data.message || 'Erreur lors de l\'envoi');
+      }
+    } catch {
+      setEmailSearchError('Erreur de connexion');
     }
   };
 
@@ -1092,6 +1143,7 @@ export default function MesAmours() {
               {([
                 { key: 'numeroh', label: '🔢 NumH' },
                 { key: 'phone',   label: '📞 Tél.' },
+                { key: 'email',   label: '✉️ Email' },
                 { key: 'qr',      label: '📷 QR' },
                 { key: 'ecrit',   label: '✍️ Écrit' },
                 { key: 'video',   label: '🎬 Vidéo' },
@@ -1102,6 +1154,7 @@ export default function MesAmours() {
                     stopQRScanner();
                     setAddMode(tab.key);
                     setPhoneResult(null); setPhoneSearchError('');
+                    setEmailResult(null); setEmailSearchError('');
                     setQrScannedUser(null); setQrScanError('');
                     setEcritResults([]); setEcritError('');
                     setFriendVideoFile(null); setFriendVideoNumeroH('');
@@ -1202,6 +1255,70 @@ export default function MesAmours() {
                   )}
 
                   {!phoneResult && !phoneSearchError && (
+                    <div className="flex justify-end pt-2">
+                      <button onClick={() => setShowAddFriend(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">Annuler</button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── Mode Email ── */}
+              {addMode === 'email' && (
+                <>
+                  <p className="text-sm text-gray-500">Saisissez l'email de la personne pour la trouver.</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => { setEmailInput(e.target.value); setEmailResult(null); setEmailSearchError(''); }}
+                      onKeyDown={(e) => e.key === 'Enter' && searchByEmail()}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      placeholder="exemple@email.com"
+                    />
+                    <button
+                      onClick={searchByEmail}
+                      disabled={emailSearchLoading || !emailInput.trim()}
+                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      {emailSearchLoading ? '...' : 'Chercher'}
+                    </button>
+                  </div>
+
+                  {emailSearchError && (
+                    <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{emailSearchError}</p>
+                  )}
+
+                  {emailResult && (
+                    <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-emerald-200 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg">
+                          {emailResult.prenom?.[0] || '?'}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{emailResult.prenom} {emailResult.nomFamille}</p>
+                          <p className="text-xs text-gray-500">{emailResult.numeroH}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Message (optionnel)</label>
+                        <textarea
+                          value={addFriendForm.message}
+                          onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          rows={2}
+                          placeholder="Message d'invitation..."
+                        />
+                      </div>
+                      <button
+                        onClick={sendFriendFromEmailResult}
+                        className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        Envoyer l'invitation
+                      </button>
+                    </div>
+                  )}
+
+                  {!emailResult && !emailSearchError && (
                     <div className="flex justify-end pt-2">
                       <button onClick={() => setShowAddFriend(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">Annuler</button>
                     </div>

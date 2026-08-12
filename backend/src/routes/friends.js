@@ -257,6 +257,30 @@ router.get('/search-by-phone', async (req, res) => {
   }
 });
 
+// search-by-email
+router.get('/search-by-email', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email requis' });
+    }
+    const user = await User.findOne({
+      where: { email: { [Op.iLike]: email.trim() }, isActive: true },
+      attributes: ['numeroH', 'prenom', 'nomFamille']
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec cet email' });
+    }
+    if (user.numeroH === req.user.numeroH) {
+      return res.status(400).json({ success: false, message: "C'est votre propre email" });
+    }
+    res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille } });
+  } catch (error) {
+    console.error('Erreur /friends/search-by-email:', error);
+    res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
+  }
+});
+
 // search-by-name
 router.get('/search-by-name', async (req, res) => {
   try {
