@@ -1,6 +1,6 @@
 /**
  * AddPersonModal — Modal universel pour trouver une personne
- * 5 méthodes : NumeroH | Téléphone | QR Code | Écrit | Vidéo
+ * 6 méthodes : NumeroH | Téléphone | Email | QR Code | Écrit | Vidéo
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -9,7 +9,7 @@ import QrScanner from 'qr-scanner';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
-type Mode = 'numeroh' | 'phone' | 'qr' | 'ecrit' | 'video';
+type Mode = 'numeroh' | 'phone' | 'email' | 'qr' | 'ecrit' | 'video';
 type QrSub = 'show' | 'scan';
 type PermState = 'unknown' | 'checking' | 'granted' | 'denied' | 'prompt';
 
@@ -37,6 +37,11 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [phoneResult, setPhoneResult] = useState<FoundUser | null>(null);
+
+  const [emailInput, setEmailInput] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [emailResult, setEmailResult] = useState<FoundUser | null>(null);
 
   const [qrSub, setQrSub] = useState<QrSub>('show');
   const [qrActive, setQrActive] = useState(false);
@@ -209,6 +214,20 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     finally { setPhoneLoading(false); }
   };
 
+  const searchByEmail = async () => {
+    if (!emailInput.trim()) return;
+    setEmailLoading(true); setEmailError(''); setEmailResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/friends/search-by-email?email=${encodeURIComponent(emailInput.trim())}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      const data = await res.json();
+      if (data.success && data.user) setEmailResult({ numeroH: data.user.numeroH, prenom: data.user.prenom, nomFamille: data.user.nomFamille });
+      else setEmailError(data.message || 'Aucun compte trouvé avec cet email.');
+    } catch { setEmailError('Erreur réseau. Vérifiez votre connexion.'); }
+    finally { setEmailLoading(false); }
+  };
+
   const searchByName = async () => {
     if (!ecritPrenom.trim() && !ecritNom.trim()) return;
     setEcritLoading(true); setEcritError(''); setEcritResults([]);
@@ -230,6 +249,7 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     stopLiveScanner();
     setMode(m);
     setPhoneResult(null); setPhoneError('');
+    setEmailResult(null); setEmailError('');
     setQrFound(null); setQrError(''); setQrScanning(false);
     setEcritResults([]); setEcritError('');
     setVideoFile(null); setVideoNumeroH('');
@@ -322,6 +342,7 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
           {([
             { key: 'numeroh', label: '🔢 NumH' },
             { key: 'phone',   label: '📞 Tél.' },
+            { key: 'email',   label: '✉️ Email' },
             { key: 'qr',      label: '📷 QR' },
             { key: 'ecrit',   label: '✍️ Écrit' },
             { key: 'video',   label: '🎬 Vidéo' },
@@ -385,6 +406,40 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
                     </div>
                   </div>
                   <button onClick={() => handleSelect(phoneResult.numeroH)}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm">
+                    Sélectionner cette personne →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Email ── */}
+          {mode === 'email' && (
+            <>
+              <p className="text-sm text-gray-500">Entrez l'email pour trouver la personne.</p>
+              <div className="flex gap-2">
+                <input type="email" value={emailInput}
+                  onChange={e => { setEmailInput(e.target.value); setEmailResult(null); setEmailError(''); }}
+                  onKeyDown={e => e.key === 'Enter' && searchByEmail()}
+                  className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  placeholder="exemple@email.com" autoFocus />
+                <button onClick={searchByEmail} disabled={emailLoading || !emailInput.trim()}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl font-semibold text-sm">
+                  {emailLoading ? '...' : 'Chercher'}
+                </button>
+              </div>
+              {emailError && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{emailError}</p>}
+              {emailResult && (
+                <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-lg">{emailResult.prenom?.[0] || '?'}</div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{emailResult.prenom} {emailResult.nomFamille}</p>
+                      <p className="text-xs text-gray-500">{emailResult.numeroH}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => handleSelect(emailResult.numeroH)}
                     className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm">
                     Sélectionner cette personne →
                   </button>
