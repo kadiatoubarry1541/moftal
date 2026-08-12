@@ -125,6 +125,8 @@ export default function AdminDashboard() {
     | "/journalisme"
   >("/sante");
   const [servicesTypeFilter, setServicesTypeFilter] = useState<string>("all");
+  const [publications, setPublications] = useState<any[]>([]);
+  const [publicationsLoading, setPublicationsLoading] = useState(false);
   const navigate = useNavigate();
 
   const API_BASE = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
@@ -279,6 +281,22 @@ export default function AdminDashboard() {
       if (data.success) setAllPros(data.accounts || []);
     } catch (error) {
       console.error("Erreur:", error);
+    }
+  };
+
+  const loadPublications = async () => {
+    setPublicationsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/pro-vitrine/admin/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setPublications(data.publications || []);
+    } catch (error) {
+      console.error("Erreur chargement annonces:", error);
+    } finally {
+      setPublicationsLoading(false);
     }
   };
 
@@ -494,6 +512,7 @@ export default function AdminDashboard() {
     { id: "couples", label: "Couples", icon: "💑" },
     { id: "parent-child", label: "Parent-Enfant", icon: "👶" },
     { id: "pros", label: "Professionnels", icon: "📋" },
+    { id: "annonces", label: "Annonces", icon: "📢" },
     { id: "users", label: "Utilisateurs", icon: "👥" },
     { id: "points", label: "Points Galerie", icon: "🪙" },
     { id: "tools", label: "Outils", icon: "🔧" },
@@ -507,7 +526,7 @@ export default function AdminDashboard() {
     ] : []),
   ];
   // G0 voit tous les services (pros, outils, familles...) mais PAS les données financières (points, moftal-pay)
-  const G0_TABS = ["overview", "families", "couples", "parent-child", "pros", "users", "tools"];
+  const G0_TABS = ["overview", "families", "couples", "parent-child", "pros", "annonces", "users", "tools"];
   const adminTabs = sectorAdminOnly
     ? allAdminTabs.filter((t) => t.id === "pros")
     : isSubAdmin0(userData)
@@ -628,6 +647,7 @@ export default function AdminDashboard() {
                 if (tab.id === "couples" && couples.length === 0) loadCouples();
                 if (tab.id === "parent-child" && parentChildLinks.length === 0) loadParentChildLinks();
                 if (tab.id === "pros") { loadAllPros("all"); setProFilter("all"); }
+                if (tab.id === "annonces") loadPublications();
                 if (tab.id === "services") loadAllPros("approved");
                 if (tab.id === "sector-admins") loadPageAdmins();
               }}
@@ -1266,6 +1286,47 @@ export default function AdminDashboard() {
                           );
                         })()}
                         {pro.status === "rejected" && <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-full">Rejeté</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========== ANNONCES ========== */}
+          {adminSection === "annonces" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-bold text-gray-800">📢 Toutes les Annonces ({publications.length})</h2>
+                <button onClick={loadPublications} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Actualiser</button>
+              </div>
+
+              {publicationsLoading ? (
+                <div className="text-center py-12 text-gray-500">Chargement des annonces...</div>
+              ) : publications.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">Aucune annonce trouvée</div>
+              ) : (
+                <div className="space-y-3">
+                  {publications.map((pub) => (
+                    <div key={pub.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="min-w-[200px]">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-gray-900">{pub.titre}</span>
+                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">{pub.type}</span>
+                            {!pub.is_active && (
+                              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-500">Inactive</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">{pub.contenu}</div>
+                          <div className="text-xs text-gray-400 mt-2">
+                            {pub.pro_name} · {pub.pro_type} {pub.pro_city ? `· ${pub.pro_city}` : ""}
+                          </div>
+                        </div>
+                        {pub.prix && (
+                          <span className="text-sm font-semibold text-emerald-700 whitespace-nowrap">{pub.prix}</span>
+                        )}
                       </div>
                     </div>
                   ))}

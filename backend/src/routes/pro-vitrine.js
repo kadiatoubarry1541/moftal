@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import ProPublication from '../models/ProPublication.js';
 import { sequelize } from '../../config/database.js';
@@ -47,6 +47,23 @@ router.get('/by-tenant/:tenantCode/publications', async (req, res) => {
 });
 
 // ─── PUBLICATIONS ────────────────────────────────────────────────────
+
+// GET /api/pro-vitrine/admin/all (admin — toutes les annonces, tous pros confondus)
+// Doit rester avant /:id/publications pour ne pas être capté par ce dernier.
+router.get('/admin/all', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT pp.*, pa.name AS pro_name, pa.type AS pro_type, pa.city AS pro_city
+       FROM pro_publications pp
+       JOIN professional_accounts pa ON pa.id = pp.professional_account_id
+       ORDER BY pp.created_at DESC
+       LIMIT 200`
+    );
+    res.json({ success: true, publications: rows || [] });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
 // GET /api/pro-vitrine/:id/publications  (public — clients voient les publications)
 router.get('/:id/publications', async (req, res) => {
