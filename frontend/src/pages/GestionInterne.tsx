@@ -1150,7 +1150,7 @@ export default function GestionInterne() {
           onClose={() => setShowGIPayment(false)}
           onSuccess={() => {
             setShowGIPayment(false);
-            fetch("/api/payment/acces-gestion-interne", { headers: { Authorization: `Bearer ${token}` } })
+            fetch(`${API}/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
               .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {});
           }}
           amount={prixMapGI()[periodeGI] || 0}

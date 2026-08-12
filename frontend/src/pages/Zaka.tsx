@@ -5,8 +5,6 @@ import PaymentModal from '../components/PaymentModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
-const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
-
 interface UserData {
   numeroH: string;
   prenom: string;
