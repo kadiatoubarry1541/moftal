@@ -73,6 +73,40 @@ function sanitizeAccountForPublic(account) {
   return rest;
 }
 
+/**
+ * Approuve un compte pro : génère le tenant_code si besoin et active l'essai
+ * gratuit de 3 mois. Utilisé aussi bien par l'endpoint d'approbation que par
+ * l'inscription directe d'un admin global (qui n'a personne pour l'approuver).
+ */
+async function finalizeApproval(account, approverUserId) {
+  const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
+  let tenantCode = account.tenant_code || null;
+  if (mgmtTypes.includes(account.type) && !tenantCode) {
+    const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU' };
+    const prefix = prefixMap[account.type] || 'PRO';
+    tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
+    await sequelize.query(
+      `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
+      { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
+    );
+  }
+
+  const finEssai = new Date();
+  finEssai.setMonth(finEssai.getMonth() + 3);
+
+  await account.update({
+    status: 'approved',
+    approvedAt: new Date(),
+    approvedBy: approverUserId,
+    subscriptionStatus: 'active',
+    subscriptionValidUntil: finEssai,
+    isTrial: true,
+    ...(tenantCode ? { tenant_code: tenantCode } : {})
+  });
+
+  return account;
+}
+
 // ============ VÉRIFICATION NOM DISPONIBLE ============
 
 // GET /api/professionals/verifier-nom?nom=... — vérifie si un nom est déjà pris
@@ -155,9 +189,17 @@ router.post('/register', authenticate, async (req, res) => {
       status: 'pending'
     });
 
+    // L'admin global approuve tout le monde : personne n'approuve pour lui.
+    // Ses propres créations sont donc publiées immédiatement, sans attente.
+    if (isGlobalAdmin(req.user)) {
+      await finalizeApproval(account, req.userId);
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Inscription envoyée. En attente de validation par l\'administrateur.',
+      message: isGlobalAdmin(req.user)
+        ? 'Compte créé et publié.'
+        : 'Inscription envoyée. En attente de validation par l\'administrateur.',
       account: sanitizeAccountForPublic(account)
     });
   } catch (error) {
@@ -684,34 +726,7 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
       });
     }
 
-    // Générer le code tenant unique pour tous les types avec Gestion Interne
-    const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
-    let tenantCode = account.tenant_code || null;
-    if (mgmtTypes.includes(account.type) && !tenantCode) {
-      const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU' };
-      const prefix = prefixMap[account.type] || 'PRO';
-      tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
-      // Créer l'entrée dans management_tenants
-      await sequelize.query(
-        `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
-        { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
-      );
-    }
-
-    // Calculer la fin de l'essai gratuit (3 mois à partir d'aujourd'hui)
-    const finEssai = new Date();
-    finEssai.setMonth(finEssai.getMonth() + 3);
-
-    await account.update({
-      status: 'approved',
-      approvedAt: new Date(),
-      approvedBy: req.userId,
-      // ── Essai gratuit 3 mois activé automatiquement à l'approbation ──
-      subscriptionStatus: 'active',
-      subscriptionValidUntil: finEssai,
-      isTrial: true,
-      ...(tenantCode ? { tenant_code: tenantCode } : {})
-    });
+    await finalizeApproval(account, req.userId);
 
     // Notifier le propriétaire
     const typeLabels = {
