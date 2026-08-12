@@ -2,6 +2,8 @@
 import { useNavigate } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 const DOMAINES = [
   { id: "agriculture",    label: "Agriculture",           emoji: "🌾", color: "#156315", bg: "#f0fdf0", desc: "Production locale, irrigation, coopératives agricoles" },
   { id: "habitat",        label: "Habitat & Logement",    emoji: "🏗️", color: "#0891b2", bg: "#ecfeff", desc: "Construction, matériaux locaux, planification urbaine" },
@@ -55,7 +57,7 @@ export default function Developpement() {
   const loadStats = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/developpement/stats", {
+      const res = await fetch(`${API_BASE}/api/developpement/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -70,7 +72,7 @@ export default function Developpement() {
   const loadMesDons = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/developpement/mes-dons", {
+      const res = await fetch(`${API_BASE}/api/developpement/mes-dons`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -85,7 +87,7 @@ export default function Developpement() {
     setDonLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/developpement/donate", {
+      const res = await fetch(`${API_BASE}/api/developpement/donate`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(donForm)

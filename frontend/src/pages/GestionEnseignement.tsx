@@ -89,22 +89,22 @@ export default function GestionEnseignement({ mode }: Props) {
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
   const get = useCallback(async (path: string) => {
-    const r = await fetch(`/api/${apiName}/${tenantCode!}${path}`, { headers: auth() });
+    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { headers: auth() });
     return r.json();
   }, [tenantCode, apiName]);
 
   const post = useCallback(async (path: string, body: any) => {
-    const r = await fetch(`/api/${apiName}/${tenantCode!}${path}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
     return r.json();
   }, [tenantCode, apiName]);
 
   const put = useCallback(async (path: string, body: any) => {
-    const r = await fetch(`/api/${apiName}/${tenantCode!}${path}`, { method: "PUT", headers: auth(), body: JSON.stringify(body) });
+    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "PUT", headers: auth(), body: JSON.stringify(body) });
     return r.json();
   }, [tenantCode, apiName]);
 
   const del = useCallback(async (path: string) => {
-    const r = await fetch(`/api/${apiName}/${tenantCode!}${path}`, { method: "DELETE", headers: auth() });
+    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "DELETE", headers: auth() });
     return r.json();
   }, [tenantCode, apiName]);
 

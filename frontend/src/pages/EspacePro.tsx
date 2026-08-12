@@ -389,7 +389,7 @@ function SubscriptionPaymentWall({
   const isNeverPaid = account.subscriptionStatus === "never_paid";
 
   useEffect(() => {
-    fetch(`/api/payment/prix-compte-pro?proId=${account.id}`, {
+    fetch(`${API}/api/payment/prix-compte-pro?proId=${account.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())

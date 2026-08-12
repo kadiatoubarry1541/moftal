@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
+import { config } from "../config/api";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 
@@ -7,7 +8,7 @@ const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
 
 async function api(path: string, opts: RequestInit = {}) {
-  const r = await fetch(`/api/transport-mgmt${path}`, { ...opts, headers: { ...h(), ...(opts.headers || {}) } });
+  const r = await fetch(`${config.API_BASE_URL}/transport-mgmt${path}`, { ...opts, headers: { ...h(), ...(opts.headers || {}) } });
   return r.json();
 }
 

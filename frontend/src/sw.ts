@@ -9,6 +9,8 @@ import { clientsClaim, skipWaiting } from 'workbox-core'
 
 declare const self: ServiceWorkerGlobalScope
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 skipWaiting()
 clientsClaim()
 
@@ -32,11 +34,11 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         if (gestionMatch) {
           const tenantCode = gestionMatch[1]
           const res = await fetch(
-            `/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodeURIComponent(clientPath)}`
+            `${API_BASE}/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodeURIComponent(clientPath)}`
           )
           if (res.ok) return res
         } else if (proMatch) {
-          const res = await fetch(`/api/professionals/pro-manifest/${proMatch[1]}`)
+          const res = await fetch(`${API_BASE}/api/professionals/pro-manifest/${proMatch[1]}`)
           if (res.ok) return res
         }
       } catch { /* silencieux — fallback ci-dessous */ }

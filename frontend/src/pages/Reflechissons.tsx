@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -81,7 +83,7 @@ export default function Reflechissons() {
   const loadReflections = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/faith/reflections', {
+      const response = await fetch(`${API_BASE}/api/faith/reflections`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -202,7 +204,7 @@ export default function Reflechissons() {
   const createReflection = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/faith/reflections', {
+      const response = await fetch(`${API_BASE}/api/faith/reflections`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

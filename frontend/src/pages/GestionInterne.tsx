@@ -5,6 +5,12 @@ import Activite from "./Activite";
 import { AddPersonModal } from "../components/AddPersonModal";
 import PaymentModal from "../components/PaymentModal";
 
+// En prod, frontend et backend sont sur des domaines différents : un chemin relatif
+// "/api/..." atterrit sur le frontend lui-même (et échoue silencieusement). L'URL doit
+// donc toujours passer par cette base. Le littéral "http://localhost:5002" est remplacé
+// par la vraie URL du backend au build (voir vite.config.ts, replaceLocalhostPlugin).
+const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
+
 // ─── CONSTANTES ───────────────────────────────────────────────────────────────
 
 const ADMIN_SERVICES = [
@@ -366,19 +372,19 @@ export default function GestionInterne() {
   useEffect(() => {
     if (!currentUser) { navigate("/login"); return; }
 
-    const myAccountsPromise = fetch("/api/professionals/my-accounts", {
+    const myAccountsPromise = fetch(`${API}/api/professionals/my-accounts`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
       setAccounts((data.accounts || []).filter((a: any) => a.status === "approved"));
     }).catch(() => {});
 
     const accesPromise = !userIsAdmin
-      ? fetch("/api/payment/acces-gestion-interne", { headers: { Authorization: `Bearer ${token}` } })
+      ? fetch(`${API}/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
           .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {})
       : Promise.resolve();
 
     const adminTenantsPromise = userIsAdmin
-      ? fetch("/api/professionals/admin/tenants", { headers: { Authorization: `Bearer ${token}` } })
+      ? fetch(`${API}/api/professionals/admin/tenants`, { headers: { Authorization: `Bearer ${token}` } })
           .then(r => r.json()).then(data => { if (data.success) setAdminTenants(data.tenants || []); }).catch(() => {})
       : Promise.resolve();
 
@@ -411,7 +417,7 @@ export default function GestionInterne() {
     const info = getTypeInfo(account.type);
     if (account.tenant_code) { ouvrirGestionUrl(info.path, account.tenant_code); return; }
     try {
-      const r = await fetch(`/api/professionals/${account.id}/ensure-tenant`, {
+      const r = await fetch(`${API}/api/professionals/${account.id}/ensure-tenant`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -425,7 +431,7 @@ export default function GestionInterne() {
 
   async function fetchPubs(accountId: string): Promise<any[]> {
     try {
-      const r = await fetch(`/api/pro-vitrine/${accountId}/publications`);
+      const r = await fetch(`${API}/api/pro-vitrine/${accountId}/publications`);
       const d = await r.json();
       return d.publications || [];
     } catch { return []; }
@@ -439,7 +445,7 @@ export default function GestionInterne() {
       // Fetch via tenant code (cas admin sans accountId direct)
       setPublishModal({ accountId: "", tenantCode, name, form: { ...DEFAULT_PUB_FORM }, pubs: [], step: "loading" });
       try {
-        const r = await fetch(`/api/pro-vitrine/by-tenant/${tenantCode}/account`, {
+        const r = await fetch(`${API}/api/pro-vitrine/by-tenant/${tenantCode}/account`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const d = await r.json();
@@ -459,7 +465,7 @@ export default function GestionInterne() {
     if (!publishModal?.accountId || !publishModal.form.titre.trim()) return;
     setPublishModal(prev => prev ? { ...prev, step: "saving" } : null);
     try {
-      const r = await fetch(`/api/pro-vitrine/${publishModal.accountId}/publications`, {
+      const r = await fetch(`${API}/api/pro-vitrine/${publishModal.accountId}/publications`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(publishModal.form)
@@ -478,7 +484,7 @@ export default function GestionInterne() {
   async function deletePublication(pubId: string) {
     if (!publishModal?.accountId) return;
     try {
-      const r = await fetch(`/api/pro-vitrine/${publishModal.accountId}/publications/${pubId}`, {
+      const r = await fetch(`${API}/api/pro-vitrine/${publishModal.accountId}/publications/${pubId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -511,7 +517,7 @@ export default function GestionInterne() {
     if (!profilModal?.accountId) return;
     setProfilModal(prev => prev ? { ...prev, step: "saving" } : null);
     try {
-      const r = await fetch(`/api/pro-vitrine/${profilModal.accountId}/publish-info`, {
+      const r = await fetch(`${API}/api/pro-vitrine/${profilModal.accountId}/publish-info`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(profilModal.form)
@@ -1102,7 +1108,7 @@ export default function GestionInterne() {
           title={`Connecter un client — ${connectModal.name}`}
           onSelect={async (numeroH) => {
             try {
-              const r = await fetch(`/api/professionals/${connectModal.accountId}/connect-client`, {
+              const r = await fetch(`${API}/api/professionals/${connectModal.accountId}/connect-client`, {
                 method: "POST",
                 headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
                 body: JSON.stringify({ clientNumeroH: numeroH })
@@ -1144,7 +1150,7 @@ export default function GestionInterne() {
           onClose={() => setShowGIPayment(false)}
           onSuccess={() => {
             setShowGIPayment(false);
-            fetch("/api/payment/acces-gestion-interne", { headers: { Authorization: `Bearer ${token}` } })
+            fetch(`${API}/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
               .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {});
           }}
           amount={prixMapGI()[periodeGI] || 0}

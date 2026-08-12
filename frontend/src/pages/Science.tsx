@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { QuickMediaCapture } from '../components/QuickMediaCapture';
 import ProSection from '../components/ProSection';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -104,7 +106,7 @@ export default function Science() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/science/my-permission', {
+      const response = await fetch(`${API_BASE}/api/science/my-permission`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -123,7 +125,7 @@ export default function Science() {
   const grantPermission = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/science/permissions', {
+      const response = await fetch(`${API_BASE}/api/science/permissions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -164,7 +166,7 @@ export default function Science() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/science/posts?category=${activeTab}`, {
+      const response = await fetch(`${API_BASE}/api/science/posts?category=${activeTab}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -355,7 +357,7 @@ export default function Science() {
         hasFile: !!fileToUse
       });
 
-      const response = await fetch('/api/science/create-post', {
+      const response = await fetch(`${API_BASE}/api/science/create-post`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

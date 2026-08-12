@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../components/AudioRecorder';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -120,7 +122,7 @@ export default function Activite2() {
   const loadGroups = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/activities/my-group?level=2', {
+      const response = await fetch(`${API_BASE}/api/activities/my-group?level=2`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (response.ok) {
@@ -148,7 +150,7 @@ export default function Activite2() {
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      await fetch(`/api/activities/groups/${groupId}/join`, {
+      await fetch(`${API_BASE}/api/activities/groups/${groupId}/join`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ numeroH: userData?.numeroH })
@@ -180,7 +182,7 @@ export default function Activite2() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/activities/groups/${selectedGroup.id}/messages`, {
+      const response = await fetch(`${API_BASE}/api/activities/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -213,7 +215,7 @@ export default function Activite2() {
   const joinWorkshop = async (postId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/activities/activity2/posts/${postId}/join-workshop`, {
+      const response = await fetch(`${API_BASE}/api/activities/activity2/posts/${postId}/join-workshop`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -237,7 +239,7 @@ export default function Activite2() {
   const joinCollaboration = async (postId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/activities/activity2/posts/${postId}/join-collaboration`, {
+      const response = await fetch(`${API_BASE}/api/activities/activity2/posts/${postId}/join-collaboration`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
