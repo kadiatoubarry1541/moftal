@@ -112,16 +112,28 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
     const imageUrl = `/uploads/publicites/${req.file.filename}`;
     const lien = (req.body.lien || '').toString().trim().slice(0, 500) || null;
 
-    const [[pub]] = await sequelize.query(`
-      INSERT INTO publicites (numero_h, nom, image_url, lien, statut, is_active, created_at)
-      VALUES (:numeroH, :nom, :imageUrl, :lien, 'en_attente', false, NOW())
-      RETURNING id
-    `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } });
+    // L'admin principal n'a personne au-dessus de lui pour approuver sa propre
+    // publicité — elle est directement approuvée, il ne reste que le paiement.
+    const autoApprouve = !!req.user.isMasterAdmin;
+
+    const [[pub]] = autoApprouve
+      ? await sequelize.query(`
+          INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, created_at)
+          VALUES (:numeroH, :nom, :imageUrl, :lien, 'approuve', :numeroH, NOW(), false, NOW())
+          RETURNING id
+        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } })
+      : await sequelize.query(`
+          INSERT INTO publicites (numero_h, nom, image_url, lien, statut, is_active, created_at)
+          VALUES (:numeroH, :nom, :imageUrl, :lien, 'en_attente', false, NOW())
+          RETURNING id
+        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } });
 
     res.json({
       success: true,
       publiciteId: pub.id,
-      message: 'Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer pour la publier.',
+      message: autoApprouve
+        ? 'Publicité approuvée. Vous pouvez maintenant payer pour la publier.'
+        : 'Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer pour la publier.',
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
