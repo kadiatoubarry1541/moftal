@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../components/AudioRecorder';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -107,7 +109,7 @@ export default function Guinee() {
   const loadGroups = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/regions/guinee/groups', {
+      const response = await fetch(`${API_BASE}/api/regions/guinee/groups`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -173,7 +175,7 @@ export default function Guinee() {
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/regions/guinee/groups/${groupId}/join`, {
+      const response = await fetch(`${API_BASE}/api/regions/guinee/groups/${groupId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -211,7 +213,7 @@ export default function Guinee() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/regions/guinee/groups/${selectedGroup.id}/posts`, {
+      const response = await fetch(`${API_BASE}/api/regions/guinee/groups/${selectedGroup.id}/posts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -235,7 +237,7 @@ export default function Guinee() {
   const createEvent = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/regions/guinee/events', {
+      const response = await fetch(`${API_BASE}/api/regions/guinee/events`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -265,7 +267,7 @@ export default function Guinee() {
   const createAnnouncement = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/regions/guinee/announcements', {
+      const response = await fetch(`${API_BASE}/api/regions/guinee/announcements`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

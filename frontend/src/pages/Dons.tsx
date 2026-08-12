@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -108,7 +110,7 @@ export default function Solidarite() {
   const loadPoorPeople = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/poor-people', {
+      const response = await fetch(`${API_BASE}/api/zakat/poor-people`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -130,7 +132,7 @@ export default function Solidarite() {
   const loadDonations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/donations', {
+      const response = await fetch(`${API_BASE}/api/zakat/donations`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -282,7 +284,7 @@ export default function Solidarite() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/make-donation', {
+      const response = await fetch(`${API_BASE}/api/zakat/make-donation`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../components/AudioRecorder';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -119,7 +121,7 @@ export default function LieuResidence2() {
       const currentUser = user || userData;
       const location = currentUser?.lieu2 || currentUser?.lieuResidence2 || currentUser?.lieu_residence_2 || '';
       if (!location) { setGroups([]); setLoading(false); return; }
-      const response = await fetch(`/api/residences/groups?location=${encodeURIComponent(location)}`, {
+      const response = await fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(location)}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
       if (response.ok) {
@@ -168,7 +170,7 @@ export default function LieuResidence2() {
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      await fetch(`/api/residences/groups/${groupId}/join`, {
+      await fetch(`${API_BASE}/api/residences/groups/${groupId}/join`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ numeroH: userData?.numeroH })
@@ -200,7 +202,7 @@ export default function LieuResidence2() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/residences/groups/${selectedGroup.id}/messages`, {
+      const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/messages`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData

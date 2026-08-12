@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface Badge {
   id: string;
   name: string;
@@ -89,7 +91,7 @@ export default function BadgeSystem({ userId, isAdmin = false }: BadgeSystemProp
       setLoading(true);
       
       // Charger les badges
-      const badgesResponse = await fetch('/api/admin/badges', {
+      const badgesResponse = await fetch(`${API_BASE}/api/admin/badges`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem("token")}`,
           'Content-Type': 'application/json'
@@ -104,7 +106,7 @@ export default function BadgeSystem({ userId, isAdmin = false }: BadgeSystemProp
       }
 
       // Charger les logos
-      const logosResponse = await fetch('/api/admin/logos', {
+      const logosResponse = await fetch(`${API_BASE}/api/admin/logos`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem("token")}`,
           'Content-Type': 'application/json'
@@ -120,7 +122,7 @@ export default function BadgeSystem({ userId, isAdmin = false }: BadgeSystemProp
 
       // Charger les badges utilisateur
       if (userId) {
-        const userBadgesResponse = await fetch(`/api/admin/user-badges/${userId}`, {
+        const userBadgesResponse = await fetch(`${API_BASE}/api/admin/user-badges/${userId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem("token")}`,
             'Content-Type': 'application/json'
@@ -241,7 +243,7 @@ export default function BadgeSystem({ userId, isAdmin = false }: BadgeSystemProp
   const createBadge = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/admin/badges', {
+      const response = await fetch(`${API_BASE}/api/admin/badges`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -278,7 +280,7 @@ export default function BadgeSystem({ userId, isAdmin = false }: BadgeSystemProp
   const createLogo = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/admin/logos', {
+      const response = await fetch(`${API_BASE}/api/admin/logos`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -314,7 +316,7 @@ export default function BadgeSystem({ userId, isAdmin = false }: BadgeSystemProp
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/admin/award-badge', {
+      const response = await fetch(`${API_BASE}/api/admin/award-badge`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

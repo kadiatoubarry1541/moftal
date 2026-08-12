@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -122,7 +124,7 @@ export default function MesCours() {
   const loadPermissions = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/my-course-permissions', {
+      const response = await fetch(`${API_BASE}/api/education/my-course-permissions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -164,7 +166,7 @@ export default function MesCours() {
   const loadCourses = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/my-courses', {
+      const response = await fetch(`${API_BASE}/api/education/my-courses`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -198,7 +200,7 @@ export default function MesCours() {
   const loadBooks = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/library', {
+      const response = await fetch(`${API_BASE}/api/education/library`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -220,7 +222,7 @@ export default function MesCours() {
   const loadCertificates = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/badges/user/${userData?.numeroH}`, {
+      const response = await fetch(`${API_BASE}/api/badges/user/${userData?.numeroH}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -335,7 +337,7 @@ export default function MesCours() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/courses', {
+      const response = await fetch(`${API_BASE}/api/education/courses`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -384,7 +386,7 @@ export default function MesCours() {
         formData.append('media', newCourse.mediaFile);
       }
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/courses/publish', {
+      const response = await fetch(`${API_BASE}/api/education/courses/publish`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -416,7 +418,7 @@ export default function MesCours() {
   const grantPermission = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/education/course-permissions', {
+      const response = await fetch(`${API_BASE}/api/education/course-permissions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

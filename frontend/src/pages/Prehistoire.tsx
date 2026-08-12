@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -66,7 +68,7 @@ export default function Prehistoire() {
   const loadSections = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/history/sections?category=prehistoire', {
+      const response = await fetch(`${API_BASE}/api/history/sections?category=prehistoire`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -173,7 +175,7 @@ Ces outils témoignent de l'adaptation des populations aux changements climatiqu
   const createSection = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/history/sections', {
+      const response = await fetch(`${API_BASE}/api/history/sections`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

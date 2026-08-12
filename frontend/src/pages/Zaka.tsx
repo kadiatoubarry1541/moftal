@@ -5,6 +5,8 @@ import PaymentModal from '../components/PaymentModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -298,7 +300,7 @@ export default function Zaka() {
   const loadMonCompteZakat = async () => {
     try {
       const token = localStorage.getItem("token");
-      const r = await fetch('/api/zakat/mon-compte', { headers: { Authorization: `Bearer ${token}` } });
+      const r = await fetch(`${API_BASE}/api/zakat/mon-compte`, { headers: { Authorization: `Bearer ${token}` } });
       const d = await r.json();
       if (d.success) setMonCompteZakat(d.compte);
     } catch { /* non bloquant */ }
@@ -319,7 +321,7 @@ export default function Zaka() {
   const loadCommunities = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/faith/communities', {
+      const response = await fetch(`${API_BASE}/api/faith/communities`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -527,7 +529,7 @@ export default function Zaka() {
   const handleJoinCommunity = async (communityId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/faith/communities/${communityId}/join`, {
+      const response = await fetch(`${API_BASE}/api/faith/communities/${communityId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -616,7 +618,7 @@ export default function Zaka() {
   const loadPoorPeople = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/poor-people', {
+      const response = await fetch(`${API_BASE}/api/zakat/poor-people`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -657,7 +659,7 @@ export default function Zaka() {
   const loadDonations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/mes-dons', {
+      const response = await fetch(`${API_BASE}/api/zakat/mes-dons`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -672,7 +674,7 @@ export default function Zaka() {
   const loadZakatCalculations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/mes-calculs', {
+      const response = await fetch(`${API_BASE}/api/zakat/mes-calculs`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -783,7 +785,7 @@ export default function Zaka() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/zakat/donner-au-pauvre/${selectedPoorPerson.id}`, {
+      const response = await fetch(`${API_BASE}/api/zakat/donner-au-pauvre/${selectedPoorPerson.id}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -814,7 +816,7 @@ export default function Zaka() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/zakat/calculer', {
+      const response = await fetch(`${API_BASE}/api/zakat/calculer`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ patrimoine: totalWealth, currency: zakatForm.currency })

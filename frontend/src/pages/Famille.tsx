@@ -373,7 +373,7 @@ export default function Famille() {
   const loadFamilyMembers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family/members', {
+      const response = await fetch(`${API_BASE}/api/family/members`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -395,7 +395,7 @@ export default function Famille() {
   const loadFamilyTreeData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family-tree/tree', {
+      const response = await fetch(`${API_BASE}/api/family-tree/tree`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -420,7 +420,7 @@ export default function Famille() {
   const loadPendingConfirmations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family-tree/pending-confirmations', {
+      const response = await fetch(`${API_BASE}/api/family-tree/pending-confirmations`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -439,7 +439,7 @@ export default function Famille() {
   const confirmAccess = async (confirmationId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/family-tree/confirm-access/${confirmationId}`, {
+      const response = await fetch(`${API_BASE}/api/family-tree/confirm-access/${confirmationId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -464,7 +464,7 @@ export default function Famille() {
   const rejectAccess = async (confirmationId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/family-tree/reject-access/${confirmationId}`, {
+      const response = await fetch(`${API_BASE}/api/family-tree/reject-access/${confirmationId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -488,7 +488,7 @@ export default function Famille() {
   const saveFamilyHeads = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family-tree/set-family-heads', {
+      const response = await fetch(`${API_BASE}/api/family-tree/set-family-heads`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -514,7 +514,7 @@ export default function Famille() {
   const loadFamilyTree = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family/tree', {
+      const response = await fetch(`${API_BASE}/api/family/tree`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -536,7 +536,7 @@ export default function Famille() {
   const loadFamilyMessages = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family-tree/messages', {
+      const response = await fetch(`${API_BASE}/api/family-tree/messages`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -642,7 +642,7 @@ export default function Famille() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/family/members', {
+      const response = await fetch(`${API_BASE}/api/family/members`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -672,7 +672,7 @@ export default function Famille() {
       const token = localStorage.getItem("token");
 
       if (newMessage.type === 'text') {
-        const response = await fetch('/api/family-tree/messages', {
+        const response = await fetch(`${API_BASE}/api/family-tree/messages`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -688,7 +688,7 @@ export default function Famille() {
         const formData = new FormData();
         if (newMessage.content) formData.append('content', newMessage.content);
         if (newMessage.mediaFile) formData.append('media', newMessage.mediaFile);
-        const response = await fetch('/api/family-tree/messages/upload', {
+        const response = await fetch(`${API_BASE}/api/family-tree/messages/upload`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData

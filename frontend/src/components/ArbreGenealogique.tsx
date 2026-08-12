@@ -7,6 +7,8 @@ import { InvitationManager } from '../utils/invitationManager'
 import { useI18n } from '../i18n/useI18n'
 import { InvitationsReceived } from './InvitationsReceived'
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface FamilyMember {
   id: string
   numeroH: string
@@ -66,7 +68,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     setSpouseTreeModal({ open: true, data: null, loading: true })
     try {
       const token = localStorage.getItem('token')
-      const res = await fetch(`/api/family-tree/spouse-tree/${spouseNumeroH}`, {
+      const res = await fetch(`${API_BASE}/api/family-tree/spouse-tree/${spouseNumeroH}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()

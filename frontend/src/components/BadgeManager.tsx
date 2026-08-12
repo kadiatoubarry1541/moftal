@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
+
 interface Badge {
   id: number;
   name: string;
@@ -64,7 +66,7 @@ export default function BadgeManager({ userData }: BadgeManagerProps) {
   const loadBadges = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/admin/badges', {
+      const response = await fetch(`${API_BASE}/api/admin/badges`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -86,7 +88,7 @@ export default function BadgeManager({ userData }: BadgeManagerProps) {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/admin/badges/user/${selectedUser}`, {
+      const response = await fetch(`${API_BASE}/api/admin/badges/user/${selectedUser}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -107,7 +109,7 @@ export default function BadgeManager({ userData }: BadgeManagerProps) {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/admin/badges', {
+      const response = await fetch(`${API_BASE}/api/admin/badges`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -146,7 +148,7 @@ export default function BadgeManager({ userData }: BadgeManagerProps) {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch('/api/admin/badges/award', {
+      const response = await fetch(`${API_BASE}/api/admin/badges/award`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -178,7 +180,7 @@ export default function BadgeManager({ userData }: BadgeManagerProps) {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`/api/admin/badges/${badgeId}`, {
+      const response = await fetch(`${API_BASE}/api/admin/badges/${badgeId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
