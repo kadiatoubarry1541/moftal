@@ -113,15 +113,18 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
     const lien = (req.body.lien || '').toString().trim().slice(0, 500) || null;
 
     // L'admin principal n'a personne au-dessus de lui pour approuver sa propre
-    // publicité — elle est directement approuvée, il ne reste que le paiement.
+    // publicité, ni pour la payer — elle est directement approuvée ET activée
+    // 30 jours, comme après un paiement normal.
     const autoApprouve = !!req.user.isMasterAdmin;
+    const expireLe = new Date();
+    expireLe.setDate(expireLe.getDate() + 30);
 
     const [[pub]] = autoApprouve
       ? await sequelize.query(`
-          INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, created_at)
-          VALUES (:numeroH, :nom, :imageUrl, :lien, 'approuve', :numeroH, NOW(), false, NOW())
+          INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, expire_le, created_at)
+          VALUES (:numeroH, :nom, :imageUrl, :lien, 'approuve', :numeroH, NOW(), true, :expireLe, NOW())
           RETURNING id
-        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } })
+        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien, expireLe } })
       : await sequelize.query(`
           INSERT INTO publicites (numero_h, nom, image_url, lien, statut, is_active, created_at)
           VALUES (:numeroH, :nom, :imageUrl, :lien, 'en_attente', false, NOW())
@@ -132,7 +135,7 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
       success: true,
       publiciteId: pub.id,
       message: autoApprouve
-        ? 'Publicité approuvée. Vous pouvez maintenant payer pour la publier.'
+        ? 'Publicité approuvée et publiée pour 30 jours.'
         : 'Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer pour la publier.',
     });
   } catch (err) {

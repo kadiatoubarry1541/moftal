@@ -69,7 +69,7 @@ export default function Publicite() {
       setImage(null)
       setLien('')
       if (fileRef.current) fileRef.current.value = ''
-      alert('Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer.')
+      alert(d.message || 'Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer.')
       setOnglet('mes-publicites')
       chargerMesPublicites()
     } catch {
