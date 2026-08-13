@@ -185,7 +185,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN — GET /api/publicites/admin/en-attente
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/admin/en-attente', requireAdmin, async (req, res) => {
+router.get('/admin/en-attente', authenticate, requireAdmin, async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
       SELECT * FROM publicites WHERE statut = 'en_attente' ORDER BY created_at ASC
@@ -199,7 +199,7 @@ router.get('/admin/en-attente', requireAdmin, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN — GET /api/publicites/admin/toutes
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/admin/toutes', requireAdmin, async (req, res) => {
+router.get('/admin/toutes', authenticate, requireAdmin, async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
       SELECT *, (is_active = true AND expire_le >= NOW()) AS en_ligne
@@ -217,7 +217,7 @@ router.get('/admin/toutes', requireAdmin, async (req, res) => {
 // ADMIN — POST /api/publicites/admin/:id/approuver
 // Approuve la publicité — l'utilisateur peut ensuite payer pour la publier.
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/admin/:id/approuver', requireAdmin, async (req, res) => {
+router.post('/admin/:id/approuver', authenticate, requireAdmin, async (req, res) => {
   try {
     await sequelize.query(`
       UPDATE publicites
@@ -233,7 +233,7 @@ router.post('/admin/:id/approuver', requireAdmin, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN — POST /api/publicites/admin/:id/refuser
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/admin/:id/refuser', requireAdmin, async (req, res) => {
+router.post('/admin/:id/refuser', authenticate, requireAdmin, async (req, res) => {
   try {
     const { raison } = req.body;
     await sequelize.query(`

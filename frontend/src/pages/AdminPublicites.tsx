@@ -29,6 +29,7 @@ export default function AdminPublicites() {
   const [toutes, setToutes] = useState<Publicite[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     chargerTout();
@@ -36,6 +37,7 @@ export default function AdminPublicites() {
 
   async function chargerTout() {
     setLoading(true);
+    setError(null);
     try {
       const [r1, r2] = await Promise.all([
         fetch(`${API}/publicites/admin/en-attente`, { headers }),
@@ -44,9 +46,11 @@ export default function AdminPublicites() {
       const d1 = await r1.json();
       const d2 = await r2.json();
       if (d1.success) setEnAttente(d1.publicites);
+      else setError(d1.message || "Impossible de charger les publicités en attente.");
       if (d2.success) setToutes(d2.publicites);
+      else setError(prev => prev || d2.message || "Impossible de charger les publicités.");
     } catch {
-      // non bloquant
+      setError("Erreur de connexion au serveur.");
     } finally {
       setLoading(false);
     }
@@ -103,6 +107,12 @@ export default function AdminPublicites() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+            ⚠️ {error}
+          </div>
+        )}
 
         {/* Onglets */}
         <div className="flex rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm w-fit">
