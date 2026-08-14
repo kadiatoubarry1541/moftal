@@ -152,12 +152,19 @@ export default function Services({ onClose }: ServicesProps = {}) {
         ➕ Proposer votre service
       </button>
 
-      {/* CTA publicité — sous le bouton "Proposer votre service" pour ne pas
-          surcharger la page d'accueil (réservée aux annonces déjà publiées) */}
+      {/* Grille icônes style compact */}
+      <div className="grid grid-cols-4 gap-2">
+        {orderedServices.map(s => (
+          <ServiceIcon key={s.to} {...s} isFavorite={favoriteIds.includes(s.to)} />
+        ))}
+      </div>
+
+      {/* CTA publicité — tout en bas de la page pour ne pas surcharger
+          (réservé aux annonces des utilisateurs, pas celles de l'admin) */}
       <button
         type="button"
         onClick={() => navigate('/publicite')}
-        className="w-full mb-4 rounded-2xl overflow-hidden text-left transition-transform active:scale-[0.99]"
+        className="w-full mt-4 rounded-2xl overflow-hidden text-left transition-transform active:scale-[0.99]"
         style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
       >
         <div className="flex items-center gap-4 px-5 py-4">
@@ -171,13 +178,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
           </div>
         </div>
       </button>
-
-      {/* Grille icônes style compact */}
-      <div className="grid grid-cols-4 gap-2">
-        {orderedServices.map(s => (
-          <ServiceIcon key={s.to} {...s} isFavorite={favoriteIds.includes(s.to)} />
-        ))}
-      </div>
 
     </div>
     </>
