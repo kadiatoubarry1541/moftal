@@ -147,9 +147,29 @@ export default function Services({ onClose }: ServicesProps = {}) {
       <button
         type="button"
         onClick={() => navigate('/inscription-pro')}
-        className="w-full mb-4 flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
+        className="w-full mb-3 flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
       >
         ➕ Proposer votre service
+      </button>
+
+      {/* CTA publicité — sous le bouton "Proposer votre service" pour ne pas
+          surcharger la page d'accueil (réservée aux annonces déjà publiées) */}
+      <button
+        type="button"
+        onClick={() => navigate('/publicite')}
+        className="w-full mb-4 rounded-2xl overflow-hidden text-left transition-transform active:scale-[0.99]"
+        style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
+      >
+        <div className="flex items-center gap-4 px-5 py-4">
+          <div className="text-3xl flex-shrink-0">📣</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-black text-sm">Annoncez votre activité ici</p>
+            <p className="text-amber-50 text-xs mt-0.5">Touchez toute la communauté Moftal</p>
+          </div>
+          <div className="flex-shrink-0 bg-white/20 rounded-full px-3 py-1.5 text-white text-xs font-bold">
+            Publier →
+          </div>
+        </div>
       </button>
 
       {/* Grille icônes style compact */}
