@@ -36,7 +36,7 @@ const MODES = [
     icon: '📷',
     label: 'Photo + Audio',
     sub: 'Photo + message vocal 10 s',
-    desc: 'Prenez une photo de votre bien et enregistrez une présentation vocale de 10 secondes maximum.',
+    desc: 'Prenez une photo de votre bien et enregistrez une présentation vocale de 5 secondes maximum.',
     border: 'border-amber-500',
     bg: 'bg-amber-50',
     text: 'text-amber-700',
@@ -46,8 +46,8 @@ const MODES = [
     key: 'video' as PublishMode,
     icon: '🎥',
     label: 'Par vidéo',
-    sub: 'Vidéo max 10 secondes',
-    desc: 'Enregistrez une courte vidéo (5 à 10 secondes) pour présenter votre produit.',
+    sub: 'Vidéo max 5 secondes',
+    desc: 'Enregistrez une courte vidéo (5 secondes) pour présenter votre produit.',
     border: 'border-blue-500',
     bg: 'bg-blue-50',
     text: 'text-blue-700',
@@ -472,7 +472,7 @@ export default function EchangePublier() {
                     </div>
                   ) : (
                     <>
-                      <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
+                      <AudioRecorder maxDuration={5} onAudioRecorded={(blob) => {
                         const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
                         setProduct(p => ({ ...p, audio30s: file }));
                       }} />
@@ -506,7 +506,7 @@ export default function EchangePublier() {
               <div className="p-6 sm:p-8 space-y-5">
                 <div className="pb-4 border-b border-blue-100">
                   <h2 className="text-lg font-bold text-gray-800">Vidéo de présentation</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">Enregistrez ou importez une vidéo de 5 à 10 secondes maximum</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Enregistrez ou importez une vidéo de 5 secondes maximum</p>
                 </div>
                 <div className={`rounded-2xl border-2 p-5 space-y-4 ${errors.videos ? 'border-red-300 bg-red-50' : 'border-blue-200 bg-blue-50/40'}`}>
                   {product.videos.length > 0 ? (
@@ -522,7 +522,7 @@ export default function EchangePublier() {
                     </div>
                   ) : (
                     <>
-                      <VideoRecorder maxDuration={10} onVideoRecorded={(blob) => {
+                      <VideoRecorder maxDuration={5} onVideoRecorded={(blob) => {
                         const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                         setProduct(p => ({ ...p, videos: [file, ...p.videos] }));
                       }} />
@@ -541,7 +541,7 @@ export default function EchangePublier() {
                             vid.onloadedmetadata = () => {
                               URL.revokeObjectURL(vid.src);
                               if (vid.duration > 10) {
-                                alert('La vidéo ne doit pas dépasser 10 secondes.');
+                                alert('La vidéo ne doit pas dépasser 5 secondes.');
                                 e.target.value = '';
                                 return;
                               }

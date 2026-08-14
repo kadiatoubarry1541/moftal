@@ -713,7 +713,7 @@ export default function EchangeSecondaire() {
             </>)}
             {publishMode === 'photo_audio' && (
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Photo + message vocal (max 10 secondes)</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Photo + message vocal (max 5 secondes)</label>
               <p className="text-xs text-gray-500 mb-2">Prenez une photo de votre bien et enregistrez un message vocal (max 10 s) pour le présenter.</p>
               <div className="rounded-xl border-2 border-amber-200 bg-amber-50/50 p-4 space-y-3">
                 <div>
@@ -722,8 +722,8 @@ export default function EchangeSecondaire() {
                   {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600">✓ Photo sélectionnée</p>}
                 </div>
                 <div>
-                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 10 secondes)</span>
-                  <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-30s-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
+                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 5 secondes)</span>
+                  <AudioRecorder maxDuration={5} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-30s-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
                   {newProduct.audio30s && <p className="mt-2 text-xs text-green-600">✓ Audio enregistré</p>}
                 </div>
               </div>
@@ -731,11 +731,11 @@ export default function EchangeSecondaire() {
             )}
             {publishMode === 'video' && (
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 10 secondes)</label>
-              <p className="text-xs text-gray-500 mb-2">Enregistrez une courte vidéo de 5 à 10 secondes pour présenter votre bien.</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 5 secondes)</label>
+              <p className="text-xs text-gray-500 mb-2">Enregistrez une courte vidéo de 5 secondes pour présenter votre bien.</p>
               <div className="rounded-xl border-2 border-blue-200 bg-blue-50/50 p-4">
                 <VideoRecorder
-                  maxDuration={10}
+                  maxDuration={5}
                   onVideoRecorded={(blob) => {
                     const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                     setNewProduct((prev) => ({ ...prev, videos: [file, ...prev.videos] }));

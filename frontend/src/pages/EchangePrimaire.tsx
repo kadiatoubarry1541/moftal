@@ -630,8 +630,8 @@ export default function EchangePrimaire() {
                   {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600">✓ Photo sélectionnée</p>}
                 </div>
                 <div>
-                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 10 secondes)</span>
-                  <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
+                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 5 secondes)</span>
+                  <AudioRecorder maxDuration={5} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
                   {newProduct.audio30s && <p className="mt-2 text-xs text-green-600">✓ Audio enregistré</p>}
                 </div>
               </div>
@@ -639,10 +639,10 @@ export default function EchangePrimaire() {
             )}
             {publishMode === 'video' && (
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 10 secondes)</label>
-              <p className="text-xs text-gray-500 mb-2">Enregistrez une courte vidéo de 5 à 10 secondes pour présenter votre produit.</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 5 secondes)</label>
+              <p className="text-xs text-gray-500 mb-2">Enregistrez une courte vidéo de 5 secondes pour présenter votre produit.</p>
               <div className="rounded-xl border-2 border-blue-200 bg-blue-50/50 p-4">
-                <VideoRecorder maxDuration={10} onVideoRecorded={(blob) => {
+                <VideoRecorder maxDuration={5} onVideoRecorded={(blob) => {
                   const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                   setNewProduct((prev) => ({ ...prev, videos: [file, ...prev.videos] }));
                 }} />
