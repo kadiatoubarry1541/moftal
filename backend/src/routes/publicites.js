@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { PRIX_PUBLICITE_AFRIQUE, PRIX_PUBLICITE_HORS_AFRIQUE } from './payment.js';
 
@@ -67,8 +67,10 @@ const upload = multer({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/publicites/actives
-// Liste les publicités approuvées, payées et non expirées — pour le bandeau
-// Famille. Accessible sans connexion.
+// Liste les publicités de l'admin principal, actives et non expirées — pour
+// le bandeau Famille. Réservé aux annonces de l'admin (voir /soumettre) :
+// la page d'accueil n'affiche jamais les publicités des autres utilisateurs.
+// Accessible sans connexion.
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/actives', async (req, res) => {
   try {
@@ -76,9 +78,10 @@ router.get('/actives', async (req, res) => {
       SELECT id, image_url, lien
       FROM publicites
       WHERE is_active = true AND statut = 'approuve' AND expire_le >= NOW()
+        AND numero_h IN (:admins)
       ORDER BY created_at DESC
       LIMIT 20
-    `);
+    `, { replacements: { admins: MASTER_ADMIN_NUMEROS } });
     res.json({ success: true, publicites });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -114,7 +117,9 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
 
     // L'admin principal n'a personne au-dessus de lui pour approuver sa propre
     // publicité, ni pour la payer — elle est directement approuvée ET activée
-    // 30 jours, comme après un paiement normal.
+    // 30 jours, comme après un paiement normal. Seul l'admin principal
+    // apparaît sur la page d'accueil (voir /actives) ; les autres
+    // utilisateurs restent soumis à l'approbation + paiement habituels.
     const autoApprouve = !!req.user.isMasterAdmin;
     const expireLe = new Date();
     expireLe.setDate(expireLe.getDate() + 30);
