@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { PRIX_PUBLICITE_AFRIQUE, PRIX_PUBLICITE_HORS_AFRIQUE } from './payment.js';
 
@@ -67,8 +67,10 @@ const upload = multer({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/publicites/actives
-// Liste les publicités approuvées, payées et non expirées — pour le bandeau
-// Famille. Accessible sans connexion.
+// Liste les publicités de l'admin principal, actives et non expirées — pour
+// le bandeau Famille. Réservé aux annonces de l'admin (voir /soumettre) :
+// la page d'accueil n'affiche jamais les publicités des autres utilisateurs.
+// Accessible sans connexion.
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/actives', async (req, res) => {
   try {
@@ -76,9 +78,10 @@ router.get('/actives', async (req, res) => {
       SELECT id, image_url, lien
       FROM publicites
       WHERE is_active = true AND statut = 'approuve' AND expire_le >= NOW()
+        AND numero_h IN (:admins)
       ORDER BY created_at DESC
       LIMIT 20
-    `);
+    `, { replacements: { admins: MASTER_ADMIN_NUMEROS } });
     res.json({ success: true, publicites });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -112,27 +115,35 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
     const imageUrl = `/uploads/publicites/${req.file.filename}`;
     const lien = (req.body.lien || '').toString().trim().slice(0, 500) || null;
 
-    // L'admin principal n'a personne au-dessus de lui pour approuver sa propre
-    // publicité — elle est directement approuvée, il ne reste que le paiement.
-    const autoApprouve = !!req.user.isMasterAdmin;
+    // L'admin principal n'a personne au-dessus de lui pour approuver ou faire
+    // payer sa propre publicité — elle est publiée immédiatement, sans
+    // attente ni paiement. Seul l'admin principal apparaît sur la page
+    // d'accueil (voir /actives) ; les autres utilisateurs restent soumis à
+    // l'approbation + paiement habituels.
+    const estAdminPrincipal = !!req.user.isMasterAdmin;
 
-    const [[pub]] = autoApprouve
-      ? await sequelize.query(`
-          INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, created_at)
-          VALUES (:numeroH, :nom, :imageUrl, :lien, 'approuve', :numeroH, NOW(), false, NOW())
-          RETURNING id
-        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } })
-      : await sequelize.query(`
-          INSERT INTO publicites (numero_h, nom, image_url, lien, statut, is_active, created_at)
-          VALUES (:numeroH, :nom, :imageUrl, :lien, 'en_attente', false, NOW())
-          RETURNING id
-        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } });
+    let pub;
+    if (estAdminPrincipal) {
+      const expireLe = new Date();
+      expireLe.setDate(expireLe.getDate() + 30);
+      [[pub]] = await sequelize.query(`
+        INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, expire_le, created_at)
+        VALUES (:numeroH, :nom, :imageUrl, :lien, 'approuve', :numeroH, NOW(), true, :expireLe, NOW())
+        RETURNING id
+      `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien, expireLe } });
+    } else {
+      [[pub]] = await sequelize.query(`
+        INSERT INTO publicites (numero_h, nom, image_url, lien, statut, is_active, created_at)
+        VALUES (:numeroH, :nom, :imageUrl, :lien, 'en_attente', false, NOW())
+        RETURNING id
+      `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } });
+    }
 
     res.json({
       success: true,
       publiciteId: pub.id,
-      message: autoApprouve
-        ? 'Publicité approuvée. Vous pouvez maintenant payer pour la publier.'
+      message: estAdminPrincipal
+        ? 'Publicité publiée !'
         : 'Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer pour la publier.',
     });
   } catch (err) {
