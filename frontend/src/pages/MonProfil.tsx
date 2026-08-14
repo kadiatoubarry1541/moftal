@@ -311,6 +311,13 @@ export default function MonProfil() {
                 {showActions ? '▲' : '▼'}
               </span>
             </button>
+            <button
+              onClick={() => navigate('/publicite')}
+              className="w-full px-3 sm:px-4 py-2 text-white font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 text-sm sm:text-base"
+              style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
+            >
+              📣 Publicité
+            </button>
           </div>
         </div>
       </div>

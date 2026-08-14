@@ -181,7 +181,7 @@ const fr: Record<string, string> = {
   'profile.role.user': '👤 Utilisateur',
   'profile.btn.identity': '✨ Identité',
   'profile.btn.admin': '⚙️ Admin',
-  'profile.btn.services': '💼 Services',
+  'profile.btn.services': '💼 Mon Service',
   'profile.btn.delete': '🗑️ Supprimer mon compte',
   'profile.numeroh': 'NuméroH',
   'profile.handicap': 'Situation de handicap',
