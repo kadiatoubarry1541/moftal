@@ -5,7 +5,7 @@ interface MediaUploaderProps {
   onUpload: (mediaData: { type: 'photo' | 'video' | 'audio', url: string, caption?: string }) => void
 }
 
-const MAX_DURATION = 120 // 2 minutes, vidéo et audio
+const MAX_DURATION = 60 // 1 minute, vidéo et audio
 
 export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
   const [mediaType, setMediaType] = useState<'photo' | 'video' | 'audio'>('photo')
@@ -39,7 +39,7 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
       el.preload = 'metadata'
       el.onloadedmetadata = () => {
         if (el.duration > MAX_DURATION) {
-          alert(`Durée trop longue : ${Math.round(el.duration)} secondes.\nMaximum autorisé : ${MAX_DURATION} secondes (2 minutes).`)
+          alert(`Durée trop longue : ${Math.round(el.duration)} secondes.\nMaximum autorisé : ${MAX_DURATION} secondes (1 minute).`)
           URL.revokeObjectURL(url)
           if (fileInputRef.current) fileInputRef.current.value = ''
           return
@@ -315,7 +315,7 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
                   <video ref={videoRef} autoPlay muted className="w-full h-64 bg-black rounded-lg mb-4" />
                   {isRecording && (
                     <p className="text-center text-sm font-semibold text-red-600 mb-2">
-                      🔴 {recordedSeconds}s / {MAX_DURATION}s (2 min max)
+                      🔴 {recordedSeconds}s / {MAX_DURATION}s (1 min max)
                     </p>
                   )}
                   <div className="flex gap-3 justify-center">
@@ -368,7 +368,7 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
                   <div className="inline-flex items-center gap-3 bg-red-50 border-2 border-red-200 rounded-lg px-6 py-4 mb-4">
                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
                     <span className="text-red-700 font-semibold">
-                      Enregistrement en cours... {recordedSeconds}s / {MAX_DURATION}s (2 min max)
+                      Enregistrement en cours... {recordedSeconds}s / {MAX_DURATION}s (1 min max)
                     </span>
                   </div>
                   <div>
