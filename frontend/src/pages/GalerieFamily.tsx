@@ -143,8 +143,8 @@ export default function GalerieFamily() {
           v.onerror = () => reject(new Error('Impossible de lire la vidéo'))
           v.src = url
         }).finally(() => URL.revokeObjectURL(url))
-        if (videoDuration > 30) {
-          setError('La vidéo est trop longue. Maximum 30 secondes pour la galerie familiale.')
+        if (videoDuration > 120) {
+          setError('La vidéo est trop longue. Maximum 2 minutes pour la galerie familiale.')
           setUploading(false)
           return
         }
@@ -286,7 +286,7 @@ export default function GalerieFamily() {
                   )}
                 </div>
                 {quota.photosRestantes === 0 && points > 0 && (
-                  <p className="mt-1.5 text-gray-500">Photos : <strong>1 pt</strong> · Vidéo ≤10s : <strong>2 pts</strong> · ≤20s : <strong>3 pts</strong> · ≤30s : <strong>5 pts</strong></p>
+                  <p className="mt-1.5 text-gray-500">Photos : <strong>1 pt</strong> · Vidéo ≤10s : <strong>2 pts</strong> · ≤20s : <strong>3 pts</strong> · au-delà (jusqu'à 2 min) : <strong>5 pts</strong></p>
                 )}
               </div>
             )}

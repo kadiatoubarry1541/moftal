@@ -5,25 +5,57 @@ interface MediaUploaderProps {
   onUpload: (mediaData: { type: 'photo' | 'video' | 'audio', url: string, caption?: string }) => void
 }
 
+const MAX_DURATION = 120 // 2 minutes, vidéo et audio
+
 export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
   const [mediaType, setMediaType] = useState<'photo' | 'video' | 'audio'>('photo')
   const [caption, setCaption] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [mediaUrl, setMediaUrl] = useState<string | null>(null)
   const [isCapturing, setIsCapturing] = useState(false)
-  
+  const [recordedSeconds, setRecordedSeconds] = useState(0)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   // const audioRef = useRef<HTMLAudioElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const clearRecordingTimer = () => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
+  }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
+    if (!file) return
+
+    if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
       const url = URL.createObjectURL(file)
-      setMediaUrl(url)
+      const el = document.createElement(file.type.startsWith('video/') ? 'video' : 'audio')
+      el.preload = 'metadata'
+      el.onloadedmetadata = () => {
+        if (el.duration > MAX_DURATION) {
+          alert(`Durée trop longue : ${Math.round(el.duration)} secondes.\nMaximum autorisé : ${MAX_DURATION} secondes (2 minutes).`)
+          URL.revokeObjectURL(url)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+          return
+        }
+        setMediaUrl(url)
+      }
+      el.onerror = () => {
+        alert('Impossible de lire ce fichier.')
+        URL.revokeObjectURL(url)
+      }
+      el.src = url
+      return
     }
+
+    const url = URL.createObjectURL(file)
+    setMediaUrl(url)
   }
 
   const startCameraCapture = async () => {
@@ -87,14 +119,25 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
       
       mediaRecorder.start()
       setIsRecording(true)
+      setRecordedSeconds(0)
+      recordingTimerRef.current = setInterval(() => {
+        setRecordedSeconds(s => {
+          if (s + 1 >= MAX_DURATION) {
+            stopVideoRecording()
+            return MAX_DURATION
+          }
+          return s + 1
+        })
+      }, 1000)
     }
   }
 
   const stopVideoRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
       stopCameraCapture()
+      clearRecordingTimer()
     }
   }
 
@@ -119,6 +162,16 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
       
       mediaRecorder.start()
       setIsRecording(true)
+      setRecordedSeconds(0)
+      recordingTimerRef.current = setInterval(() => {
+        setRecordedSeconds(s => {
+          if (s + 1 >= MAX_DURATION) {
+            stopAudioRecording()
+            return MAX_DURATION
+          }
+          return s + 1
+        })
+      }, 1000)
     } catch (error) {
       console.error('Erreur enregistrement audio:', error)
       alert('Impossible d\'accéder au microphone')
@@ -126,9 +179,10 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
   }
 
   const stopAudioRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
+      clearRecordingTimer()
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop())
         streamRef.current = null
@@ -148,6 +202,7 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
 
   const handleCancel = () => {
     stopCameraCapture()
+    clearRecordingTimer()
     if (isRecording) {
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop()
@@ -258,16 +313,21 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
               ) : (
                 <div>
                   <video ref={videoRef} autoPlay muted className="w-full h-64 bg-black rounded-lg mb-4" />
+                  {isRecording && (
+                    <p className="text-center text-sm font-semibold text-red-600 mb-2">
+                      🔴 {recordedSeconds}s / {MAX_DURATION}s (2 min max)
+                    </p>
+                  )}
                   <div className="flex gap-3 justify-center">
                     {!isRecording ? (
-                      <button 
+                      <button
                         className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center gap-2"
                         onClick={startVideoRecording}
                       >
                         🔴 Commencer l'enregistrement
                       </button>
                     ) : (
-                      <button 
+                      <button
                         className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors duration-200 animate-pulse"
                         onClick={stopVideoRecording}
                       >
@@ -307,7 +367,9 @@ export function MediaUploader({ onClose, onUpload }: MediaUploaderProps) {
                 <div className="text-center">
                   <div className="inline-flex items-center gap-3 bg-red-50 border-2 border-red-200 rounded-lg px-6 py-4 mb-4">
                     <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-                    <span className="text-red-700 font-semibold">Enregistrement en cours...</span>
+                    <span className="text-red-700 font-semibold">
+                      Enregistrement en cours... {recordedSeconds}s / {MAX_DURATION}s (2 min max)
+                    </span>
                   </div>
                   <div>
                     <button 
