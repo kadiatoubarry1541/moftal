@@ -80,6 +80,20 @@ export default function Publicite() {
     }
   }
 
+  async function publierGratuitementAdmin(id: string) {
+    try {
+      const r = await fetch(`${API}/api/publicites/${id}/activer-admin`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const d = await r.json()
+      if (!d.success) { alert(d.message || 'Erreur.'); return }
+      chargerMesPublicites()
+    } catch {
+      alert('Erreur de connexion.')
+    }
+  }
+
   async function retirerPublicite(id: string) {
     if (!confirm('Retirer cette publicité ?')) return
     await fetch(`${API}/api/publicites/${id}`, {
@@ -210,7 +224,15 @@ export default function Publicite() {
                         <p className="text-xs text-gray-400 mt-1">Expire le {fmtDate(p.expire_le)}</p>
                       )}
                       <div className="flex gap-3 mt-2">
-                        {p.statut === 'approuve' && !enLigne && (
+                        {!enLigne && p.statut !== 'refuse' && admin && (
+                          <button
+                            onClick={() => publierGratuitementAdmin(p.id)}
+                            className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg"
+                          >
+                            🚀 Publier gratuitement
+                          </button>
+                        )}
+                        {p.statut === 'approuve' && !enLigne && !admin && (
                           <button
                             onClick={() => { setPayingId(p.id); setShowPayment(true) }}
                             className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg"

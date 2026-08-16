@@ -170,6 +170,38 @@ router.get('/mes-publicites', authenticate, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /api/publicites/:id/activer-admin
+// L'admin principal publie immédiatement l'une de ses propres publicités,
+// sans jamais passer par Djomy — couvre aussi les anciennes annonces restées
+// "approuvée" mais non actives avant la mise en place de l'auto-publication.
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/:id/activer-admin', authenticate, async (req, res) => {
+  try {
+    if (!req.user.isMasterAdmin) {
+      return res.status(403).json({ success: false, message: 'Réservé à l\'admin principal.' });
+    }
+    const [[pub]] = await sequelize.query(
+      `SELECT numero_h FROM publicites WHERE id = :id`,
+      { replacements: { id: req.params.id } }
+    );
+    if (!pub) return res.status(404).json({ success: false, message: 'Publicité introuvable.' });
+    if (pub.numero_h !== req.user.numeroH) {
+      return res.status(403).json({ success: false, message: 'Cette publicité ne vous appartient pas.' });
+    }
+    const expireLe = new Date();
+    expireLe.setDate(expireLe.getDate() + 30);
+    await sequelize.query(`
+      UPDATE publicites
+      SET statut = 'approuve', approuve_par = :admin, approuve_le = NOW(), is_active = true, expire_le = :expireLe
+      WHERE id = :id
+    `, { replacements: { admin: req.user.numeroH, id: req.params.id, expireLe } });
+    res.json({ success: true, message: 'Publicité publiée pour 30 jours.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DELETE /api/publicites/:id
 // L'utilisateur retire sa propre publicité
 // ─────────────────────────────────────────────────────────────────────────────
