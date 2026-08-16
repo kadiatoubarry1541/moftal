@@ -21,14 +21,46 @@ function getApiKey() {
   return `${DJOMY_CLIENT_ID}:${sig}`;
 }
 
+/** Erreur explicite pour tout ce qui concerne l'appel à Djomy (réseau, credentials, réponse invalide) */
+class DjomyError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'DjomyError';
+    this.userMessage = message;
+  }
+}
+
+/** Appelle Djomy et distingue clairement : service injoignable / credentials manquants / réponse illisible */
+async function djomyFetch(url, options) {
+  if (!DJOMY_CLIENT_ID || !DJOMY_CLIENT_SECRET) {
+    throw new DjomyError('Le paiement Djomy n\'est pas configuré sur le serveur (identifiants manquants).');
+  }
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (networkErr) {
+    console.error('djomy: service injoignable —', networkErr.message);
+    throw new DjomyError('Le service de paiement Djomy est actuellement injoignable. Réessayez dans quelques instants.');
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch (parseErr) {
+    console.error('djomy: réponse illisible (statut ' + res.status + ')');
+    throw new DjomyError('Le service de paiement Djomy est actuellement indisponible (réponse invalide). Réessayez dans quelques instants.');
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
 async function getBearerToken() {
-  const res = await fetch(`${DJOMY_BASE_URL}/v1/auth/token`, {
+  const { data } = await djomyFetch(`${DJOMY_BASE_URL}/v1/auth/token`, {
     method: 'POST',
     headers: { 'X-API-KEY': getApiKey(), 'Content-Type': 'application/json' },
     body: JSON.stringify({})
   });
-  const data = await res.json();
-  return data.access_token || data.token || data.accessToken || '';
+  const token = data.access_token || data.token || data.accessToken || '';
+  if (!token) throw new DjomyError('Authentification Djomy refusée — vérifiez les identifiants configurés sur le serveur.');
+  return token;
 }
 
 // Formater le numéro de téléphone guinéen en format international 00224XXXXXXXXX
@@ -98,7 +130,7 @@ router.post('/initiate', authenticate, async (req, res) => {
       metadata:   { userId: user.numeroH, ref }
     };
 
-    const djomyRes = await fetch(`${DJOMY_BASE_URL}/v1/payments`, {
+    const { ok: djomyOk, status: djomyStatus, data } = await djomyFetch(`${DJOMY_BASE_URL}/v1/payments`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -108,9 +140,7 @@ router.post('/initiate', authenticate, async (req, res) => {
       body: JSON.stringify(payload)
     });
 
-    const data = await djomyRes.json();
-
-    if (djomyRes.ok) {
+    if (djomyOk) {
       const transactionId = String(data.transactionId || data.data?.transactionId || data.id || ref);
       await Payment.create({
         txRef: ref,
@@ -125,7 +155,7 @@ router.post('/initiate', authenticate, async (req, res) => {
       });
       res.json({ success: true, reference: ref, transactionId, ...data });
     } else {
-      res.status(djomyRes.status).json({
+      res.status(djomyStatus).json({
         success: false,
         message: data.message || 'Erreur Djomy.',
         details: data
@@ -133,7 +163,7 @@ router.post('/initiate', authenticate, async (req, res) => {
     }
   } catch (err) {
     console.error('djomy/initiate:', err);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    res.status(err instanceof DjomyError ? 502 : 500).json({ success: false, message: err.userMessage || 'Erreur serveur.' });
   }
 });
 
@@ -173,7 +203,7 @@ router.post('/gateway', authenticate, async (req, res) => {
       metadata:   { userId: user.numeroH, ref }
     };
 
-    const djomyRes = await fetch(`${DJOMY_BASE_URL}/v1/payments/gateway`, {
+    const { ok: djomyOk, status: djomyStatus, data } = await djomyFetch(`${DJOMY_BASE_URL}/v1/payments/gateway`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -183,9 +213,7 @@ router.post('/gateway', authenticate, async (req, res) => {
       body: JSON.stringify(payload)
     });
 
-    const data = await djomyRes.json();
-
-    if (djomyRes.ok) {
+    if (djomyOk) {
       const transactionId = String(data.transactionId || data.data?.transactionId || data.id || ref);
       await Payment.create({
         txRef: ref,
@@ -201,7 +229,7 @@ router.post('/gateway', authenticate, async (req, res) => {
       const redirectUrl = data.redirectUrl || data.paymentUrl || data.url || data.data?.redirectUrl;
       res.json({ success: true, reference: ref, transactionId, redirectUrl, ...data });
     } else {
-      res.status(djomyRes.status).json({
+      res.status(djomyStatus).json({
         success: false,
         message: data.message || 'Erreur Djomy.',
         details: data
@@ -209,7 +237,7 @@ router.post('/gateway', authenticate, async (req, res) => {
     }
   } catch (err) {
     console.error('djomy/gateway:', err);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    res.status(err instanceof DjomyError ? 502 : 500).json({ success: false, message: err.userMessage || 'Erreur serveur.' });
   }
 });
 
@@ -223,7 +251,7 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
   try {
     const token = await getBearerToken();
 
-    const djomyRes = await fetch(
+    const { ok: djomyOk, data } = await djomyFetch(
       `${DJOMY_BASE_URL}/v1/payments/${req.params.transactionId}/status`,
       {
         headers: {
@@ -232,21 +260,19 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
         }
       }
     );
-
-    const data = await djomyRes.json();
     const status = data.status || data.data?.status || '';
 
-    if (djomyRes.ok && status === 'SUCCESS') {
+    if (djomyOk && status === 'SUCCESS') {
       const payment = await Payment.findOne({
         where: { gatewayRef: req.params.transactionId, payerNumeroH: req.user.numeroH }
       });
       await completeIfNeeded(payment);
     }
 
-    res.json({ success: djomyRes.ok, ...data });
+    res.json({ success: djomyOk, ...data });
   } catch (err) {
     console.error('djomy/status:', err);
-    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    res.status(err instanceof DjomyError ? 502 : 500).json({ success: false, message: err.userMessage || 'Erreur serveur.' });
   }
 });
 
