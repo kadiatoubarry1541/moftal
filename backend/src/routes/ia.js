@@ -4,6 +4,20 @@ import IaKnowledge from '../models/IaKnowledge.js';
 import IaConversation from '../models/IaConversation.js';
 import Payment from '../models/Payment.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { TERMINALE_KNOWLEDGE } from '../data/iaKnowledgeTerminale.js';
+
+/** Insère (ou met à jour) les fiches Terminale au démarrage — n'écrase jamais une
+ *  fiche déjà modifiée manuellement par un admin depuis l'API /knowledge. */
+async function seedTerminaleKnowledge() {
+  try {
+    for (const fiche of TERMINALE_KNOWLEDGE) {
+      await IaKnowledge.findOrCreate({ where: { slug: fiche.slug }, defaults: fiche });
+    }
+  } catch (err) {
+    console.warn('⚠️ seedTerminaleKnowledge:', err.message);
+  }
+}
+seedTerminaleKnowledge();
 
 /** Vérifie si l'utilisateur a un abonnement Professeur IA actif */
 async function verifierAbonnementIA(numeroH) {
@@ -72,6 +86,10 @@ const GREETING_RESPONSE = [
   'Puissances · Suites arithmétiques · Probabilités · Moyennes',
   'Géométrie : aires, volumes, Pythagore, Trigonométrie',
   '',
+  '**Niveau Terminale :** Nombres complexes · Arithmétique · Fonctions',
+  'Logarithme · Exponentielle · Intégration · Suites · Équations différentielles',
+  'Probabilité conditionnelle · Applications affines · Similitudes',
+  '',
   '**Exemples de questions à poser :**',
   '— Explique-moi le passé composé',
   '— Résous : 2x² - 5x + 2 = 0',
@@ -79,6 +97,8 @@ const GREETING_RESPONSE = [
   '— Valeur de sin(45°)',
   '— Exercice de conjugaison',
   '— Exercice de probabilités',
+  '— Explique-moi les nombres complexes',
+  '— C\'est quoi une probabilité conditionnelle ?',
   '',
   'Posez votre question, je suis là ! 💪',
 ].join('\n');
