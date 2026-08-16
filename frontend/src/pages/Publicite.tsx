@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSessionUser } from '../utils/auth'
+import { getSessionUser, isMasterAdmin } from '../utils/auth'
 import PaymentModal from '../components/PaymentModal'
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
@@ -26,6 +26,7 @@ export default function Publicite() {
   const [image, setImage] = useState<File | null>(null)
   const [lien, setLien] = useState('')
   const [erreur, setErreur] = useState('')
+  const admin = isMasterAdmin(getSessionUser())
 
   useEffect(() => {
     const user = getSessionUser()
@@ -123,17 +124,25 @@ export default function Publicite() {
           <>
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="font-bold text-emerald-900">Prix de publication</p>
-                {prix !== null && (
+                <p className="font-bold text-emerald-900">{admin ? 'Publication administrateur' : 'Prix de publication'}</p>
+                {!admin && prix !== null && (
                   <span className="text-2xl font-black text-emerald-700">{fmt(prix)}<span className="text-sm font-semibold">/mois</span></span>
                 )}
               </div>
-              <ul className="text-sm text-emerald-700 space-y-1">
-                <li>• Votre publicité défile sur la page Famille</li>
-                <li>• Un administrateur examine d'abord votre image</li>
-                <li>• Une fois approuvée, vous payez pour la mettre en ligne 30 jours</li>
-                {zone === 'hors_afrique' && <li className="text-amber-700">• Tarif international appliqué</li>}
-              </ul>
+              {admin ? (
+                <ul className="text-sm text-emerald-700 space-y-1">
+                  <li>• Votre publicité défile sur la page Famille</li>
+                  <li>• Publiée immédiatement, sans approbation ni paiement</li>
+                  <li>• Aucune limite : publiez autant de publicités que vous voulez</li>
+                </ul>
+              ) : (
+                <ul className="text-sm text-emerald-700 space-y-1">
+                  <li>• Votre publicité défile sur la page Famille</li>
+                  <li>• Un administrateur examine d'abord votre image</li>
+                  <li>• Une fois approuvée, vous payez pour la mettre en ligne 30 jours</li>
+                  {zone === 'hors_afrique' && <li className="text-amber-700">• Tarif international appliqué</li>}
+                </ul>
+              )}
             </div>
 
             <form onSubmit={soumettre} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
@@ -165,7 +174,7 @@ export default function Publicite() {
 
               <button type="submit" disabled={loading || !image}
                 className="w-full py-3.5 rounded-xl font-black text-white text-sm disabled:opacity-50 transition-all bg-emerald-600 hover:bg-emerald-700">
-                {loading ? '⏳ Envoi en cours...' : '📤 Envoyer pour approbation'}
+                {loading ? '⏳ Envoi en cours...' : admin ? '🚀 Publier maintenant' : '📤 Envoyer pour approbation'}
               </button>
             </form>
           </>
