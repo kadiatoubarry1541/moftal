@@ -27,7 +27,7 @@ export function AdCarousel() {
     if (pubs.length <= 1) return
     timerRef.current = setInterval(() => {
       setActive(prev => (prev + 1) % pubs.length)
-    }, 1000)
+    }, 3000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [pubs.length])
 
