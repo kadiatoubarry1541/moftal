@@ -38,7 +38,42 @@ async function ensurePublicitesTable() {
   }
 }
 
-ensurePublicitesTable();
+// ─── Publicités "maison" — mettent en avant les outils Moftal eux-mêmes ───────
+// (Info Moftal, Professeur IA, Paiement Famille, Visibilité & Gestion Interne,
+// Échange). Insérées une seule fois au démarrage (marquées via payment_ref),
+// jamais réinsérées si l'admin les a modifiées ou retirées depuis.
+const HOUSE_ADS = [
+  { slug: 'info-moftal', image: '/banners/info-moftal.png', lien: '/info' },
+  { slug: 'professeur-ia', image: '/banners/professeur-ia.png', lien: '/professeur-ia' },
+  { slug: 'paiement-famille', image: '/banners/paiement-famille.png', lien: '/moftal-pay' },
+  { slug: 'visibilite-gestion', image: '/banners/visibilite-gestion.png', lien: '/inscription-pro' },
+  { slug: 'echange', image: '/banners/echange.png', lien: '/echange' },
+];
+const FRONTEND_ORIGIN = 'https://moftal.com';
+
+async function seedHouseAds() {
+  try {
+    const admin = MASTER_ADMIN_NUMEROS[0];
+    const expireLe = new Date();
+    expireLe.setFullYear(expireLe.getFullYear() + 1);
+    for (const ad of HOUSE_ADS) {
+      const ref = `house-ad:${ad.slug}`;
+      const [[existing]] = await sequelize.query(
+        `SELECT id FROM publicites WHERE payment_ref = :ref LIMIT 1`,
+        { replacements: { ref } }
+      );
+      if (existing) continue;
+      await sequelize.query(`
+        INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, expire_le, payment_ref, created_at)
+        VALUES (:numeroH, 'Moftal', :imageUrl, :lien, 'approuve', :numeroH, NOW(), true, :expireLe, :ref, NOW())
+      `, { replacements: { numeroH: admin, imageUrl: `${FRONTEND_ORIGIN}${ad.image}`, lien: ad.lien, expireLe, ref } });
+    }
+  } catch (err) {
+    console.warn('⚠️ seedHouseAds:', err.message);
+  }
+}
+
+ensurePublicitesTable().then(seedHouseAds);
 
 // ─── Upload des images de publicité ────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
