@@ -1941,6 +1941,11 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-emerald-900">Publicités</div>
                   <div className="text-xs text-emerald-700">Approuver ou refuser les publicités proposées</div>
                 </button>
+                <button onClick={() => navigate("/admin/verification")} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-5 text-left transition-colors">
+                  <div className="text-2xl mb-2">✅</div>
+                  <div className="font-semibold text-emerald-900">Comptes vérifiés</div>
+                  <div className="text-xs text-emerald-700">Accorder le badge aux comptes complets et dignes de confiance</div>
+                </button>
                 <button onClick={() => navigate("/gestion-fournisseur/RIZ-MOFTAL-ADMIN")} className="bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl p-5 text-left transition-colors">
                   <div className="text-2xl mb-2">🌾</div>
                   <div className="font-semibold text-amber-900">Marché Riz</div>

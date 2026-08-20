@@ -60,6 +60,7 @@ const AdminBadges = lazy(() => import("./pages/AdminBadges"));
 const AdminModeration = lazy(() => import("./pages/AdminModeration"));
 const AdminPoints = lazy(() => import("./pages/AdminPoints"));
 const AdminRetraits = lazy(() => import("./pages/AdminRetraits"));
+const AdminVerification = lazy(() => import("./pages/AdminVerification"));
 const AcheterPoints = lazy(() => import("./pages/AcheterPoints"));
 const TerreAdam = lazy(() => import("./pages/TerreAdam"));
 const ARetenir = lazy(() => import("./pages/ARetenir"));
@@ -639,6 +640,7 @@ function App() {
           <Route path="/admin/governments" element={<AdminGovernments />} />
           <Route path="/admin/points" element={<AdminPoints />} />
           <Route path="/admin/retraits" element={<AdminRetraits />} />
+          <Route path="/admin/verification" element={<AdminVerification />} />
           <Route path="/acheter-points" element={<AcheterPoints />} />
           <Route path="/famille" element={<Famille />} />
           <Route path="/famille/parents" element={<Parents />} />

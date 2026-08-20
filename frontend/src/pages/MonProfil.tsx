@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import IdentiteModal from "../components/IdentiteModal";
 import EditProfileModal from "../components/EditProfileModal";
 import { AdminPanel } from "../components/AdminPanel";
+import { VerifiedBadge } from "../components/VerifiedBadge";
 import { config } from "../config/api";
 import { getPhotoUrl, isMasterAdmin, getNumeroHForDisplay } from "../utils/auth";
 import { useI18n } from "../i18n/useI18n";
@@ -249,8 +250,9 @@ export default function MonProfil() {
 
             {/* Informations utilisateur */}
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-slate-800">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-1.5">
                 {userData.prenom} {userData.nomFamille}
+                {userData.isVerified && <VerifiedBadge size={20} />}
               </h2>
 
               <div className="flex items-center gap-3">
