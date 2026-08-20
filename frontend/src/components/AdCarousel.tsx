@@ -27,7 +27,7 @@ export function AdCarousel() {
     if (pubs.length <= 1) return
     timerRef.current = setInterval(() => {
       setActive(prev => (prev + 1) % pubs.length)
-    }, 4000)
+    }, 1000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [pubs.length])
 
@@ -53,7 +53,7 @@ export function AdCarousel() {
             src={imgUrl(pub.image_url)}
             alt=""
             onClick={() => goTo(pub.lien)}
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
             style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
           />
         ))}
