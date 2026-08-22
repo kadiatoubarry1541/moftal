@@ -8,6 +8,8 @@ import User from '../models/User.js';
 import DeceasedMember from '../models/DeceasedMember.js';
 import FamilyTreeConfirmation from '../models/FamilyTreeConfirmation.js';
 import { FamilyTree } from '../models/additional.js';
+import { addUserToFamilyTree, addDeceasedToFamilyTree } from './familyTree.js';
+import { normalizeNumeroH } from '../utils/numeroH.js';
 import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
@@ -62,22 +64,24 @@ loadTestUsers();
 // Fonction pour gérer les confirmations par les parents vivants
 async function handleParentConfirmations(user) {
   const confirmations = [];
+  const numeroHPere = normalizeNumeroH(user.numeroHPere);
+  const numeroHMere = normalizeNumeroH(user.numeroHMere);
 
   // Si le père est fourni, vérifier s'il est vivant
-  if (user.numeroHPere) {
-    const pere = await User.findOne({ 
-      where: { 
-        numeroH: user.numeroHPere, 
+  if (numeroHPere) {
+    const pere = await User.findOne({
+      where: {
+        numeroH: { [Op.iLike]: numeroHPere },
         type: 'vivant',
-        isActive: true 
-      } 
+        isActive: true
+      }
     });
-    
+
     if (pere) {
       // Père vivant : créer une confirmation
       const confirmation = await FamilyTreeConfirmation.create({
         childNumeroH: user.numeroH,
-        parentNumeroH: user.numeroHPere,
+        parentNumeroH: numeroHPere,
         parentType: 'pere',
         status: 'pending'
       });
@@ -89,20 +93,20 @@ async function handleParentConfirmations(user) {
   }
 
   // Si la mère est fournie, vérifier si elle est vivante
-  if (user.numeroHMere) {
-    const mere = await User.findOne({ 
-      where: { 
-        numeroH: user.numeroHMere, 
+  if (numeroHMere) {
+    const mere = await User.findOne({
+      where: {
+        numeroH: { [Op.iLike]: numeroHMere },
         type: 'vivant',
-        isActive: true 
-      } 
+        isActive: true
+      }
     });
-    
+
     if (mere) {
       // Mère vivante : créer une confirmation
       const confirmation = await FamilyTreeConfirmation.create({
         childNumeroH: user.numeroH,
-        parentNumeroH: user.numeroHMere,
+        parentNumeroH: numeroHMere,
         parentType: 'mere',
         status: 'pending'
       });
@@ -113,20 +117,20 @@ async function handleParentConfirmations(user) {
   }
 
   // Si les deux parents sont décédés ou n'existent pas, ajouter directement à l'arbre
-  const pereVivant = user.numeroHPere ? await User.findOne({ 
-    where: { 
-      numeroH: user.numeroHPere, 
-      type: 'vivant', 
-      isActive: true 
-    } 
+  const pereVivant = numeroHPere ? await User.findOne({
+    where: {
+      numeroH: { [Op.iLike]: numeroHPere },
+      type: 'vivant',
+      isActive: true
+    }
   }) : null;
-  
-  const mereVivante = user.numeroHMere ? await User.findOne({ 
-    where: { 
-      numeroH: user.numeroHMere, 
-      type: 'vivant', 
-      isActive: true 
-    } 
+
+  const mereVivante = numeroHMere ? await User.findOne({
+    where: {
+      numeroH: { [Op.iLike]: numeroHMere },
+      type: 'vivant',
+      isActive: true
+    }
   }) : null;
 
   if (!pereVivant && !mereVivante) {
@@ -135,56 +139,6 @@ async function handleParentConfirmations(user) {
   }
 
   return confirmations;
-}
-
-// Fonction pour ajouter un utilisateur à l'arbre familial
-async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
-  
-  // Trouver ou créer l'arbre
-  let tree = await FamilyTree.findOne({
-    where: {
-      [Op.or]: [
-        { numeroHPere, numeroHMere },
-        { members: { [Op.contains]: [numeroH] } }
-      ],
-      isActive: true
-    }
-  });
-
-  if (!tree && (numeroHPere || numeroHMere)) {
-    // Chercher un arbre existant avec les mêmes parents
-    tree = await FamilyTree.findOne({
-      where: {
-        [Op.or]: [
-          { numeroHPere, numeroHMere },
-          { numeroHPere, numeroHMere: null },
-          { numeroHPere: null, numeroHMere }
-        ],
-        isActive: true
-      }
-    });
-  }
-
-  if (tree) {
-    // Ajouter l'utilisateur à l'arbre existant
-    const members = tree.members || [];
-    if (!members.includes(numeroH)) {
-      members.push(numeroH);
-      await tree.update({ members });
-    }
-  } else {
-    // Créer un nouvel arbre
-    const user = await User.findOne({ where: { numeroH } });
-    tree = await FamilyTree.create({
-      rootMember: numeroH,
-      numeroHPere: numeroHPere || user?.numeroHPere || null,
-      numeroHMere: numeroHMere || user?.numeroHMere || null,
-      members: [numeroH],
-      deceasedMembers: []
-    });
-  }
-
-  return tree;
 }
 
 // Fonction pour créer automatiquement les groupes d'activités et ajouter l'utilisateur
@@ -231,42 +185,6 @@ async function createActivityGroupsForUser(user) {
     console.error('Erreur lors de la création des groupes d\'activités:', error);
     // Ne pas bloquer l'enregistrement si la création des groupes échoue
   }
-}
-
-// Fonction pour ajouter un décédé à l'arbre familial
-async function addDeceasedToFamilyTree(numeroHD, numeroHPere, numeroHMere) {
-  
-  // Trouver l'arbre avec les mêmes parents
-  let tree = await FamilyTree.findOne({
-    where: {
-      [Op.or]: [
-        { numeroHPere, numeroHMere },
-        { numeroHPere, numeroHMere: null },
-        { numeroHPere: null, numeroHMere }
-      ],
-      isActive: true
-    }
-  });
-
-  if (tree) {
-    // Ajouter le décédé à l'arbre existant
-    const deceasedMembers = tree.deceasedMembers || [];
-    if (!deceasedMembers.includes(numeroHD)) {
-      deceasedMembers.push(numeroHD);
-      await tree.update({ deceasedMembers });
-    }
-  } else {
-    // Créer un nouvel arbre pour les décédés
-    tree = await FamilyTree.create({
-      rootMember: numeroHD,
-      numeroHPere: numeroHPere || null,
-      numeroHMere: numeroHMere || null,
-      members: [],
-      deceasedMembers: [numeroHD]
-    });
-  }
-
-  return tree;
 }
 
 // Middleware de validation
@@ -632,15 +550,6 @@ router.post('/login', [
   }
 });
 
-// Normaliser NumeroH (même logique que login)
-function normalizeNumeroHForAuth(numeroH) {
-  if (!numeroH || typeof numeroH !== 'string') return '';
-  return numeroH
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/O/g, '0')
-    .replace(/o/g, '0');
-}
 
 // @route   POST /api/auth/forgot-password/verify
 // @desc    Vérifier l'identité : NumeroH obligatoire, NumeroH parent et code arbre facultatifs
@@ -654,7 +563,7 @@ router.post('/forgot-password/verify', [
       return res.status(400).json({ success: false, message: 'Données invalides', errors: errors.array() });
     }
     const { numeroH, parentNumeroH, familyCode } = req.body;
-    const normalizedNumeroH = normalizeNumeroHForAuth(numeroH);
+    const normalizedNumeroH = normalizeNumeroH(numeroH);
 
     const user = await User.findByNumeroH(normalizedNumeroH);
     if (!user) {
@@ -669,9 +578,9 @@ router.post('/forgot-password/verify', [
 
     // Vérification parent (facultative — si fournie, elle doit correspondre)
     if (parentNumeroH && parentNumeroH.trim()) {
-      const normalizedParent = normalizeNumeroHForAuth(parentNumeroH);
-      const pereNorm = user.numeroHPere ? normalizeNumeroHForAuth(user.numeroHPere) : '';
-      const mereNorm = user.numeroHMere ? normalizeNumeroHForAuth(user.numeroHMere) : '';
+      const normalizedParent = normalizeNumeroH(parentNumeroH);
+      const pereNorm = user.numeroHPere ? normalizeNumeroH(user.numeroHPere) : '';
+      const mereNorm = user.numeroHMere ? normalizeNumeroH(user.numeroHMere) : '';
       const parentMatch = (pereNorm && pereNorm === normalizedParent) || (mereNorm && mereNorm === normalizedParent);
       if (!parentMatch) {
         return res.status(400).json({ success: false, message: 'Le NumeroH du parent ne correspond pas.' });

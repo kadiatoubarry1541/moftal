@@ -13,6 +13,15 @@ import { Op } from 'sequelize';
 import Notification from '../models/Notification.js';
 import CoupleLink from '../models/CoupleLink.js';
 import { getIO } from '../socket.js';
+import { normalizeNumeroH } from '../utils/numeroH.js';
+
+/** Comparaison insensible à la casse pour un NuméroH saisi à la main
+ *  (père/mère) — évite qu'une différence de casse ou d'espace empêche
+ *  silencieusement le rattachement au bon arbre familial. */
+function matchNumeroH(value) {
+  const normalized = normalizeNumeroH(value);
+  return normalized ? { [Op.iLike]: normalized } : null;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -101,18 +110,20 @@ router.get('/tree', async (req, res) => {
 
 // Fonction pour créer ou trouver un arbre généalogique
 async function createOrFindFamilyTree(user) {
-  // Vérifier si l'utilisateur a des parents
-  const numeroHPere = user.numeroHPere;
-  const numeroHMere = user.numeroHMere;
+  // Vérifier si l'utilisateur a des parents (normalisés : casse/espaces)
+  const numeroHPere = normalizeNumeroH(user.numeroHPere);
+  const numeroHMere = normalizeNumeroH(user.numeroHMere);
+  const perePattern = matchNumeroH(numeroHPere);
+  const merePattern = matchNumeroH(numeroHMere);
 
   // Si l'utilisateur a des parents, chercher un arbre existant avec ces parents
-  if (numeroHPere || numeroHMere) {
+  if (perePattern || merePattern) {
     const existingTree = await FamilyTree.findOne({
       where: {
         [Op.or]: [
-          { numeroHPere, numeroHMere },
-          { numeroHPere, numeroHMere: null },
-          { numeroHPere: null, numeroHMere }
+          { numeroHPere: perePattern || null, numeroHMere: merePattern || null },
+          { numeroHPere: perePattern || null, numeroHMere: null },
+          { numeroHPere: null, numeroHMere: merePattern || null }
         ],
         isActive: true
       }
@@ -132,8 +143,8 @@ async function createOrFindFamilyTree(user) {
   // Créer un nouvel arbre
   const newTree = await FamilyTree.create({
     rootMember: user.numeroH,
-    numeroHPere: user.numeroHPere || null,
-    numeroHMere: user.numeroHMere || null,
+    numeroHPere: numeroHPere || null,
+    numeroHMere: numeroHMere || null,
     members: [user.numeroH],
     deceasedMembers: []
   });
@@ -175,7 +186,8 @@ async function getTreeDeceasedMembers(tree) {
 router.post('/request-access', async (req, res) => {
   try {
     const user = req.user;
-    const { numeroHPere, numeroHMere } = req.body;
+    const numeroHPere = normalizeNumeroH(req.body.numeroHPere);
+    const numeroHMere = normalizeNumeroH(req.body.numeroHMere);
 
     // Vérifier que l'utilisateur a fourni au moins un parent
     if (!numeroHPere && !numeroHMere) {
@@ -189,7 +201,7 @@ router.post('/request-access', async (req, res) => {
 
     // Si le père est fourni, vérifier s'il est vivant ou décédé
     if (numeroHPere) {
-      const pere = await User.findOne({ where: { numeroH: numeroHPere, type: 'vivant' } });
+      const pere = await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHPere }, type: 'vivant' } });
       
       if (pere && pere.isActive) {
         // Père vivant : créer une confirmation
@@ -219,7 +231,7 @@ router.post('/request-access', async (req, res) => {
 
     // Si la mère est fournie, vérifier si elle est vivante ou décédée
     if (numeroHMere) {
-      const mere = await User.findOne({ where: { numeroH: numeroHMere, type: 'vivant' } });
+      const mere = await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHMere }, type: 'vivant' } });
 
       if (mere && mere.isActive) {
         // Mère vivante : créer une confirmation
@@ -247,8 +259,8 @@ router.post('/request-access', async (req, res) => {
     }
 
     // Si les deux parents sont décédés, ajouter directement à l'arbre
-    const pereVivant = numeroHPere ? await User.findOne({ where: { numeroH: numeroHPere, type: 'vivant', isActive: true } }) : null;
-    const mereVivante = numeroHMere ? await User.findOne({ where: { numeroH: numeroHMere, type: 'vivant', isActive: true } }) : null;
+    const pereVivant = numeroHPere ? await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHPere }, type: 'vivant', isActive: true } }) : null;
+    const mereVivante = numeroHMere ? await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHMere }, type: 'vivant', isActive: true } }) : null;
 
     if (!pereVivant && !mereVivante) {
       // Les deux parents sont décédés ou n'existent pas, accès direct
@@ -833,26 +845,31 @@ router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, r
 });
 
 // Fonction pour ajouter un utilisateur à l'arbre familial
-async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
+export async function addUserToFamilyTree(numeroH, numeroHPereRaw, numeroHMereRaw) {
+  const numeroHPere = normalizeNumeroH(numeroHPereRaw);
+  const numeroHMere = normalizeNumeroH(numeroHMereRaw);
+  const perePattern = matchNumeroH(numeroHPere);
+  const merePattern = matchNumeroH(numeroHMere);
+
   // Trouver ou créer l'arbre
   let tree = await FamilyTree.findOne({
     where: {
       [Op.or]: [
-        { numeroHPere, numeroHMere },
+        { numeroHPere: perePattern || null, numeroHMere: merePattern || null },
         { members: { [Op.contains]: [numeroH] } }
       ],
       isActive: true
     }
   });
 
-  if (!tree && (numeroHPere || numeroHMere)) {
+  if (!tree && (perePattern || merePattern)) {
     // Chercher un arbre existant avec les mêmes parents
     tree = await FamilyTree.findOne({
       where: {
         [Op.or]: [
-          { numeroHPere, numeroHMere },
-          { numeroHPere, numeroHMere: null },
-          { numeroHPere: null, numeroHMere }
+          { numeroHPere: perePattern || null, numeroHMere: merePattern || null },
+          { numeroHPere: perePattern || null, numeroHMere: null },
+          { numeroHPere: null, numeroHMere: merePattern || null }
         ],
         isActive: true
       }
@@ -874,8 +891,8 @@ async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
     const nomFamille = user?.nomFamille || null;
     tree = await FamilyTree.create({
       rootMember: numeroH,
-      numeroHPere: numeroHPere || user?.numeroHPere || null,
-      numeroHMere: numeroHMere || user?.numeroHMere || null,
+      numeroHPere: numeroHPere || normalizeNumeroH(user?.numeroHPere) || null,
+      numeroHMere: numeroHMere || normalizeNumeroH(user?.numeroHMere) || null,
       members: [numeroH],
       deceasedMembers: [],
       familyName: nomFamille
@@ -897,7 +914,7 @@ async function addUserToFamilyTree(numeroH, numeroHPere, numeroHMere) {
  *
  * Exemple : Barry (3ème famille à s'inscrire) atteint 5 membres → F3S5
  */
-async function assignFamilyCodeIfNeeded(tree, members) {
+export async function assignFamilyCodeIfNeeded(tree, members) {
   if (tree.familyCode) return; // déjà attribué
   if (members.length < 3) return;
 
@@ -943,14 +960,19 @@ async function assignFamilyCodeIfNeeded(tree, members) {
 }
 
 // Fonction pour ajouter un décédé à l'arbre familial
-async function addDeceasedToFamilyTree(numeroHD, numeroHPere, numeroHMere) {
+export async function addDeceasedToFamilyTree(numeroHD, numeroHPereRaw, numeroHMereRaw) {
+  const numeroHPere = normalizeNumeroH(numeroHPereRaw);
+  const numeroHMere = normalizeNumeroH(numeroHMereRaw);
+  const perePattern = matchNumeroH(numeroHPere);
+  const merePattern = matchNumeroH(numeroHMere);
+
   // Trouver l'arbre avec les mêmes parents
   let tree = await FamilyTree.findOne({
     where: {
       [Op.or]: [
-        { numeroHPere, numeroHMere },
-        { numeroHPere, numeroHMere: null },
-        { numeroHPere: null, numeroHMere }
+        { numeroHPere: perePattern || null, numeroHMere: merePattern || null },
+        { numeroHPere: perePattern || null, numeroHMere: null },
+        { numeroHPere: null, numeroHMere: merePattern || null }
       ],
       isActive: true
     }
