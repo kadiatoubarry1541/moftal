@@ -63,7 +63,8 @@ export const TERMINALE_KNOWLEDGE = [
     category: 'mathematiques',
     level: 'terminale',
     triggers: [
-      'etude de fonction', 'derivee', 'sens de variation', 'tableau de variation',
+      'etude de fonction', 'etudier une fonction', 'variations d\'une fonction', 'variations de fonction',
+      'derivee', 'sens de variation', 'tableau de variation',
       'limite de fonction', 'asymptote', 'point d\'inflexion', 'convexite', 'tangente',
     ],
     answer: [

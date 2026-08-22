@@ -13,6 +13,12 @@ async function seedTerminaleKnowledge() {
     for (const fiche of TERMINALE_KNOWLEDGE) {
       await IaKnowledge.findOrCreate({ where: { slug: fiche.slug }, defaults: fiche });
     }
+    // Correctif ponctuel : mots-clés manquants ajoutés après coup, à synchroniser
+    // même si la fiche existait déjà (ne touche que les triggers, jamais la réponse).
+    const fonctions = TERMINALE_KNOWLEDGE.find(f => f.slug === 'terminale-fonctions-numeriques');
+    if (fonctions) {
+      await IaKnowledge.update({ triggers: fonctions.triggers }, { where: { slug: fonctions.slug } });
+    }
   } catch (err) {
     console.warn('⚠️ seedTerminaleKnowledge:', err.message);
   }
