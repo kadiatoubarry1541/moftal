@@ -1,8 +1,5 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import ExchangeProduct from '../models/ExchangeProduct.js';
@@ -15,6 +12,9 @@ import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import { authenticate } from '../middleware/auth.js';
 import { isGlobalAdmin, getManagedSectorsForUser } from '../utils/sectorAdmin.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 if (typeof PageAdmin.init === 'function') PageAdmin.init(sequelize);
 
@@ -36,21 +36,9 @@ async function canManageSuppliers(user) {
 
 const router = express.Router();
 
-// Configuration multer pour l'upload des fichiers
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads');
-    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Configuration multer pour l'upload des fichiers — en mémoire, jamais sur disque
+// (le disque du serveur est effacé à chaque redémarrage/redéploiement)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,
@@ -58,6 +46,33 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024 // 50MB
   }
 });
+
+/** Envoie les fichiers reçus (en mémoire) vers le stockage cloud (jamais le disque
+ *  du serveur, qui est effacé à chaque redémarrage) — images vers ImageKit, vidéos
+ *  et audios vers R2, avec une copie de sauvegarde sur IDrive e2 en arrière-plan. */
+async function uploadFilesToCloud(files) {
+  const images = [];
+  const videos = [];
+  const audio = [];
+  for (const file of files || []) {
+    const fieldname = file.fieldname || '';
+    let url;
+    if (fieldname.startsWith('image_') || fieldname === 'images') {
+      url = await uploadToImageKit(file.buffer, file.originalname, 'echange');
+      images.push(url);
+    } else if (fieldname.startsWith('video_')) {
+      url = await uploadToR2(file.buffer, file.originalname, file.mimetype, 'echange');
+      videos.push(url);
+    } else if (fieldname.startsWith('audio_')) {
+      url = await uploadToR2(file.buffer, file.originalname, file.mimetype, 'echange');
+      audio.push(url);
+    } else {
+      continue;
+    }
+    uploadToIDrive(file.buffer, file.originalname, file.mimetype, 'echange').catch(() => {});
+  }
+  return { images, videos, audio };
+}
 
 // Toutes les routes nécessitent l'authentification
 router.use(authenticate);
@@ -272,13 +287,7 @@ router.post('/products', upload.array('images', 10), async (req, res) => {
     const user = req.user;
 
     // Récupérer les fichiers uploadés
-    const imageUrls = req.files
-      .filter(file => file.fieldname.startsWith('image_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const videoUrls = req.files
-      .filter(file => file.fieldname.startsWith('video_'))
-      .map(file => `/uploads/${file.filename}`);
+    const { images: imageUrls, videos: videoUrls } = await uploadFilesToCloud(req.files);
 
     const product = await ExchangeProduct.create({
       title,
@@ -337,17 +346,7 @@ router.post('/primaire/products', upload.any(), async (req, res) => {
     // Les autres vendeurs peuvent aussi vendre du riz/huile, sans restriction
     const estProduitMoftal = estAdmin && MOFTAL_EXCLUSIFS.some(mot => sousCategorieNormalisee.includes(mot));
 
-    const imageUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const videoUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('video_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const audioUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('audio_'))
-      .map(file => `/uploads/${file.filename}`);
+    const { images: imageUrls, videos: videoUrls, audio: audioUrls } = await uploadFilesToCloud(req.files);
 
     const product = await ExchangeProduct.create({
       title,
@@ -406,17 +405,7 @@ router.post('/secondaire/products', upload.any(), async (req, res) => {
       }
     }
 
-    const imageUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const videoUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('video_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const audioUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('audio_'))
-      .map(file => `/uploads/${file.filename}`);
+    const { images: imageUrls, videos: videoUrls, audio: audioUrls } = await uploadFilesToCloud(req.files);
 
     const product = await ExchangeProduct.create({
       title,
@@ -471,17 +460,7 @@ router.post('/tertiaire/products', upload.any(), async (req, res) => {
       }
     }
 
-    const imageUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const videoUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('video_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const audioUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('audio_'))
-      .map(file => `/uploads/${file.filename}`);
+    const { images: imageUrls, videos: videoUrls, audio: audioUrls } = await uploadFilesToCloud(req.files);
 
     const product = await ExchangeProduct.create({
       title,
@@ -562,17 +541,7 @@ router.post('/quaternaire/products', upload.any(), async (req, res) => {
       }
     }
 
-    const imageUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const videoUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('video_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const audioUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('audio_'))
-      .map(file => `/uploads/${file.filename}`);
+    const { images: imageUrls, videos: videoUrls, audio: audioUrls } = await uploadFilesToCloud(req.files);
 
     const product = await ExchangeProduct.create({
       title,
@@ -653,17 +622,7 @@ router.post('/nourriture/products', upload.any(), async (req, res) => {
       }
     }
 
-    const imageUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('image_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const videoUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('video_'))
-      .map(file => `/uploads/${file.filename}`);
-
-    const audioUrls = (req.files || [])
-      .filter(file => file.fieldname && file.fieldname.startsWith('audio_'))
-      .map(file => `/uploads/${file.filename}`);
+    const { images: imageUrls, videos: videoUrls, audio: audioUrls } = await uploadFilesToCloud(req.files);
 
     const product = await ExchangeProduct.create({
       title,

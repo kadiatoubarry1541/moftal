@@ -1,11 +1,10 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { authenticate, requireAdmin, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { PRIX_PUBLICITE_AFRIQUE, PRIX_PUBLICITE_HORS_AFRIQUE } from './payment.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
@@ -75,24 +74,10 @@ async function seedHouseAds() {
 
 ensurePublicitesTable().then(seedHouseAds);
 
-// ─── Upload des images de publicité ────────────────────────────────────────────
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads/publicites');
-    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `pub-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
+// ─── Upload des images de publicité — en mémoire puis envoyées vers le cloud
+// (jamais sur le disque du serveur, effacé à chaque redémarrage/redéploiement) ──
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
@@ -147,7 +132,8 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
       return res.status(400).json({ success: false, message: 'Une image est requise.' });
     }
     const nom = `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim();
-    const imageUrl = `/uploads/publicites/${req.file.filename}`;
+    const imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'publicites');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'publicites').catch(() => {});
     const lien = (req.body.lien || '').toString().trim().slice(0, 500) || null;
 
     // L'admin principal n'a personne au-dessus de lui pour approuver sa propre
