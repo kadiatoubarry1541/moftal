@@ -66,9 +66,9 @@ export function AdCarousel() {
               type="button"
               aria-label={`Publicité ${i + 1}`}
               onClick={() => setActive(i)}
-              className="rounded-full transition-all"
+              className="rounded-full transition-colors"
               style={{
-                width: i === active ? 16 : 6,
+                width: 6,
                 height: 6,
                 background: i === active ? '#22a722' : '#d1d5db',
               }}
