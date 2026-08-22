@@ -33,6 +33,15 @@ export function AdCarousel() {
 
   const imgUrl = (path: string) => (path.startsWith('http') ? path : `${API_ORIGIN}${path}`)
 
+  const goPrev = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActive(prev => (prev - 1 + pubs.length) % pubs.length)
+  }
+  const goNext = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActive(prev => (prev + 1) % pubs.length)
+  }
+
   const goTo = (lien?: string | null) => {
     if (!lien) return
     if (lien.startsWith('http')) window.open(lien, '_blank', 'noopener,noreferrer')
@@ -57,6 +66,26 @@ export function AdCarousel() {
             style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
           />
         ))}
+        {pubs.length > 1 && (
+          <>
+            <button
+              type="button"
+              aria-label="Publicité précédente"
+              onClick={goPrev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+            </button>
+            <button
+              type="button"
+              aria-label="Publicité suivante"
+              onClick={goNext}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
