@@ -1,8 +1,5 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import CoupleLink from '../models/CoupleLink.js';
@@ -10,22 +7,13 @@ import CoupleActivity from '../models/CoupleActivity.js';
 import PartnerRating from '../models/PartnerRating.js';
 import { sequelize } from '../config/database.js';
 import Notification from '../models/Notification.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const coupleStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads/couple');
-    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, `couple-${uniqueSuffix}${path.extname(file.originalname) || ''}`);
-  }
-});
-const uploadCouple = multer({ storage: coupleStorage, limits: { fileSize: 50 * 1024 * 1024 } });
+// Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
+// redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
+const uploadCouple = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 const router = express.Router();
 router.use(authenticate);
@@ -742,7 +730,11 @@ router.post('/activity/upload', uploadCouple.fields([
     const files = req.files || {};
     const uploadedFile = (files.image && files.image[0]) || (files.video && files.video[0]) || (files.audio && files.audio[0]);
     if (uploadedFile) {
-      mediaUrl = `/uploads/couple/${uploadedFile.filename}`;
+      const isImage = uploadedFile.mimetype.startsWith('image/');
+      mediaUrl = isImage
+        ? await uploadToImageKit(uploadedFile.buffer, uploadedFile.originalname, 'couple')
+        : await uploadToR2(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'couple');
+      uploadToIDrive(uploadedFile.buffer, uploadedFile.originalname, uploadedFile.mimetype, 'couple').catch(() => {});
     }
 
     const activity = await CoupleActivity.create({

@@ -1,29 +1,17 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { authenticate } from '../middleware/auth.js';
 import RealityPost from '../models/RealityPost.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
-// Configuration multer pour l'upload des médias
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/reality';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `reality-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
-const upload = multer({ 
-  storage,
+// Upload en mémoire pour les médias — jamais sur le disque du serveur
+// (effacé à chaque redémarrage/redéploiement), envoyé ensuite vers le cloud.
+const upload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
   fileFilter: (_req, file, cb) => {
     if (
@@ -98,7 +86,10 @@ router.post('/create-post', upload.single('media'), async (req, res) => {
     };
     
     if (req.file) {
-      postData.mediaUrl = `/uploads/reality/${req.file.filename}`;
+      postData.mediaUrl = req.file.mimetype.startsWith('image/')
+        ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'reality')
+        : await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'reality');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'reality').catch(() => {});
     }
     
     const post = await RealityPost.create(postData);

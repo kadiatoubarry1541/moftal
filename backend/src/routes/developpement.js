@@ -1,32 +1,20 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { authenticate } from '../middleware/auth.js';
 import DeveloppementDon from '../models/DeveloppementDon.js';
 import DevActualite from '../models/DevActualite.js';
 import DevProjet from '../models/DevProjet.js';
 import DevSignalement from '../models/DevSignalement.js';
 import LocationLogo from '../models/LocationLogo.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
-const logoStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/developpement/logos';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `logo-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
+// Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
+// redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
 const uploadLogo = multer({
-  storage: logoStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -298,7 +286,8 @@ router.post('/logo', authenticate, uploadLogo.single('logo'), async (req, res) =
     if (!req.file)
       return res.status(400).json({ success: false, message: 'Aucune image envoyée' });
 
-    const logoUrl = `/uploads/developpement/logos/${req.file.filename}`;
+    const logoUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'developpement');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'developpement').catch(() => {});
     const normalizedLocation = location.toLowerCase();
     const [logo] = await LocationLogo.findOrCreate({
       where: { scope, location: normalizedLocation },

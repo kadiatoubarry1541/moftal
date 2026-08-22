@@ -1,31 +1,19 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import StateMessage from '../models/StateMessage.js';
 import Document from '../models/Document.js';
 import User from '../models/User.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
-// Configuration multer pour l'upload des pièces jointes
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/messages';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `message-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
-const upload = multer({ 
-  storage,
+// Upload en mémoire pour les pièces jointes — jamais sur le disque du serveur
+// (effacé à chaque redémarrage/redéploiement), envoyé ensuite vers le cloud.
+const upload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -181,12 +169,19 @@ router.post('/send', upload.array('attachments', 5), async (req, res) => {
       }
     }
 
-    // Traiter les pièces jointes
-    const attachments = req.files ? req.files.map(file => ({
-      filename: file.originalname,
-      url: `/uploads/messages/${file.filename}`,
-      size: file.size,
-      mimetype: file.mimetype
+    // Traiter les pièces jointes — envoyées vers le stockage cloud (images vers
+    // ImageKit, PDF/Word vers R2), jamais écrites sur le disque du serveur.
+    const attachments = req.files ? await Promise.all(req.files.map(async (file) => {
+      const url = file.mimetype.startsWith('image/')
+        ? await uploadToImageKit(file.buffer, file.originalname, 'messages')
+        : await uploadToR2(file.buffer, file.originalname, file.mimetype, 'messages');
+      uploadToIDrive(file.buffer, file.originalname, file.mimetype, 'messages').catch(() => {});
+      return {
+        filename: file.originalname,
+        url,
+        size: file.size,
+        mimetype: file.mimetype
+      };
     })) : [];
 
     const message = await StateMessage.create({

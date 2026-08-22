@@ -1,44 +1,19 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { Op } from 'sequelize';
 import Document from '../models/Document.js';
 import DocumentPermission from '../models/DocumentPermission.js';
 import DocumentValidation from '../models/DocumentValidation.js';
 import { authenticate } from '../middleware/auth.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
-// Configuration multer pour l'upload des fichiers
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// S'assurer que le dossier uploads/documents existe
-const uploadsDir = path.join(__dirname, '../../uploads');
-const documentsDir = path.join(__dirname, '../../uploads/documents');
-
-// Créer les dossiers s'ils n'existent pas
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-if (!fs.existsSync(documentsDir)) {
-  fs.mkdirSync(documentsDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, documentsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
+// Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
+// redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB
   },
@@ -103,7 +78,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    const fileUrl = `/uploads/documents/${req.file.filename}`;
+    const fileUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'documents');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'documents').catch(() => {});
 
     const document = await Document.create({
       title,
@@ -547,7 +523,8 @@ router.post('/state/send', upload.single('file'), async (req, res) => {
       });
     }
 
-    const fileUrl = `/uploads/documents/${req.file.filename}`;
+    const fileUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'documents');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'documents').catch(() => {});
 
     const document = await Document.create({
       title,
@@ -629,8 +606,9 @@ router.put('/state/:documentId', upload.single('file'), async (req, res) => {
 
     // Si un nouveau fichier est fourni, créer un nouveau document
     if (req.file) {
-      const fileUrl = `/uploads/documents/${req.file.filename}`;
-      
+      const fileUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'documents');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'documents').catch(() => {});
+
       const newDocument = await Document.create({
         title: title || document.title,
         type: document.type,

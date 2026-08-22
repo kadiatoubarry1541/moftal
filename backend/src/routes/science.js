@@ -1,35 +1,19 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import SciencePost from '../models/SciencePost.js';
 import SciencePermission from '../models/SciencePermission.js';
 import User from '../models/User.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Configuration multer pour l'upload des médias
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads/science');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `science-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
-const upload = multer({ 
-  storage,
+// Upload en mémoire pour les médias — jamais sur le disque du serveur
+// (effacé à chaque redémarrage/redéploiement), envoyé ensuite vers le cloud.
+const upload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/') || file.mimetype === 'application/pdf') {
@@ -144,7 +128,7 @@ router.post('/create-post', canPublish, upload.single('media'), handleMulterErro
       category,
       hasFile: !!req.file,
       fileInfo: req.file ? {
-        filename: req.file.filename,
+        filename: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size
       } : null
@@ -177,7 +161,10 @@ router.post('/create-post', canPublish, upload.single('media'), handleMulterErro
     };
     
     if (req.file) {
-      postData.mediaUrl = `/uploads/science/${req.file.filename}`;
+      postData.mediaUrl = req.file.mimetype.startsWith('image/')
+        ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'science')
+        : await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'science');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'science').catch(() => {});
       console.log('URL média créée:', postData.mediaUrl);
     }
     

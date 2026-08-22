@@ -1,30 +1,17 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { Op } from 'sequelize';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { Game, GamePlayer, GameQuestion, GameAnswer, GameDeposit, GameTransaction, User } from '../models/index.js';
 import { sequelize } from '../config/database.js';
 import { initGameModels } from '../models/initGameModels.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
-// Configuration multer pour l'upload des médias
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/defi-educatif';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `media-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
-const upload = multer({ 
-  storage,
+// Upload en mémoire pour les médias — jamais sur le disque du serveur
+// (effacé à chaque redémarrage/redéploiement), envoyé ensuite vers le cloud.
+const upload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/')) {
@@ -1097,14 +1084,15 @@ router.post('/upload-media', upload.single('media'), async (req, res) => {
       });
     }
 
-    const mediaUrl = `/uploads/defi-educatif/${req.file.filename}`;
+    const mediaUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'defi-educatif');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'defi-educatif').catch(() => {});
 
     res.json({
       success: true,
       message: 'Média uploadé avec succès',
       url: mediaUrl,
       mediaUrl: mediaUrl,
-      fileName: req.file.filename,
+      fileName: req.file.originalname,
       fileSize: req.file.size,
       mimeType: req.file.mimetype
     });

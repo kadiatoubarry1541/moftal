@@ -1,32 +1,18 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { Op } from 'sequelize';
 import OrganizationGroup from '../models/OrganizationGroup.js';
 import { authenticate } from '../middleware/auth.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
-// Multer pour Inspir (démographie : Hommes / Femmes / Enfants)
-const inspirStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads/inspir');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `inspir-${uniqueSuffix}${path.extname(file.originalname) || ''}`);
-  }
-});
+// Multer pour Inspir (démographie : Hommes / Femmes / Enfants) — en mémoire,
+// jamais sur le disque du serveur (effacé à chaque redémarrage/redéploiement).
 const uploadInspir = multer({
-  storage: inspirStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/') || file.mimetype === 'application/pdf') {
@@ -100,7 +86,13 @@ router.post('/create-post', uploadInspir.single('media'), async (req, res) => {
         isActive: true
       });
     }
-    const mediaUrl = req.file ? `/uploads/inspir/${req.file.filename}` : null;
+    let mediaUrl = null;
+    if (req.file) {
+      mediaUrl = req.file.mimetype.startsWith('image/')
+        ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'inspir')
+        : await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'inspir');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'inspir').catch(() => {});
+    }
     const newPost = {
       id: Date.now().toString() + '-' + Math.random().toString(36).slice(2),
       author: numeroH,

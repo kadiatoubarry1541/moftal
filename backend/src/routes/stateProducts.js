@@ -1,30 +1,17 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import HealthProduct from '../models/HealthProduct.js';
 import { Op } from 'sequelize';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
-// Configuration multer pour l'upload des images de produits
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/state-products';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `state-product-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
-const upload = multer({ 
-  storage,
+// Upload en mémoire pour les images de produits — jamais sur le disque du
+// serveur (effacé à chaque redémarrage/redéploiement), envoyé vers le cloud.
+const upload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -132,7 +119,8 @@ router.post('/publish', requireAdmin, upload.single('image'), async (req, res) =
     };
 
     if (req.file) {
-      productData.imageUrl = `/uploads/state-products/${req.file.filename}`;
+      productData.imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'state-products');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'state-products').catch(() => {});
     }
 
     const product = await HealthProduct.create(productData);
@@ -203,7 +191,8 @@ router.put('/:productId', requireAdmin, upload.single('image'), async (req, res)
     }
 
     if (req.file) {
-      product.imageUrl = `/uploads/state-products/${req.file.filename}`;
+      product.imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'state-products');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'state-products').catch(() => {});
     }
 
     await product.save();

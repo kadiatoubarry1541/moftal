@@ -1,13 +1,14 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import { Op } from 'sequelize';
 import ResidenceGroup from '../models/ResidenceGroup.js';
 import ResidenceMessage from '../models/ResidenceMessage.js';
 import User from '../models/User.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
@@ -44,23 +45,10 @@ function formatDisplayName(str) {
     .join(' ');
 }
 
-// Configuration multer pour l'upload des médias
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/residences';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `residence-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
+// Upload en mémoire pour les médias — jamais sur le disque du serveur
+// (effacé à chaque redémarrage/redéploiement), envoyé ensuite vers le cloud.
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/')) {
@@ -71,23 +59,9 @@ const upload = multer({
   }
 });
 
-// Configuration multer dédiée au logo de groupe (image uniquement, plus léger)
-const logoStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = 'uploads/residences/logos';
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `logo-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
+// Upload en mémoire dédié au logo de groupe (image uniquement, plus léger)
 const uploadLogo = multer({
-  storage: logoStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -271,7 +245,10 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
     };
     
     if (req.file) {
-      messageData.mediaUrl = `/uploads/residences/${req.file.filename}`;
+      messageData.mediaUrl = req.file.mimetype.startsWith('image/')
+        ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'residences')
+        : await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'residences');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'residences').catch(() => {});
     }
     
     const message = await ResidenceMessage.create(messageData);
@@ -399,7 +376,8 @@ router.post('/groups/:id/logo', uploadLogo.single('logo'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'Aucune image envoyée' });
     }
 
-    const logoUrl = `/uploads/residences/logos/${req.file.filename}`;
+    const logoUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'residences');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'residences').catch(() => {});
     await group.update({ logoUrl });
 
     res.json({ success: true, message: 'Logo mis à jour', logoUrl });

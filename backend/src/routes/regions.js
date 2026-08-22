@@ -1,38 +1,22 @@
 import express from 'express';
 import { Op } from 'sequelize';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import RegionGroup from '../models/RegionGroup.js';
 import RegionMessage from '../models/RegionMessage.js';
 import RegionMessagePermission from '../models/RegionMessagePermission.js';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 import { extractHashtags } from '../utils/hashtags.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Configuration multer pour l'upload des médias
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../../uploads/regions');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `region-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
-
-const upload = multer({ 
-  storage,
+// Upload en mémoire pour les médias — jamais sur le disque du serveur
+// (effacé à chaque redémarrage/redéploiement), envoyé ensuite vers le cloud.
+const upload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/')) {
@@ -270,7 +254,10 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
     
     let mediaUrl = null;
     if (req.file) {
-      mediaUrl = `/uploads/regions/${req.file.filename}`;
+      mediaUrl = req.file.mimetype.startsWith('image/')
+        ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'regions')
+        : await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'regions');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'regions').catch(() => {});
     }
     
     // Extraire les hashtags du contenu
