@@ -121,7 +121,7 @@ const fr: Record<string, string> = {
   'option.select_placeholder': 'Sélectionner',
   'msg.saving': 'Enregistrement...',
   'login.title': 'Se connecter',
-  'login.numeroh': 'NumeroH',
+  'login.numeroh': 'NuméroH, téléphone ou email',
   'login.password': 'Mot de passe',
   'login.submit': 'Se connecter',
   'login.signup_prompt': 'Pas encore inscrit?',

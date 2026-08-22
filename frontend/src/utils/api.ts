@@ -136,7 +136,12 @@ export const api = {
   },
 
   async login(numeroH: string, password: string) {
-    const normalizedNumeroH = this.normalizeNumeroH(numeroH)
+    // "numeroH" accepte ici un NuméroH, un téléphone ou un email — la
+    // normalisation O→0 ne doit s'appliquer qu'à un vrai NuméroH, sinon
+    // elle abîmerait un email ou un numéro de téléphone saisi.
+    const raw = numeroH.trim()
+    const looksLikeNumeroH = !raw.includes('@') && !/^[0-9\s\-().+]+$/.test(raw)
+    const normalizedNumeroH = looksLikeNumeroH ? this.normalizeNumeroH(numeroH) : raw
     // En dev : 10s (serveur local, doit répondre immédiatement)
     // En prod : 65s (démarrage à froid Render ~50s)
     const TIMEOUT_MS = import.meta.env.DEV ? 10000 : 65000

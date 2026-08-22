@@ -475,7 +475,7 @@ router.post('/register', validateUser, async (req, res) => {
 // @desc    Connexion utilisateur
 // @access  Public
 router.post('/login', [
-  body('numeroH').notEmpty().withMessage('Le NumeroH est requis'),
+  body('numeroH').notEmpty().withMessage('Le NumeroH, téléphone ou email est requis'),
   body('password').notEmpty().withMessage('Le mot de passe est requis')
 ], async (req, res) => {
   try {
@@ -488,9 +488,39 @@ router.post('/login', [
       });
     }
 
+    // Le champ "numeroH" accepte en fait un NuméroH, un numéro de téléphone
+    // ou un email — on détecte lequel avant de chercher l'utilisateur.
     const { numeroH, password } = req.body;
-    
+
     try {
+      const rawIdentifiant = numeroH.trim();
+      let user = null;
+
+      if (rawIdentifiant.includes('@')) {
+        // Connexion par email
+        user = await User.findOne({ where: { email: { [Op.iLike]: rawIdentifiant } } });
+      } else {
+        const digitsOnly = rawIdentifiant.replace(/[^0-9]/g, '');
+        const strippedOfPunctuation = rawIdentifiant.replace(/[\s\-().+]/g, '');
+        const looksLikePhone = digitsOnly.length >= 6 && digitsOnly === strippedOfPunctuation;
+        if (looksLikePhone) {
+          // Connexion par téléphone — tolère indicatif pays et formats différents
+          // en comparant seulement les 9 derniers chiffres (numéro guinéen).
+          try {
+            const [rows] = await User.sequelize.query(
+              `SELECT numero_h FROM users
+               WHERE tel1 IS NOT NULL
+                 AND RIGHT(REGEXP_REPLACE(tel1, '[^0-9]', '', 'g'), 9) = RIGHT(:digits, 9)
+               LIMIT 1`,
+              { replacements: { digits: digitsOnly }, type: 'SELECT' }
+            );
+            if (rows && rows.length > 0) user = await User.findByNumeroH(rows[0].numero_h);
+          } catch (phoneErr) {
+            console.error('Login phone lookup error:', phoneErr.message);
+          }
+        }
+      }
+
       // Normaliser : espaces + remplacer lettre O par chiffre 0
       const normalizedNumeroH = numeroH
         .trim()
@@ -498,7 +528,7 @@ router.post('/login', [
         .replace(/O/g, '0')
         .replace(/o/g, '0');
 
-      let user = await User.findByNumeroH(normalizedNumeroH);
+      if (!user) user = await User.findByNumeroH(normalizedNumeroH);
 
       if (!user && normalizedNumeroH !== numeroH.trim()) {
         const originalTrimmed = numeroH.trim().replace(/\s+/g, ' ');
@@ -533,7 +563,7 @@ router.post('/login', [
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'NumeroH ou mot de passe incorrect',
+          message: 'NuméroH, téléphone, email ou mot de passe incorrect',
         });
       }
 

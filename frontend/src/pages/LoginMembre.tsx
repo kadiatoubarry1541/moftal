@@ -38,13 +38,16 @@ export function LoginMembre() {
     setIsLoading(true)
 
     if (!numeroH || !password) {
-      setError('Veuillez remplir le NumeroH et le mot de passe.')
+      setError('Veuillez remplir le NuméroH, téléphone ou email, et le mot de passe.')
       setIsLoading(false)
       return
     }
 
-    // Normaliser le NumeroH : lettre O → chiffre 0 (erreur de saisie fréquente)
-    const normalizedNumeroH = numeroH.trim().replace(/O/g, '0').replace(/o/g, '0')
+    // "numeroH" accepte ici un NuméroH, un téléphone ou un email — la
+    // normalisation O→0 ne doit s'appliquer qu'à un vrai NuméroH.
+    const raw = numeroH.trim()
+    const looksLikeNumeroH = !raw.includes('@') && !/^[0-9\s\-().+]+$/.test(raw)
+    const normalizedNumeroH = looksLikeNumeroH ? raw.replace(/O/g, '0').replace(/o/g, '0') : raw
 
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -105,7 +108,7 @@ export function LoginMembre() {
               type="text"
               value={numeroH}
               onChange={(e) => setNumeroH(e.target.value)}
-              placeholder="Ex: G96C1P2R3E2F1 4"
+              placeholder="NuméroH, téléphone ou email"
               className="form-input"
             />
           </div>

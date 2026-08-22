@@ -116,7 +116,7 @@ export function Login() {
                 value={numeroH} 
                 onChange={(e)=>setNumeroH(e.target.value)} 
                 onKeyPress={(e) => e.key === 'Enter' && onSubmit()}
-                placeholder="Ex: G1C1P2R1E1F1 1" 
+                placeholder="NuméroH, téléphone ou email"
                 autoFocus
               />
             </div>
