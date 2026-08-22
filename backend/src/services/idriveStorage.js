@@ -4,8 +4,8 @@ import path from 'path';
 
 const IDRIVE_ENDPOINT = process.env.IDRIVE_ENDPOINT || 'https://s3.eu-west-4.idrivee2.com';
 const IDRIVE_REGION = process.env.IDRIVE_REGION || 'eu-west-4';
-const IDRIVE_ACCESS_KEY = process.env.IDRIVE_ACCESS_KEY || 'SysNAGvjpqYo2PddzBYN';
-const IDRIVE_SECRET_KEY = process.env.IDRIVE_SECRET_KEY || 'S2zrj4fc9rQIKuQE7OlafrwoBBQfrEhmPH4GnYpD';
+const IDRIVE_ACCESS_KEY = process.env.IDRIVE_ACCESS_KEY;
+const IDRIVE_SECRET_KEY = process.env.IDRIVE_SECRET_KEY;
 const IDRIVE_BUCKET = process.env.IDRIVE_BUCKET || 'moftal-backup';
 
 const client = new S3Client({

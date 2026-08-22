@@ -2,17 +2,25 @@ import ImageKit from 'imagekit';
 import { randomUUID } from 'crypto';
 import path from 'path';
 
-const imagekit = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY || 'public_o6m1CeyUMMXTp1v9SGoSn5p3kps=',
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY || 'private_A3TzY4UtQseNZgvy5MHhwyoWd9A=',
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || 'https://ik.imagekit.io/zislz2y2j',
-});
+// Construit le client au premier appel seulement — si les identifiants manquent
+// sur le serveur, seul l'upload échoue, pas le démarrage de tout le serveur.
+let imagekit = null;
+function getClient() {
+  if (!imagekit) {
+    imagekit = new ImageKit({
+      publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+      privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+      urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+    });
+  }
+  return imagekit;
+}
 
 export async function uploadToImageKit(fileBuffer, originalName, folder = 'photos') {
   const ext = path.extname(originalName) || '.jpg';
   const fileName = `${randomUUID()}${ext}`;
 
-  const result = await imagekit.upload({
+  const result = await getClient().upload({
     file: fileBuffer,
     fileName,
     folder: `/moftal/${folder}`,
@@ -24,10 +32,8 @@ export async function uploadToImageKit(fileBuffer, originalName, folder = 'photo
 
 export async function deleteFromImageKit(fileId) {
   try {
-    await imagekit.deleteFile(fileId);
+    await getClient().deleteFile(fileId);
   } catch (e) {
     console.warn('ImageKit delete warning:', e.message);
   }
 }
-
-export { imagekit };
