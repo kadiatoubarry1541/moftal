@@ -58,24 +58,6 @@ export function AdCarousel() {
           />
         ))}
       </div>
-      {pubs.length > 1 && (
-        <div className="flex items-center justify-center gap-1.5 mt-2">
-          {pubs.map((pub, i) => (
-            <button
-              key={pub.id}
-              type="button"
-              aria-label={`Publicité ${i + 1}`}
-              onClick={() => setActive(i)}
-              className="rounded-full transition-colors"
-              style={{
-                width: 6,
-                height: 6,
-                background: i === active ? '#22a722' : '#d1d5db',
-              }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   )
 }
