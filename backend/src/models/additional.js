@@ -138,12 +138,15 @@ export const FamilyTree = sequelize.define('FamilyTree', {
     comment: 'NumeroH du deuxième chef de famille'
   },
   members: {
-    type: DataTypes.JSON,
+    // La colonne réelle en base est JSONB (voir server.js — migration qui la
+    // convertit depuis JSON), nécessaire pour l'opérateur @> utilisé partout
+    // par Op.contains. Garder ce type cohérent avec la vraie colonne.
+    type: DataTypes.JSONB,
     defaultValue: [],
     comment: 'Liste des membres de l\'arbre (NumeroH)'
   },
   deceasedMembers: {
-    type: DataTypes.JSON,
+    type: DataTypes.JSONB,
     defaultValue: [],
     comment: 'Liste des décédés dans l\'arbre (NumeroHD)'
   },

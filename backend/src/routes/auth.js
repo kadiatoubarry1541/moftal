@@ -953,6 +953,18 @@ router.put('/profile', async (req, res) => {
 
     await user.update(updates);
 
+    // Si les parents viennent d'être renseignés/corrigés (ex: inconnus à
+    // l'inscription, ajoutés ensuite depuis le profil), rattacher l'utilisateur
+    // à l'arbre familial correspondant — sinon il reste isolé pour toujours,
+    // même si son NuméroH parent est maintenant correct.
+    if ('numeroHPere' in updates || 'numeroHMere' in updates) {
+      try {
+        await addUserToFamilyTree(user.numeroH, user.numeroHPere, user.numeroHMere);
+      } catch (treeErr) {
+        console.error('addUserToFamilyTree (profile update):', treeErr.message);
+      }
+    }
+
     const userWithoutPassword = { ...user.dataValues };
     delete userWithoutPassword.password;
 
