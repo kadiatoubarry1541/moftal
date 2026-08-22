@@ -317,6 +317,11 @@ router.post('/register', validateUser, async (req, res) => {
       ...req.body, // Tous les champs du formulaire
       password: hashedPassword, // Remplacer par le mot de passe hashé
       numeroH: numeroH,
+      // Le formulaire d'inscription envoie "telephone" — la colonne réelle en
+      // base est "tel1" (sinon le numéro n'est jamais enregistré : la connexion
+      // par téléphone ne fonctionnerait alors que pour les comptes déjà
+      // renseignés ensuite depuis le profil).
+      tel1: (String(req.body.tel1 || req.body.telephone || '').trim()) || undefined,
       genre: req.body.genre || 'AUTRE',
       dateNaissance: req.body.dateNaissance || null,
       generation: req.body.generation || 'G1',
