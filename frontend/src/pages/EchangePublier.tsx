@@ -135,9 +135,13 @@ export default function EchangePublier() {
       if (!product.location.trim()) errs.location = 'La localisation est obligatoire';
       if (product.images.length === 0) errs.images = 'Ajoutez au moins une photo';
     } else if (publishMode === 'photo_audio') {
+      if (!product.title.trim()) errs.title = 'Le titre est obligatoire';
+      if (!product.category) errs.category = 'Choisissez une catégorie';
       if (!product.photoForAudio) errs.photoForAudio = 'Sélectionnez une photo';
       if (!product.audio30s) errs.audio30s = 'Enregistrez un message vocal';
     } else if (publishMode === 'video') {
+      if (!product.title.trim()) errs.title = 'Le titre est obligatoire';
+      if (!product.category) errs.category = 'Choisissez une catégorie';
       if (product.videos.length === 0) errs.videos = 'Ajoutez une vidéo de présentation';
     }
     setErrors(errs);
@@ -155,9 +159,9 @@ export default function EchangePublier() {
 
     try {
       const formData = new FormData();
-      formData.append('title', product.title.trim() || (publishMode === 'photo_audio' ? 'Annonce audio' : 'Annonce vidéo'));
+      formData.append('title', product.title.trim());
       formData.append('description', product.description.trim() || 'Produit présenté');
-      formData.append('category', product.category || 'Autre');
+      formData.append('category', product.category);
       formData.append('price', String(Number(product.price) || 0));
       formData.append('currency', product.currency);
       formData.append('condition', product.condition);
@@ -425,6 +429,24 @@ export default function EchangePublier() {
                   <p className="text-xs text-gray-400 mt-0.5">Montrez votre bien en photo et présentez-le en 30 secondes</p>
                 </div>
 
+                {/* Titre + Catégorie */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Titre *</label>
+                  <input type="text" value={product.title} onChange={e => setProduct({ ...product, title: e.target.value })}
+                    placeholder="Ex : Riz Local Premium 25 kg"
+                    className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 transition-colors ${errors.title ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'}`} />
+                  {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Catégorie *</label>
+                  <select value={product.category} onChange={e => setProduct({ ...product, category: e.target.value })}
+                    className={`w-full px-3 py-3 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 ${errors.category ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'}`}>
+                    <option value="">— Choisir —</option>
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
+                </div>
+
                 {/* Étape 1 */}
                 <div className={`rounded-2xl border-2 p-5 space-y-3 ${errors.photoForAudio ? 'border-red-300 bg-red-50' : 'border-amber-200 bg-amber-50/40'}`}>
                   <div className="flex items-center gap-2">
@@ -508,6 +530,25 @@ export default function EchangePublier() {
                   <h2 className="text-lg font-bold text-gray-800">Vidéo de présentation</h2>
                   <p className="text-xs text-gray-400 mt-0.5">Enregistrez ou importez une vidéo de 5 secondes maximum</p>
                 </div>
+
+                {/* Titre + Catégorie */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Titre *</label>
+                  <input type="text" value={product.title} onChange={e => setProduct({ ...product, title: e.target.value })}
+                    placeholder="Ex : Riz Local Premium 25 kg"
+                    className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 transition-colors ${errors.title ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'}`} />
+                  {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Catégorie *</label>
+                  <select value={product.category} onChange={e => setProduct({ ...product, category: e.target.value })}
+                    className={`w-full px-3 py-3 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 ${errors.category ? 'border-red-400 focus:ring-red-200' : 'border-gray-200 focus:ring-emerald-200 focus:border-emerald-400'}`}>
+                    <option value="">— Choisir —</option>
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
+                </div>
+
                 <div className={`rounded-2xl border-2 p-5 space-y-4 ${errors.videos ? 'border-red-300 bg-red-50' : 'border-blue-200 bg-blue-50/40'}`}>
                   {product.videos.length > 0 ? (
                     <div className="space-y-3">
