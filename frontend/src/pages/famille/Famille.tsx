@@ -44,7 +44,7 @@ export default function Famille() {
   const current = MENU_ITEMS.find(m => m.id === activeTab)
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50">
 
       {/* ── Header (style Espace Gestion) ── */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
@@ -82,24 +82,24 @@ export default function Famille() {
       </header>
 
       {/* ── Contenu ── */}
-      <div ref={contentRef} className="flex-1 flex flex-col">
+      <div ref={contentRef}>
         {activeTab === null ? (
-          <>
-            <div className="grid grid-cols-2 gap-3 p-4 max-w-2xl mx-auto w-full">
-              {MENU_ITEMS.map(item => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleSelect(item.id)}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
-                >
-                  <span className="text-3xl leading-none">{item.emoji}</span>
-                  <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
-                </button>
-              ))}
-            </div>
-            <AdCarousel fill />
-          </>
+          <div className="grid grid-cols-2 gap-3 p-4 max-w-2xl mx-auto">
+            {MENU_ITEMS.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelect(item.id)}
+                className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+              >
+                <span className="text-3xl leading-none">{item.emoji}</span>
+                <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {activeTab === null ? (
+          <AdCarousel />
         ) : (
           <Suspense fallback={
             <div className="flex items-center justify-center py-20">
