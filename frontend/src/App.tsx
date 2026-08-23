@@ -347,7 +347,7 @@ function App() {
           leur propre en-tête) : sinon la barre restait affichée vide, blanche. */}
       {/* ══ MASTHEAD STICKY — Logo + Carte Profil + Navigation (reste collé en haut comme Facebook) ══ */}
       {!isFullscreenPage && (isAccueilConnecte || showFullHeader) && (
-        <div ref={mastheadRef} className="sticky top-0 z-50 bg-white dark:bg-gray-900 shadow-sm safe-area-inset-top">
+        <div ref={mastheadRef} className={`sticky top-0 z-50 bg-white dark:bg-gray-900 safe-area-inset-top${familyMenuOpen ? '' : ' shadow-sm'}`}>
 
           {/* Ligne 1 : Logo + Carte profil (compacte) + Cloche */}
           <div className="max-w-7xl mx-auto pl-1.5 pr-3 xs:pr-4 sm:pr-6 py-1">
