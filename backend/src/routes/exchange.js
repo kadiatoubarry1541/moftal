@@ -565,6 +565,30 @@ router.post('/nourriture/products', upload.any(), async (req, res) => {
   }
 });
 
+// @route   DELETE /api/exchange/products/:id
+// @desc    Supprimer une publication (Admin uniquement) — tous secteurs confondus
+// @access  Authentifié + Admin
+router.delete('/products/:id', async (req, res) => {
+  try {
+    const user = req.user;
+    if (!isGlobalAdmin(user)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé. Admin requis.' });
+    }
+
+    const product = await ExchangeProduct.findByPk(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Publication introuvable.' });
+    }
+
+    await product.destroy();
+
+    res.json({ success: true, message: 'Publication supprimée.' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du produit:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la suppression.' });
+  }
+});
+
 // ========== FOURNISSEURS ==========
 
 // @route   GET /api/exchange/suppliers
