@@ -127,6 +127,8 @@ export default function AdminDashboard() {
   const [servicesTypeFilter, setServicesTypeFilter] = useState<string>("all");
   const [publications, setPublications] = useState<any[]>([]);
   const [publicationsLoading, setPublicationsLoading] = useState(false);
+  const [exchangeProducts, setExchangeProducts] = useState<any[]>([]);
+  const [exchangeProductsLoading, setExchangeProductsLoading] = useState(false);
   const navigate = useNavigate();
 
   const API_BASE = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
@@ -297,6 +299,42 @@ export default function AdminDashboard() {
       console.error("Erreur chargement annonces:", error);
     } finally {
       setPublicationsLoading(false);
+    }
+  };
+
+  const loadExchangeProducts = async () => {
+    setExchangeProductsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/exchange/admin/products`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) setExchangeProducts(data.products || []);
+    } catch (error) {
+      console.error("Erreur chargement publications Échange:", error);
+    } finally {
+      setExchangeProductsLoading(false);
+    }
+  };
+
+  const deleteExchangeProduct = async (productId: string) => {
+    if (!window.confirm("Supprimer définitivement cette publication ?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/exchange/products/${productId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setExchangeProducts(prev => prev.filter(p => p.id !== productId));
+      } else {
+        alert(data.message || "Erreur lors de la suppression.");
+      }
+    } catch (error) {
+      console.error("Erreur:", error);
+      alert("Erreur de connexion.");
     }
   };
 
@@ -513,6 +551,7 @@ export default function AdminDashboard() {
     { id: "parent-child", label: "Parent-Enfant", icon: "👶" },
     { id: "pros", label: "Professionnels", icon: "📋" },
     { id: "annonces", label: "Annonces", icon: "📢" },
+    { id: "echange-produits", label: "Publications Échange", icon: "🔄" },
     { id: "users", label: "Utilisateurs", icon: "👥" },
     { id: "points", label: "Points Galerie", icon: "🪙" },
     { id: "tools", label: "Outils", icon: "🔧" },
@@ -526,7 +565,7 @@ export default function AdminDashboard() {
     ] : []),
   ];
   // G0 voit tous les services (pros, outils, familles...) mais PAS les données financières (points, moftal-pay)
-  const G0_TABS = ["overview", "families", "couples", "parent-child", "pros", "annonces", "users", "tools"];
+  const G0_TABS = ["overview", "families", "couples", "parent-child", "pros", "annonces", "echange-produits", "users", "tools"];
   const adminTabs = sectorAdminOnly
     ? allAdminTabs.filter((t) => t.id === "pros")
     : isSubAdmin0(userData)
@@ -648,6 +687,7 @@ export default function AdminDashboard() {
                 if (tab.id === "parent-child" && parentChildLinks.length === 0) loadParentChildLinks();
                 if (tab.id === "pros") { loadAllPros("all"); setProFilter("all"); }
                 if (tab.id === "annonces") loadPublications();
+                if (tab.id === "echange-produits") loadExchangeProducts();
                 if (tab.id === "services") loadAllPros("approved");
                 if (tab.id === "sector-admins") loadPageAdmins();
               }}
@@ -1327,6 +1367,50 @@ export default function AdminDashboard() {
                         {pub.prix && (
                           <span className="text-sm font-semibold text-emerald-700 whitespace-nowrap">{pub.prix}</span>
                         )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========== PUBLICATIONS ÉCHANGE (gérer/supprimer, tous secteurs) ========== */}
+          {adminSection === "echange-produits" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h2 className="text-xl font-bold text-gray-800">🔄 Publications Échange ({exchangeProducts.length})</h2>
+                <button onClick={loadExchangeProducts} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">Actualiser</button>
+              </div>
+
+              {exchangeProductsLoading ? (
+                <div className="text-center py-12 text-gray-500">Chargement des publications...</div>
+              ) : exchangeProducts.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">Aucune publication trouvée</div>
+              ) : (
+                <div className="space-y-3">
+                  {exchangeProducts.map((p) => (
+                    <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="min-w-[200px] flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-gray-900">{p.title}</span>
+                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-cyan-100 text-cyan-700 capitalize">{p.category}</span>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1 line-clamp-2">{p.description}</div>
+                          <div className="text-xs text-gray-400 mt-2">
+                            {p.numeroH || p.createdBy} · {p.location}
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-emerald-700 whitespace-nowrap">
+                          {Number(p.price || 0).toLocaleString()} {p.currency}
+                        </span>
+                        <button
+                          onClick={() => deleteExchangeProduct(p.id)}
+                          className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold"
+                        >
+                          🗑️ Supprimer
+                        </button>
                       </div>
                     </div>
                   ))}

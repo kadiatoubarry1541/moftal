@@ -395,26 +395,6 @@ export default function EchangePrimaire() {
     }
   };
 
-  const deleteProduct = async (productId: string) => {
-    if (!window.confirm('Supprimer définitivement cette publication ?')) return;
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/exchange/products/${productId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        loadData();
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        alert('Erreur lors de la suppression : ' + (errData.message || response.status));
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur de connexion.');
-    }
-  };
-
   const rejectSupplier = async (supplierId: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -936,15 +916,6 @@ export default function EchangePrimaire() {
                 >
                   📞 Contacter
                 </button>
-                {isAdmin && (
-                  <button
-                    onClick={() => deleteProduct(product.id)}
-                    title="Supprimer cette publication"
-                    className="px-3 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors text-sm font-bold"
-                  >
-                    🗑️
-                  </button>
-                )}
               </div>
             </div>
           </div>

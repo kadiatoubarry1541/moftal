@@ -250,26 +250,6 @@ export default function EchangeNourriture() {
 
   const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.numeroH === 'G0C0P0R0E0F0 0';
 
-  const deleteProduct = async (productId: string) => {
-    if (!window.confirm('Supprimer définitivement cette publication ?')) return;
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/exchange/products/${productId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        loadData();
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        alert('Erreur lors de la suppression : ' + (errData.message || response.status));
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur de connexion.');
-    }
-  };
-
   // Les produits viennent déjà filtrés par le backend (category: 'nourriture')
   const getFilteredProducts = () => {
     if (!products || !Array.isArray(products)) {
@@ -753,15 +733,6 @@ export default function EchangeNourriture() {
                   <button className="px-4 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
                     ❤️
                   </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => deleteProduct(product.id)}
-                      title="Supprimer cette publication"
-                      className="px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                    >
-                      🗑️
-                    </button>
-                  )}
                 </div>
                 </div>
               </div>

@@ -141,28 +141,6 @@ export default function EchangeTertiaire() {
     });
   };
 
-  const isAdmin = userData?.role === 'admin' || userData?.role === 'super-admin' || userData?.numeroH === 'G0C0P0R0E0F0 0';
-
-  const deleteProduct = async (productId: string) => {
-    if (!window.confirm('Supprimer définitivement cette publication ?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${config.API_BASE_URL}/exchange/products/${productId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        loadData();
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        alert('Erreur lors de la suppression : ' + (errData.message || response.status));
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Erreur de connexion.');
-    }
-  };
-
   const createProduct = async () => {
     try {
       if (!newProduct.title.trim() || !newProduct.price || !newProduct.location.trim()) {
@@ -551,21 +529,10 @@ export default function EchangeTertiaire() {
                     <span>📍</span> {product.location}
                   </p>
                 )}
-                <div className="flex gap-2">
-                  <button onClick={() => setSelectedProduct(product)}
-                    className="flex-1 py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium text-sm transition-colors">
-                    📞 Contacter le vendeur
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => deleteProduct(product.id)}
-                      title="Supprimer cette publication"
-                      className="px-3 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium text-sm transition-colors"
-                    >
-                      🗑️
-                    </button>
-                  )}
-                </div>
+                <button onClick={() => setSelectedProduct(product)}
+                  className="w-full py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium text-sm transition-colors">
+                  📞 Contacter le vendeur
+                </button>
               </div>
             </div>
           ))

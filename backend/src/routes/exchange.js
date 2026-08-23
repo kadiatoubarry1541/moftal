@@ -565,6 +565,28 @@ router.post('/nourriture/products', upload.any(), async (req, res) => {
   }
 });
 
+// @route   GET /api/exchange/admin/products
+// @desc    Liste toutes les publications d'Échange, tous secteurs confondus (Admin uniquement)
+//          — utilisé par l'espace admin pour gérer/supprimer les publications à un seul endroit
+// @access  Authentifié + Admin
+router.get('/admin/products', async (req, res) => {
+  try {
+    if (!isGlobalAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé. Admin requis.' });
+    }
+
+    const products = await ExchangeProduct.findAll({
+      where: { isActive: true },
+      order: [['created_at', 'DESC']]
+    });
+
+    res.json({ success: true, products });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des publications (admin):', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la récupération des publications' });
+  }
+});
+
 // @route   DELETE /api/exchange/products/:id
 // @desc    Supprimer une publication (Admin uniquement) — tous secteurs confondus
 // @access  Authentifié + Admin
