@@ -54,10 +54,10 @@ export function AdCarousel({ fill = false }: { fill?: boolean }) {
   if (pubs.length === 0) return null
 
   return (
-    <div className={`max-w-2xl mx-auto px-4 pt-9 pb-6 w-full${fill ? ' flex-1 flex flex-col' : ''}`}>
+    <div className={`max-w-2xl mx-auto px-4 pt-6 pb-4 w-full${fill ? ' flex-1 flex flex-col' : ''}`}>
       <div
         className={`relative rounded-2xl overflow-hidden bg-gray-100${fill ? ' flex-1' : ''}`}
-        style={fill ? { minHeight: 140, maxHeight: 210 } : { aspectRatio: '3 / 1' }}
+        style={fill ? { minHeight: 110, maxHeight: 150 } : { aspectRatio: '3 / 1' }}
       >
         {pubs.map((pub, i) => (
           <img
