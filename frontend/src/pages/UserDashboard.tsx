@@ -74,7 +74,7 @@ export function UserDashboard() {
   // l'annonce vit ici, dans le contenu principal, pour pouvoir s'étirer
   // jusqu'au pied de page au lieu de laisser un vide en dessous.
   return (
-    <div className="user-dashboard bg-gray-50 dark:bg-gray-900 h-full flex flex-col">
+    <div className="user-dashboard bg-white dark:bg-gray-900 h-full flex flex-col">
       <AdCarousel fill />
     </div>
   );
