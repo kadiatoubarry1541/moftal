@@ -55,7 +55,7 @@ export function AdCarousel() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 pb-6">
-      <div className="relative rounded-2xl overflow-hidden bg-gray-100" style={{ aspectRatio: '16 / 7' }}>
+      <div className="relative rounded-2xl overflow-hidden bg-gray-100" style={{ aspectRatio: '3 / 1' }}>
         {pubs.map((pub, i) => (
           <img
             key={pub.id}
