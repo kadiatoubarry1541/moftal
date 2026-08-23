@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { AdCarousel } from "../components/AdCarousel";
 
 interface UserData {
   numeroH: string;
@@ -69,11 +70,14 @@ export function UserDashboard() {
     );
   }
 
-  // L'accueil ne contient que les boutons et la carte de profil (dans le bandeau
-  // du haut) — le contenu de chaque section n'apparaît qu'après y être entré.
-  // Pas de min-h-screen ici : cette coquille est vide, elle ne doit pas
-  // réserver toute la hauteur de l'écran et repousser le pied de page.
-  return <div className="user-dashboard bg-gray-50 dark:bg-gray-900" />;
+  // L'accueil ne contient que les boutons (dans le bandeau du haut, collant) —
+  // l'annonce vit ici, dans le contenu principal, pour pouvoir s'étirer
+  // jusqu'au pied de page au lieu de laisser un vide en dessous.
+  return (
+    <div className="user-dashboard bg-gray-50 dark:bg-gray-900 h-full flex flex-col">
+      <AdCarousel fill />
+    </div>
+  );
 }
 
 export default UserDashboard;
