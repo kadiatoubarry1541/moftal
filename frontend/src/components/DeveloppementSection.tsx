@@ -35,6 +35,7 @@ export default function DeveloppementSection({ scope, location, locationName, is
   const [projets, setProjets] = useState<any[]>([]);
   const [loadingProjets, setLoadingProjets] = useState(true);
   const [activeDomaine, setActiveDomaine] = useState<string | null>(null);
+  const [showProjets, setShowProjets] = useState(false);
   const [showDon, setShowDon] = useState(false);
   const [showMesDons, setShowMesDons] = useState(false);
   const [mesDons, setMesDons] = useState<any[]>([]);
@@ -213,100 +214,20 @@ export default function DeveloppementSection({ scope, location, locationName, is
         </div>
       </div>
 
-      {/* Domaines */}
-      <div>
-        <h3 className="text-sm font-bold text-slate-700 mb-3">Domaines de développement</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          {DOMAINES.map((dom) => (
-            <button
-              key={dom.id}
-              onClick={() => setActiveDomaine(activeDomaine === dom.id ? null : dom.id)}
-              className="flex flex-col items-start gap-1.5 p-3 bg-white rounded-xl border-2 transition-all hover:shadow-sm text-left"
-              style={{ borderColor: activeDomaine === dom.id ? dom.color : '#e2e8f0', background: activeDomaine === dom.id ? dom.bg : 'white' }}
-            >
-              <span className="text-xl">{dom.emoji}</span>
-              <span className="font-bold text-slate-800 text-xs leading-tight">{dom.label}</span>
-              {parDomaine[dom.id] > 0 && (
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: dom.bg, color: dom.color }}>
-                  {fmt(parDomaine[dom.id])}
-                </span>
-              )}
-            </button>
-          ))}
+      {/* Accès aux projets par domaine — un seul bouton, tout le détail vit dans la fenêtre */}
+      <button
+        onClick={() => setShowProjets(true)}
+        className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl border-2 border-slate-200 hover:border-green-300 hover:shadow-sm transition-all text-left"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">📁</span>
+          <div>
+            <p className="font-bold text-slate-800 text-sm">Projets par domaine</p>
+            <p className="text-slate-500 text-xs">Agriculture, santé, éducation, énergie…</p>
+          </div>
         </div>
-
-        {activeDomaine && (() => {
-          const dom = DOMAINES.find(d => d.id === activeDomaine)!;
-          return (
-            <div className="mt-3 bg-white rounded-xl border p-4 shadow-sm" style={{ borderColor: dom.color + '44' }}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{dom.emoji}</span>
-                  <div>
-                    <h4 className="font-bold text-slate-800 text-sm">{dom.label}</h4>
-                    <p className="text-slate-500 text-xs">{dom.desc}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setDonForm({ amount: '', currency: 'FG', domaine: dom.id, domaineLabel: dom.label, message: '' });
-                    setShowDon(true);
-                  }}
-                  className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg text-white"
-                  style={{ background: dom.color }}
-                >
-                  💰 Financer
-                </button>
-              </div>
-              {parDomaine[dom.id] > 0 && (
-                <p className="text-xs font-semibold mb-2" style={{ color: dom.color }}>
-                  💚 {fmt(parDomaine[dom.id])} collectés pour ce domaine
-                </p>
-              )}
-              {(() => {
-                const projetsDomaine = projets.filter(p => p.domaine === dom.id);
-                if (loadingProjets) {
-                  return (
-                    <div className="flex justify-center py-4">
-                      <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin" />
-                    </div>
-                  );
-                }
-                if (projetsDomaine.length === 0) {
-                  return (
-                    <div className="bg-slate-50 rounded-lg p-4 text-center">
-                      <p className="text-slate-500 text-sm font-medium">Aucun projet enregistré pour l'instant</p>
-                      <p className="text-slate-400 text-xs mt-1">Les projets soumis et approuvés apparaîtront ici</p>
-                    </div>
-                  );
-                }
-                return (
-                  <div className="space-y-2">
-                    {projetsDomaine.map((p: any) => {
-                      const statutInfo: Record<string, { label: string; bg: string; text: string }> = {
-                        annonce:   { label: 'Annoncé',   bg: 'bg-blue-100',  text: 'text-blue-700' },
-                        en_cours:  { label: 'En cours',  bg: 'bg-amber-100', text: 'text-amber-700' },
-                        termine:   { label: 'Terminé',   bg: 'bg-green-100', text: 'text-green-700' },
-                        abandonne: { label: 'Abandonné', bg: 'bg-red-100',   text: 'text-red-700' },
-                      };
-                      const si = statutInfo[p.statut] || statutInfo.annonce;
-                      return (
-                        <div key={p.id} className="bg-slate-50 rounded-lg p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-semibold text-slate-800 text-sm">{p.titre}</p>
-                            <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${si.bg} ${si.text}`}>{si.label}</span>
-                          </div>
-                          {p.description && <p className="text-slate-500 text-xs mt-1">{p.description}</p>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          );
-        })()}
-      </div>
+        <span className="text-slate-400">›</span>
+      </button>
 
       {/* Statistiques rapides */}
       <div className="grid grid-cols-3 gap-2">
@@ -326,6 +247,114 @@ export default function DeveloppementSection({ scope, location, locationName, is
           <div className="text-green-600 text-[10px] font-semibold">Caisse</div>
         </div>
       </div>
+
+      {/* Modal Projets par domaine */}
+      {showProjets && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="bg-gradient-to-r from-green-700 to-emerald-600 p-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">📁 Projets — {locationName}</h2>
+                <p className="text-green-100 text-sm mt-1">Choisis un domaine pour voir les projets</p>
+              </div>
+              <button onClick={() => { setShowProjets(false); setActiveDomaine(null); }} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                {DOMAINES.map((dom) => (
+                  <button
+                    key={dom.id}
+                    onClick={() => setActiveDomaine(activeDomaine === dom.id ? null : dom.id)}
+                    className="flex flex-col items-start gap-1.5 p-3 bg-white rounded-xl border-2 transition-all hover:shadow-sm text-left"
+                    style={{ borderColor: activeDomaine === dom.id ? dom.color : '#e2e8f0', background: activeDomaine === dom.id ? dom.bg : 'white' }}
+                  >
+                    <span className="text-xl">{dom.emoji}</span>
+                    <span className="font-bold text-slate-800 text-xs leading-tight">{dom.label}</span>
+                    {parDomaine[dom.id] > 0 && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: dom.bg, color: dom.color }}>
+                        {fmt(parDomaine[dom.id])}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {activeDomaine && (() => {
+                const dom = DOMAINES.find(d => d.id === activeDomaine)!;
+                return (
+                  <div className="mt-3 bg-white rounded-xl border p-4 shadow-sm" style={{ borderColor: dom.color + '44' }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{dom.emoji}</span>
+                        <div>
+                          <h4 className="font-bold text-slate-800 text-sm">{dom.label}</h4>
+                          <p className="text-slate-500 text-xs">{dom.desc}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setDonForm({ amount: '', currency: 'FG', domaine: dom.id, domaineLabel: dom.label, message: '' });
+                          setShowProjets(false);
+                          setShowDon(true);
+                        }}
+                        className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg text-white"
+                        style={{ background: dom.color }}
+                      >
+                        💰 Financer
+                      </button>
+                    </div>
+                    {parDomaine[dom.id] > 0 && (
+                      <p className="text-xs font-semibold mb-2" style={{ color: dom.color }}>
+                        💚 {fmt(parDomaine[dom.id])} collectés pour ce domaine
+                      </p>
+                    )}
+                    {(() => {
+                      const projetsDomaine = projets.filter(p => p.domaine === dom.id);
+                      if (loadingProjets) {
+                        return (
+                          <div className="flex justify-center py-4">
+                            <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin" />
+                          </div>
+                        );
+                      }
+                      if (projetsDomaine.length === 0) {
+                        return (
+                          <div className="bg-slate-50 rounded-lg p-4 text-center">
+                            <p className="text-slate-500 text-sm font-medium">Aucun projet enregistré pour l'instant</p>
+                            <p className="text-slate-400 text-xs mt-1">Les projets soumis et approuvés apparaîtront ici</p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="space-y-2">
+                          {projetsDomaine.map((p: any) => {
+                            const statutInfo: Record<string, { label: string; bg: string; text: string }> = {
+                              annonce:   { label: 'Annoncé',   bg: 'bg-blue-100',  text: 'text-blue-700' },
+                              en_cours:  { label: 'En cours',  bg: 'bg-amber-100', text: 'text-amber-700' },
+                              termine:   { label: 'Terminé',   bg: 'bg-green-100', text: 'text-green-700' },
+                              abandonne: { label: 'Abandonné', bg: 'bg-red-100',   text: 'text-red-700' },
+                            };
+                            const si = statutInfo[p.statut] || statutInfo.annonce;
+                            return (
+                              <div key={p.id} className="bg-slate-50 rounded-lg p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="font-semibold text-slate-800 text-sm">{p.titre}</p>
+                                  <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${si.bg} ${si.text}`}>{si.label}</span>
+                                </div>
+                                {p.description && <p className="text-slate-500 text-xs mt-1">{p.description}</p>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal cotisation */}
       {showDon && (
