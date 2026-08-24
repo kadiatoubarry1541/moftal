@@ -25,6 +25,9 @@ export default function Publicite() {
   const [payingId, setPayingId] = useState('')
   const [image, setImage] = useState<File | null>(null)
   const [lien, setLien] = useState('')
+  const [titre, setTitre] = useState('')
+  const [description, setDescription] = useState('')
+  const [boutonTexte, setBoutonTexte] = useState('')
   const [erreur, setErreur] = useState('')
   const admin = isMasterAdmin(getSessionUser())
 
@@ -52,11 +55,15 @@ export default function Publicite() {
     setErreur('')
 
     if (!image) return setErreur('Choisissez une image pour votre publicité.')
+    if (!titre.trim()) return setErreur('Donnez un titre à votre publicité.')
 
     setLoading(true)
     try {
       const formData = new FormData()
       formData.append('image', image)
+      formData.append('titre', titre.trim())
+      if (description.trim()) formData.append('description', description.trim())
+      if (boutonTexte.trim()) formData.append('boutonTexte', boutonTexte.trim())
       if (lien.trim()) formData.append('lien', lien.trim())
 
       const r = await fetch(`${API}/api/publicites/soumettre`, {
@@ -69,6 +76,9 @@ export default function Publicite() {
 
       setImage(null)
       setLien('')
+      setTitre('')
+      setDescription('')
+      setBoutonTexte('')
       if (fileRef.current) fileRef.current.value = ''
       alert(d.message || 'Publicité envoyée ! Un administrateur va l\'examiner avant que vous puissiez payer.')
       setOnglet('mes-publicites')
@@ -171,6 +181,32 @@ export default function Publicite() {
               </div>
 
               <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Titre *</label>
+                <input type="text" value={titre} onChange={e => setTitre(e.target.value)} maxLength={120}
+                  placeholder="Ex : Menuiserie Barry — meubles sur mesure"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+                <p className="text-xs text-gray-400 mt-1">Affiché en gros sur votre publicité.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Description <span className="font-normal text-gray-400">(optionnel)</span>
+                </label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={300} rows={2}
+                  placeholder="Ex : Livraison à Conakry, devis gratuit"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 resize-none" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Texte du bouton <span className="font-normal text-gray-400">(optionnel)</span>
+                </label>
+                <input type="text" value={boutonTexte} onChange={e => setBoutonTexte(e.target.value)} maxLength={40}
+                  placeholder="Ex : Nous contacter"
+                  className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
+              </div>
+
+              <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
                   Lien <span className="font-normal text-gray-400">(optionnel)</span>
                 </label>
@@ -186,7 +222,7 @@ export default function Publicite() {
                 </div>
               )}
 
-              <button type="submit" disabled={loading || !image}
+              <button type="submit" disabled={loading || !image || !titre.trim()}
                 className="w-full py-3.5 rounded-xl font-black text-white text-sm disabled:opacity-50 transition-all bg-emerald-600 hover:bg-emerald-700">
                 {loading ? '⏳ Envoi en cours...' : admin ? '🚀 Publier maintenant' : '📤 Envoyer pour approbation'}
               </button>
@@ -212,8 +248,9 @@ export default function Publicite() {
               return (
                 <div key={p.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
                   <div className="flex items-start gap-3">
-                    <img src={`${API}${p.image_url}`} alt="" className="w-20 h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
+                    <img src={p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`} alt="" className="w-20 h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
+                      {p.titre && <p className="font-bold text-gray-900 text-sm truncate">{p.titre}</p>}
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${enLigne ? 'bg-green-100 text-green-700' : statutInfo.bg + ' ' + statutInfo.text}`}>
                         {enLigne ? '🟢 En ligne' : statutInfo.label}
                       </span>

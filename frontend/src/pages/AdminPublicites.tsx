@@ -8,6 +8,9 @@ interface Publicite {
   nom: string;
   image_url: string;
   lien?: string;
+  titre?: string;
+  description?: string;
+  bouton_texte?: string;
   statut: "en_attente" | "approuve" | "refuse";
   raison_refus?: string;
   expire_le?: string;
@@ -151,8 +154,11 @@ export default function AdminPublicites() {
                         {enLigne ? "🟢 En ligne" : info.label}
                       </span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-800">{p.nom || p.numero_h}</p>
+                    {p.titre && <p className="text-sm font-bold text-gray-900">{p.titre}</p>}
+                    {p.description && <p className="text-xs text-gray-500 mt-0.5">{p.description}</p>}
+                    <p className="text-sm font-semibold text-gray-800 mt-1">{p.nom || p.numero_h}</p>
                     <p className="text-xs text-gray-400">{p.numero_h}</p>
+                    {p.bouton_texte && <p className="text-xs text-gray-400 mt-0.5">Bouton : « {p.bouton_texte} »</p>}
                     {p.lien && <p className="text-xs text-blue-500 truncate mt-0.5">🔗 {p.lien}</p>}
                     {p.statut === "refuse" && p.raison_refus && (
                       <p className="text-xs text-red-500 mt-1">Raison : {p.raison_refus}</p>

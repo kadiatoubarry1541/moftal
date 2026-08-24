@@ -18,6 +18,9 @@ async function ensurePublicitesTable() {
         "nom"           VARCHAR(200)  DEFAULT '',
         "image_url"     VARCHAR(500)  NOT NULL,
         "lien"          VARCHAR(500),
+        "titre"         VARCHAR(120),
+        "description"   VARCHAR(300),
+        "bouton_texte"  VARCHAR(40),
         "statut"        VARCHAR(20)   NOT NULL DEFAULT 'en_attente',
         "raison_refus"  TEXT,
         "approuve_par"  VARCHAR(50),
@@ -30,8 +33,11 @@ async function ensurePublicitesTable() {
     `);
     await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_pub_numero_h ON "publicites" ("numero_h");`).catch(() => {});
     await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_pub_actives ON "publicites" ("is_active", "expire_le");`).catch(() => {});
-    // Ajoute la colonne "lien" si la table existait déjà avant son introduction
+    // Ajoute les colonnes si la table existait déjà avant leur introduction
     await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "lien" VARCHAR(500);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "titre" VARCHAR(120);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "description" VARCHAR(300);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "bouton_texte" VARCHAR(40);`).catch(() => {});
   } catch (err) {
     console.warn('⚠️ ensurePublicitesTable:', err.message);
   }
@@ -95,7 +101,7 @@ const upload = multer({
 router.get('/actives', async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
-      SELECT id, image_url, lien
+      SELECT id, image_url, lien, titre, description, bouton_texte
       FROM publicites
       WHERE is_active = true AND statut = 'approuve' AND expire_le >= NOW()
         AND numero_h IN (:admins)
@@ -135,6 +141,9 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
     const imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'publicites');
     uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'publicites').catch(() => {});
     const lien = (req.body.lien || '').toString().trim().slice(0, 500) || null;
+    const titre = (req.body.titre || '').toString().trim().slice(0, 120) || null;
+    const description = (req.body.description || '').toString().trim().slice(0, 300) || null;
+    const boutonTexte = (req.body.boutonTexte || '').toString().trim().slice(0, 40) || null;
 
     // L'admin principal n'a personne au-dessus de lui pour approuver sa propre
     // publicité, ni pour la payer — elle est directement approuvée ET activée
@@ -147,15 +156,15 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
 
     const [[pub]] = autoApprouve
       ? await sequelize.query(`
-          INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, expire_le, created_at)
-          VALUES (:numeroH, :nom, :imageUrl, :lien, 'approuve', :numeroH, NOW(), true, :expireLe, NOW())
+          INSERT INTO publicites (numero_h, nom, image_url, lien, titre, description, bouton_texte, statut, approuve_par, approuve_le, is_active, expire_le, created_at)
+          VALUES (:numeroH, :nom, :imageUrl, :lien, :titre, :description, :boutonTexte, 'approuve', :numeroH, NOW(), true, :expireLe, NOW())
           RETURNING id
-        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien, expireLe } })
+        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien, titre, description, boutonTexte, expireLe } })
       : await sequelize.query(`
-          INSERT INTO publicites (numero_h, nom, image_url, lien, statut, is_active, created_at)
-          VALUES (:numeroH, :nom, :imageUrl, :lien, 'en_attente', false, NOW())
+          INSERT INTO publicites (numero_h, nom, image_url, lien, titre, description, bouton_texte, statut, is_active, created_at)
+          VALUES (:numeroH, :nom, :imageUrl, :lien, :titre, :description, :boutonTexte, 'en_attente', false, NOW())
           RETURNING id
-        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien } });
+        `, { replacements: { numeroH: req.user.numeroH, nom: nom.slice(0, 200), imageUrl, lien, titre, description, boutonTexte } });
 
     res.json({
       success: true,
@@ -176,7 +185,7 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
 router.get('/mes-publicites', authenticate, async (req, res) => {
   try {
     const [publicites] = await sequelize.query(`
-      SELECT id, image_url, lien, statut, raison_refus, expire_le, is_active,
+      SELECT id, image_url, lien, titre, description, bouton_texte, statut, raison_refus, expire_le, is_active,
         (is_active = true AND expire_le >= NOW()) AS en_ligne,
         created_at
       FROM publicites

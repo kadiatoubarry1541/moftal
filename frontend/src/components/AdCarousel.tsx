@@ -8,6 +8,9 @@ interface Pub {
   id: string
   image_url: string
   lien?: string | null
+  titre?: string | null
+  description?: string | null
+  bouton_texte?: string | null
 }
 
 export function AdCarousel({ fill = false }: { fill?: boolean }) {
@@ -60,14 +63,31 @@ export function AdCarousel({ fill = false }: { fill?: boolean }) {
         style={fill ? { height: 90, marginTop: 'auto' } : { aspectRatio: '3 / 1' }}
       >
         {pubs.map((pub, i) => (
-          <img
+          <div
             key={pub.id}
-            src={imgUrl(pub.image_url)}
-            alt=""
             onClick={() => goTo(pub.lien)}
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+            className="absolute inset-0 transition-opacity duration-300"
             style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
-          />
+          >
+            <img
+              src={imgUrl(pub.image_url)}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {pub.titre && (
+              <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3">
+                <p className="text-white font-bold text-sm leading-tight drop-shadow">{pub.titre}</p>
+                {pub.description && (
+                  <p className="text-white/90 text-xs leading-tight mt-0.5 line-clamp-2 drop-shadow">{pub.description}</p>
+                )}
+                {pub.bouton_texte && (
+                  <span className="inline-flex items-center gap-1 mt-1.5 self-start px-2.5 py-1 rounded-full bg-white/90 text-gray-900 text-[11px] font-bold">
+                    {pub.bouton_texte} →
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         ))}
         {pubs.length > 1 && (
           <>
