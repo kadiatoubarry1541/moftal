@@ -591,7 +591,7 @@ function App() {
       {/* Main content - plein écran, chaque page gère son propre container.
           flex-1 colle le pied de page en bas de l'écran quand le contenu est
           court (pas de grand vide à traverser en scrollant pour l'atteindre). */}
-      <main className="w-full flex-1" style={{ overflowX: 'clip' }}>
+      <main className="w-full flex-1 flex flex-col" style={{ overflowX: 'clip' }}>
         <Suspense fallback={<LoadingBar />}>
         <Routes>
           <Route path="/" element={<Home />} />
