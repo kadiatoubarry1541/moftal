@@ -228,7 +228,10 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               {loading ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {[1, 2].map(i => (
-                    <div key={i} className="h-48 bg-gray-100 rounded-xl animate-pulse" />
+                    <div key={i} className="h-48 rounded-xl border border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2 animate-pulse">
+                      <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-400 rounded-full animate-spin" />
+                      <span className="text-xs text-gray-400">Chargement...</span>
+                    </div>
                   ))}
                 </div>
               ) : products.length === 0 ? (
