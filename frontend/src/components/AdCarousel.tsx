@@ -60,7 +60,7 @@ export function AdCarousel({ fill = false }: { fill?: boolean }) {
     <div className={`max-w-2xl mx-auto px-4 pt-6 ${fill ? 'pb-3' : 'pb-4'} w-full${fill ? ' flex-1 flex flex-col' : ''}`}>
       <div
         className="relative rounded-2xl overflow-hidden bg-gray-100"
-        style={fill ? { height: 90, marginTop: 'auto' } : { aspectRatio: '3 / 1' }}
+        style={fill ? { aspectRatio: '960 / 420', width: '100%', marginTop: 'auto' } : { aspectRatio: '960 / 420' }}
       >
         {pubs.map((pub, i) => (
           <div
@@ -72,7 +72,7 @@ export function AdCarousel({ fill = false }: { fill?: boolean }) {
             <img
               src={imgUrl(pub.image_url)}
               alt=""
-              className="absolute inset-0 w-full h-full object-contain bg-gray-100"
+              className="absolute inset-0 w-full h-full object-cover"
             />
             {pub.titre && (
               <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3">
