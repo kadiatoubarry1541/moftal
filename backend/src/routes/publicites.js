@@ -47,12 +47,16 @@ async function ensurePublicitesTable() {
 // (Info Moftal, Professeur IA, Paiement Famille, Visibilité & Gestion Interne,
 // Échange). Insérées une seule fois au démarrage (marquées via payment_ref),
 // jamais réinsérées si l'admin les a modifiées ou retirées depuis.
+// "v=4" ci-dessous force les navigateurs/CDN à recharger l'image (au lieu de
+// garder l'ancienne en cache) — à incrémenter à chaque fois que le fichier
+// PNG d'une bannière maison est remplacé.
+const BANNER_VERSION = 4;
 const HOUSE_ADS = [
-  { slug: 'info-moftal', image: '/banners/info-moftal.png', lien: '/info' },
-  { slug: 'professeur-ia', image: '/banners/professeur-ia.png', lien: '/professeur-ia' },
-  { slug: 'paiement-famille', image: '/banners/paiement-famille.png', lien: '/moftal-pay' },
-  { slug: 'visibilite-gestion', image: '/banners/visibilite-gestion.png', lien: '/inscription-pro' },
-  { slug: 'echange', image: '/banners/echange.png', lien: '/echange' },
+  { slug: 'info-moftal', image: `/banners/info-moftal.png?v=${BANNER_VERSION}`, lien: '/info' },
+  { slug: 'professeur-ia', image: `/banners/professeur-ia.png?v=${BANNER_VERSION}`, lien: '/professeur-ia' },
+  { slug: 'paiement-famille', image: `/banners/paiement-famille.png?v=${BANNER_VERSION}`, lien: '/moftal-pay' },
+  { slug: 'visibilite-gestion', image: `/banners/visibilite-gestion.png?v=${BANNER_VERSION}`, lien: '/inscription-pro' },
+  { slug: 'echange', image: `/banners/echange.png?v=${BANNER_VERSION}`, lien: '/echange' },
 ];
 const FRONTEND_ORIGIN = 'https://moftal.com';
 
@@ -63,15 +67,26 @@ async function seedHouseAds() {
     expireLe.setFullYear(expireLe.getFullYear() + 1);
     for (const ad of HOUSE_ADS) {
       const ref = `house-ad:${ad.slug}`;
+      const imageUrl = `${FRONTEND_ORIGIN}${ad.image}`;
       const [[existing]] = await sequelize.query(
-        `SELECT id FROM publicites WHERE payment_ref = :ref LIMIT 1`,
+        `SELECT id, image_url FROM publicites WHERE payment_ref = :ref LIMIT 1`,
         { replacements: { ref } }
       );
-      if (existing) continue;
+      if (existing) {
+        // Garde l'image à jour (nouvelle version = casse le cache navigateur)
+        // même si l'admin a modifié le lien ou le statut entre-temps.
+        if (existing.image_url !== imageUrl) {
+          await sequelize.query(
+            `UPDATE publicites SET image_url = :imageUrl WHERE id = :id`,
+            { replacements: { imageUrl, id: existing.id } }
+          );
+        }
+        continue;
+      }
       await sequelize.query(`
         INSERT INTO publicites (numero_h, nom, image_url, lien, statut, approuve_par, approuve_le, is_active, expire_le, payment_ref, created_at)
         VALUES (:numeroH, 'Moftal', :imageUrl, :lien, 'approuve', :numeroH, NOW(), true, :expireLe, :ref, NOW())
-      `, { replacements: { numeroH: admin, imageUrl: `${FRONTEND_ORIGIN}${ad.image}`, lien: ad.lien, expireLe, ref } });
+      `, { replacements: { numeroH: admin, imageUrl, lien: ad.lien, expireLe, ref } });
     }
   } catch (err) {
     console.warn('⚠️ seedHouseAds:', err.message);
