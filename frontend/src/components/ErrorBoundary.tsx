@@ -26,10 +26,30 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error("🚨 Erreur capturée par ErrorBoundary:", error);
     console.error("📋 Détails de l'erreur:", errorInfo);
     console.error("📍 Stack trace:", error.stack);
-    
+
+    // Après un déploiement, le navigateur peut garder en mémoire une page qui
+    // référence d'anciens fichiers (noms avec hash) qui n'existent plus sur le
+    // serveur — ça donne "Failed to fetch dynamically imported module". Un
+    // rechargement récupère la page à jour. main.tsx a le même filet pour les
+    // rejets de promesse non gérés ; ce cas-ci passe par React (composant lazy
+    // dans un Suspense), donc on le rattrape ici aussi — même clé de session
+    // pour ne déclencher qu'un seul rechargement automatique au total.
+    const isStaleChunkError =
+      /Failed to fetch dynamically imported module|ChunkLoadError|Loading chunk/i.test(
+        error.message || ""
+      );
+    if (isStaleChunkError) {
+      const key = "chunk-reload-v1";
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return;
+      }
+    }
+
     // Enregistrer l'erreur dans le state pour l'afficher
     this.setState({ errorInfo });
-    
+
     // Essayer d'afficher une notification (mais ne pas bloquer si ça échoue)
     try {
       notify.error("Une erreur inattendue s'est produite. Veuillez réessayer.");
