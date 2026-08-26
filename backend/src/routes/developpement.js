@@ -5,6 +5,7 @@ import DeveloppementDon from '../models/DeveloppementDon.js';
 import DevActualite from '../models/DevActualite.js';
 import DevProjet from '../models/DevProjet.js';
 import DevSignalement from '../models/DevSignalement.js';
+import DevPublisher from '../models/DevPublisher.js';
 import LocationLogo from '../models/LocationLogo.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
@@ -31,6 +32,20 @@ const isJournalistOrAdmin = (user) =>
   user.role === 'super-admin' ||
   user.role === 'journalist' ||
   user.isJournalist === true;
+
+const isAdminOnly = (user) =>
+  user.isMasterAdmin || user.role === 'admin' || user.role === 'super-admin';
+
+/** Journalistes/admins peuvent toujours publier — les autres seulement si
+ *  l'admin les a explicitement autorisés pour ce lieu précis (chef de
+ *  quartier, correspondant local...). */
+async function canPublishActualite(user, scope, location) {
+  if (isJournalistOrAdmin(user)) return true;
+  const grant = await DevPublisher.findOne({
+    where: { numeroH: user.numeroH, scope, location: (location || '').toLowerCase() }
+  });
+  return !!grant;
+}
 
 // ─── COTISATIONS (quartier + sous-préfecture uniquement) ────────────────────
 
@@ -102,13 +117,25 @@ router.get('/actualites', authenticate, async (req, res) => {
   }
 });
 
+router.get('/actualites/can-publish', authenticate, async (req, res) => {
+  try {
+    const { scope, location } = req.query;
+    if (!scope || !location)
+      return res.status(400).json({ success: false, message: 'scope et location requis' });
+    const canPublish = await canPublishActualite(req.user, scope, location);
+    res.json({ success: true, canPublish });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.post('/actualites', authenticate, async (req, res) => {
   try {
-    if (!isJournalistOrAdmin(req.user))
-      return res.status(403).json({ success: false, message: 'Réservé aux journalistes et administrateurs' });
     const { titre, content, mediaUrl, mediaType, domaine, scope, location } = req.body;
     if (!titre || !content || !scope || !location)
       return res.status(400).json({ success: false, message: 'Titre, contenu, scope et location requis' });
+    if (!(await canPublishActualite(req.user, scope, location)))
+      return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à publier ici. Demandez l\'autorisation à un administrateur.' });
     const actu = await DevActualite.create({
       numeroH: req.user.numeroH,
       authorName: `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim() || req.user.numeroH,
@@ -128,9 +155,65 @@ router.post('/actualites', authenticate, async (req, res) => {
 
 router.delete('/actualites/:id', authenticate, async (req, res) => {
   try {
-    if (!isJournalistOrAdmin(req.user))
+    const actu = await DevActualite.findByPk(req.params.id);
+    if (!actu) return res.status(404).json({ success: false, message: 'Actualité introuvable' });
+    const estAuteur = actu.numeroH === req.user.numeroH;
+    if (!estAuteur && !isJournalistOrAdmin(req.user))
       return res.status(403).json({ success: false, message: 'Accès refusé' });
-    await DevActualite.destroy({ where: { id: req.params.id } });
+    await actu.destroy();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── PUBLICATEURS LOCAUX AUTORISÉS (chefs, correspondants...) ──────────────
+// Gérés uniquement par l'admin — un journaliste ne peut pas s'auto-autoriser
+// ni autoriser quelqu'un d'autre.
+
+router.get('/publishers', authenticate, async (req, res) => {
+  try {
+    if (!isAdminOnly(req.user))
+      return res.status(403).json({ success: false, message: 'Réservé aux administrateurs' });
+    const { scope, location } = req.query;
+    if (!scope || !location)
+      return res.status(400).json({ success: false, message: 'scope et location requis' });
+    const publishers = await DevPublisher.findAll({
+      where: { scope, location: location.toLowerCase() },
+      order: [['created_at', 'DESC']]
+    });
+    res.json({ success: true, publishers });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/publishers', authenticate, async (req, res) => {
+  try {
+    if (!isAdminOnly(req.user))
+      return res.status(403).json({ success: false, message: 'Réservé aux administrateurs' });
+    const { numeroH, name, role, scope, location } = req.body;
+    if (!numeroH || !scope || !location)
+      return res.status(400).json({ success: false, message: 'NuméroH, scope et location requis' });
+    const publisher = await DevPublisher.create({
+      numeroH: numeroH.trim(),
+      name: name || null,
+      role: role || null,
+      scope,
+      location: location.toLowerCase(),
+      addedBy: req.user.numeroH,
+    });
+    res.json({ success: true, publisher });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/publishers/:id', authenticate, async (req, res) => {
+  try {
+    if (!isAdminOnly(req.user))
+      return res.status(403).json({ success: false, message: 'Réservé aux administrateurs' });
+    await DevPublisher.destroy({ where: { id: req.params.id } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

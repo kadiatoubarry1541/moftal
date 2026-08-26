@@ -25,8 +25,16 @@ interface Props {
   isAdmin?: boolean;
 }
 
+function getMyNumeroH(): string | null {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('session_user') || '{}');
+    return (parsed.userData || parsed)?.numeroH || null;
+  } catch { return null; }
+}
+
 export default function DeveloppementSection({ scope, location, locationName, isJournalist, isAdmin }: Props) {
   const canPublish = !!(isJournalist || isAdmin);
+  const myNumeroH = getMyNumeroH();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [totalCollecte, setTotalCollecte] = useState(0);
@@ -48,9 +56,124 @@ export default function DeveloppementSection({ scope, location, locationName, is
     message: ''
   });
 
+  // ── Actualités locales (journalistes, admins, personnes autorisées) ──
+  const [actualites, setActualites] = useState<any[]>([]);
+  const [loadingActualites, setLoadingActualites] = useState(true);
+  const [canPublishActu, setCanPublishActu] = useState(canPublish);
+  const [showPublierActu, setShowPublierActu] = useState(false);
+  const [actuForm, setActuForm] = useState({ titre: '', content: '' });
+  const [actuLoading, setActuLoading] = useState(false);
+  const [showPublishers, setShowPublishers] = useState(false);
+  const [publishers, setPublishers] = useState<any[]>([]);
+  const [newPublisher, setNewPublisher] = useState({ numeroH: '', name: '', role: 'chef' });
+
   useEffect(() => {
-    if (location) { loadStats(); loadLogo(); loadProjets(); }
+    if (location) { loadStats(); loadLogo(); loadProjets(); loadActualites(); checkCanPublishActu(); }
   }, [scope, location]);
+
+  const loadActualites = async () => {
+    setLoadingActualites(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(
+        `${API_BASE}/api/developpement/actualites?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) { const d = await res.json(); setActualites(d.actualites || []); }
+    } catch {} finally { setLoadingActualites(false); }
+  };
+
+  const checkCanPublishActu = async () => {
+    if (canPublish) { setCanPublishActu(true); return; }
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(
+        `${API_BASE}/api/developpement/actualites/can-publish?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) { const d = await res.json(); setCanPublishActu(!!d.canPublish); }
+    } catch {}
+  };
+
+  const submitActualite = async () => {
+    if (!actuForm.titre.trim() || !actuForm.content.trim()) return;
+    setActuLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/developpement/actualites`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...actuForm, scope, location })
+      });
+      const d = await res.json();
+      if (d.success) {
+        setShowPublierActu(false);
+        setActuForm({ titre: '', content: '' });
+        loadActualites();
+      } else {
+        alert(d.message || 'Erreur lors de la publication.');
+      }
+    } catch {
+      alert('Erreur lors de la publication.');
+    } finally {
+      setActuLoading(false);
+    }
+  };
+
+  const deleteActualite = async (id: string) => {
+    if (!confirm('Retirer cette actualité ?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE}/api/developpement/actualites/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      loadActualites();
+    } catch {}
+  };
+
+  const loadPublishers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(
+        `${API_BASE}/api/developpement/publishers?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) { const d = await res.json(); setPublishers(d.publishers || []); }
+    } catch {}
+  };
+
+  const addPublisher = async () => {
+    if (!newPublisher.numeroH.trim()) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/developpement/publishers`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newPublisher, scope, location })
+      });
+      const d = await res.json();
+      if (d.success) {
+        setNewPublisher({ numeroH: '', name: '', role: 'chef' });
+        loadPublishers();
+      } else {
+        alert(d.message || 'Erreur.');
+      }
+    } catch {
+      alert('Erreur.');
+    }
+  };
+
+  const removePublisher = async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE}/api/developpement/publishers/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      loadPublishers();
+    } catch {}
+  };
 
   const loadProjets = async () => {
     setLoadingProjets(true);
@@ -157,109 +280,269 @@ export default function DeveloppementSection({ scope, location, locationName, is
   return (
     <div className="space-y-4">
 
-      {/* Bannière caisse */}
-      <div className="bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl p-4 text-white">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            {(logoUrl || canPublish) && (
-              <label
-                className={`relative w-11 h-11 rounded-full bg-white/20 flex items-center justify-center overflow-hidden flex-shrink-0 ${canPublish ? 'cursor-pointer' : ''}`}
-                title={canPublish ? `Changer le logo de ${locationName}` : undefined}
-              >
-                {logoUrl ? (
-                  <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-lg">🏛️</span>
-                )}
-                {canPublish && (
-                  <>
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none">
-                      {uploadingLogo ? '…' : '📷'}
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={uploadingLogo}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleLogoUpload(file);
-                        e.target.value = '';
-                      }}
-                    />
-                  </>
-                )}
-              </label>
+      {/* En-tête du lieu (logo optionnel) */}
+      <div className="flex items-center gap-3">
+        {(logoUrl || canPublish) && (
+          <label
+            className={`relative w-11 h-11 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 ${canPublish ? 'cursor-pointer' : ''}`}
+            title={canPublish ? `Changer le logo de ${locationName}` : undefined}
+          >
+            {logoUrl ? (
+              <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg">🏛️</span>
             )}
-            <div>
-              <p className="text-green-100 text-xs font-medium">Caisse de développement — {locationName}</p>
-              <p className="text-2xl font-extrabold mt-0.5">{fmt(totalCollecte)}</p>
-              <p className="text-green-100 text-xs mt-0.5">{nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''}</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowDon(true)}
-              className="px-4 py-2 bg-white text-green-700 font-bold rounded-xl text-sm hover:bg-green-50 transition-colors shadow"
-            >
-              🤝 Cotiser
-            </button>
-            <button
-              onClick={() => { setShowMesDons(true); loadMesDons(); }}
-              className="px-4 py-2 bg-white/20 text-white font-semibold rounded-xl text-sm hover:bg-white/30 transition-colors"
-            >
-              📋 Mes dons
-            </button>
-          </div>
-        </div>
+            {canPublish && (
+              <>
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none opacity-0 hover:opacity-100 transition-opacity">
+                  {uploadingLogo ? '…' : '📷'}
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingLogo}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file);
+                    e.target.value = '';
+                  }}
+                />
+              </>
+            )}
+          </label>
+        )}
+        <p className="font-bold text-slate-800 text-lg">{locationName}</p>
       </div>
 
-      {/* Accès aux projets par domaine — un seul bouton, tout le détail vit dans la fenêtre */}
+      {/* Un seul bouton : caisse, cotisation et projets par domaine — tout est dedans */}
       <button
         onClick={() => setShowProjets(true)}
-        className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl border-2 border-slate-200 hover:border-green-300 hover:shadow-sm transition-all text-left"
+        className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl text-left shadow"
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">📁</span>
           <div>
-            <p className="font-bold text-slate-800 text-sm">Projets par domaine</p>
-            <p className="text-slate-500 text-xs">Agriculture, santé, éducation, énergie…</p>
+            <p className="font-bold text-white text-sm">Projets & Caisse de développement</p>
+            <p className="text-green-100 text-xs">{fmt(totalCollecte)} · {nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''} · {projets.length} projet{projets.length > 1 ? 's' : ''}</p>
           </div>
         </div>
-        <span className="text-slate-400">›</span>
+        <span className="text-white/80">›</span>
       </button>
 
-      {/* Statistiques rapides */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="bg-white rounded-xl p-3 border text-center">
-          <div className="text-lg mb-0.5">📋</div>
-          <div className="font-bold text-slate-800 text-base">{projets.filter(p => p.statut === 'en_cours').length}</div>
-          <div className="text-slate-500 text-[10px]">En cours</div>
+      {/* Actualités locales — le cœur de la page */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-slate-800 text-base">📰 Actualités — {locationName}</h3>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => { setShowPublishers(true); loadPublishers(); }}
+                className="text-xs text-slate-500 hover:text-slate-700 font-medium underline underline-offset-2"
+              >
+                Gérer les autorisations
+              </button>
+            )}
+            {canPublishActu && (
+              <button
+                onClick={() => setShowPublierActu(true)}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors"
+              >
+                + Publier
+              </button>
+            )}
+          </div>
         </div>
-        <div className="bg-white rounded-xl p-3 border text-center">
-          <div className="text-lg mb-0.5">✅</div>
-          <div className="font-bold text-slate-800 text-base">{projets.filter(p => p.statut === 'termine').length}</div>
-          <div className="text-slate-500 text-[10px]">Terminés</div>
-        </div>
-        <div className="bg-green-50 rounded-xl p-3 border border-green-200 text-center cursor-pointer hover:bg-green-100 transition-colors" onClick={() => setShowDon(true)}>
-          <div className="text-lg mb-0.5">🤝</div>
-          <div className="font-bold text-green-700 text-sm">{fmt(totalCollecte)}</div>
-          <div className="text-green-600 text-[10px] font-semibold">Caisse</div>
-        </div>
+
+        {loadingActualites ? (
+          <div className="flex justify-center py-8">
+            <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin" />
+          </div>
+        ) : actualites.length === 0 ? (
+          <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 text-center">
+            <p className="text-slate-500 text-sm font-medium">Aucune actualité pour l'instant</p>
+            <p className="text-slate-400 text-xs mt-1">Les publications des journalistes, admins et correspondants locaux apparaîtront ici</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {actualites.map((actu: any) => (
+              <div key={actu.id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-bold text-slate-800 text-sm">{actu.titre}</h4>
+                  {(isAdmin || actu.numeroH === myNumeroH) && (
+                    <button onClick={() => deleteActualite(actu.id)} className="text-slate-300 hover:text-red-500 text-xs flex-shrink-0">✕</button>
+                  )}
+                </div>
+                {actu.mediaUrl && (
+                  <img src={actu.mediaUrl.startsWith('http') ? actu.mediaUrl : `${API_BASE}${actu.mediaUrl}`} alt="" className="w-full h-40 object-cover rounded-lg mt-2" />
+                )}
+                <p className="text-slate-600 text-sm mt-2 whitespace-pre-wrap">{actu.content}</p>
+                <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
+                  <span className="font-semibold text-slate-500">{actu.authorName}</span>
+                  <span>·</span>
+                  <span>{new Date(actu.createdAt || actu.created_at).toLocaleDateString('fr-FR')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Modal Projets par domaine */}
+      {/* Modal Publier une actualité */}
+      {showPublierActu && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-green-700 to-emerald-600 p-5">
+              <h2 className="text-lg font-bold text-white">📰 Publier une actualité — {locationName}</h2>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Titre</label>
+                <input
+                  type="text"
+                  value={actuForm.titre}
+                  onChange={(e) => setActuForm({ ...actuForm, titre: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Ex : Nouvelle école ouverte à Dogomet"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Contenu</label>
+                <textarea
+                  value={actuForm.content}
+                  onChange={(e) => setActuForm({ ...actuForm, content: e.target.value })}
+                  rows={4}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                  placeholder="Détails de l'actualité..."
+                />
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex gap-3">
+              <button
+                onClick={() => setShowPublierActu(false)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={submitActualite}
+                disabled={actuLoading || !actuForm.titre.trim() || !actuForm.content.trim()}
+                className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition-colors"
+              >
+                {actuLoading ? 'Publication...' : 'Publier'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Gérer les autorisations (admin uniquement) */}
+      {showPublishers && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="bg-gradient-to-r from-slate-700 to-slate-800 p-5 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">👥 Autorisés à publier — {locationName}</h2>
+              <button onClick={() => setShowPublishers(false)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <p className="text-xs text-slate-500">Journalistes et administrateurs peuvent déjà publier partout. Ajoute ici les chefs ou correspondants que tu autorises pour ce lieu précis.</p>
+              <div className="border border-slate-200 rounded-xl p-3 space-y-2">
+                <input
+                  type="text"
+                  value={newPublisher.numeroH}
+                  onChange={(e) => setNewPublisher({ ...newPublisher, numeroH: e.target.value })}
+                  placeholder="NuméroH"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                />
+                <input
+                  type="text"
+                  value={newPublisher.name}
+                  onChange={(e) => setNewPublisher({ ...newPublisher, name: e.target.value })}
+                  placeholder="Nom (optionnel)"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                />
+                <select
+                  value={newPublisher.role}
+                  onChange={(e) => setNewPublisher({ ...newPublisher, role: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                >
+                  <option value="chef">Chef</option>
+                  <option value="correspondant">Correspondant local</option>
+                  <option value="autre">Autre</option>
+                </select>
+                <button onClick={addPublisher} className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold rounded-lg transition-colors">
+                  + Autoriser
+                </button>
+              </div>
+              <div className="space-y-2">
+                {publishers.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-4">Personne d'autre autorisé pour l'instant</p>
+                ) : publishers.map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between gap-2 bg-slate-50 rounded-lg p-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{p.name || p.numeroH}</p>
+                      <p className="text-xs text-slate-500">{p.numeroH} · {p.role || 'autorisé'}</p>
+                    </div>
+                    <button onClick={() => removePublisher(p.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold">
+                      Retirer
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Projets & Caisse (regroupe caisse, cotisation, statistiques et projets par domaine) */}
       {showProjets && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[85vh] flex flex-col">
             <div className="bg-gradient-to-r from-green-700 to-emerald-600 p-5 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-white">📁 Projets — {locationName}</h2>
-                <p className="text-green-100 text-sm mt-1">Choisis un domaine pour voir les projets</p>
+                <h2 className="text-lg font-bold text-white">📁 Projets & Caisse — {locationName}</h2>
+                <p className="text-green-100 text-sm mt-1">{fmt(totalCollecte)} · {nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''}</p>
               </div>
               <button onClick={() => { setShowProjets(false); setActiveDomaine(null); }} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto p-5">
+
+              {/* Cotiser / Mes dons */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => { setShowProjets(false); setShowDon(true); }}
+                  className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm transition-colors"
+                >
+                  🤝 Cotiser
+                </button>
+                <button
+                  onClick={() => { setShowMesDons(true); loadMesDons(); }}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors"
+                >
+                  📋 Mes dons
+                </button>
+              </div>
+
+              {/* Statistiques rapides */}
+              <div className="grid grid-cols-3 gap-2 mb-5">
+                <div className="bg-slate-50 rounded-xl p-3 border text-center">
+                  <div className="text-lg mb-0.5">📋</div>
+                  <div className="font-bold text-slate-800 text-base">{projets.filter(p => p.statut === 'en_cours').length}</div>
+                  <div className="text-slate-500 text-[10px]">En cours</div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border text-center">
+                  <div className="text-lg mb-0.5">✅</div>
+                  <div className="font-bold text-slate-800 text-base">{projets.filter(p => p.statut === 'termine').length}</div>
+                  <div className="text-slate-500 text-[10px]">Terminés</div>
+                </div>
+                <div className="bg-green-50 rounded-xl p-3 border border-green-200 text-center">
+                  <div className="text-lg mb-0.5">🤝</div>
+                  <div className="font-bold text-green-700 text-sm">{fmt(totalCollecte)}</div>
+                  <div className="text-green-600 text-[10px] font-semibold">Caisse</div>
+                </div>
+              </div>
+
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Projets par domaine</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {DOMAINES.map((dom) => (
                   <button
