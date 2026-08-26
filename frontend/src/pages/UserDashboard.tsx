@@ -71,10 +71,10 @@ export function UserDashboard() {
   }
 
   // L'accueil ne contient que les boutons (dans le bandeau du haut, collant) —
-  // l'annonce vit ici, dans le contenu principal, en carte compacte simple.
+  // l'annonce vit ici, dans le contenu principal, collée au pied de page.
   return (
-    <div className="user-dashboard bg-white dark:bg-gray-900">
-      <AdCarousel />
+    <div className="user-dashboard bg-white dark:bg-gray-900 flex-1 flex flex-col">
+      <AdCarousel fill />
     </div>
   );
 }
