@@ -54,8 +54,20 @@ interface Props {
   isAdmin: boolean;
 }
 
+function getMyNumeroH(): string | null {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('session_user') || '{}');
+    return (parsed.userData || parsed)?.numeroH || null;
+  } catch { return null; }
+}
+
 export default function DeveloppementGouvernemental({ scope, location, locationName, isJournalist, isAdmin }: Props) {
   const canPublish = isJournalist || isAdmin;
+  const myNumeroH = getMyNumeroH();
+  const [canPublishActu, setCanPublishActu] = useState(canPublish);
+  const [showPublishers, setShowPublishers] = useState(false);
+  const [publishers, setPublishers] = useState<any[]>([]);
+  const [newPublisher, setNewPublisher] = useState({ numeroH: '', name: '', role: 'chef' });
   const [activeTab, setActiveTab] = useState<'actualites' | 'projets' | 'signaler'>('actualites');
 
   // Actualités
@@ -95,8 +107,49 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     loadActualites();
     loadProjets();
     loadLogo();
+    checkCanPublishActu();
     if (canPublish) loadSignalements();
   }, [scope, location]);
+
+  const checkCanPublishActu = async () => {
+    if (canPublish) { setCanPublishActu(true); return; }
+    try {
+      const res = await fetch(api(`/actualites/can-publish?${qs}`), { headers: { Authorization: `Bearer ${token()}` } });
+      if (res.ok) { const d = await res.json(); setCanPublishActu(!!d.canPublish); }
+    } catch {}
+  };
+
+  const loadPublishers = async () => {
+    try {
+      const res = await fetch(api(`/publishers?${qs}`), { headers: { Authorization: `Bearer ${token()}` } });
+      if (res.ok) { const d = await res.json(); setPublishers(d.publishers || []); }
+    } catch {}
+  };
+
+  const addPublisher = async () => {
+    if (!newPublisher.numeroH.trim()) return;
+    try {
+      const res = await fetch(api('/publishers'), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newPublisher, scope, location })
+      });
+      const d = await res.json();
+      if (d.success) {
+        setNewPublisher({ numeroH: '', name: '', role: 'chef' });
+        loadPublishers();
+      } else {
+        alert(d.message || 'Erreur.');
+      }
+    } catch { alert('Erreur.'); }
+  };
+
+  const removePublisher = async (id: string) => {
+    try {
+      await fetch(api(`/publishers/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
+      loadPublishers();
+    } catch {}
+  };
 
   const loadLogo = async () => {
     try {
@@ -310,14 +363,24 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
       {/* ── TAB ACTUALITÉS ───────────────────────────────────────────────── */}
       {activeTab === 'actualites' && (
         <div className="space-y-3">
-          {canPublish && (
-            <button
-              onClick={() => setShowActuForm(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-colors"
-            >
-              ✚ Publier une actualité
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {canPublishActu && (
+              <button
+                onClick={() => setShowActuForm(true)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm hover:bg-blue-700 transition-colors"
+              >
+                ✚ Publier une actualité
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => { setShowPublishers(true); loadPublishers(); }}
+                className="flex-shrink-0 px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-xl transition-colors"
+              >
+                👥 Autorisations
+              </button>
+            )}
+          </div>
 
           {loadingActu ? (
             <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" /></div>
@@ -325,8 +388,8 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
             <div className="bg-gray-50 rounded-xl p-8 text-center">
               <div className="text-4xl mb-2">📰</div>
               <p className="text-gray-500 text-sm font-medium">Aucune actualité publiée</p>
-              {canPublish && <p className="text-gray-400 text-xs mt-1">Publiez la première actualité sur le développement de {locationName}</p>}
-              {!canPublish && <p className="text-gray-400 text-xs mt-1">Les journalistes approuvés publient les informations sur le développement ici</p>}
+              {canPublishActu && <p className="text-gray-400 text-xs mt-1">Publiez la première actualité sur le développement de {locationName}</p>}
+              {!canPublishActu && <p className="text-gray-400 text-xs mt-1">Les journalistes approuvés publient les informations sur le développement ici</p>}
             </div>
           ) : (
             <div className="space-y-3">
@@ -346,7 +409,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
                             </span>
                           )}
                         </div>
-                        {canPublish && (
+                        {(canPublish || actu.numeroH === myNumeroH) && (
                           <button onClick={() => supprimerActualite(actu.id)} className="text-red-400 hover:text-red-600 text-xs flex-shrink-0">✕</button>
                         )}
                       </div>
@@ -596,6 +659,64 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── MODAL : Gérer les autorisations (admin uniquement) ───────────── */}
+      {showPublishers && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="bg-gradient-to-r from-slate-700 to-slate-800 p-5 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-white">👥 Autorisés à publier — {locationName}</h2>
+              <button onClick={() => setShowPublishers(false)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <p className="text-xs text-gray-500">Journalistes et administrateurs peuvent déjà publier partout. Ajoute ici les chefs ou correspondants que tu autorises pour ce lieu précis.</p>
+              <div className="border border-gray-200 rounded-xl p-3 space-y-2">
+                <input
+                  type="text"
+                  value={newPublisher.numeroH}
+                  onChange={(e) => setNewPublisher({ ...newPublisher, numeroH: e.target.value })}
+                  placeholder="NuméroH"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                />
+                <input
+                  type="text"
+                  value={newPublisher.name}
+                  onChange={(e) => setNewPublisher({ ...newPublisher, name: e.target.value })}
+                  placeholder="Nom (optionnel)"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                />
+                <select
+                  value={newPublisher.role}
+                  onChange={(e) => setNewPublisher({ ...newPublisher, role: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                >
+                  <option value="chef">Chef</option>
+                  <option value="correspondant">Correspondant local</option>
+                  <option value="autre">Autre</option>
+                </select>
+                <button onClick={addPublisher} className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold rounded-lg transition-colors">
+                  + Autoriser
+                </button>
+              </div>
+              <div className="space-y-2">
+                {publishers.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">Personne d'autre autorisé pour l'instant</p>
+                ) : publishers.map((p: any) => (
+                  <div key={p.id} className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg p-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{p.name || p.numeroH}</p>
+                      <p className="text-xs text-gray-500">{p.numeroH} · {p.role || 'autorisé'}</p>
+                    </div>
+                    <button onClick={() => removePublisher(p.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold">
+                      Retirer
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
