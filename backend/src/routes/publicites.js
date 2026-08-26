@@ -50,7 +50,7 @@ async function ensurePublicitesTable() {
 // "v=4" ci-dessous force les navigateurs/CDN à recharger l'image (au lieu de
 // garder l'ancienne en cache) — à incrémenter à chaque fois que le fichier
 // PNG d'une bannière maison est remplacé.
-const BANNER_VERSION = 4;
+const BANNER_VERSION = 5;
 const HOUSE_ADS = [
   { slug: 'info-moftal', image: `/banners/info-moftal.png?v=${BANNER_VERSION}`, lien: '/info' },
   { slug: 'professeur-ia', image: `/banners/professeur-ia.png?v=${BANNER_VERSION}`, lien: '/professeur-ia' },
