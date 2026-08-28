@@ -130,8 +130,8 @@ function formatShortNumeroH(numeroH?: string | null): string | null {
 
 export default function TerreAdam() {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeTab, setActiveTab] = useState<'lieux' | 'region' | 'pays' | 'continent' | 'mondial'>('lieux');
-  type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3' | 'sous-prefecture' | 'prefecture';
+  const [activeTab, setActiveTab] = useState<'lieux' | 'prefecture' | 'region' | 'pays' | 'continent' | 'mondial'>('lieux');
+  type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3' | 'sous-prefecture';
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -606,6 +606,11 @@ export default function TerreAdam() {
         const navTabs = [
           { id: 'lieux', icon: '🏠', label: 'Résidence' },
           {
+            id: 'prefecture',
+            icon: '🏢',
+            label: userPrefecture?.name || userData?.prefecture || getCountryGeoLabels(userData?.pays || '').level2.label || 'Préfecture'
+          },
+          {
             id: 'region',
             icon: getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine),
             label: userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'
@@ -716,8 +721,7 @@ export default function TerreAdam() {
                       icon: '🏘️',
                       visible: isAdmin || isRealLieu(userQuartierCodes[2])
                     },
-                    { id: 'sous-prefecture' as LieuTabId, label: userSousPrefecture?.name || userData.sousPrefecture || getCountryGeoLabels(userData.pays || '').level3.label, icon: '🏛️', visible: true },
-                    { id: 'prefecture' as LieuTabId, label: userPrefecture?.name || userData.prefecture || getCountryGeoLabels(userData.pays || '').level2.label, icon: '🏢', visible: true }
+                    { id: 'sous-prefecture' as LieuTabId, label: userSousPrefecture?.name || userData.sousPrefecture || getCountryGeoLabels(userData.pays || '').level3.label, icon: '🏛️', visible: true }
                   ].filter(tab => tab.visible).map((tab) => (
                     <button
                       key={tab.id}
@@ -1142,21 +1146,6 @@ export default function TerreAdam() {
                     );
                   })()}
 
-                  {/* Page niveau 2 (Préfecture / Département / County...) */}
-                  {activeLieuTab === 'prefecture' && (() => {
-                    const name = userPrefecture?.name || userData.prefecture || getCountryGeoLabels(userData.pays || '').level2.label || 'Préfecture';
-                    const loc = userData.prefectureCode || userData.prefecture || name;
-                    return (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-lg">🏢</span>
-                          <h3 className="font-bold text-gray-800 text-sm">{name}</h3>
-                        </div>
-                        <DeveloppementGouvernemental scope="prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} />
-                      </div>
-                    );
-                  })()}
-
                 </div>
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
@@ -1171,7 +1160,33 @@ export default function TerreAdam() {
           </div>
         )}
 
-        {/* 2. Région */}
+        {/* 2. Préfecture */}
+        {activeTab === 'prefecture' && (() => {
+          const name = userPrefecture?.name || userData?.prefecture || getCountryGeoLabels(userData?.pays || '').level2.label || 'Préfecture';
+          const loc = userData?.prefectureCode || userData?.prefecture || name;
+          return (
+            <div className="space-y-3">
+              <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
+                <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="text-xl">🏢</span>
+                  <span>{name}</span>
+                </h2>
+                {(userData?.prefectureCode || userData?.prefecture || isAdmin) ? (
+                  <DeveloppementGouvernemental scope="prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} />
+                ) : (
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                    <p className="text-xs text-yellow-800">
+                      <strong>⚠️ Aucune préfecture enregistrée</strong><br />
+                      Vous n'avez pas encore enregistré votre préfecture lors de l'inscription.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 3. Région */}
         {activeTab === 'region' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
@@ -1199,7 +1214,7 @@ export default function TerreAdam() {
           </div>
         )}
 
-        {/* 3. Pays */}
+        {/* 4. Pays */}
         {activeTab === 'pays' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
@@ -1227,7 +1242,7 @@ export default function TerreAdam() {
           </div>
         )}
 
-        {/* 4. Continent */}
+        {/* 5. Continent */}
         {activeTab === 'continent' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
@@ -1255,7 +1270,7 @@ export default function TerreAdam() {
           </div>
         )}
 
-        {/* 5. Mondial */}
+        {/* 6. Mondial */}
         {activeTab === 'mondial' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
