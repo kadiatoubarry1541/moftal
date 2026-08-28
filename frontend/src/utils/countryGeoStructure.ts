@@ -352,10 +352,21 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   },
 }
 
+// Normalise un nom de pays : minuscule + sans accents + sans espaces superflus,
+// pour que "Guinée", "guinee", "GUINÉE " etc. retombent tous sur la même entrée.
+function normalizeCountryName(str: string): string {
+  return str.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+const NORMALIZED_COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = Object.fromEntries(
+  Object.entries(COUNTRY_GEO_LABELS).map(([name, labels]) => [normalizeCountryName(name), labels])
+)
+
 /**
  * Retourne les labels géographiques pour un pays donné.
  * Utilise le DEFAULT si le pays n'est pas dans la liste.
  */
 export function getCountryGeoLabels(countryName: string): CountryGeoLabels {
-  return COUNTRY_GEO_LABELS[countryName] || DEFAULT_LABELS
+  if (!countryName) return DEFAULT_LABELS
+  return NORMALIZED_COUNTRY_GEO_LABELS[normalizeCountryName(countryName)] || DEFAULT_LABELS
 }
