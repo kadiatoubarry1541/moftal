@@ -154,7 +154,7 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
     };
   }, []);
 
-  const [showIOSCard, setShowIOSCard] = useState(false);
+  const [showHelpCard, setShowHelpCard] = useState(false);
 
   if (installed) {
     if (!isBanner) return null;
@@ -169,11 +169,26 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
   }
 
   if (!prompt) {
-    if (!isIOS()) return null;
+    // Le navigateur n'a pas (encore) déclenché beforeinstallprompt — ça arrive souvent
+    // (Chrome/Android sous certaines conditions, ou simplement pas encore prêt). On ne
+    // masque jamais le bouton pour autant : on affiche des instructions manuelles, en
+    // adaptant le texte selon l'appareil (iOS vs Android/desktop générique).
+    const ios = isIOS();
+    const steps = ios
+      ? [
+          { icon: "⎙", text: "Appuyez sur le bouton Partager en bas de Safari" },
+          { icon: "＋", text: "Choisissez « Sur l'écran d'accueil »" },
+          { icon: "✅", text: "Appuyez sur Ajouter — c'est fait !" },
+        ]
+      : [
+          { icon: "⋮", text: "Ouvrez le menu de votre navigateur (en haut ou en bas de l'écran)" },
+          { icon: "＋", text: "Choisissez « Installer l'application » ou « Ajouter à l'écran d'accueil »" },
+          { icon: "✅", text: "Confirmez — c'est fait !" },
+        ];
     return (
       <>
         <button
-          onClick={() => setShowIOSCard(true)}
+          onClick={() => setShowHelpCard(true)}
           title="Installer l'application"
           aria-label="Installer l'application"
           style={isBanner
@@ -191,8 +206,8 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
             </>
           ) : "📲"}
         </button>
-        {showIOSCard && (
-          <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setShowIOSCard(false); }}>
+        {showHelpCard && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setShowHelpCard(false); }}>
             <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)" }}>
               <div style={{ width: 40, height: 4, background: "#e2e8f0", borderRadius: 2, margin: "0 auto 24px" }} />
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
@@ -202,18 +217,16 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
                   <div style={{ fontSize: 13, color: "#64748b" }}>Application mobile gratuite</div>
                 </div>
               </div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>Installer sur iPhone / iPad :</p>
-              {[
-                { icon: "⎙", text: "Appuyez sur le bouton Partager en bas de Safari" },
-                { icon: "＋", text: "Choisissez « Sur l'écran d'accueil »" },
-                { icon: "✅", text: "Appuyez sur Ajouter — c'est fait !" },
-              ].map((s, i) => (
+              <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>
+                {ios ? "Installer sur iPhone / iPad :" : "Installer sur ce téléphone :"}
+              </p>
+              {steps.map((s, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
                   <div style={{ width: 34, height: 34, borderRadius: 8, background: "#1a8f1a", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{s.icon}</div>
                   <span style={{ fontSize: 13, color: "#374151" }}>{s.text}</span>
                 </div>
               ))}
-              <button onClick={() => setShowIOSCard(false)} style={{ width: "100%", marginTop: 16, padding: "14px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+              <button onClick={() => setShowHelpCard(false)} style={{ width: "100%", marginTop: 16, padding: "14px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
                 J'ai compris
               </button>
             </div>
