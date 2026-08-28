@@ -64,7 +64,6 @@ export default function DynamicAppManifest({
       theme_color: themeColor,
       icons: [
         { src: iconSrc, sizes: "any", type: proId ? "image/png" : "image/svg+xml", purpose: "any" },
-        { src: iconSrc, sizes: "any", type: proId ? "image/png" : "image/svg+xml", purpose: "maskable" },
       ],
     };
 
