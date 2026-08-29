@@ -608,12 +608,12 @@ export default function TerreAdam() {
           {
             id: 'sous-prefecture',
             icon: '🏛️',
-            label: userSousPrefecture?.name || userData?.sousPrefecture || getCountryGeoLabels(userData?.pays || '').level3.label || 'Sous-préfecture'
+            label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Sous-préfecture')
           },
           {
             id: 'prefecture',
             icon: '🏢',
-            label: userPrefecture?.name || userData?.prefecture || getCountryGeoLabels(userData?.pays || '').level2.label || 'Préfecture'
+            label: userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : 'Préfecture')
           },
           {
             id: 'region',
@@ -1152,7 +1152,7 @@ export default function TerreAdam() {
 
         {/* 2. Sous-préfecture */}
         {activeTab === 'sous-prefecture' && (() => {
-          const name = userSousPrefecture?.name || userData?.sousPrefecture || getCountryGeoLabels(userData?.pays || '').level3.label || 'Sous-préfecture';
+          const name = userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Sous-préfecture');
           const loc = userData?.sousPrefectureCode || userData?.sousPrefecture || name;
           return (
             <div className="space-y-3">
@@ -1178,7 +1178,7 @@ export default function TerreAdam() {
 
         {/* 3. Préfecture */}
         {activeTab === 'prefecture' && (() => {
-          const name = userPrefecture?.name || userData?.prefecture || getCountryGeoLabels(userData?.pays || '').level2.label || 'Préfecture';
+          const name = userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : 'Préfecture');
           const loc = userData?.prefectureCode || userData?.prefecture || name;
           return (
             <div className="space-y-3">
