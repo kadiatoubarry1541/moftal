@@ -656,22 +656,23 @@ export default function TerreAdam() {
               )}
             </div>
 
-            {/* Les 5 niveaux propres à Terre ADAM — dans la même barre */}
-            <div className="flex gap-1.5" style={{ padding: '0 6px 6px' }}>
+            {/* Les 7 niveaux propres à Terre ADAM — barre défilante pour rester lisible même avec beaucoup d'onglets */}
+            <div className="flex gap-1.5 overflow-x-auto" style={{ padding: '0 6px 6px', WebkitOverflowScrolling: 'touch' }}>
               {navTabs.map(tab => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className="flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition"
+                  className="flex-shrink-0 flex flex-col items-center gap-0.5 py-2 px-1 text-[10px] font-bold transition"
                   style={{
                     borderRadius: 10,
+                    minWidth: 60,
                     background: activeTab === tab.id ? '#1a8f1a' : 'rgba(255,255,255,0.06)',
                     color: activeTab === tab.id ? 'white' : '#94a3b8',
                   }}
                 >
                   <span className={`text-lg transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
-                  <span className="truncate max-w-[64px]">{tab.label}</span>
+                  <span className="truncate max-w-[70px]">{tab.label}</span>
                 </button>
               ))}
             </div>
