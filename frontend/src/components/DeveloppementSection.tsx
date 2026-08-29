@@ -323,7 +323,7 @@ export default function DeveloppementSection({ scope, location, locationName, is
         <div className="flex items-center gap-3">
           <span className="text-2xl">📁</span>
           <div>
-            <p className="font-bold text-white text-sm">Projets & Caisse de développement</p>
+            <p className="font-bold text-white text-sm">Projets</p>
             <p className="text-green-100 text-xs">{fmt(totalCollecte)} · {nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''} · {projets.length} projet{projets.length > 1 ? 's' : ''}</p>
           </div>
         </div>
