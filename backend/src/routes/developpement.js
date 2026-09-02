@@ -26,6 +26,20 @@ const uploadLogo = multer({
   }
 });
 
+// Média des actualités : photo ou courte vidéo (la durée max de 5s est vérifiée
+// côté client avant l'envoi — 20MB couvre largement une vidéo de 5 secondes).
+const uploadActuMedia = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Seules les images et vidéos sont autorisées'), false);
+    }
+  }
+});
+
 const isJournalistOrAdmin = (user) =>
   user.isMasterAdmin ||
   user.role === 'admin' ||
@@ -129,20 +143,29 @@ router.get('/actualites/can-publish', authenticate, async (req, res) => {
   }
 });
 
-router.post('/actualites', authenticate, async (req, res) => {
+router.post('/actualites', authenticate, uploadActuMedia.single('media'), async (req, res) => {
   try {
-    const { titre, content, mediaUrl, mediaType, domaine, scope, location } = req.body;
+    const { titre, content, domaine, scope, location } = req.body;
     if (!titre || !content || !scope || !location)
       return res.status(400).json({ success: false, message: 'Titre, contenu, scope et location requis' });
     if (!(await canPublishActualite(req.user, scope, location)))
       return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à publier ici. Demandez l\'autorisation à un administrateur.' });
+
+    let mediaUrl = null;
+    let mediaType = 'text';
+    if (req.file) {
+      mediaUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'developpement-actualites');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'developpement-actualites').catch(() => {});
+      mediaType = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
+    }
+
     const actu = await DevActualite.create({
       numeroH: req.user.numeroH,
       authorName: `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim() || req.user.numeroH,
       titre,
       content,
-      mediaUrl: mediaUrl || null,
-      mediaType: mediaType || 'text',
+      mediaUrl,
+      mediaType,
       domaine: domaine || null,
       scope,
       location: location.toLowerCase(),

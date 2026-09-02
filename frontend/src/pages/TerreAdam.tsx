@@ -13,6 +13,7 @@ import DeveloppementSection from '../components/DeveloppementSection';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
+const MAX_VIDEO_SECONDS = 5;
 
 interface UserData {
   numeroH: string;
@@ -1103,12 +1104,28 @@ export default function TerreAdam() {
                                     accept={newMessage.messageType === 'image' ? 'image/*' : 'video/*'}
                                     onChange={(e) => {
                                       const file = e.target.files?.[0] || null;
-                                      if (file) {
-                                        let detectedType = newMessage.messageType;
-                                        if (file.type.startsWith('image/')) detectedType = 'image';
-                                        else if (file.type.startsWith('video/')) detectedType = 'video';
-                                        setNewMessage({...newMessage, messageType: detectedType, mediaFile: file});
-                                      } else setNewMessage({...newMessage, mediaFile: null});
+                                      if (!file) { setNewMessage({...newMessage, mediaFile: null}); return; }
+                                      let detectedType = newMessage.messageType;
+                                      if (file.type.startsWith('image/')) detectedType = 'image';
+                                      else if (file.type.startsWith('video/')) detectedType = 'video';
+                                      if (detectedType === 'video') {
+                                        const url = URL.createObjectURL(file);
+                                        const videoEl = document.createElement('video');
+                                        videoEl.preload = 'metadata';
+                                        videoEl.onloadedmetadata = () => {
+                                          URL.revokeObjectURL(url);
+                                          if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
+                                            alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`);
+                                            e.target.value = '';
+                                            return;
+                                          }
+                                          setNewMessage(prev => ({...prev, messageType: 'video', mediaFile: file}));
+                                        };
+                                        videoEl.onerror = () => { URL.revokeObjectURL(url); alert('Impossible de lire cette vidéo.'); };
+                                        videoEl.src = url;
+                                        return;
+                                      }
+                                      setNewMessage({...newMessage, messageType: detectedType, mediaFile: file});
                                     }}
                                     className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm"
                                   />

@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+const MAX_VIDEO_SECONDS = 5;
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -63,6 +65,10 @@ export default function DeveloppementSection({ scope, location, locationName, is
   const [showPublierActu, setShowPublierActu] = useState(false);
   const [actuForm, setActuForm] = useState({ titre: '', content: '' });
   const [actuLoading, setActuLoading] = useState(false);
+  const [actuMediaFile, setActuMediaFile] = useState<File | null>(null);
+  const [actuMediaPreview, setActuMediaPreview] = useState<string | null>(null);
+  const [actuMediaType, setActuMediaType] = useState<'image' | 'video' | null>(null);
+  const actuMediaInputRef = useRef<HTMLInputElement>(null);
   const [showPublishers, setShowPublishers] = useState(false);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [newPublisher, setNewPublisher] = useState({ numeroH: '', name: '', role: 'chef' });
@@ -95,20 +101,70 @@ export default function DeveloppementSection({ scope, location, locationName, is
     } catch {}
   };
 
+  const removeActuMedia = () => {
+    if (actuMediaPreview) URL.revokeObjectURL(actuMediaPreview);
+    setActuMediaFile(null);
+    setActuMediaPreview(null);
+    setActuMediaType(null);
+    if (actuMediaInputRef.current) actuMediaInputRef.current.value = '';
+  };
+
+  const handleActuMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      alert('Seules les images et vidéos sont autorisées.');
+      e.target.value = '';
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    if (file.type.startsWith('video/')) {
+      const videoEl = document.createElement('video');
+      videoEl.preload = 'metadata';
+      videoEl.onloadedmetadata = () => {
+        if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
+          alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`);
+          URL.revokeObjectURL(url);
+          e.target.value = '';
+          return;
+        }
+        setActuMediaFile(file);
+        setActuMediaPreview(url);
+        setActuMediaType('video');
+      };
+      videoEl.onerror = () => {
+        alert('Impossible de lire cette vidéo.');
+        URL.revokeObjectURL(url);
+      };
+      videoEl.src = url;
+    } else {
+      setActuMediaFile(file);
+      setActuMediaPreview(url);
+      setActuMediaType('image');
+    }
+  };
+
   const submitActualite = async () => {
     if (!actuForm.titre.trim() || !actuForm.content.trim()) return;
     setActuLoading(true);
     try {
       const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('titre', actuForm.titre);
+      formData.append('content', actuForm.content);
+      formData.append('scope', scope);
+      formData.append('location', location);
+      if (actuMediaFile) formData.append('media', actuMediaFile);
       const res = await fetch(`${API_BASE}/api/developpement/actualites`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...actuForm, scope, location })
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
       });
       const d = await res.json();
       if (d.success) {
         setShowPublierActu(false);
         setActuForm({ titre: '', content: '' });
+        removeActuMedia();
         loadActualites();
       } else {
         alert(d.message || 'Erreur lors de la publication.');
@@ -374,7 +430,11 @@ export default function DeveloppementSection({ scope, location, locationName, is
                   )}
                 </div>
                 {actu.mediaUrl && (
-                  <img src={actu.mediaUrl.startsWith('http') ? actu.mediaUrl : `${API_BASE}${actu.mediaUrl}`} alt="" className="w-full h-40 object-cover rounded-lg mt-2" />
+                  actu.mediaType === 'video' ? (
+                    <video src={actu.mediaUrl.startsWith('http') ? actu.mediaUrl : `${API_BASE}${actu.mediaUrl}`} controls className="w-full h-40 object-cover rounded-lg mt-2 bg-black" />
+                  ) : (
+                    <img src={actu.mediaUrl.startsWith('http') ? actu.mediaUrl : `${API_BASE}${actu.mediaUrl}`} alt="" className="w-full h-40 object-cover rounded-lg mt-2" />
+                  )
                 )}
                 <p className="text-slate-600 text-sm mt-2 whitespace-pre-wrap">{actu.content}</p>
                 <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
@@ -416,10 +476,42 @@ export default function DeveloppementSection({ scope, location, locationName, is
                   placeholder="Détails de l'actualité..."
                 />
               </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Photo ou vidéo (optionnel)</label>
+                {actuMediaPreview ? (
+                  <div className="relative">
+                    {actuMediaType === 'video' ? (
+                      <video src={actuMediaPreview} controls className="w-full max-h-48 rounded-xl bg-black" />
+                    ) : (
+                      <img src={actuMediaPreview} alt="Aperçu" className="w-full max-h-48 object-contain rounded-xl" />
+                    )}
+                    <button
+                      onClick={removeActuMedia}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white text-sm flex items-center justify-center"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => actuMediaInputRef.current?.click()}
+                    className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-sm text-slate-500 hover:bg-slate-50 transition-colors"
+                  >
+                    📷 Ajouter une photo ou une vidéo (5s max)
+                  </button>
+                )}
+                <input
+                  ref={actuMediaInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={handleActuMediaSelect}
+                  className="hidden"
+                />
+              </div>
             </div>
             <div className="px-5 pb-5 flex gap-3">
               <button
-                onClick={() => setShowPublierActu(false)}
+                onClick={() => { setShowPublierActu(false); removeActuMedia(); }}
                 className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors"
               >
                 Annuler
