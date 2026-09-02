@@ -196,7 +196,45 @@ export default function TerreAdam() {
 
   const effectiveContinent = userContinent || inferredGeo?.continent || null;
   const effectiveCountry = userCountry || inferredGeo?.country || null;
-  
+
+  // Chaîne des niveaux au-dessus du quartier, du plus local au plus large —
+  // sert à proposer « faire remonter » une actualité vers les niveaux
+  // supérieurs (partage, jamais une copie).
+  const geoLevels = [
+    {
+      scope: 'sous-prefecture',
+      location: userData?.sousPrefectureCode || userData?.sousPrefecture || '',
+      label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Sous-préfecture')
+    },
+    {
+      scope: 'prefecture',
+      location: userData?.prefectureCode || userData?.prefecture || '',
+      label: userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : 'Préfecture')
+    },
+    {
+      scope: 'region',
+      location: userData?.regionCode || userData?.region || userData?.regionOrigine || '',
+      label: userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'
+    },
+    {
+      scope: 'pays',
+      location: userData?.paysCode || effectiveCountry?.code || userData?.pays || '',
+      label: effectiveCountry?.name || userData?.pays || 'Pays'
+    },
+    {
+      scope: 'continent',
+      location: userData?.continentCode || effectiveContinent?.code || userData?.continent || '',
+      label: effectiveContinent?.name || userData?.continent || 'Continent'
+    },
+    { scope: 'mondial', location: 'mondial', label: 'Mondial' },
+  ].filter(l => l.location);
+
+  /** Niveaux strictement au-dessus de `scope` dans la chaîne géographique. */
+  const higherLevelsFrom = (scope: string) => {
+    const idx = geoLevels.findIndex(l => l.scope === scope);
+    return idx === -1 ? geoLevels : geoLevels.slice(idx + 1);
+  };
+
   /** Codes des 1 à 3 quartiers de l'utilisateur (peuvent être null si non renseignés) */
   const userQuartierCodes: (string | null)[] = [
     userData?.quartierCode || userData?.lieu1 || userData?.lieuResidence1 || null,
@@ -764,6 +802,7 @@ export default function TerreAdam() {
                             locationName={name || `Résidence ${slotNum}`}
                             isJournalist={isJournalist}
                             isAdmin={isAdmin}
+                            higherLevels={higherLevelsFrom('quartier')}
                           />
                         );
                       })()}
@@ -1188,7 +1227,7 @@ export default function TerreAdam() {
                   <span>{name}</span>
                 </h2>
                 {(userData?.sousPrefectureCode || userData?.sousPrefecture || isAdmin) ? (
-                  <DeveloppementSection scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} />
+                  <DeveloppementSection scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                     <p className="text-xs text-yellow-800">
@@ -1214,7 +1253,7 @@ export default function TerreAdam() {
                   <span>{name}</span>
                 </h2>
                 {(userData?.prefectureCode || userData?.prefecture || isAdmin) ? (
-                  <DeveloppementGouvernemental scope="prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} />
+                  <DeveloppementGouvernemental scope="prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                     <p className="text-xs text-yellow-800">
@@ -1243,6 +1282,7 @@ export default function TerreAdam() {
                   locationName={userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'}
                   isJournalist={isJournalist}
                   isAdmin={isAdmin}
+                  higherLevels={higherLevelsFrom('region')}
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
@@ -1271,6 +1311,7 @@ export default function TerreAdam() {
                   locationName={effectiveCountry?.name || userData?.pays || 'Pays'}
                   isJournalist={isJournalist}
                   isAdmin={isAdmin}
+                  higherLevels={higherLevelsFrom('pays')}
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
@@ -1299,6 +1340,7 @@ export default function TerreAdam() {
                   locationName={effectiveContinent?.name || userData?.continent || 'Continent'}
                   isJournalist={isJournalist}
                   isAdmin={isAdmin}
+                  higherLevels={higherLevelsFrom('continent')}
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">

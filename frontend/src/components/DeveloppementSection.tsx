@@ -19,12 +19,19 @@ const DOMAINES = [
   { id: 'gouvernance',    label: 'Gouvernance',           emoji: '🏛️', color: '#1d4ed8', bg: '#eff6ff', desc: 'Démocratie locale, transparence, participation citoyenne' },
 ];
 
+interface HigherLevel {
+  scope: string;
+  location: string;
+  label: string;
+}
+
 interface Props {
   scope: string;
   location: string;
   locationName: string;
   isJournalist?: boolean;
   isAdmin?: boolean;
+  higherLevels?: HigherLevel[];
 }
 
 function getMyNumeroH(): string | null {
@@ -34,7 +41,7 @@ function getMyNumeroH(): string | null {
   } catch { return null; }
 }
 
-export default function DeveloppementSection({ scope, location, locationName, isJournalist, isAdmin }: Props) {
+export default function DeveloppementSection({ scope, location, locationName, isJournalist, isAdmin, higherLevels = [] }: Props) {
   const canPublish = !!(isJournalist || isAdmin);
   const myNumeroH = getMyNumeroH();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -69,6 +76,10 @@ export default function DeveloppementSection({ scope, location, locationName, is
   const [actuMediaPreview, setActuMediaPreview] = useState<string | null>(null);
   const [actuMediaType, setActuMediaType] = useState<'image' | 'video' | null>(null);
   const actuMediaInputRef = useRef<HTMLInputElement>(null);
+  // Niveaux au-dessus où l'auteur a réellement le droit de publier — donc où
+  // il peut faire remonter (partager) cette même actualité.
+  const [allowedHigherLevels, setAllowedHigherLevels] = useState<HigherLevel[]>([]);
+  const [selectedPartages, setSelectedPartages] = useState<Set<string>>(new Set());
   const [showPublishers, setShowPublishers] = useState(false);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [newPublisher, setNewPublisher] = useState({ numeroH: '', name: '', role: 'chef' });
@@ -76,6 +87,39 @@ export default function DeveloppementSection({ scope, location, locationName, is
   useEffect(() => {
     if (location) { loadStats(); loadLogo(); loadProjets(); loadActualites(); checkCanPublishActu(); }
   }, [scope, location]);
+
+  // Vérifie, uniquement à l'ouverture du formulaire, sur quels niveaux
+  // au-dessus l'auteur a aussi le droit de publier (pour proposer de
+  // partager la même actualité là-bas, sans jamais la dupliquer).
+  useEffect(() => {
+    if (!showPublierActu || higherLevels.length === 0) { setAllowedHigherLevels([]); return; }
+    if (canPublish) { setAllowedHigherLevels(higherLevels); return; }
+    let cancelled = false;
+    const token = localStorage.getItem('token');
+    Promise.all(higherLevels.map(async (lvl) => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/developpement/actualites/can-publish?scope=${encodeURIComponent(lvl.scope)}&location=${encodeURIComponent(lvl.location)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!res.ok) return null;
+        const d = await res.json();
+        return d.canPublish ? lvl : null;
+      } catch { return null; }
+    })).then(results => {
+      if (!cancelled) setAllowedHigherLevels(results.filter((l): l is HigherLevel => !!l));
+    });
+    return () => { cancelled = true; };
+  }, [showPublierActu]);
+
+  const togglePartage = (lvl: HigherLevel) => {
+    const key = `${lvl.scope}:${lvl.location}`;
+    setSelectedPartages(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   const loadActualites = async () => {
     setLoadingActualites(true);
@@ -155,6 +199,10 @@ export default function DeveloppementSection({ scope, location, locationName, is
       formData.append('scope', scope);
       formData.append('location', location);
       if (actuMediaFile) formData.append('media', actuMediaFile);
+      const partages = allowedHigherLevels
+        .filter(l => selectedPartages.has(`${l.scope}:${l.location}`))
+        .map(l => ({ scope: l.scope, location: l.location }));
+      if (partages.length) formData.append('partages', JSON.stringify(partages));
       const res = await fetch(`${API_BASE}/api/developpement/actualites`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -165,6 +213,7 @@ export default function DeveloppementSection({ scope, location, locationName, is
         setShowPublierActu(false);
         setActuForm({ titre: '', content: '' });
         removeActuMedia();
+        setSelectedPartages(new Set());
         loadActualites();
       } else {
         alert(d.message || 'Erreur lors de la publication.');
@@ -508,10 +557,29 @@ export default function DeveloppementSection({ scope, location, locationName, is
                   className="hidden"
                 />
               </div>
+              {allowedHigherLevels.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Faire remonter aussi vers</label>
+                  <div className="space-y-1.5">
+                    {allowedHigherLevels.map(lvl => (
+                      <label key={`${lvl.scope}:${lvl.location}`} className="flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={selectedPartages.has(`${lvl.scope}:${lvl.location}`)}
+                          onChange={() => togglePartage(lvl)}
+                          className="w-4 h-4 accent-green-600"
+                        />
+                        {lvl.label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">La même publication apparaîtra aussi là-bas — sans être enregistrée deux fois.</p>
+                </div>
+              )}
             </div>
             <div className="px-5 pb-5 flex gap-3">
               <button
-                onClick={() => { setShowPublierActu(false); removeActuMedia(); }}
+                onClick={() => { setShowPublierActu(false); removeActuMedia(); setSelectedPartages(new Set()); }}
                 className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition-colors"
               >
                 Annuler
