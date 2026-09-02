@@ -47,12 +47,19 @@ const TYPE_SIGNALEMENT = [
   { id: 'autre',             label: 'Autre problème',            emoji: '📌' },
 ];
 
+interface HigherLevel {
+  scope: string;
+  location: string;
+  label: string;
+}
+
 interface Props {
   scope: string;
   location: string;
   locationName: string;
   isJournalist: boolean;
   isAdmin: boolean;
+  higherLevels?: HigherLevel[];
 }
 
 function getMyNumeroH(): string | null {
@@ -62,7 +69,7 @@ function getMyNumeroH(): string | null {
   } catch { return null; }
 }
 
-export default function DeveloppementGouvernemental({ scope, location, locationName, isJournalist, isAdmin }: Props) {
+export default function DeveloppementGouvernemental({ scope, location, locationName, isJournalist, isAdmin, higherLevels = [] }: Props) {
   const canPublish = isJournalist || isAdmin;
   const myNumeroH = getMyNumeroH();
   const [canPublishActu, setCanPublishActu] = useState(canPublish);
@@ -81,6 +88,8 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const [actuMediaPreview, setActuMediaPreview] = useState<string | null>(null);
   const [actuMediaType, setActuMediaType] = useState<'image' | 'video' | null>(null);
   const actuMediaInputRef = useRef<HTMLInputElement>(null);
+  const [allowedHigherLevels, setAllowedHigherLevels] = useState<HigherLevel[]>([]);
+  const [selectedPartages, setSelectedPartages] = useState<Set<string>>(new Set());
 
   // Projets
   const [projets, setProjets] = useState<any[]>([]);
@@ -115,6 +124,38 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     checkCanPublishActu();
     if (canPublish) loadSignalements();
   }, [scope, location]);
+
+  // Vérifie, uniquement à l'ouverture du formulaire, sur quels niveaux
+  // au-dessus l'auteur a aussi le droit de publier (pour proposer de
+  // partager la même actualité là-bas, sans jamais la dupliquer).
+  useEffect(() => {
+    if (!showActuForm || higherLevels.length === 0) { setAllowedHigherLevels([]); return; }
+    if (canPublish) { setAllowedHigherLevels(higherLevels); return; }
+    let cancelled = false;
+    Promise.all(higherLevels.map(async (lvl) => {
+      try {
+        const res = await fetch(
+          api(`/actualites/can-publish?scope=${encodeURIComponent(lvl.scope)}&location=${encodeURIComponent(lvl.location)}`),
+          { headers: { Authorization: `Bearer ${token()}` } }
+        );
+        if (!res.ok) return null;
+        const d = await res.json();
+        return d.canPublish ? lvl : null;
+      } catch { return null; }
+    })).then(results => {
+      if (!cancelled) setAllowedHigherLevels(results.filter((l): l is HigherLevel => !!l));
+    });
+    return () => { cancelled = true; };
+  }, [showActuForm]);
+
+  const togglePartage = (lvl: HigherLevel) => {
+    const key = `${lvl.scope}:${lvl.location}`;
+    setSelectedPartages(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   const checkCanPublishActu = async () => {
     if (canPublish) { setCanPublishActu(true); return; }
@@ -261,6 +302,10 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
       formData.append('scope', scope);
       formData.append('location', location);
       if (actuMediaFile) formData.append('media', actuMediaFile);
+      const partages = allowedHigherLevels
+        .filter(l => selectedPartages.has(`${l.scope}:${l.location}`))
+        .map(l => ({ scope: l.scope, location: l.location }));
+      if (partages.length) formData.append('partages', JSON.stringify(partages));
       const res = await fetch(api('/actualites'), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token()}` },
@@ -270,6 +315,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
         setShowActuForm(false);
         setActuForm({ titre: '', content: '', domaine: '' });
         removeActuMedia();
+        setSelectedPartages(new Set());
         loadActualites();
       } else {
         const e = await res.json().catch(() => ({}));
@@ -852,9 +898,28 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
                   className="hidden"
                 />
               </div>
+              {allowedHigherLevels.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Faire remonter aussi vers</label>
+                  <div className="space-y-1.5">
+                    {allowedHigherLevels.map(lvl => (
+                      <label key={`${lvl.scope}:${lvl.location}`} className="flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={selectedPartages.has(`${lvl.scope}:${lvl.location}`)}
+                          onChange={() => togglePartage(lvl)}
+                          className="w-4 h-4 accent-blue-600"
+                        />
+                        {lvl.label}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">La même publication apparaîtra aussi là-bas — sans être enregistrée deux fois.</p>
+                </div>
+              )}
             </div>
             <div className="px-5 pb-5 flex gap-3">
-              <button onClick={() => { setShowActuForm(false); removeActuMedia(); }} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition-colors">Annuler</button>
+              <button onClick={() => { setShowActuForm(false); removeActuMedia(); setSelectedPartages(new Set()); }} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition-colors">Annuler</button>
               <button
                 onClick={publierActualite}
                 disabled={actuLoading || !actuForm.titre.trim() || !actuForm.content.trim()}

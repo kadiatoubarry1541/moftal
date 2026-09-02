@@ -3,6 +3,7 @@ import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
 import DeveloppementDon from '../models/DeveloppementDon.js';
 import DevActualite from '../models/DevActualite.js';
+import DevActualitePartage from '../models/DevActualitePartage.js';
 import DevProjet from '../models/DevProjet.js';
 import DevSignalement from '../models/DevSignalement.js';
 import DevPublisher from '../models/DevPublisher.js';
@@ -120,11 +121,25 @@ router.get('/actualites', authenticate, async (req, res) => {
     const { scope, location } = req.query;
     if (!scope || !location)
       return res.status(400).json({ success: false, message: 'scope et location requis' });
-    const actualites = await DevActualite.findAll({
-      where: { scope, location: location.toLowerCase() },
-      order: [['created_at', 'DESC']],
-      limit: 50
-    });
+    const loc = location.toLowerCase();
+
+    // Actualités publiées directement ici + actualités publiées ailleurs mais
+    // partagées vers ce niveau (une seule ligne en base, jamais dupliquée).
+    const [directes, partages] = await Promise.all([
+      DevActualite.findAll({ where: { scope, location: loc } }),
+      DevActualitePartage.findAll({ where: { scope, location: loc } }),
+    ]);
+    const idsPartages = partages.map(p => p.actualiteId);
+    const partagees = idsPartages.length
+      ? await DevActualite.findAll({ where: { id: idsPartages } })
+      : [];
+
+    const vues = new Map();
+    for (const a of [...directes, ...partagees]) vues.set(a.id, a);
+    const actualites = [...vues.values()]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 50);
+
     res.json({ success: true, actualites });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -145,7 +160,7 @@ router.get('/actualites/can-publish', authenticate, async (req, res) => {
 
 router.post('/actualites', authenticate, uploadActuMedia.single('media'), async (req, res) => {
   try {
-    const { titre, content, domaine, scope, location } = req.body;
+    const { titre, content, domaine, scope, location, partages } = req.body;
     if (!titre || !content || !scope || !location)
       return res.status(400).json({ success: false, message: 'Titre, contenu, scope et location requis' });
     if (!(await canPublishActualite(req.user, scope, location)))
@@ -170,7 +185,35 @@ router.post('/actualites', authenticate, uploadActuMedia.single('media'), async 
       scope,
       location: location.toLowerCase(),
     });
-    res.json({ success: true, actualite: actu });
+
+    // Faire remonter la même actualité (pas de copie) vers d'autres niveaux —
+    // seulement ceux où l'auteur a réellement le droit de publier. On ne fait
+    // jamais confiance à la liste envoyée par le client sans la revérifier.
+    let partagesCrees = [];
+    if (partages) {
+      let demandes = [];
+      try { demandes = JSON.parse(partages); } catch { demandes = []; }
+      if (Array.isArray(demandes)) {
+        demandes = demandes.slice(0, 10); // limite raisonnable
+        for (const p of demandes) {
+          const pScope = p?.scope;
+          const pLocation = p?.location;
+          if (!pScope || !pLocation) continue;
+          if (pScope === scope && pLocation.toLowerCase() === location.toLowerCase()) continue;
+          if (!(await canPublishActualite(req.user, pScope, pLocation))) continue;
+          partagesCrees.push(
+            await DevActualitePartage.create({
+              actualiteId: actu.id,
+              scope: pScope,
+              location: pLocation.toLowerCase(),
+              partageBy: req.user.numeroH,
+            })
+          );
+        }
+      }
+    }
+
+    res.json({ success: true, actualite: actu, partages: partagesCrees });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -183,6 +226,7 @@ router.delete('/actualites/:id', authenticate, async (req, res) => {
     const estAuteur = actu.numeroH === req.user.numeroH;
     if (!estAuteur && !isJournalistOrAdmin(req.user))
       return res.status(403).json({ success: false, message: 'Accès refusé' });
+    await DevActualitePartage.destroy({ where: { actualiteId: actu.id } });
     await actu.destroy();
     res.json({ success: true });
   } catch (err) {
