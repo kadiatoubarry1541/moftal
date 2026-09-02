@@ -755,7 +755,16 @@ export default function TerreAdam() {
                         const loc = code ? findLocationByCode(code) : null;
                         const name = loc?.name || (isRealLieu(code) ? code : null);
 
-                        return null;
+                        if (!code && !isAdmin) return null;
+                        return (
+                          <DeveloppementSection
+                            scope="quartier"
+                            location={code || `quartier-${slotNum}`}
+                            locationName={name || `Résidence ${slotNum}`}
+                            isJournalist={isJournalist}
+                            isAdmin={isAdmin}
+                          />
+                        );
                       })()}
 
                       {/* Messagerie */}
