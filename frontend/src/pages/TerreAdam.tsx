@@ -9,7 +9,7 @@ import {
 import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countryFlags';
 import { getCountryGeoLabels } from '../utils/countryGeoStructure';
 import { AudioRecorder } from '../components/AudioRecorder';
-import DeveloppementSection from '../components/DeveloppementSection';
+import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -160,6 +160,10 @@ export default function TerreAdam() {
   const [activeCanal, setActiveCanal] = useState<CanalItem | null>(null);
   const [showCategoryGrid, setShowCategoryGrid] = useState(false);
   const [showMembersList, setShowMembersList] = useState(false);
+  // Permet d'ouvrir la modale "Projets" du quartier depuis le bouton placé
+  // à côté de "Liste" dans l'en-tête du chat, plutôt que depuis son propre
+  // bouton (masqué sur la page Quartier via hideProjetsButton).
+  const quartierDevRef = useRef<DeveloppementSectionHandle>(null);
 
   // Niveau actuel : quartier (Résidence 1/2/3) ou plus large (sous-préfecture, région, pays, continent)
   const isQuartierLevel =
@@ -797,12 +801,14 @@ export default function TerreAdam() {
                         if (!code && !isAdmin) return null;
                         return (
                           <DeveloppementSection
+                            ref={quartierDevRef}
                             scope="quartier"
                             location={code || `quartier-${slotNum}`}
                             locationName={name || `Résidence ${slotNum}`}
                             isJournalist={isJournalist}
                             isAdmin={isAdmin}
                             higherLevels={higherLevelsFrom('quartier')}
+                            hideProjetsButton
                           />
                         );
                       })()}
@@ -924,6 +930,12 @@ export default function TerreAdam() {
                                   className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
                                 >
                                   👥 Liste
+                                </button>
+                                <button
+                                  onClick={() => quartierDevRef.current?.openProjets()}
+                                  className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
+                                >
+                                  📁 Projets
                                 </button>
                               </div>
                             </div>

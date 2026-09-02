@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 
 const MAX_VIDEO_SECONDS = 5;
 
@@ -32,6 +32,14 @@ interface Props {
   isJournalist?: boolean;
   isAdmin?: boolean;
   higherLevels?: HigherLevel[];
+  /** Cache le gros bouton "Projets" intégré — utile quand une page appelante
+   *  affiche déjà son propre bouton (ex: à côté de la liste des membres) et
+   *  déclenche la modale via la ref plutôt que par ce bouton. */
+  hideProjetsButton?: boolean;
+}
+
+export interface DeveloppementSectionHandle {
+  openProjets: () => void;
 }
 
 function getMyNumeroH(): string | null {
@@ -41,7 +49,10 @@ function getMyNumeroH(): string | null {
   } catch { return null; }
 }
 
-export default function DeveloppementSection({ scope, location, locationName, isJournalist, isAdmin, higherLevels = [] }: Props) {
+const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(function DeveloppementSection(
+  { scope, location, locationName, isJournalist, isAdmin, higherLevels = [], hideProjetsButton = false },
+  ref
+) {
   const canPublish = !!(isJournalist || isAdmin);
   const myNumeroH = getMyNumeroH();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -53,6 +64,7 @@ export default function DeveloppementSection({ scope, location, locationName, is
   const [loadingProjets, setLoadingProjets] = useState(true);
   const [activeDomaine, setActiveDomaine] = useState<string | null>(null);
   const [showProjets, setShowProjets] = useState(false);
+  useImperativeHandle(ref, () => ({ openProjets: () => setShowProjets(true) }), []);
   const [showDon, setShowDon] = useState(false);
   const [showMesDons, setShowMesDons] = useState(false);
   const [mesDons, setMesDons] = useState<any[]>([]);
@@ -421,19 +433,21 @@ export default function DeveloppementSection({ scope, location, locationName, is
       </div>
 
       {/* Un seul bouton : caisse, cotisation et projets par domaine — tout est dedans */}
-      <button
-        onClick={() => setShowProjets(true)}
-        className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl text-left shadow"
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">📁</span>
-          <div>
-            <p className="font-bold text-white text-sm">Projets</p>
-            <p className="text-green-100 text-xs">{fmt(totalCollecte)} · {nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''} · {projets.length} projet{projets.length > 1 ? 's' : ''}</p>
+      {!hideProjetsButton && (
+        <button
+          onClick={() => setShowProjets(true)}
+          className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl text-left shadow"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📁</span>
+            <div>
+              <p className="font-bold text-white text-sm">Projets</p>
+              <p className="text-green-100 text-xs">{fmt(totalCollecte)} · {nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''} · {projets.length} projet{projets.length > 1 ? 's' : ''}</p>
+            </div>
           </div>
-        </div>
-        <span className="text-white/80">›</span>
-      </button>
+          <span className="text-white/80">›</span>
+        </button>
+      )}
 
       {/* Actualités locales — le cœur de la page */}
       <div>
@@ -944,4 +958,6 @@ export default function DeveloppementSection({ scope, location, locationName, is
       )}
     </div>
   );
-}
+});
+
+export default DeveloppementSection;
