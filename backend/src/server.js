@@ -76,6 +76,7 @@ import paymentRoutes from './routes/payment.js';
 import uploadRoutes from './routes/upload.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
+import quartierFundRoutes from './routes/quartierFund.js';
 import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
 import djomyPaymentRoutes from './routes/djomyPayment.js';
 import moftalPayRoutes from './routes/MoftalPay.js';
@@ -584,6 +585,89 @@ async function initAllTables() {
         `CREATE INDEX IF NOT EXISTS idx_freq_from   ON "friend_requests" ("from_user");`,
         `CREATE INDEX IF NOT EXISTS idx_freq_to     ON "friend_requests" ("to_user");`,
         `CREATE INDEX IF NOT EXISTS idx_freq_status ON "friend_requests" ("status");`
+      ],
+      alters: []
+    },
+    {
+      name: 'dev_actualite_partages',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "dev_actualite_partages" (
+          "id"           UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "actualite_id" UUID         NOT NULL,
+          "scope"        VARCHAR(30)  NOT NULL,
+          "location"     VARCHAR(150) NOT NULL,
+          "partage_by"   VARCHAR(255) NOT NULL,
+          "created_at"   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_dap_scope_loc ON "dev_actualite_partages" ("scope", "location");`,
+        `CREATE INDEX IF NOT EXISTS idx_dap_actualite  ON "dev_actualite_partages" ("actualite_id");`
+      ],
+      alters: []
+    },
+    {
+      name: 'quartier_funds',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "quartier_funds" (
+          "id"               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "scope"            VARCHAR(30)  NOT NULL,
+          "location"         VARCHAR(150) NOT NULL,
+          "location_name"    VARCHAR(150),
+          "solde_sante"      BIGINT       NOT NULL DEFAULT 0,
+          "solde_orphelins"  BIGINT       NOT NULL DEFAULT 0,
+          "total_depose"     BIGINT       NOT NULL DEFAULT 0,
+          "total_depense"    BIGINT       NOT NULL DEFAULT 0,
+          "chef1_numero_h"   VARCHAR(255),
+          "chef1_nom"        VARCHAR(255),
+          "chef1_photo"      TEXT,
+          "chef2_numero_h"   VARCHAR(255),
+          "chef2_nom"        VARCHAR(255),
+          "chef2_photo"      TEXT,
+          "chef3_numero_h"   VARCHAR(255),
+          "chef3_nom"        VARCHAR(255),
+          "chef3_photo"      TEXT,
+          "is_active"        BOOLEAN      NOT NULL DEFAULT true,
+          "created_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_qf_scope_loc ON "quartier_funds" ("scope", "location");`
+      ],
+      alters: []
+    },
+    {
+      name: 'quartier_fund_requests',
+      sql: `
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_quartier_fund_requests_type') THEN
+            CREATE TYPE "enum_quartier_fund_requests_type" AS ENUM ('sante','orphelins');
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_quartier_fund_requests_statut') THEN
+            CREATE TYPE "enum_quartier_fund_requests_statut" AS ENUM ('en_attente','approuve','rejete');
+          END IF;
+        END $$;
+        CREATE TABLE IF NOT EXISTS "quartier_fund_requests" (
+          "id"                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+          "fund_id"              UUID        NOT NULL,
+          "type"                 "enum_quartier_fund_requests_type" NOT NULL,
+          "montant"              BIGINT       NOT NULL,
+          "nombre_sacs"          INTEGER,
+          "beneficiaire_nom"     VARCHAR(255),
+          "beneficiaire_contact" VARCHAR(255),
+          "description"          TEXT,
+          "demandeur_numero_h"   VARCHAR(255) NOT NULL,
+          "demandeur_nom"        VARCHAR(255),
+          "confirmations"        JSONB        NOT NULL DEFAULT '[]',
+          "rejete_par"           VARCHAR(255),
+          "statut"               "enum_quartier_fund_requests_statut" NOT NULL DEFAULT 'en_attente',
+          "executed_at"          TIMESTAMPTZ,
+          "created_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_qfr_fund_id ON "quartier_fund_requests" ("fund_id");`,
+        `CREATE INDEX IF NOT EXISTS idx_qfr_statut  ON "quartier_fund_requests" ("statut");`
       ],
       alters: []
     }
@@ -2607,6 +2691,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);
+app.use('/api/quartier-fund', quartierFundRoutes);
 app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);
 app.use('/api/djomy', djomyPaymentRoutes);
 app.use('/api/moftal-pay', moftalPayRoutes);

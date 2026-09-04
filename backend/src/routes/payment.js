@@ -6,6 +6,7 @@ import User from '../models/User.js';
 import { FamilyTree } from '../models/additional.js';
 import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
+import QuartierFund from '../models/QuartierFund.js';
 import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import { sequelize } from '../../config/database.js';
 import { Op } from 'sequelize';
@@ -600,6 +601,18 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     amount = montantDepot;
   }
 
+  // Dépôt Compte Solidarité (quartier/sous-préfecture) — relatedId encodé
+  // "scope:location:categorie:montant" car ce dépôt ne concerne pas l'auteur
+  // du paiement lui-même (pas de compte perso) mais un lieu + une catégorie.
+  if (purpose === 'wallet_depot_quartier_fund') {
+    const parts = String(relatedId || '').split(':');
+    const montantDepot = parseInt(parts[3], 10);
+    if (!montantDepot || montantDepot < 1000) {
+      return { error: 'Montant minimum de dépôt : 1 000 GNF.' };
+    }
+    amount = montantDepot;
+  }
+
   if (!amount || !purpose) return { error: 'Montant et objet requis' };
   return { amount };
 }
@@ -872,6 +885,26 @@ export async function handlePostPayment(payment) {
         console.log(`✅ Dépôt compte famille — ${montantNet.toLocaleString()} GNF crédités | ${payment.payerNumeroH} | txRef: ${payment.txRef}`);
       } else {
         console.warn(`⚠️ Dépôt wallet_depot_famille sans compte famille trouvé pour ${payment.payerNumeroH}`);
+      }
+    }
+
+    // ── Dépôt Moftal Pay — Compte Solidarité quartier/sous-préfecture ──────
+    if (payment.purpose === 'wallet_depot_quartier_fund') {
+      const [scope, location, categorie] = String(payment.relatedId || '').split(':');
+      const champSolde = categorie === 'orphelins' ? 'solde_orphelins' : 'solde_sante';
+      const fund = (scope && location)
+        ? await QuartierFund.findOne({ where: { scope, location: location.toLowerCase(), isActive: true } })
+        : null;
+      if (fund) {
+        const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
+        await fund.update({
+          [champSolde]:  Number(fund[champSolde]) + montantNet,
+          total_depose:  Number(fund.total_depose) + montantNet,
+        });
+        await enregistrerCommissionPlateforme('depot_quartier_fund', payment.txRef, payment.amount, commission, payment.payerNumeroH);
+        console.log(`✅ Dépôt Compte Solidarité — ${montantNet.toLocaleString()} GNF crédités (${categorie}) | ${scope}/${location} | txRef: ${payment.txRef}`);
+      } else {
+        console.warn(`⚠️ Dépôt wallet_depot_quartier_fund sans compte trouvé pour relatedId=${payment.relatedId}`);
       }
     }
 
