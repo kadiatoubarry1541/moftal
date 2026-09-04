@@ -378,8 +378,7 @@ En français, l'ordre est généralement : Sujet + Verbe + Compléments""",
                 "Que je mange (subjonctif)"
             ]
         }
-    }
-}
+    },
 
     # =========================================================
     # NIVEAU SECONDE (2nde) — Première année du lycée

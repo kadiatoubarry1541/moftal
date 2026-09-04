@@ -949,7 +949,17 @@ Mais même sans clé API, je peux répondre à beaucoup de questions ! Essaie de
 
     # Recherche dans la base de cours de maths (si disponible)
     elif COURS_DISPONIBLES and any(mot in message_lower for mot in MOTS_CLES_MATHS):
-        resultats_maths = rechercher_cours_maths(message_lower)
+        # Sujets Terminale spécifiques vérifiés en priorité : rechercher_cours_maths()
+        # fait une recherche générique qui peut accrocher un autre cours par coïncidence
+        # (ex: "logarithme népérien" apparaît aussi dans le cours sur les exponentielles).
+        sujets_specifiques_stpl = [
+            'nombre complexe', 'nombres complexes', 'affixe', 'partie imaginaire',
+            'arithmétique', 'arithmetique', 'pgcd', 'division euclidienne', 'bézout', 'bezout',
+            'logarithme népérien', 'logarithme neperien',
+            'probabilité conditionnelle', 'probabilite conditionnelle', 'arbre pondéré', 'arbre pondere',
+            'similitude', 'application affine', 'homothétie', 'homothetie',
+        ]
+        resultats_maths = [] if any(mot in message_lower for mot in sujets_specifiques_stpl) else rechercher_cours_maths(message_lower)
         if resultats_maths:
             cours = resultats_maths[0]['cours']
             niveau_affiche = resultats_maths[0]['niveau'].replace('_', ' ').upper()
@@ -1292,6 +1302,137 @@ u₀ = 2, q = 3 → u₄ = 2 × 3⁴ = 2 × 81 = **162**
 
 Continue comme ça ! 💪"""
 
+        elif any(mot in message_lower for mot in ['nombre complexe', 'nombres complexes', 'complexe', 'partie imaginaire', 'partie réelle', 'module et argument', 'forme trigonométrique', 'forme exponentielle', 'affixe']):
+            return """Excellente question ! 📐
+
+**Nombres Complexes — Terminale**
+
+Un nombre complexe s'écrit **z = a + bi**, avec a la partie réelle, b la partie imaginaire, et i² = -1.
+
+**Les 3 formes d'un nombre complexe :**
+| Forme | Écriture |
+|---|---|
+| Algébrique | z = a + bi |
+| Trigonométrique | z = r(cos θ + i sin θ) |
+| Exponentielle | z = r·e^(iθ) |
+
+**Module et argument :**
+- Module : r = \\|z\\| = √(a² + b²)
+- Argument θ : cos θ = a/r, sin θ = b/r
+
+**Opérations :**
+- Conjugué : z̄ = a - bi (z + z̄ est réel, z - z̄ est imaginaire pur)
+- Somme/produit : (a+bi) + (c+di) = (a+c) + (b+d)i ; (a+bi)(c+di) = (ac-bd) + (ad+bc)i
+- Module d'un produit : \\|z₁z₂\\| = \\|z₁\\|·\\|z₂\\|
+- Argument d'un produit : arg(z₁z₂) = arg(z₁) + arg(z₂)
+
+**Exemple :**
+z₁ = 3(2-i) + i(3+2i) = 6 - 3i + 3i - 2 = **4**
+
+**Résoudre une équation dans C :** ex. z² - 2z + 4 = 0 → discriminant Δ = -12 < 0, donc deux solutions complexes conjuguées : z = 1 ± i√3
+
+**Interprétation géométrique :** pour A, B, C d'affixes zA, zB, zC, l'argument de (zC-zA)/(zB-zA) donne l'angle (AB, AC), et son module donne le rapport AC/AB — très utile pour montrer qu'un triangle est isocèle, rectangle ou équilatéral.
+
+Continue comme ça, les complexes relient l'algèbre à la géométrie du plan ! 💪"""
+
+        elif any(mot in message_lower for mot in ['arithmétique', 'arithmetique', 'pgcd', 'division euclidienne', 'algorithme d\'euclide', 'nombres premiers', 'congruence', 'divisibilité', 'bézout', 'bezout']):
+            return """Excellente question ! 📐
+
+**Arithmétique — Terminale**
+
+**Division euclidienne :** pour a, b entiers (b≠0), il existe un unique couple (q, r) avec a = b×q + r et 0 ≤ r < \\|b\\|.
+
+**PGCD et algorithme d'Euclide :** pour trouver PGCD(a, b), on effectue des divisions euclidiennes successives ; le PGCD est le dernier reste non nul.
+Exemple : PGCD(354, 20) → 354 = 20×17+14 ; 20 = 14×1+6 ; 14 = 6×2+2 ; 6 = 2×3+0 → **PGCD = 2**
+
+**Nombres premiers entre eux :** a et b sont premiers entre eux si PGCD(a,b) = 1.
+
+**Congruences :** a ≡ b (mod n) signifie que a et b ont le même reste dans la division par n (autrement dit, n divise a - b).
+- Exemple : 1999 ≡ 4 (mod 7), car 1999 = 7×285 + 4
+
+**Théorème de Bézout :** a et b sont premiers entre eux si et seulement s'il existe des entiers u, v tels que au + bv = 1. Ces équations (dites diophantiennes) se résolvent avec l'algorithme d'Euclide "remonté".
+
+**Nombres premiers :** un entier n > 1 est premier s'il n'a que deux diviseurs (1 et lui-même). Pour tester si n est premier, il suffit de vérifier qu'aucun nombre premier ≤ √n ne le divise.
+
+Continue comme ça, l'arithmétique c'est de la logique pure sur les nombres entiers ! 💪"""
+
+        elif any(mot in message_lower for mot in ['logarithme népérien', 'logarithme neperien', 'fonction ln', 'ln(x)', 'propriétés du logarithme']):
+            return """Excellente question ! 📐
+
+**Fonction Logarithme Népérien — Terminale**
+
+ln(x) est définie pour **x > 0**, et c'est la fonction réciproque de l'exponentielle : ln(eˣ) = x et e^(ln x) = x.
+
+**Propriétés algébriques :**
+- ln(1) = 0 ; ln(e) = 1
+- ln(a×b) = ln(a) + ln(b)
+- ln(a/b) = ln(a) - ln(b)
+- ln(aⁿ) = n×ln(a)
+- ln(√a) = ½ln(a)
+
+**Dérivée :** (ln x)' = 1/x, et pour une fonction composée : [ln(u(x))]' = u'(x)/u(x)
+
+**Limites de référence :**
+- lim(x→0⁺) ln(x) = -∞
+- lim(x→+∞) ln(x) = +∞
+- lim(x→+∞) ln(x)/x = 0 (ln "grandit" moins vite que x)
+- lim(x→0⁺) x·ln(x) = 0
+
+**Résoudre une équation avec ln :** toujours commencer par le domaine (arguments > 0) !
+Exemple : ln(5x+1) = ln(x-1) → domaine x > 1, puis 5x+1 = x-1 → 4x = -2 → x = -0,5 (rejeté, hors domaine) → **pas de solution**
+
+**Résoudre une inéquation :** ex. (ln x)² - ln x - 2 ≥ 0 → poser X = ln(x), résoudre X² - X - 2 ≥ 0, puis revenir à x.
+
+Continue comme ça, avec ln pense toujours "domaine d'abord" ! 💪"""
+
+        elif any(mot in message_lower for mot in ['probabilité conditionnelle', 'probabilite conditionnelle', 'arbre pondéré', 'arbre pondere', 'probabilité totale', 'événements indépendants', 'evenements independants']):
+            return """Excellente question ! 📐
+
+**Probabilité Conditionnelle — Terminale**
+
+La probabilité conditionnelle P_A(B) (ou P(B\\|A)) est la probabilité que B se réalise **sachant que A est déjà réalisé**.
+
+**Formule :** P_A(B) = P(A∩B) / P(A), avec P(A) ≠ 0
+
+**Arbre pondéré :** chaque branche porte une probabilité ; sur les branches du 2ème niveau, on écrit des probabilités conditionnelles. La probabilité d'un chemin = produit des probabilités le long du chemin.
+
+**Formule des probabilités totales :** si A et son contraire Ā forment une partition de l'univers :
+P(B) = P(A∩B) + P(Ā∩B) = P(A)×P_A(B) + P(Ā)×P_Ā(B)
+
+**Événements indépendants :** A et B sont indépendants si P(A∩B) = P(A) × P(B) (autrement dit, P_A(B) = P(B) : savoir que A est réalisé ne change rien à la probabilité de B).
+
+**Exemple :** Un test de dépistage : 1% des animaux sont malades (M). Si malade, le test est positif 85% du temps ; si sain, il est négatif 95% du temps.
+- P(M∩T) = P(M) × P_M(T) = 0,01 × 0,85 = 0,0085
+- P(T) = P(M)×P_M(T) + P(M̄)×P_M̄(T) = 0,01×0,85 + 0,99×0,05 = **0,058**
+- P_T(M) = P(M∩T)/P(T) = 0,0085/0,058 ≈ **14,7%** (même positif, peu de chances d'être malade car la maladie est rare !)
+
+Continue comme ça, avec la proba conditionnelle, dessine toujours l'arbre en premier ! 💪"""
+
+        elif any(mot in message_lower for mot in ['similitude', 'application affine', 'transformation du plan', 'homothétie', 'homothetie', 'rotation du plan', 'translation complexe']):
+            return """Excellente question ! 📐
+
+**Transformations du plan (similitudes) — Terminale**
+
+En utilisant les nombres complexes, chaque transformation du plan correspond à une écriture z' = f(z) :
+
+| Transformation | Écriture complexe | Caractéristique |
+|---|---|---|
+| Translation | z' = z + b | vecteur d'affixe b |
+| Homothétie | z' = k·z + b (k réel) | centre Ω, rapport k |
+| Rotation | z' = e^(iθ)·z + b | centre Ω, angle θ |
+| Similitude directe | z' = a·z + b (a complexe) | centre Ω, rapport \\|a\\|, angle arg(a) |
+
+**Trouver le centre Ω d'une similitude z' = az + b (a≠1) :** Ω est le point fixe, donc on résout ω = a·ω + b, soit **ω = b/(1-a)**.
+
+**Exemple :** z' = 2z + 3 - 2i (a=2 réel positif ≠ 1) → c'est une **homothétie** de rapport 2.
+Centre : ω = (3-2i)/(1-2) = (3-2i)/(-1) = **-3+2i**
+
+**Composée de similitudes :** la composée de deux similitudes directes est une similitude directe ; les rapports se multiplient et les angles s'additionnent.
+
+**Similitude indirecte (utilise z̄) :** ex. z' = a·z̄ + b — combine une similitude directe avec une réflexion (symétrie axiale).
+
+Continue comme ça, pour identifier une transformation, regarde d'abord si a est réel ou complexe, et s'il y a un z̄ ! 💪"""
+
         else:
             return """Excellente question ! 📐
 
@@ -1315,10 +1456,16 @@ Je suis ton professeur de **Mathématiques niveau STPL** (Seconde → Terminale)
 - Loi binomiale B(n,p)
 
 **Terminale STPL :**
-- Calcul intégral (primitives, intégrales, valeur moyenne)
+- Calcul intégral (primitives, intégrales, intégration par parties, valeur moyenne)
 - Équations différentielles (y' = ay et y' = ay + b)
 - Loi normale N(μ, σ) et intervalle de confiance
 - Matrices (opérations, déterminant, inverse, systèmes)
+- Étude complète de fonction (tableau de variations, asymptotes)
+- Nombres complexes (formes algébrique/trigonométrique/exponentielle)
+- Arithmétique (PGCD, congruences, nombres premiers)
+- Fonction logarithme népérien
+- Probabilité conditionnelle
+- Transformations du plan (similitudes, homothéties, rotations)
 
 **Pose-moi tes questions de maths, par exemple :**
 - "Calcule la dérivée de x³ - 2x"
@@ -2288,7 +2435,7 @@ L'adjectif s'accorde avec le nom qu'il décrit (genre et nombre).
 Continue comme ça ! 💪"""
     
     # ORTHOGRAPHE - ACCENTS (100% COMPLET)
-    elif any(mot in message_lower for mot in ['accent', 'accents', 'é', 'è', 'ê', 'à', 'ù', 'ç', 'cédille']):
+    elif any(mot in message_lower for mot in ['accent', 'accents', 'accent aigu', 'accent grave', 'accent circonflexe', 'cédille', 'cedille']):
         return """Excellente question ! ✨
 
 Les accents en français changent la prononciation et parfois le sens.

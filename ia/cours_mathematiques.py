@@ -782,7 +782,7 @@ MOTS_CLES_MATHS = [
     "variation", "extremum", "maximum", "minimum", "croissante", "décroissante",
     "tangente", "limite",
     # Nombres
-    "exponentielle", "logarithme", "ln", "log", "puissance", "exposant",
+    "exponentielle", "logarithme", "ln", "puissance", "exposant",
     "racine carrée", "racine carre",
     # Géométrie
     "vecteur", "coordonnée", "distance", "milieu", "droite", "pente",
@@ -804,4 +804,22 @@ MOTS_CLES_MATHS = [
     "intégration", "integration", "asymptote", "branche infinie",
     "tableau de variation", "domaine de définition", "domaine de definition",
     "ensemble de définition", "ensemble de definition",
+    # Nombres complexes
+    "nombre complexe", "nombres complexes", "complexe", "partie imaginaire",
+    "partie réelle", "partie reelle", "module et argument", "forme trigonométrique",
+    "forme exponentielle", "affixe",
+    # Arithmétique
+    "arithmétique", "arithmetique", "pgcd", "division euclidienne",
+    "algorithme d'euclide", "nombres premiers", "congruence", "divisibilité",
+    "divisibilite", "bézout", "bezout",
+    # Logarithme népérien
+    "logarithme népérien", "logarithme neperien", "fonction ln", "ln(x)",
+    "propriétés du logarithme", "proprietes du logarithme",
+    # Probabilité conditionnelle
+    "probabilité conditionnelle", "probabilite conditionnelle", "arbre pondéré",
+    "arbre pondere", "probabilité totale", "probabilite totale",
+    "événements indépendants", "evenements independants",
+    # Transformations du plan / similitudes
+    "similitude", "application affine", "transformation du plan", "homothétie",
+    "homothetie", "rotation du plan", "translation complexe",
 ]
