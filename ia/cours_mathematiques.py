@@ -800,4 +800,8 @@ MOTS_CLES_MATHS = [
     "matrice", "déterminant", "determinant", "inverse",
     # Équations diff.
     "différentielle", "differentielle",
+    # Étude de fonction
+    "intégration", "integration", "asymptote", "branche infinie",
+    "tableau de variation", "domaine de définition", "domaine de definition",
+    "ensemble de définition", "ensemble de definition",
 ]
