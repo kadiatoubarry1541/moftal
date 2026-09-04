@@ -965,7 +965,83 @@ Mais même sans clé API, je peux répondre à beaucoup de questions ! Essaie de
 Continue comme ça, tu progresses en maths ! 💪"""
 
         # Réponses spécifiques pour les maths STPL les plus demandées
-        if any(mot in message_lower for mot in ['dérivée', 'derivee', 'dériver', 'dérivation', 'règle dérivée']):
+        if any(mot in message_lower for mot in ['notion de fonction', 'qu\'est-ce qu\'une fonction', 'définition de fonction', 'definition de fonction', 'domaine de définition', 'domaine de definition', 'ensemble de définition', 'ensemble de definition']):
+            return """Excellente question ! 📐
+
+**Notion de fonction — Seconde**
+
+**1) Définition**
+
+Une fonction f est une relation qui, à chaque élément x d'un ensemble A, associe **au plus un** élément y de l'ensemble B (au zéro ou un élément de B, jamais plus).
+
+On note : **f : A → B, x ↦ y = f(x)**
+
+- x s'appelle **l'antécédent** (la valeur de départ)
+- y = f(x) s'appelle **l'image** de x par f
+
+**2) Ensemble (ou domaine) de définition**
+
+C'est l'ensemble des valeurs de x pour lesquelles f(x) existe réellement. On le note Df.
+
+**Cas fréquents à surveiller :**
+- Une fraction 1/g(x) : il faut g(x) ≠ 0
+- Une racine carrée √g(x) : il faut g(x) ≥ 0
+
+**Exemple concret :**
+Soit f définie par f(x) = √(x - 1)
+
+Pour que f(x) existe, il faut : x - 1 ≥ 0, c'est-à-dire **x ≥ 1**
+
+Donc **Df = [1 ; +∞[**
+
+Exemples de valeurs : f(5) = √4 = 2, f(10) = √9 = 3
+
+**3) Représentation graphique**
+
+Le plan est muni d'un repère orthonormé (O, I, J). La courbe représentative (Cf) de f est l'ensemble des points M(x ; f(x)) pour x ∈ Df.
+
+En résumé : une fonction associe à chaque x un seul y = f(x), et le domaine de définition, c'est l'ensemble des x où ce calcul est possible.
+
+Continue comme ça, tu maîtrises les bases des fonctions ! 💪"""
+
+        elif any(mot in message_lower for mot in ['étude de fonction', 'etude de fonction', 'étudier une fonction', 'tableau de variation', 'asymptote', 'branche infinie', 'branches infinies']):
+            return """Excellente question ! 📐
+
+**Étude complète d'une fonction — Terminale**
+
+Voici le plan à suivre, dans l'ordre, pour étudier n'importe quelle fonction f :
+
+**1) Ensemble de définition Df**
+Détermine les valeurs interdites (dénominateur nul, racine négative, logarithme de nombre négatif...).
+
+**2) Limites aux bornes de Df**
+Calcule lim f(x) quand x tend vers chaque borne (souvent -∞, +∞, ou une valeur interdite).
+
+**3) Dérivée f'(x) et son signe**
+Calcule f'(x), puis résous f'(x) > 0, f'(x) < 0, f'(x) = 0 pour connaître le sens de variation.
+
+**4) Tableau de variations**
+Résume x, le signe de f'(x), et les valeurs/limites de f(x) dans un tableau.
+
+**5) Branches infinies (asymptotes)**
+- **Asymptote verticale (AV)** en x = a si lim f(x) = ±∞ quand x → a
+- **Asymptote horizontale (AH)** y = b si lim f(x) = b quand x → ±∞
+- **Asymptote oblique (AO)** y = ax + b si lim [f(x) - (ax+b)] = 0
+- Si aucune de ces limites n'existe (ex: a = lim f(x)/x = +∞), on parle de **branche parabolique**
+
+**6) Intersections avec les axes**
+- Avec (x'Ox) : résoudre f(x) = 0
+- Avec (y'Oy) : calculer f(0)
+
+**7) Tracé de la courbe (Cf)**
+En t'appuyant sur le tableau de variations, les asymptotes, et les points remarquables trouvés.
+
+**Exemple de raisonnement (théorème des valeurs intermédiaires) :**
+Si g est continue et strictement monotone sur un intervalle, et que g change de signe (ex: g(3,5) × g(3,6) < 0), alors g s'annule une seule fois entre les deux : il existe un unique β avec g(β) = 0.
+
+Continue comme ça, l'étude de fonction demande de la méthode, pas de la vitesse ! 💪"""
+
+        elif any(mot in message_lower for mot in ['dérivée', 'derivee', 'dériver', 'dérivation', 'règle dérivée']):
             return """Excellente question ! 📐
 
 **Les Dérivées — Première/Terminale STPL**
@@ -1000,6 +1076,45 @@ f(x) = x³ - 3x + 2
 y = f'(x₀)(x - x₀) + f(x₀)
 
 Continue comme ça, tu maîtrises les dérivées ! 💪"""
+
+        elif any(mot in message_lower for mot in ['intégration par parties', 'integration par parties', 'ipp', 'par parties']):
+            return """Excellente question ! 📐
+
+**Intégration par parties (IPP) — Terminale**
+
+**Formule à connaître par cœur :**
+∫[a→b] u(x)v'(x) dx = [u(x)v(x)]ₐᵇ - ∫[a→b] u'(x)v(x) dx
+
+**Méthode :**
+1. Choisis u(x) (facile à dériver) et v'(x) (facile à intégrer)
+2. Calcule u'(x) et une primitive v(x)
+3. Applique la formule
+4. Calcule la nouvelle intégrale (souvent plus simple)
+
+**Exemple complet (suite de type Iₙ) :**
+Soit Iₙ = ∫[1→2] (1/xⁿ) × e^(1/x) dx
+
+**Calcul de I₂ :**
+On pose le changement de variable t = 1/x, dt = -1/x² dx, donc dx = -dt/t².
+Quand x = 1, t = 1 ; quand x = 2, t = 1/2.
+
+I₂ = ∫[1→2] (1/x²) e^(1/x) dx = ∫[1→1/2] t × eᵗ × (-1/t²) dt = ∫[1/2→1] eᵗ dt = [eᵗ]₁ᵢ₂¹ = e - √e
+
+**I₂ = e - √e**
+
+**Relation de récurrence entre Iₙ₊₁ et Iₙ (par IPP) :**
+On pose u = 1/xⁿ (donc u' = -n/xⁿ⁺¹) et dv = e^(1/x)/x² dx (donc v = -e^(1/x)).
+
+Iₙ₊₁ = [-e^(1/x)/xⁿ]₁² - n∫[1→2] e^(1/x)/xⁿ⁺¹ dx
+
+Après simplification, on obtient la relation :
+**Iₙ₊₁ = e - √e/2ⁿ⁻¹ + (1 - n)Iₙ**
+
+Cette relation permet de calculer I₃, I₄... de proche en proche à partir de I₂.
+
+**Astuce d'examen :** Dans une suite d'exercices Iₙ, calcule toujours le premier terme par changement de variable ou calcul direct, puis établis la relation de récurrence par IPP entre Iₙ₊₁ et Iₙ.
+
+Continue comme ça, l'IPP demande de la pratique mais la méthode ne change jamais ! 💪"""
 
         elif any(mot in message_lower for mot in ['intégrale', 'integrale', 'primitive', 'intégration', 'calcul intégral']):
             return """Excellente question ! 📐
@@ -3114,133 +3229,7 @@ L'imparfait, c'est le temps qui exprime une action dans le passé qui dure ou un
 **En résumé :** L'imparfait exprime une action dans le passé qui dure, une habitude passée ou une description. Il se forme avec le radical (nous) + terminaisons -ais, -ais, -ait, -ions, -iez, -aient.
 
 Continue comme ça ! 💪"""
-- Nous étions
-- Vous étiez
-- Ils/Elles étaient
 
-**3. Verbe "avoir" à l'imparfait :**
-- J'avais
-- Tu avais
-- Il/Elle avait
-- Nous avions
-- Vous aviez
-- Ils/Elles avaient
-
-**4. Verbe "faire" à l'imparfait :**
-- Je faisais
-- Tu faisais
-- Il/Elle faisait
-- Nous faisions
-- Vous faisiez
-- Ils/Elles faisaient
-
-**RÈGLE DE FORMATION DE L'IMPARFAIT (100% COMPLET) :**
-
-**Pour tous les verbes (réguliers et irréguliers) :**
-- On prend le radical du verbe à la 1ère personne du pluriel (nous)
-- On enlève "-ons"
-- On ajoute les terminaisons : -ais, -ais, -ait, -ions, -iez, -aient
-
-**Exemple avec "manger" :**
-- Nous mangeons → radical "mang"
-- Je mangeais, tu mangeais, il mangeait, nous mangions, vous mangiez, ils mangeaient
-
-**QUAND UTILISER L'IMPARFAIT (100% COMPLET) :**
-
-**1. Habitude dans le passé :**
-   - "Quand j'étais petit, je mangeais tous les jours à midi." (habitude)
-   - "Avant, je jouais au football." (habitude passée)
-
-**2. Action qui dure dans le passé :**
-   - "Hier, il pleuvait." (action qui durait)
-   - "Pendant que je lisais, il dormait." (actions simultanées)
-
-**3. Description dans le passé :**
-   - "Il faisait beau." (description)
-   - "Le ciel était bleu." (description)
-
-**4. Action en cours interrompue :**
-   - "Je lisais quand il est arrivé." (action en cours interrompue)
-   - "Il dormait quand le téléphone a sonné." (action interrompue)
-
-**DIFFÉRENCE ENTRE PASSÉ COMPOSÉ ET IMPARFAIT :**
-
-**Passé composé :** Action terminée, précise, unique
-- "Hier, j'ai mangé une pomme." (action terminée, précise)
-
-**Imparfait :** Action qui dure, habitude, description
-- "Avant, je mangeais des pommes tous les jours." (habitude)
-- "Il pleuvait quand je suis sorti." (action qui durait)
-
-**EXEMPLES CONCRETS (7 exemples) :**
-1. "Quand j'étais enfant, je jouais tous les jours." (habitude passée)
-2. "Hier, il pleuvait pendant que je marchais." (action qui durait)
-3. "Le soleil brillait et les oiseaux chantaient." (description)
-4. "Je lisais quand il est arrivé." (action interrompue)
-5. "Avant, nous allions à l'école à pied." (habitude)
-6. "Il faisait froid et je portais un manteau." (description)
-7. "Pendant que tu dormais, je travaillais." (actions simultanées)
-
-**EXERCICES PRATIQUES (5 exercices avec corrigés) :**
-
-**Exercice 1 :** Conjugue "manger" à l'imparfait (facile)
-- Je ... tous les jours → Je mangeais tous les jours
-- Tu ... souvent → Tu mangeais souvent
-- Il ... avec nous → Il mangeait avec nous
-- Nous ... ensemble → Nous mangions ensemble
-
-**Corrigé :**
-- Je mangeais (1ère personne)
-- Tu mangeais (2ème personne)
-- Il mangeait (3ème personne)
-- Nous mangions (1ère personne pluriel)
-
-**Exercice 2 :** Conjugue "être" à l'imparfait (moyen)
-- Je ... petit → J'étais petit
-- Tu ... content → Tu étais content
-- Il ... là → Il était là
-- Nous ... ensemble → Nous étions ensemble
-
-**Corrigé :**
-- J'étais
-- Tu étais
-- Il était
-- Nous étions
-
-**Exercice 3 :** Choisis entre passé composé et imparfait (difficile)
-- "Hier, j'ai mangé" (passé composé, action terminée) vs "Avant, je mangeais" (imparfait, habitude)
-- "Il a plu" (passé composé, action terminée) vs "Il pleuvait" (imparfait, action qui durait)
-- "Je lisais quand il est arrivé" (imparfait + passé composé, action en cours interrompue)
-
-**Exercice 4 :** Complète avec l'imparfait
-- "Quand j'étais petit, je ... (jouer) tous les jours" → "Quand j'étais petit, je jouais tous les jours"
-- "Il ... (pleuvoir) quand je suis sorti" → "Il pleuvait quand je suis sorti"
-- "Nous ... (aller) à l'école à pied" → "Nous allions à l'école à pied"
-
-**Exercice 5 :** Écris correctement
-- "Avant je mange tous les jours" → "Avant, je mangeais tous les jours" (imparfait)
-- "Hier il pleut" → "Hier, il pleuvait" (imparfait, action qui durait)
-- "Je lis quand il arrive" → "Je lisais quand il est arrivé" (imparfait + passé composé)
-
-**ASTUCES MNÉMOTECHNIQUES :**
-- **Imparfait** : pense à "avant, quand j'étais petit" (habitude, durée)
-- **Terminaisons** : -ais, -ais, -ait, -ions, -iez, -aient
-- **Formation** : radical (nous) + terminaisons
-- **Usage** : habitude, action qui dure, description
-
-**TABLEAU RÉCAPITULATIF :**
-
-| Temps | Usage | Exemple |
-|-------|-------|---------|
-| Imparfait | Habitude passée | Je mangeais tous les jours |
-| Imparfait | Action qui dure | Il pleuvait |
-| Imparfait | Description | Il faisait beau |
-| Passé composé | Action terminée | J'ai mangé hier |
-
-**En résumé :** L'imparfait exprime une action dans le passé qui dure, une habitude passée ou une description. Il se forme avec le radical (nous) + terminaisons -ais, -ais, -ait, -ions, -iez, -aient.
-
-Continue comme ça ! 💪"""
-    
     # GRAMMAIRE - ARTICLES (100% COMPLET)
     elif any(mot in message_lower for mot in ['article', 'articles', 'le la les', 'un une des', 'défini', 'indéfini']):
         return """Excellente question ! ✨
@@ -4417,6 +4406,71 @@ En résumé : le complément complète le verbe (COD directement, COI avec prép
 
 Continue comme ça ! 💪"""
     
+    # GRAMMAIRE - ANALYSE LOGIQUE (préparation BEPC)
+    elif any(mot in message_lower for mot in ['analyse logique', 'analyse grammaticale', 'nature et fonction', 'nature du mot', 'fonction du mot', 'proposition', 'propositions', 'sujet du verbe', "analyser une phrase"]):
+        return """Excellente question ! ✨
+
+**Analyse logique — préparation BEPC**
+
+Analyser une phrase, c'est répondre à deux questions pour chaque mot ou groupe de mots :
+1. **Quelle est sa nature ?** (nom, verbe, adjectif, pronom, préposition...)
+2. **Quelle est sa fonction ?** (sujet, COD, COI, complément circonstanciel...)
+
+**Méthode en 3 étapes :**
+1. Trouve le(s) verbe(s) conjugué(s) → cela indique le nombre de propositions.
+2. Pour chaque verbe, trouve son **sujet** (qui fait l'action ? on pose la question "Qui est-ce qui...?").
+3. Trouve les **compléments** du verbe (COD, COI, circonstanciel).
+
+**Exemple complet :**
+Phrase : "Le petit garçon mange une pomme rouge dans le jardin."
+
+| Mot / groupe | Nature | Fonction |
+|---|---|---|
+| Le petit garçon | groupe nominal | sujet du verbe "mange" |
+| mange | verbe (1er groupe, présent) | verbe conjugué |
+| une pomme rouge | groupe nominal | COD de "mange" |
+| dans le jardin | groupe prépositionnel | complément circonstanciel de lieu |
+
+**Les propositions :**
+- **Proposition indépendante** : elle a un sens complet toute seule (ex : "Il pleut.")
+- **Proposition principale** : elle commande une ou plusieurs propositions subordonnées.
+- **Proposition subordonnée** : elle dépend d'une autre proposition, souvent introduite par "que", "qui", "quand", "parce que"...
+  - Ex : "Je sais **qu'il viendra**." → "qu'il viendra" = subordonnée, complément d'objet de "sais"
+
+**Astuce d'examen :** compte toujours d'abord les verbes conjugués (un verbe conjugué = une proposition), puis analyse chaque proposition séparément.
+
+Continue comme ça ! 💪"""
+
+    # DICTÉE - MÉTHODE (préparation BEPC)
+    elif any(mot in message_lower for mot in ['dictée', 'dictee', 'faire une dictée', 'réussir une dictée', 'reussir une dictee', 'orthographe dictée']):
+        return """Excellente question ! ✨
+
+**Réussir une dictée — préparation BEPC**
+
+**Avant la dictée :**
+- Repose-toi bien, sois attentif dès la première lecture.
+- Écoute d'abord tout le texte une fois sans écrire, pour comprendre le sens général.
+
+**Pendant la dictée :**
+1. **Écoute la phrase en entier** avant d'écrire (ne commence pas à écrire mot par mot).
+2. **Identifie le sujet et le verbe** de chaque phrase mentalement : cela t'aide à trouver le bon accord.
+3. Fais attention aux **homophones** les plus fréquents :
+   - **a / à** : "a" (verbe avoir, on peut dire "avait") / "à" (préposition)
+   - **et / est** : "et" (addition, on peut dire "et puis") / "est" (verbe être, on peut dire "était")
+   - **son / sont** : "son" (possessif, + nom) / "sont" (verbe être, pluriel)
+   - **ou / où** : "ou" (choix, = "ou bien") / "où" (lieu ou temps)
+   - **ce / se** : "ce" (devant un nom) / "se" (devant un verbe pronominal)
+4. **Accorde** : sujet-verbe (s'accordent en nombre et personne), déterminant-nom-adjectif (en genre et nombre).
+
+**Après la dictée (relecture) :**
+- **1ère relecture** : vérifie que chaque phrase a un sens, qu'il ne manque pas de mots.
+- **2ème relecture** : vérifie chaque accord sujet-verbe (souligne les sujets et les verbes).
+- **3ème relecture** : vérifie les accords dans les groupes nominaux (déterminant-nom-adjectif) et les homophones.
+
+**Astuce d'examen :** ne te précipite jamais. Une dictée bien relue 3 fois vaut mieux qu'une dictée écrite vite sans relecture.
+
+Continue comme ça, la dictée s'améliore avec la pratique régulière ! 💪"""
+
     # GRAMMAIRE - ADVERBES
     elif any(mot in message_lower for mot in ['adverbe', 'adverbes', 'bien', 'mal', 'vite', 'lentement', 'beaucoup', 'peu']):
         return """Excellente question ! ✨
