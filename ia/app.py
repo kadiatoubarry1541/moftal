@@ -1330,6 +1330,100 @@ Pour des calculs numériques et des exercices complets, configure une clé API O
 
 Continue, pose-moi tes questions ! 💪"""
 
+    # ========== PHYSIQUE — TERMINALE (Mécanique) ==========
+
+    elif any(mot in message_lower for mot in ['cinématique', 'cinematique', 'mru', 'mruv', 'mouvement rectiligne', 'mouvement circulaire', 'vitesse angulaire', 'base de frenet', 'accélération tangentielle']):
+        return """Excellente question ! ⚙️
+
+**Cinématique du point matériel — Terminale**
+
+La cinématique étudie les mouvements sans s'occuper de leurs causes (les forces). Elle s'intéresse à : position, vitesse, accélération, durée.
+
+**Grandeurs de base :**
+| Grandeur | Définition | Unité |
+|---|---|---|
+| Vecteur position | OM = x·i + y·j + z·k | m |
+| Vecteur vitesse | v = d(OM)/dt | m/s |
+| Vecteur accélération | a = dv/dt | m/s² |
+
+**Mouvement Rectiligne Uniforme (MRU) :** a = 0, donc x = v·t + x₀
+
+**Mouvement Rectiligne Uniformément Varié (MRUV) :**
+- v = a·t + v₀
+- x = ½·a·t² + v₀·t + x₀
+- **Relation de Galilée (sans le temps) :** v² - v₀² = 2a(x - x₀)
+
+**Mouvement circulaire :**
+- Abscisse curviligne : s = R·θ
+- Vitesse angulaire : ω = dθ/dt (rad/s), avec v = R·ω
+- Accélération normale (centripète) : aₙ = v²/R ; tangentielle : aₜ = dv/dt
+- Circulaire uniforme si aₜ = 0
+
+**Exemple (type BAC) :** Un point part sans vitesse avec a = 0,8 m/s², atteint 8 m/s, parcourt 24 m à cette vitesse, puis freine sur 8 m jusqu'à l'arrêt.
+→ Durée totale : **15 s** ; distance totale : **72 m**
+
+Continue comme ça, la cinématique c'est de la méthode : identifie le type de mouvement, puis choisis la bonne formule ! 💪"""
+
+    elif any(mot in message_lower for mot in ['dynamique', 'relation fondamentale de la dynamique', 'rfd', 'théorème de l\'énergie cinétique', 'tec', 'théorème du centre d\'inertie', 'tci', 'quantité de mouvement', 'lois de newton', 'travail d\'une force', 'plan incliné']):
+        return """Excellente question ! ⚙️
+
+**Dynamique du point matériel — Terminale**
+
+La dynamique relie le mouvement d'un corps aux forces qui le provoquent.
+
+**Grandeurs clés :**
+- **Travail d'une force constante :** W = F · AB = F × AB × cos(α) (en Joules)
+  - Moteur si W > 0, résistant si W < 0, nul si α = 90°
+- **Puissance :** P = W/t = F × v × cos(α)
+- **Énergie cinétique :** Ec = ½mv²
+- **Énergie potentielle de pesanteur :** Ep = mgh
+- **Quantité de mouvement :** p = m·v
+
+**Les lois fondamentales :**
+- **Principe de l'inertie (1ère loi de Newton) :** si ΣF = 0, le corps est au repos ou en MRU
+- **Théorème du centre d'inertie / RFD (2ème loi) :** ΣF = m·a
+- **Théorème de l'énergie cinétique (TEC) :** ΔEc = Ecf - Eci = Σ des travaux de toutes les forces
+
+**Exemple résolu : plan incliné avec frottement**
+Un solide de masse m glisse sur un plan incliné d'angle α, avec frottement f.
+1. **Nature du mouvement (TCI) :** en projetant sur l'axe du mouvement : m·g·sin(α) - f = m·a → **a = g·sin(α) - f/m** (rectiligne uniformément accéléré)
+2. **Réaction normale :** R_N = m·g·cos(α)
+3. **Vitesse en un point (TEC) :** v_B² - v_A² = 2·AB·(g·sin(α) - f/m)
+4. **Sans frottement :** on pose f = 0 dans toutes les formules
+
+Continue comme ça, en dynamique il faut toujours commencer par faire le bilan des forces ! 💪"""
+
+    elif any(mot in message_lower for mot in ['gravitation', 'champ gravitationnel', 'satellite', 'lois de kepler', 'kepler', 'vitesse cosmique', 'satellite géostationnaire', 'apesanteur']):
+        return """Excellente question ! ⚙️
+
+**Interaction et champ gravitationnel — Terminale**
+
+**Loi de gravitation universelle (Newton) :** deux masses m₁ et m₂ séparées de d s'attirent avec une force :
+F = G × (m₁ × m₂) / d² (N), avec G = 6,67 × 10⁻¹¹ (unité SI)
+
+**Champ gravitationnel :**
+- Au sol : g₀ = G × M / R²
+- À l'altitude h : g = G × M / (R+h)² = g₀ × (R/(R+h))²
+
+**Satellites en orbite circulaire :**
+- Vitesse : v = √(GM/(R+h)) — indépendante de la masse du satellite
+- Période : T = 2π√((R+h)³/GM)
+- **Satellite géostationnaire :** même période que la Terre, altitude ≈ 36 000 km, dans le plan équatorial
+
+**Les 3 lois de Kepler :**
+1. Loi des orbites : la trajectoire d'une planète est une ellipse (le Soleil à un foyer)
+2. Loi des aires : le segment Soleil-planète balaie des aires égales en des durées égales
+3. Loi des périodes : T²/r³ = constante
+
+**Les 3 vitesses cosmiques (Terre) :**
+- v₁ (satellisation, h≈0) : v₁ = √(g₀R) ≈ **7,92 km/s**
+- v₂ (libération) : v₂ = √2 × v₁ ≈ **11,2 km/s**
+- v₃ (échappement au Soleil) ≈ **13,8 km/s**
+
+**Exemple :** Un satellite orbite à 180 km d'altitude (R Terre = 6370 km, g₀ = 9,8 m/s²) → Période ≈ **1 h 30 min**, vitesse ≈ **7,8 km/s**
+
+Continue comme ça, la gravitation relie la mécanique du quotidien à celle des planètes ! 💪"""
+
     # Détection de questions sur la programmation - RÉPONSE SIMPLE ET PRÉCISE
     elif any(mot in message_lower for mot in ['programmation', 'code', 'python', 'javascript', 'algorithme', 'coder', 'programmer']):
         return """Excellente question ! ✨
