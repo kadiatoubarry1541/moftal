@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import CompteSolidariteQuartier from './CompteSolidariteQuartier';
 
 const MAX_VIDEO_SECONDS = 5;
 
@@ -429,7 +430,8 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
             )}
           </label>
         )}
-        <p className="font-bold text-slate-800 text-lg">{locationName}</p>
+        <p className="font-bold text-slate-800 text-lg flex-1">{locationName}</p>
+        <CompteSolidariteQuartier scope={scope} location={location} locationName={locationName} />
       </div>
 
       {/* Un seul bouton : caisse, cotisation et projets par domaine — tout est dedans */}
