@@ -29,7 +29,7 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Guinée': {
     level1: { label: 'Région', placeholder: 'Ex: Basse-Guinée, Fouta-Djallon, Haute-Guinée, Guinée Forestière' },
     level2: { label: 'Préfecture', placeholder: 'Ex: Conakry, Kindia, Labé, Kankan, Faranah, N\'Zérékoré...' },
-    level3: { label: 'Sous-préfecture', placeholder: 'Ex: Kaloum, Dixinn, Kindia-Centre, Labé-Centre, Mamou-Centre...' },
+    level3: { label: 'Sous-préfecture / Commune', placeholder: 'Ex: Kaloum, Dixinn, Kindia-Centre, Labé-Centre, Mamou-Centre...' },
     level4: { label: 'Quartier / Village', placeholder: 'Ex: Almamya, Bambeto, Hafia, Dogomet, Simbaya...' },
   },
 
