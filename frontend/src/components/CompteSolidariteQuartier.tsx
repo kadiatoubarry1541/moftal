@@ -12,7 +12,7 @@ interface Props {
 interface Chef { numeroH: string; nom: string; photo: string | null }
 interface Compte {
   id: string;
-  soldes: { sante: number; orphelins: number; total: number };
+  soldes: { sante: number; orphelins: number; developpement: number; disponible: number; total: number };
   totalDepose: number;
   totalDepense: number;
   chefs: Chef[];
@@ -57,10 +57,10 @@ export default function CompteSolidariteQuartier({ scope, location, locationName
   const [chef2, setChef2] = useState('');
   const [chef3, setChef3] = useState('');
 
-  // Dépôt
+  // Dépôt — réparti automatiquement 50% santé / 20% orphelins / 30% développement (bloqué)
   const [montantDepot, setMontantDepot] = useState('');
-  const [categorieDepot, setCategorieDepot] = useState<'sante' | 'orphelins'>('sante');
   const [showDepotPayment, setShowDepotPayment] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
 
   // Demande de paiement (chef)
   const [showDemande, setShowDemande] = useState(false);
@@ -252,19 +252,34 @@ export default function CompteSolidariteQuartier({ scope, location, locationName
 
               {existe && compte && (
                 <>
-                  {/* Soldes */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                      <div className="text-[11px] text-emerald-700 font-bold">🏥 Santé</div>
-                      <div className="text-lg font-black text-emerald-800">{fmt(compte.soldes.sante)} GNF</div>
-                    </div>
-                    <div className="bg-amber-50 rounded-xl p-3 text-center">
-                      <div className="text-[11px] text-amber-700 font-bold">🍚 Orphelins</div>
-                      <div className="text-lg font-black text-amber-800">{fmt(compte.soldes.orphelins)} GNF</div>
-                    </div>
+                  {/* Solde global, détail dépliable */}
+                  <div className="bg-cyan-50 rounded-xl p-4 text-center">
+                    <div className="text-xs text-cyan-700 font-bold">💰 Solde total</div>
+                    <div className="text-2xl font-black text-cyan-900">{fmt(compte.soldes.total)} GNF</div>
+                    <button onClick={() => setShowDetail(v => !v)} className="text-[11px] text-cyan-700 underline mt-1">
+                      {showDetail ? 'Cacher le détail' : 'Voir le détail'}
+                    </button>
                   </div>
+
+                  {showDetail && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-emerald-50 rounded-xl p-2 text-center">
+                        <div className="text-[10px] text-emerald-700 font-bold">🏥 Santé</div>
+                        <div className="text-sm font-black text-emerald-800">{fmt(compte.soldes.sante)}</div>
+                      </div>
+                      <div className="bg-amber-50 rounded-xl p-2 text-center">
+                        <div className="text-[10px] text-amber-700 font-bold">🍚 Orphelins</div>
+                        <div className="text-sm font-black text-amber-800">{fmt(compte.soldes.orphelins)}</div>
+                      </div>
+                      <div className="bg-gray-100 rounded-xl p-2 text-center">
+                        <div className="text-[10px] text-gray-500 font-bold">🔒 Développement</div>
+                        <div className="text-sm font-black text-gray-600">{fmt(compte.soldes.developpement)}</div>
+                      </div>
+                    </div>
+                  )}
                   <p className="text-[11px] text-gray-400 text-center">
-                    Jamais de retrait en argent — paiement direct hôpital ou riz. Total déposé : {fmt(compte.totalDepose)} GNF.
+                    Chaque dépôt est réparti automatiquement : 50% santé, 20% orphelins, 30% développement (bloqué pour le moment).
+                    Jamais de retrait en argent. Total déposé depuis le début : {fmt(compte.totalDepose)} GNF.
                   </p>
 
                   {/* Chefs */}
@@ -282,16 +297,6 @@ export default function CompteSolidariteQuartier({ scope, location, locationName
                   {/* Dépôt */}
                   <div className="bg-gray-50 rounded-xl p-3 space-y-2">
                     <p className="text-xs font-bold text-gray-600">Déposer de l'argent</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setCategorieDepot('sante')}
-                        className={`flex-1 py-1.5 rounded-full text-xs font-bold ${categorieDepot === 'sante' ? 'bg-emerald-600 text-white' : 'bg-white border text-gray-600'}`}
-                      >🏥 Santé</button>
-                      <button
-                        onClick={() => setCategorieDepot('orphelins')}
-                        className={`flex-1 py-1.5 rounded-full text-xs font-bold ${categorieDepot === 'orphelins' ? 'bg-amber-600 text-white' : 'bg-white border text-gray-600'}`}
-                      >🍚 Orphelins</button>
-                    </div>
                     <div className="flex gap-2">
                       <input
                         type="number"
@@ -412,8 +417,8 @@ export default function CompteSolidariteQuartier({ scope, location, locationName
         onSuccess={onDepotSuccess}
         amount={parseInt(montantDepot) || 0}
         purpose="wallet_depot_quartier_fund"
-        relatedId={`${scope}:${location}:${categorieDepot}:${montantDepot}`}
-        description={`Dépôt Compte Solidarité — ${locationName} (${categorieDepot === 'sante' ? 'Santé' : 'Orphelins'})`}
+        relatedId={`${scope}:${location}:${montantDepot}`}
+        description={`Dépôt Compte Solidarité — ${locationName}`}
       />
     </>
   );
