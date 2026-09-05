@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import CompteSolidariteQuartier from './CompteSolidariteQuartier';
+import CompteSolidariteQuartier, { type CompteSolidariteQuartierHandle } from './CompteSolidariteQuartier';
 
 const MAX_VIDEO_SECONDS = 5;
 
@@ -41,6 +41,7 @@ interface Props {
 
 export interface DeveloppementSectionHandle {
   openProjets: () => void;
+  openSolidarite: () => void;
 }
 
 function getMyNumeroH(): string | null {
@@ -65,7 +66,12 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
   const [loadingProjets, setLoadingProjets] = useState(true);
   const [activeDomaine, setActiveDomaine] = useState<string | null>(null);
   const [showProjets, setShowProjets] = useState(false);
-  useImperativeHandle(ref, () => ({ openProjets: () => setShowProjets(true) }), []);
+  const [showCaisseMenu, setShowCaisseMenu] = useState(false);
+  const soliRef = useRef<CompteSolidariteQuartierHandle>(null);
+  useImperativeHandle(ref, () => ({
+    openProjets: () => setShowProjets(true),
+    openSolidarite: () => soliRef.current?.open(),
+  }), []);
   const [showDon, setShowDon] = useState(false);
   const [showMesDons, setShowMesDons] = useState(false);
   const [mesDons, setMesDons] = useState<any[]>([]);
@@ -431,24 +437,45 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
           </label>
         )}
         <p className="font-bold text-slate-800 text-lg flex-1">{locationName}</p>
-        <CompteSolidariteQuartier scope={scope} location={location} locationName={locationName} />
       </div>
+      <CompteSolidariteQuartier ref={soliRef} scope={scope} location={location} locationName={locationName} />
 
-      {/* Un seul bouton : caisse, cotisation et projets par domaine — tout est dedans */}
+      {/* Un seul bouton "Caisse" : ouvre un choix entre Projets et Solidarité */}
       {!hideProjetsButton && (
-        <button
-          onClick={() => setShowProjets(true)}
-          className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl text-left shadow"
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📁</span>
-            <div>
-              <p className="font-bold text-white text-sm">Projets</p>
-              <p className="text-green-100 text-xs">{fmt(totalCollecte)} · {nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''} · {projets.length} projet{projets.length > 1 ? 's' : ''}</p>
+        <div className="relative">
+          <button
+            onClick={() => setShowCaisseMenu(v => !v)}
+            className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl text-left shadow"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">💰</span>
+              <p className="font-bold text-white text-sm">Caisse</p>
             </div>
-          </div>
-          <span className="text-white/80">›</span>
-        </button>
+            <span className="text-white/80">{showCaisseMenu ? '⌄' : '›'}</span>
+          </button>
+
+          {showCaisseMenu && (
+            <div className="mt-1.5 space-y-1.5">
+              <button
+                onClick={() => { setShowCaisseMenu(false); setShowProjets(true); }}
+                className="w-full flex items-center gap-3 p-3 bg-white border rounded-xl text-left shadow-sm"
+              >
+                <span className="text-xl">📁</span>
+                <div>
+                  <p className="font-bold text-slate-800 text-sm">Projets</p>
+                  <p className="text-slate-400 text-xs">{fmt(totalCollecte)} · {nbDonneurs} cotisant{nbDonneurs > 1 ? 's' : ''} · {projets.length} projet{projets.length > 1 ? 's' : ''}</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowCaisseMenu(false); soliRef.current?.open(); }}
+                className="w-full flex items-center gap-3 p-3 bg-white border rounded-xl text-left shadow-sm"
+              >
+                <span className="text-xl">🤝</span>
+                <p className="font-bold text-slate-800 text-sm">Solidarité</p>
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Actualités locales — le cœur de la page */}
