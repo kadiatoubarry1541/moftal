@@ -3,14 +3,25 @@ import { sequelize } from '../../config/database.js';
 
 /**
  * Compte Solidarité Quartier / Sous-préfecture
- * Deux volets seulement, jamais de retrait en argent liquide :
- *   - santé      → paiement direct à l'hôpital
- *   - orphelins  → achat direct de riz (livré aux enfants de - de 20 ans
- *                  ayant perdu père ET mère)
+ * Chaque dépôt est réparti automatiquement (le donateur ne choisit plus) :
+ *   50% → santé          → paiement direct à l'hôpital
+ *   20% → orphelins      → achat direct de riz (- de 20 ans, sans père ni mère)
+ *   30% → développement  → bloqué pour le moment, le quartier décidera plus
+ *                          tard des projets à financer avec cette réserve
  * Géré par 2 ou 3 chefs de quartier/sous-préfecture ; un paiement n'est
  * exécuté qu'après confirmation d'au moins 2 chefs différents.
  */
 class QuartierFund extends Model {
+
+  /** Calcule la répartition d'un dépôt — sans perte d'argent (arrondis absorbés) */
+  static repartir(montant) {
+    const m = Math.floor(Number(montant));
+    const sante = Math.floor(m * 0.50);
+    const orphelins = Math.floor(m * 0.20);
+    // Le reste va dans développement pour absorber les arrondis sans perdre un centime
+    const developpement = m - sante - orphelins;
+    return { sante, orphelins, developpement };
+  }
 
   /** Liste des numéros H des chefs désignés (jusqu'à 3), sans valeurs vides */
   getChefs() {
@@ -26,8 +37,13 @@ class QuartierFund extends Model {
     return Math.min(2, this.getChefs().length || 1);
   }
 
-  getSoldeTotal() {
+  /** Solde utilisable (hors développement, bloqué pour le moment) */
+  getSoldeDisponible() {
     return Number(this.solde_sante) + Number(this.solde_orphelins);
+  }
+
+  getSoldeTotal() {
+    return this.getSoldeDisponible() + Number(this.solde_developpement);
   }
 }
 
@@ -62,6 +78,11 @@ QuartierFund.init({
     type: DataTypes.BIGINT,
     defaultValue: 0,
     comment: 'Achat direct de riz pour les orphelins complets (- de 20 ans)'
+  },
+  solde_developpement: {
+    type: DataTypes.BIGINT,
+    defaultValue: 0,
+    comment: 'Bloqué pour le moment — projets de développement décidés plus tard par le quartier'
   },
   total_depose: {
     type: DataTypes.BIGINT,

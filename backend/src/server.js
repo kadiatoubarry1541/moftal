@@ -614,8 +614,9 @@ async function initAllTables() {
           "scope"            VARCHAR(30)  NOT NULL,
           "location"         VARCHAR(150) NOT NULL,
           "location_name"    VARCHAR(150),
-          "solde_sante"      BIGINT       NOT NULL DEFAULT 0,
-          "solde_orphelins"  BIGINT       NOT NULL DEFAULT 0,
+          "solde_sante"        BIGINT       NOT NULL DEFAULT 0,
+          "solde_orphelins"    BIGINT       NOT NULL DEFAULT 0,
+          "solde_developpement" BIGINT      NOT NULL DEFAULT 0,
           "total_depose"     BIGINT       NOT NULL DEFAULT 0,
           "total_depense"    BIGINT       NOT NULL DEFAULT 0,
           "chef1_numero_h"   VARCHAR(255),
@@ -634,7 +635,9 @@ async function initAllTables() {
       indexes: [
         `CREATE INDEX IF NOT EXISTS idx_qf_scope_loc ON "quartier_funds" ("scope", "location");`
       ],
-      alters: []
+      alters: [
+        `ALTER TABLE "quartier_funds" ADD COLUMN IF NOT EXISTS "solde_developpement" BIGINT NOT NULL DEFAULT 0;`
+      ]
     },
     {
       name: 'quartier_fund_requests',

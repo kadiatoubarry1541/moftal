@@ -33,9 +33,11 @@ function formatFund(fund, numeroH) {
     location: fund.location,
     locationName: fund.locationName,
     soldes: {
-      sante:      Number(fund.solde_sante),
-      orphelins:  Number(fund.solde_orphelins),
-      total:      Number(fund.solde_sante) + Number(fund.solde_orphelins)
+      sante:         Number(fund.solde_sante),
+      orphelins:     Number(fund.solde_orphelins),
+      developpement: Number(fund.solde_developpement),
+      disponible:    fund.getSoldeDisponible(),
+      total:         fund.getSoldeTotal()
     },
     totalDepose:  Number(fund.total_depose),
     totalDepense: Number(fund.total_depense),
@@ -379,11 +381,12 @@ router.get('/admin/tous', async (req, res) => {
     }
     const fonds = await QuartierFund.findAll({ where: { isActive: true }, order: [['created_at', 'DESC']] });
     const totalGlobal = fonds.reduce((acc, f) => ({
-      sante:     acc.sante     + Number(f.solde_sante),
-      orphelins: acc.orphelins + Number(f.solde_orphelins),
-      depose:    acc.depose    + Number(f.total_depose),
-      depense:   acc.depense   + Number(f.total_depense),
-    }), { sante: 0, orphelins: 0, depose: 0, depense: 0 });
+      sante:         acc.sante         + Number(f.solde_sante),
+      orphelins:     acc.orphelins     + Number(f.solde_orphelins),
+      developpement: acc.developpement + Number(f.solde_developpement),
+      depose:        acc.depose        + Number(f.total_depose),
+      depense:       acc.depense       + Number(f.total_depense),
+    }), { sante: 0, orphelins: 0, developpement: 0, depose: 0, depense: 0 });
 
     res.json({
       success: true,

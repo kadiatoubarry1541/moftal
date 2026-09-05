@@ -602,11 +602,13 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
   }
 
   // Dépôt Compte Solidarité (quartier/sous-préfecture) — relatedId encodé
-  // "scope:location:categorie:montant" car ce dépôt ne concerne pas l'auteur
-  // du paiement lui-même (pas de compte perso) mais un lieu + une catégorie.
+  // "scope:location:montant" car ce dépôt ne concerne pas l'auteur du paiement
+  // lui-même (pas de compte perso) mais un lieu. La répartition (50% santé /
+  // 20% orphelins / 30% développement bloqué) est automatique, le donateur
+  // ne choisit plus de catégorie.
   if (purpose === 'wallet_depot_quartier_fund') {
     const parts = String(relatedId || '').split(':');
-    const montantDepot = parseInt(parts[3], 10);
+    const montantDepot = parseInt(parts[2], 10);
     if (!montantDepot || montantDepot < 1000) {
       return { error: 'Montant minimum de dépôt : 1 000 GNF.' };
     }
@@ -890,19 +892,21 @@ export async function handlePostPayment(payment) {
 
     // ── Dépôt Moftal Pay — Compte Solidarité quartier/sous-préfecture ──────
     if (payment.purpose === 'wallet_depot_quartier_fund') {
-      const [scope, location, categorie] = String(payment.relatedId || '').split(':');
-      const champSolde = categorie === 'orphelins' ? 'solde_orphelins' : 'solde_sante';
+      const [scope, location] = String(payment.relatedId || '').split(':');
       const fund = (scope && location)
         ? await QuartierFund.findOne({ where: { scope, location: location.toLowerCase(), isActive: true } })
         : null;
       if (fund) {
         const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
+        const repartition = QuartierFund.repartir(montantNet);
         await fund.update({
-          [champSolde]:  Number(fund[champSolde]) + montantNet,
-          total_depose:  Number(fund.total_depose) + montantNet,
+          solde_sante:         Number(fund.solde_sante)         + repartition.sante,
+          solde_orphelins:     Number(fund.solde_orphelins)     + repartition.orphelins,
+          solde_developpement: Number(fund.solde_developpement) + repartition.developpement,
+          total_depose:        Number(fund.total_depose)        + montantNet,
         });
         await enregistrerCommissionPlateforme('depot_quartier_fund', payment.txRef, payment.amount, commission, payment.payerNumeroH);
-        console.log(`✅ Dépôt Compte Solidarité — ${montantNet.toLocaleString()} GNF crédités (${categorie}) | ${scope}/${location} | txRef: ${payment.txRef}`);
+        console.log(`✅ Dépôt Compte Solidarité — ${montantNet.toLocaleString()} GNF crédités (50/20/30) | ${scope}/${location} | txRef: ${payment.txRef}`);
       } else {
         console.warn(`⚠️ Dépôt wallet_depot_quartier_fund sans compte trouvé pour relatedId=${payment.relatedId}`);
       }
