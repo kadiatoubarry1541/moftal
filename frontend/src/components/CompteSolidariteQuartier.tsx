@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import PaymentModal from './PaymentModal';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -41,8 +41,16 @@ function getMyNumeroH(): string | null {
 
 function fmt(n: number) { return n.toLocaleString('fr-FR'); }
 
-export default function CompteSolidariteQuartier({ scope, location, locationName }: Props) {
+export interface CompteSolidariteQuartierHandle {
+  open: () => void;
+}
+
+const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Props>(function CompteSolidariteQuartier(
+  { scope, location, locationName },
+  ref
+) {
   const [open, setOpen] = useState(false);
+  useImperativeHandle(ref, () => ({ open: () => setOpen(true) }), []);
   const [loading, setLoading] = useState(false);
   const [existe, setExiste] = useState<boolean | null>(null);
   const [peutCreer, setPeutCreer] = useState(false);
@@ -200,14 +208,6 @@ export default function CompteSolidariteQuartier({ scope, location, locationName
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white shadow-sm"
-        style={{ background: 'linear-gradient(135deg,#0e7490,#0891b2)' }}
-      >
-        💰 Solidarité
-      </button>
-
       {open && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setOpen(false)}>
           <div
@@ -422,4 +422,6 @@ export default function CompteSolidariteQuartier({ scope, location, locationName
       />
     </>
   );
-}
+});
+
+export default CompteSolidariteQuartier;
