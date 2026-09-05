@@ -459,9 +459,10 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
             {isAdmin && (
               <button
                 onClick={() => { setShowPublishers(true); loadPublishers(); }}
-                className="text-xs text-slate-500 hover:text-slate-700 font-medium underline underline-offset-2"
+                title="Gérer les autorisations"
+                className="w-7 h-7 flex items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
               >
-                Gérer les autorisations
+                ⚙️
               </button>
             )}
             {canPublishActu && (
@@ -481,8 +482,7 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
           </div>
         ) : actualites.length === 0 ? (
           <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 text-center">
-            <p className="text-slate-500 text-sm font-medium">Aucune actualité pour l'instant</p>
-            <p className="text-slate-400 text-xs mt-1">Les publications des journalistes, admins et correspondants locaux apparaîtront ici</p>
+            <p className="text-slate-500 text-sm font-medium">Aucune actualité</p>
           </div>
         ) : (
           <div className="space-y-3">
