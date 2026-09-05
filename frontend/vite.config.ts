@@ -54,16 +54,22 @@ export default defineConfig(({ mode }) => {
           ],
           icons: [
             {
-              src: "/logo-moftal.svg",
-              sizes: "any",
-              type: "image/svg+xml",
+              src: "/icon-moftal-192.png?v=2",
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "/icon-moftal-512.png?v=2",
+              sizes: "512x512",
+              type: "image/png",
               purpose: "any",
             },
             {
               src: "/logo-moftal.svg",
               sizes: "any",
               type: "image/svg+xml",
-              purpose: "maskable",
+              purpose: "any",
             },
           ],
           categories: ["social", "health", "education", "business"],
