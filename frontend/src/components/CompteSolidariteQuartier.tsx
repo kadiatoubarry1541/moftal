@@ -215,7 +215,7 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
             onClick={e => e.stopPropagation()}
           >
             <div className="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
-              <h2 className="font-black text-base">💰 Compte Solidarité — {locationName}</h2>
+              <h2 className="font-black text-base">💰 Caisse — {locationName}</h2>
               <button onClick={() => setOpen(false)} className="text-gray-400 text-xl leading-none">✕</button>
             </div>
 
@@ -272,13 +272,13 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
                         <div className="text-sm font-black text-amber-800">{fmt(compte.soldes.orphelins)}</div>
                       </div>
                       <div className="bg-gray-100 rounded-xl p-2 text-center">
-                        <div className="text-[10px] text-gray-500 font-bold">🔒 Développement</div>
+                        <div className="text-[10px] text-gray-500 font-bold">🔒 Projets</div>
                         <div className="text-sm font-black text-gray-600">{fmt(compte.soldes.developpement)}</div>
                       </div>
                     </div>
                   )}
                   <p className="text-[11px] text-gray-400 text-center">
-                    Chaque dépôt est réparti automatiquement : 50% santé, 20% orphelins, 30% développement (bloqué pour le moment).
+                    Chaque dépôt est réparti automatiquement : 50% santé, 20% orphelins, 30% projets (bloqué pour le moment).
                     Jamais de retrait en argent. Total déposé depuis le début : {fmt(compte.totalDepose)} GNF.
                   </p>
 

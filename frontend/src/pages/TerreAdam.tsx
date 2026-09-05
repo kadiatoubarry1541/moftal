@@ -160,7 +160,6 @@ export default function TerreAdam() {
   const [activeCanal, setActiveCanal] = useState<CanalItem | null>(null);
   const [showCategoryGrid, setShowCategoryGrid] = useState(false);
   const [showMembersList, setShowMembersList] = useState(false);
-  const [showCaisseMenuQuartier, setShowCaisseMenuQuartier] = useState(false);
   // Permet d'ouvrir la modale "Projets" du quartier depuis le bouton placé
   // à côté de "Liste" dans l'en-tête du chat, plutôt que depuis son propre
   // bouton (masqué sur la page Quartier via hideProjetsButton).
@@ -931,30 +930,12 @@ export default function TerreAdam() {
                                 >
                                   👥 Liste
                                 </button>
-                                <div className="relative flex-shrink-0">
-                                  <button
-                                    onClick={() => setShowCaisseMenuQuartier(v => !v)}
-                                    className="bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
-                                  >
-                                    💰 Caisse
-                                  </button>
-                                  {showCaisseMenuQuartier && (
-                                    <div className="absolute right-0 mt-1.5 w-40 bg-white rounded-xl shadow-lg border overflow-hidden z-10">
-                                      <button
-                                        onClick={() => { setShowCaisseMenuQuartier(false); quartierDevRef.current?.openProjets(); }}
-                                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 text-left"
-                                      >
-                                        📁 Projets
-                                      </button>
-                                      <button
-                                        onClick={() => { setShowCaisseMenuQuartier(false); quartierDevRef.current?.openSolidarite(); }}
-                                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 text-left border-t"
-                                      >
-                                        🤝 Solidarité
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
+                                <button
+                                  onClick={() => quartierDevRef.current?.openCaisse()}
+                                  className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
+                                >
+                                  💰 Caisse
+                                </button>
                               </div>
                             </div>
                             {isAdmin && groups.length > 1 && (
