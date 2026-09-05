@@ -7,11 +7,11 @@ import PaymentModal from '../components/PaymentModal';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
 const CATEGORIES = [
-  { key: 'reserve',    label: 'Réserve bloquée',  pct: 50, color: '#1e3a5f', icon: '🔒' },
-  { key: 'sante',      label: 'Santé',             pct: 30, color: '#1a8f1a', icon: '🏥' },
-  { key: 'nourriture', label: 'Nourriture',        pct: 10, color: '#d97706', icon: '🌾' },
+  { key: 'reserve',    label: 'Réserve bloquée',  pct: 20, color: '#1e3a5f', icon: '🔒' },
+  { key: 'sante',      label: 'Santé',             pct: 40, color: '#1a8f1a', icon: '🏥' },
+  { key: 'nourriture', label: 'Nourriture',        pct: 20, color: '#d97706', icon: '🌾' },
   { key: 'urgence',    label: 'Urgence',           pct: 5,  color: '#dc2626', icon: '🚨' },
-  { key: 'projet',     label: 'Projet collectif',  pct: 5,  color: '#7c3aed', icon: '🤝' },
+  { key: 'projet',     label: 'Projet collectif',  pct: 15, color: '#7c3aed', icon: '🤝' },
 ];
 
 const TYPE_MAP: Record<string, string> = {
@@ -499,7 +499,7 @@ export default function CompteFamille() {
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h3 className="font-bold text-gray-900 mb-1">💵 Faire un dépôt</h3>
               <p className="text-xs text-gray-400 mb-3">
-                Réparti automatiquement : 50% réserve · 30% santé · 10% nourriture · 5% urgence · 5% projet
+                Réparti automatiquement : 20% réserve · 40% santé · 20% nourriture · 5% urgence · 15% projet
               </p>
               <div className="flex gap-3">
                 <input

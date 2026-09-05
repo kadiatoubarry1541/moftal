@@ -152,11 +152,11 @@ export function AdminCompteFamille({ token, apiBase }: Props) {
             {/* Répartition compacte */}
             <div className="grid grid-cols-5 border-t border-gray-50">
               {[
-                { label: '🔒', val: c.soldes.reserve, pct: '50%' },
-                { label: '🏥', val: c.soldes.sante, pct: '30%' },
-                { label: '🌾', val: c.soldes.nourriture, pct: '10%' },
+                { label: '🔒', val: c.soldes.reserve, pct: '20%' },
+                { label: '🏥', val: c.soldes.sante, pct: '40%' },
+                { label: '🌾', val: c.soldes.nourriture, pct: '20%' },
                 { label: '🚨', val: c.soldes.urgence, pct: '5%' },
-                { label: '🤝', val: c.soldes.projet, pct: '5%' },
+                { label: '🤝', val: c.soldes.projet, pct: '15%' },
               ].map((s, i) => (
                 <div key={i} className="p-2 text-center border-r border-gray-50 last:border-0">
                   <div className="text-sm">{s.label}</div>
