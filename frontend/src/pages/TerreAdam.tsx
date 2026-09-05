@@ -847,8 +847,7 @@ export default function TerreAdam() {
                             {groups.length === 0 ? (
                               <>
                                 <span className="text-4xl mb-2">💬</span>
-                                <p className="text-sm text-gray-500">Aucun groupe disponible</p>
-                                <p className="text-xs text-gray-400 mt-1">Les groupes sont créés automatiquement.</p>
+                                <p className="text-sm text-gray-500">Aucun groupe</p>
                               </>
                             ) : (
                               <div className="w-7 h-7 border-2 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
@@ -1216,11 +1215,7 @@ export default function TerreAdam() {
                 </div>
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
-                  <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 break-words">
-                    <strong>⚠️ Aucun lieu de résidence enregistré</strong>
-                    <br />
-                    Vous n'avez pas encore enregistré vos lieux de résidence lors de l'inscription.
-                  </p>
+                  <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 font-bold break-words">⚠️ Aucun lieu de résidence enregistré</p>
                 </div>
               )}
             </div>
@@ -1242,10 +1237,7 @@ export default function TerreAdam() {
                   <DeveloppementSection scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                    <p className="text-xs text-yellow-800">
-                      <strong>⚠️ Aucune sous-préfecture enregistrée</strong><br />
-                      Vous n'avez pas encore enregistré votre sous-préfecture lors de l'inscription.
-                    </p>
+                    <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune sous-préfecture enregistrée</p>
                   </div>
                 )}
               </div>
@@ -1268,10 +1260,7 @@ export default function TerreAdam() {
                   <DeveloppementGouvernemental scope="prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                    <p className="text-xs text-yellow-800">
-                      <strong>⚠️ Aucune préfecture enregistrée</strong><br />
-                      Vous n'avez pas encore enregistré votre préfecture lors de l'inscription.
-                    </p>
+                    <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune préfecture enregistrée</p>
                   </div>
                 )}
               </div>
@@ -1298,10 +1287,7 @@ export default function TerreAdam() {
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                  <p className="text-xs text-yellow-800">
-                    <strong>⚠️ Aucune région enregistrée</strong><br />
-                    Vous n'avez pas encore enregistré votre région lors de l'inscription.
-                  </p>
+                  <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune région enregistrée</p>
                 </div>
               )}
             </div>
@@ -1327,10 +1313,7 @@ export default function TerreAdam() {
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                  <p className="text-xs text-yellow-800">
-                    <strong>⚠️ Aucun pays enregistré</strong><br />
-                    Vous n'avez pas encore enregistré votre pays lors de l'inscription.
-                  </p>
+                  <p className="text-xs text-yellow-800 font-bold">⚠️ Aucun pays enregistré</p>
                 </div>
               )}
             </div>
@@ -1356,10 +1339,7 @@ export default function TerreAdam() {
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                  <p className="text-xs text-yellow-800">
-                    <strong>⚠️ Aucun continent enregistré</strong><br />
-                    Vous n'avez pas encore enregistré votre continent lors de l'inscription.
-                  </p>
+                  <p className="text-xs text-yellow-800 font-bold">⚠️ Aucun continent enregistré</p>
                 </div>
               )}
             </div>
