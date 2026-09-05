@@ -4,20 +4,20 @@ import { sequelize } from '../../config/database.js';
 /**
  * Compte Famille Moftal
  * Répartition automatique des dépôts :
- *   50% → réserve bloquée
- *   30% → santé (paiement direct cliniques)
- *   10% → nourriture (paiement direct fournisseurs)
+ *   20% → réserve bloquée
+ *   40% → santé (paiement direct cliniques)
+ *   20% → nourriture (paiement direct fournisseurs)
  *    5% → urgence (prison, danger, accident)
- *    5% → projet collectif familial
+ *   15% → projet collectif familial
  */
 class FamilyFund extends Model {
 
   /** Calcule la répartition d'un montant déposé — sans perte d'argent */
   static repartir(montant) {
     const m = Math.floor(Number(montant));
-    const reserve    = Math.floor(m * 0.50);
-    const sante      = Math.floor(m * 0.30);
-    const nourriture = Math.floor(m * 0.10);
+    const reserve    = Math.floor(m * 0.20);
+    const sante      = Math.floor(m * 0.40);
+    const nourriture = Math.floor(m * 0.20);
     const urgence    = Math.floor(m * 0.05);
     // Le reste va dans projet pour absorber les arrondis sans perdre un centime
     const projet     = m - reserve - sante - nourriture - urgence;
@@ -56,17 +56,17 @@ FamilyFund.init({
   solde_reserve: {
     type: DataTypes.BIGINT,
     defaultValue: 0,
-    comment: '50% — bloqué, intouchable sauf vote unanime'
+    comment: '20% — bloqué, intouchable sauf vote unanime'
   },
   solde_sante: {
     type: DataTypes.BIGINT,
     defaultValue: 0,
-    comment: '30% — paiement direct cliniques/hôpitaux sur Moftal'
+    comment: '40% — paiement direct cliniques/hôpitaux sur Moftal'
   },
   solde_nourriture: {
     type: DataTypes.BIGINT,
     defaultValue: 0,
-    comment: '10% — paiement direct fournisseurs alimentaires sur Moftal'
+    comment: '20% — paiement direct fournisseurs alimentaires sur Moftal'
   },
   solde_urgence: {
     type: DataTypes.BIGINT,
@@ -76,7 +76,7 @@ FamilyFund.init({
   solde_projet: {
     type: DataTypes.BIGINT,
     defaultValue: 0,
-    comment: '5% — projet collectif familial avec garantie'
+    comment: '15% — projet collectif familial avec garantie'
   },
   // Totaux cumulés (pour statistiques)
   total_depose: {
