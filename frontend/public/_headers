@@ -12,13 +12,14 @@
 /*.webp
   Cache-Control: public, max-age=31536000, immutable
 
-# SVG : cache 7 jours (peut changer moins souvent que JS)
+# SVG (logos/icônes) : cache court — une correction de logo doit apparaître
+# vite, pas rester coincée jusqu'à 7 jours chez les visiteurs déjà passés.
 /*.svg
-  Cache-Control: public, max-age=604800
+  Cache-Control: public, max-age=3600
 
-# PNG : cache 7 jours
+# PNG (icônes d'app) : cache court, même raison
 /*.png
-  Cache-Control: public, max-age=604800
+  Cache-Control: public, max-age=3600
 
 # HTML : ne jamais cacher (SPA — l'index.html doit toujours être à jour)
 /*.html
