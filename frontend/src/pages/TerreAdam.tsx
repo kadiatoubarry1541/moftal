@@ -1137,44 +1137,8 @@ export default function TerreAdam() {
                                     </button>
                                   );
                                 })()}
-                                {/* Pièce jointe (photo ou vidéo) — le type est détecté automatiquement, rien à choisir à l'avance */}
-                                {newMessage.messageType !== 'audio' && !newMessage.mediaFile && (
-                                  <label
-                                    className="flex-shrink-0 w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-lg cursor-pointer transition-colors"
-                                    title="Envoyer une photo ou une vidéo"
-                                  >
-                                    📎
-                                    <input
-                                      type="file"
-                                      accept="image/*,video/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0] || null;
-                                        e.target.value = '';
-                                        if (!file) return;
-                                        if (file.type.startsWith('video/')) {
-                                          const url = URL.createObjectURL(file);
-                                          const videoEl = document.createElement('video');
-                                          videoEl.preload = 'metadata';
-                                          videoEl.onloadedmetadata = () => {
-                                            URL.revokeObjectURL(url);
-                                            if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
-                                              alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`);
-                                              return;
-                                            }
-                                            setNewMessage(prev => ({...prev, messageType: 'video', mediaFile: file}));
-                                          };
-                                          videoEl.onerror = () => { URL.revokeObjectURL(url); alert('Impossible de lire cette vidéo.'); };
-                                          videoEl.src = url;
-                                        } else {
-                                          setNewMessage(prev => ({...prev, messageType: 'image', mediaFile: file}));
-                                        }
-                                      }}
-                                    />
-                                  </label>
-                                )}
-
-                                {/* Zone centrale : texte, média prêt à envoyer, ou enregistrement vocal en cours */}
+                                {/* Zone centrale : texte (avec la pièce jointe intégrée dedans, à droite), média
+                                    prêt à envoyer, ou enregistrement vocal en cours */}
                                 {newMessage.messageType === 'audio' && !newMessage.mediaFile ? (
                                   <div className="flex-1 min-w-0">
                                     <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
@@ -1190,14 +1154,50 @@ export default function TerreAdam() {
                                     <button type="button" onClick={() => setNewMessage({...newMessage, messageType: 'text', mediaFile: null})} className="text-red-500 text-xs font-medium flex-shrink-0">✕</button>
                                   </div>
                                 ) : (
-                                  <input
-                                    type="text"
-                                    value={newMessage.content}
-                                    onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
-                                    onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); setShowCategoryGrid(false); } }}
-                                    placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.icon || ''} ${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
-                                    className="flex-1 min-w-0 px-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
-                                  />
+                                  <div className="flex-1 min-w-0 relative">
+                                    <input
+                                      type="text"
+                                      value={newMessage.content}
+                                      onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
+                                      onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); setShowCategoryGrid(false); } }}
+                                      placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.icon || ''} ${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
+                                      className="w-full min-w-0 pl-4 pr-11 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
+                                    />
+                                    {/* Pièce jointe (photo ou vidéo) — intégrée dans le champ, type détecté automatiquement */}
+                                    <label
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-lg text-gray-500 hover:text-gray-700 cursor-pointer"
+                                      title="Envoyer une photo ou une vidéo"
+                                    >
+                                      📎
+                                      <input
+                                        type="file"
+                                        accept="image/*,video/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0] || null;
+                                          e.target.value = '';
+                                          if (!file) return;
+                                          if (file.type.startsWith('video/')) {
+                                            const url = URL.createObjectURL(file);
+                                            const videoEl = document.createElement('video');
+                                            videoEl.preload = 'metadata';
+                                            videoEl.onloadedmetadata = () => {
+                                              URL.revokeObjectURL(url);
+                                              if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
+                                                alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`);
+                                                return;
+                                              }
+                                              setNewMessage(prev => ({...prev, messageType: 'video', mediaFile: file}));
+                                            };
+                                            videoEl.onerror = () => { URL.revokeObjectURL(url); alert('Impossible de lire cette vidéo.'); };
+                                            videoEl.src = url;
+                                          } else {
+                                            setNewMessage(prev => ({...prev, messageType: 'image', mediaFile: file}));
+                                          }
+                                        }}
+                                      />
+                                    </label>
+                                  </div>
                                 )}
 
                                 {/* Message vocal */}
