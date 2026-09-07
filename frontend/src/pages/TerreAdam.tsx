@@ -1164,7 +1164,7 @@ export default function TerreAdam() {
                                         <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 text-xs font-medium">✕</button>
                                       </div>
                                     ) : (
-                                      <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
+                                      <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
                                         const file = new File([blob], 'vocal.webm', { type: blob.type });
                                         setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
                                       }} />
