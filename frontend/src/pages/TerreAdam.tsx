@@ -525,7 +525,7 @@ export default function TerreAdam() {
 
   // Catégories quartier : besoins du quartier (décès, mariage, baptême, etc.)
   const QUARTIER_CATEGORIES = [
-    { id: 'information', label: 'Information', icon: 'ℹ️' },
+    { id: 'information', label: 'Information', icon: '📰' },
     { id: 'rencontre', label: 'Rencontre', icon: '🤝' },
     { id: 'deces', label: 'Décès', icon: '🕯️' },
     { id: 'mariage', label: 'Mariage', icon: '💒' },
@@ -1152,6 +1152,14 @@ export default function TerreAdam() {
                                       {newMessage.messageType === 'audio' ? '🎙️ Audio prêt' : newMessage.messageType === 'video' ? '🎥 Vidéo prête' : '📷 Photo prête'}
                                     </span>
                                     <button type="button" onClick={() => setNewMessage({...newMessage, messageType: 'text', mediaFile: null})} className="text-red-500 text-xs font-medium flex-shrink-0">✕</button>
+                                    <button
+                                      type="button"
+                                      onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
+                                      className="w-7 h-7 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
+                                      title="Envoyer"
+                                    >
+                                      ✓
+                                    </button>
                                   </div>
                                 ) : (
                                   <div className="flex-1 min-w-0 relative">
@@ -1161,11 +1169,11 @@ export default function TerreAdam() {
                                       onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
                                       onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); setShowCategoryGrid(false); } }}
                                       placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.icon || ''} ${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
-                                      className="w-full min-w-0 pl-4 pr-11 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
+                                      className="w-full min-w-0 pl-4 pr-20 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
                                     />
                                     {/* Pièce jointe (photo ou vidéo) — intégrée dans le champ, type détecté automatiquement */}
                                     <label
-                                      className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-lg text-gray-500 hover:text-gray-700 cursor-pointer"
+                                      className="absolute right-10 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-lg text-gray-500 hover:text-gray-700 cursor-pointer"
                                       title="Envoyer une photo ou une vidéo"
                                     >
                                       📎
@@ -1197,6 +1205,16 @@ export default function TerreAdam() {
                                         }}
                                       />
                                     </label>
+                                    {/* Envoyer — intégré dans le champ */}
+                                    <button
+                                      type="button"
+                                      onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
+                                      disabled={!newMessage.content.trim()}
+                                      title="Envoyer"
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold transition-colors"
+                                    >
+                                      ✓
+                                    </button>
                                   </div>
                                 )}
 
@@ -1211,13 +1229,6 @@ export default function TerreAdam() {
                                     🎤
                                   </button>
                                 )}
-                                <button
-                                  onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
-                                  disabled={newMessage.messageType === 'text' ? !newMessage.content.trim() : !newMessage.mediaFile}
-                                  className="bg-emerald-600 text-white px-5 py-2.5 rounded-full hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity flex-shrink-0 font-medium text-sm"
-                                >
-                                  ▶
-                                </button>
                               </div>
                             </div>
                           ) : (
