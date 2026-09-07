@@ -818,12 +818,8 @@ export default function TerreAdam() {
 
                       {/* Messagerie */}
                       <div className="space-y-3">
-                        {/* En-tête compact + filtre admin en chips */}
-                        <div className="flex items-center justify-between px-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">💬</span>
-                            <span className="font-bold text-gray-800 text-sm">Chats de résidence</span>
-                          </div>
+                        {/* Filtre admin en chips */}
+                        <div className="flex items-center justify-end px-0.5">
                           {isAdmin && (
                             <div className="flex gap-1">
                               <button
