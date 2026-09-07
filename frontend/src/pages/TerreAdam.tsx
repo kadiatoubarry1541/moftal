@@ -10,6 +10,7 @@ import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countr
 import { getCountryGeoLabels } from '../utils/countryGeoStructure';
 import { AudioRecorder } from '../components/AudioRecorder';
 import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
+import LivreQuartier, { type LivreQuartierHandle } from '../components/LivreQuartier';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -172,6 +173,7 @@ export default function TerreAdam() {
   // à côté de "Liste" dans l'en-tête du chat, plutôt que depuis son propre
   // bouton (masqué sur la page Quartier via hideProjetsButton).
   const quartierDevRef = useRef<DeveloppementSectionHandle>(null);
+  const livreQuartierRef = useRef<LivreQuartierHandle>(null);
 
   // Niveau actuel : quartier (Résidence 1/2/3) ou plus large (sous-préfecture, région, pays, continent)
   const isQuartierLevel =
@@ -1434,11 +1436,28 @@ export default function TerreAdam() {
                   <span className="flex items-center gap-3 font-bold text-white text-sm">💰 Caisse</span>
                   <span className="text-white/80">›</span>
                 </button>
+                <button
+                  onClick={() => { setShowQuartierMenu(false); livreQuartierRef.current?.open(); }}
+                  className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-amber-700 to-amber-600 rounded-xl shadow"
+                >
+                  <span className="flex items-center gap-3 font-bold text-white text-sm">📚 Livre</span>
+                  <span className="text-white/80">›</span>
+                </button>
               </div>
             </div>
           </div>
         );
       })()}
+
+      {selectedGroup && (
+        <LivreQuartier
+          ref={livreQuartierRef}
+          scope="quartier"
+          location={selectedGroup.location || ''}
+          locationName={selectedGroup.title || selectedGroup.name || ''}
+          canPublish={isJournalist || isAdmin}
+        />
+      )}
 
       {/* Modal — Liste des membres du quartier */}
       {showMembersList && selectedGroup && (
