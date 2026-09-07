@@ -854,8 +854,8 @@ export default function TerreAdam() {
                       {/* Messagerie */}
                       <div className="space-y-3">
                         {/* Filtre admin en chips */}
-                        <div className="flex items-center justify-end px-0.5">
-                          {isAdmin && (
+                        {isAdmin && (
+                          <div className="flex items-center justify-end px-0.5">
                             <div className="flex gap-1">
                               <button
                                 type="button"
@@ -872,8 +872,8 @@ export default function TerreAdam() {
                                 🏘️ Ce quartier
                               </button>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {!selectedGroup ? (
                           /* État vide ou chargement — le groupe est normalement auto-sélectionné */
