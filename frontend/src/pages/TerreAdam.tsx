@@ -858,7 +858,8 @@ export default function TerreAdam() {
 
                           {/* En-tête : nom du quartier + membres + sélecteur admin */}
                           <div className="bg-gray-800 text-white flex-shrink-0">
-                            <div className="px-4 py-3 flex items-center gap-3">
+                            <div className="px-4 py-3 space-y-2">
+                            <div className="flex items-center gap-3">
                               {(() => {
                                 const canEditLogo = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
                                 const logoSrc = selectedGroup.logoUrl
@@ -902,7 +903,8 @@ export default function TerreAdam() {
                                   {' · '}{messages.length} message{messages.length > 1 ? 's' : ''}
                                 </p>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
+                            </div>
+                            <div className="flex items-center gap-2">
                                 {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
                                   <div className="flex -space-x-2">
                                     {selectedGroup.members.slice(0, 4).map((member: any, index: number) => {
@@ -935,7 +937,7 @@ export default function TerreAdam() {
                                 >
                                   💰 Caisse
                                 </button>
-                              </div>
+                            </div>
                             </div>
                             {isAdmin && groups.length > 1 && (
                               <div className="flex gap-2 overflow-x-auto px-3 pb-2">
