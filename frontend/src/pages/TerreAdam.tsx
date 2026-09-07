@@ -160,6 +160,10 @@ export default function TerreAdam() {
   const [activeCanal, setActiveCanal] = useState<CanalItem | null>(null);
   const [showCategoryGrid, setShowCategoryGrid] = useState(false);
   const [showMembersList, setShowMembersList] = useState(false);
+  // Clic sur la photo du quartier (comme la photo de profil) : ouvre le
+  // menu Liste/Caisse au lieu d'avoir des boutons séparés en permanence.
+  const [showQuartierMenu, setShowQuartierMenu] = useState(false);
+  const quartierLogoInputRef = useRef<HTMLInputElement>(null);
   // Permet d'ouvrir la modale "Projets" du quartier depuis le bouton placé
   // à côté de "Liste" dans l'en-tête du chat, plutôt que depuis son propre
   // bouton (masqué sur la page Quartier via hideProjetsButton).
@@ -858,42 +862,68 @@ export default function TerreAdam() {
 
                           {/* En-tête : nom du quartier + membres + sélecteur admin */}
                           <div className="bg-gray-800 text-white flex-shrink-0">
-                            <div className="px-4 py-3 space-y-2">
-                            <div className="flex items-center gap-3">
+                            <div className="px-4 py-3 flex items-center gap-3 relative">
                               {(() => {
                                 const canEditLogo = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
                                 const logoSrc = selectedGroup.logoUrl
                                   ? (selectedGroup.logoUrl.startsWith('http') ? selectedGroup.logoUrl : `${API_BASE}${selectedGroup.logoUrl}`)
                                   : null;
                                 return (
-                                  <label
-                                    className={`relative w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-base flex-shrink-0 overflow-hidden ${canEditLogo ? 'cursor-pointer' : ''}`}
-                                    title={canEditLogo ? 'Changer le logo du quartier' : undefined}
-                                  >
-                                    {logoSrc ? (
-                                      <img src={logoSrc} alt="Logo du quartier" className="w-full h-full object-cover" />
-                                    ) : (
-                                      (selectedGroup.title || selectedGroup.name || '?').charAt(0).toUpperCase()
-                                    )}
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowQuartierMenu(v => !v)}
+                                      className="relative w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-base flex-shrink-0 overflow-hidden cursor-pointer"
+                                      title="Voir Liste et Caisse"
+                                    >
+                                      {logoSrc ? (
+                                        <img src={logoSrc} alt="Logo du quartier" className="w-full h-full object-cover" />
+                                      ) : (
+                                        (selectedGroup.title || selectedGroup.name || '?').charAt(0).toUpperCase()
+                                      )}
+                                      {uploadingLogo && (
+                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none">…</div>
+                                      )}
+                                    </button>
                                     {canEditLogo && (
-                                      <>
-                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none">
-                                          {uploadingLogo ? '…' : '📷'}
-                                        </div>
-                                        <input
-                                          type="file"
-                                          accept="image/*"
-                                          className="hidden"
-                                          disabled={uploadingLogo}
-                                          onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) handleLogoUpload(file);
-                                            e.target.value = '';
-                                          }}
-                                        />
-                                      </>
+                                      <input
+                                        ref={quartierLogoInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        disabled={uploadingLogo}
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) handleLogoUpload(file);
+                                          e.target.value = '';
+                                        }}
+                                      />
                                     )}
-                                  </label>
+                                    {showQuartierMenu && (
+                                      <div className="absolute top-11 left-0 z-20 bg-white text-gray-800 rounded-xl shadow-lg border border-gray-200 overflow-hidden w-44">
+                                        <button
+                                          onClick={() => { setShowQuartierMenu(false); setShowMembersList(true); }}
+                                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition-colors"
+                                        >
+                                          👥 Liste
+                                        </button>
+                                        <button
+                                          onClick={() => { setShowQuartierMenu(false); quartierDevRef.current?.openCaisse(); }}
+                                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition-colors border-t border-gray-100"
+                                        >
+                                          💰 Caisse
+                                        </button>
+                                        {canEditLogo && (
+                                          <button
+                                            onClick={() => { setShowQuartierMenu(false); quartierLogoInputRef.current?.click(); }}
+                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition-colors border-t border-gray-100"
+                                          >
+                                            📷 Changer la photo
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </>
                                 );
                               })()}
                               <div className="flex-1 min-w-0">
@@ -903,41 +933,26 @@ export default function TerreAdam() {
                                   {' · '}{messages.length} message{messages.length > 1 ? 's' : ''}
                                 </p>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
-                                  <div className="flex -space-x-2">
-                                    {selectedGroup.members.slice(0, 4).map((member: any, index: number) => {
-                                      const isObject = member && typeof member === 'object';
-                                      const prenom = isObject ? (member.prenom as string | undefined) : undefined;
-                                      const photo = isObject ? (member.photo as string | undefined) : undefined;
-                                      const initiale = (prenom || '?').charAt(0).toUpperCase();
-                                      return (
-                                        <div key={index} title={prenom || `Membre ${index + 1}`} className="w-10 h-10 rounded-full bg-emerald-200 border-2 border-gray-700 overflow-hidden flex items-center justify-center text-xs font-bold text-emerald-800 flex-shrink-0">
-                                          {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
-                                        </div>
-                                      );
-                                    })}
-                                    {selectedGroup.members.length > 4 && (
-                                      <div className="w-10 h-10 rounded-full bg-gray-600 border-2 border-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-300 flex-shrink-0">
-                                        +{selectedGroup.members.length - 4}
+                              {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
+                                <div className="flex -space-x-2 flex-shrink-0">
+                                  {selectedGroup.members.slice(0, 4).map((member: any, index: number) => {
+                                    const isObject = member && typeof member === 'object';
+                                    const prenom = isObject ? (member.prenom as string | undefined) : undefined;
+                                    const photo = isObject ? (member.photo as string | undefined) : undefined;
+                                    const initiale = (prenom || '?').charAt(0).toUpperCase();
+                                    return (
+                                      <div key={index} title={prenom || `Membre ${index + 1}`} className="w-8 h-8 rounded-full bg-emerald-200 border-2 border-gray-700 overflow-hidden flex items-center justify-center text-xs font-bold text-emerald-800 flex-shrink-0">
+                                        {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
                                       </div>
-                                    )}
-                                  </div>
-                                )}
-                                <button
-                                  onClick={() => setShowMembersList(true)}
-                                  className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
-                                >
-                                  👥 Liste
-                                </button>
-                                <button
-                                  onClick={() => quartierDevRef.current?.openCaisse()}
-                                  className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
-                                >
-                                  💰 Caisse
-                                </button>
-                            </div>
+                                    );
+                                  })}
+                                  {selectedGroup.members.length > 4 && (
+                                    <div className="w-8 h-8 rounded-full bg-gray-600 border-2 border-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-300 flex-shrink-0">
+                                      +{selectedGroup.members.length - 4}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             {isAdmin && groups.length > 1 && (
                               <div className="flex gap-2 overflow-x-auto px-3 pb-2">
