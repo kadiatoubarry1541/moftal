@@ -299,40 +299,6 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
   return (
     <div className="space-y-4">
 
-      {/* En-tête du lieu (logo optionnel) */}
-      <div className="flex items-center gap-3">
-        {(logoUrl || canPublish) && (
-          <label
-            className={`relative w-11 h-11 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 ${canPublish ? 'cursor-pointer' : ''}`}
-            title={canPublish ? `Changer le logo de ${locationName}` : undefined}
-          >
-            {logoUrl ? (
-              <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-lg">🏛️</span>
-            )}
-            {canPublish && (
-              <>
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none opacity-0 hover:opacity-100 transition-opacity">
-                  {uploadingLogo ? '…' : '📷'}
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingLogo}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleLogoUpload(file);
-                    e.target.value = '';
-                  }}
-                />
-              </>
-            )}
-          </label>
-        )}
-        <p className="font-bold text-slate-800 text-lg flex-1">{locationName}</p>
-      </div>
       <CompteSolidariteQuartier ref={soliRef} scope={scope} location={location} locationName={locationName} />
 
       {/* Un seul bouton "Caisse" : santé, orphelins et projets (développement), tout dedans */}
@@ -351,9 +317,41 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
 
       {/* Actualités locales — le cœur de la page */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-slate-800 text-base">📰 Actualités — {locationName}</h3>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between mb-3 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {(logoUrl || canPublish) && (
+              <label
+                className={`relative w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 ${canPublish ? 'cursor-pointer' : ''}`}
+                title={canPublish ? `Changer le logo de ${locationName}` : undefined}
+              >
+                {logoUrl ? (
+                  <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs">🏛️</span>
+                )}
+                {canPublish && (
+                  <>
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[8px] leading-none opacity-0 hover:opacity-100 transition-opacity">
+                      {uploadingLogo ? '…' : '📷'}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleLogoUpload(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </>
+                )}
+              </label>
+            )}
+            <h3 className="font-bold text-slate-800 text-base truncate">📰 Actualités — {locationName}</h3>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             {isAdmin && (
               <button
                 onClick={() => { setShowPublishers(true); loadPublishers(); }}
