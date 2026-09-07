@@ -77,6 +77,7 @@ import uploadRoutes from './routes/upload.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import quartierFundRoutes from './routes/quartierFund.js';
+import quartierDocumentsRoutes from './routes/quartierDocuments.js';
 import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
 import djomyPaymentRoutes from './routes/djomyPayment.js';
 import moftalPayRoutes from './routes/MoftalPay.js';
@@ -671,6 +672,28 @@ async function initAllTables() {
       indexes: [
         `CREATE INDEX IF NOT EXISTS idx_qfr_fund_id ON "quartier_fund_requests" ("fund_id");`,
         `CREATE INDEX IF NOT EXISTS idx_qfr_statut  ON "quartier_fund_requests" ("statut");`
+      ],
+      alters: []
+    },
+    {
+      name: 'quartier_documents',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "quartier_documents" (
+          "id"                    UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "scope"                 VARCHAR(30)  NOT NULL,
+          "location"              VARCHAR(150) NOT NULL,
+          "location_name"         VARCHAR(150),
+          "titre"                 VARCHAR(255) NOT NULL,
+          "description"           TEXT,
+          "file_url"              TEXT         NOT NULL,
+          "file_name"             VARCHAR(255),
+          "uploaded_by_numero_h"  VARCHAR(255) NOT NULL,
+          "uploaded_by_nom"       VARCHAR(255),
+          "created_at"            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"            TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_qdoc_scope_loc ON "quartier_documents" ("scope", "location");`
       ],
       alters: []
     }
@@ -2695,6 +2718,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);
 app.use('/api/quartier-fund', quartierFundRoutes);
+app.use('/api/quartier-documents', quartierDocumentsRoutes);
 app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);
 app.use('/api/djomy', djomyPaymentRoutes);
 app.use('/api/moftal-pay', moftalPayRoutes);
