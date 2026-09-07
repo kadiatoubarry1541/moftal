@@ -1,5 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 
+/** Navigateurs intégrés (Facebook, Instagram, LinkedIn, Messenger, TikTok...)
+ *  qui bloquent souvent le micro/caméra au niveau du système, sans même
+ *  proposer de demande d'autorisation — rien à faire côté site dans ce cas,
+ *  il faut ouvrir le lien dans le vrai navigateur du téléphone. */
+function estNavigateurIntegre(): boolean {
+  const ua = navigator.userAgent || '';
+  return /FBAN|FBAV|Instagram|LinkedInApp|Line\/|MicroMessenger|TikTok|Snapchat/i.test(ua);
+}
+
 interface AudioRecorderProps {
   onAudioRecorded: (audioBlob: Blob) => void;
   /** Durée max en secondes (défaut 10) */
@@ -66,7 +75,20 @@ export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = fal
         });
       }, 1000);
     } catch (err) {
-      setError("Impossible d'accéder au micro. Vérifiez les permissions.");
+      const name = (err as { name?: string })?.name;
+      if (estNavigateurIntegre()) {
+        setError(
+          "Le micro ne fonctionne pas dans le navigateur intégré de cette appli (Facebook, Instagram, LinkedIn...). Ouvre ce lien dans Chrome : menu ⋮ en haut à droite → \"Ouvrir dans le navigateur\"."
+        );
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        setError("Aucun micro trouvé sur cet appareil.");
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        setError("Le micro est déjà utilisé par une autre application.");
+      } else {
+        setError(
+          "Micro refusé. Vérifie les autorisations : appuie sur le cadenas/icône à côté de l'adresse du site, puis autorise le micro."
+        );
+      }
       console.error(err);
     }
   };
