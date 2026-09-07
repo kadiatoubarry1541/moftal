@@ -731,8 +731,8 @@ export default function TerreAdam() {
       <div className="max-w-7xl mx-auto px-2 sm:px-4 pb-4">
         {/* 1. Résidence */}
         {activeTab === 'lieux' && (
-          <div className="space-y-3">
-            <div className="bg-white p-3 sm:p-4">
+          <div className="space-y-2">
+            <div className="bg-white p-2 sm:p-3">
               {/* Sous-onglets : un par quartier (Résidence 1, 2, 3) — affichés
                   seulement s'il y en a plus d'un à choisir. */}
               {(() => {
@@ -795,10 +795,10 @@ export default function TerreAdam() {
               })()}
 
               {((userData?.quartierCode || userData?.lieu1 || userData?.lieuResidence1) || (userData?.continentCode && userData?.paysCode && userData?.regionCode && userData?.prefectureCode && userData?.sousPrefectureCode) || isAdmin) ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {/* Page Quartier : une page indépendante par résidence (1, 2 ou 3) */}
                   {(activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3') && (
-                    <div className="space-y-3 sm:space-y-4">
+                    <div className="space-y-2">
                       {(() => {
                         const slotNum = activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3;
                         const code = userQuartierCodes[slotNum - 1];
