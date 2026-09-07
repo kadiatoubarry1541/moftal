@@ -729,63 +729,66 @@ export default function TerreAdam() {
         {activeTab === 'lieux' && (
           <div className="space-y-3">
             <div className="bg-white p-3 sm:p-4">
-              <h2 className="text-base font-bold text-emerald-800 mb-3 flex items-center gap-2">
-                <span className="text-xl">🏠</span>
-                <span>Résidence</span>
-              </h2>
-              {/* Sous-onglets : un par quartier (Résidence 1, 2, 3) */}
-              <div className="border-b border-gray-200 mb-4">
-                <nav className="flex">
-                  {[
-                    {
-                      id: 'quartier-1' as LieuTabId,
-                      label: (() => {
-                        const c = userQuartierCodes[0];
-                        const loc = c ? findLocationByCode(c) : null;
-                        if (loc?.name) return loc.name;
-                        return isRealLieu(c) ? String(c).trim() : 'Résidence 1';
-                      })(),
-                      icon: '🏘️',
-                      visible: isAdmin || isRealLieu(userQuartierCodes[0])
-                    },
-                    {
-                      id: 'quartier-2' as LieuTabId,
-                      label: (() => {
-                        const c = userQuartierCodes[1];
-                        const loc = c ? findLocationByCode(c) : null;
-                        if (loc?.name) return loc.name;
-                        return isRealLieu(c) ? String(c).trim() : 'Résidence 2';
-                      })(),
-                      icon: '🏘️',
-                      visible: isAdmin || isRealLieu(userQuartierCodes[1])
-                    },
-                    {
-                      id: 'quartier-3' as LieuTabId,
-                      label: (() => {
-                        const c = userQuartierCodes[2];
-                        const loc = c ? findLocationByCode(c) : null;
-                        if (loc?.name) return loc.name;
-                        return isRealLieu(c) ? String(c).trim() : 'Résidence 3';
-                      })(),
-                      icon: '🏘️',
-                      visible: isAdmin || isRealLieu(userQuartierCodes[2])
-                    }
-                  ].filter(tab => tab.visible).map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveLieuTab(tab.id)}
-                      className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
-                        activeLieuTab === tab.id
-                          ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="text-sm leading-none">{tab.icon}</span>
-                      <span className="text-[9px] font-medium leading-tight w-full truncate text-center px-0.5">{tab.label}</span>
-                    </button>
-                  ))}
-                </nav>
-              </div>
+              {/* Sous-onglets : un par quartier (Résidence 1, 2, 3) — affichés
+                  seulement s'il y en a plus d'un à choisir. */}
+              {(() => {
+                const tabs = [
+                  {
+                    id: 'quartier-1' as LieuTabId,
+                    label: (() => {
+                      const c = userQuartierCodes[0];
+                      const loc = c ? findLocationByCode(c) : null;
+                      if (loc?.name) return loc.name;
+                      return isRealLieu(c) ? String(c).trim() : 'Résidence 1';
+                    })(),
+                    icon: '🏘️',
+                    visible: isAdmin || isRealLieu(userQuartierCodes[0])
+                  },
+                  {
+                    id: 'quartier-2' as LieuTabId,
+                    label: (() => {
+                      const c = userQuartierCodes[1];
+                      const loc = c ? findLocationByCode(c) : null;
+                      if (loc?.name) return loc.name;
+                      return isRealLieu(c) ? String(c).trim() : 'Résidence 2';
+                    })(),
+                    icon: '🏘️',
+                    visible: isAdmin || isRealLieu(userQuartierCodes[1])
+                  },
+                  {
+                    id: 'quartier-3' as LieuTabId,
+                    label: (() => {
+                      const c = userQuartierCodes[2];
+                      const loc = c ? findLocationByCode(c) : null;
+                      if (loc?.name) return loc.name;
+                      return isRealLieu(c) ? String(c).trim() : 'Résidence 3';
+                    })(),
+                    icon: '🏘️',
+                    visible: isAdmin || isRealLieu(userQuartierCodes[2])
+                  }
+                ].filter(tab => tab.visible);
+                if (tabs.length <= 1) return null;
+                return (
+                  <div className="border-b border-gray-200 mb-4">
+                    <nav className="flex">
+                      {tabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveLieuTab(tab.id)}
+                          className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
+                            activeLieuTab === tab.id
+                              ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="text-sm leading-none">{tab.icon}</span>
+                          <span className="text-[9px] font-medium leading-tight w-full truncate text-center px-0.5">{tab.label}</span>
+                        </button>
+                      ))}
+                    </nav>
+                  </div>
+                );
+              })()}
 
               {((userData?.quartierCode || userData?.lieu1 || userData?.lieuResidence1) || (userData?.continentCode && userData?.paysCode && userData?.regionCode && userData?.prefectureCode && userData?.sousPrefectureCode) || isAdmin) ? (
                 <div className="space-y-4">
