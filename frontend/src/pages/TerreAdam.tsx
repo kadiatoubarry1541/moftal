@@ -901,9 +901,9 @@ export default function TerreAdam() {
                                   <>
                                     <button
                                       type="button"
-                                      onClick={() => setShowQuartierMenu(v => !v)}
+                                      onClick={() => setShowQuartierMenu(true)}
                                       className="relative w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-base flex-shrink-0 overflow-hidden cursor-pointer"
-                                      title="Voir Liste et Caisse"
+                                      title="Voir les infos du quartier"
                                     >
                                       {logoSrc ? (
                                         <img src={logoSrc} alt="Logo du quartier" className="w-full h-full object-cover" />
@@ -927,30 +927,6 @@ export default function TerreAdam() {
                                           e.target.value = '';
                                         }}
                                       />
-                                    )}
-                                    {showQuartierMenu && (
-                                      <div className="absolute top-11 left-0 z-20 bg-white text-gray-800 rounded-xl shadow-lg border border-gray-200 overflow-hidden w-44">
-                                        <button
-                                          onClick={() => { setShowQuartierMenu(false); setShowMembersList(true); }}
-                                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition-colors"
-                                        >
-                                          👥 Liste
-                                        </button>
-                                        <button
-                                          onClick={() => { setShowQuartierMenu(false); quartierDevRef.current?.openCaisse(); }}
-                                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition-colors border-t border-gray-100"
-                                        >
-                                          💰 Caisse
-                                        </button>
-                                        {canEditLogo && (
-                                          <button
-                                            onClick={() => { setShowQuartierMenu(false); quartierLogoInputRef.current?.click(); }}
-                                            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 transition-colors border-t border-gray-100"
-                                          >
-                                            📷 Changer la photo
-                                          </button>
-                                        )}
-                                      </div>
                                     )}
                                   </>
                                 );
@@ -1405,6 +1381,64 @@ export default function TerreAdam() {
         )}
 
       </div>
+
+      {/* Page entière — Infos du quartier (ouverte en cliquant sur sa photo,
+          comme la photo de profil, pour ne pas mélanger ça avec le chat) */}
+      {showQuartierMenu && selectedGroup && (() => {
+        const canEditLogo = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
+        const logoSrc = selectedGroup.logoUrl
+          ? (selectedGroup.logoUrl.startsWith('http') ? selectedGroup.logoUrl : `${API_BASE}${selectedGroup.logoUrl}`)
+          : null;
+        return (
+          <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col">
+            <div className="bg-gray-800 text-white px-4 py-3 flex items-center gap-3 flex-shrink-0">
+              <button onClick={() => setShowQuartierMenu(false)} aria-label="Retour" className="text-3xl leading-none">‹</button>
+              <h2 className="font-bold text-base truncate">{selectedGroup.title || selectedGroup.name}</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 flex flex-col items-center gap-5">
+              <label className={`relative w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-3xl overflow-hidden ${canEditLogo ? 'cursor-pointer' : ''}`}>
+                {logoSrc ? (
+                  <img src={logoSrc} alt="Logo du quartier" className="w-full h-full object-cover" />
+                ) : (
+                  (selectedGroup.title || selectedGroup.name || '?').charAt(0).toUpperCase()
+                )}
+                {canEditLogo && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-xs leading-none opacity-0 hover:opacity-100 transition-opacity">
+                    {uploadingLogo ? '…' : '📷'}
+                  </div>
+                )}
+              </label>
+              {canEditLogo && (
+                <button
+                  onClick={() => quartierLogoInputRef.current?.click()}
+                  className="text-emerald-700 text-sm font-semibold -mt-3"
+                >
+                  📷 Changer la photo
+                </button>
+              )}
+              <p className="text-gray-500 text-sm -mt-2">
+                {selectedGroup.members?.length ?? 0} membre{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}
+              </p>
+              <div className="w-full max-w-sm space-y-3">
+                <button
+                  onClick={() => { setShowQuartierMenu(false); setShowMembersList(true); }}
+                  className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
+                >
+                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">👥 Liste des membres</span>
+                  <span className="text-gray-400">›</span>
+                </button>
+                <button
+                  onClick={() => { setShowQuartierMenu(false); quartierDevRef.current?.openCaisse(); }}
+                  className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl shadow"
+                >
+                  <span className="flex items-center gap-3 font-bold text-white text-sm">💰 Caisse</span>
+                  <span className="text-white/80">›</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal — Liste des membres du quartier */}
       {showMembersList && selectedGroup && (
