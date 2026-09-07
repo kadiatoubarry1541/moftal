@@ -2,7 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
 import QuartierDocument from '../models/QuartierDocument.js';
-import { uploadToIDrive, deleteFromIDrive } from '../services/idriveStorage.js';
+import { uploadToR2, deleteFromR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
 
 // "Livre" du quartier / sous-préfecture : documents (PDF...) sur l'histoire
 // et la vie du lieu — consultable par tous, publié par les admins/journalistes.
@@ -60,7 +61,8 @@ router.post('/', upload.single('document'), async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Fichier requis.' });
     }
-    const fileUrl = await uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'quartier-documents');
+    const fileUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'quartier-documents');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'quartier-documents').catch(() => {});
     const doc = await QuartierDocument.create({
       scope,
       location: String(location).toLowerCase(),
@@ -87,7 +89,7 @@ router.delete('/:id', async (req, res) => {
     if (!isJournalistOrAdmin(req.user) && doc.uploadedByNumeroH !== req.user.numeroH) {
       return res.status(403).json({ success: false, message: 'Non autorisé.' });
     }
-    await deleteFromIDrive(doc.fileUrl);
+    await deleteFromR2(doc.fileUrl);
     await doc.destroy();
     res.json({ success: true });
   } catch (err) {
