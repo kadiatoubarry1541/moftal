@@ -1119,26 +1119,9 @@ export default function TerreAdam() {
                               )}
                               {/* Barre de saisie compacte */}
                               <div className="flex gap-2 items-center px-3 py-3">
-                                {/* Bouton catégorie — affiche l'icône choisie, ouvre/ferme la grille */}
-                                {(() => {
-                                  const cd = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === newMessage.category);
-                                  const cl = getCanalColors(cd?.color || 'blue');
-                                  const cat = QUARTIER_CATEGORIES.find(c => c.id === newMessage.category);
-                                  return (
-                                    <button
-                                      type="button"
-                                      onClick={() => setShowCategoryGrid(!showCategoryGrid)}
-                                      title="Choisir le type de publication"
-                                      className={`flex-shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center border-2 transition-all ${
-                                        showCategoryGrid ? `${cl.bg} ${cl.border}` : 'bg-gray-100 border-gray-200 hover:bg-gray-200'
-                                      }`}
-                                    >
-                                      <span className="text-xl leading-none">{cat?.icon || 'ℹ️'}</span>
-                                    </button>
-                                  );
-                                })()}
-                                {/* Zone centrale : texte (avec la pièce jointe intégrée dedans, à droite), média
-                                    prêt à envoyer, ou enregistrement vocal en cours */}
+                                {/* Zone centrale : texte (avec la catégorie et la pièce jointe intégrées
+                                    dedans, à gauche et à droite), média prêt à envoyer, ou enregistrement
+                                    vocal en cours */}
                                 {newMessage.messageType === 'audio' && !newMessage.mediaFile ? (
                                   <div className="flex-1 min-w-0">
                                     <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
@@ -1163,13 +1146,31 @@ export default function TerreAdam() {
                                   </div>
                                 ) : (
                                   <div className="flex-1 min-w-0 relative">
+                                    {/* Catégorie — affiche l'icône choisie, ouvre/ferme la grille, intégrée dans le champ */}
+                                    {(() => {
+                                      const cd = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === newMessage.category);
+                                      const cl = getCanalColors(cd?.color || 'blue');
+                                      const cat = QUARTIER_CATEGORIES.find(c => c.id === newMessage.category);
+                                      return (
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowCategoryGrid(!showCategoryGrid)}
+                                          title="Choisir le type de publication"
+                                          className={`absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                                            showCategoryGrid ? `${cl.bg}` : 'hover:bg-gray-200'
+                                          }`}
+                                        >
+                                          <span className="text-lg leading-none">{cat?.icon || '📰'}</span>
+                                        </button>
+                                      );
+                                    })()}
                                     <input
                                       type="text"
                                       value={newMessage.content}
                                       onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
                                       onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); setShowCategoryGrid(false); } }}
-                                      placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.icon || ''} ${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
-                                      className="w-full min-w-0 pl-4 pr-20 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
+                                      placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
+                                      className="w-full min-w-0 pl-12 pr-20 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
                                     />
                                     {/* Pièce jointe (photo ou vidéo) — intégrée dans le champ, type détecté automatiquement */}
                                     <label
