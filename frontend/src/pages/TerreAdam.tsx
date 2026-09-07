@@ -858,7 +858,7 @@ export default function TerreAdam() {
                           </div>
                         ) : (
                         /* ── Feed unique avec filtres (une seule page, tout visible) ── */
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" style={{ minHeight: '480px', maxHeight: '82vh' }}>
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" style={{ minHeight: '600px', maxHeight: '92vh' }}>
 
                           {/* En-tête : nom du quartier + membres + sélecteur admin */}
                           <div className="bg-gray-800 text-white flex-shrink-0">
