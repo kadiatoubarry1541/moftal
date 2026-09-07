@@ -679,7 +679,6 @@ export default function TerreAdam() {
           },
           { id: 'mondial', icon: '🌎', label: 'Mondial' }
         ];
-        const current = navTabs.find(t => t.id === activeTab);
         return (
           <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
             {/* Retour + titre + badge du niveau actif */}
@@ -695,12 +694,6 @@ export default function TerreAdam() {
                 </button>
                 <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>🌍 Terre ADAM</h1>
               </div>
-              {current && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
-                  <span>{current.icon}</span>
-                  <span className="truncate max-w-[100px]">{current.label}</span>
-                </span>
-              )}
             </div>
 
             {/* Les 7 niveaux propres à Terre ADAM — barre défilante pour rester lisible même avec beaucoup d'onglets */}
@@ -728,7 +721,7 @@ export default function TerreAdam() {
       })()}
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 pb-4">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
         {/* 1. Résidence */}
         {activeTab === 'lieux' && (
           <div className="space-y-2.5">
