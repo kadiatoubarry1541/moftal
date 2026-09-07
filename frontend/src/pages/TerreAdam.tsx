@@ -164,6 +164,10 @@ export default function TerreAdam() {
   // menu Liste/Caisse au lieu d'avoir des boutons séparés en permanence.
   const [showQuartierMenu, setShowQuartierMenu] = useState(false);
   const quartierLogoInputRef = useRef<HTMLInputElement>(null);
+  // Logo de chaque résidence (1, 2, 3) pour l'afficher directement dans
+  // l'onglet — même les personnes qui ne savent pas lire reconnaissent
+  // leur quartier par sa photo, pas seulement par son nom.
+  const [quartierTabLogos, setQuartierTabLogos] = useState<Record<string, string | null>>({});
   // Permet d'ouvrir la modale "Projets" du quartier depuis le bouton placé
   // à côté de "Liste" dans l'en-tête du chat, plutôt que depuis son propre
   // bouton (masqué sur la page Quartier via hideProjetsButton).
@@ -385,6 +389,28 @@ export default function TerreAdam() {
       setActiveCanal(null);
     }
   }, [selectedGroup]);
+
+  // Charge le logo du groupe principal de chaque résidence réelle de
+  // l'utilisateur, pour l'afficher directement dans l'onglet Résidence 1/2/3.
+  useEffect(() => {
+    if (!userData) return;
+    const token = localStorage.getItem('token');
+    const codes = userQuartierCodes.filter(isRealLieu) as string[];
+    codes.forEach(async (code) => {
+      if (code in quartierTabLogos) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(normalizeLoc(code))}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const logoUrl = data.groups?.[0]?.logoUrl || null;
+        setQuartierTabLogos(prev => ({ ...prev, [code]: logoUrl }));
+      } catch {
+        setQuartierTabLogos(prev => ({ ...prev, [code]: null }));
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData]);
 
   const loadGroups = async () => {
     if (!userData) {
@@ -732,35 +758,35 @@ export default function TerreAdam() {
                 const tabs = [
                   {
                     id: 'quartier-1' as LieuTabId,
+                    code: userQuartierCodes[0],
                     label: (() => {
                       const c = userQuartierCodes[0];
                       const loc = c ? findLocationByCode(c) : null;
                       if (loc?.name) return loc.name;
                       return isRealLieu(c) ? String(c).trim() : 'Résidence 1';
                     })(),
-                    icon: '🏘️',
                     visible: isAdmin || isRealLieu(userQuartierCodes[0])
                   },
                   {
                     id: 'quartier-2' as LieuTabId,
+                    code: userQuartierCodes[1],
                     label: (() => {
                       const c = userQuartierCodes[1];
                       const loc = c ? findLocationByCode(c) : null;
                       if (loc?.name) return loc.name;
                       return isRealLieu(c) ? String(c).trim() : 'Résidence 2';
                     })(),
-                    icon: '🏘️',
                     visible: isAdmin || isRealLieu(userQuartierCodes[1])
                   },
                   {
                     id: 'quartier-3' as LieuTabId,
+                    code: userQuartierCodes[2],
                     label: (() => {
                       const c = userQuartierCodes[2];
                       const loc = c ? findLocationByCode(c) : null;
                       if (loc?.name) return loc.name;
                       return isRealLieu(c) ? String(c).trim() : 'Résidence 3';
                     })(),
-                    icon: '🏘️',
                     visible: isAdmin || isRealLieu(userQuartierCodes[2])
                   }
                 ].filter(tab => tab.visible);
@@ -768,20 +794,30 @@ export default function TerreAdam() {
                 return (
                   <div className="border-b border-gray-200 mb-4">
                     <nav className="flex">
-                      {tabs.map((tab) => (
-                        <button
-                          key={tab.id}
-                          onClick={() => setActiveLieuTab(tab.id)}
-                          className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
-                            activeLieuTab === tab.id
-                              ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
-                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <span className="text-sm leading-none">{tab.icon}</span>
-                          <span className="text-[9px] font-medium leading-tight w-full truncate text-center px-0.5">{tab.label}</span>
-                        </button>
-                      ))}
+                      {tabs.map((tab) => {
+                        const rawLogo = tab.code ? quartierTabLogos[tab.code] : null;
+                        const logoSrc = rawLogo ? (rawLogo.startsWith('http') ? rawLogo : `${API_BASE}${rawLogo}`) : null;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveLieuTab(tab.id)}
+                            className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 border-b-2 transition-colors ${
+                              activeLieuTab === tab.id
+                                ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            <span className="w-8 h-8 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center text-sm font-bold text-emerald-700 flex-shrink-0">
+                              {logoSrc ? (
+                                <img src={logoSrc} alt={tab.label} className="w-full h-full object-cover" />
+                              ) : (
+                                tab.label.charAt(0).toUpperCase()
+                              )}
+                            </span>
+                            <span className="text-[9px] font-medium leading-tight w-full truncate text-center px-0.5">{tab.label}</span>
+                          </button>
+                        );
+                      })}
                     </nav>
                   </div>
                 );
