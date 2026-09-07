@@ -904,7 +904,7 @@ export default function TerreAdam() {
                                     <button
                                       type="button"
                                       onClick={() => setShowQuartierMenu(true)}
-                                      className="relative w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-base flex-shrink-0 overflow-hidden cursor-pointer"
+                                      className="relative w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 overflow-hidden cursor-pointer"
                                       title="Voir les infos du quartier"
                                     >
                                       {logoSrc ? (
@@ -937,7 +937,6 @@ export default function TerreAdam() {
                                 <h3 className="font-bold text-sm truncate">{selectedGroup.title || selectedGroup.name}</h3>
                                 <p className="text-xs text-gray-400 mt-0.5">
                                   {selectedGroup.members?.length ?? 0} membre{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}
-                                  {' · '}{messages.length} message{messages.length > 1 ? 's' : ''}
                                 </p>
                               </div>
                               {Array.isArray(selectedGroup.members) && selectedGroup.members.length > 0 && (
