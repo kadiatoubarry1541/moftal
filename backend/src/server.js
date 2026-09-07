@@ -78,6 +78,7 @@ import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import quartierFundRoutes from './routes/quartierFund.js';
 import quartierDocumentsRoutes from './routes/quartierDocuments.js';
+import locationChildrenRoutes from './routes/locationChildren.js';
 import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
 import djomyPaymentRoutes from './routes/djomyPayment.js';
 import moftalPayRoutes from './routes/MoftalPay.js';
@@ -694,6 +695,23 @@ async function initAllTables() {
         );`,
       indexes: [
         `CREATE INDEX IF NOT EXISTS idx_qdoc_scope_loc ON "quartier_documents" ("scope", "location");`
+      ],
+      alters: []
+    },
+    {
+      name: 'location_children',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "location_children" (
+          "id"                   UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "parent_scope"         VARCHAR(30)  NOT NULL,
+          "parent_location"      VARCHAR(150) NOT NULL,
+          "name"                 VARCHAR(150) NOT NULL,
+          "added_by_numero_h"    VARCHAR(255) NOT NULL,
+          "created_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"           TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_lc_parent ON "location_children" ("parent_scope", "parent_location");`
       ],
       alters: []
     }
@@ -2719,6 +2737,7 @@ app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);
 app.use('/api/quartier-fund', quartierFundRoutes);
 app.use('/api/quartier-documents', quartierDocumentsRoutes);
+app.use('/api/location-children', locationChildrenRoutes);
 app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);
 app.use('/api/djomy', djomyPaymentRoutes);
 app.use('/api/moftal-pay', moftalPayRoutes);
