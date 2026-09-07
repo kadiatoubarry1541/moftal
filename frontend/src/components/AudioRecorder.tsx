@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 
-/** Navigateurs intégrés (Facebook, Instagram, LinkedIn, Messenger, TikTok...)
- *  qui bloquent souvent le micro/caméra au niveau du système, sans même
- *  proposer de demande d'autorisation — rien à faire côté site dans ce cas,
- *  il faut ouvrir le lien dans le vrai navigateur du téléphone. */
+/** Navigateurs intégrés (Facebook, Instagram, LinkedIn, Messenger, TikTok,
+ *  appli Google...) qui bloquent souvent le micro/caméra au niveau du
+ *  système, sans même proposer de demande d'autorisation — rien à faire
+ *  côté site dans ce cas, il faut ouvrir le lien dans le vrai navigateur
+ *  du téléphone (Chrome, Samsung Internet...). */
 function estNavigateurIntegre(): boolean {
   const ua = navigator.userAgent || '';
-  return /FBAN|FBAV|Instagram|LinkedInApp|Line\/|MicroMessenger|TikTok|Snapchat/i.test(ua);
+  return /FBAN|FBAV|Instagram|LinkedInApp|Line\/|MicroMessenger|TikTok|Snapchat|GSA\/|; wv\)/i.test(ua);
 }
 
 interface AudioRecorderProps {
@@ -78,7 +79,7 @@ export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = fal
       const name = (err as { name?: string })?.name;
       if (estNavigateurIntegre()) {
         setError(
-          "Le micro ne fonctionne pas dans le navigateur intégré de cette appli (Facebook, Instagram, LinkedIn...). Ouvre ce lien dans Chrome : menu ⋮ en haut à droite → \"Ouvrir dans le navigateur\"."
+          "Le micro ne fonctionne pas ici car ce lien s'est ouvert dans le navigateur intégré d'une appli (Google, Facebook, Instagram...), pas dans Chrome directement. Ouvre le menu (⋮ ou ⋯) en haut de l'écran et choisis \"Ouvrir dans le navigateur\" ou \"Ouvrir dans Chrome\"."
         );
       } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         setError("Aucun micro trouvé sur cet appareil.");
@@ -86,7 +87,7 @@ export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = fal
         setError("Le micro est déjà utilisé par une autre application.");
       } else {
         setError(
-          "Micro refusé. Vérifie les autorisations : appuie sur le cadenas/icône à côté de l'adresse du site, puis autorise le micro."
+          "Micro refusé. Vérifie les autorisations (appuie sur le cadenas/icône à côté de l'adresse du site, puis autorise le micro) — ou essaie d'ouvrir ce lien directement dans Chrome."
         );
       }
       console.error(err);

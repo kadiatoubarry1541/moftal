@@ -1156,7 +1156,7 @@ export default function TerreAdam() {
                                           type="button"
                                           onClick={() => setShowCategoryGrid(!showCategoryGrid)}
                                           title="Choisir le type de publication"
-                                          className={`absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                                          className={`absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-colors ${
                                             showCategoryGrid ? `${cl.bg}` : 'hover:bg-gray-200'
                                           }`}
                                         >
@@ -1174,10 +1174,10 @@ export default function TerreAdam() {
                                     />
                                     {/* Pièce jointe (photo ou vidéo) — intégrée dans le champ, type détecté automatiquement */}
                                     <label
-                                      className="absolute right-10 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-lg text-gray-500 hover:text-gray-700 cursor-pointer"
+                                      className="absolute right-10 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-lg leading-none text-gray-500 hover:text-gray-700 cursor-pointer"
                                       title="Envoyer une photo ou une vidéo"
                                     >
-                                      📎
+                                      📷
                                       <input
                                         type="file"
                                         accept="image/*,video/*"
@@ -1224,7 +1224,7 @@ export default function TerreAdam() {
                                   <button
                                     type="button"
                                     onClick={() => setNewMessage({...newMessage, messageType: 'audio', mediaFile: null})}
-                                    className="flex-shrink-0 w-11 h-11 rounded-full bg-gray-200 hover:bg-emerald-100 text-gray-600 hover:text-emerald-700 flex items-center justify-center text-xl transition-colors"
+                                    className="flex-shrink-0 w-11 h-11 rounded-full overflow-hidden bg-gray-200 hover:bg-emerald-100 text-gray-600 hover:text-emerald-700 flex items-center justify-center text-xl leading-none transition-colors"
                                     title="Envoyer un message vocal"
                                   >
                                     🎤
