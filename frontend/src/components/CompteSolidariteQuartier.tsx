@@ -105,8 +105,11 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
 
   useEffect(() => { if (open) charger(); }, [open, charger]);
 
+  const estAdminPrincipal = myNumeroH === 'G0C0P0R0E0F0 0' || myNumeroH === 'G7C7P7R7E7F7 7';
+
   async function creerCompte() {
-    if (!chef1 || !chef2) return alert('Il faut désigner au moins 2 chefs.');
+    if (!chef1) return alert('Le chef 1 est requis.');
+    if (!chef2 && !estAdminPrincipal) return alert('Il faut désigner au moins 2 chefs.');
     setLoading(true);
     try {
       const r = await fetch(`${API_BASE}/api/quartier-fund/creer`, {
@@ -230,14 +233,21 @@ const CompteSolidariteQuartier = forwardRef<CompteSolidariteQuartierHandle, Prop
                   </p>
                   {peutCreer ? (
                     !showCreer ? (
-                      <button onClick={() => setShowCreer(true)} className="px-4 py-2 rounded-full bg-cyan-700 text-white text-sm font-bold">
+                      <button
+                        onClick={() => { if (estAdminPrincipal && myNumeroH) setChef1(myNumeroH); setShowCreer(true); }}
+                        className="px-4 py-2 rounded-full bg-cyan-700 text-white text-sm font-bold"
+                      >
                         Créer le compte
                       </button>
                     ) : (
                       <div className="text-left space-y-2 bg-gray-50 p-3 rounded-xl">
-                        <p className="text-xs text-gray-500 mb-1">Désigne 2 ou 3 chefs (numéro H). 2 confirmations seront requises pour chaque paiement.</p>
+                        <p className="text-xs text-gray-500 mb-1">
+                          {estAdminPrincipal
+                            ? 'En tant qu\'admin, tu peux créer seule (pour voir le compte) ou désigner directement les chefs.'
+                            : 'Désigne 2 ou 3 chefs (numéro H). 2 confirmations seront requises pour chaque paiement.'}
+                        </p>
                         <input value={chef1} onChange={e => setChef1(e.target.value)} placeholder="Numéro H — Chef 1" className="w-full border rounded-lg px-3 py-2 text-sm" />
-                        <input value={chef2} onChange={e => setChef2(e.target.value)} placeholder="Numéro H — Chef 2" className="w-full border rounded-lg px-3 py-2 text-sm" />
+                        <input value={chef2} onChange={e => setChef2(e.target.value)} placeholder={`Numéro H — Chef 2${estAdminPrincipal ? ' (optionnel)' : ''}`} className="w-full border rounded-lg px-3 py-2 text-sm" />
                         <input value={chef3} onChange={e => setChef3(e.target.value)} placeholder="Numéro H — Chef 3 (optionnel)" className="w-full border rounded-lg px-3 py-2 text-sm" />
                         <button onClick={creerCompte} disabled={loading} className="w-full py-2 rounded-full bg-cyan-700 text-white text-sm font-bold disabled:opacity-50">
                           Confirmer la création

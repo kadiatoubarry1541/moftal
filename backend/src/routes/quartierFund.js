@@ -127,8 +127,13 @@ router.post('/creer', async (req, res) => {
     if (existe) {
       return res.status(400).json({ success: false, message: 'Ce compte existe déjà.' });
     }
-    if (!chef1NumeroH || !chef2NumeroH) {
+    // L'admin principal peut créer seul (ex: pour voir/tester le compte) ;
+    // pour un vrai compte de quartier, 2 chefs minimum restent obligatoires.
+    if (!req.user.isMasterAdmin && (!chef1NumeroH || !chef2NumeroH)) {
       return res.status(400).json({ success: false, message: 'Il faut désigner au moins 2 chefs (2 confirmations sont requises pour chaque paiement).' });
+    }
+    if (!chef1NumeroH) {
+      return res.status(400).json({ success: false, message: 'Le chef 1 est requis.' });
     }
 
     const updates = { scope, location: loc, locationName: locationName || location };
