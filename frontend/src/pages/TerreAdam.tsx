@@ -1137,17 +1137,59 @@ export default function TerreAdam() {
                                     </button>
                                   );
                                 })()}
-                                <select
-                                  value={newMessage.messageType}
-                                  onChange={(e) => setNewMessage({...newMessage, messageType: e.target.value as any, mediaFile: null})}
-                                  className="px-2 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm flex-shrink-0"
-                                >
-                                  <option value="text">📝</option>
-                                  <option value="image">🖼️</option>
-                                  <option value="video">🎥</option>
-                                  <option value="audio">🎵</option>
-                                </select>
-                                {newMessage.messageType === 'text' ? (
+                                {/* Pièce jointe (photo ou vidéo) — le type est détecté automatiquement, rien à choisir à l'avance */}
+                                {newMessage.messageType !== 'audio' && !newMessage.mediaFile && (
+                                  <label
+                                    className="flex-shrink-0 w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-lg cursor-pointer transition-colors"
+                                    title="Envoyer une photo ou une vidéo"
+                                  >
+                                    📎
+                                    <input
+                                      type="file"
+                                      accept="image/*,video/*"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        e.target.value = '';
+                                        if (!file) return;
+                                        if (file.type.startsWith('video/')) {
+                                          const url = URL.createObjectURL(file);
+                                          const videoEl = document.createElement('video');
+                                          videoEl.preload = 'metadata';
+                                          videoEl.onloadedmetadata = () => {
+                                            URL.revokeObjectURL(url);
+                                            if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
+                                              alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`);
+                                              return;
+                                            }
+                                            setNewMessage(prev => ({...prev, messageType: 'video', mediaFile: file}));
+                                          };
+                                          videoEl.onerror = () => { URL.revokeObjectURL(url); alert('Impossible de lire cette vidéo.'); };
+                                          videoEl.src = url;
+                                        } else {
+                                          setNewMessage(prev => ({...prev, messageType: 'image', mediaFile: file}));
+                                        }
+                                      }}
+                                    />
+                                  </label>
+                                )}
+
+                                {/* Zone centrale : texte, média prêt à envoyer, ou enregistrement vocal en cours */}
+                                {newMessage.messageType === 'audio' && !newMessage.mediaFile ? (
+                                  <div className="flex-1 min-w-0">
+                                    <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
+                                      const file = new File([blob], 'vocal.webm', { type: blob.type });
+                                      setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
+                                    }} />
+                                  </div>
+                                ) : newMessage.mediaFile ? (
+                                  <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
+                                    <span className="text-sm text-green-700 flex-1 truncate">
+                                      {newMessage.messageType === 'audio' ? '🎙️ Audio prêt' : newMessage.messageType === 'video' ? '🎥 Vidéo prête' : '📷 Photo prête'}
+                                    </span>
+                                    <button type="button" onClick={() => setNewMessage({...newMessage, messageType: 'text', mediaFile: null})} className="text-red-500 text-xs font-medium flex-shrink-0">✕</button>
+                                  </div>
+                                ) : (
                                   <input
                                     type="text"
                                     value={newMessage.content}
@@ -1156,53 +1198,10 @@ export default function TerreAdam() {
                                     placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.icon || ''} ${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
                                     className="flex-1 min-w-0 px-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
                                   />
-                                ) : newMessage.messageType === 'audio' ? (
-                                  <div className="flex-1 min-w-0">
-                                    {newMessage.mediaFile ? (
-                                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
-                                        <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
-                                        <button type="button" onClick={() => setNewMessage({...newMessage, mediaFile: null})} className="text-red-500 text-xs font-medium">✕</button>
-                                      </div>
-                                    ) : (
-                                      <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
-                                        const file = new File([blob], 'vocal.webm', { type: blob.type });
-                                        setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
-                                      }} />
-                                    )}
-                                  </div>
-                                ) : (
-                                  <input
-                                    type="file"
-                                    accept={newMessage.messageType === 'image' ? 'image/*' : 'video/*'}
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0] || null;
-                                      if (!file) { setNewMessage({...newMessage, mediaFile: null}); return; }
-                                      let detectedType = newMessage.messageType;
-                                      if (file.type.startsWith('image/')) detectedType = 'image';
-                                      else if (file.type.startsWith('video/')) detectedType = 'video';
-                                      if (detectedType === 'video') {
-                                        const url = URL.createObjectURL(file);
-                                        const videoEl = document.createElement('video');
-                                        videoEl.preload = 'metadata';
-                                        videoEl.onloadedmetadata = () => {
-                                          URL.revokeObjectURL(url);
-                                          if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
-                                            alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`);
-                                            e.target.value = '';
-                                            return;
-                                          }
-                                          setNewMessage(prev => ({...prev, messageType: 'video', mediaFile: file}));
-                                        };
-                                        videoEl.onerror = () => { URL.revokeObjectURL(url); alert('Impossible de lire cette vidéo.'); };
-                                        videoEl.src = url;
-                                        return;
-                                      }
-                                      setNewMessage({...newMessage, messageType: detectedType, mediaFile: file});
-                                    }}
-                                    className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-sm"
-                                  />
                                 )}
-                                {newMessage.messageType !== 'audio' && (
+
+                                {/* Message vocal */}
+                                {newMessage.messageType !== 'audio' && !newMessage.mediaFile && (
                                   <button
                                     type="button"
                                     onClick={() => setNewMessage({...newMessage, messageType: 'audio', mediaFile: null})}
