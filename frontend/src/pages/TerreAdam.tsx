@@ -631,7 +631,11 @@ export default function TerreAdam() {
     setShareSelected(new Set());
     setShareLevels([]);
     setShareChecking(true);
-    const candidats = higherLevelsFrom('quartier');
+    // Un quartier ne peut partager que vers la sous-préfecture juste
+    // au-dessus — jamais sauter directement à un niveau plus loin. C'est
+    // depuis la sous-préfecture (une fois l'info arrivée là) qu'on peut
+    // continuer à la faire remonter plus haut.
+    const candidats = higherLevelsFrom('quartier').slice(0, 1);
     const token = localStorage.getItem('token');
     try {
       const resultats = await Promise.all(candidats.map(async (lvl) => {
