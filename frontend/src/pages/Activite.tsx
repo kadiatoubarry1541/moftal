@@ -13,7 +13,7 @@ import {
   // Icônes distinctes par activité — chaque activité a son propre logo, aucun partage
   HeartPulse, Cross, Dog, Eye, Presentation, Landmark, Umbrella, Gavel,
   Cpu, Code, PencilRuler, Megaphone, Siren, Wheat, Brush, Trophy, Cog,
-  Trees, Moon
+  Trees, Moon, Drill
 } from 'lucide-react';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
