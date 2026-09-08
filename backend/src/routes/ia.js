@@ -6,6 +6,7 @@ import Payment from '../models/Payment.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { TERMINALE_KNOWLEDGE } from '../data/iaKnowledgeTerminale.js';
 import { BIOLOGIE_KNOWLEDGE } from '../data/iaKnowledgeBiologie.js';
+import { FRANCAIS_AVANCE_KNOWLEDGE } from '../data/iaKnowledgeFrancaisAvance.js';
 
 /** Insère (ou met à jour) les fiches Terminale au démarrage — n'écrase jamais une
  *  fiche déjà modifiée manuellement par un admin depuis l'API /knowledge. */
@@ -39,6 +40,20 @@ async function seedBiologieKnowledge() {
   }
 }
 seedBiologieKnowledge();
+
+/** Insère (ou met à jour) les fiches Français avancé au démarrage — mêmes
+ *  règles que les autres seeds : n'écrase jamais une fiche déjà modifiée
+ *  manuellement par un admin depuis l'API /knowledge. */
+async function seedFrancaisAvanceKnowledge() {
+  try {
+    for (const fiche of FRANCAIS_AVANCE_KNOWLEDGE) {
+      await IaKnowledge.findOrCreate({ where: { slug: fiche.slug }, defaults: fiche });
+    }
+  } catch (err) {
+    console.warn('⚠️ seedFrancaisAvanceKnowledge:', err.message);
+  }
+}
+seedFrancaisAvanceKnowledge();
 
 /** Vérifie si l'utilisateur a un abonnement Professeur IA actif */
 async function verifierAbonnementIA(numeroH) {
@@ -98,7 +113,9 @@ const GREETING_RESPONSE = [
   '━━━━━━━━━━━━━━━━━━━━━━━',
   'Grammaire · Conjugaison · Orthographe · Homophones',
   'Vocabulaire (synonymes, antonymes) · Figures de style',
-  'Commentaire · Dissertation · Analyse de texte',
+  'Pronoms indéfinis · Pronoms compléments · Auxiliaires',
+  'Aspect du verbe · Passé antérieur',
+  'Commentaire · Dissertation · Compréhension de texte',
   '',
   '━━━━━━━━━━━━━━━━━━━━━━━',
   '🔢 **MATHÉMATIQUES**',
@@ -318,6 +335,64 @@ function generateExercice(type) {
     return series[Math.floor(Math.random() * series.length)];
   }
 
+  function exPronomIndefini() {
+    var series = [
+      { question: 'Dans "Plusieurs élèves sont absents", quelle est la nature du mot souligné "Plusieurs" ?', reponse: 'pronom indefini', explication: '"Plusieurs" est un PRONOM INDÉFINI (toujours au pluriel). Il désigne les êtres et les choses d\'une façon vague, indéfinie.' },
+      { question: 'Dans "On joua plusieurs bouteilles", quelle est la nature du mot "On" ?', reponse: 'pronom indefini', explication: '"On" est un PRONOM INDÉFINI, neutre, sujet du verbe "joua". Les pronoms indéfinis neutres (autrui, on, personne, quelque chose, quiconque, rien) ne remplacent pas de nom précis.' },
+      { question: 'Parmi ces mots, lequel est un pronom indéfini VARIABLE (s\'accorde en genre/nombre) : "aucun" ou "rien" ?', reponse: 'aucun', explication: '"Aucun" est variable (aucun/aucune). "Rien" est neutre et invariable, comme autrui, on, personne, quelque chose, quiconque.' },
+      { question: 'Quel pronom indéfini signifie "chaque personne, une par une" ?', reponse: 'chacun', explication: '"Chacun" (chacune au féminin) est un pronom indéfini variable qui désigne chaque élément d\'un ensemble pris séparément.' },
+      { question: 'Complétez avec un pronom indéfini neutre : "___ ne sait ce qui l\'attend." (Personne / Chacun)', reponse: 'personne', explication: '"Personne" est un pronom indéfini NEUTRE (invariable), qui signifie "aucune personne" dans une phrase négative.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exPronomComplement() {
+    var series = [
+      { question: 'Dans "Mohamed se blesse", quelle est la fonction du pronom "se" ?', reponse: 'complement d\'objet direct', explication: '"Se" est un pronom personnel réfléchi, mis pour "Mohamed" (3e personne du singulier), COMPLÉMENT D\'OBJET DIRECT du verbe "blesser".' },
+      { question: 'Dans "Je te vois", quelle est la nature et la fonction de "te" ?', reponse: 'pronom personnel complement', explication: '"Te" est un PRONOM PERSONNEL, complément d\'objet direct du verbe "voir" (2e personne du singulier).' },
+      { question: 'Dans "Il lui parle", quelle est la fonction de "lui" ?', reponse: 'complement d\'objet indirect', explication: '"Lui" est un pronom personnel, COMPLÉMENT D\'OBJET INDIRECT du verbe "parler" (on parle À quelqu\'un).' },
+      { question: 'Dans "Nous nous lavons", quelle est la fonction de "nous" (le second) ?', reponse: 'complement d\'objet direct', explication: 'Ce "nous" est un pronom réfléchi, complément d\'objet direct : le sujet fait l\'action sur lui-même (verbe pronominal).' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exAuxiliaire() {
+    var series = [
+      { question: 'Complétez avec le bon auxiliaire : "Ma tante ___ restée seule." (avait / était)', reponse: 'etait', explication: 'Le verbe "rester" se conjugue avec l\'auxiliaire ÊTRE aux temps composés : "était restée" (plus-que-parfait).' },
+      { question: 'Complétez avec le bon auxiliaire : "Il ___ mangé une pomme." (a / est)', reponse: 'a', explication: 'Le verbe "manger" (comme la majorité des verbes) se conjugue avec l\'auxiliaire AVOIR aux temps composés : "a mangé".' },
+      { question: 'Quel auxiliaire utilise-t-on pour conjuguer les verbes pronominaux (ex: se laver) aux temps composés ?', reponse: 'etre', explication: 'Les verbes pronominaux se conjuguent toujours avec l\'auxiliaire ÊTRE : "il s\'est lavé".' },
+      { question: 'Complétez : "Ils ___ partis tôt ce matin." (ont / sont)', reponse: 'sont', explication: 'Le verbe "partir" fait partie des verbes de déplacement (comme aller, venir, arriver...) qui se conjuguent avec ÊTRE : "sont partis".' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exAspectVerbe() {
+    var series = [
+      { question: 'Dans "Elle commença à parler", quel est l\'aspect du verbe ?', reponse: 'inchoatif', explication: 'C\'est l\'aspect INCHOATIF : il exprime le DÉBUT de l\'action (souvent avec "commencer à").' },
+      { question: 'Dans "Il était en train de parler", quel est l\'aspect du verbe ?', reponse: 'median', explication: 'C\'est l\'aspect MÉDIAN (duratif) : il exprime l\'action saisie en son MILIEU, en train de se dérouler (souvent avec "être en train de").' },
+      { question: 'Dans "Il venait d\'arriver", quel est l\'aspect du verbe ?', reponse: 'recent', explication: 'C\'est l\'aspect RÉCENT : il exprime une action qui vient tout juste de se terminer (souvent avec "venir de").' },
+      { question: 'Dans "Il finit de parler", quel est l\'aspect du verbe ?', reponse: 'terminatif', explication: 'C\'est l\'aspect TERMINATIF (accompli) : il exprime la FIN de l\'action (souvent avec "finir de").' },
+      { question: 'Dans "Le maire s\'apprêtait à parler", quel est l\'aspect du verbe ?', reponse: 'imminent', explication: 'C\'est l\'aspect IMMINENT : il exprime une action sur le point de se produire (souvent avec "être sur le point de", "s\'apprêter à").' },
+      { question: 'Quelle est la différence entre le TEMPS et l\'ASPECT d\'un verbe ?', reponse: 'le temps situe l\'action, l\'aspect decrit son deroulement', explication: 'Le TEMPS situe l\'action dans le présent, le passé ou le futur. L\'ASPECT décrit la MANIÈRE dont l\'action se déroule : son début (inchoatif), son milieu (médian), sa fin (terminatif), etc. Les périphrases verbales (commencer à, être en train de, venir de, finir de...) expriment l\'aspect.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exPasseAnterieur() {
+    var series = [
+      { question: 'Comment se forme le passé antérieur ?', reponse: 'auxiliaire au passe simple plus participe passe', explication: 'Le passé antérieur se forme avec l\'AUXILIAIRE (avoir/être) au PASSÉ SIMPLE + le PARTICIPE PASSÉ du verbe. Exemple : "il eut mangé", "il fut parti".' },
+      { question: 'Dans "Ce soir-là, il mangea tout le plat qu\'il eut préparé", quel temps exprime une action antérieure et achevée par rapport au passé simple ?', reponse: 'passe anterieur', explication: 'Le PASSÉ ANTÉRIEUR ("il eut préparé") indique une action antérieure, achevée, par rapport à une autre action exprimée au passé simple ("il mangea").' },
+      { question: 'Conjuguez "arriver" au passé antérieur, 3e personne du singulier.', reponse: 'il fut arrive', explication: '"Arriver" se conjugue avec ÊTRE : passé simple de être (il fut) + participe passé (arrivé) = "il fut arrivé".' },
+      { question: 'Conjuguez "finir" au passé antérieur, 3e personne du singulier.', reponse: 'il eut fini', explication: '"Finir" se conjugue avec AVOIR : passé simple de avoir (il eut) + participe passé (fini) = "il eut fini".' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exComprehensionTexte() {
+    var series = [
+      { question: 'Un texte qui défend une opinion et cherche à convaincre le lecteur est de type... ?', reponse: 'argumentatif', explication: 'Un texte ARGUMENTATIF défend une thèse à l\'aide d\'arguments et d\'exemples, pour convaincre ou persuader le lecteur.' },
+      { question: 'Un texte qui raconte une suite d\'événements (une histoire) est de type... ?', reponse: 'narratif', explication: 'Un texte NARRATIF raconte des événements, réels ou imaginaires, généralement organisés dans le temps.' },
+      { question: 'Un texte qui décrit un lieu, une personne ou un objet est de type... ?', reponse: 'descriptif', explication: 'Un texte DESCRIPTIF donne à voir : il détaille les caractéristiques d\'un lieu, d\'une personne, d\'un objet...' },
+      { question: 'Un texte qui explique un phénomène ou donne des informations objectives est de type... ?', reponse: 'explicatif', explication: 'Un texte EXPLICATIF (ou informatif) présente des faits et des explications de façon claire et objective, sans chercher à convaincre.' },
+      { question: 'Dans l\'étude d\'un texte, comment appelle-t-on le message principal que l\'auteur veut transmettre ?', reponse: 'idee generale', explication: 'L\'IDÉE GÉNÉRALE (ou thèse) est le message principal, résumé en une phrase, que l\'auteur cherche à transmettre à travers son texte.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
   function exDecimaux() {
     var a = Math.round((Math.floor(Math.random() * 90 + 10) / 10) * 10) / 10;
     var b = Math.round((Math.floor(Math.random() * 50 + 5) / 10) * 10) / 10;
@@ -543,6 +618,12 @@ function generateExercice(type) {
     bio_ecologie: exBioEcologie,
     bio_genetique: exBioGenetique,
     bio_immunite: exBioImmunite,
+    pronom_indefini: exPronomIndefini,
+    pronom_complement: exPronomComplement,
+    auxiliaire: exAuxiliaire,
+    aspect_verbe: exAspectVerbe,
+    passe_anterieur: exPasseAnterieur,
+    comprehension_texte: exComprehensionTexte,
   };
 
   var types = Object.keys(map);
@@ -578,6 +659,12 @@ function detectExerciceRequest(message) {
     equation:      ['equation', 'inconnue', 'resoudre', 'trouver x', 'valeur de x'],
     aire_triangle: ['aire triangle', 'aire du triangle', 'surface triangle'],
     homophone:     ['homophone', 'homophones', 'a ou a', 'on ou ont', 'son ou sont', 'orthographe', 'dictee', 'fautes'],
+    pronom_indefini:   ['pronom indefini', 'pronoms indefinis'],
+    pronom_complement: ['pronom complement', 'pronom personnel complement', 'complement d\'objet'],
+    auxiliaire:        ['auxiliaire', 'auxiliaires', 'avoir ou etre'],
+    aspect_verbe:      ['aspect du verbe', 'aspect verbal', 'aspect inchoatif', 'aspect terminatif', 'aspect imminent', 'aspect median', 'periphrase verbale'],
+    passe_anterieur:   ['passe anterieur'],
+    comprehension_texte: ['comprehension de texte', 'comprehension texte', 'type de texte', 'nature du texte'],
     conjugaison:   ['conjugaison', 'conjuguer', 'conjugue', 'verbe', 'temps verbal', 'passe compose', 'imparfait', 'futur'],
     vocabulaire:   ['vocabulaire', 'synonyme', 'antonyme', 'contraire', 'sens des mots', 'definition'],
     grammaire:     ['grammaire', 'nature', 'classe grammaticale', 'nom verbe adjectif', 'adverbe', 'pronom', 'analyse grammaticale'],
@@ -624,6 +711,9 @@ var EXERCICE_LABELS = {
   bio_nerveux: '🧬 Le système nerveux', bio_reproduction: '🧬 La reproduction',
   bio_photosynthese: '🧬 La photosynthèse', bio_ecologie: '🧬 Écologie',
   bio_genetique: '🧬 La génétique', bio_immunite: '🧬 Système immunitaire',
+  pronom_indefini: '📖 Pronoms indéfinis', pronom_complement: '📖 Pronoms compléments',
+  auxiliaire: '📖 Auxiliaires (avoir/être)', aspect_verbe: '📖 Aspect du verbe',
+  passe_anterieur: '📖 Passé antérieur', comprehension_texte: '📖 Compréhension de texte',
 };
 
 /** Formate un exercice pour l'affichage */
@@ -1355,7 +1445,7 @@ router.post('/chat', authenticate, async function(req, res) {
       var bestItem = await findBestKnowledgeMatch(message);
       if (bestItem) {
         answer = bestItem.answer;
-        var categoriesExercices = ['mathematiques', 'geometrie', 'probabilites', 'statistiques', 'biologie'];
+        var categoriesExercices = ['mathematiques', 'geometrie', 'probabilites', 'statistiques', 'biologie', 'francais'];
         if (categoriesExercices.includes(bestItem.category)) {
           answer += '\n\n---\nEnvie de pratiquer ? Tapez **"exercice"** pour tester vos connaissances sur ce sujet !';
         }

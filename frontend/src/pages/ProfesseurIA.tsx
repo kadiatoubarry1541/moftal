@@ -28,6 +28,12 @@ const FR_EXERCICES = [
   { label: '📝 Grammaire',    msg: 'exercice grammaire',     color: 'blue' },
   { label: '🔤 Homophones',   msg: 'exercice homophones',    color: 'blue' },
   { label: '🔡 Conjugaison',  msg: 'exercice conjugaison',   color: 'blue' },
+  { label: '🔎 Pronoms indéfinis', msg: 'exercice pronom indefini', color: 'blue' },
+  { label: '🔎 Pronoms compléments', msg: 'exercice pronom complement', color: 'blue' },
+  { label: '🔗 Auxiliaires',  msg: 'exercice auxiliaire',    color: 'blue' },
+  { label: '⏳ Aspect du verbe', msg: 'exercice aspect du verbe', color: 'blue' },
+  { label: '⏳ Passé antérieur', msg: 'exercice passe anterieur', color: 'blue' },
+  { label: '📄 Compréhension de texte', msg: 'exercice comprehension de texte', color: 'blue' },
   { label: '✍️ Français aléatoire', msg: 'donne moi un exercice de francais', color: 'blue' },
 ];
 
