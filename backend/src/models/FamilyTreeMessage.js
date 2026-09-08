@@ -47,6 +47,11 @@ FamilyTreeMessage.init({
     defaultValue: 'text',
     field: 'message_type'
   },
+  category: {
+    type: DataTypes.STRING,
+    defaultValue: 'information',
+    comment: "Type d'information (rencontre, deces, mariage, naissance...)"
+  },
   content: {
     type: DataTypes.TEXT,
     allowNull: false
