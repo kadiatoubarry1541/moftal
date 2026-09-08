@@ -964,7 +964,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                               <span className="text-4xl group-hover:scale-110 transition-transform">🤖</span>
                               <div className="flex-1">
                                 <h3 className="font-bold text-white text-base">IA Education Moftal</h3>
-                                <p className="text-sm text-cyan-100">Posez vos questions en français et en math, l'IA vous aide pas à pas.</p>
+                                <p className="text-sm text-cyan-100">Posez vos questions en français, math et biologie, l'IA vous aide pas à pas.</p>
                               </div>
                               <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
                             </Link>
