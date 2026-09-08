@@ -393,6 +393,55 @@ function generateExercice(type) {
     ];
     return series[Math.floor(Math.random() * series.length)];
   }
+  function exVoixPassive() {
+    var series = [
+      { question: 'Mettez à la voix passive : "Le chat attrape la souris." (présent)', reponse: 'la souris est attrapee par le chat', explication: 'Voix passive : sujet passif + ÊTRE (au même temps que le verbe actif) + participe passé + "par" + agent. "attrape" (présent) → "est attrapée".' },
+      { question: 'Quelle est la formation de la voix passive aux temps SIMPLES ?', reponse: 'auxiliaire etre au temps simple plus participe passe', explication: 'Aux temps simples : auxiliaire ÊTRE au même temps simple que le verbe actif + participe passé. Ex : "il attrape" (actif) → "il est attrapé" (passif).' },
+      { question: 'Quelle est la formation de la voix passive aux temps COMPOSÉS ?', reponse: 'auxiliaire etre aux temps composes plus participe passe', explication: 'Aux temps composés : l\'auxiliaire ÊTRE se conjugue lui-même aux temps composés (ex : "a été", "avait été") + participe passé du verbe. Ex : "il a attrapé" → "il a été attrapé".' },
+      { question: 'Mettez à la voix passive : "Nous écoutons la radio." (présent)', reponse: 'la radio est ecoutee par nous', explication: '"écoutons" (présent, actif) → "est écoutée" (présent passif) : auxiliaire ÊTRE au présent + participe passé "écoutée".' },
+      { question: 'Mettez à la voix passive : "Le professeur a corrigé les cahiers." (passé composé)', reponse: 'les cahiers ont ete corriges par le professeur', explication: '"a corrigé" (passé composé actif) → "ont été corrigés" (passé composé passif) : auxiliaire ÊTRE au passé composé ("ont été") + participe passé "corrigés".' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exSubjonctif() {
+    var series = [
+      { question: 'Complétez au subjonctif : "Il faut que tu ___ ton travail." (fais / fasses)', reponse: 'fasses', explication: 'Après "il faut que", le subjonctif est obligatoire : "que tu fasses" (subjonctif présent de "faire").' },
+      { question: 'Complétez au subjonctif : "Je ne pense pas qu\'il ___ triste." (est / soit)', reponse: 'soit', explication: 'Après une opinion négative ("je ne pense pas que"), on emploie le subjonctif : "qu\'il soit" (subjonctif présent d\'"être").' },
+      { question: 'Quelle conjonction introduit obligatoirement le subjonctif : "avant que" ou "après que" ?', reponse: 'avant que', explication: '"AVANT QUE" impose le subjonctif (ex : "avant qu\'il fasse nuit"). "Après que" est normalement suivi de l\'indicatif.' },
+      { question: 'Complétez : "Elle a peur qu\'il ne ___ à pleuvoir." (se mette / se met)', reponse: 'se mette', explication: 'Après un verbe exprimant un sentiment (avoir peur que), le subjonctif est obligatoire : "qu\'il se mette".' },
+      { question: 'Citez 3 conjonctions qui imposent le subjonctif.', reponse: 'pour que afin que avant que bien que pourvu que', explication: 'Le subjonctif est obligatoire après : pour que, afin que, avant que, bien que, pourvu que (entre autres), ainsi qu\'après un verbe de sentiment ou de volonté (souhaiter que, vouloir que, aimer que...).' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exSubordonneeCirconstancielle() {
+    var series = [
+      { question: 'Dans "Il travaille afin que sa famille vive mieux", quel type de subordonnée introduit "afin que" ?', reponse: 'but', explication: 'La subordonnée de BUT exprime le résultat qu\'on cherche à atteindre. Elle répond à la question "dans quel but ?". Conjonctions : afin que, pour que, de peur que, de crainte que.' },
+      { question: 'Dans "Il n\'est pas venu parce qu\'il était malade", quel type de subordonnée introduit "parce que" ?', reponse: 'cause', explication: 'La subordonnée de CAUSE explique la raison d\'un fait. Elle répond à "pourquoi ?". Conjonctions : parce que, puisque, comme, étant donné que, sous prétexte que.' },
+      { question: 'Dans "Bien qu\'il soit fatigué, il continue", quel type de subordonnée introduit "bien que" ?', reponse: 'concession', explication: 'La subordonnée de CONCESSION exprime une opposition malgré laquelle l\'action se réalise. Conjonctions : bien que, quoique, malgré que, encore que.' },
+      { question: 'Dans "Si tu travailles, tu réussiras", quel type de subordonnée introduit "si" ?', reponse: 'condition', explication: 'La subordonnée de CONDITION pose une condition à la réalisation de l\'action. Conjonctions : si, à condition que, pourvu que, à supposer que, à moins que.' },
+      { question: 'Dans "Il agit comme son père agissait", quel type de subordonnée introduit "comme" ?', reponse: 'comparaison', explication: 'La subordonnée de COMPARAISON établit un rapport de comparaison. Conjonctions : comme, ainsi que, de même que, autant que, plus...que.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exGenreNoms() {
+    var series = [
+      { question: 'Quel est le féminin de "étudiant" ?', reponse: 'etudiante', explication: 'La plupart des noms forment leur féminin en ajoutant un "e" : étudiant → étudiante.' },
+      { question: 'Quel est le féminin de "acteur" ?', reponse: 'actrice', explication: 'Les noms en "-teur" font souvent leur féminin en "-trice" : acteur → actrice.' },
+      { question: 'Quel est le féminin de "chanteur" ?', reponse: 'chanteuse', explication: 'Les noms en "-eur" (issus d\'un verbe) font souvent leur féminin en "-euse" : chanteur → chanteuse.' },
+      { question: 'Quel est le féminin de "directeur" ?', reponse: 'directrice', explication: 'Les noms en "-teur" font leur féminin en "-trice" : directeur → directrice.' },
+      { question: 'Le mot "professeur" a-t-il une forme féminine standard en français ?', reponse: 'professeure', explication: '"Professeur" est traditionnellement épicène (même forme aux 2 genres), mais la forme féminine "professeure" est aujourd\'hui largement admise et utilisée.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exConjonctionCoordination() {
+    var series = [
+      { question: 'Citez les 7 conjonctions de coordination (moyen mnémotechnique "Mais où est donc Ornicar ?").', reponse: 'mais ou et donc or ni car', explication: 'Les 7 conjonctions de coordination sont : MAIS, OU, ET, DONC, OR, NI, CAR — retenues par la phrase "Mais où est donc Ornicar ?".' },
+      { question: 'Dans "Il pleuvait, mais nous sommes sortis", quelle est la nature de "mais" ?', reponse: 'conjonction de coordination', explication: '"Mais" est une CONJONCTION DE COORDINATION : elle relie deux propositions de même niveau, ici en marquant l\'opposition.' },
+      { question: 'Quelle conjonction de coordination exprime la conséquence ?', reponse: 'donc', explication: '"DONC" exprime la conséquence (ex : "il pleut, donc je reste").' },
+      { question: 'Quelle conjonction de coordination exprime la cause ?', reponse: 'car', explication: '"CAR" exprime la cause, l\'explication (ex : "il reste, car il pleut").' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
   function exDecimaux() {
     var a = Math.round((Math.floor(Math.random() * 90 + 10) / 10) * 10) / 10;
     var b = Math.round((Math.floor(Math.random() * 50 + 5) / 10) * 10) / 10;
@@ -624,6 +673,11 @@ function generateExercice(type) {
     aspect_verbe: exAspectVerbe,
     passe_anterieur: exPasseAnterieur,
     comprehension_texte: exComprehensionTexte,
+    voix_passive: exVoixPassive,
+    subjonctif: exSubjonctif,
+    subordonnee_circonstancielle: exSubordonneeCirconstancielle,
+    genre_noms: exGenreNoms,
+    conjonction_coordination: exConjonctionCoordination,
   };
 
   var types = Object.keys(map);
@@ -665,6 +719,11 @@ function detectExerciceRequest(message) {
     aspect_verbe:      ['aspect du verbe', 'aspect verbal', 'aspect inchoatif', 'aspect terminatif', 'aspect imminent', 'aspect median', 'periphrase verbale'],
     passe_anterieur:   ['passe anterieur'],
     comprehension_texte: ['comprehension de texte', 'comprehension texte', 'type de texte', 'nature du texte'],
+    voix_passive:      ['voix passive', 'voix active', 'forme passive'],
+    subjonctif:        ['subjonctif'],
+    subordonnee_circonstancielle: ['subordonnee circonstancielle', 'subordonnee de cause', 'subordonnee de but', 'subordonnee de concession', 'subordonnee de condition', 'subordonnee de comparaison', 'proposition subordonnee'],
+    genre_noms:        ['genre des noms', 'feminin d\'un nom', 'masculin et feminin'],
+    conjonction_coordination: ['conjonction de coordination', 'conjonctions de coordination'],
     conjugaison:   ['conjugaison', 'conjuguer', 'conjugue', 'verbe', 'temps verbal', 'passe compose', 'imparfait', 'futur'],
     vocabulaire:   ['vocabulaire', 'synonyme', 'antonyme', 'contraire', 'sens des mots', 'definition'],
     grammaire:     ['grammaire', 'nature', 'classe grammaticale', 'nom verbe adjectif', 'adverbe', 'pronom', 'analyse grammaticale'],
@@ -714,6 +773,9 @@ var EXERCICE_LABELS = {
   pronom_indefini: '📖 Pronoms indéfinis', pronom_complement: '📖 Pronoms compléments',
   auxiliaire: '📖 Auxiliaires (avoir/être)', aspect_verbe: '📖 Aspect du verbe',
   passe_anterieur: '📖 Passé antérieur', comprehension_texte: '📖 Compréhension de texte',
+  voix_passive: '📖 Voix passive', subjonctif: '📖 Subjonctif',
+  subordonnee_circonstancielle: '📖 Subordonnées circonstancielles',
+  genre_noms: '📖 Genre des noms', conjonction_coordination: '📖 Conjonctions de coordination',
 };
 
 /** Formate un exercice pour l'affichage */

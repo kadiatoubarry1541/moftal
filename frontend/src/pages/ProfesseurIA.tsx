@@ -34,6 +34,11 @@ const FR_EXERCICES = [
   { label: '⏳ Aspect du verbe', msg: 'exercice aspect du verbe', color: 'blue' },
   { label: '⏳ Passé antérieur', msg: 'exercice passe anterieur', color: 'blue' },
   { label: '📄 Compréhension de texte', msg: 'exercice comprehension de texte', color: 'blue' },
+  { label: '🔄 Voix passive', msg: 'exercice voix passive', color: 'blue' },
+  { label: '🔀 Subjonctif', msg: 'exercice subjonctif', color: 'blue' },
+  { label: '🔗 Subordonnées', msg: 'exercice subordonnee circonstancielle', color: 'blue' },
+  { label: '♀️♂️ Genre des noms', msg: 'exercice genre des noms', color: 'blue' },
+  { label: '➕ Conjonctions', msg: 'exercice conjonction de coordination', color: 'blue' },
   { label: '✍️ Français aléatoire', msg: 'donne moi un exercice de francais', color: 'blue' },
 ];
 
