@@ -521,11 +521,6 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const [selectedGeneration, setSelectedGeneration] = useState('all');
   const [stats, setStats] = useState<any>(null);
   const [currentUserNumeroH, setCurrentUserNumeroH] = useState<string | null>(null);
-  const [narrateurContact, setNarrateurContact] = useState('');
-  const [narrateurContactSave, setNarrateurContactSave] = useState('');
-  const [narrateurSaving, setNarrateurSaving] = useState(false);
-  const [narrateurMsg, setNarrateurMsg] = useState('');
-  const [showNarrateurForm, setShowNarrateurForm] = useState(false);
   const [testifyingId, setTestifyingId] = useState<number | null>(null);
   const [selectedStory, setSelectedStory] = useState<PublishedStory | null>(null);
   const [selectedHistorical, setSelectedHistorical] = useState<HistoricalEntry | null>(null);
@@ -560,15 +555,6 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
         const user = parsed.userData || parsed;
         if (user?.numeroH) {
           setCurrentUserNumeroH(user.numeroH);
-          // Charger le numéro narrateur
-          const token = localStorage.getItem('token') || parsed.token;
-          if (token) {
-            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/mon-contact-narrateur`, {
-              headers: { Authorization: `Bearer ${token}` }
-            }).then(r => r.json()).then(d => {
-              if (d.success && d.contact) { setNarrateurContact(d.contact); setNarrateurContactSave(d.contact); }
-            }).catch(() => {});
-          }
         }
       } catch {}
     }
@@ -664,25 +650,6 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
     });
   };
 
-  const sauvegarderContact = async () => {
-    if (!narrateurContact.trim()) return;
-    setNarrateurSaving(true);
-    setNarrateurMsg('');
-    try {
-      const session = localStorage.getItem("session_user");
-      const token = session ? (JSON.parse(session).token || localStorage.getItem('token')) : localStorage.getItem('token');
-      const r = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/mon-contact-narrateur`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contact: narrateurContact }),
-      });
-      const d = await r.json();
-      if (d.success) { setNarrateurContactSave(narrateurContact); setNarrateurMsg('✅ Numéro enregistré !'); setShowNarrateurForm(false); }
-      else setNarrateurMsg(d.message || 'Erreur');
-    } catch { setNarrateurMsg('Erreur de connexion'); }
-    finally { setNarrateurSaving(false); }
-  };
-
   const toggleWitnesses = (key: string) => {
     setWitnessesVisible(prev => {
       const next = new Set(prev);
@@ -727,41 +694,6 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
           </div>
         </div>
       </div>
-
-      {/* ── Bloc Narrateur — numéro Orange Money pour paiement admin ── */}
-      {currentUserNumeroH && (
-        <div className="bg-indigo-900 border-b border-indigo-700">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-indigo-200 text-xs">📜 Narrateur Reci :</span>
-              {narrateurContactSave ? (
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-white bg-indigo-700 px-3 py-1 rounded-full">📞 {narrateurContactSave}</span>
-                  <button onClick={() => setShowNarrateurForm(true)} className="text-indigo-300 hover:text-white text-xs underline">Modifier</button>
-                </div>
-              ) : (
-                <button onClick={() => setShowNarrateurForm(true)}
-                  className="text-xs text-amber-300 hover:text-amber-100 underline font-semibold">
-                  + Laisser mon numéro pour être payé par l'admin
-                </button>
-              )}
-              {showNarrateurForm && (
-                <div className="flex items-center gap-2 ml-2">
-                  <input type="tel" value={narrateurContact} onChange={e => setNarrateurContact(e.target.value)}
-                    placeholder="Ex: 628000000"
-                    className="text-xs px-3 py-1.5 rounded-lg bg-indigo-800 text-white border border-indigo-500 outline-none focus:border-amber-400 w-36" />
-                  <button onClick={sauvegarderContact} disabled={narrateurSaving}
-                    className="text-xs px-3 py-1.5 bg-amber-400 text-indigo-900 font-bold rounded-lg hover:bg-amber-300 disabled:opacity-50">
-                    {narrateurSaving ? '...' : 'Enregistrer'}
-                  </button>
-                  <button onClick={() => setShowNarrateurForm(false)} className="text-indigo-400 hover:text-white text-xs">✕</button>
-                </div>
-              )}
-              {narrateurMsg && <span className="text-xs text-green-300">{narrateurMsg}</span>}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Note G96 ── */}
       <div className="bg-amber-50 border-b border-amber-200">
