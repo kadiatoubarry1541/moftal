@@ -21,6 +21,7 @@ const COUPLE_CATEGORIES = [
   { id: 'sante',       label: 'Santé',       icon: '🏥' },
   { id: 'argent',      label: 'Argent',      icon: '💰' },
   { id: 'enfants',     label: 'Enfants',     icon: '🧒' },
+  { id: 'opportunite', label: 'Opportunité', icon: '🌟' },
   { id: 'urgence',     label: 'Urgence',     icon: '🚨' },
 ] as const
 

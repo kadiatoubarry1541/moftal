@@ -21,6 +21,7 @@ const PARENT_CHILD_CATEGORIES = [
   { id: 'sante',       label: 'Santé',       icon: '🏥' },
   { id: 'argent',      label: 'Argent',      icon: '💰' },
   { id: 'amour',       label: 'Amour',       icon: '❤️' },
+  { id: 'opportunite', label: 'Opportunité', icon: '🌟' },
   { id: 'urgence',     label: 'Urgence',     icon: '🚨' },
 ] as const
 
