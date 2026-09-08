@@ -204,12 +204,13 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   const [newActivityPost, setNewActivityPost] = useState({
     content: '',
     type: 'text' as 'text' | 'image' | 'video' | 'audio',
-    category: 'information' as 'information' | 'rencontre' | 'opportunite' | 'outil' | 'reunion',
+    category: 'information' as 'information' | 'rencontre' | 'opportunite' | 'outil' | 'reunion' | 'sante' | 'deces',
     mediaFile: null as File | null
   });
 
   // Filtre du fil : tout, opportunités ou outils de travail
   const [feedFilter, setFeedFilter] = useState<'all' | 'opportunite' | 'outil'>('all');
+  const [showCategoryGrid, setShowCategoryGrid] = useState(false);
 
   // Transforme un texte en JSX avec les URLs rendues cliquables
   const renderTextWithLinks = (text: string) => {
@@ -245,7 +246,12 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
             <p className="text-xs opacity-60">{hideIncrement(displayNumero)}</p>
           </div>
           {msg.messageType === 'text' && msg.content && (
-            <p className="text-sm">{renderTextWithLinks(msg.content)}</p>
+            <p className="text-sm">
+              {msg.category && msg.category !== 'information' && (
+                <span className="mr-1">{ACTIVITE_CATEGORIES.find(c => c.id === msg.category)?.icon}</span>
+              )}
+              {renderTextWithLinks(msg.content)}
+            </p>
           )}
           {msg.messageType === 'image' && msg.mediaUrl && (
             <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />
@@ -403,41 +409,17 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     }
   };
 
-  // Fonction helper pour obtenir le logo selon la catégorie
-  const getCategoryLogo = (category: string) => {
-    switch (category) {
-      case 'information':
-        return 'ℹ️';
-      case 'rencontre':
-        return '🤝';
-      case 'opportunite':
-        return '🌟';
-      case 'outil':
-        return '🛠️';
-      case 'reunion':
-        return '👥';
-      default:
-        return 'ℹ️';
-    }
-  };
-
-  // Fonction helper pour obtenir le nom de la catégorie
-  const getCategoryName = (category: string) => {
-    switch (category) {
-      case 'information':
-        return 'Information';
-      case 'rencontre':
-        return 'Rencontre';
-      case 'opportunite':
-        return 'Opportunité';
-      case 'outil':
-        return 'Info Moftal';
-      case 'reunion':
-        return 'Réunion';
-      default:
-        return 'Information';
-    }
-  };
+  // Catégories des publications d'Activité — les 4 d'origine (information,
+  // réunion, rencontre, opportunité) + santé et décès, pertinentes dans la vie
+  // professionnelle (mariage/baptême restent réservés à Info Wallou/Terre ADAM).
+  const ACTIVITE_CATEGORIES = [
+    { id: 'information', label: 'Information', icon: 'ℹ️' },
+    { id: 'reunion',      label: 'Réunion',      icon: '👥' },
+    { id: 'rencontre',    label: 'Rencontre',    icon: '🤝' },
+    { id: 'opportunite',  label: 'Opportunité',  icon: '🌟' },
+    { id: 'sante',        label: 'Santé',        icon: '🏥' },
+    { id: 'deces',        label: 'Décès',        icon: '🕯️' },
+  ] as const;
 
   // Le groupe est déterminé par le NOM réel de l'activité (ex: "Santé") + le pays —
   // pas par le slot (Activité1/2/3) : tout le monde qui exerce "Santé" dans un même
@@ -1030,68 +1012,80 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                       </div>
                     )}
                     {feedFilter !== 'outil' && selectedGroup && (
-                      <div className="space-y-2">
-                        <div className="flex gap-2">
-                          <select value={newActivityPost.category} onChange={(e) => setNewActivityPost({...newActivityPost, category: e.target.value as any})}
-                            className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm">
-                            <option value="information">ℹ️ Information</option>
-                            <option value="reunion">👥 Réunion</option>
-                            <option value="rencontre">🤝 Rencontre</option>
-                            <option value="opportunite">🌟 Opportunité</option>
-                          </select>
-                        </div>
-                        <div className="flex gap-2">
-                          <div className="flex gap-2 flex-1">
-                            <select value={newActivityPost.type} onChange={(e) => { setNewActivityPost({...newActivityPost, type: e.target.value as any, mediaFile: null}); }}
-                              className="px-2 py-2 border border-gray-300 rounded-lg bg-white text-sm">
-                              <option value="text">📝</option>
-                              <option value="image">🖼️</option>
-                              <option value="video">🎥</option>
-                              <option value="audio">🎵</option>
-                            </select>
-                            {newActivityPost.type === 'text' ? (
+                      <div className="flex items-center gap-2">
+                        {/* Pièce jointe (photo ou vidéo) — externe, type détecté automatiquement */}
+                        <label
+                          className="flex-shrink-0 w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-lg text-gray-500 hover:bg-gray-100 cursor-pointer transition-colors"
+                          title="Envoyer une photo ou une vidéo"
+                        >
+                          📷
+                          <input type="file" accept="image/*,video/*" className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              e.target.value = '';
+                              if (!file) return;
+                              const detectedType = file.type.startsWith('video/') ? 'video' : 'image';
+                              setNewActivityPost(prev => ({ ...prev, type: detectedType, mediaFile: file }));
+                            }} />
+                        </label>
+
+                        <div className="flex-1 min-w-0 relative">
+                          {newActivityPost.type === 'audio' && !newActivityPost.mediaFile ? (
+                            <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
+                              const file = new File([blob], 'vocal.webm', { type: blob.type });
+                              setNewActivityPost(prev => ({ ...prev, mediaFile: file }));
+                            }} />
+                          ) : newActivityPost.mediaFile ? (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
+                              <span className="text-sm text-green-700 flex-1 truncate">
+                                {newActivityPost.type === 'audio' ? '🎙️ Audio prêt' : newActivityPost.type === 'video' ? '🎥 Vidéo prête' : '📷 Photo prête'}
+                              </span>
+                              <button type="button" onClick={() => setNewActivityPost(prev => ({ ...prev, type: 'text', mediaFile: null }))} className="text-red-500 hover:text-red-700 text-xs font-medium flex-shrink-0">✕</button>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Catégorie — icône choisie, ouvre/ferme la grille, intégrée dans le champ */}
+                              <button type="button" onClick={() => setShowCategoryGrid(v => !v)} title="Choisir le type de publication"
+                                className={`absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-green-100' : 'hover:bg-gray-200'}`}>
+                                <span className="text-base leading-none">{ACTIVITE_CATEGORIES.find(c => c.id === newActivityPost.category)?.icon}</span>
+                              </button>
                               <input type="text" value={newActivityPost.content}
-                                onChange={(e) => setNewActivityPost({...newActivityPost, content: e.target.value})}
-                                onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendActivityMessage(); } }}
-                                placeholder="Tapez un message..."
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500" />
-                            ) : newActivityPost.type === 'audio' ? (
-                              <div className="flex gap-2 flex-1 items-center">
-                                {newActivityPost.mediaFile ? (
-                                  <div className="flex items-center gap-2 flex-1 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
-                                    <span className="text-sm text-green-700 flex-1">🎙️ Audio prêt</span>
-                                    <button type="button" onClick={() => setNewActivityPost({...newActivityPost, mediaFile: null})} className="text-red-500 hover:text-red-700 text-xs font-medium">✕</button>
-                                  </div>
-                                ) : (
-                                  <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
-                                    const file = new File([blob], 'vocal.webm', { type: blob.type });
-                                    setNewActivityPost({...newActivityPost, mediaFile: file});
-                                  }} />
-                                )}
-                              </div>
-                            ) : (
-                              <input type="file" accept={newActivityPost.type === 'image' ? 'image/*' : 'video/*'}
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0] || null;
-                                  if (file) {
-                                    let detectedType = newActivityPost.type;
-                                    if (file.type.startsWith('image/')) detectedType = 'image';
-                                    else if (file.type.startsWith('video/')) detectedType = 'video';
-                                    else if (file.type.startsWith('audio/')) detectedType = 'audio';
-                                    setNewActivityPost({...newActivityPost, type: detectedType, mediaFile: file});
-                                  } else {
-                                    setNewActivityPost({...newActivityPost, mediaFile: null});
-                                  }
-                                }}
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm" />
-                            )}
-                          </div>
-                          <button onClick={sendActivityMessage}
-                            disabled={newActivityPost.type === 'text' ? !newActivityPost.content.trim() : !newActivityPost.mediaFile}
-                            className="bg-green-600 text-white px-6 py-2 rounded-full hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
-                            ▶
-                          </button>
+                                onChange={(e) => setNewActivityPost({ ...newActivityPost, content: e.target.value })}
+                                onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendActivityMessage(); setShowCategoryGrid(false); } }}
+                                placeholder={`${ACTIVITE_CATEGORIES.find(c => c.id === newActivityPost.category)?.label || 'Information'}...`}
+                                className="w-full min-w-0 pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm" />
+                              {showCategoryGrid && (
+                                <div className="absolute bottom-11 left-0 z-20 bg-white rounded-xl shadow-lg border border-gray-200 p-2 grid grid-cols-3 gap-1 w-48">
+                                  {ACTIVITE_CATEGORIES.map(cat => (
+                                    <button key={cat.id} type="button"
+                                      onClick={() => { setNewActivityPost({ ...newActivityPost, category: cat.id }); setShowCategoryGrid(false); }}
+                                      className={`flex flex-col items-center gap-0.5 py-2 rounded-lg ${newActivityPost.category === cat.id ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+                                      title={cat.label}>
+                                      <span className="text-lg leading-none">{cat.icon}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
+
+                        {/* Message vocal */}
+                        {newActivityPost.type !== 'audio' && !newActivityPost.mediaFile && (
+                          <button type="button" onClick={() => setNewActivityPost(prev => ({ ...prev, type: 'audio', mediaFile: null }))}
+                            className="flex-shrink-0 w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                            title="Message vocal">
+                            🎤
+                          </button>
+                        )}
+
+                        {(newActivityPost.content.trim() || newActivityPost.mediaFile) && (
+                          <button onClick={() => { sendActivityMessage(); setShowCategoryGrid(false); }}
+                            className="flex-shrink-0 w-9 h-9 rounded-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center text-sm font-bold transition-colors"
+                            title="Envoyer">
+                            ✓
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

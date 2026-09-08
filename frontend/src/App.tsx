@@ -502,7 +502,7 @@ function App() {
                   ce sous-menu est ouvert : pas besoin de répéter le mot "Famille" ici,
                   la couleur suffit à montrer que c'est la page ouverte. */}
               {familyMenuOpen && (
-                <div className="border-t-2 border-emerald-500 bg-white">
+                <div className="bg-white">
                   <div className="grid grid-cols-2 gap-3 p-4 pt-3 max-w-md mx-auto">
                     {([
                       { id: "heritage",   emoji: "🌳", label: "Héritage"   },

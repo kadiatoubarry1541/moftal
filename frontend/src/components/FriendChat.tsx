@@ -20,6 +20,7 @@ const FRIEND_CATEGORIES = [
   { id: 'amitie',      label: 'Amitié',      icon: '🤝' },
   { id: 'sortie',      label: 'Sortie',      icon: '🎉' },
   { id: 'aide',        label: 'Aide',        icon: '🤲' },
+  { id: 'opportunite', label: 'Opportunité', icon: '🌟' },
   { id: 'urgence',     label: 'Urgence',     icon: '🚨' },
 ] as const
 

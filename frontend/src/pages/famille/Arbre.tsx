@@ -66,6 +66,7 @@ const FAMILLE_CATEGORIES = [
   { id: 'solidarite',  label: 'Solidarité / Entraide', icon: '🤲' },
   { id: 'fete',        label: 'Fête / Événement', icon: '🎉' },
   { id: 'annonce',     label: 'Annonce',     icon: '📢' },
+  { id: 'opportunite', label: 'Opportunité', icon: '🌟' },
   { id: 'urgence',     label: 'Urgence',     icon: '🚨' },
   { id: 'reunion',     label: 'Réunion',     icon: '👥' },
 ] as const;
