@@ -11,6 +11,27 @@ const q1 = (sql, rep) =>
   sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT })
     .then(r => r[0]).catch(() => ({ c: 0, t: 0 }));
 
+// ─── GET /api/pro-public/list/:type ────────────────────────────────────────
+// Liste publique des espaces Gestion Interne actifs d'un type donné — pour
+// les afficher aux côtés des professionnels simples sur les pages Services.
+// Déclarée avant "/:type/:tenantCode" ci-dessous, sinon cette route générique
+// capterait "/list/<type>" (type="list", tenantCode="<type>").
+router.get('/list/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    const tenants = await sequelize.query(
+      `SELECT tenant_code, type, name, logo_url, address, phone, email, description, city
+       FROM management_tenants
+       WHERE type = :type AND is_active = true AND tenant_code NOT LIKE 'DEMO-REF-%'
+       ORDER BY name ASC`,
+      { replacements: { type }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, tenants });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // ─── GET /api/pro-public/:type/:tenantCode ─────────────────────────────────
 // Infos publiques du tenant (nom, logo, contact, description)
 router.get('/:type/:tenantCode', async (req, res) => {
