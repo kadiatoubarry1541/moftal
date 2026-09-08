@@ -484,13 +484,13 @@ function App() {
                   <button
                     key={item.id}
                     onClick={() => item.id === "famille" ? setFamilyMenuOpen(true) : navigate(item.path)}
-                    className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all hover:bg-gray-50 ${item.id === "famille" && familyMenuOpen ? "bg-gray-100" : ""}`}
+                    className={`flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-xl transition-all hover:bg-gray-50 ${item.id === "famille" && familyMenuOpen ? "bg-emerald-50" : ""}`}
                   >
                     {item.id === "echanges"
                       ? <SalesIcon size={20} className="text-gray-500" />
                       : <span className="text-lg leading-none">{item.icon}</span>
                     }
-                    <span className="text-[9px] font-medium text-gray-600">
+                    <span className={`text-[9px] font-medium ${item.id === "famille" && familyMenuOpen ? "text-emerald-700 font-bold" : "text-gray-600"}`}>
                       {item.label}
                     </span>
                   </button>
@@ -498,16 +498,12 @@ function App() {
               </div>
 
               {/* Sous-menu Famille — s'ouvre directement ici, sans changer de page.
-                  Fond blanc + fin trait vert (couleur exacte du logo) en haut pour bien
-                  montrer que c'est la page Famille qui est ouverte, tout en laissant la
-                  ligne d'icônes accessible pour aller ailleurs. */}
+                  Le bouton "Famille" ci-dessus passe déjà en vert (fond + texte) quand
+                  ce sous-menu est ouvert : pas besoin de répéter le mot "Famille" ici,
+                  la couleur suffit à montrer que c'est la page ouverte. */}
               {familyMenuOpen && (
                 <div className="border-t-2 border-emerald-500 bg-white">
-                  <p className="flex items-center gap-1.5 px-4 pt-3 text-xs font-bold text-emerald-800">
-                    <span>👨‍👩‍👧‍👦</span>
-                    <span>Famille</span>
-                  </p>
-                  <div className="grid grid-cols-2 gap-3 p-4 max-w-md mx-auto">
+                  <div className="grid grid-cols-2 gap-3 p-4 pt-3 max-w-md mx-auto">
                     {([
                       { id: "heritage",   emoji: "🌳", label: "Héritage"   },
                       { id: "amitie",     emoji: "💕", label: "Amitié"     },

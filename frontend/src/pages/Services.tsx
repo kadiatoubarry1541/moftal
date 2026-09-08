@@ -143,14 +143,24 @@ export default function Services({ onClose }: ServicesProps = {}) {
       </header>
 
     <div className="max-w-md mx-auto px-4 pb-4 pt-3">
-      {/* Bouton créer un compte pro */}
-      <button
-        type="button"
-        onClick={() => navigate('/inscription-pro')}
-        className="w-full mb-3 flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
-      >
-        ➕ Proposer votre service
-      </button>
+      {/* Bouton créer un compte pro + CTA publicité — côte à côte, en haut */}
+      <div className="flex gap-2 mb-3">
+        <button
+          type="button"
+          onClick={() => navigate('/inscription-pro')}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-xs rounded-xl shadow-sm transition-colors"
+        >
+          ➕ Proposer votre service
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/publicite')}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white font-bold text-xs rounded-xl shadow-sm transition-colors"
+          style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
+        >
+          📣 Annoncer votre activité
+        </button>
+      </div>
 
       {/* Grille icônes style compact */}
       <div className="grid grid-cols-4 gap-2">
@@ -158,27 +168,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
           <ServiceIcon key={s.to} {...s} isFavorite={favoriteIds.includes(s.to)} />
         ))}
       </div>
-
-      {/* CTA publicité — tout en bas de la page pour ne pas surcharger
-          (réservé aux annonces des utilisateurs, pas celles de l'admin) */}
-      <button
-        type="button"
-        onClick={() => navigate('/publicite')}
-        className="w-full mt-4 rounded-2xl overflow-hidden text-left transition-transform active:scale-[0.99]"
-        style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
-      >
-        <div className="flex items-center gap-4 px-5 py-4">
-          <div className="text-3xl flex-shrink-0">📣</div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-black text-sm">Annoncez votre activité ici</p>
-            <p className="text-amber-50 text-xs mt-0.5">Touchez toute la communauté Moftal</p>
-          </div>
-          <div className="flex-shrink-0 bg-white/20 rounded-full px-3 py-1.5 text-white text-xs font-bold">
-            Publier →
-          </div>
-        </div>
-      </button>
-
     </div>
     </>
   )
