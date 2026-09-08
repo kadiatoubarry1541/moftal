@@ -48,6 +48,20 @@ function estDansLAmitie(friend, numeroH) {
   return !!friend && (friend.userNumeroH === numeroH || friend.friendNumeroH === numeroH);
 }
 
+/** Admin : aucune condition, tout voir et tout gérer (y compris son propre espace de démo). */
+function isAdmin(user) {
+  return !!(
+    user &&
+    (
+      user.role === 'admin' ||
+      user.role === 'super-admin' ||
+      user.numeroH === 'G7C7P7R7E7F7 7' ||
+      user.numeroH === 'G0C0P0R0E0F0 0' ||
+      user.bypassRestrictions
+    )
+  );
+}
+
 // ─── GET /api/friends/list → liste des amis acceptés ─────────────────────────
 router.get('/list', async (req, res) => {
   try {
@@ -356,7 +370,7 @@ router.get('/messages', async (req, res) => {
     const { linkId } = req.query;
     if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
     const friend = await Friend.findByPk(linkId);
-    if (!estDansLAmitie(friend, req.user.numeroH)) {
+    if (!estDansLAmitie(friend, req.user.numeroH) && !isAdmin(req.user)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
     const messages = await FriendMessage.getMessages(linkId);
@@ -384,7 +398,7 @@ router.post('/messages', async (req, res) => {
       return res.status(400).json({ success: false, message: 'linkId et content requis.' });
     }
     const friend = await Friend.findByPk(linkId);
-    if (!estDansLAmitie(friend, user.numeroH)) {
+    if (!estDansLAmitie(friend, user.numeroH) && !isAdmin(user)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
     const msg = await FriendMessage.create({
@@ -412,7 +426,7 @@ router.post('/messages/upload', uploadFriendMedia.single('media'), async (req, r
     const { linkId, category = 'information' } = req.body;
     if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
     const friend = await Friend.findByPk(linkId);
-    if (!estDansLAmitie(friend, user.numeroH)) {
+    if (!estDansLAmitie(friend, user.numeroH) && !isAdmin(user)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
