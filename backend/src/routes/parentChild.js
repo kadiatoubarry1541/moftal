@@ -5,11 +5,13 @@ import User from '../models/User.js';
 import ParentChildLink from '../models/ParentChildLink.js';
 import ParentChildActivity from '../models/ParentChildActivity.js';
 import ParentChildRating from '../models/ParentChildRating.js';
+import ParentChildMessage from '../models/ParentChildMessage.js';
 import { sequelize } from '../config/database.js';
 import Notification from '../models/Notification.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
+import { getIO } from '../socket.js';
 
 // Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
 // redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
@@ -42,6 +44,33 @@ async function ensureParentChildActivityTable() {
   } catch (err) {
     console.warn('⚠️ ensureParentChildActivityTable:', err.message);
   }
+}
+
+// Crée la table parent_child_messages si elle n'existe pas (dev ET production)
+async function ensureParentChildMessagesTable() {
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "parent_child_messages" (
+        "id"             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        "link_id"        UUID         NOT NULL,
+        "numero_h"       VARCHAR(255) NOT NULL,
+        "message_type"   VARCHAR(20)  DEFAULT 'text',
+        "category"       VARCHAR(50)  DEFAULT 'information',
+        "content"        TEXT         NOT NULL,
+        "media_url"      TEXT,
+        "created_at"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
+    `);
+    await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_pcm_link ON "parent_child_messages" ("link_id");`).catch(() => {});
+  } catch (err) {
+    console.warn('⚠️ ensureParentChildMessagesTable:', err.message);
+  }
+}
+
+/** Vérifie que l'utilisateur fait bien partie de ce lien parent-enfant. */
+function estDansLeLienPC(link, numeroH) {
+  return !!link && (link.parentNumeroH === numeroH || link.childNumeroH === numeroH);
 }
 
 /** Admin : aucune condition, tout voir et tout gérer. */
@@ -714,6 +743,112 @@ router.delete('/link-by-users', async (req, res) => {
     res.json({ success: true, message: 'Lien familial supprimé avec succès' });
   } catch (error) {
     console.error('Erreur suppression lien-by-users:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ─── MESSAGERIE PRIVÉE PARENT-ENFANT (par lien précis) ───
+
+/**
+ * GET /api/parent-child/messages?linkId=
+ */
+router.get('/messages', async (req, res) => {
+  try {
+    await ensureParentChildMessagesTable();
+    const { linkId } = req.query;
+    if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
+    const link = await ParentChildLink.findByPk(linkId);
+    if (!estDansLeLienPC(link, req.user.numeroH) && !isAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const messages = await ParentChildMessage.getMessages(linkId);
+    const numeroHs = [...new Set(messages.map(m => m.numeroH))];
+    const users = await User.findAll({ where: { numeroH: numeroHs }, attributes: ['numeroH', 'prenom', 'nomFamille'] });
+    const userMap = Object.fromEntries(users.map(u => [u.numeroH, u]));
+    const list = messages.slice().reverse().map(m => ({
+      ...m.toJSON(),
+      authorName: userMap[m.numeroH] ? `${userMap[m.numeroH].prenom} ${userMap[m.numeroH].nomFamille}` : m.numeroH
+    }));
+    res.json({ success: true, messages: list });
+  } catch (error) {
+    console.error('Erreur récupération messages parent-enfant:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/parent-child/messages — message texte
+ */
+router.post('/messages', async (req, res) => {
+  try {
+    await ensureParentChildMessagesTable();
+    const user = req.user;
+    const { linkId, content, category = 'information' } = req.body;
+    if (!linkId || !content?.trim()) {
+      return res.status(400).json({ success: false, message: 'linkId et content requis.' });
+    }
+    const link = await ParentChildLink.findByPk(linkId);
+    if (!estDansLeLienPC(link, user.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const msg = await ParentChildMessage.create({
+      linkId,
+      numeroH: user.numeroH,
+      messageType: 'text',
+      category,
+      content: content.trim()
+    });
+    const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
+    const io = getIO();
+    if (io) io.to(`parent-child-${linkId}`).emit('parent-child-message', msgData);
+    res.status(201).json({ success: true, message: msgData });
+  } catch (error) {
+    console.error('Erreur envoi message parent-enfant:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/parent-child/messages/upload — photo/vidéo/audio (≤30s côté client)
+ */
+router.post('/messages/upload', uploadChild.single('media'), async (req, res) => {
+  try {
+    await ensureParentChildMessagesTable();
+    const user = req.user;
+    const { linkId, category = 'information' } = req.body;
+    if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
+    const link = await ParentChildLink.findByPk(linkId);
+    if (!estDansLeLienPC(link, user.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
+
+    const mime = req.file.mimetype;
+    let messageType = 'image';
+    if (mime.startsWith('video/')) messageType = 'video';
+    else if (mime.startsWith('audio/')) messageType = 'audio';
+
+    const mediaUrl = messageType === 'image'
+      ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'parent-child-messages')
+      : await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'parent-child-messages');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'parent-child-messages').catch(() => {});
+
+    const content = req.body.content || (messageType === 'audio' ? '🎤 Message vocal' : messageType === 'video' ? '🎬 Vidéo' : '📷 Photo');
+
+    const msg = await ParentChildMessage.create({
+      linkId,
+      numeroH: user.numeroH,
+      messageType,
+      category,
+      content,
+      mediaUrl
+    });
+    const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
+    const io = getIO();
+    if (io) io.to(`parent-child-${linkId}`).emit('parent-child-message', msgData);
+    res.status(201).json({ success: true, message: msgData });
+  } catch (error) {
+    console.error('Erreur upload message parent-enfant:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

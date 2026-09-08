@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
-import { CommunicationHub } from '../../components/CommunicationHub'
+import { ParentChildChat } from '../../components/ParentChildChat'
 import { AddPersonModal } from '../../components/AddPersonModal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -901,19 +901,12 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
                           <div className="p-6">
                             <div className="mb-4">
                               <h3 className="text-lg font-bold text-slate-800">Messagerie avec {childName}</h3>
-                              <p className="text-slate-600 text-sm mt-1">Échangez avec votre enfant.</p>
+                              <p className="text-slate-600 text-sm mt-1">Espace privé entre vous deux uniquement.</p>
                             </div>
-                            {user ? (
-                              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                                <CommunicationHub
-                                  userData={user}
-                                  showGroups={false}
-                                  showBroadcast={false}
-                                  showGallery={false}
-                                />
-                              </div>
+                            {user && selectedChild?.id ? (
+                              <ParentChildChat linkId={selectedChild.id} myNumeroH={user.numeroH} partnerLabel={childName} />
                             ) : (
-                              <p className="text-slate-500 text-sm">Connectez-vous pour accéder à la messagerie familiale.</p>
+                              <p className="text-slate-500 text-sm">Sélectionnez un enfant pour accéder à la messagerie.</p>
                             )}
                           </div>
                         )}

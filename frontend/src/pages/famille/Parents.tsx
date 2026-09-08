@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
-import { CommunicationHub } from '../../components/CommunicationHub'
+import { ParentChildChat } from '../../components/ParentChildChat'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -749,18 +749,15 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
                   {/* ═══ PANNEAU MESSAGE ═══ */}
                   {activeTab === 'message' && (
                     <div className="p-5">
-                      {user ? (
-                        <div className="border border-slate-200 rounded-xl overflow-hidden">
-                          <CommunicationHub
-                            userData={user}
-                            showGroups={false}
-                            showBroadcast={false}
-                            showGallery={false}
-                          />
-                        </div>
+                      {user && selectedParent?.id ? (
+                        <ParentChildChat
+                          linkId={selectedParent.id}
+                          myNumeroH={user.numeroH}
+                          partnerLabel={selectedParent.parent ? `${selectedParent.parent.prenom} ${selectedParent.parent.nomFamille}` : (selectedParent.parentType === 'mere' ? 'votre mère' : 'votre père')}
+                        />
                       ) : (
                         <p className="text-slate-500 text-sm text-center py-8">
-                          Connectez-vous pour accéder à la messagerie familiale.
+                          Sélectionnez un parent pour accéder à la messagerie.
                         </p>
                       )}
                     </div>
