@@ -678,9 +678,9 @@ export default function GestionInterne() {
   const tab = tabOverride ?? defaultTab;
 
   const TabButtons = () => (
-    <div style={{ marginBottom:16 }}>
+    <div style={{ marginBottom: tab === "activite" ? 4 : 16 }}>
       {tab === "activite" ? (
-        <h2 style={{ margin:0, padding:"10px 0", fontSize:18, fontWeight:800, color:"#0f172a", display:"flex", alignItems:"center", gap:8 }}>
+        <h2 style={{ margin:0, padding:"4px 0", fontSize:18, fontWeight:800, color:"#0f172a", display:"flex", alignItems:"center", gap:8 }}>
           Activité
         </h2>
       ) : (
@@ -991,7 +991,7 @@ export default function GestionInterne() {
       <div style={{ maxWidth:700, margin:"0 auto", padding:"4px 20px 0" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
-        <div style={{ borderTop:"1.5px solid #e2e8f0", marginBottom:16 }} />
+        <div style={{ borderTop:"1.5px solid #e2e8f0", marginBottom: tab === "activite" ? 6 : 16 }} />
 
         <TabButtons />
 

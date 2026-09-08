@@ -2,14 +2,18 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Sprout, Beef, Fish, ShoppingBag, Hammer, Car, GraduationCap,
-  Stethoscope, Building2, Monitor, HardHat, Wrench, UtensilsCrossed,
+  Stethoscope, Building2, HardHat, Wrench, UtensilsCrossed,
   Scissors, Zap, Droplets, Shield, Banknote, Radio, Newspaper,
   BookOpen, Home, Sunset, Globe, LucideIcon,
   // Nouvelles icônes
   Pill, Baby, Brain, Microscope, Scale, Calculator, Camera, Dumbbell,
-  ChefHat, Leaf, Package, Briefcase, TrendingUp, ArrowLeftRight,
+  ChefHat, Leaf, Package, TrendingUp, ArrowLeftRight,
   Palette, Hotel, Languages, School, Flame, Snowflake, PaintBucket,
-  Layers, HeartHandshake, Syringe, Building
+  Layers, HeartHandshake, Syringe, Building,
+  // Icônes distinctes par activité — chaque activité a son propre logo, aucun partage
+  HeartPulse, Cross, Dog, Eye, Presentation, Landmark, Umbrella, Gavel,
+  Cpu, Code, PencilRuler, Megaphone, Siren, Wheat, Brush, Trophy, Cog,
+  Trees, Moon
 } from 'lucide-react';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
@@ -30,43 +34,44 @@ function isActivityBlocked(name: string): boolean {
   return BLOCKED_ACTIVITY_TERMS.some(term => lower.includes(term));
 }
 
-// Mapping activité → icône Lucide
+// Mapping activité → icône Lucide — chaque activité a son propre logo distinct,
+// jamais partagé avec une autre, pour qu'on les reconnaisse au premier coup d'œil.
 const ACTIVITY_ICONS: Record<string, LucideIcon> = {
   // Santé & Médecine
   'Santé':                    Stethoscope,
-  'Médecin':                  Stethoscope,
+  'Médecin':                  HeartPulse,
   'Infirmier/Infirmière':     Syringe,
   'Pharmacien':               Pill,
   'Sage-femme':               Baby,
-  'Dentiste':                 Stethoscope,
+  'Dentiste':                 Cross,
   'Psychologue/Thérapeute':   Brain,
   'Kiné/Physiothérapeute':    Dumbbell,
-  'Vétérinaire':              Beef,
-  'Opticien':                 Monitor,
+  'Vétérinaire':              Dog,
+  'Opticien':                 Eye,
   // Éducation
   'Élève':                    School,
   'Étudiant':                 BookOpen,
   'Enseignement':             GraduationCap,
-  'Professeur/Formateur':     GraduationCap,
+  'Professeur/Formateur':     Presentation,
   'Chercheur/Scientifique':   Microscope,
   // Droit, Finance & Admin
-  'Administration':           Building2,
+  'Administration':           Landmark,
   'Avocat/Juriste':           Scale,
   'Comptable/Auditeur':       Calculator,
   'Économiste':               TrendingUp,
   'Banque/Finance':           Banknote,
-  'Assurance':                Shield,
+  'Assurance':                Umbrella,
   'Agent immobilier':         Building,
-  'Notaire/Huissier':         Scale,
+  'Notaire/Huissier':         Gavel,
   // Numérique & Tech
-  'Informatique':             Monitor,
-  'Développeur/Programmeur':  Monitor,
+  'Informatique':             Cpu,
+  'Développeur/Programmeur':  Code,
   'Graphiste/Designer':       Palette,
   'Cybersécurité':            Shield,
   'Télécommunications':       Radio,
   // BTP & Artisanat
   'Construction':             HardHat,
-  'Maçonnerie':               HardHat,
+  'Maçonnerie':               Drill,
   'Menuiserie':               Hammer,
   'Électricité':              Zap,
   'Plomberie':                Droplets,
@@ -75,16 +80,16 @@ const ACTIVITY_ICONS: Record<string, LucideIcon> = {
   'Peinture en bâtiment':     PaintBucket,
   'Carrelage':                Layers,
   'Mécanique':                Wrench,
-  'Artisanat':                Hammer,
+  'Artisanat':                PencilRuler,
   'Couture':                  Scissors,
   // Commerce & Échanges
   'Commerce':                 ShoppingBag,
   'Import/Export':            ArrowLeftRight,
-  'Marketing/Communication':  TrendingUp,
+  'Marketing/Communication':  Megaphone,
   'Transport':                Car,
   'Logistique':               Package,
   'Journalisme':              Newspaper,
-  'Sécurité':                 Shield,
+  'Sécurité':                 Siren,
   // Alimentation
   'Agriculture':              Sprout,
   'Maraîchage':               Leaf,
@@ -92,17 +97,17 @@ const ACTIVITY_ICONS: Record<string, LucideIcon> = {
   'Pêche':                    Fish,
   'Boulangerie/Pâtisserie':   ChefHat,
   'Restauration':             UtensilsCrossed,
-  'Agroalimentaire':          ShoppingBag,
+  'Agroalimentaire':          Wheat,
   // Services
-  'Coiffure':                 Scissors,
+  'Coiffure':                 Brush,
   'Hôtellerie/Tourisme':      Hotel,
   'Photographie/Vidéo':       Camera,
-  'Sport/Coach sportif':      Dumbbell,
-  'Ingénierie':               Wrench,
+  'Sport/Coach sportif':      Trophy,
+  'Ingénierie':               Cog,
   'Architecture':             Building2,
-  'Environnement/Écologie':   Leaf,
+  'Environnement/Écologie':   Trees,
   'Travail social':           HeartHandshake,
-  'Imam/Prédicateur':         BookOpen,
+  'Imam/Prédicateur':         Moon,
   'Traducteur/Interprète':    Languages,
   // Statut
   'Sans emploi':              Home,
@@ -814,7 +819,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
       )}
 
       {/* Bandeau activité + pays (détection automatique selon le profil) */}
-      <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
+      <div className="bg-amber-50 border-b border-amber-200 px-4 py-1">
         <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap">
           {/* Activité + spécialité */}
           {(() => {
@@ -841,7 +846,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
       {/* Navigation Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="grid grid-cols-3 gap-2 py-2">
+          <nav className="grid grid-cols-3 gap-2 py-1.5">
             {(() => {
               if (!userData) return null;
 
@@ -875,7 +880,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
+                    className={`flex flex-col items-center justify-center gap-1 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-all ${
                       isActive
                         ? 'bg-amber-500 text-white shadow-md'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
