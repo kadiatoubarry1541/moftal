@@ -769,6 +769,7 @@ async function initAllTables() {
 
   // media_url doit être TEXT (base64 data URLs)
   await sequelize.query(`ALTER TABLE "family_tree_messages" ALTER COLUMN "media_url" TYPE TEXT;`).catch(() => {});
+  await sequelize.query(`ALTER TABLE "family_tree_messages" ADD COLUMN IF NOT EXISTS "category" VARCHAR(50) DEFAULT 'information';`).catch(() => {});
 
   // Colonnes ajoutées récemment sur users (visibilité arbre généalogique)
   const userAlters = [

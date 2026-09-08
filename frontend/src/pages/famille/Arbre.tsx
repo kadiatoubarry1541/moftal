@@ -50,10 +50,25 @@ interface FamilyMessage {
   content: string
   messageType?: 'text' | 'image' | 'video' | 'audio'
   mediaUrl?: string | null
+  category?: string
   created_at?: string
   createdAt?: string
   familyName?: string
 }
+
+const FAMILLE_CATEGORIES = [
+  { id: 'information', label: 'Information', icon: '📰' },
+  { id: 'rencontre',   label: 'Rencontre',   icon: '🤝' },
+  { id: 'deces',       label: 'Décès',       icon: '🕯️' },
+  { id: 'mariage',     label: 'Mariage',     icon: '💒' },
+  { id: 'bapteme',     label: 'Baptême',     icon: '⛪' },
+  { id: 'naissance',   label: 'Naissance',   icon: '👶' },
+  { id: 'solidarite',  label: 'Solidarité / Entraide', icon: '🤲' },
+  { id: 'fete',        label: 'Fête / Événement', icon: '🎉' },
+  { id: 'annonce',     label: 'Annonce',     icon: '📢' },
+  { id: 'urgence',     label: 'Urgence',     icon: '🚨' },
+  { id: 'reunion',     label: 'Réunion',     icon: '👥' },
+] as const;
 
 interface GalleryItem {
   id: string
@@ -207,6 +222,9 @@ export default function Arbre() {
   // Messagerie familiale (style WhatsApp)
   const [familyMessages, setFamilyMessages] = useState<FamilyMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [newMessageCategory, setNewMessageCategory] = useState('information')
+  const [showCategoryGrid, setShowCategoryGrid] = useState(false)
+  const [feedFilter, setFeedFilter] = useState<string>('all')
   const [isSending, setIsSending] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
@@ -511,7 +529,7 @@ const enhancedUser: UserData = useMemo(() => {
           Authorization: token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ content: newMessage.trim(), messageType: 'text' })
+        body: JSON.stringify({ content: newMessage.trim(), messageType: 'text', category: newMessageCategory })
       })
 
       const data = await response.json()
@@ -571,6 +589,7 @@ const enhancedUser: UserData = useMemo(() => {
     try {
       const formData = new FormData()
       formData.append('media', file)
+      formData.append('category', newMessageCategory)
       const res = await fetch(`${API_BASE}/api/family-tree/messages/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -591,7 +610,7 @@ const enhancedUser: UserData = useMemo(() => {
     } finally {
       setIsSending(false)
     }
-  }, [API_BASE])
+  }, [API_BASE, newMessageCategory])
 
   // Enregistrement vocal : appui = démarre, relâche = envoie
   const startRecording = useCallback(async () => {
@@ -1261,6 +1280,27 @@ const enhancedUser: UserData = useMemo(() => {
                   )}
                 </div>
 
+                {/* Filtre par catégorie */}
+                {familyMessages.length > 0 && (
+                  <div className="flex gap-1.5 overflow-x-auto px-3 py-2 bg-white border-b border-gray-100">
+                    <button
+                      onClick={() => setFeedFilter('all')}
+                      className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === 'all' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                      💬 Tout
+                    </button>
+                    {FAMILLE_CATEGORIES.map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setFeedFilter(cat.id)}
+                        className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === cat.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                      >
+                        {cat.icon} {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Zone de messages */}
                 <div className="flex-1 bg-gray-100 px-3 py-3 overflow-y-auto">
                   {loadingMessages ? (
@@ -1279,7 +1319,9 @@ const enhancedUser: UserData = useMemo(() => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {familyMessages.map((msg) => {
+                      {familyMessages
+                        .filter(msg => feedFilter === 'all' || (msg.category || 'information') === feedFilter)
+                        .map((msg) => {
                         const isMe = msg.numeroH === effectiveUser.numeroH
                         const createdAt =
                           msg.createdAt || msg.created_at || new Date().toISOString()
@@ -1302,7 +1344,12 @@ const enhancedUser: UserData = useMemo(() => {
                                 </p>
                               )}
                               {(msg.messageType === 'text' || !msg.messageType) && (
-                                <p className="text-sm whitespace-pre-line">{msg.content}</p>
+                                <p className="text-sm whitespace-pre-line">
+                                  {msg.category && msg.category !== 'information' && (
+                                    <span className="mr-1">{FAMILLE_CATEGORIES.find(c => c.id === msg.category)?.icon}</span>
+                                  )}
+                                  {msg.content}
+                                </p>
                               )}
                               {msg.mediaUrl && msg.messageType === 'image' && (
                                 <img
@@ -1393,19 +1440,45 @@ const enhancedUser: UserData = useMemo(() => {
                       />
                     </label>
 
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          sendFamilyMessage()
-                        }
-                      }}
-                      placeholder="Écrivez un message familial..."
-                      className="flex-1 min-w-0 px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
-                    />
+                    <div className="flex-1 min-w-0 relative">
+                      {/* Catégorie — intégrée dans le champ, à gauche */}
+                      <button
+                        type="button"
+                        onClick={() => setShowCategoryGrid(v => !v)}
+                        title="Choisir le type d'information"
+                        className={`absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+                      >
+                        <span className="text-base leading-none">{FAMILLE_CATEGORIES.find(c => c.id === newMessageCategory)?.icon}</span>
+                      </button>
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            sendFamilyMessage()
+                          }
+                        }}
+                        placeholder="Écrivez un message familial..."
+                        className="w-full min-w-0 pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
+                      />
+                      {showCategoryGrid && (
+                        <div className="absolute bottom-11 left-0 z-20 bg-white rounded-xl shadow-lg border border-gray-200 p-2 grid grid-cols-4 gap-1 w-64">
+                          {FAMILLE_CATEGORIES.map(cat => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => { setNewMessageCategory(cat.id); setShowCategoryGrid(false) }}
+                              className={`flex flex-col items-center gap-0.5 py-2 rounded-lg ${newMessageCategory === cat.id ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+                              title={cat.label}
+                            >
+                              <span className="text-lg leading-none">{cat.icon}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Micro vocal : appui = enregistre, relâche = envoie */}
                     <button

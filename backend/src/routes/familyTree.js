@@ -746,7 +746,7 @@ router.get('/messages', async (req, res) => {
 router.post('/messages', async (req, res) => {
   try {
     const user = req.user;
-    const { content, messageType = 'text', mediaUrl } = req.body;
+    const { content, messageType = 'text', mediaUrl, category = 'information' } = req.body;
 
     const familyName = user.nomFamille || user.familyName;
 
@@ -763,7 +763,8 @@ router.post('/messages', async (req, res) => {
       numeroH: user.numeroH,
       messageType: messageType || 'text',
       content: String(content || '').trim(),
-      mediaUrl: mediaUrl || null
+      mediaUrl: mediaUrl || null,
+      category: category || 'information'
     });
 
     const msgData = {
@@ -825,7 +826,8 @@ router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, r
       numeroH: user.numeroH,
       messageType,
       content,
-      mediaUrl
+      mediaUrl,
+      category: req.body.category || 'information'
     });
 
     const msgData = {
