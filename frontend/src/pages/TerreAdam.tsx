@@ -175,6 +175,14 @@ export default function TerreAdam() {
   const quartierDevRef = useRef<DeveloppementSectionHandle>(null);
   const livreQuartierRef = useRef<LivreQuartierHandle>(null);
 
+  // Partage d'un message du chat vers un niveau supérieur (sous-préfecture,
+  // préfecture...), comme sur WhatsApp — sans avoir à retaper l'information.
+  const [shareMsg, setShareMsg] = useState<ResidenceMessage | null>(null);
+  const [shareLevels, setShareLevels] = useState<{ scope: string; location: string; label: string }[]>([]);
+  const [shareSelected, setShareSelected] = useState<Set<string>>(new Set());
+  const [shareChecking, setShareChecking] = useState(false);
+  const [shareSending, setShareSending] = useState(false);
+
   // Niveau actuel : quartier (Résidence 1/2/3) ou plus large (sous-préfecture, région, pays, continent)
   const isQuartierLevel =
     activeLieuTab === 'quartier-1' ||
@@ -613,6 +621,73 @@ export default function TerreAdam() {
     } catch (error: any) {
       console.error('Erreur lors de l\'envoi du message:', error);
       alert(error.message || 'Erreur lors de l\'envoi du message');
+    }
+  };
+
+  // Partager un message du quartier vers un ou plusieurs niveaux au-dessus
+  // (sous-préfecture, préfecture...) — comme "transférer" sur WhatsApp.
+  const openShare = async (msg: ResidenceMessage) => {
+    setShareMsg(msg);
+    setShareSelected(new Set());
+    setShareLevels([]);
+    setShareChecking(true);
+    const candidats = higherLevelsFrom('quartier');
+    const token = localStorage.getItem('token');
+    try {
+      const resultats = await Promise.all(candidats.map(async (lvl) => {
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/developpement/actualites/can-publish?scope=${encodeURIComponent(lvl.scope)}&location=${encodeURIComponent(lvl.location)}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (!res.ok) return null;
+          const d = await res.json();
+          return d.canPublish ? lvl : null;
+        } catch { return null; }
+      }));
+      setShareLevels(resultats.filter((l): l is { scope: string; location: string; label: string } => !!l));
+    } finally {
+      setShareChecking(false);
+    }
+  };
+
+  const toggleShareLevel = (key: string) => {
+    setShareSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const confirmShare = async () => {
+    if (!shareMsg || shareSelected.size === 0) return;
+    setShareSending(true);
+    try {
+      const cibles = shareLevels.filter(l => shareSelected.has(`${l.scope}:${l.location}`));
+      const [premiere, ...reste] = cibles;
+      const categoryLabel = QUARTIER_CATEGORIES.find(c => c.id === (shareMsg.category || 'information'))?.label || 'Information';
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('titre', `${categoryLabel} — ${selectedGroup?.title || selectedGroup?.name || ''}`);
+      formData.append('content', shareMsg.content || '');
+      formData.append('scope', premiere.scope);
+      formData.append('location', premiere.location);
+      if (reste.length) formData.append('partages', JSON.stringify(reste.map(l => ({ scope: l.scope, location: l.location }))));
+      const res = await fetch(`${API_BASE}/api/developpement/actualites`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const d = await res.json();
+      if (d.success) {
+        setShareMsg(null);
+      } else {
+        alert(d.message || 'Erreur lors du partage.');
+      }
+    } catch {
+      alert('Impossible de contacter le serveur.');
+    } finally {
+      setShareSending(false);
     }
   };
 
@@ -1074,9 +1149,20 @@ export default function TerreAdam() {
                                         {(msg.type === 'audio' || msg.messageType === 'audio') && msg.mediaUrl && (
                                           <audio src={toMediaUrl(msg.mediaUrl)} controls className="w-full" />
                                         )}
-                                        <p className={`text-[10px] mt-2 text-right ${isMyMessage ? 'text-emerald-500' : 'text-gray-400'}`}>
-                                          {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                        </p>
+                                        <div className="flex items-center justify-end gap-2 mt-2">
+                                          {(msg.type === 'text' || msg.messageType === 'text') && msg.content && (
+                                            <button
+                                              onClick={() => openShare(msg)}
+                                              className="text-[10px] text-gray-400 hover:text-emerald-600 font-semibold"
+                                              title="Partager vers un niveau au-dessus"
+                                            >
+                                              ↗️ Partager
+                                            </button>
+                                          )}
+                                          <p className={`text-[10px] ${isMyMessage ? 'text-emerald-500' : 'text-gray-400'}`}>
+                                            {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                          </p>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -1467,6 +1553,50 @@ export default function TerreAdam() {
           locationName={selectedGroup.title || selectedGroup.name || ''}
           canPublish={isJournalist || isAdmin}
         />
+      )}
+
+      {/* Modal — Partager un message vers un niveau au-dessus */}
+      {shareMsg && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShareMsg(null)}>
+          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-emerald-700 px-4 py-3 flex items-center justify-between">
+              <h2 className="text-white font-bold text-base">↗️ Partager</h2>
+              <button onClick={() => setShareMsg(null)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-2.5 line-clamp-3">{shareMsg.content}</p>
+              {shareChecking ? (
+                <div className="text-center text-sm text-gray-400 py-4">Vérification des droits...</div>
+              ) : shareLevels.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">Tu n'as le droit de publier à aucun niveau au-dessus pour l'instant.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {shareLevels.map(lvl => {
+                    const key = `${lvl.scope}:${lvl.location}`;
+                    return (
+                      <label key={key} className="flex items-center gap-2 text-sm text-gray-700 py-1">
+                        <input
+                          type="checkbox"
+                          checked={shareSelected.has(key)}
+                          onChange={() => toggleShareLevel(key)}
+                          className="w-4 h-4 accent-emerald-600"
+                        />
+                        {lvl.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              <button
+                onClick={confirmShare}
+                disabled={shareSending || shareSelected.size === 0}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold rounded-xl text-sm transition-colors"
+              >
+                {shareSending ? 'Partage...' : 'Partager'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal — Liste des membres du quartier */}

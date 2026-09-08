@@ -40,6 +40,11 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
+  // Informations partagées depuis les quartiers de cette sous-préfecture
+  // (bouton "↗️ Partager" sur un message du chat) — lecture seule ici.
+  const [infosPartagees, setInfosPartagees] = useState<any[]>([]);
+  const [loadingInfos, setLoadingInfos] = useState(false);
+
   useEffect(() => {
     if (!showLogoEtListe || !location) return;
     (async () => {
@@ -51,6 +56,17 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
         );
         if (res.ok) { const d = await res.json(); setLogoUrl(d.logoUrl || null); }
       } catch { /* ignore */ }
+    })();
+    (async () => {
+      setLoadingInfos(true);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(
+          `${API_BASE}/api/developpement/actualites?scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.ok) { const d = await res.json(); setInfosPartagees(d.actualites || []); }
+      } catch { /* ignore */ } finally { setLoadingInfos(false); }
     })();
   }, [showLogoEtListe, scope, location]);
 
@@ -135,6 +151,37 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
           </div>
           <span className="text-white/80">›</span>
         </button>
+      )}
+
+      {/* Informations partagées depuis les quartiers — lecture seule */}
+      {showLogoEtListe && (infosPartagees.length > 0 || loadingInfos) && (
+        <div>
+          <h3 className="font-bold text-slate-800 text-sm mb-2">📰 Informations partagées</h3>
+          {loadingInfos ? (
+            <div className="flex justify-center py-4">
+              <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {infosPartagees.map((info: any) => (
+                <div key={info.id} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
+                  <h4 className="font-bold text-slate-800 text-sm">{info.titre}</h4>
+                  {info.mediaUrl && (
+                    info.mediaType === 'video' ? (
+                      <video src={info.mediaUrl.startsWith('http') ? info.mediaUrl : `${API_BASE}${info.mediaUrl}`} controls className="w-full h-32 object-cover rounded-lg mt-2 bg-black" />
+                    ) : (
+                      <img src={info.mediaUrl.startsWith('http') ? info.mediaUrl : `${API_BASE}${info.mediaUrl}`} alt="" className="w-full h-32 object-cover rounded-lg mt-2" />
+                    )
+                  )}
+                  <p className="text-slate-600 text-sm mt-1.5 whitespace-pre-wrap">{info.content}</p>
+                  <p className="text-xs text-slate-400 mt-2">
+                    {info.authorName} · {new Date(info.createdAt || info.created_at).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
