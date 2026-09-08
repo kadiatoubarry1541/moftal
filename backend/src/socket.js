@@ -42,6 +42,12 @@ export function initSocket(httpServer, corsOrigins) {
       if (familyName) socket.join(`family-${familyName}`);
     });
 
+    // Rejoindre une room de messagerie privée (couple, parent-enfant...) —
+    // nom de room générique déjà préfixé côté appelant (ex: "couple-<linkId>").
+    socket.on('join-room', (room) => {
+      if (room) socket.join(room);
+    });
+
     // ──── Signaling WebRTC ────────────────────────────────────────────────────
 
     // Appel sortant : l'appelant envoie une offre SDP

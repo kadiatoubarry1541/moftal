@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
-import { CommunicationHub } from '../../components/CommunicationHub'
+import { CoupleChat } from '../../components/CoupleChat'
 import { AddPersonModal } from '../../components/AddPersonModal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -1218,20 +1218,13 @@ export default function Partenaire({ inline }: { inline?: boolean } = {}) {
               <div className="p-6">
                 <div className="mb-4">
                   <h3 className="text-lg font-bold text-slate-800">Messagerie avec {partnerLabel}</h3>
-                  <p className="text-slate-600 text-sm mt-1">Échangez avec votre partenaire.</p>
+                  <p className="text-slate-600 text-sm mt-1">Espace privé entre vous deux uniquement.</p>
                 </div>
-                {user ? (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <CommunicationHub
-                      userData={user}
-                      showGroups={false}
-                      showBroadcast={false}
-                      showGallery={false}
-                    />
-                  </div>
+                {user && linkInfo?.id ? (
+                  <CoupleChat linkId={linkInfo.id} myNumeroH={user.numeroH} partnerLabel={partnerLabel} />
                 ) : (
                   <p className="text-slate-500 text-sm">
-                    Connectez-vous pour accéder à la messagerie de couple.
+                    Liez-vous d'abord à {partnerLabel} pour accéder à la messagerie.
                   </p>
                 )}
               </div>
