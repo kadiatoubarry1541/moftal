@@ -4,12 +4,14 @@ import { authenticate } from '../middleware/auth.js';
 import User from '../models/User.js';
 import CoupleLink from '../models/CoupleLink.js';
 import CoupleActivity from '../models/CoupleActivity.js';
+import CoupleMessage from '../models/CoupleMessage.js';
 import PartnerRating from '../models/PartnerRating.js';
 import { sequelize } from '../config/database.js';
 import Notification from '../models/Notification.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
+import { getIO } from '../socket.js';
 
 // Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
 // redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
@@ -42,6 +44,36 @@ async function ensureCoupleActivityTable() {
   } catch (err) {
     console.warn('⚠️ ensureCoupleActivityTable:', err.message);
   }
+}
+
+// Crée la table couple_messages si elle n'existe pas (dev ET production)
+async function ensureCoupleMessagesTable() {
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "couple_messages" (
+        "id"             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        "link_id"        UUID         NOT NULL,
+        "numero_h"       VARCHAR(255) NOT NULL,
+        "message_type"   VARCHAR(20)  DEFAULT 'text',
+        "category"       VARCHAR(50)  DEFAULT 'information',
+        "content"        TEXT         NOT NULL,
+        "media_url"      TEXT,
+        "created_at"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
+    `);
+    await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_cm_link ON "couple_messages" ("link_id");`).catch(() => {});
+  } catch (err) {
+    console.warn('⚠️ ensureCoupleMessagesTable:', err.message);
+  }
+}
+
+/** Vérifie que l'utilisateur fait bien partie de ce lien de couple. */
+function estDansLeLien(link, numeroH) {
+  return !!link && (
+    link.numeroH1 === numeroH || link.numeroH2 === numeroH ||
+    link.husbandNumeroH === numeroH || link.wifeNumeroH === numeroH
+  );
 }
 
 /** Admin : aucune condition, tout voir et tout gérer. */
@@ -757,6 +789,112 @@ router.post('/activity/upload', uploadCouple.fields([
     });
   } catch (error) {
     console.error('Erreur upload activité couple:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ─── MESSAGERIE PRIVÉE DU COUPLE (par lien précis — pas de mélange entre épouses) ───
+
+/**
+ * GET /api/couple/messages?linkId=
+ */
+router.get('/messages', async (req, res) => {
+  try {
+    await ensureCoupleMessagesTable();
+    const { linkId } = req.query;
+    if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
+    const link = await CoupleLink.findByPk(linkId);
+    if (!estDansLeLien(link, req.user.numeroH) && !isAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const messages = await CoupleMessage.getMessages(linkId);
+    const numeroHs = [...new Set(messages.map(m => m.numeroH))];
+    const users = await User.findAll({ where: { numeroH: numeroHs }, attributes: ['numeroH', 'prenom', 'nomFamille'] });
+    const userMap = Object.fromEntries(users.map(u => [u.numeroH, u]));
+    const list = messages.slice().reverse().map(m => ({
+      ...m.toJSON(),
+      authorName: userMap[m.numeroH] ? `${userMap[m.numeroH].prenom} ${userMap[m.numeroH].nomFamille}` : m.numeroH
+    }));
+    res.json({ success: true, messages: list });
+  } catch (error) {
+    console.error('Erreur récupération messages couple:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/couple/messages — message texte
+ */
+router.post('/messages', async (req, res) => {
+  try {
+    await ensureCoupleMessagesTable();
+    const user = req.user;
+    const { linkId, content, category = 'information' } = req.body;
+    if (!linkId || !content?.trim()) {
+      return res.status(400).json({ success: false, message: 'linkId et content requis.' });
+    }
+    const link = await CoupleLink.findByPk(linkId);
+    if (!estDansLeLien(link, user.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const msg = await CoupleMessage.create({
+      linkId,
+      numeroH: user.numeroH,
+      messageType: 'text',
+      category,
+      content: content.trim()
+    });
+    const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
+    const io = getIO();
+    if (io) io.to(`couple-${linkId}`).emit('couple-message', msgData);
+    res.status(201).json({ success: true, message: msgData });
+  } catch (error) {
+    console.error('Erreur envoi message couple:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/couple/messages/upload — photo/vidéo/audio (≤30s côté client)
+ */
+router.post('/messages/upload', uploadCouple.single('media'), async (req, res) => {
+  try {
+    await ensureCoupleMessagesTable();
+    const user = req.user;
+    const { linkId, category = 'information' } = req.body;
+    if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
+    const link = await CoupleLink.findByPk(linkId);
+    if (!estDansLeLien(link, user.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
+
+    const mime = req.file.mimetype;
+    let messageType = 'image';
+    if (mime.startsWith('video/')) messageType = 'video';
+    else if (mime.startsWith('audio/')) messageType = 'audio';
+
+    const mediaUrl = messageType === 'image'
+      ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'couple-messages')
+      : await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'couple-messages');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'couple-messages').catch(() => {});
+
+    const content = req.body.content || (messageType === 'audio' ? '🎤 Message vocal' : messageType === 'video' ? '🎬 Vidéo' : '📷 Photo');
+
+    const msg = await CoupleMessage.create({
+      linkId,
+      numeroH: user.numeroH,
+      messageType,
+      category,
+      content,
+      mediaUrl
+    });
+    const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
+    const io = getIO();
+    if (io) io.to(`couple-${linkId}`).emit('couple-message', msgData);
+    res.status(201).json({ success: true, message: msgData });
+  } catch (error) {
+    console.error('Erreur upload message couple:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
