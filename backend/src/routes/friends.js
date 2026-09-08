@@ -1,15 +1,52 @@
 import express from 'express';
+import multer from 'multer';
 import { Op } from 'sequelize';
 import Friend from '../models/Friend.js';
 import FriendRequest from '../models/FriendRequest.js';
+import FriendMessage from '../models/FriendMessage.js';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 import Notification from '../models/Notification.js';
+import { sequelize } from '../config/database.js';
+import { uploadToImageKit } from '../services/imagekitStorage.js';
+import { uploadToR2 } from '../services/r2Storage.js';
+import { uploadToIDrive } from '../services/idriveStorage.js';
+import { getIO } from '../socket.js';
+
+// Upload en mémoire — jamais sur le disque du serveur — puis envoyé vers le stockage cloud.
+const uploadFriendMedia = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
 const router = express.Router();
 
 // Toutes les routes nécessitent l'authentification
 router.use(authenticate);
+
+// Crée la table friend_messages si elle n'existe pas (dev ET production)
+async function ensureFriendMessagesTable() {
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "friend_messages" (
+        "id"             UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+        "link_id"        UUID         NOT NULL,
+        "numero_h"       VARCHAR(255) NOT NULL,
+        "message_type"   VARCHAR(20)  DEFAULT 'text',
+        "category"       VARCHAR(50)  DEFAULT 'information',
+        "content"        TEXT         NOT NULL,
+        "media_url"      TEXT,
+        "created_at"     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      );
+    `);
+    await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_fm_link ON "friend_messages" ("link_id");`).catch(() => {});
+  } catch (err) {
+    console.warn('⚠️ ensureFriendMessagesTable:', err.message);
+  }
+}
+
+/** Vérifie que l'utilisateur fait bien partie de cette amitié. */
+function estDansLAmitie(friend, numeroH) {
+  return !!friend && (friend.userNumeroH === numeroH || friend.friendNumeroH === numeroH);
+}
 
 // ─── GET /api/friends/list → liste des amis acceptés ─────────────────────────
 router.get('/list', async (req, res) => {
@@ -306,6 +343,107 @@ router.get('/search-by-name', async (req, res) => {
   } catch (error) {
     console.error('Erreur /friends/search-by-name:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
+  }
+});
+
+// ─── MESSAGERIE PRIVÉE ENTRE AMIS (par amitié précise) — déclarée avant
+// "/:numeroH" ci-dessous, sinon cette route générique capterait "/messages". ───
+
+// GET /api/friends/messages?linkId=
+router.get('/messages', async (req, res) => {
+  try {
+    await ensureFriendMessagesTable();
+    const { linkId } = req.query;
+    if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
+    const friend = await Friend.findByPk(linkId);
+    if (!estDansLAmitie(friend, req.user.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const messages = await FriendMessage.getMessages(linkId);
+    const numeroHs = [...new Set(messages.map(m => m.numeroH))];
+    const users = await User.findAll({ where: { numeroH: numeroHs }, attributes: ['numeroH', 'prenom', 'nomFamille'] });
+    const userMap = Object.fromEntries(users.map(u => [u.numeroH, u]));
+    const list = messages.slice().reverse().map(m => ({
+      ...m.toJSON(),
+      authorName: userMap[m.numeroH] ? `${userMap[m.numeroH].prenom} ${userMap[m.numeroH].nomFamille}` : m.numeroH
+    }));
+    res.json({ success: true, messages: list });
+  } catch (error) {
+    console.error('Erreur récupération messages amis:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/friends/messages — message texte
+router.post('/messages', async (req, res) => {
+  try {
+    await ensureFriendMessagesTable();
+    const user = req.user;
+    const { linkId, content, category = 'information' } = req.body;
+    if (!linkId || !content?.trim()) {
+      return res.status(400).json({ success: false, message: 'linkId et content requis.' });
+    }
+    const friend = await Friend.findByPk(linkId);
+    if (!estDansLAmitie(friend, user.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    const msg = await FriendMessage.create({
+      linkId,
+      numeroH: user.numeroH,
+      messageType: 'text',
+      category,
+      content: content.trim()
+    });
+    const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
+    const io = getIO();
+    if (io) io.to(`friend-${linkId}`).emit('friend-message', msgData);
+    res.status(201).json({ success: true, message: msgData });
+  } catch (error) {
+    console.error('Erreur envoi message ami:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/friends/messages/upload — photo/vidéo/audio (≤30s côté client)
+router.post('/messages/upload', uploadFriendMedia.single('media'), async (req, res) => {
+  try {
+    await ensureFriendMessagesTable();
+    const user = req.user;
+    const { linkId, category = 'information' } = req.body;
+    if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
+    const friend = await Friend.findByPk(linkId);
+    if (!estDansLAmitie(friend, user.numeroH)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
+
+    const mime = req.file.mimetype;
+    let messageType = 'image';
+    if (mime.startsWith('video/')) messageType = 'video';
+    else if (mime.startsWith('audio/')) messageType = 'audio';
+
+    const mediaUrl = messageType === 'image'
+      ? await uploadToImageKit(req.file.buffer, req.file.originalname, 'friend-messages')
+      : await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype, 'friend-messages');
+    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'friend-messages').catch(() => {});
+
+    const content = req.body.content || (messageType === 'audio' ? '🎤 Message vocal' : messageType === 'video' ? '🎬 Vidéo' : '📷 Photo');
+
+    const msg = await FriendMessage.create({
+      linkId,
+      numeroH: user.numeroH,
+      messageType,
+      category,
+      content,
+      mediaUrl
+    });
+    const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
+    const io = getIO();
+    if (io) io.to(`friend-${linkId}`).emit('friend-message', msgData);
+    res.status(201).json({ success: true, message: msgData });
+  } catch (error) {
+    console.error('Erreur upload message ami:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

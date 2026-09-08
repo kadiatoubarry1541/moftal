@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay } from '../../utils/auth';
+import { FriendChat } from '../../components/FriendChat';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -87,6 +88,7 @@ export default function MesAmours() {
   const [loading, setLoading] = useState(true);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [chatFriend, setChatFriend] = useState<Friend | null>(null);
   const [showEditInfo, setShowEditInfo] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
 
@@ -966,8 +968,11 @@ export default function MesAmours() {
                       >
                         Voir infos
                       </button>
-                      <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors">
-                        Message
+                      <button
+                        onClick={() => setChatFriend(friend)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
+                      >
+                        💬 Message
                       </button>
                     </div>
                   </div>
@@ -1551,6 +1556,27 @@ export default function MesAmours() {
                 </>
               )}
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de messagerie privée avec un ami */}
+      {chatFriend && userData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setChatFriend(null)}>
+          <div className="bg-white rounded-lg w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-violet-600 px-4 py-3 flex items-center justify-between">
+              <h3 className="text-white font-bold text-base">
+                💬 {chatFriend.prenom} {chatFriend.nomFamille}
+              </h3>
+              <button onClick={() => setChatFriend(null)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+            </div>
+            <div className="p-3">
+              <FriendChat
+                linkId={chatFriend.id}
+                myNumeroH={userData.numeroH}
+                partnerLabel={`${chatFriend.prenom} ${chatFriend.nomFamille}`}
+              />
             </div>
           </div>
         </div>
