@@ -5,6 +5,7 @@ import IaConversation from '../models/IaConversation.js';
 import Payment from '../models/Payment.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { TERMINALE_KNOWLEDGE } from '../data/iaKnowledgeTerminale.js';
+import { BIOLOGIE_KNOWLEDGE } from '../data/iaKnowledgeBiologie.js';
 
 /** Insère (ou met à jour) les fiches Terminale au démarrage — n'écrase jamais une
  *  fiche déjà modifiée manuellement par un admin depuis l'API /knowledge. */
@@ -24,6 +25,20 @@ async function seedTerminaleKnowledge() {
   }
 }
 seedTerminaleKnowledge();
+
+/** Insère (ou met à jour) les fiches Biologie au démarrage — mêmes règles
+ *  que seedTerminaleKnowledge : n'écrase jamais une fiche déjà modifiée
+ *  manuellement par un admin depuis l'API /knowledge. */
+async function seedBiologieKnowledge() {
+  try {
+    for (const fiche of BIOLOGIE_KNOWLEDGE) {
+      await IaKnowledge.findOrCreate({ where: { slug: fiche.slug }, defaults: fiche });
+    }
+  } catch (err) {
+    console.warn('⚠️ seedBiologieKnowledge:', err.message);
+  }
+}
+seedBiologieKnowledge();
 
 /** Vérifie si l'utilisateur a un abonnement Professeur IA actif */
 async function verifierAbonnementIA(numeroH) {
@@ -76,7 +91,7 @@ function isGreetingOrPoliteness(message) {
 
 /** Reponse d'accueil quand l'utilisateur dit bonjour / salut */
 const GREETING_RESPONSE = [
-  'Bonjour ! Je suis votre **Professeur IA**, spécialisé en **Français** et en **Mathématiques** (du CP à la Terminale). 📚',
+  'Bonjour ! Je suis votre **Professeur IA**, spécialisé en **Français**, **Mathématiques** et **Biologie** (du CP à la Terminale). 📚',
   '',
   '━━━━━━━━━━━━━━━━━━━━━━━',
   '📖 **FRANÇAIS**',
@@ -96,6 +111,13 @@ const GREETING_RESPONSE = [
   'Logarithme · Exponentielle · Intégration · Suites · Équations différentielles',
   'Probabilité conditionnelle · Applications affines · Similitudes',
   '',
+  '━━━━━━━━━━━━━━━━━━━━━━━',
+  '🧬 **BIOLOGIE**',
+  '━━━━━━━━━━━━━━━━━━━━━━━',
+  'La cellule · Digestion · Respiration · Circulation sanguine',
+  'Système nerveux · Reproduction · Photosynthèse',
+  'Écologie (écosystèmes, chaînes alimentaires) · Génétique · Immunité',
+  '',
   '**Exemples de questions à poser :**',
   '— Explique-moi le passé composé',
   '— Résous : 2x² - 5x + 2 = 0',
@@ -105,6 +127,8 @@ const GREETING_RESPONSE = [
   '— Exercice de probabilités',
   '— Explique-moi les nombres complexes',
   '— C\'est quoi une probabilité conditionnelle ?',
+  '— Explique-moi la photosynthèse',
+  '— Exercice de biologie',
   '',
   'Posez votre question, je suis là ! 💪',
 ].join('\n');
@@ -382,6 +406,110 @@ function generateExercice(type) {
     };
   }
 
+  // ── Biologie ───────────────────────────────────────────────────
+  function exBioCellule() {
+    var series = [
+      { question: 'Quelle structure entoure et protège la cellule, en contrôlant ce qui entre et sort ?', reponse: 'membrane plasmique', explication: 'La MEMBRANE PLASMIQUE (ou membrane cellulaire) enveloppe la cellule et régule les échanges avec le milieu extérieur.' },
+      { question: 'Quel organite est appelé "centrale énergétique" de la cellule ?', reponse: 'mitochondrie', explication: 'La MITOCHONDRIE produit l\'énergie (ATP) de la cellule grâce à la respiration cellulaire.' },
+      { question: 'Quel organite contient l\'ADN (matériel génétique) dans une cellule ?', reponse: 'noyau', explication: 'Le NOYAU contient l\'ADN, qui porte l\'information génétique de la cellule.' },
+      { question: 'Quel organite, présent chez les végétaux, permet la photosynthèse ?', reponse: 'chloroplaste', explication: 'Le CHLOROPLASTE contient la chlorophylle et capte la lumière pour réaliser la photosynthèse.' },
+      { question: 'Quelle est la plus petite unité vivante capable de se reproduire ?', reponse: 'cellule', explication: 'La CELLULE est l\'unité de base du vivant : tout être vivant est constitué d\'une ou plusieurs cellules.' },
+      { question: 'Quel gel liquide, à l\'intérieur de la cellule, contient les organites ?', reponse: 'cytoplasme', explication: 'Le CYTOPLASME est le milieu intérieur de la cellule, entre la membrane et le noyau, où baignent les organites.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioDigestion() {
+    var series = [
+      { question: 'Quel organe produit la salive qui commence la digestion dans la bouche ?', reponse: 'glandes salivaires', explication: 'Les GLANDES SALIVAIRES produisent la salive, qui contient une enzyme (amylase) débutant la digestion des sucres.' },
+      { question: 'Quel organe produit le suc gastrique qui digère les aliments dans l\'estomac ?', reponse: 'estomac', explication: 'L\'ESTOMAC sécrète le suc gastrique (acide + enzymes) qui transforme les aliments en bouillie appelée chyme.' },
+      { question: 'Dans quel organe se fait l\'absorption des nutriments vers le sang ?', reponse: 'intestin grêle', explication: 'L\'INTESTIN GRÊLE, tapissé de villosités, absorbe les nutriments digérés vers le sang.' },
+      { question: 'Quel organe produit la bile qui aide à digérer les graisses ?', reponse: 'foie', explication: 'Le FOIE produit la bile, stockée dans la vésicule biliaire, qui émulsionne les graisses pour faciliter leur digestion.' },
+      { question: 'Quel organe absorbe l\'eau et forme les selles en fin de digestion ?', reponse: 'gros intestin', explication: 'Le GROS INTESTIN (côlon) absorbe l\'eau restante et forme les selles avant leur évacuation.' },
+      { question: 'Quel organe produit l\'insuline pour réguler le sucre dans le sang ?', reponse: 'pancréas', explication: 'Le PANCRÉAS produit l\'insuline (baisse la glycémie) et le glucagon (l\'augmente), ainsi que des enzymes digestives.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioRespiration() {
+    var series = [
+      { question: 'Quel gaz respirons-nous et absorbons-nous dans les poumons ?', reponse: 'dioxygene', explication: 'Nous inspirons du DIOXYGÈNE (O2), indispensable à la respiration cellulaire, et rejetons du dioxyde de carbone (CO2).' },
+      { question: 'Quel gaz est rejeté lors de l\'expiration ?', reponse: 'dioxyde de carbone', explication: 'Le DIOXYDE DE CARBONE (CO2) est un déchet de la respiration cellulaire, évacué par les poumons lors de l\'expiration.' },
+      { question: 'Dans quelles petites structures pulmonaires se font les échanges gazeux ?', reponse: 'alveoles', explication: 'Les ALVÉOLES PULMONAIRES, entourées de capillaires sanguins, sont le lieu des échanges entre l\'air et le sang.' },
+      { question: 'Quel muscle, sous les poumons, permet la respiration en se contractant ?', reponse: 'diaphragme', explication: 'Le DIAPHRAGME se contracte et s\'abaisse à l\'inspiration, agrandissant la cage thoracique pour faire entrer l\'air.' },
+      { question: 'Quel tuyau relie la gorge aux poumons ?', reponse: 'trachee', explication: 'La TRACHÉE conduit l\'air de la gorge vers les bronches puis les poumons.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioCirculation() {
+    var series = [
+      { question: 'Quel organe, en se contractant, propulse le sang dans tout le corps ?', reponse: 'coeur', explication: 'Le CŒUR est un muscle qui se contracte pour pomper le sang dans les vaisseaux sanguins.' },
+      { question: 'Combien y a-t-il de cavités (chambres) dans le cœur humain ?', reponse: '4', explication: 'Le cœur a 4 CAVITÉS : 2 oreillettes (en haut) et 2 ventricules (en bas).' },
+      { question: 'Quels vaisseaux transportent le sang du cœur vers les organes ?', reponse: 'arteres', explication: 'Les ARTÈRES transportent le sang du cœur vers les organes (sauf l\'artère pulmonaire qui va aux poumons).' },
+      { question: 'Quels vaisseaux ramènent le sang des organes vers le cœur ?', reponse: 'veines', explication: 'Les VEINES ramènent le sang des organes vers le cœur (sauf la veine pulmonaire qui vient des poumons).' },
+      { question: 'Quelles cellules du sang transportent le dioxygène ?', reponse: 'globules rouges', explication: 'Les GLOBULES ROUGES (hématies) contiennent l\'hémoglobine qui fixe et transporte le dioxygène.' },
+      { question: 'Quelles cellules du sang défendent l\'organisme contre les microbes ?', reponse: 'globules blancs', explication: 'Les GLOBULES BLANCS (leucocytes) font partie du système immunitaire et combattent les infections.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioNerveux() {
+    var series = [
+      { question: 'Quel organe commande le système nerveux et est protégé par le crâne ?', reponse: 'cerveau', explication: 'Le CERVEAU est le centre de commande du système nerveux, il analyse les informations et envoie des ordres.' },
+      { question: 'Quelle cellule est l\'unité de base du système nerveux, capable de transmettre un message ?', reponse: 'neurone', explication: 'Le NEURONE est une cellule nerveuse qui transmet des messages électriques (influx nerveux).' },
+      { question: 'Quel organe des sens permet de voir ?', reponse: 'oeil', explication: 'L\'ŒIL capte la lumière ; la rétine transforme cette information en message nerveux envoyé au cerveau.' },
+      { question: 'Quelle structure protège la moelle épinière ?', reponse: 'colonne vertebrale', explication: 'La COLONNE VERTÉBRALE (vertèbres) protège la moelle épinière, qui relie le cerveau au reste du corps.' },
+      { question: 'Comment appelle-t-on une réaction rapide et involontaire, comme retirer sa main d\'une plaque chaude ?', reponse: 'reflexe', explication: 'C\'est un RÉFLEXE : une réponse automatique et rapide qui ne passe pas (ou peu) par le cerveau.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioReproduction() {
+    var series = [
+      { question: 'Comment s\'appelle la cellule reproductrice masculine ?', reponse: 'spermatozoide', explication: 'Le SPERMATOZOÏDE est la cellule reproductrice (gamète) masculine, produite par les testicules.' },
+      { question: 'Comment s\'appelle la cellule reproductrice féminine ?', reponse: 'ovule', explication: 'L\'OVULE est la cellule reproductrice (gamète) féminine, produite par les ovaires.' },
+      { question: 'Comment s\'appelle la cellule issue de la fusion de l\'ovule et du spermatozoïde ?', reponse: 'cellule oeuf', explication: 'La fécondation forme une CELLULE-ŒUF (zygote), qui se divisera pour donner un embryon.' },
+      { question: 'Dans quel organe se développe le fœtus pendant la grossesse ?', reponse: 'uterus', explication: 'L\'UTÉRUS accueille et protège l\'embryon puis le fœtus pendant toute la grossesse.' },
+      { question: 'Chez les plantes à fleurs, comment s\'appelle le transport du pollen vers le pistil ?', reponse: 'pollinisation', explication: 'La POLLINISATION est le transport du pollen (souvent par le vent ou les insectes) de l\'étamine vers le pistil, permettant la fécondation.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioPhotosynthese() {
+    var series = [
+      { question: 'Quel pigment vert des plantes capte la lumière pour la photosynthèse ?', reponse: 'chlorophylle', explication: 'La CHLOROPHYLLE, présente dans les chloroplastes, absorbe la lumière du soleil pour la photosynthèse.' },
+      { question: 'Quel gaz les plantes absorbent-elles pour réaliser la photosynthèse ?', reponse: 'dioxyde de carbone', explication: 'Les plantes absorbent le DIOXYDE DE CARBONE (CO2) de l\'air pour fabriquer leur matière organique.' },
+      { question: 'Quel gaz les plantes rejettent-elles pendant la photosynthèse ?', reponse: 'dioxygene', explication: 'La photosynthèse produit du DIOXYGÈNE (O2), rejeté dans l\'atmosphère — essentiel à la respiration des êtres vivants.' },
+      { question: 'Par quel organe la plante absorbe-t-elle l\'eau et les sels minéraux du sol ?', reponse: 'racines', explication: 'Les RACINES absorbent l\'eau et les sels minéraux du sol, transportés ensuite vers les feuilles.' },
+      { question: 'Quel sucre la plante fabrique-t-elle grâce à la photosynthèse ?', reponse: 'glucose', explication: 'La photosynthèse fabrique du GLUCOSE (sucre), la matière organique qui nourrit la plante.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioEcologie() {
+    var series = [
+      { question: 'Comment appelle-t-on un être vivant qui fabrique sa propre matière organique (ex: une plante) ?', reponse: 'producteur', explication: 'Un PRODUCTEUR (ex: plante verte) fabrique sa matière organique par photosynthèse ; il est à la base des chaînes alimentaires.' },
+      { question: 'Comment appelle-t-on un être vivant qui se nourrit d\'autres êtres vivants ?', reponse: 'consommateur', explication: 'Un CONSOMMATEUR se nourrit d\'autres êtres vivants (herbivore = consommateur primaire, carnivore = secondaire...).' },
+      { question: 'Comment appelle-t-on les organismes qui décomposent la matière morte (ex: champignons, bactéries) ?', reponse: 'decomposeurs', explication: 'Les DÉCOMPOSEURS transforment la matière organique morte en matière minérale, recyclée dans l\'écosystème.' },
+      { question: 'Comment appelle-t-on l\'ensemble formé par un milieu de vie et les êtres vivants qui y vivent ?', reponse: 'ecosysteme', explication: 'Un ÉCOSYSTÈME est l\'ensemble d\'un milieu (biotope) et des êtres vivants (biocénose) qui y interagissent.' },
+      { question: 'Comment appelle-t-on la relation où deux espèces vivent ensemble en s\'entraidant mutuellement ?', reponse: 'symbiose', explication: 'La SYMBIOSE est une association durable entre deux espèces différentes, bénéfique pour les deux (ex: abeille et fleur).' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioGenetique() {
+    var series = [
+      { question: 'Quelle molécule, présente dans le noyau, porte l\'information génétique ?', reponse: 'adn', explication: 'L\'ADN (acide désoxyribonucléique) porte l\'information génétique sous forme de gènes, organisés en chromosomes.' },
+      { question: 'Comment appelle-t-on un fragment d\'ADN qui code pour un caractère héréditaire ?', reponse: 'gene', explication: 'Un GÈNE est une portion d\'ADN qui contient l\'information pour un caractère (ex: couleur des yeux).' },
+      { question: 'Comment appelle-t-on les structures qui portent l\'ADN dans le noyau ?', reponse: 'chromosomes', explication: 'Les CHROMOSOMES sont des structures condensées d\'ADN. L\'être humain en possède 46 (23 paires).' },
+      { question: 'Combien de chromosomes possède une cellule humaine normale ?', reponse: '46', explication: 'Une cellule humaine possède 46 chromosomes, soit 23 paires (23 venant du père, 23 de la mère).' },
+      { question: 'Comment appelle-t-on la transmission des caractères des parents aux enfants ?', reponse: 'heredite', explication: 'L\'HÉRÉDITÉ est la transmission des caractères génétiques des parents à leur descendance via l\'ADN.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+  function exBioImmunite() {
+    var series = [
+      { question: 'Comment appelle-t-on un micro-organisme capable de provoquer une maladie ?', reponse: 'microbe', explication: 'Un MICROBE (ou agent pathogène : bactérie, virus, champignon...) peut provoquer une infection.' },
+      { question: 'Comment appelle-t-on les protéines fabriquées par le corps pour neutraliser un microbe précis ?', reponse: 'anticorps', explication: 'Les ANTICORPS sont des protéines produites par les globules blancs pour reconnaître et neutraliser un microbe spécifique.' },
+      { question: 'Comment appelle-t-on l\'injection qui prépare le corps à se défendre contre une maladie sans la provoquer ?', reponse: 'vaccin', explication: 'Un VACCIN entraîne le système immunitaire à reconnaître un microbe, sans provoquer la maladie, pour réagir plus vite en cas d\'infection réelle.' },
+      { question: 'Comment appelle-t-on la capacité du corps à se souvenir d\'un microbe déjà rencontré ?', reponse: 'memoire immunitaire', explication: 'La MÉMOIRE IMMUNITAIRE permet une réponse plus rapide et efficace lors d\'un second contact avec le même microbe.' },
+    ];
+    return series[Math.floor(Math.random() * series.length)];
+  }
+
   var map = {
     addition: exAddition,
     soustraction: exSoustraction,
@@ -405,6 +533,16 @@ function generateExercice(type) {
     probabilite: exProbabilite,
     moyenne: exMoyenne,
     suite: exSuiteArith,
+    bio_cellule: exBioCellule,
+    bio_digestion: exBioDigestion,
+    bio_respiration: exBioRespiration,
+    bio_circulation: exBioCirculation,
+    bio_nerveux: exBioNerveux,
+    bio_reproduction: exBioReproduction,
+    bio_photosynthese: exBioPhotosynthese,
+    bio_ecologie: exBioEcologie,
+    bio_genetique: exBioGenetique,
+    bio_immunite: exBioImmunite,
   };
 
   var types = Object.keys(map);
@@ -447,6 +585,16 @@ function detectExerciceRequest(message) {
     probabilite:   ['probabilite', 'probabilites', 'chance', 'hasard', 'de a faces', 'tirage'],
     moyenne:       ['moyenne', 'statistiques', 'notes', 'calcul de la moyenne'],
     suite:         ['suite', 'progression', 'suite arithmetique', 'terme suivant', 'prochain terme'],
+    bio_cellule:      ['cellule', 'organite', 'membrane plasmique', 'mitochondrie', 'noyau cellulaire', 'cytoplasme'],
+    bio_digestion:    ['digestion', 'digestif', 'estomac', 'intestin', 'foie', 'pancreas', 'bile'],
+    bio_respiration:  ['respiration', 'respiratoire', 'poumon', 'alveole', 'trachee', 'diaphragme'],
+    bio_circulation:  ['circulation', 'circulatoire', 'coeur', 'sang', 'artere', 'veine', 'globule'],
+    bio_nerveux:      ['systeme nerveux', 'cerveau', 'neurone', 'reflexe', 'nerf'],
+    bio_reproduction: ['reproduction', 'spermatozoide', 'ovule', 'fecondation', 'grossesse', 'pollinisation'],
+    bio_photosynthese:['photosynthese', 'chlorophylle', 'chloroplaste'],
+    bio_ecologie:     ['ecologie', 'ecosysteme', 'chaine alimentaire', 'producteur consommateur', 'decomposeur', 'symbiose'],
+    bio_genetique:    ['genetique', 'adn', 'gene', 'chromosome', 'heredite'],
+    bio_immunite:     ['immunite', 'immunitaire', 'microbe', 'anticorps', 'vaccin', 'virus', 'bacterie'],
   };
 
   var found = null;
@@ -471,6 +619,11 @@ var EXERCICE_LABELS = {
   vocabulaire: '📖 Vocabulaire', grammaire: '📖 Grammaire',
   decimaux: '🔢 Nombres décimaux', probabilite: '🎲 Probabilités',
   moyenne: '📊 Statistiques — Moyenne', suite: '🔢 Suites arithmétiques',
+  bio_cellule: '🧬 La cellule', bio_digestion: '🧬 La digestion',
+  bio_respiration: '🧬 La respiration', bio_circulation: '🧬 La circulation sanguine',
+  bio_nerveux: '🧬 Le système nerveux', bio_reproduction: '🧬 La reproduction',
+  bio_photosynthese: '🧬 La photosynthèse', bio_ecologie: '🧬 Écologie',
+  bio_genetique: '🧬 La génétique', bio_immunite: '🧬 Système immunitaire',
 };
 
 /** Formate un exercice pour l'affichage */
@@ -1202,22 +1355,23 @@ router.post('/chat', authenticate, async function(req, res) {
       var bestItem = await findBestKnowledgeMatch(message);
       if (bestItem) {
         answer = bestItem.answer;
-        var categoriesExercices = ['mathematiques', 'geometrie', 'probabilites', 'statistiques'];
+        var categoriesExercices = ['mathematiques', 'geometrie', 'probabilites', 'statistiques', 'biologie'];
         if (categoriesExercices.includes(bestItem.category)) {
           answer += '\n\n---\nEnvie de pratiquer ? Tapez **"exercice"** pour tester vos connaissances sur ce sujet !';
         }
       } else {
         // 6. Message par defaut
         answer = [
-          'Je suis votre Professeur IA, specialise en **Francais** et **Mathematiques** (du CP a la Terminale).',
+          'Je suis votre Professeur IA, specialise en **Francais**, **Mathematiques** et **Biologie** (du CP a la Terminale).',
           '',
           'Je n\'ai pas trouve de reponse precise. Essayez de reformuler avec des mots-cles :',
           '',
           '**Francais :** conjugaison passe compose, figures de style, accord participe passe...',
           '**Maths :** equation second degre, theoreme Pythagore, fractions, probabilites...',
           '**Geometrie :** aire triangle, volume cylindre, theoreme Thales...',
+          '**Biologie :** la cellule, digestion, respiration, photosynthese, systeme nerveux...',
           '',
-          'Ou tapez **"exercice"** pour vous entrainer sur un calcul aleatoire !',
+          'Ou tapez **"exercice"** pour vous entrainer sur une question aleatoire !',
         ].join('\n');
       }
     }

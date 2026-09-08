@@ -48,6 +48,20 @@ const MA_EXERCICES = [
   { label: '🎲 Maths aléatoire', msg: 'donne moi un exercice de maths', color: 'green' },
 ];
 
+const BIO_EXERCICES = [
+  { label: '🧬 La cellule',         msg: 'exercice cellule',        color: 'purple' },
+  { label: '🍽️ Digestion',          msg: 'exercice digestion',      color: 'purple' },
+  { label: '🫁 Respiration',        msg: 'exercice respiration',    color: 'purple' },
+  { label: '❤️ Circulation',        msg: 'exercice circulation',    color: 'purple' },
+  { label: '🧠 Système nerveux',    msg: 'exercice systeme nerveux',color: 'purple' },
+  { label: '👶 Reproduction',       msg: 'exercice reproduction',   color: 'purple' },
+  { label: '🌱 Photosynthèse',      msg: 'exercice photosynthese',  color: 'purple' },
+  { label: '🌍 Écologie',           msg: 'exercice ecologie',       color: 'purple' },
+  { label: '🧬 Génétique',          msg: 'exercice genetique',      color: 'purple' },
+  { label: '🛡️ Immunité',           msg: 'exercice immunite',       color: 'purple' },
+  { label: '🎲 Biologie aléatoire', msg: 'donne moi un exercice de biologie', color: 'purple' },
+];
+
 export default function ProfesseurIA() {
   const [activeTab, setActiveTab] = useState<Tab>('entrainement');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -56,7 +70,7 @@ export default function ProfesseurIA() {
   // === ONGLET QUESTIONS ===
   const [messages, setMessages] = useState<Message[]>([
     {
-      text: 'Bonjour ! Je suis votre **Professeur IA**, spécialisé en **Français** et **Mathématiques** (du CP à la Terminale).\n\nPosez-moi une question : conjugaison, grammaire, calcul, géométrie...',
+      text: 'Bonjour ! Je suis votre **Professeur IA**, spécialisé en **Français**, **Mathématiques** et **Biologie** (du CP à la Terminale).\n\nPosez-moi une question : conjugaison, grammaire, calcul, géométrie, biologie...',
       isUser: false,
       timestamp: new Date(),
     },
@@ -181,7 +195,7 @@ export default function ProfesseurIA() {
             historical.push({ text: conv.botResponse, isUser: false, timestamp: new Date(conv.created_at) });
           });
           setMessages([
-            { text: 'Bonjour ! Je suis votre **Professeur IA**, spécialisé en **Français** et **Mathématiques**.\n\n_Historique chargé — vos anciennes conversations sont affichées ci-dessous._', isUser: false, timestamp: new Date() },
+            { text: 'Bonjour ! Je suis votre **Professeur IA**, spécialisé en **Français**, **Mathématiques** et **Biologie**.\n\n_Historique chargé — vos anciennes conversations sont affichées ci-dessous._', isUser: false, timestamp: new Date() },
             ...historical
           ]);
         }
@@ -619,6 +633,26 @@ export default function ProfesseurIA() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Biologie */}
+                  <div className="px-5 py-3 border-t border-gray-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-6 h-6 rounded-lg bg-purple-600 flex items-center justify-center text-xs">🧬</span>
+                      <p className="text-sm font-bold text-purple-800">Biologie</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {BIO_EXERCICES.map(btn => (
+                        <button
+                          key={btn.msg}
+                          onClick={() => { resetExercice(); launchExercice(btn.msg); setShowSelector(false); }}
+                          disabled={exerciceLoading}
+                          className="px-3 py-1.5 bg-purple-50 border border-purple-200 hover:border-purple-500 hover:bg-purple-100 text-purple-800 text-sm font-medium rounded-xl transition-all disabled:opacity-40"
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -724,7 +758,7 @@ export default function ProfesseurIA() {
                 {/* Info en haut */}
                 <div className="px-5 py-2 bg-cyan-50 border-b border-cyan-100">
                   <p className="text-xs text-cyan-700 font-medium">
-                    💬 Posez n'importe quelle question en Français ou Maths — le Professeur IA vous répond.
+                    💬 Posez n'importe quelle question en Français, Maths ou Biologie — le Professeur IA vous répond.
                   </p>
                 </div>
 
@@ -826,7 +860,7 @@ export default function ProfesseurIA() {
             </div>
 
             {/* Info cards */}
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div className="rounded-2xl p-4 border border-blue-100" style={{ background: 'linear-gradient(135deg,#eff6ff,#eef2ff)' }}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-sm">📖</span>
@@ -843,6 +877,15 @@ export default function ProfesseurIA() {
                 </div>
                 <p className="text-xs text-gray-600 leading-relaxed">
                   "x² + 5x + 6 = 0" · "sin(45°)" · "Aire d'un cercle de rayon 7" · "Probabilité de tirer un as"
+                </p>
+              </div>
+              <div className="rounded-2xl p-4 border border-purple-100" style={{ background: 'linear-gradient(135deg,#faf5ff,#f5f3ff)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-7 h-7 rounded-lg bg-purple-600 flex items-center justify-center text-sm">🧬</span>
+                  <p className="font-bold text-purple-900 text-sm">Biologie — exemples</p>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  "Explique-moi la photosynthèse" · "C'est quoi l'ADN ?" · "Rôle des globules blancs" · "Exercice de biologie"
                 </p>
               </div>
             </div>

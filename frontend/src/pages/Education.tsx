@@ -1177,7 +1177,7 @@ export default function Education() {
                       Assistant IA
                     </h2>
                     <p className="text-lg text-gray-600">
-                      Capable de vous assister en <strong>Français</strong> et en <strong>Mathématiques</strong>.
+                      Capable de vous assister en <strong>Français</strong>, <strong>Mathématiques</strong> et <strong>Biologie</strong>.
                     </p>
                   </div>
                   <div className="ml-auto">
