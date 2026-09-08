@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
-import { getNumeroHForDisplay } from '../../utils/auth';
+import { getNumeroHForDisplay, isAdmin } from '../../utils/auth';
 import { FriendChat } from '../../components/FriendChat';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -91,6 +91,20 @@ export default function MesAmours() {
   const [chatFriend, setChatFriend] = useState<Friend | null>(null);
   const [showEditInfo, setShowEditInfo] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+
+  const userIsAdmin = isAdmin(userData);
+  // Espace de test admin : permet de vérifier que la messagerie entre amis fonctionne
+  // correctement même sans amitié réelle (l'admin doit pouvoir contrôler ses produits).
+  const adminDemoFriend: Friend = {
+    id: '00000000-0000-0000-0000-000000000001',
+    numeroH: 'DEMO-ADMIN',
+    prenom: 'Aperçu',
+    nomFamille: '(test admin)',
+    status: 'accepted',
+    requestedAt: new Date().toISOString(),
+    mutualFriends: 0,
+    commonInterests: []
+  };
 
   const [addFriendForm, setAddFriendForm] = useState({
     numeroH: '',
@@ -893,6 +907,20 @@ export default function MesAmours() {
                     className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg transition-colors font-medium"
                   >
                     ➕ Ajouter mon premier ami
+                  </button>
+                </div>
+              )}
+              {userIsAdmin && friends.length === 0 && (
+                <div className="border-2 border-dashed border-emerald-300 bg-emerald-50 rounded-lg p-5 mb-6 flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">🧪 Espace de test admin</p>
+                    <p className="text-sm text-gray-600">Aucun ami réel n'est nécessaire pour vérifier que la messagerie fonctionne correctement.</p>
+                  </div>
+                  <button
+                    onClick={() => setChatFriend(adminDemoFriend)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg transition-colors font-medium whitespace-nowrap"
+                  >
+                    💬 Tester la messagerie
                   </button>
                 </div>
               )}
