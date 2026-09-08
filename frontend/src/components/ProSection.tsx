@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
+import { GESTION_VITRINE_PATHS } from "../utils/gestionVitrines";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -20,8 +21,20 @@ interface ProAccount {
   status: string;
 }
 
+interface GestionTenant {
+  tenant_code: string;
+  type: string;
+  name: string;
+  logo_url?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  description?: string;
+  city?: string;
+}
+
 interface ProSectionProps {
-  type: "clinic" | "security_agency" | "journalist" | "enterprise" | "school" | "supplier" | "scientist" | "ngo" | "broker" | "restaurant" | "transport" | "commerce" | "vendor" | "producer" | "artisan" | "beauty" | "mosque" | "madrasa" | "mairie";
+  type: "clinic" | "security_agency" | "journalist" | "enterprise" | "school" | "supplier" | "scientist" | "ngo" | "broker" | "restaurant" | "transport" | "commerce" | "vendor" | "producer" | "artisan" | "beauty" | "mosque" | "madrasa" | "mairie" | "reseau";
   title: string;
   icon: string;
   description: string;
@@ -32,6 +45,7 @@ interface ProSectionProps {
 export default function ProSection({ type, title, icon, description, hideEmptyMessage }: ProSectionProps) {
   const navigate = useNavigate();
   const [rawAccounts, setRawAccounts] = useState<ProAccount[]>([]);
+  const [tenants, setTenants] = useState<GestionTenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -39,8 +53,9 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
   const [gpsActive, setGpsActive] = useState(false);
 
   const accounts = useMemo(() => sortByProximity(rawAccounts, userGeo), [rawAccounts, userGeo]);
+  const vitrinePath = GESTION_VITRINE_PATHS[type];
 
-  useEffect(() => { loadAccounts(); }, [type]);
+  useEffect(() => { loadAccounts(); loadTenants(); }, [type]);
 
   useEffect(() => {
     requestGPS().then(coords => {
@@ -64,10 +79,28 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
     }
   };
 
+  // Espaces Gestion Interne (clinique, école, commerce...) du même type —
+  // leur site vitrine, jusqu'ici invisible du public, apparaît ici aussi.
+  const loadTenants = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/pro-public/list/${type}`);
+      const data = await res.json();
+      if (data.success) setTenants(data.tenants || []);
+    } catch (error) {
+      console.error("Erreur:", error);
+    }
+  };
+
   const filtered = accounts.filter(a =>
     !search || a.name.toLowerCase().includes(search.toLowerCase()) ||
     a.city.toLowerCase().includes(search.toLowerCase()) ||
     (a.address || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredTenants = tenants.filter(t =>
+    !search || t.name.toLowerCase().includes(search.toLowerCase()) ||
+    (t.city || '').toLowerCase().includes(search.toLowerCase()) ||
+    (t.address || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const buildLocation = (pro: ProAccount) => {
@@ -107,7 +140,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
       {/* Liste */}
       {loading ? (
         <div className="text-center py-6 text-gray-500 text-sm">Chargement...</div>
-      ) : filtered.length === 0 ? (
+      ) : filtered.length === 0 && filteredTenants.length === 0 ? (
         hideEmptyMessage ? null : (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 mt-2">
             <div className="text-6xl mb-4">{icon}</div>
@@ -128,6 +161,51 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
         )
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* Espaces Gestion Interne — entreprises abonnées, leur site vitrine complet */}
+          {vitrinePath && filteredTenants.map((t) => (
+            <div key={t.tenant_code} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800 overflow-hidden hover:shadow-lg transition-shadow flex">
+              <div className="flex flex-col items-stretch w-32 sm:w-40 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+                <div className="relative w-full h-28 sm:h-32 bg-gray-100 dark:bg-gray-700">
+                  {t.logo_url ? (
+                    <img src={t.logo_url} alt={t.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">{icon}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => navigate(`/${vitrinePath}/${t.tenant_code}`)}
+                  className="mt-2 mx-1 mb-2 flex items-center justify-center gap-1 min-h-[32px] px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-semibold rounded-xl transition-colors"
+                >
+                  🌐 Voir le site
+                </button>
+              </div>
+              <div className="p-3 sm:p-4 flex flex-col flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-gray-100 leading-snug truncate">
+                    {t.name}
+                  </h3>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 text-indigo-700 bg-indigo-50 border border-indigo-200 dark:text-indigo-300 dark:bg-indigo-900/30 dark:border-indigo-800">
+                    Espace Gestion
+                  </span>
+                </div>
+                {t.description && (
+                  <p className="text-[11px] text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">{t.description}</p>
+                )}
+                {(t.address || t.city) && (
+                  <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <span className="mt-0.5 flex-shrink-0">📍</span>
+                    <span>{[t.address, t.city].filter(Boolean).join(', ')}</span>
+                  </div>
+                )}
+                {t.phone && (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-sm flex-shrink-0">📞</span>
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-300">{t.phone}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
           {filtered.map((pro) => {
             const isExpanded = expandedId === pro.id;
             const location = buildLocation(pro);
