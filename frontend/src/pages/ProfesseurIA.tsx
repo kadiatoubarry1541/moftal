@@ -812,6 +812,18 @@ export default function ProfesseurIA() {
                                 blockquote: ({ children }) => (
                                   <blockquote className="border-l-4 border-cyan-400 pl-3 my-2 italic text-gray-600 bg-cyan-50 py-1 text-sm">{children}</blockquote>
                                 ),
+                                table: ({ children }) => (
+                                  <div className="overflow-x-auto my-2 -mx-1">
+                                    <table className="min-w-full text-xs border-collapse">{children}</table>
+                                  </div>
+                                ),
+                                thead: ({ children }) => <thead className="bg-cyan-50">{children}</thead>,
+                                th: ({ children }) => (
+                                  <th className="border border-gray-200 px-2 py-1.5 text-left font-bold text-gray-700">{children}</th>
+                                ),
+                                td: ({ children }) => (
+                                  <td className="border border-gray-200 px-2 py-1.5 align-top">{children}</td>
+                                ),
                               }}
                             >
                               {message.text}
