@@ -1,30 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 340" font-family="Arial, sans-serif">
-  <rect width="400" height="340" fill="#ffffff"/>
-  <text x="200" y="22" font-size="16" font-weight="bold" fill="#166534" text-anchor="middle">La cellule (animale)</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 340" font-family="Arial, sans-serif">
+  <rect width="540" height="340" fill="#ffffff"/>
+  <text x="270" y="22" font-size="16" font-weight="bold" fill="#166534" text-anchor="middle">La cellule (animale)</text>
 
   <!-- Membrane plasmique -->
-  <ellipse cx="200" cy="175" rx="150" ry="115" fill="#f0fdf4" stroke="#16a34a" stroke-width="4"/>
-  <!-- Cytoplasme (déjà rempli par le fond de l'ellipse) -->
+  <ellipse cx="180" cy="175" rx="140" ry="110" fill="#f0fdf4" stroke="#16a34a" stroke-width="4"/>
 
   <!-- Noyau -->
-  <circle cx="170" cy="165" r="48" fill="#a7f3d0" stroke="#047857" stroke-width="3"/>
-  <circle cx="170" cy="165" r="18" fill="#6ee7b7" stroke="#047857" stroke-width="2"/>
-  <text x="170" y="169" font-size="13" font-weight="bold" fill="#064e3b" text-anchor="middle">noyau</text>
+  <circle cx="150" cy="165" r="44" fill="#a7f3d0" stroke="#047857" stroke-width="3"/>
+  <circle cx="150" cy="165" r="16" fill="#6ee7b7" stroke="#047857" stroke-width="2"/>
+  <text x="150" y="169" font-size="12" font-weight="bold" fill="#064e3b" text-anchor="middle">noyau</text>
 
   <!-- Mitochondries -->
-  <ellipse cx="270" cy="120" rx="22" ry="12" fill="#fca5a5" stroke="#b91c1c" stroke-width="2" transform="rotate(-20 270 120)"/>
-  <ellipse cx="285" cy="200" rx="22" ry="12" fill="#fca5a5" stroke="#b91c1c" stroke-width="2" transform="rotate(15 285 200)"/>
+  <ellipse cx="245" cy="120" rx="20" ry="11" fill="#fca5a5" stroke="#b91c1c" stroke-width="2" transform="rotate(-20 245 120)"/>
+  <ellipse cx="255" cy="195" rx="20" ry="11" fill="#fca5a5" stroke="#b91c1c" stroke-width="2" transform="rotate(15 255 195)"/>
 
   <!-- Réticulum / autres organites (petits ronds) -->
-  <circle cx="240" cy="240" r="8" fill="#fde68a" stroke="#b45309" stroke-width="1.5"/>
-  <circle cx="258" cy="255" r="8" fill="#fde68a" stroke="#b45309" stroke-width="1.5"/>
-  <circle cx="130" cy="235" r="7" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="1.5"/>
+  <circle cx="115" cy="230" r="7" fill="#fde68a" stroke="#b45309" stroke-width="1.5"/>
+  <circle cx="132" cy="245" r="7" fill="#fde68a" stroke="#b45309" stroke-width="1.5"/>
+  <circle cx="95" cy="120" r="6" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="1.5"/>
 
-  <!-- Légende -->
-  <g font-size="13">
-    <circle cx="24" cy="290" r="7" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/><text x="38" y="295" fill="#0f172a">Membrane plasmique</text>
-    <circle cx="24" cy="308" r="7" fill="#a7f3d0" stroke="#047857" stroke-width="2"/><text x="38" y="313" fill="#0f172a">Noyau (ADN)</text>
-    <circle cx="200" cy="290" r="7" fill="#fca5a5" stroke="#b91c1c" stroke-width="2"/><text x="214" y="295" fill="#0f172a">Mitochondrie</text>
-    <circle cx="200" cy="308" r="7" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/><text x="214" y="313" fill="#0f172a">Cytoplasme</text>
+  <!-- Lignes de rappel + étiquettes directes -->
+  <g stroke="#64748b" stroke-width="1.3" fill="none">
+    <path d="M 245 120 L 320 60 L 350 60"/>
+    <path d="M 76 165 L 320 105 L 350 105"/>
+    <path d="M 200 250 L 320 150 L 350 150"/>
+    <path d="M 95 120 L 320 195 L 350 195"/>
+  </g>
+  <g>
+    <circle cx="245" cy="120" r="3.5" fill="#b91c1c"/>
+    <circle cx="76" cy="165" r="3.5" fill="#16a34a"/>
+    <circle cx="200" cy="250" r="3.5" fill="#16a34a"/>
+    <circle cx="95" cy="120" r="3.5" fill="#1d4ed8"/>
+  </g>
+  <g font-size="15" font-weight="bold" fill="#0f172a">
+    <text x="355" y="65">Mitochondrie</text>
+    <text x="355" y="110">Membrane plasmique</text>
+    <text x="355" y="155">Cytoplasme</text>
+    <text x="355" y="200">Autres organites</text>
+  </g>
+  <g font-size="12" fill="#475569">
+    <text x="355" y="80">produit l'énergie</text>
+    <text x="355" y="125">contrôle les échanges</text>
+    <text x="355" y="170">milieu intérieur</text>
+    <text x="355" y="215">(ex : réticulum)</text>
   </g>
 </svg>
