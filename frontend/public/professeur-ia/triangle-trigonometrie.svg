@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 340" font-family="Arial, sans-serif">
+  <rect width="440" height="340" fill="#ffffff"/>
+  <!-- Triangle rectangle : angle theta en A(60,220), angle droit en B(320,220), sommet C(320,50) -->
+  <polygon points="60,220 320,220 320,50" fill="#f5f3ff" stroke="#6d28d9" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Angle droit en B -->
+  <rect x="302" y="202" width="18" height="18" fill="none" stroke="#6d28d9" stroke-width="2.5"/>
+  <!-- Arc de l'angle theta en A -->
+  <path d="M 100 220 A 40 40 0 0 0 88 193" fill="none" stroke="#dc2626" stroke-width="2.5"/>
+  <text x="95" y="185" font-size="20" font-weight="bold" fill="#dc2626">θ</text>
+  <!-- Sommets -->
+  <circle cx="60" cy="220" r="3.5" fill="#6d28d9"/>
+  <circle cx="320" cy="220" r="3.5" fill="#6d28d9"/>
+  <circle cx="320" cy="50" r="3.5" fill="#6d28d9"/>
+  <text x="38" y="240" font-size="18" font-weight="bold" fill="#4c1d95">A</text>
+  <text x="330" y="240" font-size="18" font-weight="bold" fill="#4c1d95">B</text>
+  <text x="330" y="46" font-size="18" font-weight="bold" fill="#4c1d95">C</text>
+  <!-- Côté adjacent AB -->
+  <text x="150" y="208" font-size="16" font-weight="bold" fill="#0f766e">adjacent</text>
+  <!-- Côté opposé BC -->
+  <text x="330" y="140" font-size="16" font-weight="bold" fill="#b45309">opposé</text>
+  <!-- Hypoténuse AC -->
+  <text x="120" y="122" font-size="16" font-weight="bold" fill="#be123c" transform="rotate(-33 120 122)">hypoténuse</text>
+  <!-- Formules -->
+  <text x="60" y="270" font-size="15" font-weight="bold" fill="#0f172a">sin θ = opposé / hypoténuse</text>
+  <text x="60" y="295" font-size="15" font-weight="bold" fill="#0f172a">cos θ = adjacent / hypoténuse</text>
+  <text x="60" y="320" font-size="15" font-weight="bold" fill="#0f172a">tan θ = opposé / adjacent</text>
+</svg>

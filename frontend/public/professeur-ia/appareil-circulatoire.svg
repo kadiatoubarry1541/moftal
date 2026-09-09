@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 420" font-family="Arial, sans-serif">
+  <rect width="380" height="420" fill="#ffffff"/>
+  <!-- Silhouette légère -->
+  <circle cx="190" cy="35" r="26" fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+  <path d="M 130 65 Q 130 60 150 58 L 230 58 Q 250 60 250 65 L 262 360 Q 262 375 247 375 L 133 375 Q 118 375 118 360 Z"
+        fill="#fef2f2" stroke="#fca5a5" stroke-width="2"/>
+
+  <!-- Veines (bleu) partant des membres vers le coeur -->
+  <path d="M 60 200 Q 100 190 140 170 M 60 340 Q 100 320 145 260" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round"/>
+  <!-- Artères (rouge) partant du coeur vers les membres -->
+  <path d="M 320 200 Q 280 190 240 170 M 320 340 Q 280 320 235 260" fill="none" stroke="#dc2626" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Coeur -->
+  <path d="M 190 210 C 150 175, 100 195, 110 235 C 118 268, 160 290, 190 320 C 220 290, 262 268, 270 235 C 280 195, 230 175, 190 210 Z"
+        fill="#ef4444" stroke="#991b1b" stroke-width="3"/>
+  <!-- 4 cavités (illustration simplifiée) -->
+  <line x1="190" y1="205" x2="190" y2="310" stroke="#991b1b" stroke-width="2.5"/>
+  <line x1="140" y1="235" x2="240" y2="235" stroke="#991b1b" stroke-width="2.5"/>
+  <text x="160" y="228" font-size="12" fill="#fff" font-weight="bold">OG</text>
+  <text x="210" y="228" font-size="12" fill="#fff" font-weight="bold">OD</text>
+  <text x="158" y="270" font-size="12" fill="#fff" font-weight="bold">VG</text>
+  <text x="208" y="270" font-size="12" fill="#fff" font-weight="bold">VD</text>
+
+  <!-- Globules (petits ronds) dans un vaisseau -->
+  <circle cx="90" cy="195" r="5" fill="#dc2626"/>
+  <circle cx="105" cy="185" r="5" fill="#dc2626"/>
+  <circle cx="290" cy="195" r="5" fill="#2563eb"/>
+
+  <!-- Légende -->
+  <g font-size="14">
+    <line x1="24" y1="392" x2="42" y2="392" stroke="#dc2626" stroke-width="5"/><text x="50" y="397" fill="#0f172a">Artères (sang riche en O₂)</text>
+    <line x1="24" y1="412" x2="42" y2="412" stroke="#2563eb" stroke-width="5"/><text x="50" y="417" fill="#0f172a">Veines (retour vers le cœur)</text>
+  </g>
+  <text x="190" y="20" font-size="16" font-weight="bold" fill="#991b1b" text-anchor="middle">L'appareil circulatoire</text>
+  <text x="190" y="345" font-size="12" fill="#7f1d1d" text-anchor="middle">OG/OD = oreillettes · VG/VD = ventricules</text>
+</svg>

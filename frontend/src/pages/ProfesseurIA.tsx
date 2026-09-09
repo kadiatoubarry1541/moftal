@@ -705,7 +705,14 @@ export default function ProfesseurIA() {
                   <div className="mx-5 mt-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl space-y-2">
                     <p className="font-bold text-red-800 text-base">❌ Ce n'est pas la bonne réponse.</p>
                     <div className="text-sm text-gray-700 prose prose-sm max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          img: ({ src, alt }) => (
+                            <img src={src} alt={alt} className="w-full max-w-xs rounded-lg border border-gray-200 my-2" />
+                          ),
+                        }}
+                      >
                         {exerciceCorrection}
                       </ReactMarkdown>
                     </div>
@@ -823,6 +830,9 @@ export default function ProfesseurIA() {
                                 ),
                                 td: ({ children }) => (
                                   <td className="border border-gray-200 px-2 py-1.5 align-top">{children}</td>
+                                ),
+                                img: ({ src, alt }) => (
+                                  <img src={src} alt={alt} className="w-full max-w-xs rounded-lg border border-gray-200 my-2" />
                                 ),
                               }}
                             >

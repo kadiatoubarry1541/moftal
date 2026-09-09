@@ -7,6 +7,7 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { TERMINALE_KNOWLEDGE } from '../data/iaKnowledgeTerminale.js';
 import { BIOLOGIE_KNOWLEDGE } from '../data/iaKnowledgeBiologie.js';
 import { FRANCAIS_AVANCE_KNOWLEDGE } from '../data/iaKnowledgeFrancaisAvance.js';
+import { GEOMETRIE_KNOWLEDGE } from '../data/iaKnowledgeGeometrie.js';
 
 /** Insère (ou met à jour) les fiches Terminale au démarrage — n'écrase jamais une
  *  fiche déjà modifiée manuellement par un admin depuis l'API /knowledge. */
@@ -54,6 +55,20 @@ async function seedFrancaisAvanceKnowledge() {
   }
 }
 seedFrancaisAvanceKnowledge();
+
+/** Insère (ou met à jour) les fiches Géométrie au démarrage — mêmes règles
+ *  que les autres seeds : n'écrase jamais une fiche déjà modifiée
+ *  manuellement par un admin depuis l'API /knowledge. */
+async function seedGeometrieKnowledge() {
+  try {
+    for (const fiche of GEOMETRIE_KNOWLEDGE) {
+      await IaKnowledge.findOrCreate({ where: { slug: fiche.slug }, defaults: fiche });
+    }
+  } catch (err) {
+    console.warn('⚠️ seedGeometrieKnowledge:', err.message);
+  }
+}
+seedGeometrieKnowledge();
 
 /** Vérifie si l'utilisateur a un abonnement Professeur IA actif */
 async function verifierAbonnementIA(numeroH) {
@@ -222,7 +237,7 @@ function generateExercice(type) {
     return {
       question: 'Triangle rectangle avec cotes ' + a + ' cm et ' + b + ' cm. Calculez l\'hypotenuse.',
       reponse: c,
-      explication: 'c = racine(' + a + '^2 + ' + b + '^2) = racine(' + (a * a) + ' + ' + (b * b) + ') = racine(' + (a * a + b * b) + ') = ' + c + ' cm',
+      explication: 'c = racine(' + a + '^2 + ' + b + '^2) = racine(' + (a * a) + ' + ' + (b * b) + ') = racine(' + (a * a + b * b) + ') = ' + c + ' cm\n\n![Triangle rectangle — théorème de Pythagore](/professeur-ia/triangle-pythagore.svg)',
     };
   }
 
@@ -1146,6 +1161,8 @@ function formatTrigAnswer(func, angle) {
     'Excellente question ! ✨',
     '',
     '**Trigonométrie :** ' + func + '(' + angle + '°)',
+    '',
+    '![Triangle rectangle — trigonométrie](/professeur-ia/triangle-trigonometrie.svg)',
     '',
   ];
   if (exact) lines.push('**Valeur exacte :** ' + func + '(' + angle + '°) = **' + exact + '**');
