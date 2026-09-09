@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 400" font-family="Arial, sans-serif">
+  <rect width="380" height="400" fill="#ffffff"/>
+  <!-- Silhouette légère -->
+  <circle cx="190" cy="35" r="26" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+  <path d="M 130 65 Q 130 60 150 58 L 230 58 Q 250 60 250 65 L 258 330 Q 258 345 243 345 L 137 345 Q 122 345 122 330 Z"
+        fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+
+  <!-- Nez / bouche -->
+  <ellipse cx="190" cy="58" rx="7" ry="3" fill="#1e3a8a"/>
+  <!-- Trachée -->
+  <rect x="184" y="62" width="12" height="55" rx="5" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="2.5"/>
+  <!-- Bronches -->
+  <path d="M 190 117 L 160 145 M 190 117 L 220 145" fill="none" stroke="#1d4ed8" stroke-width="7" stroke-linecap="round"/>
+  <!-- Poumon gauche -->
+  <path d="M 160 145 Q 120 155 118 210 Q 116 265 150 280 Q 175 288 178 250 L 178 155 Z"
+        fill="#93c5fd" stroke="#1d4ed8" stroke-width="2.5"/>
+  <!-- Poumon droit -->
+  <path d="M 220 145 Q 260 155 262 210 Q 264 265 230 280 Q 205 288 202 250 L 202 155 Z"
+        fill="#93c5fd" stroke="#1d4ed8" stroke-width="2.5"/>
+  <!-- Alvéoles (petits ronds dans les poumons) -->
+  <g fill="#dbeafe" stroke="#1d4ed8" stroke-width="1">
+    <circle cx="145" cy="190" r="7"/><circle cx="160" cy="210" r="7"/><circle cx="145" cy="230" r="7"/><circle cx="160" cy="250" r="7"/>
+    <circle cx="235" cy="190" r="7"/><circle cx="220" cy="210" r="7"/><circle cx="235" cy="230" r="7"/><circle cx="220" cy="250" r="7"/>
+  </g>
+  <!-- Diaphragme -->
+  <path d="M 130 290 Q 190 310 250 290" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Légende -->
+  <g font-size="14">
+    <rect x="24" y="358" width="14" height="10" fill="#bfdbfe" stroke="#1d4ed8"/><text x="44" y="367" fill="#0f172a">Trachée</text>
+    <rect x="120" y="358" width="14" height="10" fill="#93c5fd" stroke="#1d4ed8"/><text x="140" y="367" fill="#0f172a">Poumons</text>
+    <rect x="216" y="358" width="14" height="10" fill="#dbeafe" stroke="#1d4ed8"/><text x="236" y="367" fill="#0f172a">Alvéoles</text>
+    <rect x="24" y="380" width="14" height="6" fill="#f59e0b"/><text x="44" y="389" fill="#0f172a">Diaphragme</text>
+  </g>
+  <text x="190" y="20" font-size="16" font-weight="bold" fill="#1e3a8a" text-anchor="middle">L'appareil respiratoire</text>
+</svg>
