@@ -39,7 +39,7 @@ function PubCarrousel() {
       <button
         type="button"
         onClick={() => navigate('/publicite')}
-        className="w-full h-14 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold text-white"
+        className="w-full h-[68px] flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold text-white"
         style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
       >
         📣 Pub
@@ -54,7 +54,7 @@ function PubCarrousel() {
     <button
       type="button"
       onClick={() => navigate(pub.lien || '/publicite')}
-      className="relative w-full h-14 rounded-lg overflow-hidden border border-amber-300"
+      className="relative w-full h-[68px] rounded-lg overflow-hidden border border-amber-300"
     >
       {/* L'image occupe tout le bouton pour qu'on puisse voir et comprendre la pub */}
       <img src={imgSrc} alt={pub.titre || 'Pub'} className="absolute inset-0 w-full h-full object-cover" />
