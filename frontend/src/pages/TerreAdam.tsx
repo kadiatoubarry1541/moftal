@@ -12,6 +12,7 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
 import LivreQuartier, { type LivreQuartierHandle } from '../components/LivreQuartier';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
+import { REGLES_LOCALITE, NUMERO_EMOJI } from '../utils/reglesLocalite';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 const MAX_VIDEO_SECONDS = 5;
@@ -1534,18 +1535,12 @@ export default function TerreAdam() {
                 <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
                   <h3 className="font-bold text-gray-800 text-sm mb-3">📜 Règles du quartier</h3>
                   <ul className="space-y-2.5 text-sm text-gray-600">
-                    <li className="flex gap-2">
-                      <span className="flex-shrink-0">1️⃣</span>
-                      <span>Personne n'est obligé de verser de l'argent ici — chacun fait selon son propre gré.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="flex-shrink-0">2️⃣</span>
-                      <span>Personne n'a le droit de parler du nom de quelqu'un ici sans lui demander son autorisation.</span>
-                    </li>
-                    <li className="flex gap-2">
-                      <span className="flex-shrink-0">3️⃣</span>
-                      <span>Les chefs sont les porte-paroles de tous les membres, et non d'une seule personne.</span>
-                    </li>
+                    {REGLES_LOCALITE.map((regle, i) => (
+                      <li key={i} className="flex gap-2">
+                        <span className="flex-shrink-0">{NUMERO_EMOJI[i] || `${i + 1}.`}</span>
+                        <span>{regle}</span>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
