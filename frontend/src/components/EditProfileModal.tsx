@@ -36,6 +36,9 @@ interface UserData {
   lieu1?: string;
   lieu2?: string;
   lieu3?: string;
+  sousPrefecture?: string;
+  sousPrefecture2?: string;
+  sousPrefecture3?: string;
   [key: string]: any;
 }
 
@@ -289,6 +292,9 @@ export default function EditProfileModal({
             lieu1: formData.lieu1,
             lieu2: formData.lieu2,
             lieu3: formData.lieu3,
+            sousPrefecture: formData.sousPrefecture,
+            sousPrefecture2: formData.sousPrefecture2,
+            sousPrefecture3: formData.sousPrefecture3,
             numeroHPere: formData.numeroHPere,
             numeroHMere: formData.numeroHMere,
             languesAutre: formData.languesAutre,
@@ -834,6 +840,51 @@ export default function EditProfileModal({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Autre quartier ou lieu</option>
+                  {allLocations.map((loc) => (
+                    <option key={loc.code} value={loc.name}>
+                      {loc.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sous-préfecture 1</label>
+                <select
+                  value={formData.sousPrefecture || ""}
+                  onChange={(e) => handleInputChange("sousPrefecture", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sélectionner une sous-préfecture</option>
+                  {allLocations.map((loc) => (
+                    <option key={loc.code} value={loc.name}>
+                      {loc.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sous-préfecture 2 (optionnel)</label>
+                <select
+                  value={formData.sousPrefecture2 || ""}
+                  onChange={(e) => handleInputChange("sousPrefecture2", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Autre sous-préfecture</option>
+                  {allLocations.map((loc) => (
+                    <option key={loc.code} value={loc.name}>
+                      {loc.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sous-préfecture 3 (optionnel)</label>
+                <select
+                  value={formData.sousPrefecture3 || ""}
+                  onChange={(e) => handleInputChange("sousPrefecture3", e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Autre sous-préfecture</option>
                   {allLocations.map((loc) => (
                     <option key={loc.code} value={loc.name}>
                       {loc.title}

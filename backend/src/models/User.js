@@ -378,6 +378,14 @@ User.init({
     type: DataTypes.STRING,
     field: 'sous_prefecture'
   },
+  sousPrefecture2: {
+    type: DataTypes.STRING,
+    field: 'sous_prefecture2'
+  },
+  sousPrefecture3: {
+    type: DataTypes.STRING,
+    field: 'sous_prefecture3'
+  },
   lieuResidence1: {
     type: DataTypes.STRING,
     field: 'lieu_residence_1'
