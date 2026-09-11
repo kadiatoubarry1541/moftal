@@ -135,8 +135,6 @@ export default function TerreAdam() {
   const [activeTab, setActiveTab] = useState<'lieux' | 'sous-prefecture' | 'prefecture' | 'region' | 'pays' | 'continent' | 'mondial'>('lieux');
   type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3';
   const [activeLieuTab, setActiveLieuTab] = useState<LieuTabId>('quartier-1');
-  type SousPrefTabId = 'sp-1' | 'sp-2' | 'sp-3';
-  const [activeSousPrefTab, setActiveSousPrefTab] = useState<SousPrefTabId>('sp-1');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
@@ -1348,49 +1346,15 @@ export default function TerreAdam() {
           </div>
         )}
 
-        {/* 2. Sous-préfecture — jusqu'à 3 sous-préfectures distinctes par personne,
-            comme pour le quartier : chacune n'apparaît que si elle est réellement
-            renseignée, sinon aucun signe qu'elle existe. */}
+        {/* 2. Sous-préfecture */}
         {activeTab === 'sous-prefecture' && (() => {
-          const sousPrefValues = [
-            userSousPrefecture?.name || userData?.sousPrefecture || '',
-            userData?.sousPrefecture2 || '',
-            userData?.sousPrefecture3 || ''
-          ];
-          const sousPrefTabs = [
-            { id: 'sp-1' as const, value: sousPrefValues[0], visible: isAdmin || isRealLieu(sousPrefValues[0]) },
-            { id: 'sp-2' as const, value: sousPrefValues[1], visible: isAdmin || isRealLieu(sousPrefValues[1]) },
-            { id: 'sp-3' as const, value: sousPrefValues[2], visible: isAdmin || isRealLieu(sousPrefValues[2]) }
-          ].filter(t => t.visible);
-
-          const defaultTabId = sousPrefTabs.find(t => isRealLieu(t.value))?.id || sousPrefTabs[0]?.id || 'sp-1';
-          const currentTabId = sousPrefTabs.some(t => t.id === activeSousPrefTab) ? activeSousPrefTab : defaultTabId;
-          const currentTab = sousPrefTabs.find(t => t.id === currentTabId);
-
-          const fallbackLabel = userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Sous-préfecture';
-          const name = (currentTab && isRealLieu(currentTab.value)) ? currentTab.value : fallbackLabel;
-          const loc = (currentTab && isRealLieu(currentTab.value)) ? currentTab.value : name;
-
+          const name = userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Sous-préfecture');
+          const loc = userData?.sousPrefectureCode || userData?.sousPrefecture || name;
           return (
             <div className="space-y-3">
-              {sousPrefTabs.length > 1 && (
-                <div className="bg-white rounded-lg shadow-sm p-1.5 flex gap-1.5">
-                  {sousPrefTabs.map((t, idx) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setActiveSousPrefTab(t.id)}
-                      className={`flex-1 py-2 px-2 rounded-md text-xs font-bold truncate transition-colors ${
-                        currentTabId === t.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {isRealLieu(t.value) ? t.value : `Sous-préfecture ${idx + 1}`}
-                    </button>
-                  ))}
-                </div>
-              )}
               <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
-                {(isRealLieu(currentTab?.value) || isAdmin) ? (
-                  <DeveloppementSection key={loc} scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
+                {(userData?.sousPrefectureCode || userData?.sousPrefecture || isAdmin) ? (
+                  <DeveloppementSection scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                     <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune sous-préfecture enregistrée</p>
@@ -1408,10 +1372,6 @@ export default function TerreAdam() {
           return (
             <div className="space-y-3">
               <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
-                <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="text-xl">🏢</span>
-                  <span>{name}</span>
-                </h2>
                 {(userData?.prefectureCode || userData?.prefecture || isAdmin) ? (
                   <DeveloppementGouvernemental scope="prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('prefecture')} />
                 ) : (
@@ -1428,10 +1388,6 @@ export default function TerreAdam() {
         {activeTab === 'region' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
-              <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-xl">{getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine)}</span>
-                <span>{userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'}</span>
-              </h2>
               {(userData?.regionCode || userData?.region || isAdmin) ? (
                 <DeveloppementGouvernemental
                   scope="region"
@@ -1454,10 +1410,6 @@ export default function TerreAdam() {
         {activeTab === 'pays' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
-              <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-xl">{effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️'}</span>
-                <span>{effectiveCountry?.name || userData?.pays || 'Pays'}</span>
-              </h2>
               {(effectiveCountry || userData?.pays || isAdmin) ? (
                 <DeveloppementGouvernemental
                   scope="pays"
@@ -1480,10 +1432,6 @@ export default function TerreAdam() {
         {activeTab === 'continent' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
-              <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-xl">{effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : getContinentIcon(undefined, undefined)}</span>
-                <span>{effectiveContinent?.name || userData?.continent || 'Continent'}</span>
-              </h2>
               {(effectiveContinent || userData?.continent || isAdmin) ? (
                 <DeveloppementGouvernemental
                   scope="continent"
@@ -1506,10 +1454,6 @@ export default function TerreAdam() {
         {activeTab === 'mondial' && (
           <div className="space-y-3">
             <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
-              <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-xl">🌎</span>
-                <span>Mondial</span>
-              </h2>
               <DeveloppementGouvernemental scope="mondial" location="mondial" locationName="Monde" isJournalist={isJournalist} isAdmin={isAdmin} />
             </div>
           </div>
