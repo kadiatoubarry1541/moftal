@@ -788,6 +788,8 @@ async function initAllTables() {
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lieu_residence_3" VARCHAR(255);`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "prefecture" VARCHAR(255);`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sous_prefecture" VARCHAR(255);`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sous_prefecture2" VARCHAR(255);`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "sous_prefecture3" VARCHAR(255);`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "nb_femmes" INTEGER DEFAULT 0;`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "annees_avant_naissance" INTEGER;`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "annees_depuis_deces" INTEGER;`,
