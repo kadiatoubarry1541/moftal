@@ -54,10 +54,15 @@ function PubCarrousel() {
     <button
       type="button"
       onClick={() => navigate(pub.lien || '/publicite')}
-      className="min-h-[36px] flex items-center gap-1.5 px-1.5 py-1 rounded-lg border border-amber-300 bg-amber-50 flex-1 min-w-0"
+      className="relative h-9 rounded-lg overflow-hidden border border-amber-300 flex-1 min-w-0"
     >
-      <img src={imgSrc} alt={pub.titre || 'Pub'} className="w-6 h-6 rounded object-cover flex-shrink-0" />
-      <span className="text-amber-800 text-[11px] font-semibold truncate min-w-0">{pub.titre || 'Pub'}</span>
+      {/* L'image occupe tout le bouton pour qu'on puisse voir et comprendre la pub */}
+      <img src={imgSrc} alt={pub.titre || 'Pub'} className="absolute inset-0 w-full h-full object-cover" />
+      {pub.titre && (
+        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] font-semibold truncate px-1.5 py-0.5 text-left">
+          {pub.titre}
+        </span>
+      )}
     </button>
   )
 }
