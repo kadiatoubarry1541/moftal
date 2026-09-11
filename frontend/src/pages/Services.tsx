@@ -13,6 +13,9 @@ interface Pub {
   bouton_texte?: string
 }
 
+// Bandeau "Pub" compact — tient sur la même ligne que le bouton Favoris dans
+// le header, sans faire bouger ce dernier. Montre une pub à la fois, qui
+// change automatiquement toutes les 3 secondes (comme une liste qui tourne).
 function PubCarrousel() {
   const navigate = useNavigate()
   const [pubs, setPubs] = useState<Pub[]>([])
@@ -36,10 +39,10 @@ function PubCarrousel() {
       <button
         type="button"
         onClick={() => navigate('/publicite')}
-        className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-white font-bold text-xs rounded-xl shadow-sm transition-colors mb-3"
+        className="min-h-[36px] flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0"
         style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
       >
-        📣 Publier une pub
+        📣 Pub
       </button>
     )
   }
@@ -51,21 +54,10 @@ function PubCarrousel() {
     <button
       type="button"
       onClick={() => navigate(pub.lien || '/publicite')}
-      className="w-full flex items-center gap-3 p-2 mb-3 rounded-xl shadow-sm border border-amber-200 bg-amber-50 text-left transition-opacity"
+      className="min-h-[36px] flex items-center gap-1.5 px-1.5 py-1 rounded-lg border border-amber-300 bg-amber-50 flex-1 min-w-0"
     >
-      <img src={imgSrc} alt={pub.titre || 'Pub'} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
-      <div className="min-w-0 flex-1">
-        {pub.titre && <p className="font-bold text-gray-900 text-xs truncate">{pub.titre}</p>}
-        {pub.description && <p className="text-gray-500 text-[11px] truncate">{pub.description}</p>}
-        {pub.bouton_texte && <span className="inline-block mt-1 text-[10px] font-bold text-amber-700">{pub.bouton_texte} ›</span>}
-      </div>
-      {pubs.length > 1 && (
-        <div className="flex gap-1 flex-shrink-0 self-end pb-0.5">
-          {pubs.map((_, i) => (
-            <span key={i} className={`w-1.5 h-1.5 rounded-full ${i === index % pubs.length ? 'bg-amber-600' : 'bg-amber-200'}`} />
-          ))}
-        </div>
-      )}
+      <img src={imgSrc} alt={pub.titre || 'Pub'} className="w-6 h-6 rounded object-cover flex-shrink-0" />
+      <span className="text-amber-800 text-[11px] font-semibold truncate min-w-0">{pub.titre || 'Pub'}</span>
     </button>
   )
 }
@@ -170,8 +162,8 @@ export default function Services({ onClose }: ServicesProps = {}) {
     <>
       {/* Header (style Espace Gestion) */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-      <div className="max-w-md mx-auto flex items-center justify-between" style={{ padding: '6px 12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div className="max-w-md mx-auto flex items-center gap-2" style={{ padding: '6px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => navigate('/compte')}
@@ -181,6 +173,10 @@ export default function Services({ onClose }: ServicesProps = {}) {
             ‹
           </button>
           <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>💼 Services</h1>
+        </div>
+        {/* Pub — même ligne que le bouton Favoris, juste avant lui ; Favoris ne bouge pas */}
+        <div className="flex-1 min-w-0 flex justify-end">
+          <PubCarrousel />
         </div>
         {numeroH && (
           <FavorisDropdown
@@ -210,9 +206,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
       </header>
 
     <div className="max-w-md mx-auto px-4 pb-4 pt-3">
-      {/* Pub — bandeau tournant (défile toutes les 3s), juste avant le bouton favori */}
-      <PubCarrousel />
-
       {/* Grille icônes style compact */}
       <div className="grid grid-cols-4 gap-2">
         {orderedServices.map(s => (
