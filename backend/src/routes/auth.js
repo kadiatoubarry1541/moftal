@@ -851,7 +851,7 @@ router.put('/profile', async (req, res) => {
       'prenomMere', 'nomFamilleMere', 'numeroHMere', 'treeVisibility',
       'activite1', 'activite2', 'activite3', 'specialite', 'statutMatrimonial',
       'lieu1', 'lieu2', 'lieu3', 'languesAutre',
-      'sousPrefecture', 'sousPrefecture2', 'sousPrefecture3', 'handicap'
+      'sousPrefecture', 'handicap'
     ];
     
     const updates = {};
