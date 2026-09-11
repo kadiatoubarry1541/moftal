@@ -402,7 +402,23 @@ export function VideoRegistration() {
       if (result.success) {
         saveAndGo(result.user, 'registration_video')
       } else {
-        saveAndGo(completeData, 'registration_video_fallback')
+        // L'inscription a échoué — souvent parce que la vidéo a pris trop de
+        // temps à s'envoyer et que le compte a en fait déjà été créé par une
+        // tentative précédente. Plutôt que de rejeter l'utilisateur, on essaie
+        // de le connecter directement avec les identifiants qu'il vient de
+        // saisir : si le compte existe déjà avec ce mot de passe, il est
+        // connecté automatiquement au lieu de voir un message de rejet.
+        const identifiant = normalizedData.email?.trim() || normalizedData.telephone?.trim() || ''
+        const loginResult = identifiant
+          ? await api.login(identifiant, normalizedData.password).catch(() => null)
+          : null
+
+        if (loginResult?.success) {
+          showCredentialsReminder(numeroH, normalizedData.password)
+          navigate('/compte')
+        } else {
+          alert(result.message || 'Une erreur est survenue lors de l\'inscription. Réessayez.')
+        }
       }
     } catch (error) {
       console.error('Erreur enregistrement vidéo:', error)
