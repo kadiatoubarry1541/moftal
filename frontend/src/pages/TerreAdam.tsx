@@ -1389,10 +1389,6 @@ export default function TerreAdam() {
                 </div>
               )}
               <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
-                <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <span className="text-xl">🏛️</span>
-                  <span>{name}</span>
-                </h2>
                 {(isRealLieu(currentTab?.value) || isAdmin) ? (
                   <DeveloppementSection key={loc} scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
                 ) : (
