@@ -39,7 +39,7 @@ function PubCarrousel() {
       <button
         type="button"
         onClick={() => navigate('/publicite')}
-        className="min-h-[36px] flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0"
+        className="h-[46px] flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0"
         style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
       >
         📣 Pub
@@ -54,7 +54,7 @@ function PubCarrousel() {
     <button
       type="button"
       onClick={() => navigate(pub.lien || '/publicite')}
-      className="relative h-9 rounded-lg overflow-hidden border border-amber-300 flex-1 min-w-0"
+      className="relative h-[46px] rounded-lg overflow-hidden border border-amber-300 flex-1 min-w-0"
     >
       {/* L'image occupe tout le bouton pour qu'on puisse voir et comprendre la pub */}
       <img src={imgSrc} alt={pub.titre || 'Pub'} className="absolute inset-0 w-full h-full object-cover" />
@@ -167,7 +167,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
     <>
       {/* Header (style Espace Gestion) */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-      <div className="max-w-md mx-auto flex items-center gap-2" style={{ padding: '6px 12px' }}>
+      <div className="max-w-lg mx-auto flex items-center gap-2" style={{ padding: '6px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button
             type="button"
@@ -210,7 +210,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
       </div>
       </header>
 
-    <div className="max-w-md mx-auto px-4 pb-4 pt-3">
+    <div className="max-w-lg mx-auto px-2 pb-4 pt-3">
       {/* Grille icônes style compact */}
       <div className="grid grid-cols-4 gap-2">
         {orderedServices.map(s => (
