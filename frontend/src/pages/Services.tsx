@@ -39,7 +39,7 @@ function PubCarrousel() {
       <button
         type="button"
         onClick={() => navigate('/publicite')}
-        className="h-[46px] flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0"
+        className="w-full h-14 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold text-white"
         style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
       >
         📣 Pub
@@ -54,7 +54,7 @@ function PubCarrousel() {
     <button
       type="button"
       onClick={() => navigate(pub.lien || '/publicite')}
-      className="relative h-[46px] rounded-lg overflow-hidden border border-amber-300 flex-1 min-w-0"
+      className="relative w-full h-14 rounded-lg overflow-hidden border border-amber-300"
     >
       {/* L'image occupe tout le bouton pour qu'on puisse voir et comprendre la pub */}
       <img src={imgSrc} alt={pub.titre || 'Pub'} className="absolute inset-0 w-full h-full object-cover" />
@@ -167,7 +167,8 @@ export default function Services({ onClose }: ServicesProps = {}) {
     <>
       {/* Header (style Espace Gestion) */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-      <div className="max-w-lg mx-auto flex items-center gap-2" style={{ padding: '6px 12px' }}>
+      {/* Retour + titre + Favoris */}
+      <div className="max-w-lg mx-auto flex items-center justify-between gap-2" style={{ padding: '6px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button
             type="button"
@@ -178,10 +179,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
             ‹
           </button>
           <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>💼 Services</h1>
-        </div>
-        {/* Pub — même ligne que le bouton Favoris, juste avant lui ; Favoris ne bouge pas */}
-        <div className="flex-1 min-w-0 flex justify-end">
-          <PubCarrousel />
         </div>
         {numeroH && (
           <FavorisDropdown
@@ -207,6 +204,11 @@ export default function Services({ onClose }: ServicesProps = {}) {
             })}
           </FavorisDropdown>
         )}
+      </div>
+      {/* Pub — sa propre rangée dans le header, comme les onglets de Terre ADAM,
+          pour lui laisser assez de hauteur pour s'afficher correctement */}
+      <div className="max-w-lg mx-auto" style={{ padding: '0 12px 8px' }}>
+        <PubCarrousel />
       </div>
       </header>
 
