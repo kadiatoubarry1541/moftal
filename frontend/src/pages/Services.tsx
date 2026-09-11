@@ -2,6 +2,74 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { FavorisDropdown, FavorisDropdownItem } from '../components/FavorisDropdown'
 
+const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
+
+interface Pub {
+  id: string
+  image_url: string
+  lien?: string
+  titre?: string
+  description?: string
+  bouton_texte?: string
+}
+
+function PubCarrousel() {
+  const navigate = useNavigate()
+  const [pubs, setPubs] = useState<Pub[]>([])
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    fetch(`${API}/api/publicites/actives`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setPubs(d.publicites) })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (pubs.length <= 1) return
+    const timer = setInterval(() => setIndex(i => (i + 1) % pubs.length), 3000)
+    return () => clearInterval(timer)
+  }, [pubs.length])
+
+  if (pubs.length === 0) {
+    return (
+      <button
+        type="button"
+        onClick={() => navigate('/publicite')}
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-white font-bold text-xs rounded-xl shadow-sm transition-colors mb-3"
+        style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
+      >
+        📣 Publier une pub
+      </button>
+    )
+  }
+
+  const pub = pubs[index % pubs.length]
+  const imgSrc = pub.image_url.startsWith('http') ? pub.image_url : `${API}${pub.image_url}`
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(pub.lien || '/publicite')}
+      className="w-full flex items-center gap-3 p-2 mb-3 rounded-xl shadow-sm border border-amber-200 bg-amber-50 text-left transition-opacity"
+    >
+      <img src={imgSrc} alt={pub.titre || 'Pub'} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+      <div className="min-w-0 flex-1">
+        {pub.titre && <p className="font-bold text-gray-900 text-xs truncate">{pub.titre}</p>}
+        {pub.description && <p className="text-gray-500 text-[11px] truncate">{pub.description}</p>}
+        {pub.bouton_texte && <span className="inline-block mt-1 text-[10px] font-bold text-amber-700">{pub.bouton_texte} ›</span>}
+      </div>
+      {pubs.length > 1 && (
+        <div className="flex gap-1 flex-shrink-0 self-end pb-0.5">
+          {pubs.map((_, i) => (
+            <span key={i} className={`w-1.5 h-1.5 rounded-full ${i === index % pubs.length ? 'bg-amber-600' : 'bg-amber-200'}`} />
+          ))}
+        </div>
+      )}
+    </button>
+  )
+}
+
 interface ServicesProps {
   onClose?: () => void
 }
@@ -82,7 +150,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
     { to: '/reseau',                                   emoji: '🔗', label: 'Réseau',       bg: 'bg-purple-100' },
     { to: '/vendeurs',                                 emoji: '🛍️', label: 'Vendeurs',     bg: 'bg-sky-100'    },
     { to: '/producteurs',                              emoji: '🌾', label: 'Producteurs',  bg: 'bg-lime-100'   },
-    { to: '/publicite',                                emoji: '📣', label: 'Publicité',    bg: 'bg-emerald-100'},
   ]
 
   const toggleFavorite = (to: string) => {
@@ -143,24 +210,8 @@ export default function Services({ onClose }: ServicesProps = {}) {
       </header>
 
     <div className="max-w-md mx-auto px-4 pb-4 pt-3">
-      {/* Bouton créer un compte pro + CTA publicité — côte à côte, en haut */}
-      <div className="flex gap-2 mb-3">
-        <button
-          type="button"
-          onClick={() => navigate('/inscription-pro')}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-xs rounded-xl shadow-sm transition-colors"
-        >
-          ➕ Proposer votre service
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/publicite')}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-white font-bold text-xs rounded-xl shadow-sm transition-colors"
-          style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
-        >
-          📣 Annoncer votre activité
-        </button>
-      </div>
+      {/* Pub — bandeau tournant (défile toutes les 3s), juste avant le bouton favori */}
+      <PubCarrousel />
 
       {/* Grille icônes style compact */}
       <div className="grid grid-cols-4 gap-2">
@@ -168,6 +219,15 @@ export default function Services({ onClose }: ServicesProps = {}) {
           <ServiceIcon key={s.to} {...s} isFavorite={favoriteIds.includes(s.to)} />
         ))}
       </div>
+
+      {/* Proposer votre service — en bas */}
+      <button
+        type="button"
+        onClick={() => navigate('/inscription-pro')}
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 mt-4 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-xs rounded-xl shadow-sm transition-colors"
+      >
+        ➕ Proposer votre service
+      </button>
     </div>
     </>
   )
