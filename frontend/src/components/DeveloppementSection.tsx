@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import CompteSolidariteQuartier, { type CompteSolidariteQuartierHandle } from './CompteSolidariteQuartier';
 import ListeEnfants, { type ListeEnfantsHandle } from './ListeEnfants';
+import { REGLES_LOCALITE, NUMERO_EMOJI } from '../utils/reglesLocalite';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -203,6 +204,20 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
 
       {showLogoEtListe && (
         <ListeEnfants ref={listeRef} scope={scope} location={location} locationName={locationName} childLabel="quartiers" canManage={canPublish} />
+      )}
+
+      {showLogoEtListe && (
+        <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
+          <h3 className="font-bold text-gray-800 text-sm mb-3">📜 Règles de la sous-préfecture</h3>
+          <ul className="space-y-2.5 text-sm text-gray-600">
+            {REGLES_LOCALITE.map((regle, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="flex-shrink-0">{NUMERO_EMOJI[i] || `${i + 1}.`}</span>
+                <span>{regle}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <CompteSolidariteQuartier ref={soliRef} scope={scope} location={location} locationName={locationName} />
