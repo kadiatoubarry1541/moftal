@@ -1530,6 +1530,16 @@ export default function TerreAdam() {
                   <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">👥 Liste des membres</span>
                   <span className="text-gray-400">›</span>
                 </button>
+                {canEditLogo && (
+                  <button
+                    onClick={() => quartierLogoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                    className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200 disabled:opacity-50"
+                  >
+                    <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">🖼️ Photo de profil du quartier</span>
+                    <span className="text-gray-400">›</span>
+                  </button>
+                )}
                 <button
                   onClick={() => { setShowQuartierMenu(false); quartierDevRef.current?.openCaisse(); }}
                   className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl shadow"
@@ -1544,6 +1554,24 @@ export default function TerreAdam() {
                   <span className="flex items-center gap-3 font-bold text-white text-sm">📚 Livre</span>
                   <span className="text-white/80">›</span>
                 </button>
+
+                <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
+                  <h3 className="font-bold text-gray-800 text-sm mb-3">📜 Règles du quartier</h3>
+                  <ul className="space-y-2.5 text-sm text-gray-600">
+                    <li className="flex gap-2">
+                      <span className="flex-shrink-0">1️⃣</span>
+                      <span>Personne n'est obligé de verser de l'argent ici — chacun fait selon son propre gré.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="flex-shrink-0">2️⃣</span>
+                      <span>Personne n'a le droit de parler du nom de quelqu'un ici sans lui demander son autorisation.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="flex-shrink-0">3️⃣</span>
+                      <span>Les chefs sont les porte-paroles de tous les membres, et non d'une seule personne.</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
