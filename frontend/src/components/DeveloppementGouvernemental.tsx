@@ -113,13 +113,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  // Enfants du lieu (les sous-préfectures d'une préfecture, les préfectures
-  // d'une région) — affichés juste sous le logo, juste leur nom.
-  const ENFANTS_LABEL: Record<string, string> = { prefecture: 'sous-préfectures', region: 'préfectures' };
-  const enfantsLabel = ENFANTS_LABEL[scope];
-  const [enfants, setEnfants] = useState<{ id: string; name: string }[]>([]);
-  const [nouvelEnfant, setNouvelEnfant] = useState('');
-
   const token = () => localStorage.getItem('token');
   const api = (path: string) => `${API_BASE}/api/developpement${path}`;
   const qs = `scope=${encodeURIComponent(scope)}&location=${encodeURIComponent(location)}`;
@@ -130,40 +123,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     loadLogo();
     checkCanPublishActu();
     if (canPublish) loadSignalements();
-    if (enfantsLabel) loadEnfants();
   }, [scope, location]);
-
-  const loadEnfants = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/location-children?${qs}`, { headers: { Authorization: `Bearer ${token()}` } });
-      if (res.ok) { const d = await res.json(); setEnfants(d.children || []); }
-    } catch {}
-  };
-
-  const ajouterEnfant = async () => {
-    if (!nouvelEnfant.trim()) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/location-children`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scope, location, name: nouvelEnfant.trim() })
-      });
-      const d = await res.json();
-      if (d.success) { setNouvelEnfant(''); loadEnfants(); }
-      else alert(d.message || 'Erreur.');
-    } catch { alert('Erreur.'); }
-  };
-
-  const retirerEnfant = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/location-children/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token()}` }
-      });
-      const d = await res.json();
-      if (d.success) loadEnfants();
-    } catch {}
-  };
 
   // Vérifie, uniquement à l'ouverture du formulaire, sur quels niveaux
   // au-dessus l'auteur a aussi le droit de publier (pour proposer de
@@ -473,35 +433,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
             )}
           </label>
           <span className="text-sm font-semibold text-gray-700 truncate">{locationName}</span>
-        </div>
-      )}
-
-      {/* Enfants du lieu — juste leurs noms, sous le logo */}
-      {enfantsLabel && (
-        <div className="pl-12 -mt-1 flex flex-wrap items-center gap-1.5">
-          {enfants.map(e => (
-            <span key={e.id} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-medium pl-2.5 pr-1.5 py-1 rounded-full">
-              {e.name}
-              {canPublish && (
-                <button onClick={() => retirerEnfant(e.id)} className="text-gray-400 hover:text-red-500 leading-none">✕</button>
-              )}
-            </span>
-          ))}
-          {enfants.length === 0 && !canPublish && (
-            <span className="text-xs text-gray-400">Aucune {enfantsLabel.replace(/s$/, '')} enregistrée</span>
-          )}
-          {canPublish && (
-            <span className="inline-flex items-center gap-1 bg-white border border-dashed border-gray-300 rounded-full pl-2.5 pr-1 py-1">
-              <input
-                value={nouvelEnfant}
-                onChange={(e) => setNouvelEnfant(e.target.value)}
-                onKeyPress={(e) => { if (e.key === 'Enter') ajouterEnfant(); }}
-                placeholder={`+ ${enfantsLabel.replace(/s$/, '')}`}
-                className="text-xs w-28 outline-none bg-transparent"
-              />
-              <button onClick={ajouterEnfant} disabled={!nouvelEnfant.trim()} className="text-emerald-700 disabled:text-gray-300 font-bold text-xs px-1">✓</button>
-            </span>
-          )}
         </div>
       )}
 
