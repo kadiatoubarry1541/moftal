@@ -707,6 +707,7 @@
   .view-btn {
     flex: 1;
     min-width: 60px;
+    max-width: 170px;
   }
 
   .form-grid {
