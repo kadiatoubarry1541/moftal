@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import CompteSolidariteQuartier, { type CompteSolidariteQuartierHandle } from './CompteSolidariteQuartier';
 import ListeEnfants, { type ListeEnfantsHandle } from './ListeEnfants';
+import LivreQuartier, { type LivreQuartierHandle } from './LivreQuartier';
 import { REGLES_LOCALITE, NUMERO_EMOJI } from '../utils/reglesLocalite';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -30,6 +31,8 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
 ) {
   const soliRef = useRef<CompteSolidariteQuartierHandle>(null);
   const listeRef = useRef<ListeEnfantsHandle>(null);
+  const livreRef = useRef<LivreQuartierHandle>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   useImperativeHandle(ref, () => ({
     openCaisse: () => soliRef.current?.open(),
   }), []);
@@ -40,6 +43,10 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
   const canPublish = !!(isJournalist || isAdmin);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  // Page "Infos" — même principe que pour le quartier : cliquer sur le logo
+  // ouvre un menu (Liste, Photo de profil, Caisse, Livre, Règles) au lieu de
+  // changer la photo directement.
+  const [showInfos, setShowInfos] = useState(false);
 
   // Informations partagées depuis les quartiers de cette sous-préfecture
   // (bouton "↗️ Partager" sur un message du chat) — lecture seule ici.
@@ -161,22 +168,60 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
   return (
     <div className="space-y-4">
       {showLogoEtListe && (
-        <div className="flex items-center gap-3">
-          <label
-            className={`relative w-14 h-14 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0 ${canPublish ? 'cursor-pointer' : ''}`}
-            title={canPublish ? `Changer le logo de ${locationName}` : undefined}
-          >
+        <button
+          type="button"
+          onClick={() => setShowInfos(true)}
+          className="w-full flex items-center gap-3 text-left"
+        >
+          <div className="relative w-14 h-14 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden flex-shrink-0">
             {logoUrl ? (
               <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
             ) : (
               <span className="text-2xl">🏛️</span>
             )}
-            {canPublish && (
-              <>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-slate-800 text-lg truncate">{locationName}</p>
+          </div>
+        </button>
+      )}
+
+      {showLogoEtListe && (
+        <ListeEnfants ref={listeRef} scope={scope} location={location} locationName={locationName} childLabel="quartiers" canManage={canPublish} />
+      )}
+
+      {showLogoEtListe && (
+        <LivreQuartier ref={livreRef} scope={scope} location={location} locationName={locationName} canPublish={canPublish} />
+      )}
+
+      <CompteSolidariteQuartier ref={soliRef} scope={scope} location={location} locationName={locationName} />
+
+      {/* Page entière "Infos" — même principe que pour le quartier : logo,
+          nom, puis un menu (Liste des quartiers, Photo de profil, Caisse,
+          Livre) et les règles de la localité en dessous. */}
+      {showLogoEtListe && showInfos && (
+        <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col">
+          <div className="bg-gray-800 text-white px-4 py-3 flex items-center gap-3 flex-shrink-0">
+            <button onClick={() => setShowInfos(false)} aria-label="Retour" className="text-3xl leading-none">‹</button>
+            <h2 className="font-bold text-base truncate">{locationName}</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-5 flex flex-col items-center gap-5">
+            <label className={`relative w-24 h-24 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-3xl overflow-hidden ${canPublish ? 'cursor-pointer' : ''}`}>
+              {logoUrl ? (
+                <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
+              ) : (
+                <span>🏛️</span>
+              )}
+              {canPublish && (
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-xs leading-none opacity-0 hover:opacity-100 transition-opacity">
                   {uploadingLogo ? '…' : '📷'}
                 </div>
+              )}
+            </label>
+            {canPublish && (
+              <>
                 <input
+                  ref={logoInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
@@ -187,40 +232,62 @@ const DeveloppementSection = forwardRef<DeveloppementSectionHandle, Props>(funct
                     e.target.value = '';
                   }}
                 />
+                <button
+                  onClick={() => logoInputRef.current?.click()}
+                  className="text-emerald-700 text-sm font-semibold -mt-3"
+                >
+                  📷 Changer la photo
+                </button>
               </>
             )}
-          </label>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-slate-800 text-lg truncate">{locationName}</p>
+            <div className="w-full max-w-sm space-y-3">
+              <button
+                onClick={() => { setShowInfos(false); listeRef.current?.open(); }}
+                className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
+              >
+                <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">👥 Liste des quartiers</span>
+                <span className="text-gray-400">›</span>
+              </button>
+              {canPublish && (
+                <button
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200 disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">🖼️ Photo de profil</span>
+                  <span className="text-gray-400">›</span>
+                </button>
+              )}
+              <button
+                onClick={() => { setShowInfos(false); soliRef.current?.open(); }}
+                className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl shadow"
+              >
+                <span className="flex items-center gap-3 font-bold text-white text-sm">💰 Caisse</span>
+                <span className="text-white/80">›</span>
+              </button>
+              <button
+                onClick={() => { setShowInfos(false); livreRef.current?.open(); }}
+                className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-amber-700 to-amber-600 rounded-xl shadow"
+              >
+                <span className="flex items-center gap-3 font-bold text-white text-sm">📚 Livre</span>
+                <span className="text-white/80">›</span>
+              </button>
+
+              <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
+                <h3 className="font-bold text-gray-800 text-sm mb-3">📜 Règles de la sous-préfecture</h3>
+                <ul className="space-y-2.5 text-sm text-gray-600">
+                  {REGLES_LOCALITE.map((regle, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="flex-shrink-0">{NUMERO_EMOJI[i] || `${i + 1}.`}</span>
+                      <span>{regle}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => listeRef.current?.open()}
-            className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-3 py-2 rounded-full transition-colors"
-          >
-            👥 Liste
-          </button>
         </div>
       )}
-
-      {showLogoEtListe && (
-        <ListeEnfants ref={listeRef} scope={scope} location={location} locationName={locationName} childLabel="quartiers" canManage={canPublish} />
-      )}
-
-      {showLogoEtListe && (
-        <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
-          <h3 className="font-bold text-gray-800 text-sm mb-3">📜 Règles de la sous-préfecture</h3>
-          <ul className="space-y-2.5 text-sm text-gray-600">
-            {REGLES_LOCALITE.map((regle, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="flex-shrink-0">{NUMERO_EMOJI[i] || `${i + 1}.`}</span>
-                <span>{regle}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <CompteSolidariteQuartier ref={soliRef} scope={scope} location={location} locationName={locationName} />
 
       {/* Un seul bouton "Caisse" : santé, orphelins et projets (développement), tout dedans */}
       {!hideProjetsButton && (
