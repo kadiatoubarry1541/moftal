@@ -72,7 +72,7 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             className="absolute inset-0 transition-opacity duration-300"
             style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
           >
-            <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
+            <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />
             {(pub.titre || pub.description || pub.bouton_texte) && (
               <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/15 to-transparent px-2 py-1">
                 {pub.titre && <p className="text-white font-bold text-xs truncate drop-shadow">{pub.titre}</p>}
