@@ -13,7 +13,7 @@ interface Pub {
   bouton_texte?: string | null
 }
 
-export function AdCarousel({ fill = false }: { fill?: boolean }) {
+export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; compact?: boolean }) {
   const navigate = useNavigate()
   const [pubs, setPubs] = useState<Pub[]>([])
   const [active, setActive] = useState(0)
@@ -55,6 +55,54 @@ export function AdCarousel({ fill = false }: { fill?: boolean }) {
   // réservée aux annonces déjà publiées. Le CTA "Proposer votre service" vit
   // dans la page Services, sous le bouton de création.
   if (pubs.length === 0) return null
+
+  // Version compacte : pas de marge/padding externes, hauteur fixe plutôt
+  // qu'un ratio 4/1 — pensée pour tenir sur la même ligne qu'un autre bouton
+  // (ex : à côté de "Favoris" dans un header), même mécanisme de défilement.
+  if (compact) {
+    return (
+      <div className="relative w-full h-full rounded-lg overflow-hidden bg-gray-100">
+        {pubs.map((pub, i) => (
+          <div
+            key={pub.id}
+            onClick={() => goTo(pub.lien)}
+            className="absolute inset-0 transition-opacity duration-300"
+            style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
+          >
+            <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            {pub.titre && (
+              <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/10 to-transparent px-2 py-1">
+                <p className="text-white font-bold text-[11px] leading-tight truncate drop-shadow">{pub.titre}</p>
+                {pub.description && (
+                  <p className="text-white/90 text-[9px] leading-tight truncate drop-shadow">{pub.description}</p>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+        {pubs.length > 1 && (
+          <>
+            <button
+              type="button"
+              aria-label="Publicité précédente"
+              onClick={goPrev}
+              className="absolute left-0.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+            </button>
+            <button
+              type="button"
+              aria-label="Publicité suivante"
+              onClick={goNext}
+              className="absolute right-0.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
+            >
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+            </button>
+          </>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className={`max-w-2xl mx-auto px-4 pt-6 ${fill ? 'pb-0' : 'pb-4'} w-full${fill ? ' flex-1 flex flex-col' : ''}`}>
