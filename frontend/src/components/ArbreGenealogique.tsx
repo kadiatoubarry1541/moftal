@@ -40,7 +40,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
   const [generationFilter, setGenerationFilter] = useState<string>('all')
   const [showStats, setShowStats] = useState(false)
-  const [showLegend, setShowLegend] = useState(false)
   const [showAddMemberForm, setShowAddMemberForm] = useState(false)
   const [addMemberType, setAddMemberType] = useState<'vivant' | 'defunt' | null>(null)
   const [newMember, setNewMember] = useState({
@@ -509,13 +508,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               className={`view-btn ${showStats ? 'active' : ''}`}
               onClick={() => setShowStats(!showStats)}
             >
-              📊 Stats
-            </button>
-            <button
-              className={`view-btn ${showLegend ? 'active' : ''}`}
-              onClick={() => setShowLegend(!showLegend)}
-            >
-              📘 Légende
+              ℹ️ Infos
             </button>
             <button
               className="view-btn"
@@ -1178,16 +1171,18 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         );
       })()}
 
-      {/* Statistiques dans une fenêtre modale indépendante */}
+      {/* Statistiques + Légende regroupées dans une seule fenêtre modale,
+          pour éviter d'avoir un bouton séparé pour chacune. */}
       {showStats && (
         <div className="member-details-modal">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>📊 Statistiques de l'arbre</h3>
+              <h3>ℹ️ Infos de l'arbre</h3>
               <button onClick={() => setShowStats(false)}>✕</button>
             </div>
             <div className="modal-body">
               <div className="arbre-stats">
+                <h4 className="mb-2">📊 Statistiques</h4>
                 <div className="stat-card">
                   <p><strong>Total membres:</strong> {familyMembers.length}</p>
                   <p><strong>Vivants:</strong> {familyMembers.filter(m => !m.isDeceased).length}</p>
@@ -1368,80 +1363,70 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     <InvitationsReceived userData={userData} />
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Légende dans une fenêtre modale indépendante */}
-      {showLegend && (
-        <div className="member-details-modal">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>📘 Légende de l'arbre</h3>
-              <button onClick={() => setShowLegend(false)}>✕</button>
-            </div>
-            <div className="modal-body">
-              {/* Recommandations pour compléter l'arbre (déplacées ici) */}
-              {recommendations.length > 0 && (
-                <div
-                  className="tree-recommendations"
-                  style={{
-                    marginBottom: '16px',
-                    padding: '15px',
-                    backgroundColor: '#FEF3C7',
-                    border: '2px solid #F59E0B',
-                    borderRadius: '8px',
-                    textAlign: 'left',
-                  }}
-                >
-                  <h4 style={{ marginTop: 0, color: '#92400E', fontSize: '14px' }}>
-                    💡 Recommandations pour compléter votre arbre généalogique :
-                  </h4>
-                  <ul style={{ marginBottom: 0, paddingLeft: '20px' }}>
-                    {recommendations.map((rec, index) => (
-                      <li
-                        key={index}
-                        style={{ color: '#78350F', marginBottom: '6px', fontSize: '13px' }}
-                      >
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                {/* Légende — regroupée ici avec les statistiques */}
+                <div className="mt-6">
+                  <h4 className="mb-2">📘 Légende</h4>
+                  {recommendations.length > 0 && (
+                    <div
+                      className="tree-recommendations"
+                      style={{
+                        marginBottom: '16px',
+                        padding: '15px',
+                        backgroundColor: '#FEF3C7',
+                        border: '2px solid #F59E0B',
+                        borderRadius: '8px',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <h4 style={{ marginTop: 0, color: '#92400E', fontSize: '14px' }}>
+                        💡 Recommandations pour compléter votre arbre généalogique :
+                      </h4>
+                      <ul style={{ marginBottom: 0, paddingLeft: '20px' }}>
+                        {recommendations.map((rec, index) => (
+                          <li
+                            key={index}
+                            style={{ color: '#78350F', marginBottom: '6px', fontSize: '13px' }}
+                          >
+                            {rec}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-              <div className="tree-legend-card">
-                <div className="legend-section">
-                  <div className="legend-section-title">Générations :</div>
-                  <div className="legend-row">
-                    <span className="legend-color" style={{ backgroundColor: '#A0522D' }} />
-                    <span>G-1 : Grands-parents</span>
-                  </div>
-                  <div className="legend-row">
-                    <span className="legend-color" style={{ backgroundColor: '#CD853F' }} />
-                    <span>G0 : Parents</span>
-                  </div>
-                  <div className="legend-row">
-                    <span className="legend-color" style={{ backgroundColor: '#667eea' }} />
-                    <span>G1 : Vous / Fratrie</span>
-                  </div>
-                  <div className="legend-row">
-                    <span className="legend-color" style={{ backgroundColor: '#4CAF50' }} />
-                    <span>G2 : Enfants</span>
-                  </div>
-                </div>
-                <div className="legend-section">
-                  <div className="legend-section-title">Genres :</div>
-                  <div className="legend-row">
-                    <span className="legend-shape legend-male" /> <span>= Homme</span>
-                  </div>
-                  <div className="legend-row">
-                    <span className="legend-shape legend-female" /> <span>= Femme</span>
-                  </div>
-                  <div className="legend-row">
-                    <span className="legend-dot" /> <span>= Vous</span>
+                  <div className="tree-legend-card">
+                    <div className="legend-section">
+                      <div className="legend-section-title">Générations :</div>
+                      <div className="legend-row">
+                        <span className="legend-color" style={{ backgroundColor: '#A0522D' }} />
+                        <span>G-1 : Grands-parents</span>
+                      </div>
+                      <div className="legend-row">
+                        <span className="legend-color" style={{ backgroundColor: '#CD853F' }} />
+                        <span>G0 : Parents</span>
+                      </div>
+                      <div className="legend-row">
+                        <span className="legend-color" style={{ backgroundColor: '#667eea' }} />
+                        <span>G1 : Vous / Fratrie</span>
+                      </div>
+                      <div className="legend-row">
+                        <span className="legend-color" style={{ backgroundColor: '#4CAF50' }} />
+                        <span>G2 : Enfants</span>
+                      </div>
+                    </div>
+                    <div className="legend-section">
+                      <div className="legend-section-title">Genres :</div>
+                      <div className="legend-row">
+                        <span className="legend-shape legend-male" /> <span>= Homme</span>
+                      </div>
+                      <div className="legend-row">
+                        <span className="legend-shape legend-female" /> <span>= Femme</span>
+                      </div>
+                      <div className="legend-row">
+                        <span className="legend-dot" /> <span>= Vous</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
