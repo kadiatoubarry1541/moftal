@@ -117,7 +117,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
           <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>💼 Services</h1>
         </div>
         {/* Pub — même ligne que le bouton Favoris, juste avant lui ; Favoris ne bouge pas */}
-        <div className="flex-1 min-w-0 h-[85px]">
+        <div className="flex-1 min-w-0 h-[83px]">
           <AdCarousel compact />
         </div>
         {numeroH && (
