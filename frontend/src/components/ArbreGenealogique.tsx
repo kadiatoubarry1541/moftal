@@ -294,7 +294,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
   // Couleur par genre — bleu pour homme, rose pour femme (style MyHeritage)
   const getGenreColor = (genre?: string) =>
-    genre?.toUpperCase() === 'FEMME' ? '#be185d' : genre?.toUpperCase() === 'HOMME' ? '#1d4ed8' : '#374151'
+    genre?.toUpperCase() === 'FEMME' ? '#9333ea' : genre?.toUpperCase() === 'HOMME' ? '#1d4ed8' : '#374151'
 
   // Ouvre le formulaire d'ajout avec la relation pré-remplie
   const openAddForm = (relation: string) => {
@@ -645,7 +645,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       {/* Vue arbre généalogique — style MyHeritage : couleurs par genre, dates, boutons "+" */}
 
       {/* ── Contrôles de zoom : une seule barre compacte, rattachée — le rouge est réservé aux défunts ── */}
-      <div className="flex items-center justify-end gap-2 mb-2.5 flex-wrap">
+      <div className="flex items-center justify-end gap-1.5 mb-2.5 flex-nowrap overflow-x-auto">
         <div className="inline-flex items-center rounded-full border border-gray-200 bg-white shadow-sm overflow-hidden shrink-0">
           <button
             type="button"
@@ -747,8 +747,10 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         const gpmX = Math.round(mMidX - NGAP / 2 - NW)   // grand-père maternel
         const gmmX = Math.round(mMidX + NGAP / 2)         // grand-mère maternelle
 
-        // ── G2 : centré sur SVG_W, barre étendue pour toujours inclure downX ──
-        const g2StartX = Math.round((SVG_W - g2RowW) / 2)
+        // ── G2 : centré sous VOUS (downX), pas sous SVG_W — sinon les grands-
+        //   parents élargissent le canevas et les enfants se retrouvent décalés,
+        //   avec des lignes qui semblent "couper" sous un autre nœud (ex: Sœur).
+        const g2StartX = Math.round(downX - g2RowW / 2)
         const g2Xs = Array.from({ length: g2Slots }, (_, i) => g2StartX + i * (NW + NGAP))
         const g2BarL = Math.min(g2Xs[0] + NW / 2, downX)
         const g2BarR = Math.max(g2Xs[g2Slots - 1] + NW / 2, downX)
