@@ -103,8 +103,8 @@ export default function Services({ onClose }: ServicesProps = {}) {
     <>
       {/* Header (style Espace Gestion) */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-      {/* Retour + titre + Favoris */}
-      <div className="max-w-lg mx-auto flex items-center justify-between gap-2" style={{ padding: '6px 12px' }}>
+      {/* Retour + titre + Pub + Favoris — tous sur la même ligne */}
+      <div className="max-w-lg mx-auto flex items-center gap-2" style={{ padding: '10px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button
             type="button"
@@ -115,6 +115,10 @@ export default function Services({ onClose }: ServicesProps = {}) {
             ‹
           </button>
           <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>💼 Services</h1>
+        </div>
+        {/* Pub — même ligne que le bouton Favoris, juste avant lui ; Favoris ne bouge pas */}
+        <div className="flex-1 min-w-0 h-16">
+          <AdCarousel compact />
         </div>
         {numeroH && (
           <FavorisDropdown
@@ -142,9 +146,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
         )}
       </div>
       </header>
-
-    {/* Pub — même carrousel que sur la page d'accueil (image + dégradé + titre/description/bouton, défilement automatique, flèches précédent/suivant) */}
-    <AdCarousel />
 
     <div className="max-w-lg mx-auto px-2 pb-4 pt-3">
       {/* Grille icônes style compact */}
