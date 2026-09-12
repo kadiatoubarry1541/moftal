@@ -50,19 +50,25 @@ function PubCarrousel() {
   const pub = pubs[index % pubs.length]
   const imgSrc = pub.image_url.startsWith('http') ? pub.image_url : `${API}${pub.image_url}`
 
+  // Carte "Pub" au gabarit fixe, identique pour toutes les pubs : une cellule
+  // image (qui remplit tout son espace) + une cellule info (titre, description,
+  // bouton) qui remplit le reste — rien n'est caché ou coupé.
   return (
     <button
       type="button"
       onClick={() => navigate(pub.lien || '/publicite')}
-      className="relative w-full h-[68px] rounded-lg overflow-hidden border border-amber-300"
+      className="w-full h-[68px] flex items-stretch gap-2 rounded-lg overflow-hidden border border-amber-300 bg-amber-50 text-left"
     >
-      {/* L'image occupe tout le bouton pour qu'on puisse voir et comprendre la pub */}
-      <img src={imgSrc} alt={pub.titre || 'Pub'} className="absolute inset-0 w-full h-full object-cover" />
-      {pub.titre && (
-        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] font-semibold truncate px-1.5 py-0.5 text-left">
-          {pub.titre}
-        </span>
-      )}
+      <img src={imgSrc} alt={pub.titre || 'Pub'} className="h-full w-[68px] flex-shrink-0 object-cover" />
+      <div className="min-w-0 flex-1 flex flex-col justify-center py-1 pr-2">
+        <p className="font-bold text-gray-900 text-xs truncate">{pub.titre || 'Pub'}</p>
+        {pub.description && (
+          <p className="text-gray-500 text-[10px] truncate">{pub.description}</p>
+        )}
+        {pub.bouton_texte && (
+          <span className="mt-0.5 inline-block text-[10px] font-bold text-amber-700 truncate">{pub.bouton_texte} ›</span>
+        )}
+      </div>
     </button>
   )
 }
