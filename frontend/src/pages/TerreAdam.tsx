@@ -1355,7 +1355,7 @@ export default function TerreAdam() {
             <div className="space-y-3">
               <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4">
                 {(userData?.sousPrefectureCode || userData?.sousPrefecture || isAdmin) ? (
-                  <DeveloppementSection scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
+                  <DeveloppementGouvernemental scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
                     <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune sous-préfecture enregistrée</p>
