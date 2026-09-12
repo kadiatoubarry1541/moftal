@@ -16,7 +16,7 @@ export interface CountryGeoLabels {
 const DEFAULT_LABELS: CountryGeoLabels = {
   level1: { label: 'Région / Province', placeholder: 'Votre région ou province...' },
   level2: { label: 'Département / District', placeholder: 'Votre département ou district...' },
-  level3: { label: 'Commune / Ville', placeholder: 'Votre commune ou ville...' },
+  level3: { label: 'Commune', placeholder: 'Votre commune ou ville...' },
   level4: { label: 'Quartier / Village', placeholder: 'Votre quartier ou village...' },
 }
 
@@ -36,7 +36,7 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Sénégal': {
     level1: { label: 'Région', placeholder: 'Ex: Dakar, Thiès, Ziguinchor, Saint-Louis, Kaolack...' },
     level2: { label: 'Département', placeholder: 'Ex: Dakar, Pikine, Guédiawaye, Rufisque, Thiès...' },
-    level3: { label: 'Commune / Arrondissement', placeholder: 'Ex: Plateau, Médina, HLM, Grand Dakar, Guédiawaye...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Plateau, Médina, HLM, Grand Dakar, Guédiawaye...' },
     level4: { label: 'Quartier', placeholder: 'Ex: Almadies, Fann, Point E, Liberté 6, Parcelles Assainies...' },
   },
 
@@ -71,14 +71,14 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Cameroun': {
     level1: { label: 'Région', placeholder: 'Ex: Centre, Littoral, Nord, Adamaoua, Ouest, Est...' },
     level2: { label: 'Département', placeholder: 'Ex: Mfoundi, Wouri, Bénoué, Mezam, Mifi...' },
-    level3: { label: 'Arrondissement / Commune', placeholder: 'Ex: Yaoundé I, Douala V, Bafoussam I, Garoua I...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Yaoundé I, Douala V, Bafoussam I, Garoua I...' },
     level4: { label: 'Quartier / Village', placeholder: 'Ex: Bastos, Biyem-Assi, Akwa, Bonanjo, Ngoa-Ékellé...' },
   },
 
   'Guinée-Bissau': {
     level1: { label: 'Région', placeholder: 'Ex: Bissau, Bafatá, Gabú, Cacheu, Biombo...' },
     level2: { label: 'Secteur', placeholder: 'Ex: Bissau, Bafatá, Gabú, Mansoa, Cacheu...' },
-    level3: { label: 'Localité / Tabanka', placeholder: 'Ex: Bandim, Bor, Bairro Militar, Quelelé...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Bandim, Bor, Bairro Militar, Quelelé...' },
     level4: { label: 'Quartier / Village', placeholder: 'Ex: votre quartier ou village...' },
   },
 
@@ -99,7 +99,7 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Bénin': {
     level1: { label: 'Département', placeholder: 'Ex: Littoral, Atlantique, Borgou, Ouémé, Zou...' },
     level2: { label: 'Commune', placeholder: 'Ex: Cotonou, Porto-Novo, Parakou, Abomey-Calavi...' },
-    level3: { label: 'Arrondissement', placeholder: 'Ex: 1er arr., Cadjèhoun, Fifadji, Akpakpa...' },
+    level3: { label: 'Commune', placeholder: 'Ex: 1er arr., Cadjèhoun, Fifadji, Akpakpa...' },
     level4: { label: 'Quartier / Village', placeholder: 'Ex: Cadjèhoun, Gbégamey, Akpakpa, Dantokpa...' },
   },
 
@@ -159,7 +159,7 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Égypte': {
     level1: { label: 'Gouvernorat', placeholder: 'Ex: Le Caire, Alexandrie, Giza, Assouan, Louxor...' },
     level2: { label: 'Markaz / District', placeholder: 'Ex: Le Caire, Alexandrie, Giza, Maadi...' },
-    level3: { label: 'Qism / Ville', placeholder: 'Ex: Garden City, Zamalek, Heliopolis, Dokki...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Garden City, Zamalek, Heliopolis, Dokki...' },
     level4: { label: 'Quartier / Hayy', placeholder: 'Ex: Mohandessin, Nasr City, Shubra, Imbaba...' },
   },
 
@@ -170,42 +170,42 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Nigeria': {
     level1: { label: 'State', placeholder: 'Ex: Lagos, Abuja FCT, Kano, Rivers, Oyo, Delta...' },
     level2: { label: "Local Gov't Area (LGA)", placeholder: 'Ex: Lagos Island, Ikeja, Surulere, Eti-Osa...' },
-    level3: { label: 'City / Town', placeholder: 'Ex: Lagos, Abuja, Kano, Ibadan, Port Harcourt...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Lagos, Abuja, Kano, Ibadan, Port Harcourt...' },
     level4: { label: 'Neighborhood', placeholder: 'Ex: Lekki, Victoria Island, Ikoyi, Surulere, Yaba...' },
   },
 
   'Ghana': {
     level1: { label: 'Region', placeholder: 'Ex: Greater Accra, Ashanti, Western, Northern, Eastern...' },
     level2: { label: 'District', placeholder: 'Ex: Accra Metro, Kumasi Metro, Tema, Cape Coast...' },
-    level3: { label: 'City / Town', placeholder: 'Ex: Accra, Kumasi, Tema, Tamale, Cape Coast, Takoradi...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Accra, Kumasi, Tema, Tamale, Cape Coast, Takoradi...' },
     level4: { label: 'Neighborhood', placeholder: 'Ex: Osu, Labone, Cantonments, Airport City, Adabraka...' },
   },
 
   'Kenya': {
     level1: { label: 'County', placeholder: 'Ex: Nairobi, Mombasa, Kisumu, Nakuru, Kiambu...' },
     level2: { label: 'Sub-County', placeholder: 'Ex: Westlands, Langata, Kibra, Kajiado, Thika Town...' },
-    level3: { label: 'Ward', placeholder: 'Ex: Kilimani, Lavington, Parklands, Karen, Kasarani...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Kilimani, Lavington, Parklands, Karen, Kasarani...' },
     level4: { label: 'Village / Neighborhood', placeholder: 'Ex: Karen, Gigiri, Kileleshwa, Langata, Runda...' },
   },
 
   'Afrique du Sud': {
     level1: { label: 'Province', placeholder: 'Ex: Gauteng, Western Cape, KwaZulu-Natal, Eastern Cape...' },
     level2: { label: 'District / Metro', placeholder: 'Ex: City of Johannesburg, Cape Town Metro, eThekwini...' },
-    level3: { label: 'City / Town', placeholder: 'Ex: Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Johannesburg, Cape Town, Durban, Pretoria, Port Elizabeth...' },
     level4: { label: 'Suburb / Township', placeholder: 'Ex: Sandton, Soweto, Sea Point, Khayelitsha, Alexandra...' },
   },
 
   'Tanzanie': {
     level1: { label: 'Region', placeholder: 'Ex: Dar es Salaam, Mwanza, Arusha, Dodoma, Mbeya...' },
     level2: { label: 'District', placeholder: 'Ex: Ilala, Kinondoni, Temeke, Arusha, Dodoma Urban...' },
-    level3: { label: 'Ward', placeholder: 'Ex: Kariakoo, Oyster Bay, Msasani, Sinza, Mwenge...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Kariakoo, Oyster Bay, Msasani, Sinza, Mwenge...' },
     level4: { label: 'Village / Neighborhood', placeholder: 'Ex: votre village ou quartier...' },
   },
 
   'Éthiopie': {
     level1: { label: 'Région', placeholder: 'Ex: Addis Abeba, Oromia, Amhara, Tigray, SNNPR...' },
     level2: { label: 'Zone', placeholder: 'Ex: Addis Abeba, Shewa, Welega, Arsi, Jimma...' },
-    level3: { label: 'Woreda', placeholder: 'Ex: Bole, Kirkos, Arada, Yeka, Kolfe Keranio...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Bole, Kirkos, Arada, Yeka, Kolfe Keranio...' },
     level4: { label: 'Kebele / Quartier', placeholder: 'Ex: votre kebele ou quartier...' },
   },
 
@@ -237,42 +237,42 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Allemagne': {
     level1: { label: 'Bundesland', placeholder: 'Ex: Bayern, Berlin, NRW, Hessen, Baden-Württemberg...' },
     level2: { label: 'Kreis / Landkreis', placeholder: 'Ex: München, Köln, Hamburg, Frankfurt, Stuttgart...' },
-    level3: { label: 'Stadt / Gemeinde', placeholder: 'Ex: München, Köln, Frankfurt, Hamburg, Berlin...' },
+    level3: { label: 'Commune', placeholder: 'Ex: München, Köln, Frankfurt, Hamburg, Berlin...' },
     level4: { label: 'Stadtteil', placeholder: 'Ex: Schwabing, Mitte, Altona, Sachsenhausen, Prenzlauer Berg...' },
   },
 
   'Espagne': {
     level1: { label: 'Comunidad autónoma', placeholder: 'Ex: Cataluña, Madrid, Andalucía, Valencia, País Vasco...' },
     level2: { label: 'Provincia', placeholder: 'Ex: Barcelona, Madrid, Sevilla, Valencia, Málaga...' },
-    level3: { label: 'Municipio', placeholder: 'Ex: Barcelona, Madrid, Sevilla, Valencia, Zaragoza...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Barcelona, Madrid, Sevilla, Valencia, Zaragoza...' },
     level4: { label: 'Barrio', placeholder: 'Ex: Gracia, Barrio Gótico, Lavapiés, Triana, El Born...' },
   },
 
   'Italie': {
     level1: { label: 'Regione', placeholder: 'Ex: Lombardia, Lazio, Sicilia, Campania, Veneto...' },
     level2: { label: 'Provincia', placeholder: 'Ex: Milano, Roma, Napoli, Torino, Venezia...' },
-    level3: { label: 'Comune', placeholder: 'Ex: Milano, Roma, Napoli, Firenze, Torino, Venezia...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Milano, Roma, Napoli, Firenze, Torino, Venezia...' },
     level4: { label: 'Quartiere', placeholder: 'Ex: Navigli, Trastevere, Pigneto, Parioli, Testaccio...' },
   },
 
   'Portugal': {
     level1: { label: 'Região', placeholder: 'Ex: Lisboa, Norte, Centro, Alentejo, Algarve...' },
     level2: { label: 'Distrito', placeholder: 'Ex: Lisboa, Porto, Braga, Setúbal, Faro...' },
-    level3: { label: 'Município', placeholder: 'Ex: Lisboa, Porto, Braga, Loures, Sintra, Coimbra...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Lisboa, Porto, Braga, Loures, Sintra, Coimbra...' },
     level4: { label: 'Bairro / Freguesia', placeholder: 'Ex: Alfama, Bairro Alto, Mouraria, Chiado...' },
   },
 
   'Royaume-Uni': {
     level1: { label: 'Region / Nation', placeholder: 'Ex: England, Scotland, Wales, Northern Ireland...' },
     level2: { label: 'County / Council', placeholder: 'Ex: Greater London, West Yorkshire, Kent, Strathclyde...' },
-    level3: { label: 'City / Town', placeholder: 'Ex: London, Manchester, Birmingham, Glasgow, Edinburgh...' },
+    level3: { label: 'Commune', placeholder: 'Ex: London, Manchester, Birmingham, Glasgow, Edinburgh...' },
     level4: { label: 'Neighborhood', placeholder: 'Ex: Soho, Notting Hill, Brixton, Shoreditch, Hackney...' },
   },
 
   'Pays-Bas': {
     level1: { label: 'Provincie', placeholder: 'Ex: Noord-Holland, Zuid-Holland, Utrecht, Gelderland...' },
     level2: { label: 'Gemeente (grote)', placeholder: 'Ex: Amsterdam, Rotterdam, Den Haag, Utrecht...' },
-    level3: { label: 'Gemeente', placeholder: 'Ex: Amsterdam, Rotterdam, Den Haag, Utrecht, Eindhoven...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Amsterdam, Rotterdam, Den Haag, Utrecht, Eindhoven...' },
     level4: { label: 'Wijk / Buurt', placeholder: 'Ex: Jordaan, De Pijp, Centrum, Noord, Oud-West...' },
   },
 
@@ -283,28 +283,28 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'États-Unis': {
     level1: { label: 'State', placeholder: 'Ex: California, New York, Texas, Florida, Illinois...' },
     level2: { label: 'County', placeholder: 'Ex: LA County, New York County, Harris County, Cook County...' },
-    level3: { label: 'City / Town', placeholder: 'Ex: Los Angeles, New York, Houston, Chicago, Phoenix...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Los Angeles, New York, Houston, Chicago, Phoenix...' },
     level4: { label: 'Neighborhood', placeholder: 'Ex: Hollywood, Brooklyn, Harlem, Midtown, The Loop...' },
   },
 
   'Canada': {
     level1: { label: 'Province / Territoire', placeholder: 'Ex: Ontario, Québec, Colombie-Britannique, Alberta...' },
     level2: { label: 'Comté / MRC / Région', placeholder: 'Ex: Toronto, Montréal, Vancouver, Ottawa, Calgary...' },
-    level3: { label: 'Ville / Municipalité', placeholder: 'Ex: Toronto, Montréal, Vancouver, Ottawa, Calgary...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Toronto, Montréal, Vancouver, Ottawa, Calgary...' },
     level4: { label: 'Quartier', placeholder: 'Ex: Plateau-Mont-Royal, Outremont, Rosedale, Kitsilano...' },
   },
 
   'Brésil': {
     level1: { label: 'Estado', placeholder: 'Ex: São Paulo, Rio de Janeiro, Bahia, Minas Gerais, Pará...' },
     level2: { label: 'Mesorregião', placeholder: 'Ex: Metropolitana de São Paulo, Grande Rio de Janeiro...' },
-    level3: { label: 'Município', placeholder: 'Ex: São Paulo, Rio de Janeiro, Salvador, Fortaleza, Brasília...' },
+    level3: { label: 'Commune', placeholder: 'Ex: São Paulo, Rio de Janeiro, Salvador, Fortaleza, Brasília...' },
     level4: { label: 'Bairro', placeholder: 'Ex: Pinheiros, Ipanema, Pelourinho, Meireles, Lapa...' },
   },
 
   'Mexique': {
     level1: { label: 'Estado', placeholder: 'Ex: Ciudad de México, Jalisco, Nuevo León, Puebla, Veracruz...' },
     level2: { label: 'Municipio / Alcaldía', placeholder: 'Ex: Cuauhtémoc, Guadalajara, Monterrey, Puebla...' },
-    level3: { label: 'Colonia', placeholder: 'Ex: Polanco, Roma Norte, Condesa, Doctores, Del Valle...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Polanco, Roma Norte, Condesa, Doctores, Del Valle...' },
     level4: { label: 'Manzana / Quartier', placeholder: 'Ex: votre quartier ou manzana...' },
   },
 
@@ -315,28 +315,28 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Inde': {
     level1: { label: 'State / UT', placeholder: 'Ex: Maharashtra, Delhi, Karnataka, Tamil Nadu, UP...' },
     level2: { label: 'District', placeholder: 'Ex: Mumbai, Delhi, Bangalore, Chennai, Hyderabad...' },
-    level3: { label: 'City / Tehsil', placeholder: 'Ex: Mumbai, New Delhi, Bangalore, Chennai, Hyderabad...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Mumbai, New Delhi, Bangalore, Chennai, Hyderabad...' },
     level4: { label: 'Neighborhood', placeholder: 'Ex: Bandra, Connaught Place, Koramangala, Andheri...' },
   },
 
   'Chine': {
     level1: { label: '省 Province', placeholder: 'Ex: Guangdong, Beijing, Shanghai, Sichuan, Zhejiang...' },
     level2: { label: '地级市 Préfecture', placeholder: 'Ex: Guangzhou, Shenzhen, Beijing, Wuhan, Chengdu...' },
-    level3: { label: '区 District', placeholder: 'Ex: Tianhe, Chaoyang, Pudong, Yuzhong, Jianghan...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Tianhe, Chaoyang, Pudong, Yuzhong, Jianghan...' },
     level4: { label: '街道 Quartier', placeholder: 'Ex: votre rue ou quartier...' },
   },
 
   'Japon': {
     level1: { label: '都道府県 Préfecture', placeholder: 'Ex: Tokyo, Osaka, Kanagawa, Aichi, Hokkaido...' },
     level2: { label: '市 Ville', placeholder: 'Ex: Shinjuku, Shibuya, Yokohama, Osaka, Nagoya...' },
-    level3: { label: '区 Arrondissement', placeholder: 'Ex: Nakameguro, Harajuku, Namba, Umeda...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Nakameguro, Harajuku, Namba, Umeda...' },
     level4: { label: '丁目 Quartier', placeholder: 'Ex: votre quartier ou chō...' },
   },
 
   'Arabie saoudite': {
     level1: { label: 'Région (Mintaqah)', placeholder: 'Ex: Riyad, La Mecque, Médine, Dammam...' },
     level2: { label: 'Gouvernorat', placeholder: 'Ex: Riyad, Djeddah, La Mecque, Dammam, Médine...' },
-    level3: { label: 'Ville / Muhafazah', placeholder: 'Ex: Riyad, Djeddah, La Mecque, Médine, Dammam...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Riyad, Djeddah, La Mecque, Médine, Dammam...' },
     level4: { label: 'Quartier / Hayy', placeholder: 'Ex: Al Malaz, Al Murabba, Al Olaya, Al Hamra...' },
   },
 
@@ -347,7 +347,7 @@ const COUNTRY_GEO_LABELS: Record<string, CountryGeoLabels> = {
   'Australie': {
     level1: { label: 'State / Territory', placeholder: 'Ex: New South Wales, Victoria, Queensland, WA, SA...' },
     level2: { label: "Local Gov't Area", placeholder: 'Ex: Sydney, Melbourne, Brisbane, Perth, Adelaide...' },
-    level3: { label: 'City / Suburb', placeholder: 'Ex: Sydney, Melbourne, Brisbane, Perth, Adelaide...' },
+    level3: { label: 'Commune', placeholder: 'Ex: Sydney, Melbourne, Brisbane, Perth, Adelaide...' },
     level4: { label: 'Neighborhood', placeholder: 'Ex: Bondi, Fitzroy, South Bank, Fremantle, Glenelg...' },
   },
 }
