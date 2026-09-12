@@ -167,8 +167,8 @@ export default function Services({ onClose }: ServicesProps = {}) {
     <>
       {/* Header (style Espace Gestion) */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-      {/* Retour + titre + Favoris */}
-      <div className="max-w-lg mx-auto flex items-center justify-between gap-2" style={{ padding: '6px 12px' }}>
+      {/* Retour + titre + Pub + Favoris — tous sur la même ligne */}
+      <div className="max-w-lg mx-auto flex items-center gap-2" style={{ padding: '6px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button
             type="button"
@@ -179,6 +179,10 @@ export default function Services({ onClose }: ServicesProps = {}) {
             ‹
           </button>
           <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>💼 Services</h1>
+        </div>
+        {/* Pub — même ligne que le bouton Favoris, juste avant lui ; Favoris ne bouge pas */}
+        <div className="flex-1 min-w-0 flex justify-end">
+          <PubCarrousel />
         </div>
         {numeroH && (
           <FavorisDropdown
@@ -204,11 +208,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
             })}
           </FavorisDropdown>
         )}
-      </div>
-      {/* Pub — sa propre rangée dans le header, comme les onglets de Terre ADAM,
-          pour lui laisser assez de hauteur pour s'afficher correctement */}
-      <div className="max-w-lg mx-auto" style={{ padding: '0 12px 8px' }}>
-        <PubCarrousel />
       </div>
       </header>
 
