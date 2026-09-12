@@ -56,28 +56,31 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
   // dans la page Services, sous le bouton de création.
   if (pubs.length === 0) return null
 
-  // Version compacte : pas de marge/padding externes, hauteur fixe plutôt
-  // qu'un ratio 4/1 — pensée pour tenir sur la même ligne qu'un autre bouton
-  // (ex : à côté de "Favoris" dans un header), même mécanisme de défilement.
+  // Version compacte : pas de marge/padding externes, gabarit à 2 cellules
+  // (image qui remplit tout son espace + cellule info avec titre, description
+  // et texte du bouton, rien de caché) — pensée pour tenir sur la même ligne
+  // qu'un autre bouton (ex : à côté de "Favoris" dans un header), avec le
+  // même mécanisme de défilement automatique + flèches que sur l'accueil.
   if (compact) {
     return (
-      <div className="relative w-full h-full rounded-lg overflow-hidden bg-gray-100">
+      <div className="relative w-full h-full rounded-lg overflow-hidden border border-amber-300 bg-amber-50">
         {pubs.map((pub, i) => (
           <div
             key={pub.id}
             onClick={() => goTo(pub.lien)}
-            className="absolute inset-0 transition-opacity duration-300"
+            className="absolute inset-0 flex items-stretch gap-2 transition-opacity duration-300"
             style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
           >
-            <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            {pub.titre && (
-              <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/10 to-transparent px-2 py-1">
-                <p className="text-white font-bold text-[11px] leading-tight truncate drop-shadow">{pub.titre}</p>
-                {pub.description && (
-                  <p className="text-white/90 text-[9px] leading-tight truncate drop-shadow">{pub.description}</p>
-                )}
-              </div>
-            )}
+            <img src={imgUrl(pub.image_url)} alt="" className="h-full aspect-square flex-shrink-0 object-cover" />
+            <div className="min-w-0 flex-1 flex flex-col justify-center py-1 pr-6">
+              <p className="font-bold text-gray-900 text-xs truncate">{pub.titre || 'Pub'}</p>
+              {pub.description && (
+                <p className="text-gray-500 text-[10px] truncate">{pub.description}</p>
+              )}
+              {pub.bouton_texte && (
+                <span className="mt-0.5 inline-block text-[10px] font-bold text-amber-700 truncate">{pub.bouton_texte} ›</span>
+              )}
+            </div>
           </div>
         ))}
         {pubs.length > 1 && (
