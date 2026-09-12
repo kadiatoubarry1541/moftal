@@ -228,7 +228,7 @@ export default function TerreAdam() {
     {
       scope: 'sous-prefecture',
       location: userData?.sousPrefectureCode || userData?.sousPrefecture || '',
-      label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Sous-préfecture')
+      label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Commune')
     },
     {
       scope: 'prefecture',
@@ -765,7 +765,7 @@ export default function TerreAdam() {
           {
             id: 'sous-prefecture',
             icon: '🏛️',
-            label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Sous-préfecture')
+            label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Commune')
           },
           {
             id: 'prefecture',
@@ -1348,9 +1348,9 @@ export default function TerreAdam() {
           </div>
         )}
 
-        {/* 2. Sous-préfecture */}
+        {/* 2. Commune (sous-préfecture) */}
         {activeTab === 'sous-prefecture' && (() => {
-          const name = userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Sous-préfecture');
+          const name = userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Commune');
           const loc = userData?.sousPrefectureCode || userData?.sousPrefecture || name;
           return (
             <div className="space-y-3">
@@ -1359,7 +1359,7 @@ export default function TerreAdam() {
                   <DeveloppementGouvernemental scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                    <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune sous-préfecture enregistrée</p>
+                    <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune commune enregistrée</p>
                   </div>
                 )}
               </div>
