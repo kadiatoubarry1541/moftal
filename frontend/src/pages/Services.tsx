@@ -1,77 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { FavorisDropdown, FavorisDropdownItem } from '../components/FavorisDropdown'
-
-const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
-
-interface Pub {
-  id: string
-  image_url: string
-  lien?: string
-  titre?: string
-  description?: string
-  bouton_texte?: string
-}
-
-// Bandeau "Pub" compact — tient sur la même ligne que le bouton Favoris dans
-// le header, sans faire bouger ce dernier. Montre une pub à la fois, qui
-// change automatiquement toutes les 3 secondes (comme une liste qui tourne).
-function PubCarrousel() {
-  const navigate = useNavigate()
-  const [pubs, setPubs] = useState<Pub[]>([])
-  const [index, setIndex] = useState(0)
-
-  useEffect(() => {
-    fetch(`${API}/api/publicites/actives`)
-      .then(r => r.json())
-      .then(d => { if (d.success) setPubs(d.publicites) })
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    if (pubs.length <= 1) return
-    const timer = setInterval(() => setIndex(i => (i + 1) % pubs.length), 3000)
-    return () => clearInterval(timer)
-  }, [pubs.length])
-
-  if (pubs.length === 0) {
-    return (
-      <button
-        type="button"
-        onClick={() => navigate('/publicite')}
-        className="w-full h-[68px] flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold text-white"
-        style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
-      >
-        📣 Pub
-      </button>
-    )
-  }
-
-  const pub = pubs[index % pubs.length]
-  const imgSrc = pub.image_url.startsWith('http') ? pub.image_url : `${API}${pub.image_url}`
-
-  // Carte "Pub" au gabarit fixe, identique pour toutes les pubs : une cellule
-  // image (qui remplit tout son espace) + une cellule info (titre, description,
-  // bouton) qui remplit le reste — rien n'est caché ou coupé.
-  return (
-    <button
-      type="button"
-      onClick={() => navigate(pub.lien || '/publicite')}
-      className="w-full h-[68px] flex items-stretch gap-2 rounded-lg overflow-hidden border border-amber-300 bg-amber-50 text-left"
-    >
-      <img src={imgSrc} alt={pub.titre || 'Pub'} className="h-full w-[68px] flex-shrink-0 object-cover" />
-      <div className="min-w-0 flex-1 flex flex-col justify-center py-1 pr-2">
-        <p className="font-bold text-gray-900 text-xs truncate">{pub.titre || 'Pub'}</p>
-        {pub.description && (
-          <p className="text-gray-500 text-[10px] truncate">{pub.description}</p>
-        )}
-        {pub.bouton_texte && (
-          <span className="mt-0.5 inline-block text-[10px] font-bold text-amber-700 truncate">{pub.bouton_texte} ›</span>
-        )}
-      </div>
-    </button>
-  )
-}
+import { AdCarousel } from '../components/AdCarousel'
 
 interface ServicesProps {
   onClose?: () => void
@@ -173,8 +103,8 @@ export default function Services({ onClose }: ServicesProps = {}) {
     <>
       {/* Header (style Espace Gestion) */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-      {/* Retour + titre + Pub + Favoris — tous sur la même ligne */}
-      <div className="max-w-lg mx-auto flex items-center gap-2" style={{ padding: '6px 12px' }}>
+      {/* Retour + titre + Favoris */}
+      <div className="max-w-lg mx-auto flex items-center justify-between gap-2" style={{ padding: '6px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button
             type="button"
@@ -185,10 +115,6 @@ export default function Services({ onClose }: ServicesProps = {}) {
             ‹
           </button>
           <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>💼 Services</h1>
-        </div>
-        {/* Pub — même ligne que le bouton Favoris, juste avant lui ; Favoris ne bouge pas */}
-        <div className="flex-1 min-w-0 flex justify-end">
-          <PubCarrousel />
         </div>
         {numeroH && (
           <FavorisDropdown
@@ -216,6 +142,9 @@ export default function Services({ onClose }: ServicesProps = {}) {
         )}
       </div>
       </header>
+
+    {/* Pub — même carrousel que sur la page d'accueil (image + dégradé + titre/description/bouton, défilement automatique, flèches précédent/suivant) */}
+    <AdCarousel />
 
     <div className="max-w-lg mx-auto px-2 pb-4 pt-3">
       {/* Grille icônes style compact */}
