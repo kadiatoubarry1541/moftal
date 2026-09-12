@@ -34,7 +34,7 @@ interface ArbreGenealogiqueProps {
   onOpenGallery?: () => void
 }
 
-export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onTreeHiddenChange }: ArbreGenealogiqueProps) {
+export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onTreeHiddenChange, onOpenGallery }: ArbreGenealogiqueProps) {
   const { t } = useI18n()
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
@@ -508,13 +508,27 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               className={`view-btn ${showStats ? 'active' : ''}`}
               onClick={() => setShowStats(!showStats)}
             >
-              ℹ️ Infos
+              📊 Aperçu
             </button>
             <button
               className="view-btn"
               onClick={() => navigate('/famille/noyau')}
             >
               🧬 Mon Noyau
+            </button>
+            {onOpenGallery && (
+              <button
+                className="view-btn"
+                onClick={onOpenGallery}
+              >
+                📷 Galerie
+              </button>
+            )}
+            <button
+              className="view-btn"
+              onClick={() => navigate('/probleme')}
+            >
+              🚨 Problèmes
             </button>
           </div>
 
@@ -1177,7 +1191,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         <div className="member-details-modal">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>ℹ️ Infos de l'arbre</h3>
+              <h3>📊 Aperçu de l'arbre</h3>
               <button onClick={() => setShowStats(false)}>✕</button>
             </div>
             <div className="modal-body">

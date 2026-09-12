@@ -918,7 +918,8 @@ const enhancedUser: UserData = useMemo(() => {
         <h1 className="text-2xl font-bold text-gray-900">Héritage</h1>
       </div>
 
-      {/* Navigation — une seule ligne compacte, 6 boutons */}
+      {/* Navigation — une seule ligne compacte, 4 boutons. Galerie et
+          Problèmes ont été déplacés dans l'onglet Arbre lui-même. */}
       <div className="bg-white border-b border-gray-200 mb-4">
         <nav className="flex" role="tablist">
 
@@ -944,22 +945,6 @@ const enhancedUser: UserData = useMemo(() => {
           >
             <span className="text-lg leading-none">🏠</span>
             <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Foyer</span>
-          </button>
-
-          <button type="button"
-            onClick={() => navigate('/probleme')}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-lg leading-none">🚨</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Problèmes</span>
-          </button>
-
-          <button type="button"
-            onClick={openGallery}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-lg leading-none">📷</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Galerie</span>
           </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
