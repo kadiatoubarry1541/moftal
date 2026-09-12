@@ -71,9 +71,9 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             className="absolute inset-0 flex items-stretch gap-2 transition-opacity duration-300"
             style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
           >
-            <img src={imgUrl(pub.image_url)} alt="" className="h-full aspect-square flex-shrink-0 object-cover" />
+            <img src={imgUrl(pub.image_url)} alt="" className="h-full w-20 flex-shrink-0 object-cover" />
             <div className="min-w-0 flex-1 flex flex-col justify-center py-1 pr-6">
-              <p className="font-bold text-gray-900 text-xs truncate">{pub.titre || 'Pub'}</p>
+              {pub.titre && <p className="font-bold text-gray-900 text-xs truncate">{pub.titre}</p>}
               {pub.description && (
                 <p className="text-gray-500 text-[10px] truncate">{pub.description}</p>
               )}
