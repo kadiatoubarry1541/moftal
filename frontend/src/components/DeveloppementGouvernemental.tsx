@@ -451,7 +451,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
       {hasCaisseEtRegles && (
         <>
           <CompteSolidariteQuartier ref={soliRef} scope={scope} location={location} locationName={locationName} />
-          <ReglesLocalite ref={reglesRef} title="Règles de la sous-préfecture" />
+          <ReglesLocalite ref={reglesRef} title="Règles de la commune" />
         </>
       )}
 
@@ -1132,7 +1132,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
                   onClick={() => { setShowInfos(false); reglesRef.current?.open(); }}
                   className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
                 >
-                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">📜 Règles de la sous-préfecture</span>
+                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">📜 Règles de la commune</span>
                   <span className="text-gray-400">›</span>
                 </button>
               )}
