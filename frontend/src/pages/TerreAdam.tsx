@@ -11,8 +11,8 @@ import { getCountryGeoLabels } from '../utils/countryGeoStructure';
 import { AudioRecorder } from '../components/AudioRecorder';
 import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
 import LivreQuartier, { type LivreQuartierHandle } from '../components/LivreQuartier';
+import ReglesLocalite, { type ReglesLocaliteHandle } from '../components/ReglesLocalite';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
-import { REGLES_LOCALITE, NUMERO_EMOJI } from '../utils/reglesLocalite';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 const MAX_VIDEO_SECONDS = 5;
@@ -175,6 +175,7 @@ export default function TerreAdam() {
   // bouton (masqué sur la page Quartier via hideProjetsButton).
   const quartierDevRef = useRef<DeveloppementSectionHandle>(null);
   const livreQuartierRef = useRef<LivreQuartierHandle>(null);
+  const reglesQuartierRef = useRef<ReglesLocaliteHandle>(null);
 
   // Partage d'un message du chat vers un niveau supérieur (sous-préfecture,
   // préfecture...), comme sur WhatsApp — sans avoir à retaper l'information.
@@ -1532,17 +1533,13 @@ export default function TerreAdam() {
                   <span className="text-white/80">›</span>
                 </button>
 
-                <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
-                  <h3 className="font-bold text-gray-800 text-sm mb-3">📜 Règles du quartier</h3>
-                  <ul className="space-y-2.5 text-sm text-gray-600">
-                    {REGLES_LOCALITE.map((regle, i) => (
-                      <li key={i} className="flex gap-2">
-                        <span className="flex-shrink-0">{NUMERO_EMOJI[i] || `${i + 1}.`}</span>
-                        <span>{regle}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <button
+                  onClick={() => { setShowQuartierMenu(false); reglesQuartierRef.current?.open(); }}
+                  className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
+                >
+                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">📜 Règles du quartier</span>
+                  <span className="text-gray-400">›</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1558,6 +1555,8 @@ export default function TerreAdam() {
           canPublish={isJournalist || isAdmin}
         />
       )}
+
+      <ReglesLocalite ref={reglesQuartierRef} title="Règles du quartier" />
 
       {/* Modal — Partager un message vers un niveau au-dessus */}
       {shareMsg && (

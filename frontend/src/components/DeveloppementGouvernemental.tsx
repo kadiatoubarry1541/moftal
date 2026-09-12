@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import CompteSolidariteQuartier, { type CompteSolidariteQuartierHandle } from './CompteSolidariteQuartier';
 import ListeEnfants, { type ListeEnfantsHandle } from './ListeEnfants';
 import LivreQuartier, { type LivreQuartierHandle } from './LivreQuartier';
-import { REGLES_LOCALITE, NUMERO_EMOJI } from '../utils/reglesLocalite';
+import ReglesLocalite, { type ReglesLocaliteHandle } from './ReglesLocalite';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 const MAX_VIDEO_SECONDS = 5;
@@ -56,6 +56,18 @@ interface HigherLevel {
   location: string;
   label: string;
 }
+
+// Nom des lieux "enfants" affichés dans le bouton "Liste" de chaque niveau :
+// une sous-préfecture regroupe des quartiers, une préfecture des
+// sous-préfectures, etc. — jusqu'en haut de la hiérarchie.
+const CHILD_LABELS: Record<string, string> = {
+  'sous-prefecture': 'quartiers',
+  'prefecture':      'sous-préfectures',
+  'region':          'préfectures',
+  'pays':            'régions',
+  'continent':       'pays',
+  'mondial':         'continents',
+};
 
 interface Props {
   scope: string;
@@ -117,14 +129,17 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  // La sous-préfecture regroupe des quartiers et a sa propre caisse — son
-  // logo ouvre donc le même menu "Infos" (Liste, Photo, Caisse, Livre,
-  // Règles) que le quartier, au lieu du simple logo des autres niveaux.
-  const isSousPrefecture = scope === 'sous-prefecture';
+  // Chaque niveau regroupe le niveau du dessous — son logo ouvre donc le
+  // même menu "Infos" (Liste des lieux qu'il regroupe, Photo, Livre) que le
+  // quartier. Seule la sous-préfecture garde en plus sa propre caisse et
+  // les règles de localité (le quartier a les siennes séparément).
+  const childLabel = CHILD_LABELS[scope] || 'lieux';
+  const hasCaisseEtRegles = scope === 'sous-prefecture';
   const [showInfos, setShowInfos] = useState(false);
   const soliRef = useRef<CompteSolidariteQuartierHandle>(null);
   const listeRef = useRef<ListeEnfantsHandle>(null);
   const livreRef = useRef<LivreQuartierHandle>(null);
+  const reglesRef = useRef<ReglesLocaliteHandle>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const token = () => localStorage.getItem('token');
@@ -415,64 +430,28 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   return (
     <div className="space-y-3">
 
-      {/* Logo du lieu — pour la sous-préfecture, ouvre le menu "Infos"
-          (Liste des quartiers, Photo de profil, Caisse, Livre, Règles)
-          comme pour le quartier ; pour les autres niveaux, change la photo
-          directement au clic. */}
-      {isSousPrefecture ? (
-        (logoUrl || canPublish) && (
-          <button type="button" onClick={() => setShowInfos(true)} className="w-full flex items-center gap-2 text-left">
-            <div className="relative w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-              {logoUrl ? (
-                <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-lg">🏛️</span>
-              )}
-            </div>
-            <span className="text-sm font-semibold text-gray-700 truncate">{locationName}</span>
-          </button>
-        )
-      ) : (
-        (logoUrl || canPublish) && (
-          <div className="flex items-center gap-2">
-            <label
-              className={`relative w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 ${canPublish ? 'cursor-pointer' : ''}`}
-              title={canPublish ? `Changer le logo de ${locationName}` : undefined}
-            >
-              {logoUrl ? (
-                <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-lg">🏛️</span>
-              )}
-              {canPublish && (
-                <>
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] leading-none text-white">
-                    {uploadingLogo ? '…' : '📷'}
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={uploadingLogo}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleLogoUpload(file);
-                      e.target.value = '';
-                    }}
-                  />
-                </>
-              )}
-            </label>
-            <span className="text-sm font-semibold text-gray-700 truncate">{locationName}</span>
+      {/* Logo du lieu — ouvre le menu "Infos" (Liste des lieux qu'il
+          regroupe, Photo de profil, Livre, ...) comme pour le quartier,
+          au lieu de changer la photo directement au clic. */}
+      {(logoUrl || canPublish) && (
+        <button type="button" onClick={() => setShowInfos(true)} className="w-full flex items-center gap-2 text-left">
+          <div className="relative w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`} alt={`Logo de ${locationName}`} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg">🏛️</span>
+            )}
           </div>
-        )
+          <span className="text-sm font-semibold text-gray-700 truncate">{locationName}</span>
+        </button>
       )}
 
-      {isSousPrefecture && (
+      <ListeEnfants ref={listeRef} scope={scope} location={location} locationName={locationName} childLabel={childLabel} canManage={canPublish} />
+      <LivreQuartier ref={livreRef} scope={scope} location={location} locationName={locationName} canPublish={canPublish} />
+      {hasCaisseEtRegles && (
         <>
-          <ListeEnfants ref={listeRef} scope={scope} location={location} locationName={locationName} childLabel="quartiers" canManage={canPublish} />
-          <LivreQuartier ref={livreRef} scope={scope} location={location} locationName={locationName} canPublish={canPublish} />
           <CompteSolidariteQuartier ref={soliRef} scope={scope} location={location} locationName={locationName} />
+          <ReglesLocalite ref={reglesRef} title="Règles de la sous-préfecture" />
         </>
       )}
 
@@ -1069,10 +1048,10 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
         </div>
       )}
 
-      {/* Page entière "Infos" de la sous-préfecture — même principe que pour
-          le quartier : logo, nom, puis un menu (Liste des quartiers, Photo
-          de profil, Caisse, Livre) et les règles de la localité en dessous. */}
-      {isSousPrefecture && showInfos && (
+      {/* Page entière "Infos" du lieu — même principe que pour le quartier :
+          logo, nom, puis un menu (Liste des lieux qu'il regroupe, Photo de
+          profil, Livre, ...). */}
+      {showInfos && (
         <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col">
           <div className="bg-gray-800 text-white px-4 py-3 flex items-center gap-3 flex-shrink-0">
             <button onClick={() => setShowInfos(false)} aria-label="Retour" className="text-3xl leading-none">‹</button>
@@ -1118,7 +1097,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
                 onClick={() => { setShowInfos(false); listeRef.current?.open(); }}
                 className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
               >
-                <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">👥 Liste des quartiers</span>
+                <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">👥 Liste des {childLabel}</span>
                 <span className="text-gray-400">›</span>
               </button>
               {canPublish && (
@@ -1131,13 +1110,15 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
                   <span className="text-gray-400">›</span>
                 </button>
               )}
-              <button
-                onClick={() => { setShowInfos(false); soliRef.current?.open(); }}
-                className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl shadow"
-              >
-                <span className="flex items-center gap-3 font-bold text-white text-sm">💰 Caisse</span>
-                <span className="text-white/80">›</span>
-              </button>
+              {hasCaisseEtRegles && (
+                <button
+                  onClick={() => { setShowInfos(false); soliRef.current?.open(); }}
+                  className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl shadow"
+                >
+                  <span className="flex items-center gap-3 font-bold text-white text-sm">💰 Caisse</span>
+                  <span className="text-white/80">›</span>
+                </button>
+              )}
               <button
                 onClick={() => { setShowInfos(false); livreRef.current?.open(); }}
                 className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-amber-700 to-amber-600 rounded-xl shadow"
@@ -1146,17 +1127,15 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
                 <span className="text-white/80">›</span>
               </button>
 
-              <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
-                <h3 className="font-bold text-gray-800 text-sm mb-3">📜 Règles de la sous-préfecture</h3>
-                <ul className="space-y-2.5 text-sm text-gray-600">
-                  {REGLES_LOCALITE.map((regle, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="flex-shrink-0">{NUMERO_EMOJI[i] || `${i + 1}.`}</span>
-                      <span>{regle}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {hasCaisseEtRegles && (
+                <button
+                  onClick={() => { setShowInfos(false); reglesRef.current?.open(); }}
+                  className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
+                >
+                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">📜 Règles de la sous-préfecture</span>
+                  <span className="text-gray-400">›</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
