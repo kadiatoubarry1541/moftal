@@ -33,16 +33,16 @@ function saveFavoriteServices(numeroH: string, ids: string[]) {
 
 function ServiceIcon({ to, emoji, label, bg, isFavorite }: ServiceItem & { isFavorite: boolean }) {
   return (
-    <Link to={to} className="relative w-full flex flex-col items-center gap-1 py-4 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-gray-50 hover:border-gray-200 active:scale-95">
+    <Link to={to} className="relative w-full flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-xl bg-white border border-gray-100 shadow-sm transition hover:bg-gray-50 hover:border-gray-200 active:scale-95">
       {isFavorite && (
         <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
           ✓
         </span>
       )}
-      <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl flex-shrink-0 ${bg}`}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${bg}`}>
         {emoji}
       </div>
-      <span className="text-[11px] font-medium text-gray-600 text-center leading-tight">{label}</span>
+      <span className="text-[10px] font-medium text-gray-600 text-center leading-tight">{label}</span>
     </Link>
   )
 }
@@ -149,7 +149,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
 
     <div className="max-w-lg mx-auto px-2 pb-4 pt-3">
       {/* Grille icônes style compact */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-2">
         {orderedServices.map(s => (
           <ServiceIcon key={s.to} {...s} isFavorite={favoriteIds.includes(s.to)} />
         ))}
@@ -159,7 +159,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
       <button
         type="button"
         onClick={() => navigate('/inscription-pro')}
-        className="w-full flex items-center justify-center gap-1.5 px-3 py-3.5 mt-6 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-3 mt-4 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
       >
         ➕ Proposer votre service
       </button>
