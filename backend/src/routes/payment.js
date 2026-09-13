@@ -187,6 +187,24 @@ function calculerExpiration(periode) {
   return d;
 }
 
+// ── Régularisation (compte bloqué pour impayé, Visibilité/Gestion Interne) ──
+// L'essai gratuit de 3 mois n'est jamais dû. Mais au-delà (mois payés ou
+// consommés pendant le délai de grâce sans être payés), TOUS les mois
+// consommés doivent être réglés avant de débloquer le compte — pas de
+// nouvel abonnement "propre" tant que la dette n'est pas payée.
+function calculerMoisDus(proAccount) {
+  const depart = proAccount.subscriptionValidUntil ? new Date(proAccount.subscriptionValidUntil) : new Date();
+  const maintenant = new Date();
+  let mois = (maintenant.getFullYear() - depart.getFullYear()) * 12 + (maintenant.getMonth() - depart.getMonth());
+  if (maintenant.getDate() > depart.getDate()) mois += 1;
+  return Math.max(1, mois);
+}
+
+function estTierGestionInterne(proAccount) {
+  if (!proAccount.gestionInterneValidUntil || !proAccount.subscriptionValidUntil) return false;
+  return new Date(proAccount.gestionInterneValidUntil).getTime() >= new Date(proAccount.subscriptionValidUntil).getTime();
+}
+
 // Tous les pays africains (nom complet et codes ISO courants)
 const PAYS_AFRICAINS = new Set([
   // Afrique de l'Ouest
@@ -301,6 +319,34 @@ router.get('/prix-compte-pro', authenticate, async (req, res) => {
         an:        getPrixGestionInterne(proAcc.type, 'an', pays),
       },
     });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+/**
+ * GET /api/payment/prix-regularisation?proId=...
+ * Retourne le montant à payer pour débloquer un compte (tous les mois
+ * consommés impayés, hors essai gratuit — voir calculerMoisDus).
+ */
+router.get('/prix-regularisation', authenticate, async (req, res) => {
+  try {
+    const { proId } = req.query;
+    if (!proId) return res.status(400).json({ success: false, message: 'proId requis.' });
+
+    const proAcc = await ProfessionalAccount.findByPk(proId);
+    if (!proAcc) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
+    if (proAcc.subscriptionStatus !== 'blocked') {
+      return res.json({ success: true, bloque: false, moisDus: 0, montant: 0 });
+    }
+
+    const pays = req.user?.pays || '';
+    const moisDus = calculerMoisDus(proAcc);
+    const tarifMensuel = estTierGestionInterne(proAcc)
+      ? getPrixGestionInterne(proAcc.type, 'mois', pays)
+      : getPrixVisibilite(proAcc.type, 'mois', pays);
+
+    res.json({ success: true, bloque: true, moisDus, tarifMensuel, montant: tarifMensuel * moisDus });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
@@ -613,6 +659,20 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     amount = getPrixGestionInterne(proAcc.type, periode, pays);
   }
 
+  // ── Régularisation d'un compte bloqué (Visibilité/Gestion Interne) ────────
+  // Tous les mois consommés impayés doivent être payés — pas de nouvel
+  // abonnement tant que cette dette n'est pas réglée.
+  if (purpose === 'regularisation') {
+    const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
+    if (!proAcc) return { error: 'Compte professionnel requis.' };
+    if (proAcc.subscriptionStatus !== 'blocked') return { error: 'Ce compte n\'est pas bloqué.' };
+    const moisDus = calculerMoisDus(proAcc);
+    const tarifMensuel = estTierGestionInterne(proAcc)
+      ? getPrixGestionInterne(proAcc.type, 'mois', pays)
+      : getPrixVisibilite(proAcc.type, 'mois', pays);
+    amount = tarifMensuel * moisDus;
+  }
+
   // ── Abonnement vendeur Échange (mensuel obligatoire, sans essai) ──────────
   if (purpose === 'vendeur_mois') {
     const vendorAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
@@ -826,6 +886,20 @@ export async function handlePostPayment(payment) {
         { where: { id: payment.relatedId } }
       );
       console.log(`✅ Gestion Interne activée (${periode}) — compte ${payment.relatedId} | expire: ${expiration.toLocaleDateString()}`);
+    }
+
+    // ── Régularisation d'un compte bloqué (paie tous les mois consommés) ──
+    if (payment.purpose === 'regularisation' && payment.relatedId) {
+      const proAcc = await ProfessionalAccount.findByPk(payment.relatedId);
+      if (proAcc) {
+        const moisDus = calculerMoisDus(proAcc);
+        const nouvelleDate = proAcc.subscriptionValidUntil ? new Date(proAcc.subscriptionValidUntil) : new Date();
+        nouvelleDate.setMonth(nouvelleDate.getMonth() + moisDus);
+        const maj = { subscriptionStatus: 'active', subscriptionValidUntil: nouvelleDate, isTrial: false };
+        if (proAcc.gestionInterneValidUntil) maj.gestionInterneValidUntil = nouvelleDate;
+        await proAcc.update(maj);
+        console.log(`✅ Régularisation payée (${moisDus} mois) — compte ${payment.relatedId} | à jour jusqu'au ${nouvelleDate.toLocaleDateString()}`);
+      }
     }
 
     // ── Abonnement vendeur Échange (mensuel, sans essai, sans délai de grâce) ──

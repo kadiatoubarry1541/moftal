@@ -349,6 +349,8 @@ export default function GestionInterne() {
   const [payGILoading, setPayGILoading] = useState(false);
   const [showGIPayment, setShowGIPayment] = useState(false);
   const [periodeGI, setPeriodeGI] = useState<"mois" | "troisMois" | "an" | "vie">("mois");
+  const [regul, setRegul] = useState<{ moisDus: number; montant: number } | null>(null);
+  const [showRegulPayment, setShowRegulPayment] = useState(false);
   const [showPaywall, setShowPaywall]   = useState(false);
   const [tabOverride, setTabOverride]   = useState<"pro" | "activite" | null>(null);
   const [connectModal, setConnectModal] = useState<{ accountId: number; name: string } | null>(null);
@@ -390,6 +392,16 @@ export default function GestionInterne() {
 
     Promise.all([myAccountsPromise, accesPromise, adminTenantsPromise]).finally(() => setLoading(false));
   }, []);
+
+  // Compte bloqué (3 mois d'impayé) : charger le montant à régulariser (tous les mois consommés)
+  useEffect(() => {
+    if (accesGI?.mode === "bloque" && accesGI?.proId) {
+      fetch(`${API}/api/payment/prix-regularisation?proId=${accesGI.proId}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => { if (d.success && d.bloque) setRegul({ moisDus: d.moisDus, montant: d.montant }); })
+        .catch(() => {});
+    }
+  }, [accesGI?.mode, accesGI?.proId]);
 
   // ─── FONCTIONS PAIEMENT ─────────────────────────────────────────────────────
 
@@ -546,6 +558,33 @@ export default function GestionInterne() {
   );
 
   // ─── SOUS-COMPOSANTS LOCAUX ──────────────────────────────────────────────────
+
+  const BandeauRegularisation = () => {
+    if (accesGI?.mode !== "bloque") return null;
+    return (
+      <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:10, padding:"12px 16px", marginBottom:16 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:20 }}>⛔</span>
+            <div>
+              <p style={{ margin:0, fontSize:13, color:"#991b1b", fontWeight:700 }}>
+                Compte bloqué — 3 mois sans paiement
+              </p>
+              <p style={{ margin:"2px 0 0", fontSize:11, color:"#b91c1c" }}>
+                {regul
+                  ? `${regul.moisDus} mois consommé${regul.moisDus > 1 ? "s" : ""} impayé${regul.moisDus > 1 ? "s" : ""} à régler : ${regul.montant.toLocaleString("fr-GN")} GNF`
+                  : "Calcul du montant à régler..."}
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setShowRegulPayment(true)} disabled={!regul}
+            style={{ padding:"7px 14px", background:"#dc2626", color:"white", border:"none", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap", opacity: regul ? 1 : 0.6 }}>
+            Payer et débloquer
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   const BandeauAcces = () => {
     if (userIsAdmin || !accesGI?.aAcces) return null;
@@ -963,6 +1002,13 @@ export default function GestionInterne() {
       label: "Créer un compte pro",
       onClick: () => navigate("/inscription-pro"),
     };
+  } else if (accesGI?.mode === "bloque") {
+    espacePro = {
+      emoji: "⛔", titre: "Espace Pro",
+      desc: "Compte bloqué pour impayé — réglez vos mois consommés pour continuer.",
+      label: "Payer et débloquer",
+      onClick: () => setShowRegulPayment(true),
+    };
   } else if (sansAcces) {
     espacePro = {
       emoji: "🔒", titre: "Espace Pro",
@@ -1011,7 +1057,8 @@ export default function GestionInterne() {
             </button>
           </div>
 
-          {showPaywall && sansAcces && <OffreVie />}
+          <BandeauRegularisation />
+          {showPaywall && sansAcces && accesGI?.mode !== "bloque" && <OffreVie />}
           <BandeauAcces />
 
           {/* Liste des comptes — toujours visible dès qu'il y en a */}
@@ -1158,6 +1205,23 @@ export default function GestionInterne() {
           purpose={purposeMapGI[periodeGI]}
           relatedId={accesGI?.proId}
           description={`Gestion Interne ${periodeGI === "mois" ? "mensuel" : periodeGI === "troisMois" ? "3 mois" : periodeGI === "an" ? "annuel" : "à vie"}`}
+        />
+      )}
+      {showRegulPayment && regul && (
+        <PaymentModal
+          isOpen={showRegulPayment}
+          onClose={() => setShowRegulPayment(false)}
+          onSuccess={() => {
+            setShowRegulPayment(false);
+            setRegul(null);
+            fetch(`${API}/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
+              .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {});
+          }}
+          amount={regul.montant}
+          currency="GNF"
+          purpose="regularisation"
+          relatedId={accesGI?.proId}
+          description={`Régularisation — ${regul.moisDus} mois impayé${regul.moisDus > 1 ? "s" : ""}`}
         />
       )}
     </div>

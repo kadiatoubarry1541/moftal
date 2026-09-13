@@ -384,18 +384,81 @@ function SubscriptionPaymentWall({
   const [prix, setPrix] = useState<{ visibilite: Record<string, number>; gestionInterne: Record<string, number> } | null>(null);
   const [periodeChoisie, setPeriodeChoisie] = useState<"mois" | "troisMois" | "an">("mois");
   const [showPayment, setShowPayment] = useState(false);
+  const [regul, setRegul] = useState<{ moisDus: number; montant: number } | null>(null);
+  const [showRegulPayment, setShowRegulPayment] = useState(false);
 
   const isOverdue   = account.subscriptionStatus === "overdue";
   const isNeverPaid = account.subscriptionStatus === "never_paid";
+  const isBlocked   = account.subscriptionStatus === "blocked";
 
   useEffect(() => {
+    if (isBlocked) return;
     fetch(`${API}/api/payment/prix-compte-pro?proId=${account.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
       .then(d => { if (d.success) setPrix(d); })
       .catch(() => {});
-  }, [account.id]);
+  }, [account.id, isBlocked]);
+
+  useEffect(() => {
+    if (!isBlocked) return;
+    fetch(`${API}/api/payment/prix-regularisation?proId=${account.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (d.success && d.bloque) setRegul({ moisDus: d.moisDus, montant: d.montant }); })
+      .catch(() => {});
+  }, [account.id, isBlocked]);
+
+  if (isBlocked) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 py-8">
+        <div className="max-w-lg w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-red-200 dark:border-red-800 p-6 text-center">
+          <div className="text-5xl mb-2">⛔</div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">Compte bloqué — 3 mois sans paiement</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Tous les mois consommés impayés doivent être réglés pour débloquer votre compte.
+          </p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl p-4 mb-4">
+            {regul ? (
+              <p className="text-lg font-bold text-red-700 dark:text-red-300">
+                {regul.moisDus} mois impayé{regul.moisDus > 1 ? "s" : ""} — {regul.montant.toLocaleString("fr-GN")} GNF
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400 animate-pulse">Calcul du montant à régler...</p>
+            )}
+          </div>
+          <button
+            onClick={() => setShowRegulPayment(true)}
+            disabled={!regul}
+            className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors mb-2"
+          >
+            💳 Payer et débloquer
+          </button>
+          <button
+            onClick={() => navigate("/mes-comptes-pro")}
+            className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-center"
+          >
+            ← Retour à mes comptes
+          </button>
+        </div>
+
+        {showRegulPayment && regul && (
+          <PaymentModal
+            isOpen={showRegulPayment}
+            onClose={() => setShowRegulPayment(false)}
+            onSuccess={() => { setShowRegulPayment(false); onSuccess(); }}
+            amount={regul.montant}
+            currency="GNF"
+            purpose="regularisation"
+            relatedId={account.id}
+            description={`Régularisation — ${regul.moisDus} mois impayé${regul.moisDus > 1 ? "s" : ""} — ${account.name}`}
+          />
+        )}
+      </div>
+    );
+  }
 
   const PERIODES: { key: "mois" | "troisMois" | "an"; label: string; sub: string; badge?: string }[] = [
     { key: "mois",      label: "Mensuel",  sub: "Renouvelable chaque mois" },
