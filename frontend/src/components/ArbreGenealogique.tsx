@@ -543,18 +543,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             </button>
           </div>
 
-          <div className="filter-controls">
-            <label>Génération:</label>
-            <select 
-              value={generationFilter} 
-              onChange={(e) => setGenerationFilter(e.target.value)}
-            >
-              <option value="all">Toutes</option>
-              {generations.map(gen => (
-                <option key={gen} value={gen}>{gen}</option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 
@@ -1352,7 +1340,21 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
                 {/* Ancienne vue liste intégrée dans la modale Statistiques */}
                 <div className="list-view">
-                  <h4 className="mt-4 mb-2">📋 Détails des membres</h4>
+                  <div className="flex items-center justify-between mt-4 mb-2 flex-wrap gap-2">
+                    <h4 className="m-0">📋 Détails des membres</h4>
+                    <div className="filter-controls">
+                      <label>Génération:</label>
+                      <select
+                        value={generationFilter}
+                        onChange={(e) => setGenerationFilter(e.target.value)}
+                      >
+                        <option value="all">Toutes</option>
+                        {generations.map(gen => (
+                          <option key={gen} value={gen}>{gen}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   <div className="members-list">
                     {filteredMembers.map(member => {
                       const isCurrentUser = userData?.numeroH && String(member.numeroH).trim() === String(userData.numeroH).trim();
