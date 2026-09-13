@@ -75,12 +75,12 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />
             {(pub.titre || pub.description || pub.bouton_texte) && (
               <div className="absolute inset-0 flex flex-col items-center justify-between text-center bg-black/40 px-2 py-1.5">
-                {pub.titre && <p className="text-white font-bold text-[22px] truncate drop-shadow">{pub.titre}</p>}
+                {pub.titre && <p className="text-white font-bold text-[27px] truncate drop-shadow">{pub.titre}</p>}
                 {pub.description && (
-                  <p className="text-white/90 text-[20px] truncate drop-shadow">{pub.description}</p>
+                  <p className="text-white/90 text-[25px] truncate drop-shadow">{pub.description}</p>
                 )}
                 {pub.bouton_texte && (
-                  <span className="mt-0.5 inline-block text-[20px] font-bold text-gray-900 bg-white/90 px-1.5 py-0.5 rounded-full">{pub.bouton_texte} ›</span>
+                  <span className="mt-0.5 inline-block text-[25px] font-bold text-gray-900 bg-white/90 px-1.5 py-0.5 rounded-full">{pub.bouton_texte} ›</span>
                 )}
               </div>
             )}
@@ -92,17 +92,17 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
               type="button"
               aria-label="Publicité précédente"
               onClick={goPrev}
-              className="absolute left-0.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
+              className="absolute left-0.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
             >
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
             </button>
             <button
               type="button"
               aria-label="Publicité suivante"
               onClick={goNext}
-              className="absolute right-0.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
+              className="absolute right-0.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
             >
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
             </button>
           </>
         )}
@@ -130,12 +130,12 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             />
             {pub.titre && (
               <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3">
-                <p className="text-white font-bold text-[24px] leading-tight drop-shadow">{pub.titre}</p>
+                <p className="text-white font-bold text-[29px] leading-tight drop-shadow">{pub.titre}</p>
                 {pub.description && (
-                  <p className="text-white/90 text-[22px] leading-tight mt-0.5 line-clamp-2 drop-shadow">{pub.description}</p>
+                  <p className="text-white/90 text-[27px] leading-tight mt-0.5 line-clamp-2 drop-shadow">{pub.description}</p>
                 )}
                 {pub.bouton_texte && (
-                  <span className="inline-flex items-center gap-1 mt-1.5 self-start px-2.5 py-1 rounded-full bg-white/90 text-gray-900 text-[21px] font-bold">
+                  <span className="inline-flex items-center gap-1 mt-1.5 self-start px-2.5 py-1 rounded-full bg-white/90 text-gray-900 text-[26px] font-bold">
                     {pub.bouton_texte} →
                   </span>
                 )}
@@ -149,17 +149,17 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
               type="button"
               aria-label="Publicité précédente"
               onClick={goPrev}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+              <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
             </button>
             <button
               type="button"
               aria-label="Publicité suivante"
               onClick={goNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/35 hover:bg-black/50 flex items-center justify-center transition-colors"
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
+              <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
             </button>
           </>
         )}
