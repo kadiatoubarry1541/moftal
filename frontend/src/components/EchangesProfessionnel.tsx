@@ -150,13 +150,13 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
     <>
       {/* Header + raccourcis — jamais besoin de quitter cette page */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0.5px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               type="button"
               onClick={() => navigate('/compte')}
               aria-label="Retour à l'accueil"
-              style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
+              style={{ background: 'none', color: 'white', border: 'none', padding: 0.5, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
             >
               ‹
             </button>
@@ -181,7 +181,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
         </div>
 
         {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir */}
-        <div className="flex gap-1.5" style={{ padding: '0 8px 8px' }}>
+        <div className="flex gap-1.5" style={{ padding: '0 8px 2px' }}>
           {SECTIONS.map(section => {
             const c = COLOR_CLASSES[section.color];
             const active = activeSection === section.id;
@@ -190,9 +190,10 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                 key={section.id}
                 type="button"
                 onClick={() => scrollToSection(section.id)}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 text-[10px] font-bold transition rounded-lg ${
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold transition rounded-lg ${
                   active ? c.bg + ' text-white' : 'bg-white/10 text-gray-300'
                 }`}
+                style={{ height: 37 }}
               >
                 <span className="text-base leading-none">{section.icons[0]}</span>
                 <span className="truncate max-w-[60px]">{section.label}</span>
