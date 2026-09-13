@@ -348,7 +348,7 @@ export default function GestionInterne() {
   const [accesGI, setAccesGI]           = useState<any>(null);
   const [payGILoading, setPayGILoading] = useState(false);
   const [showGIPayment, setShowGIPayment] = useState(false);
-  const [periodeGI, setPeriodeGI] = useState<"mois" | "an" | "cinqAns" | "vie">("mois");
+  const [periodeGI, setPeriodeGI] = useState<"mois" | "an" | "vie">("mois");
   const [showPaywall, setShowPaywall]   = useState(false);
   const [tabOverride, setTabOverride]   = useState<"pro" | "activite" | null>(null);
   const [connectModal, setConnectModal] = useState<{ accountId: number; name: string } | null>(null);
@@ -393,10 +393,10 @@ export default function GestionInterne() {
 
   // ─── FONCTIONS PAIEMENT ─────────────────────────────────────────────────────
 
-  const purposeMapGI = { mois: "gestion_mois", an: "gestion_an", cinqAns: "gestion_5ans", vie: "gestion_interne_vie" } as const;
-  const prixMapGI = () => ({ mois: accesGI?.prixMois, an: accesGI?.prixAn, cinqAns: accesGI?.prixCinqAns, vie: accesGI?.prixVie });
+  const purposeMapGI = { mois: "gestion_mois", an: "gestion_an", vie: "gestion_interne_vie" } as const;
+  const prixMapGI = () => ({ mois: accesGI?.prixMois, an: accesGI?.prixAn, vie: accesGI?.prixVie });
 
-  function payerGestionInterne(periode: "mois" | "an" | "cinqAns" | "vie") {
+  function payerGestionInterne(periode: "mois" | "an" | "vie") {
     setPeriodeGI(periode);
     setShowGIPayment(true);
   }
@@ -632,10 +632,9 @@ export default function GestionInterne() {
         {/* Options de période */}
         <div style={{ display:"grid", gap:8 }}>
           {([
-            { periode: "mois"    as const, label: "Mensuel", prix: accesGI?.prixMois },
-            { periode: "an"      as const, label: "Annuel",  prix: accesGI?.prixAn,      badge: "2 mois offerts" },
-            { periode: "cinqAns" as const, label: "5 ans",   prix: accesGI?.prixCinqAns, badge: "1 an offert"    },
-            { periode: "vie"     as const, label: "À vie",   prix: accesGI?.prixVie,     badge: "Une seule fois" },
+            { periode: "mois" as const, label: "Mensuel", prix: accesGI?.prixMois },
+            { periode: "an"   as const, label: "Annuel",  prix: accesGI?.prixAn,  badge: "2 mois offerts" },
+            { periode: "vie"  as const, label: "À vie",   prix: accesGI?.prixVie, badge: "Une seule fois" },
           ]).map(opt => (
             <button key={opt.periode} onClick={() => payerGestionInterne(opt.periode)} disabled={payGILoading}
               style={{ width:"100%", padding:"12px 16px", background:"white", color:"#1e3a5f", border:"none", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:800, opacity: payGILoading ? 0.6 : 1, display:"flex", justifyContent:"space-between", alignItems:"center", transition:"opacity 0.15s", boxSizing:"border-box" }}>
@@ -1157,7 +1156,7 @@ export default function GestionInterne() {
           currency="GNF"
           purpose={purposeMapGI[periodeGI]}
           relatedId={accesGI?.proId}
-          description={`Gestion Interne ${periodeGI === "mois" ? "mensuel" : periodeGI === "an" ? "annuel" : periodeGI === "cinqAns" ? "5 ans" : "à vie"}`}
+          description={`Gestion Interne ${periodeGI === "mois" ? "mensuel" : periodeGI === "an" ? "annuel" : "à vie"}`}
         />
       )}
     </div>
