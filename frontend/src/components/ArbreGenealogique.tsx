@@ -750,7 +750,11 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         // ── G2 : centré sous VOUS (downX), pas sous SVG_W — sinon les grands-
         //   parents élargissent le canevas et les enfants se retrouvent décalés,
         //   avec des lignes qui semblent "couper" sous un autre nœud (ex: Sœur).
-        const g2StartX = Math.round(downX - g2RowW / 2)
+        //   Bloqué entre les marges pour ne jamais sortir du canevas SVG (sinon
+        //   la génération G2 est carrément coupée hors du viewBox, donnant
+        //   l'impression d'un arbre séparé en deux, sans aucune liaison visible).
+        const g2StartXIdeal = Math.round(downX - g2RowW / 2)
+        const g2StartX = Math.min(Math.max(g2StartXIdeal, MARGIN), SVG_W - MARGIN - g2RowW)
         const g2Xs = Array.from({ length: g2Slots }, (_, i) => g2StartX + i * (NW + NGAP))
         const g2BarL = Math.min(g2Xs[0] + NW / 2, downX)
         const g2BarR = Math.max(g2Xs[g2Slots - 1] + NW / 2, downX)
