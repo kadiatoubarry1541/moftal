@@ -7,12 +7,18 @@
  * Cas traités :
  *   J-3  → Email "Votre abonnement expire dans 3 jours"
  *   J+0  → Email "Coupure dans 24h" + passage du compte en 'overdue'
- *   J+1  → Passage du compte en 'blocked' (compte désactivé)
+ *   Blocage définitif ('blocked') :
+ *     - Vendeurs Échange (moftal_vendor) : J+1, aucun délai de grâce —
+ *       ils doivent payer chaque mois, bloqués dès qu'ils ne payent pas.
+ *     - Tous les autres comptes pro (Visibilité / Gestion Interne) : seulement
+ *       après 3 MOIS sans paiement (délai de grâce), qu'il s'agisse de la fin
+ *       de l'essai gratuit ou de la fin d'une période payée.
  */
 
 import { Op } from 'sequelize';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
+import { GRACE_MOIS_VISIBILITE } from '../middleware/gestionAccessGuard.js';
 import {
   sendSubscriptionExpiringSoonEmail,
   sendSubscriptionCutoffWarningEmail,
@@ -89,17 +95,46 @@ async function runSubscriptionCheck() {
       console.log(`  🚨 Coupure 24h → ${account.name} (${proEmail})`);
     }
 
-    // ── 3. Comptes en 'overdue' depuis hier → bloquer définitivement ──────────
+    // ── 3a. Vendeurs Échange en 'overdue' depuis hier → bloqués immédiatement ──
+    // (aucun délai de grâce : ils doivent payer chaque mois pour publier)
     const { start: twoDaysAgoStart, end: twoDaysAgoEnd } = dayRange(-2);
-    const toBlock = await ProfessionalAccount.findAll({
+    const toBlockVendeurs = await ProfessionalAccount.findAll({
       where: {
+        type: 'moftal_vendor',
         subscriptionStatus: 'overdue',
         subscriptionValidUntil: { [Op.lt]: twoDaysAgoEnd },
       },
     });
 
-    for (const account of toBlock) {
-      await account.update({ subscriptionStatus: 'blocked', status: 'rejected' });
+    for (const account of toBlockVendeurs) {
+      await account.update({ subscriptionStatus: 'blocked' });
+
+      const { proEmail, proName } = await resolveProEmail(account);
+      if (!proEmail) continue;
+      sendSubscriptionExpiredEmail({
+        proEmail,
+        proName,
+        expiredAt: account.subscriptionValidUntil,
+      }).catch(err => console.error(`[blocked vendeur] ${account.name}:`, err.message));
+      console.log(`  ❌ Bloqué (vendeur, sans délai) → ${account.name} (${proEmail})`);
+    }
+
+    // ── 3b. Visibilité / Gestion Interne : bloqués seulement après 3 MOIS ─────
+    // sans paiement (délai de grâce), comptés depuis la fin de l'essai gratuit
+    // ou depuis la fin de la dernière période payée.
+    const graceCutoff = new Date();
+    graceCutoff.setMonth(graceCutoff.getMonth() - GRACE_MOIS_VISIBILITE);
+
+    const toBlockAutres = await ProfessionalAccount.findAll({
+      where: {
+        type: { [Op.ne]: 'moftal_vendor' },
+        subscriptionStatus: 'overdue',
+        subscriptionValidUntil: { [Op.lt]: graceCutoff },
+      },
+    });
+
+    for (const account of toBlockAutres) {
+      await account.update({ subscriptionStatus: 'blocked' });
 
       const { proEmail, proName } = await resolveProEmail(account);
       if (!proEmail) continue;
@@ -108,9 +143,10 @@ async function runSubscriptionCheck() {
         proName,
         expiredAt: account.subscriptionValidUntil,
       }).catch(err => console.error(`[blocked] ${account.name}:`, err.message));
-      console.log(`  ❌ Bloqué → ${account.name} (${proEmail})`);
+      console.log(`  ❌ Bloqué (3 mois d'impayé) → ${account.name} (${proEmail})`);
     }
 
+    const toBlock = [...toBlockVendeurs, ...toBlockAutres];
     const total = expiringSoon.length + expiredYesterday.length + toBlock.length;
     console.log(`  ✅ Vérification terminée — ${total} compte(s) traité(s)\n`);
   } catch (err) {

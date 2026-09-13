@@ -67,17 +67,28 @@ export const GRAND_SECTEUR = ['clinic', 'school', 'supplier', 'enterprise'];
 export const PRIX_NGO = { mois: 1000, an: 10000 };
 
 // ─── Visibilité seulement (profil public sur la plateforme) ──────────────────
+// Périodes : mois (mensuel), troisMois (3 mois = 3x le tarif mensuel), an (annuel)
 //                          Petit       Grand
 export const PRIX_VISIBILITE = {
-  petit: { mois:   15000, an:  240000 },
-  grand: { mois:   40000, an:  490000 },
+  petit: { mois:   10000, troisMois:  30000, an:  240000 },
+  grand: { mois:   20000, troisMois:  60000, an:  490000 },
 };
 
 // ─── Gestion Interne (inclut visibilité automatiquement) ─────────────────────
 //                          Petit       Grand
 export const PRIX_GESTION_INTERNE = {
-  petit: { mois:   40000, an:  490000 },
-  grand: { mois:   70000, an:  740000 },
+  petit: { mois:   15000, troisMois:  45000, an:  490000 },
+  grand: { mois:   30000, troisMois:  90000, an:  740000 },
+};
+
+// ─── Vendeurs Échange (moftal_vendor) — paiement mensuel obligatoire, ────────
+// aucun essai gratuit : bloqués dès que le mois n'est pas payé.
+export const PRIX_VENDEUR_ECHANGE = {
+  primaire:    20000,
+  nourriture:  20000, // rattaché au secteur primaire
+  secondaire:  50000,
+  tertiaire:   50000,
+  quaternaire: 50000,
 };
 
 // ─── Abonnement Bibliothèque (lire les livres publiés sur Inspir) ─────────────
@@ -158,6 +169,11 @@ function getPrixGestionInterne(type, periode, pays) {
   return estAfricain(pays) ? base : base * 2;
 }
 
+function getPrixVendeurEchange(subSector, pays) {
+  const base = PRIX_VENDEUR_ECHANGE[subSector] || PRIX_VENDEUR_ECHANGE.secondaire;
+  return estAfricain(pays) ? base : base * 2;
+}
+
 function getPrixLivres(pays) {
   return estAfricain(pays) ? PRIX_LIVRES_AFRIQUE_AN : PRIX_LIVRES_HORS_AFRIQUE_AN;
 }
@@ -165,8 +181,9 @@ function getPrixLivres(pays) {
 // Calcule la date d'expiration selon la période payée
 function calculerExpiration(periode) {
   const d = new Date();
-  if (periode === 'mois') { d.setMonth(d.getMonth() + 1); }
-  if (periode === 'an')   { d.setFullYear(d.getFullYear() + 1); }
+  if (periode === 'mois')      { d.setMonth(d.getMonth() + 1); }
+  if (periode === 'troisMois') { d.setMonth(d.getMonth() + 3); }
+  if (periode === 'an')        { d.setFullYear(d.getFullYear() + 1); }
   return d;
 }
 
@@ -274,13 +291,43 @@ router.get('/prix-compte-pro', authenticate, async (req, res) => {
       type: proAcc.type,
       tarif_humanitaire: isNgo,
       visibilite: {
-        mois: getPrixVisibilite(proAcc.type, 'mois', pays),
-        an:   getPrixVisibilite(proAcc.type, 'an', pays),
+        mois:      getPrixVisibilite(proAcc.type, 'mois', pays),
+        troisMois: getPrixVisibilite(proAcc.type, 'troisMois', pays),
+        an:        getPrixVisibilite(proAcc.type, 'an', pays),
       },
       gestionInterne: {
-        mois: getPrixGestionInterne(proAcc.type, 'mois', pays),
-        an:   getPrixGestionInterne(proAcc.type, 'an', pays),
+        mois:      getPrixGestionInterne(proAcc.type, 'mois', pays),
+        troisMois: getPrixGestionInterne(proAcc.type, 'troisMois', pays),
+        an:        getPrixGestionInterne(proAcc.type, 'an', pays),
       },
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+/**
+ * GET /api/payment/prix-vendeur-echange?proId=...
+ * Retourne le prix mensuel d'abonnement pour un compte vendeur Échange donné
+ */
+router.get('/prix-vendeur-echange', authenticate, async (req, res) => {
+  try {
+    const { proId } = req.query;
+    if (!proId) return res.status(400).json({ success: false, message: 'proId requis.' });
+
+    const vendorAcc = await ProfessionalAccount.findByPk(proId);
+    if (!vendorAcc || vendorAcc.type !== 'moftal_vendor') {
+      return res.status(404).json({ success: false, message: 'Compte vendeur Échange introuvable.' });
+    }
+
+    const pays = req.user?.pays || '';
+    const estAf = estAfricain(pays);
+    res.json({
+      success: true,
+      mois: getPrixVendeurEchange(vendorAcc.subSector, pays),
+      subSector: vendorAcc.subSector,
+      zone: estAf ? 'afrique' : 'hors_afrique',
+      label: estAf ? 'Tarif Afrique' : 'Tarif international',
     });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -321,6 +368,7 @@ router.get('/acces-gestion-interne', authenticate, async (req, res) => {
       finGestionInterne: access.giValidUntil,
       prixVie: 3000000,
       prixMois: prixGI.mois,
+      prixTroisMois: prixGI.troisMois,
       prixAn: prixGI.an,
       proId: proAccount.id,
     });
@@ -550,19 +598,26 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
   if (purpose === 'subscription_pro') amount = getPrixAbonnementPro(pays);
 
   // ── Visibilité seulement (profil public) — relatedId = ID du compte pro ──
-  if (['visibilite_mois', 'visibilite_an'].includes(purpose)) {
+  if (['visibilite_mois', 'visibilite_3mois', 'visibilite_an'].includes(purpose)) {
     const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
     if (!proAcc) return { error: 'Compte professionnel requis.' };
-    const periode = purpose === 'visibilite_mois' ? 'mois' : 'an';
+    const periode = purpose === 'visibilite_mois' ? 'mois' : purpose === 'visibilite_3mois' ? 'troisMois' : 'an';
     amount = getPrixVisibilite(proAcc.type, periode, pays);
   }
 
   // ── Gestion Interne (inclut visibilité) ───────────────────────────────────
-  if (['gestion_mois', 'gestion_an'].includes(purpose)) {
+  if (['gestion_mois', 'gestion_3mois', 'gestion_an'].includes(purpose)) {
     const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
     if (!proAcc) return { error: 'Compte professionnel requis.' };
-    const periode = purpose === 'gestion_mois' ? 'mois' : 'an';
+    const periode = purpose === 'gestion_mois' ? 'mois' : purpose === 'gestion_3mois' ? 'troisMois' : 'an';
     amount = getPrixGestionInterne(proAcc.type, periode, pays);
+  }
+
+  // ── Abonnement vendeur Échange (mensuel obligatoire, sans essai) ──────────
+  if (purpose === 'vendeur_mois') {
+    const vendorAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
+    if (!vendorAcc || vendorAcc.type !== 'moftal_vendor') return { error: 'Compte vendeur Échange requis.' };
+    amount = getPrixVendeurEchange(vendorAcc.subSector, pays);
   }
 
   // Gestion Interne à vie (ancienne formule — compatibilité)
@@ -746,19 +801,19 @@ export async function handlePostPayment(payment) {
       }
     }
     // ── Visibilité seulement ──────────────────────────────────────────
-    if (['visibilite_mois','visibilite_an'].includes(payment.purpose) && payment.relatedId) {
-      const periode = payment.purpose === 'visibilite_mois' ? 'mois' : 'an';
+    if (['visibilite_mois','visibilite_3mois','visibilite_an'].includes(payment.purpose) && payment.relatedId) {
+      const periode = payment.purpose === 'visibilite_mois' ? 'mois' : payment.purpose === 'visibilite_3mois' ? 'troisMois' : 'an';
       const expiration = calculerExpiration(periode);
       await ProfessionalAccount.update(
-        { subscriptionStatus: 'active', subscriptionValidUntil: expiration },
+        { subscriptionStatus: 'active', subscriptionValidUntil: expiration, isTrial: false },
         { where: { id: payment.relatedId } }
       );
       console.log(`✅ Visibilité activée (${periode}) — compte ${payment.relatedId} | expire: ${expiration.toLocaleDateString()}`);
     }
 
     // ── Gestion Interne (inclut visibilité) ──────────────────────────
-    if (['gestion_mois','gestion_an'].includes(payment.purpose) && payment.relatedId) {
-      const periode = payment.purpose === 'gestion_mois' ? 'mois' : 'an';
+    if (['gestion_mois','gestion_3mois','gestion_an'].includes(payment.purpose) && payment.relatedId) {
+      const periode = payment.purpose === 'gestion_mois' ? 'mois' : payment.purpose === 'gestion_3mois' ? 'troisMois' : 'an';
       const expiration = calculerExpiration(periode);
       // Active le compte pro ET la Gestion Interne jusqu'à la même date
       await ProfessionalAccount.update(
@@ -766,10 +821,21 @@ export async function handlePostPayment(payment) {
           subscriptionStatus: 'active',
           subscriptionValidUntil: expiration,
           gestionInterneValidUntil: expiration,
+          isTrial: false,
         },
         { where: { id: payment.relatedId } }
       );
       console.log(`✅ Gestion Interne activée (${periode}) — compte ${payment.relatedId} | expire: ${expiration.toLocaleDateString()}`);
+    }
+
+    // ── Abonnement vendeur Échange (mensuel, sans essai, sans délai de grâce) ──
+    if (payment.purpose === 'vendeur_mois' && payment.relatedId) {
+      const expiration = calculerExpiration('mois');
+      await ProfessionalAccount.update(
+        { subscriptionStatus: 'active', subscriptionValidUntil: expiration, isTrial: false },
+        { where: { id: payment.relatedId } }
+      );
+      console.log(`✅ Abonnement vendeur Échange activé (1 mois) — compte ${payment.relatedId} | expire: ${expiration.toLocaleDateString()}`);
     }
 
     // ── Publication formation — activer l'annonce après paiement ─────

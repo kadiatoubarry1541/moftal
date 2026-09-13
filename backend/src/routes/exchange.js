@@ -32,6 +32,24 @@ async function canManageSuppliers(user) {
 
 const router = express.Router();
 
+/**
+ * Vérifie qu'un vendeur Échange est approuvé ET à jour de paiement pour son secteur.
+ * Aucun essai gratuit ni délai de grâce pour les vendeurs : dès que l'abonnement
+ * mensuel n'est plus payé, la publication est bloquée.
+ */
+async function getVendorSubscriptionStatus(numeroH, subSector) {
+  const [acc] = await sequelize.query(
+    `SELECT id, subscription_status, subscription_valid_until
+     FROM professional_accounts
+     WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector=:s LIMIT 1`,
+    { replacements: { n: numeroH, s: subSector }, type: sequelize.QueryTypes.SELECT }
+  ).catch(() => [null]);
+  if (!acc) return { approved: false, aAcces: false, accountId: null };
+  const validUntil = acc.subscription_valid_until ? new Date(acc.subscription_valid_until) : null;
+  const aAcces = acc.subscription_status === 'active' && !!validUntil && validUntil > new Date();
+  return { approved: true, aAcces, accountId: acc.id };
+}
+
 // Configuration multer pour l'upload des fichiers — en mémoire, jamais sur disque
 // (le disque du serveur est effacé à chaque redémarrage/redéploiement)
 const storage = multer.memoryStorage();
@@ -89,12 +107,18 @@ router.get('/vendor-status', async (req, res) => {
     }
 
     const accounts = await sequelize.query(
-      `SELECT sub_sector, status, name FROM professional_accounts
+      `SELECT id, sub_sector, status, name, subscription_status, subscription_valid_until FROM professional_accounts
        WHERE owner_numero_h=:n AND type='moftal_vendor' AND status IN ('approved', 'pending')`,
       { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
     );
 
-    const approvedSectors = accounts.filter(a => a.status === 'approved').map(a => a.sub_sector);
+    const maintenant = new Date();
+    const approvedAccounts = accounts.filter(a => a.status === 'approved').map(a => {
+      const validUntil = a.subscription_valid_until ? new Date(a.subscription_valid_until) : null;
+      const aAcces = a.subscription_status === 'active' && !!validUntil && validUntil > maintenant;
+      return { id: a.id, subSector: a.sub_sector, aAcces, subscriptionValidUntil: a.subscription_valid_until };
+    });
+    const approvedSectors = approvedAccounts.map(a => a.subSector);
     const pendingSectors = accounts.filter(a => a.status === 'pending').map(a => a.sub_sector);
     const accountName = accounts.find(a => a.status === 'approved')?.name;
 
@@ -102,6 +126,7 @@ router.get('/vendor-status', async (req, res) => {
       success: true,
       isVendor: approvedSectors.length > 0,
       approvedSectors,
+      approvedAccounts,
       pendingSectors,
       accountName,
     });
@@ -143,7 +168,7 @@ router.post('/register-vendor', async (req, res) => {
 
     await sequelize.query(
       `INSERT INTO professional_accounts (id, type, name, description, phone, city, owner_numero_h, status, sub_sector, subscription_status, is_trial, created_at, updated_at)
-       VALUES (gen_random_uuid(), 'moftal_vendor', :nom, :desc, :tel, :ville, :owner, 'pending', :secteur, 'never_paid', true, NOW(), NOW())`,
+       VALUES (gen_random_uuid(), 'moftal_vendor', :nom, :desc, :tel, :ville, :owner, 'pending', :secteur, 'never_paid', false, NOW(), NOW())`,
       { replacements: { nom: nomBoutique, desc: description || '', tel: telephone || '', ville: ville || '', owner: userNumeroH, secteur } }
     );
 
@@ -240,12 +265,12 @@ router.post('/primaire/products', upload.any(), async (req, res) => {
     const userNumeroH = user?.numeroH || req.userId;
 
     if (!estAdmin) {
-      const [vendorOk] = await sequelize.query(
-        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='primaire' LIMIT 1`,
-        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
-      ).catch(() => []);
-      if (!vendorOk) {
+      const vendorStatus = await getVendorSubscriptionStatus(userNumeroH, 'primaire');
+      if (!vendorStatus.approved) {
         return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Alimentation) doit être approuvé par un administrateur.' });
+      }
+      if (!vendorStatus.aAcces) {
+        return res.status(402).json({ success: false, blocked: true, code: 'PAYMENT_REQUIRED', proId: vendorStatus.accountId, message: 'Votre abonnement vendeur (secteur Alimentation) doit être payé pour publier.' });
       }
     }
 
@@ -305,12 +330,12 @@ router.post('/secondaire/products', upload.any(), async (req, res) => {
     const userNumeroH = user?.numeroH || req.userId;
 
     if (!estAdmin) {
-      const [vendorOk] = await sequelize.query(
-        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='secondaire' LIMIT 1`,
-        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
-      ).catch(() => []);
-      if (!vendorOk) {
+      const vendorStatus = await getVendorSubscriptionStatus(userNumeroH, 'secondaire');
+      if (!vendorStatus.approved) {
         return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Mode & Beauté) doit être approuvé par un administrateur.' });
+      }
+      if (!vendorStatus.aAcces) {
+        return res.status(402).json({ success: false, blocked: true, code: 'PAYMENT_REQUIRED', proId: vendorStatus.accountId, message: 'Votre abonnement vendeur (secteur Mode & Beauté) doit être payé pour publier.' });
       }
     }
 
@@ -360,12 +385,12 @@ router.post('/tertiaire/products', upload.any(), async (req, res) => {
     const userNumeroH = user?.numeroH || req.userId;
 
     if (!estAdmin) {
-      const [vendorOk] = await sequelize.query(
-        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='tertiaire' LIMIT 1`,
-        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
-      ).catch(() => []);
-      if (!vendorOk) {
+      const vendorStatus = await getVendorSubscriptionStatus(userNumeroH, 'tertiaire');
+      if (!vendorStatus.approved) {
         return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Maison & Construction) doit être approuvé par un administrateur.' });
+      }
+      if (!vendorStatus.aAcces) {
+        return res.status(402).json({ success: false, blocked: true, code: 'PAYMENT_REQUIRED', proId: vendorStatus.accountId, message: 'Votre abonnement vendeur (secteur Maison & Construction) doit être payé pour publier.' });
       }
     }
 
@@ -441,12 +466,12 @@ router.post('/quaternaire/products', upload.any(), async (req, res) => {
     const userNumeroH = user?.numeroH || req.userId;
 
     if (!estAdmin) {
-      const [vendorOk] = await sequelize.query(
-        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='quaternaire' LIMIT 1`,
-        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
-      ).catch(() => []);
-      if (!vendorOk) {
+      const vendorStatus = await getVendorSubscriptionStatus(userNumeroH, 'quaternaire');
+      if (!vendorStatus.approved) {
         return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Technologie & Véhicules) doit être approuvé par un administrateur.' });
+      }
+      if (!vendorStatus.aAcces) {
+        return res.status(402).json({ success: false, blocked: true, code: 'PAYMENT_REQUIRED', proId: vendorStatus.accountId, message: 'Votre abonnement vendeur (secteur Technologie & Véhicules) doit être payé pour publier.' });
       }
     }
 
@@ -522,12 +547,12 @@ router.post('/nourriture/products', upload.any(), async (req, res) => {
     const userNumeroH = user?.numeroH || req.userId;
 
     if (!estAdmin) {
-      const [vendorOk] = await sequelize.query(
-        `SELECT id FROM professional_accounts WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector='nourriture' LIMIT 1`,
-        { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
-      ).catch(() => []);
-      if (!vendorOk) {
+      const vendorStatus = await getVendorSubscriptionStatus(userNumeroH, 'nourriture');
+      if (!vendorStatus.approved) {
         return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte vendeur Moftal (secteur Restaurants) doit être approuvé par un administrateur.' });
+      }
+      if (!vendorStatus.aAcces) {
+        return res.status(402).json({ success: false, blocked: true, code: 'PAYMENT_REQUIRED', proId: vendorStatus.accountId, message: 'Votre abonnement vendeur (secteur Restaurants) doit être payé pour publier.' });
       }
     }
 

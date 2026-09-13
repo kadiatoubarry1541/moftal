@@ -77,6 +77,10 @@ function sanitizeAccountForPublic(account) {
  * Approuve un compte pro : génère le tenant_code si besoin et active l'essai
  * gratuit de 3 mois. Utilisé aussi bien par l'endpoint d'approbation que par
  * l'inscription directe d'un admin global (qui n'a personne pour l'approuver).
+ *
+ * Exception : les vendeurs Échange (moftal_vendor) n'ont AUCUN essai gratuit —
+ * ils doivent payer leur abonnement mensuel immédiatement après approbation
+ * pour pouvoir publier (voir exchange.js / PRIX_VENDEUR_ECHANGE).
  */
 async function finalizeApproval(account, approverUserId) {
   const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
@@ -89,6 +93,18 @@ async function finalizeApproval(account, approverUserId) {
       `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
       { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
     );
+  }
+
+  if (account.type === 'moftal_vendor') {
+    // Pas d'essai gratuit : le vendeur doit payer son premier mois pour publier.
+    await account.update({
+      status: 'approved',
+      approvedAt: new Date(),
+      approvedBy: approverUserId,
+      isTrial: false,
+      ...(tenantCode ? { tenant_code: tenantCode } : {})
+    });
+    return account;
   }
 
   const finEssai = new Date();
