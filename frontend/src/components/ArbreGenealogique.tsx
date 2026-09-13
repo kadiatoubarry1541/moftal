@@ -60,6 +60,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [newDoc, setNewDoc] = useState({ type: 'naissance', description: '', annee: '' })
   const [showAddDoc, setShowAddDoc] = useState(false)
   const [zoom, setZoom] = useState(1.0)
+  const [showZoomMenu, setShowZoomMenu] = useState(false)
   const navigate = useNavigate()
 
   const handleViewSpouseTree = async (spouseNumeroH: string) => {
@@ -644,31 +645,42 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
       {/* Vue arbre généalogique — style MyHeritage : couleurs par genre, dates, boutons "+" */}
 
-      {/* ── Contrôles de zoom : une seule barre compacte, rattachée — le rouge est réservé aux défunts ── */}
-      <div className="flex items-center justify-end gap-1.5 mb-2.5 flex-nowrap overflow-x-auto">
-        <div className="inline-flex items-center rounded-full border border-gray-200 bg-white shadow-sm overflow-hidden shrink-0">
-          <button
-            type="button"
-            onClick={() => setZoom(z => Math.max(0.25, +(z - 0.1).toFixed(1)))}
-            className="w-9 h-9 shrink-0 flex items-center justify-center text-gray-600 font-bold text-lg leading-none active:bg-gray-100"
-          >−</button>
-          <span className="px-2 min-w-[44px] shrink-0 text-center text-xs font-bold text-gray-700">{Math.round(zoom * 100)}%</span>
-          <button
-            type="button"
-            onClick={() => setZoom(z => Math.min(2.0, +(z + 0.1).toFixed(1)))}
-            className="w-9 h-9 shrink-0 flex items-center justify-center text-emerald-600 font-bold text-lg leading-none active:bg-gray-100"
-          >+</button>
-        </div>
+      {/* ── Zoom : un seul bouton qui ouvre un petit menu avec les 3 réglages ── */}
+      <div className="relative flex items-center justify-end mb-2.5">
         <button
           type="button"
-          onClick={() => setZoom(1.0)}
+          onClick={() => setShowZoomMenu(v => !v)}
           className="shrink-0 h-9 px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm active:bg-gray-50"
-        >↺ Normal</button>
-        <button
-          type="button"
-          onClick={() => setZoom(0.55)}
-          className="shrink-0 h-9 px-3 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 shadow-sm active:bg-blue-100"
-        >🔍 Vue globale</button>
+        >
+          🔍 Zoom ({Math.round(zoom * 100)}%)
+        </button>
+        {showZoomMenu && (
+          <div className="absolute right-0 top-11 z-20 flex flex-col gap-2 p-2 rounded-xl border border-gray-200 bg-white shadow-lg">
+            <div className="inline-flex items-center rounded-full border border-gray-200 overflow-hidden shrink-0">
+              <button
+                type="button"
+                onClick={() => setZoom(z => Math.max(0.25, +(z - 0.1).toFixed(1)))}
+                className="w-9 h-9 shrink-0 flex items-center justify-center text-gray-600 font-bold text-lg leading-none active:bg-gray-100"
+              >−</button>
+              <span className="px-2 min-w-[44px] shrink-0 text-center text-xs font-bold text-gray-700">{Math.round(zoom * 100)}%</span>
+              <button
+                type="button"
+                onClick={() => setZoom(z => Math.min(2.0, +(z + 0.1).toFixed(1)))}
+                className="w-9 h-9 shrink-0 flex items-center justify-center text-emerald-600 font-bold text-lg leading-none active:bg-gray-100"
+              >+</button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setZoom(1.0)}
+              className="shrink-0 h-9 px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-600 shadow-sm active:bg-gray-50"
+            >↺ Normal</button>
+            <button
+              type="button"
+              onClick={() => setZoom(0.55)}
+              className="shrink-0 h-9 px-3 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 shadow-sm active:bg-blue-100"
+            >🔍 Vue globale</button>
+          </div>
+        )}
       </div>
 
       <div className="tree-view-horizontal" style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '78vh' }}>
