@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getNumeroHForDisplay } from '../utils/auth'
 import './ArbreGenealogique.css'
@@ -61,7 +61,17 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [showAddDoc, setShowAddDoc] = useState(false)
   const [zoom, setZoom] = useState(1.0)
   const [showZoomMenu, setShowZoomMenu] = useState(false)
+  const zoomMenuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!showZoomMenu) return
+    const handleClick = (e: MouseEvent) => {
+      if (zoomMenuRef.current && !zoomMenuRef.current.contains(e.target as Node)) setShowZoomMenu(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showZoomMenu])
 
   const handleViewSpouseTree = async (spouseNumeroH: string) => {
     if (!spouseNumeroH) return
@@ -646,7 +656,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       {/* Vue arbre généalogique — style MyHeritage : couleurs par genre, dates, boutons "+" */}
 
       {/* ── Zoom : un seul bouton qui ouvre un petit menu avec les 3 réglages ── */}
-      <div className="relative flex items-center justify-end mb-2.5">
+      <div ref={zoomMenuRef} className="relative flex items-center justify-end mb-2.5">
         <button
           type="button"
           onClick={() => setShowZoomMenu(v => !v)}
@@ -656,6 +666,15 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         </button>
         {showZoomMenu && (
           <div className="absolute right-0 top-11 z-20 flex flex-col gap-2 p-2 rounded-xl border border-gray-200 bg-white shadow-lg">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-[11px] font-bold text-gray-400 uppercase">Zoom</span>
+              <button
+                type="button"
+                onClick={() => setShowZoomMenu(false)}
+                aria-label="Fermer"
+                className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 text-sm leading-none"
+              >✕</button>
+            </div>
             <div className="inline-flex items-center rounded-full border border-gray-200 overflow-hidden shrink-0">
               <button
                 type="button"
