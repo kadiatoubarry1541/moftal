@@ -64,20 +64,20 @@ export const GRAND_SECTEUR = ['clinic', 'school', 'supplier', 'enterprise'];
 // Tout ce qui n'est pas dans GRAND_SECTEUR = PETIT SECTEUR
 
 // ─── ONG — tarif humanitaire spécial (10 000 GNF/an) ─────────────────────────
-export const PRIX_NGO = { mois: 1000, an: 10000, cinqAns: 40000 };
+export const PRIX_NGO = { mois: 1000, an: 10000 };
 
 // ─── Visibilité seulement (profil public sur la plateforme) ──────────────────
 //                          Petit       Grand
 export const PRIX_VISIBILITE = {
-  petit: { mois:   15000, an:  240000, cinqAns:  990000 },
-  grand: { mois:   40000, an:  490000, cinqAns: 1990000 },
+  petit: { mois:   15000, an:  240000 },
+  grand: { mois:   40000, an:  490000 },
 };
 
 // ─── Gestion Interne (inclut visibilité automatiquement) ─────────────────────
 //                          Petit       Grand
 export const PRIX_GESTION_INTERNE = {
-  petit: { mois:   40000, an:  490000, cinqAns: 1990000 },
-  grand: { mois:   70000, an:  740000, cinqAns: 2990000 },
+  petit: { mois:   40000, an:  490000 },
+  grand: { mois:   70000, an:  740000 },
 };
 
 // ─── Abonnement Bibliothèque (lire les livres publiés sur Inspir) ─────────────
@@ -143,7 +143,7 @@ function getPrixVisibilite(type, periode, pays) {
     return estAfricain(pays) ? base : base * 2;
   }
   const secteur = getSecteur(type);
-  const base = PRIX_VISIBILITE[secteur][periode]; // mois | an | cinqAns
+  const base = PRIX_VISIBILITE[secteur][periode]; // mois | an
   return estAfricain(pays) ? base : base * 2;
 }
 
@@ -165,9 +165,8 @@ function getPrixLivres(pays) {
 // Calcule la date d'expiration selon la période payée
 function calculerExpiration(periode) {
   const d = new Date();
-  if (periode === 'mois')    { d.setMonth(d.getMonth() + 1); }
-  if (periode === 'an')      { d.setFullYear(d.getFullYear() + 1); }
-  if (periode === 'cinqAns') { d.setFullYear(d.getFullYear() + 5); }
+  if (periode === 'mois') { d.setMonth(d.getMonth() + 1); }
+  if (periode === 'an')   { d.setFullYear(d.getFullYear() + 1); }
   return d;
 }
 
@@ -275,14 +274,12 @@ router.get('/prix-compte-pro', authenticate, async (req, res) => {
       type: proAcc.type,
       tarif_humanitaire: isNgo,
       visibilite: {
-        mois:    getPrixVisibilite(proAcc.type, 'mois', pays),
-        an:      getPrixVisibilite(proAcc.type, 'an', pays),
-        cinqAns: getPrixVisibilite(proAcc.type, 'cinqAns', pays),
+        mois: getPrixVisibilite(proAcc.type, 'mois', pays),
+        an:   getPrixVisibilite(proAcc.type, 'an', pays),
       },
       gestionInterne: {
-        mois:    getPrixGestionInterne(proAcc.type, 'mois', pays),
-        an:      getPrixGestionInterne(proAcc.type, 'an', pays),
-        cinqAns: getPrixGestionInterne(proAcc.type, 'cinqAns', pays),
+        mois: getPrixGestionInterne(proAcc.type, 'mois', pays),
+        an:   getPrixGestionInterne(proAcc.type, 'an', pays),
       },
     });
   } catch (e) {
@@ -325,7 +322,6 @@ router.get('/acces-gestion-interne', authenticate, async (req, res) => {
       prixVie: 3000000,
       prixMois: prixGI.mois,
       prixAn: prixGI.an,
-      prixCinqAns: prixGI.cinqAns,
       proId: proAccount.id,
     });
   } catch (e) {
@@ -554,18 +550,18 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
   if (purpose === 'subscription_pro') amount = getPrixAbonnementPro(pays);
 
   // ── Visibilité seulement (profil public) — relatedId = ID du compte pro ──
-  if (['visibilite_mois', 'visibilite_an', 'visibilite_5ans'].includes(purpose)) {
+  if (['visibilite_mois', 'visibilite_an'].includes(purpose)) {
     const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
     if (!proAcc) return { error: 'Compte professionnel requis.' };
-    const periode = purpose === 'visibilite_mois' ? 'mois' : purpose === 'visibilite_an' ? 'an' : 'cinqAns';
+    const periode = purpose === 'visibilite_mois' ? 'mois' : 'an';
     amount = getPrixVisibilite(proAcc.type, periode, pays);
   }
 
   // ── Gestion Interne (inclut visibilité) ───────────────────────────────────
-  if (['gestion_mois', 'gestion_an', 'gestion_5ans'].includes(purpose)) {
+  if (['gestion_mois', 'gestion_an'].includes(purpose)) {
     const proAcc = relatedId ? await ProfessionalAccount.findByPk(relatedId) : null;
     if (!proAcc) return { error: 'Compte professionnel requis.' };
-    const periode = purpose === 'gestion_mois' ? 'mois' : purpose === 'gestion_an' ? 'an' : 'cinqAns';
+    const periode = purpose === 'gestion_mois' ? 'mois' : 'an';
     amount = getPrixGestionInterne(proAcc.type, periode, pays);
   }
 
@@ -750,8 +746,8 @@ export async function handlePostPayment(payment) {
       }
     }
     // ── Visibilité seulement ──────────────────────────────────────────
-    if (['visibilite_mois','visibilite_an','visibilite_5ans'].includes(payment.purpose) && payment.relatedId) {
-      const periode = payment.purpose === 'visibilite_mois' ? 'mois' : payment.purpose === 'visibilite_an' ? 'an' : 'cinqAns';
+    if (['visibilite_mois','visibilite_an'].includes(payment.purpose) && payment.relatedId) {
+      const periode = payment.purpose === 'visibilite_mois' ? 'mois' : 'an';
       const expiration = calculerExpiration(periode);
       await ProfessionalAccount.update(
         { subscriptionStatus: 'active', subscriptionValidUntil: expiration },
@@ -761,8 +757,8 @@ export async function handlePostPayment(payment) {
     }
 
     // ── Gestion Interne (inclut visibilité) ──────────────────────────
-    if (['gestion_mois','gestion_an','gestion_5ans'].includes(payment.purpose) && payment.relatedId) {
-      const periode = payment.purpose === 'gestion_mois' ? 'mois' : payment.purpose === 'gestion_an' ? 'an' : 'cinqAns';
+    if (['gestion_mois','gestion_an'].includes(payment.purpose) && payment.relatedId) {
+      const periode = payment.purpose === 'gestion_mois' ? 'mois' : 'an';
       const expiration = calculerExpiration(periode);
       // Active le compte pro ET la Gestion Interne jusqu'à la même date
       await ProfessionalAccount.update(

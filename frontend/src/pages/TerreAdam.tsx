@@ -813,7 +813,7 @@ export default function TerreAdam() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className="flex-shrink-0 flex flex-col items-center gap-0.5 py-[2px] px-1 text-[10px] font-bold transition"
+                  className="flex-shrink-0 flex flex-col items-center gap-0.5 py-[0.5px] px-1 text-[10px] font-bold transition"
                   style={{
                     borderRadius: 10,
                     minWidth: 60,

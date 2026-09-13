@@ -105,7 +105,7 @@ export default function MesComptesPro() {
   // Prix par compte (chargés dynamiquement depuis le backend)
   const [prix, setPrix] = useState<Record<string, any>>({});
   const [paiementModal, setPaiementModal] = useState<{ acc: ProAccount; mode: 'visibilite' | 'gestion' } | null>(null);
-  const [periodeChoisie, setPeriodeChoisie] = useState<'mois' | 'an' | 'cinqAns'>('mois');
+  const [periodeChoisie, setPeriodeChoisie] = useState<'mois' | 'an'>('mois');
 
   const token = localStorage.getItem("token");
 
@@ -138,16 +138,16 @@ export default function MesComptesPro() {
     }
   };
 
-  const handlePay = (acc: ProAccount, mode: 'visibilite' | 'gestion', periode: 'mois' | 'an' | 'cinqAns') => {
+  const handlePay = (acc: ProAccount, mode: 'visibilite' | 'gestion', periode: 'mois' | 'an') => {
     setPayError(null);
     const purposeMap = {
-      visibilite: { mois: 'visibilite_mois', an: 'visibilite_an', cinqAns: 'visibilite_5ans' },
-      gestion:    { mois: 'gestion_mois',    an: 'gestion_an',    cinqAns: 'gestion_5ans' },
+      visibilite: { mois: 'visibilite_mois', an: 'visibilite_an' },
+      gestion:    { mois: 'gestion_mois',    an: 'gestion_an' },
     };
     const purpose = purposeMap[mode][periode];
     const p = prix[acc.id];
     const montant = p ? p[mode === 'visibilite' ? 'visibilite' : 'gestionInterne'][periode] : 0;
-    const periodeLabel = periode === 'mois' ? 'mensuel' : periode === 'an' ? 'annuel' : '5 ans';
+    const periodeLabel = periode === 'mois' ? 'mensuel' : 'annuel';
     const modeLabel = mode === 'visibilite' ? 'Visibilité' : 'Gestion Interne';
 
     setPayModal({
@@ -339,13 +339,13 @@ export default function MesComptesPro() {
                             <p className="text-[11px] text-blue-600 dark:text-blue-400 mb-2 leading-tight">
                               Profil public · Recevoir des rendez-vous · Vitrine
                             </p>
-                            {(['mois','an','cinqAns'] as const).map(p => (
+                            {(['mois','an'] as const).map(p => (
                               <button key={p}
                                 onClick={() => handlePay(acc, 'visibilite', p)}
                                 disabled={paying === acc.id}
                                 className="w-full text-left px-3 py-2 mb-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-gray-700 border border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50 flex justify-between items-center"
                               >
-                                <span>{p === 'mois' ? '📅 Mensuel' : p === 'an' ? '📆 Annuel' : '🏆 5 ans'}</span>
+                                <span>{p === 'mois' ? '📅 Mensuel' : '📆 Annuel'}</span>
                                 <span className="text-blue-700 dark:text-blue-300 font-bold">
                                   {prix[acc.id].visibilite[p].toLocaleString('fr-GN')} GNF
                                 </span>
@@ -362,13 +362,13 @@ export default function MesComptesPro() {
                             <p className="text-[11px] text-green-700 dark:text-green-400 mb-2 leading-tight">
                               Inclut Visibilité + Rendez-vous + Gestion complète
                             </p>
-                            {(['mois','an','cinqAns'] as const).map(p => (
+                            {(['mois','an'] as const).map(p => (
                               <button key={p}
                                 onClick={() => handlePay(acc, 'gestion', p)}
                                 disabled={paying === acc.id}
                                 className="w-full text-left px-3 py-2 mb-1.5 rounded-lg text-xs font-bold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50 flex justify-between items-center"
                               >
-                                <span>{p === 'mois' ? '📅 Mensuel' : p === 'an' ? '📆 Annuel' : '🏆 5 ans'}</span>
+                                <span>{p === 'mois' ? '📅 Mensuel' : '📆 Annuel'}</span>
                                 <span>{prix[acc.id].gestionInterne[p].toLocaleString('fr-GN')} GNF</span>
                               </button>
                             ))}
