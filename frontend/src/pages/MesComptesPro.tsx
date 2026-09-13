@@ -104,6 +104,7 @@ export default function MesComptesPro() {
 
   // Prix par compte (chargés dynamiquement depuis le backend)
   const [prix, setPrix] = useState<Record<string, any>>({});
+  const [regul, setRegul] = useState<Record<string, { moisDus: number; montant: number }>>({});
   const [paiementModal, setPaiementModal] = useState<{ acc: ProAccount; mode: 'visibilite' | 'gestion' } | null>(null);
   const [periodeChoisie, setPeriodeChoisie] = useState<'mois' | 'an'>('mois');
 
@@ -124,6 +125,14 @@ export default function MesComptesPro() {
         setAccounts(accs);
         // Charger les prix pour chaque compte
         accs.forEach((acc: ProAccount) => {
+          if (acc.subscriptionStatus === 'blocked') {
+            fetch(`${API}/api/payment/prix-regularisation?proId=${acc.id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            }).then(r => r.json()).then(d => {
+              if (d.success && d.bloque) setRegul(prev => ({ ...prev, [acc.id]: { moisDus: d.moisDus, montant: d.montant } }));
+            }).catch(() => {});
+            return;
+          }
           fetch(`${API}/api/payment/prix-compte-pro?proId=${acc.id}`, {
             headers: { Authorization: `Bearer ${token}` }
           }).then(r => r.json()).then(d => {
@@ -155,6 +164,18 @@ export default function MesComptesPro() {
       amount: montant,
       purpose,
       description: `${modeLabel} ${periodeLabel} — ${acc.name}`,
+    });
+  };
+
+  const handlePayRegularisation = (acc: ProAccount) => {
+    setPayError(null);
+    const r = regul[acc.id];
+    if (!r) return;
+    setPayModal({
+      accountId: acc.id,
+      amount: r.montant,
+      purpose: 'regularisation',
+      description: `Régularisation — ${r.moisDus} mois impayé${r.moisDus > 1 ? 's' : ''} — ${acc.name}`,
     });
   };
 
@@ -321,8 +342,28 @@ export default function MesComptesPro() {
                     )}
                   </div>
 
+                  {/* Compte bloqué (3 mois d'impayé) — régulariser avant tout nouvel abonnement */}
+                  {acc.status === "approved" && subStatus === "blocked" && (
+                    <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+                      <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                        <p className="text-xs text-red-700 dark:text-red-300 font-semibold">
+                          ⛔ Compte bloqué — {regul[acc.id]
+                            ? `${regul[acc.id].moisDus} mois impayé${regul[acc.id].moisDus > 1 ? 's' : ''} : ${regul[acc.id].montant.toLocaleString('fr-GN')} GNF`
+                            : 'calcul du montant dû...'}
+                        </p>
+                        <button
+                          onClick={() => handlePayRegularisation(acc)}
+                          disabled={!regul[acc.id] || paying === acc.id}
+                          className="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          Payer et débloquer
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Paywall — formules d'abonnement */}
-                  {acc.status === "approved" && !canOpenDashboard && (
+                  {acc.status === "approved" && !canOpenDashboard && subStatus !== "blocked" && (
                     <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
                       {isExpired ? (
                         <p className="text-xs font-bold text-red-600 mb-3">⛔ Abonnement expiré — choisissez une formule pour réactiver</p>
