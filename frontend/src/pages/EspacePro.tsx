@@ -382,7 +382,7 @@ function SubscriptionPaymentWall({
   const token = localStorage.getItem("token");
 
   const [prix, setPrix] = useState<{ visibilite: Record<string, number>; gestionInterne: Record<string, number> } | null>(null);
-  const [periodeChoisie, setPeriodeChoisie] = useState<"mois" | "an">("mois");
+  const [periodeChoisie, setPeriodeChoisie] = useState<"mois" | "troisMois" | "an">("mois");
   const [showPayment, setShowPayment] = useState(false);
 
   const isOverdue   = account.subscriptionStatus === "overdue";
@@ -397,13 +397,14 @@ function SubscriptionPaymentWall({
       .catch(() => {});
   }, [account.id]);
 
-  const PERIODES: { key: "mois" | "an"; label: string; sub: string; badge?: string }[] = [
-    { key: "mois", label: "Mensuel", sub: "Renouvelable chaque mois" },
-    { key: "an",   label: "Annuel",  sub: "2 mois offerts",           badge: "2 mois offerts" },
+  const PERIODES: { key: "mois" | "troisMois" | "an"; label: string; sub: string; badge?: string }[] = [
+    { key: "mois",      label: "Mensuel",  sub: "Renouvelable chaque mois" },
+    { key: "troisMois", label: "3 mois",   sub: "Renouvelable tous les 3 mois" },
+    { key: "an",        label: "Annuel",   sub: "2 mois offerts",           badge: "2 mois offerts" },
   ];
 
   const PURPOSE_MAP: Record<string, string> = {
-    mois: "visibilite_mois", an: "visibilite_an",
+    mois: "visibilite_mois", troisMois: "visibilite_3mois", an: "visibilite_an",
   };
 
   const montantChoisi = prix?.visibilite[periodeChoisie] ?? 0;

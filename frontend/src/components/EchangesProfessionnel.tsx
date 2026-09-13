@@ -2,6 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 import { DevenirVendeurButton } from './DevenirVendeurButton';
+import PaymentModal from './PaymentModal';
+
+const SUB_SECTOR_LABELS: Record<string, string> = {
+  primaire: 'Alimentation',
+  secondaire: 'Mode & Beauté',
+  tertiaire: 'Maison & Construction',
+  quaternaire: 'Technologie & Véhicules',
+  nourriture: 'Restaurants',
+};
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -87,6 +96,8 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
   const [activeSection, setActiveSection] = useState<string>('primaire');
   const [canPublish, setCanPublish] = useState(false);
+  const [unpaidVendorAccounts, setUnpaidVendorAccounts] = useState<{ id: string; subSector: string }[]>([]);
+  const [payingAccount, setPayingAccount] = useState<{ id: string; subSector: string; amount: number } | null>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Charge les produits réels de chaque catégorie (mêmes routes que les pages détaillées)
@@ -105,7 +116,13 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
     // pas pour quelqu'un qui se ferait refuser sa publication à la fin.
     fetch(`${config.API_BASE_URL}/exchange/vendor-status`, { headers })
       .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data?.success) setCanPublish(!!(data.isAdmin || data.approvedSectors?.length)); })
+      .then(data => {
+        if (!data?.success) return;
+        const approvedAccounts: { id: string; subSector: string; aAcces: boolean }[] = data.approvedAccounts || [];
+        const unpaid = approvedAccounts.filter(a => !a.aAcces);
+        setUnpaidVendorAccounts(unpaid.map(a => ({ id: a.id, subSector: a.subSector })));
+        setCanPublish(!!(data.isAdmin || approvedAccounts.some(a => a.aAcces)));
+      })
       .catch(() => {});
 
     SECTIONS.forEach(async (section) => {
@@ -144,6 +161,20 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
   const scrollToSection = (id: string) => {
     setActiveSection(id);
     document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const openVendorPayment = async (account: { id: string; subSector: string }) => {
+    try {
+      const s = localStorage.getItem('session_user');
+      const token = s ? JSON.parse(s).token : null;
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${config.API_BASE_URL}/payment/prix-vendeur-echange?proId=${account.id}`, { headers });
+      const data = await res.json();
+      if (data?.success) setPayingAccount({ id: account.id, subSector: account.subSector, amount: data.mois });
+    } catch {
+      // silencieux — l'utilisateur peut réessayer
+    }
   };
 
   return (
@@ -202,6 +233,25 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
           })}
         </div>
       </header>
+
+      {unpaidVendorAccounts.length > 0 && (
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 pt-3">
+          {unpaidVendorAccounts.map(a => (
+            <div key={a.id} className="flex items-center justify-between gap-2 mb-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-xs text-red-700 font-semibold">
+                ⚠️ Abonnement vendeur ({SUB_SECTOR_LABELS[a.subSector] || a.subSector}) non payé — publication bloquée.
+              </p>
+              <button
+                type="button"
+                onClick={() => openVendorPayment(a)}
+                className="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Payer
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Une seule page qui défile — les 4 catégories se suivent, jamais besoin de sortir */}
       <div className="max-w-3xl mx-auto px-3 sm:px-4 pb-8">
@@ -321,6 +371,23 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             </button>
           </div>
         </div>
+      )}
+
+      {payingAccount && (
+        <PaymentModal
+          isOpen={!!payingAccount}
+          onClose={() => setPayingAccount(null)}
+          onSuccess={() => {
+            setPayingAccount(null);
+            setUnpaidVendorAccounts(prev => prev.filter(a => a.id !== payingAccount.id));
+            setCanPublish(true);
+          }}
+          amount={payingAccount.amount}
+          currency="GNF"
+          purpose="vendeur_mois"
+          relatedId={payingAccount.id}
+          description={`Abonnement vendeur Échange (${SUB_SECTOR_LABELS[payingAccount.subSector] || payingAccount.subSector}) — 1 mois`}
+        />
       )}
     </>
   );
