@@ -175,7 +175,7 @@ export default function Probleme() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-24 w-24 border-b-2 border-red-600 mx-auto" />
           <p className="mt-4 text-gray-600">
-            Chargement de vos informations de problèmes...
+            Chargement de vos solutions familiales...
           </p>
         </div>
       </div>
@@ -189,9 +189,9 @@ export default function Probleme() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">🚨 Problèmes de la famille</h1>
+              <h1 className="text-3xl font-bold text-gray-900">🤝 Mes Solutions</h1>
               <p className="mt-2 text-gray-600">
-                Page réservée aux <strong>problèmes de la famille</strong> (maladie, situations difficiles, alertes importantes).
+                Page d&apos;entraide familiale : assistance santé et soutien aux membres dans le besoin (maladie, situations difficiles).
                 Quand quelqu&apos;un est malade, c&apos;est ici que l&apos;information et les preuves (vidéos, etc.) sont centralisées.
               </p>
             </div>

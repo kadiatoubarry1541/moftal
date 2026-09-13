@@ -514,7 +514,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               className="view-btn"
               onClick={() => navigate('/famille/noyau')}
             >
-              🧬 Mon Noyau
+              🧬 Noyau
             </button>
             {onOpenGallery && (
               <button
@@ -528,7 +528,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               className="view-btn"
               onClick={() => navigate('/probleme')}
             >
-              🚨 Problèmes
+              🤝 Mes Solutions
             </button>
           </div>
 
