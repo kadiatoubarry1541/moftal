@@ -262,17 +262,22 @@ router.post('/request-access', async (req, res) => {
     const pereVivant = numeroHPere ? await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHPere }, type: 'vivant', isActive: true } }) : null;
     const mereVivante = numeroHMere ? await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHMere }, type: 'vivant', isActive: true } }) : null;
 
+    let limitReached = false;
     if (!pereVivant && !mereVivante) {
       // Les deux parents sont décédés ou n'existent pas, accès direct
-      await addUserToFamilyTree(user.numeroH, numeroHPere, numeroHMere);
+      const result = await addUserToFamilyTree(user.numeroH, numeroHPere, numeroHMere);
+      limitReached = result.limitReached;
     }
 
     res.json({
       success: true,
-      message: confirmations.length > 0 
-        ? 'Demandes de confirmation envoyées aux parents vivants' 
+      message: limitReached
+        ? `Cet arbre a déjà atteint la limite de ${MAX_MEMBRES_ARBRE} membres. Contactez un administrateur.`
+        : confirmations.length > 0
+        ? 'Demandes de confirmation envoyées aux parents vivants'
         : 'Accès direct accordé (parents décédés)',
-      confirmations
+      confirmations,
+      limitReached
     });
   } catch (error) {
     console.error('Erreur lors de la demande d\'accès:', error);
@@ -378,7 +383,7 @@ router.post('/confirm-access/:confirmationId', async (req, res) => {
     });
 
     // Ajouter l'enfant à l'arbre familial existant (basé sur numeroHPere / numeroHMere)
-    await addUserToFamilyTree(
+    const { limitReached } = await addUserToFamilyTree(
       confirmation.childNumeroH,
       child?.numeroHPere || null,
       child?.numeroHMere || null
@@ -386,7 +391,10 @@ router.post('/confirm-access/:confirmationId', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Accès confirmé avec succès'
+      message: limitReached
+        ? `Le lien parent-enfant est confirmé, mais cet arbre a déjà atteint la limite de ${MAX_MEMBRES_ARBRE} membres — contactez un administrateur.`
+        : 'Accès confirmé avec succès',
+      limitReached
     });
   } catch (error) {
     console.error('Erreur lors de la confirmation:', error);
@@ -846,7 +854,12 @@ router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, r
   }
 });
 
+// Limite dure du nombre de membres vivants par arbre familial.
+export const MAX_MEMBRES_ARBRE = 100;
+
 // Fonction pour ajouter un utilisateur à l'arbre familial
+// Retourne { tree, limitReached } — limitReached=true si l'arbre est déjà à
+// MAX_MEMBRES_ARBRE membres : dans ce cas numeroH n'est PAS ajouté.
 export async function addUserToFamilyTree(numeroH, numeroHPereRaw, numeroHMereRaw) {
   const numeroHPere = normalizeNumeroH(numeroHPereRaw);
   const numeroHMere = normalizeNumeroH(numeroHMereRaw);
@@ -882,6 +895,9 @@ export async function addUserToFamilyTree(numeroH, numeroHPereRaw, numeroHMereRa
     // Ajouter l'utilisateur à l'arbre existant
     const members = tree.members || [];
     if (!members.includes(numeroH)) {
+      if (members.length >= MAX_MEMBRES_ARBRE) {
+        return { tree, limitReached: true };
+      }
       members.push(numeroH);
       await tree.update({ members });
       // Attribuer le code F+S dès 5 membres
@@ -901,7 +917,7 @@ export async function addUserToFamilyTree(numeroH, numeroHPereRaw, numeroHMereRa
     });
   }
 
-  return tree;
+  return { tree, limitReached: false };
 }
 
 /**

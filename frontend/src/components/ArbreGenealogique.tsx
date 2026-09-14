@@ -67,6 +67,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   // par enfant G2, chargés depuis /api/parent-child/children-of/:numeroH —
   // remplace l'ancienne génération G3 qui n'était jamais alimentée.
   const [realG3ByParent, setRealG3ByParent] = useState<Record<string, FamilyMember[]>>({})
+  // Conjoint RÉEL confirmé (lien de couple actif) — remplace les champs
+  // userData.conjoint* (jamais validés par l'autre personne) quand présent.
+  const [realConjoint, setRealConjoint] = useState<{ numeroH: string; prenom: string; nomFamille: string; genre: string; photo?: string } | null>(null)
 
   useEffect(() => {
     if (!showZoomMenu) return
@@ -140,6 +143,110 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     } else {
       setRealG3ByParent({})
     }
+
+    // Père / Mère / grands-parents / frères-sœurs / conjoint RÉELS (liens
+    // confirmés côté backend) — remplacent les entrées locales, qui pour les
+    // grands-parents n'étaient QUE des silhouettes jamais alimentées, et pour
+    // père/mère/conjoint reflétaient juste ce que l'utilisateur avait tapé
+    // dans son profil, jamais validé par l'autre personne.
+    ;(async () => {
+      const token = localStorage.getItem('token')
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+      try {
+        const [parentsRes, partnerRes] = await Promise.all([
+          fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then(r => r.json()).catch(() => null),
+          fetch(`${API_BASE}/api/couple/my-partner`, { headers }).then(r => r.json()).catch(() => null),
+        ])
+
+        const realParents: any[] = (parentsRes?.success ? parentsRes.parents : []) || []
+        const toMember = (p: any, relation: FamilyMember['relation'], generation: string, idPrefix: string): FamilyMember => ({
+          id: `${idPrefix}-${p.numeroH}`,
+          numeroH: p.numeroH,
+          prenom: p.prenom,
+          nomFamille: p.nomFamille,
+          genre: p.genre,
+          dateNaissance: p.dateNaissance,
+          photo: p.photo,
+          relation,
+          generation,
+          isVisible: true
+        })
+
+        const newMembers: FamilyMember[] = []
+        // Ids des silhouettes locales à retirer précisément (une branche à la fois —
+        // jamais toute une génération, sinon une branche encore non confirmée perdrait
+        // sa silhouette alors qu'aucune vraie donnée ne la remplace).
+        const placeholderIdsToRemove = new Set<string>()
+        const localPereId = autoBuiltTree.find(m => m.relation === 'pere')?.id
+        const localMereId = autoBuiltTree.find(m => m.relation === 'mere')?.id
+        const localGpArr = autoBuiltTree.filter(m => m.relation === 'grand-pere') // [paternel, maternel]
+        const localGmArr = autoBuiltTree.filter(m => m.relation === 'grand-mere') // [paternelle, maternelle]
+
+        const perePart = realParents.find(p => p.parentType === 'pere')
+        const merePart = realParents.find(p => p.parentType === 'mere')
+        if (perePart) { newMembers.push(toMember(perePart, 'pere', 'G0', 'real-pere')); if (localPereId) placeholderIdsToRemove.add(localPereId) }
+        if (merePart) { newMembers.push(toMember(merePart, 'mere', 'G0', 'real-mere')); if (localMereId) placeholderIdsToRemove.add(localMereId) }
+
+        // Grands-parents : les parents confirmés de chaque parent confirmé —
+        // ordre requis par le rendu : [père du père, mère du père, père de la mère, mère de la mère]
+        const branches = ['pere', 'mere'] as const
+        for (let bi = 0; bi < branches.length; bi++) {
+          const branch = branches[bi]
+          const p = realParents.find(rp => rp.parentType === branch)
+          if (!p) continue
+          try {
+            const res = await fetch(`${API_BASE}/api/parent-child/parents-of/${encodeURIComponent(p.numeroH)}`, { headers })
+            const data = await res.json()
+            const list: any[] = (data.success ? data.parents : []) || []
+            const gp = list.find(g => g.genre === 'HOMME')
+            const gm = list.find(g => g.genre === 'FEMME')
+            if (gp) { newMembers.push(toMember(gp, 'grand-pere', 'G-1', `real-gp-${branch}`)); if (localGpArr[bi]?.id) placeholderIdsToRemove.add(localGpArr[bi].id) }
+            if (gm) { newMembers.push(toMember(gm, 'grand-mere', 'G-1', `real-gm-${branch}`)); if (localGmArr[bi]?.id) placeholderIdsToRemove.add(localGmArr[bi].id) }
+          } catch { /* ignore */ }
+        }
+
+        // Frères/sœurs réels : les autres enfants confirmés des mêmes parents
+        const seenSiblings = new Set<string>()
+        for (const p of realParents) {
+          try {
+            const res = await fetch(`${API_BASE}/api/parent-child/children-of/${encodeURIComponent(p.numeroH)}`, { headers })
+            const data = await res.json()
+            const kids: any[] = (data.success ? data.children : []) || []
+            for (const kid of kids) {
+              if (kid.numeroH === userData.numeroH || seenSiblings.has(kid.numeroH)) continue
+              seenSiblings.add(kid.numeroH)
+              newMembers.push(toMember(kid, kid.genre === 'FEMME' ? 'soeur' : 'frere', 'G1', 'real-sib'))
+            }
+          } catch { /* ignore */ }
+        }
+
+        if (newMembers.length > 0) {
+          setFamilyMembers(prev => {
+            const siblingRelationsFound = new Set(newMembers.filter(m => m.relation === 'frere' || m.relation === 'soeur').map(m => m.relation))
+            const realNumeroHs = new Set(newMembers.map(m => m.numeroH).filter(Boolean))
+            const kept = prev.filter(m => {
+              if (m.id.startsWith('real-')) return true
+              if (m.id && placeholderIdsToRemove.has(m.id)) return false
+              // Frères/sœurs : seules les silhouettes SANS identité (numeroH 'N/A' ou
+              // vide) sont retirées — jamais un défunt ou toute autre personne réelle,
+              // même de la même relation (ex : un frère décédé reste affiché à côté
+              // d'un frère réel confirmé).
+              const isPlaceholder = !m.numeroH || m.numeroH === 'N/A'
+              if (isPlaceholder && siblingRelationsFound.has(m.relation as any)) return false
+              if (m.numeroH && realNumeroHs.has(m.numeroH)) return false
+              return true
+            })
+            return [...kept, ...newMembers]
+          })
+        }
+
+        const partner = partnerRes?.success ? partnerRes.partner : null
+        setRealConjoint(partner ? {
+          numeroH: partner.numeroH, prenom: partner.prenom, nomFamille: partner.nomFamille,
+          genre: partner.genre, photo: partner.photo
+        } : null)
+      } catch { /* silencieux — l'arbre local reste affiché */ }
+    })()
 
     // Compter les invitations de famille en attente pour cet utilisateur
     const receivedInvitations = InvitationManager.getReceivedInvitations(userData.numeroH)
@@ -260,9 +367,26 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       return
     }
 
-    // Autres relations (frère/sœur, conjoint, grands-parents, oncle/tante/cousin…) :
-    // pas encore de lien backend validé pour ces types — on garde l'ancien système
-    // d'invitation locale en attendant.
+    // Conjoint : lien de couple réel, confirmé par le partenaire (POST /api/couple/link)
+    if (newMember.relation === 'conjoint') {
+      try {
+        const res = await fetch(`${API_BASE}/api/couple/link`, {
+          method: 'POST', headers: authHeaders,
+          body: JSON.stringify({ partnerNumeroH: newMember.numeroH.trim() })
+        })
+        const data = await res.json()
+        alert(data.message || (data.success
+          ? `Demande envoyée à ${toName}. Le lien apparaîtra dès sa confirmation.`
+          : "Erreur lors de l'envoi de la demande."))
+      } catch { alert('Erreur réseau. Vérifiez votre connexion.') }
+      resetAddMemberForm()
+      return
+    }
+
+    // Frère/sœur, grands-parents, oncle/tante/cousin : ces relations se déduisent
+    // automatiquement des liens parent-enfant confirmés (partagez le même parent
+    // confirmé et votre frère/sœur apparaît seul, sans rien à ajouter ici) — pas
+    // de lien backend direct pour ces types, on garde l'ancien système local.
     const fromName = `${userData.prenom ?? ''} ${userData.nomFamille ?? ''}`.trim() || userData.numeroH
     InvitationManager.sendInvitation({
       fromNumeroH: userData.numeroH,
@@ -466,7 +590,12 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const mereMember = familyMembers.find(m => m.relation === 'mere')
   const hasPere = !!(pereMember?.isVisible)
   const hasMere = !!(mereMember?.isVisible)
-  const hasConjoint = !!(userData.conjointNumeroH && userData.conjointPrenom)
+  // Conjoint réel confirmé prioritaire sur les champs de profil (jamais validés par l'autre personne)
+  const conjointAffiche = realConjoint || (userData.conjointNumeroH && userData.conjointPrenom ? {
+    numeroH: userData.conjointNumeroH, prenom: userData.conjointPrenom, nomFamille: userData.conjointNomFamille,
+    genre: userData.conjointGenre, photo: userData.conjointPhoto
+  } : null)
+  const hasConjoint = !!conjointAffiche
   const frereLinked = familyMembers.find(m => m.relation === 'frere' && m.isVisible)
   const soeurLinked = familyMembers.find(m => m.relation === 'soeur' && m.isVisible)
   const g1Mbrs = familyMembers.filter(m => m.generation === 'G-1')
@@ -1019,19 +1148,20 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 <line x1={vousX+NW} y1={385} x2={conjX} y2={385} stroke="#1a8f1a" strokeWidth={2}/>
                 <text x={Math.round((vousX+NW+conjX)/2)} y={377} textAnchor="middle" fontSize={10} fill="#FF9800" fontWeight="bold">♥</text>
                 {renderNodeShape(
-                  (userData.conjointGenre?.toUpperCase()==='FEMME' ? 'FEMME' : 'HOMME') as 'HOMME'|'FEMME'|'AUTRE',
+                  (conjointAffiche?.genre?.toUpperCase()==='FEMME' ? 'FEMME' : 'HOMME') as 'HOMME'|'FEMME'|'AUTRE',
                   conjX, 350, NW, NH, '#667eea', 3, 'white',
                   () => setSelectedMember(familyMembers.find(m=>m.relation==='conjoint')||null)
                 )}
                 <circle cx={conjX+26} cy={385} r={20} fill="#667eea" opacity="0.25"/>
-                {userData.conjointPhoto && <image href={userData.conjointPhoto} x={conjX+6} y={365} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-conj)"/>}
+                {conjointAffiche?.photo && <image href={conjointAffiche.photo} x={conjX+6} y={365} width={40} height={40} preserveAspectRatio="xMidYMid slice" clipPath="url(#c-conj)"/>}
                 <defs><clipPath id="c-conj"><circle cx={conjX+26} cy={385} r={20}/></clipPath></defs>
                 <text x={conjX+54} y={377} fontSize={11} fontWeight="bold" fill="#2c5530">
-                  {userData.conjointGenre?.toUpperCase()==='HOMME' ? 'Époux' : 'Épouse'}
+                  {conjointAffiche?.genre?.toUpperCase()==='HOMME' ? 'Époux' : 'Épouse'}
+                  {!realConjoint && ' (non confirmé)'}
                 </text>
-                <text x={conjX+54} y={391} fontSize={11} fill="#555">{userData.conjointPrenom}</text>
-                <text x={conjX+54} y={405} fontSize={10} fill="#667eea" fontWeight="bold">{userData.conjointNumeroH}</text>
-                <g style={{cursor:'pointer'}} onClick={()=>handleViewSpouseTree(userData.conjointNumeroH)}>
+                <text x={conjX+54} y={391} fontSize={11} fill="#555">{conjointAffiche?.prenom}</text>
+                <text x={conjX+54} y={405} fontSize={10} fill="#667eea" fontWeight="bold">{conjointAffiche?.numeroH}</text>
+                <g style={{cursor:'pointer'}} onClick={()=>handleViewSpouseTree(conjointAffiche?.numeroH || '')}>
                   <rect x={conjX+2} y={425} width={72} height={16} rx={6} fill="#667eea" opacity="0.85"/>
                   <text x={conjX+38} y={436} fontSize={9} textAnchor="middle" fill="white" fontWeight="bold">Voir arbre</text>
                 </g>
@@ -1598,7 +1728,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 520, width: '95%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, color: '#2c5530', fontSize: 18 }}>Arbre familial de {userData.conjointPrenom}</h3>
+              <h3 style={{ margin: 0, color: '#2c5530', fontSize: 18 }}>Arbre familial de {realConjoint?.prenom || userData.conjointPrenom}</h3>
               <button onClick={() => setSpouseTreeModal({ open: false, data: null, loading: false })}
                 style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#666' }}>✕</button>
             </div>
