@@ -129,13 +129,13 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
               className="absolute inset-0 w-full h-full object-cover object-top"
             />
             {pub.titre && (
-              <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/10 to-transparent p-3">
-                <p className="text-white font-bold text-[29px] leading-tight drop-shadow">{pub.titre}</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center bg-black/50 p-3">
+                <p className="text-white font-bold text-[33px] leading-tight drop-shadow">{pub.titre}</p>
                 {pub.description && (
-                  <p className="text-white/90 text-[27px] leading-tight mt-0.5 line-clamp-2 drop-shadow">{pub.description}</p>
+                  <p className="text-white/90 text-[31px] leading-tight mt-0.5 line-clamp-2 drop-shadow">{pub.description}</p>
                 )}
                 {pub.bouton_texte && (
-                  <span className="inline-flex items-center gap-1 mt-1.5 self-start px-2.5 py-1 rounded-full bg-white/90 text-gray-900 text-[26px] font-bold">
+                  <span className="inline-flex items-center gap-1 mt-1.5 px-2.5 py-1 rounded-full bg-white/90 text-gray-900 text-[30px] font-bold">
                     {pub.bouton_texte} →
                   </span>
                 )}
