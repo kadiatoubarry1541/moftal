@@ -75,12 +75,12 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />
             {(pub.titre || pub.description || pub.bouton_texte) && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center bg-black/40 px-2 py-1">
-                {pub.titre && <p className="text-white font-bold text-[27px] truncate drop-shadow">{pub.titre}</p>}
+                {pub.titre && <p className="text-white font-bold text-[47px] truncate drop-shadow">{pub.titre}</p>}
                 {pub.description && (
-                  <p className="text-white/90 text-[25px] truncate drop-shadow">{pub.description}</p>
+                  <p className="text-white/90 text-[45px] truncate drop-shadow">{pub.description}</p>
                 )}
                 {pub.bouton_texte && (
-                  <span className="mt-0.5 inline-block text-[25px] font-bold text-gray-900 bg-white/90 px-1.5 py-0.5 rounded-full">{pub.bouton_texte} ›</span>
+                  <span className="mt-0.5 inline-block text-[45px] font-bold text-gray-900 bg-white/90 px-1.5 py-0.5 rounded-full">{pub.bouton_texte} ›</span>
                 )}
               </div>
             )}
@@ -126,16 +126,16 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             <img
               src={imgUrl(pub.image_url)}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover object-top"
+              className="absolute inset-0 w-full h-full object-cover object-center"
             />
             {pub.titre && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center bg-black/50 p-3">
-                <p className="text-white font-bold text-[33px] leading-tight drop-shadow">{pub.titre}</p>
+                <p className="text-white font-bold text-[53px] leading-tight drop-shadow">{pub.titre}</p>
                 {pub.description && (
-                  <p className="text-white/90 text-[31px] leading-tight mt-0.5 line-clamp-2 drop-shadow">{pub.description}</p>
+                  <p className="text-white/90 text-[51px] leading-tight mt-0.5 line-clamp-2 drop-shadow">{pub.description}</p>
                 )}
                 {pub.bouton_texte && (
-                  <span className="inline-flex items-center gap-1 mt-1.5 px-2.5 py-1 rounded-full bg-white/90 text-gray-900 text-[30px] font-bold">
+                  <span className="inline-flex items-center gap-1 mt-1.5 px-2.5 py-1 rounded-full bg-white/90 text-gray-900 text-[50px] font-bold">
                     {pub.bouton_texte} →
                   </span>
                 )}
