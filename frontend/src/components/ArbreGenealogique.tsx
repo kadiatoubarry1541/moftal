@@ -190,6 +190,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         // Grands-parents : les parents confirmés de chaque parent confirmé —
         // ordre requis par le rendu : [père du père, mère du père, père de la mère, mère de la mère]
         const branches = ['pere', 'mere'] as const
+        const grandParentsFound: { numeroH: string; excludeChild: string }[] = []
         for (let bi = 0; bi < branches.length; bi++) {
           const branch = branches[bi]
           const p = realParents.find(rp => rp.parentType === branch)
@@ -200,8 +201,33 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             const list: any[] = (data.success ? data.parents : []) || []
             const gp = list.find(g => g.genre === 'HOMME')
             const gm = list.find(g => g.genre === 'FEMME')
-            if (gp) { newMembers.push(toMember(gp, 'grand-pere', 'G-1', `real-gp-${branch}`)); if (localGpArr[bi]?.id) placeholderIdsToRemove.add(localGpArr[bi].id) }
-            if (gm) { newMembers.push(toMember(gm, 'grand-mere', 'G-1', `real-gm-${branch}`)); if (localGmArr[bi]?.id) placeholderIdsToRemove.add(localGmArr[bi].id) }
+            if (gp) { newMembers.push(toMember(gp, 'grand-pere', 'G-1', `real-gp-${branch}`)); if (localGpArr[bi]?.id) placeholderIdsToRemove.add(localGpArr[bi].id); grandParentsFound.push({ numeroH: gp.numeroH, excludeChild: p.numeroH }) }
+            if (gm) { newMembers.push(toMember(gm, 'grand-mere', 'G-1', `real-gm-${branch}`)); if (localGmArr[bi]?.id) placeholderIdsToRemove.add(localGmArr[bi].id); grandParentsFound.push({ numeroH: gm.numeroH, excludeChild: p.numeroH }) }
+          } catch { /* ignore */ }
+        }
+
+        // Oncles/tantes réels : les autres enfants confirmés de chaque grand-parent
+        // (frères/sœurs du père ou de la mère), et cousins/cousines : leurs enfants.
+        const seenOnclesTantes = new Set<string>()
+        for (const gpEntry of grandParentsFound) {
+          try {
+            const res = await fetch(`${API_BASE}/api/parent-child/children-of/${encodeURIComponent(gpEntry.numeroH)}`, { headers })
+            const data = await res.json()
+            const kids: any[] = (data.success ? data.children : []) || []
+            for (const kid of kids) {
+              if (kid.numeroH === gpEntry.excludeChild || seenOnclesTantes.has(kid.numeroH)) continue
+              seenOnclesTantes.add(kid.numeroH)
+              newMembers.push(toMember(kid, kid.genre === 'FEMME' ? 'tante' : 'oncle', 'G0', 'real-oncle-tante'))
+
+              try {
+                const resCousins = await fetch(`${API_BASE}/api/parent-child/children-of/${encodeURIComponent(kid.numeroH)}`, { headers })
+                const dataCousins = await resCousins.json()
+                const cousins: any[] = (dataCousins.success ? dataCousins.children : []) || []
+                for (const cousin of cousins) {
+                  newMembers.push(toMember(cousin, cousin.genre === 'FEMME' ? 'cousine' : 'cousin', 'G1', 'real-cousin'))
+                }
+              } catch { /* ignore */ }
+            }
           } catch { /* ignore */ }
         }
 
