@@ -127,6 +127,18 @@ router.post('/link', async (req, res) => {
       });
     }
 
+    // Maximum 15 enfants par parent (actifs + en attente de confirmation)
+    const { Op: OpChild } = await import('sequelize');
+    const childrenCount = await ParentChildLink.count({
+      where: { parentNumeroH: user.numeroH, parentType: typeParent, status: { [OpChild.in]: ['active', 'pending'] }, isActive: true }
+    });
+    if (childrenCount >= 15) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vous avez déjà 15 enfants liés (ou en attente de confirmation) — c\'est le maximum autorisé.'
+      });
+    }
+
     const link = await ParentChildLink.create({
       parentNumeroH: user.numeroH,
       childNumeroH: String(childNumeroH).trim(),
