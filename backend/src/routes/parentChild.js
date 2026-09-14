@@ -12,6 +12,7 @@ import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
+import { addUserToFamilyTree, MAX_MEMBRES_ARBRE } from './familyTree.js';
 
 // Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
 // redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
@@ -276,6 +277,23 @@ router.post('/confirm/:linkId', async (req, res) => {
     if (link.childNumeroH !== user.numeroH && !isAdmin(user)) {
       return res.status(403).json({ success: false, message: 'Seul l\'apprenant (destinataire) peut confirmer ce lien' });
     }
+
+    // Rattache l'enfant au même arbre familial que son parent (limite de
+    // MAX_MEMBRES_ARBRE membres) — si l'arbre est déjà plein, la confirmation
+    // est bloquée : le parent devra libérer une place avant de réessayer.
+    const child = await User.findOne({ where: { numeroH: link.childNumeroH } });
+    const { limitReached } = await addUserToFamilyTree(
+      link.childNumeroH,
+      child?.numeroHPere || link.parentNumeroH,
+      child?.numeroHMere || null
+    );
+    if (limitReached) {
+      return res.status(400).json({
+        success: false,
+        message: `Cet arbre familial a déjà atteint la limite de ${MAX_MEMBRES_ARBRE} membres. Impossible de confirmer ce lien pour le moment.`
+      });
+    }
+
     link.status = 'active';
     link.confirmedAt = new Date();
     await link.save();
@@ -433,6 +451,35 @@ router.get('/children-of/:numeroH', async (req, res) => {
     res.json({ success: true, children: children.filter(Boolean) });
   } catch (error) {
     console.error('Erreur children-of:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * GET /api/parent-child/parents-of/:numeroH
+ * Liste des parents CONFIRMÉS (liens actifs) d'un NumeroH donné — infos
+ * publiques uniquement, pour dériver les grands-parents / oncles-tantes
+ * dans l'arbre sans exposer de données privées.
+ */
+router.get('/parents-of/:numeroH', async (req, res) => {
+  try {
+    const { numeroH } = req.params;
+    const links = await ParentChildLink.findAll({
+      where: { childNumeroH: numeroH, status: 'active', isActive: true },
+      order: [['created_at', 'DESC']]
+    });
+    const parents = await Promise.all(
+      links.map(async (link) => {
+        const parent = await User.findOne({
+          where: { numeroH: link.parentNumeroH },
+          attributes: ['numeroH', 'prenom', 'nomFamille', 'genre', 'dateNaissance', 'photo']
+        });
+        return parent ? { ...parent.toJSON(), linkId: link.id, parentType: link.parentType, childNumeroH: numeroH } : null;
+      })
+    );
+    res.json({ success: true, parents: parents.filter(Boolean) });
+  } catch (error) {
+    console.error('Erreur parents-of:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
