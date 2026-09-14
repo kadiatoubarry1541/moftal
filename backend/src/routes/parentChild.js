@@ -409,6 +409,35 @@ router.get('/my-children', async (req, res) => {
 });
 
 /**
+ * GET /api/parent-child/children-of/:numeroH
+ * Liste des enfants CONFIRMÉS (liens actifs) d'un NumeroH donné — infos
+ * publiques uniquement (identité + photo), pour afficher les petits-enfants
+ * dans l'arbre d'un grand-parent sans exposer de données privées.
+ */
+router.get('/children-of/:numeroH', async (req, res) => {
+  try {
+    const { numeroH } = req.params;
+    const links = await ParentChildLink.findAll({
+      where: { parentNumeroH: numeroH, status: 'active', isActive: true },
+      order: [['created_at', 'DESC']]
+    });
+    const children = await Promise.all(
+      links.map(async (link) => {
+        const child = await User.findOne({
+          where: { numeroH: link.childNumeroH },
+          attributes: ['numeroH', 'prenom', 'nomFamille', 'genre', 'dateNaissance', 'photo']
+        });
+        return child ? { ...child.toJSON(), linkId: link.id, parentNumeroH: numeroH } : null;
+      })
+    );
+    res.json({ success: true, children: children.filter(Boolean) });
+  } catch (error) {
+    console.error('Erreur children-of:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+/**
  * GET /api/parent-child/my-parents
  * Liste des parents liés (pour l'enfant).
  */
