@@ -1083,7 +1083,10 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <text x={mX+54} y={230} fontSize={11} fill="#555">{familyMembers.find(m=>m.relation==='mere')?.prenom||userData.prenomMere||'Mère'}</text>
             <text x={mX+54} y={244} fontSize={10} fill="#CD853F" fontWeight="bold">{familyMembers.find(m=>m.relation==='mere')?.numeroH||userData.numeroHMere||''}</text>
 
-            <line x1={pmMidX} y1={260} x2={pmMidX} y2={310} stroke="#1a8f1a" strokeWidth={2}/>
+            {/* Part exactement de la ligne "Conjoints" (y=225, entre père et mère) — avant,
+                cette verticale démarrait à y=260 (bas des cartes), laissant un vide visible
+                de 35px entre la ligne des conjoints et la descente vers les enfants. */}
+            <line x1={pmMidX} y1={225} x2={pmMidX} y2={310} stroke="#1a8f1a" strokeWidth={2}/>
             {renderPlusButton(pX+80, 215, 'Lier père', 'pere')}
             {renderPlusButton(mX+80, 215, 'Lier mère', 'mere')}
           </g>
@@ -1162,8 +1165,11 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               </>
             )}
 
-            {/* Vertical vers G2 */}
-            <line x1={downX} y1={420} x2={downX} y2={460} stroke="#1a8f1a" strokeWidth={2}/>
+            {/* Vertical vers G2 — part de la ligne "♥" du couple (y=385) quand il y a un
+                conjoint, comme pour Conjoints en G0, au lieu du bas des cartes (y=420) qui
+                laissait le même vide visible de 35px. Sans conjoint, downX tombe déjà au
+                centre de VOUS : pas besoin de remonter, y=420 reste correct. */}
+            <line x1={downX} y1={hasConjoint ? 385 : 420} x2={downX} y2={460} stroke="#1a8f1a" strokeWidth={2}/>
           </g>
 
           {/* ── Barre G1→G2 : étendue pour toujours inclure downX ── */}
