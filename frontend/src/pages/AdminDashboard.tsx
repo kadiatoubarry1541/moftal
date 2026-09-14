@@ -747,6 +747,18 @@ export default function AdminDashboard() {
                         Lancer le contrôle
                       </button>
                     </div>
+                    <div className="bg-gradient-to-br from-pink-50 to-rose-100 rounded-xl p-5 border border-pink-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl">💕</span>
+                        <div>
+                          <h3 className="font-semibold text-pink-900">Messagerie Amitié</h3>
+                          <p className="text-xs text-pink-700">Voir tous les couples liés et leurs conversations</p>
+                        </div>
+                      </div>
+                      <button onClick={() => navigate("/admin/amitie-messages")} className="w-full px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors text-sm">
+                        Ouvrir
+                      </button>
+                    </div>
                     <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-3xl">👥</span>
