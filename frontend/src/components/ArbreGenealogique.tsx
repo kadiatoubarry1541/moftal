@@ -246,6 +246,20 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           } catch { /* ignore */ }
         }
 
+        // Frères/sœurs liés DIRECTEMENT (utile quand le parent commun est décédé,
+        // donc ne peut confirmer aucun lien parent-enfant) — les deux se valident
+        // entre eux via /api/sibling/link, sans passer par un parent commun.
+        try {
+          const res = await fetch(`${API_BASE}/api/sibling/my-siblings`, { headers })
+          const data = await res.json()
+          const directSiblings: any[] = (data.success ? data.siblings : []) || []
+          for (const sib of directSiblings) {
+            if (sib.numeroH === userData.numeroH || seenSiblings.has(sib.numeroH)) continue
+            seenSiblings.add(sib.numeroH)
+            newMembers.push(toMember(sib, sib.genre === 'FEMME' ? 'soeur' : 'frere', 'G1', 'real-sib-direct'))
+          }
+        } catch { /* ignore */ }
+
         if (newMembers.length > 0) {
           setFamilyMembers(prev => {
             const siblingRelationsFound = new Set(newMembers.filter(m => m.relation === 'frere' || m.relation === 'soeur').map(m => m.relation))
@@ -409,10 +423,27 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       return
     }
 
-    // Frère/sœur, grands-parents, oncle/tante/cousin : ces relations se déduisent
-    // automatiquement des liens parent-enfant confirmés (partagez le même parent
-    // confirmé et votre frère/sœur apparaît seul, sans rien à ajouter ici) — pas
-    // de lien backend direct pour ces types, on garde l'ancien système local.
+    // Frère/sœur : lien direct réel, confirmé par l'autre personne (POST
+    // /api/sibling/link) — utile quand le parent commun est décédé (donc ne
+    // peut confirmer aucun lien parent-enfant) : les deux se valident entre eux.
+    if (newMember.relation === 'frere' || newMember.relation === 'soeur') {
+      try {
+        const res = await fetch(`${API_BASE}/api/sibling/link`, {
+          method: 'POST', headers: authHeaders,
+          body: JSON.stringify({ siblingNumeroH: newMember.numeroH.trim() })
+        })
+        const data = await res.json()
+        alert(data.message || (data.success
+          ? `Demande envoyée à ${toName}. Le lien apparaîtra dès sa confirmation.`
+          : "Erreur lors de l'envoi de la demande."))
+      } catch { alert('Erreur réseau. Vérifiez votre connexion.') }
+      resetAddMemberForm()
+      return
+    }
+
+    // Grands-parents, oncle/tante/cousin : ces relations se déduisent
+    // automatiquement des liens parent-enfant confirmés — pas de lien
+    // backend direct pour ces types, on garde l'ancien système local.
     const fromName = `${userData.prenom ?? ''} ${userData.nomFamille ?? ''}`.trim() || userData.numeroH
     InvitationManager.sendInvitation({
       fromNumeroH: userData.numeroH,
@@ -845,11 +876,14 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     <option value="mere">Mère</option>
                     <option value="enfant">Enfant</option>
                     <option value="conjoint">Conjoint(e)</option>
+                    <option value="frere">Frère</option>
+                    <option value="soeur">Sœur</option>
                   </select>
                   <p style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
-                    Grands-parents, frères/sœurs, oncles/tantes et cousins apparaissent
-                    automatiquement dès que les liens parent-enfant sont confirmés — rien à
-                    ajouter ici pour eux.
+                    Frère/Sœur : à utiliser surtout si votre parent commun est décédé
+                    (il/elle doit confirmer). Grands-parents, oncles/tantes et cousins
+                    apparaissent automatiquement dès que les liens parent-enfant sont
+                    confirmés — rien à ajouter ici pour eux.
                   </p>
                 </div>
               </div>
@@ -1142,8 +1176,10 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 <>
                   {renderSVGNode('HOMME', g1Xs[0], 350, 'Frère', '', 'Frère', undefined, undefined, undefined, 'c-ph-frere', undefined)}
                   {renderSVGNode('FEMME', g1Xs[1], 350, 'Sœur', '', 'Sœur', undefined, undefined, undefined, 'c-ph-soeur', undefined)}
-                  {/* Pas de bouton "+" ici : un frère/une sœur apparaît automatiquement
-                      dès que vous partagez tous les deux un parent confirmé — rien à ajouter. */}
+                  {/* Utile surtout si le parent commun est décédé : sinon, partagez un
+                      parent confirmé et le frère/la sœur apparaît automatiquement. */}
+                  {renderPlusButton(g1Xs[0]+80, 375, 'Lier frère', 'frere')}
+                  {renderPlusButton(g1Xs[1]+80, 375, 'Lier sœur', 'soeur')}
                 </>
               )
             }
