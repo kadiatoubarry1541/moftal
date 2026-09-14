@@ -817,19 +817,14 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     <option value="">Sélectionner une relation</option>
                     <option value="pere">Père</option>
                     <option value="mere">Mère</option>
-                    <option value="grand-pere">Grand-père</option>
-                    <option value="grand-mere">Grand-mère</option>
-                    <option value="arriere-grand-pere">Arrière grand-père</option>
-                    <option value="arriere-grand-mere">Arrière grand-mère</option>
-                    <option value="frere">Frère</option>
-                    <option value="soeur">Sœur</option>
                     <option value="enfant">Enfant</option>
                     <option value="conjoint">Conjoint(e)</option>
-                    <option value="oncle">Oncle</option>
-                    <option value="tante">Tante</option>
-                    <option value="cousin">Cousin</option>
-                    <option value="cousine">Cousine</option>
                   </select>
+                  <p style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+                    Grands-parents, frères/sœurs, oncles/tantes et cousins apparaissent
+                    automatiquement dès que les liens parent-enfant sont confirmés — rien à
+                    ajouter ici pour eux.
+                  </p>
                 </div>
               </div>
 
@@ -1061,10 +1056,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
               {/* Verticale couple maternel → mère G0 : au centre du gap entre gpm et gmm */}
               <line x1={mMidX} y1={75} x2={mMidX} y2={190} stroke="#1a8f1a" strokeWidth={2}/>
 
-              {renderPlusButton(gppX+80, 35, 'G-père paternel', 'grand-pere')}
-              {renderPlusButton(gmpX+80, 35, 'G-mère paternelle', 'grand-mere')}
-              {renderPlusButton(gpmX+80, 35, 'G-père maternel', 'grand-pere')}
-              {renderPlusButton(gmmX+80, 35, 'G-mère maternelle', 'grand-mere')}
+              {/* Pas de bouton "+" ici : un grand-parent n'est jamais ajouté depuis
+                  votre propre arbre — c'est à votre parent de lier SON parent
+                  depuis son propre compte ; il apparaît alors ici automatiquement. */}
             </g>
           )}
 
@@ -1112,7 +1106,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                         sib.relation === 'frere' ? 'Frère' : 'Sœur',
                         sib.photo, sib.dateNaissance, sib.dateDeces, clipId,
                         () => setSelectedMember(sib))}
-                      {renderPlusButton(x+80, 375, `Voir ${sib.prenom}`, sib.relation)}
                     </g>
                   )
                 })
@@ -1120,8 +1113,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 <>
                   {renderSVGNode('HOMME', g1Xs[0], 350, 'Frère', '', 'Frère', undefined, undefined, undefined, 'c-ph-frere', undefined)}
                   {renderSVGNode('FEMME', g1Xs[1], 350, 'Sœur', '', 'Sœur', undefined, undefined, undefined, 'c-ph-soeur', undefined)}
-                  {renderPlusButton(g1Xs[0]+80, 375, 'Ajouter frère', 'frere')}
-                  {renderPlusButton(g1Xs[1]+80, 375, 'Ajouter sœur', 'soeur')}
+                  {/* Pas de bouton "+" ici : un frère/une sœur apparaît automatiquement
+                      dès que vous partagez tous les deux un parent confirmé — rien à ajouter. */}
                 </>
               )
             }
