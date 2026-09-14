@@ -63,6 +63,10 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [showZoomMenu, setShowZoomMenu] = useState(false)
   const zoomMenuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  // Petits-enfants RÉELS : liens parent-enfant confirmés (cross-comptes), un
+  // par enfant G2, chargés depuis /api/parent-child/children-of/:numeroH —
+  // remplace l'ancienne génération G3 qui n'était jamais alimentée.
+  const [realG3ByParent, setRealG3ByParent] = useState<Record<string, FamilyMember[]>>({})
 
   useEffect(() => {
     if (!showZoomMenu) return
@@ -92,10 +96,50 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     // Construire automatiquement l'arbre généalogique selon les conditions remplies
     const autoBuiltTree = buildFamilyTree(userData)
     setFamilyMembers(autoBuiltTree)
-    
+
     // Obtenir les recommandations pour compléter l'arbre
     const recs = getTreeCompletionRecommendations(userData)
     setRecommendations(recs)
+
+    // Petits-enfants réels : un enfant (G2) n'apparaît comme parent que si SON
+    // propre lien parent-enfant a été confirmé côté backend (pas juste ajouté
+    // localement) — donc ce sont de vrais liens validés, pas une supposition.
+    const g2NumeroHs = autoBuiltTree
+      .filter(m => (m.parentId === `user-${userData.numeroH}` || (m.relation === 'enfant' && m.generation === 'G2')) && m.numeroH)
+      .map(m => m.numeroH)
+    if (g2NumeroHs.length > 0) {
+      const token = localStorage.getItem('token')
+      Promise.all(g2NumeroHs.map(async (numeroH) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/parent-child/children-of/${encodeURIComponent(numeroH)}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          })
+          const data = await res.json()
+          const kids: FamilyMember[] = (data.success ? data.children : []).map((c: any) => ({
+            id: `g3-${c.numeroH}`,
+            numeroH: c.numeroH,
+            prenom: c.prenom,
+            nomFamille: c.nomFamille,
+            genre: c.genre,
+            dateNaissance: c.dateNaissance,
+            photo: c.photo,
+            relation: 'enfant' as const,
+            generation: 'G3',
+            parentId: numeroH,
+            isVisible: true
+          }))
+          return [numeroH, kids] as const
+        } catch {
+          return [numeroH, [] as FamilyMember[]] as const
+        }
+      })).then(results => {
+        const map: Record<string, FamilyMember[]> = {}
+        results.forEach(([numeroH, kids]) => { if (kids.length > 0) map[numeroH] = kids })
+        setRealG3ByParent(map)
+      })
+    } else {
+      setRealG3ByParent({})
+    }
 
     // Compter les invitations de famille en attente pour cet utilisateur
     const receivedInvitations = InvitationManager.getReceivedInvitations(userData.numeroH)
@@ -152,31 +196,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     return icons[relation] || '👤'
   }
 
-  const handleAddMember = () => {
-    if (!newMember.numeroH || !newMember.relation) {
-      alert('Merci de renseigner le NuméroH et la relation.')
-      return
-    }
-
-    // Si on ajoute un vivant, on envoie une invitation pour qu'il puisse accepter ou refuser
-    if (addMemberType === 'vivant') {
-      const fromName = `${userData.prenom ?? ''} ${userData.nomFamille ?? ''}`.trim() || userData.numeroH
-      const toName = newMember.prenom || newMember.nomFamille || newMember.numeroH
-
-      InvitationManager.sendInvitation({
-        fromNumeroH: userData.numeroH,
-        fromName,
-        fromPhoto: userData.photo || undefined,
-        toNumeroH: newMember.numeroH.trim(),
-        toName,
-        relation: newMember.relation,
-        message: undefined
-      })
-
-      alert(`Invitation envoyée au membre ${toName} (${newMember.numeroH}).\nIl pourra accepter ou refuser depuis sa page "Mes invitations".`)
-    }
-
-    // Réinitialiser le formulaire (on ne modifie pas directement l'arbre ici)
+  const resetAddMemberForm = () => {
     setShowAddMemberForm(false)
     setAddMemberType(null)
     setNewMember({
@@ -189,6 +209,72 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       dateDeces: '',
       isDeceased: false
     })
+  }
+
+  const handleAddMember = async () => {
+    if (!newMember.numeroH || !newMember.relation) {
+      alert('Merci de renseigner le NuméroH et la relation.')
+      return
+    }
+    if (addMemberType !== 'vivant') { resetAddMemberForm(); return }
+
+    const toName = newMember.prenom || newMember.nomFamille || newMember.numeroH
+    const token = localStorage.getItem('token')
+    const authHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+
+    // Enfant : lien parent→enfant réel, confirmé par l'enfant (POST /api/parent-child/link)
+    if (newMember.relation === 'enfant') {
+      try {
+        const res = await fetch(`${API_BASE}/api/parent-child/link`, {
+          method: 'POST', headers: authHeaders,
+          body: JSON.stringify({
+            childNumeroH: newMember.numeroH.trim(),
+            parentType: userData.genre?.toUpperCase() === 'FEMME' ? 'mere' : 'pere'
+          })
+        })
+        const data = await res.json()
+        alert(data.message || (data.success
+          ? `Demande envoyée à ${toName}. Elle apparaîtra dans son arbre dès qu'il/elle confirme.`
+          : "Erreur lors de l'envoi de la demande."))
+      } catch { alert('Erreur réseau. Vérifiez votre connexion.') }
+      resetAddMemberForm()
+      return
+    }
+
+    // Père / Mère : demande d'accès réelle, confirmée par le parent (POST /api/family-tree/request-access)
+    if (newMember.relation === 'pere' || newMember.relation === 'mere') {
+      try {
+        const res = await fetch(`${API_BASE}/api/family-tree/request-access`, {
+          method: 'POST', headers: authHeaders,
+          body: JSON.stringify({
+            numeroHPere: newMember.relation === 'pere' ? newMember.numeroH.trim() : undefined,
+            numeroHMere: newMember.relation === 'mere' ? newMember.numeroH.trim() : undefined
+          })
+        })
+        const data = await res.json()
+        alert(data.message || (data.success
+          ? `Demande envoyée à ${toName}. Le lien apparaîtra dès sa confirmation.`
+          : "Erreur lors de l'envoi de la demande."))
+      } catch { alert('Erreur réseau. Vérifiez votre connexion.') }
+      resetAddMemberForm()
+      return
+    }
+
+    // Autres relations (frère/sœur, conjoint, grands-parents, oncle/tante/cousin…) :
+    // pas encore de lien backend validé pour ces types — on garde l'ancien système
+    // d'invitation locale en attendant.
+    const fromName = `${userData.prenom ?? ''} ${userData.nomFamille ?? ''}`.trim() || userData.numeroH
+    InvitationManager.sendInvitation({
+      fromNumeroH: userData.numeroH,
+      fromName,
+      fromPhoto: userData.photo || undefined,
+      toNumeroH: newMember.numeroH.trim(),
+      toName,
+      relation: newMember.relation,
+      message: undefined
+    })
+    alert(`Invitation envoyée au membre ${toName} (${newMember.numeroH}).\nIl pourra accepter ou refuser depuis sa page "Mes invitations".`)
+    resetAddMemberForm()
   }
 
   const calculateGeneration = (relation: string): string => {
@@ -715,13 +801,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         )
         const g2Slots = Math.max(2, g2Members.length)
 
-        // ── G3 : Petits-enfants (s'adapte dynamiquement) ──
-        const g3Members = familyMembers.filter(
-          m => m.generation === 'G3' && m.isVisible !== false && !isHidden(m.numeroH)
-        )
-        const hasG3 = g3Members.length > 0
-        const g3Slots = Math.max(1, g3Members.length)
-        const g3RowW = g3Slots * NW + (g3Slots - 1) * NGAP
+        // ── G3 : Petits-enfants RÉELS (liens confirmés) — un groupe par vrai parent G2 ──
+        const hasG3 = Object.values(realG3ByParent).some(arr => arr.length > 0)
 
         // ── Largeur SVG — s'adapte au nombre réel de membres ──
         const g1RowW = g1Total * NW + (g1Total - 1) * NGAP
@@ -729,7 +810,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         const hasGP = familyMembers.some(m => m.generation === 'G-1')
         const MARGIN = 80
         // Avec PG=280 et NW=160, les grands-parents ont besoin de SVG_W >= 800
-        const SVG_W = Math.max(g1RowW + 2 * MARGIN, g2RowW + 2 * MARGIN, g3RowW + 2 * MARGIN, hasGP ? 1100 : 600)
+        const SVG_W = Math.max(g1RowW + 2 * MARGIN, g2RowW + 2 * MARGIN, hasGP ? 1100 : 600)
         // ── Hauteur SVG — grandit si G3 (petits-enfants) existe ──
         const SVG_H = hasG3 ? 680 : 580
 
@@ -777,9 +858,36 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         const g2Xs = Array.from({ length: g2Slots }, (_, i) => g2StartX + i * (NW + NGAP))
         const g2BarL = Math.min(g2Xs[0] + NW / 2, downX)
         const g2BarR = Math.max(g2Xs[g2Slots - 1] + NW / 2, downX)
-        // ── G3 centré sur SVG_W ──
-        const g3StartX = Math.round((SVG_W - g3RowW) / 2)
-        const g3Xs = Array.from({ length: g3Slots }, (_, i) => g3StartX + i * (NW + NGAP))
+
+        // ── G3 : chaque groupe de petits-enfants reste sous SON vrai parent ──
+        //   (avant : un seul point moyen entre tous les enfants G2, donnant
+        //   l'impression que les petits-enfants du bas ne rejoignaient personne)
+        type G3Group = { parentNumeroH: string; parentCenterX: number; children: FamilyMember[]; xs: number[] }
+        const g3Groups: G3Group[] = []
+        {
+          let cursorX = MARGIN
+          for (let i = 0; i < g2Members.length && i < g2Xs.length; i++) {
+            const parent = g2Members[i]
+            const kids = ((parent.numeroH && realG3ByParent[parent.numeroH]) || []).filter(k => !isHidden(k.numeroH))
+            if (kids.length === 0) continue
+            const groupW = kids.length * NW + (kids.length - 1) * NGAP
+            const parentCenterX = g2Xs[i] + NW / 2
+            const startX = Math.max(Math.round(parentCenterX - groupW / 2), cursorX)
+            const xs = Array.from({ length: kids.length }, (_, k) => startX + k * (NW + NGAP))
+            g3Groups.push({ parentNumeroH: parent.numeroH, parentCenterX, children: kids, xs })
+            cursorX = startX + groupW + NGAP
+          }
+          // Recale tout le bloc vers la gauche si besoin pour ne jamais sortir du viewBox SVG
+          const lastGroup = g3Groups[g3Groups.length - 1]
+          if (lastGroup) {
+            const rightEdge = lastGroup.xs[lastGroup.xs.length - 1] + NW
+            const overflow = rightEdge - (SVG_W - MARGIN)
+            if (overflow > 0) {
+              const shift = Math.min(overflow, Math.max(0, g3Groups[0].xs[0] - MARGIN))
+              if (shift > 0) g3Groups.forEach(g => { g.xs = g.xs.map(x => x - shift) })
+            }
+          }
+        }
 
         return (
         <svg className="tree-svg" width={SVG_W * zoom} height={SVG_H * zoom} viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ display: 'block' }}>
@@ -970,42 +1078,39 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             }
           </g>
 
-          {/* ── G3 : Petits-enfants — HOMME=rectangle / FEMME=hexagone ── */}
-          {hasG3 && (() => {
-            const g2CenterX = g2Xs.length > 1
-              ? Math.round((g2Xs[0] + NW / 2 + g2Xs[g2Xs.length - 1] + NW / 2) / 2)
-              : (g2Xs[0] ?? downX) + NW / 2
-            const g3BarL = Math.min(g3Xs[0] + NW / 2, g2CenterX)
-            const g3BarR = Math.max(g3Xs[g3Slots - 1] + NW / 2, g2CenterX)
+          {/* ── G3 : Petits-enfants réels — un groupe par vrai parent, HOMME=rectangle / FEMME=hexagone ── */}
+          {g3Groups.map((group) => {
             const G3_Y = 610
+            const barL = Math.min(...group.xs.map(x => x + NW / 2), group.parentCenterX)
+            const barR = Math.max(...group.xs.map(x => x + NW / 2), group.parentCenterX)
             return (
-              <>
-                {/* Verticale G2→barre G3 */}
-                <line x1={g2CenterX} y1={560} x2={g2CenterX} y2={600} stroke="#1a8f1a" strokeWidth={2}/>
-                {/* Barre horizontale G3 */}
-                <line x1={g3BarL} y1={600} x2={g3BarR} y2={600} stroke="#1a8f1a" strokeWidth={2}/>
-                {/* Branches descendantes vers chaque petit-enfant */}
-                {g3Xs.map((x, i) => (
-                  <line key={`b3-${i}`} x1={x + NW / 2} y1={600} x2={x + NW / 2} y2={G3_Y} stroke="#1a8f1a" strokeWidth={2}/>
+              <g key={`g3-group-${group.parentNumeroH}`}>
+                {/* Verticale : du vrai parent G2 → barre G3 */}
+                <line x1={group.parentCenterX} y1={560} x2={group.parentCenterX} y2={600} stroke="#1a8f1a" strokeWidth={2}/>
+                {/* Barre horizontale de ce groupe */}
+                <line x1={barL} y1={600} x2={barR} y2={600} stroke="#1a8f1a" strokeWidth={2}/>
+                {/* Branches descendantes vers chaque petit-enfant de ce parent */}
+                {group.xs.map((x, i) => (
+                  <line key={`b3-${group.parentNumeroH}-${i}`} x1={x + NW / 2} y1={600} x2={x + NW / 2} y2={G3_Y} stroke="#1a8f1a" strokeWidth={2}/>
                 ))}
                 <g className="generation-g3">
-                  {g3Members.map((gc, i) => (
+                  {group.children.map((gc, i) => (
                     <g key={gc.id}>
                       {renderSVGNode(
                         gc.genre,         // HOMME → rect, FEMME → hexagone ← règle respectée
-                        g3Xs[i], G3_Y,
+                        group.xs[i], G3_Y,
                         gc.prenom || '—', gc.numeroH || '',
                         gc.genre === 'FEMME' ? 'Petite-fille' : 'Petit-fils',
-                        gc.photo, gc.dateNaissance, gc.dateDeces,
-                        `c-gc-${i}`,
+                        gc.photo, gc.dateNaissance, undefined,
+                        `c-gc-${group.parentNumeroH}-${i}`,
                         () => setSelectedMember(gc)
                       )}
                     </g>
                   ))}
                 </g>
-              </>
+              </g>
             )
-          })()}
+          })}
 
         </svg>
         )
