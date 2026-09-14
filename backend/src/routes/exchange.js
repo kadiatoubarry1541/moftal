@@ -138,10 +138,20 @@ router.get('/vendor-status', async (req, res) => {
 
 // @route   POST /api/exchange/register-vendor
 // @desc    Inscription comme vendeur Moftal (crée un compte en attente d'approbation)
-// @access  Authentifié
+//          Réservé à l'administrateur : Moftal est le seul vendeur — tous les
+//          autres participent en tant que fournisseurs (voir /suppliers).
+// @access  Authentifié (admin uniquement)
 router.post('/register-vendor', async (req, res) => {
   try {
     const userNumeroH = req.user?.numeroH || req.userId;
+
+    if (!isGlobalAdmin(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Les inscriptions vendeur sont réservées à Moftal. Inscrivez-vous plutôt comme fournisseur pour approvisionner la plateforme.'
+      });
+    }
+
     const { nomBoutique, description, secteur, telephone, ville } = req.body;
 
     if (!nomBoutique || !secteur) {
