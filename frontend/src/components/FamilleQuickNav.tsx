@@ -56,7 +56,7 @@ function useEntourageItems(user: Props['user']): NavItem[] {
     ...(showFemme
       ? [{ id: 'femme', to: '/famille/femmes', emoji: '👰', label: 'Ma femme', hint: 'Ma conjointe' } as NavItem]
       : []),
-    { id: 'amours', to: '/famille/mes-amours', emoji: '💕', label: 'Mes amours', hint: 'Mes amours' },
+    { id: 'amours', to: '/famille/mes-amours', emoji: '💕', label: 'Amitié', hint: 'Amitié' },
     { id: 'noyau', to: '/famille/noyau', emoji: '🏠', label: 'Mon Noyau', hint: 'Famille restreinte : noyau et livre familial' }
   ]
 }

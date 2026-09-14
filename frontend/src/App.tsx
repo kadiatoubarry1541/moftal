@@ -60,6 +60,7 @@ const AdminModeration = lazy(() => import("./pages/AdminModeration"));
 const AdminPoints = lazy(() => import("./pages/AdminPoints"));
 const AdminRetraits = lazy(() => import("./pages/AdminRetraits"));
 const AdminVerification = lazy(() => import("./pages/AdminVerification"));
+const AdminAmitieMessages = lazy(() => import("./pages/AdminAmitieMessages"));
 const AcheterPoints = lazy(() => import("./pages/AcheterPoints"));
 const TerreAdam = lazy(() => import("./pages/TerreAdam"));
 const ARetenir = lazy(() => import("./pages/ARetenir"));
@@ -630,6 +631,7 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/badges" element={<AdminBadges />} />
           <Route path="/admin/moderation" element={<AdminModeration />} />
+          <Route path="/admin/amitie-messages" element={<AdminAmitieMessages />} />
           <Route path="/admin/logos" element={<Navigate to="/admin/badges?tab=logos" replace />} />
           <Route path="/admin/governments" element={<AdminGovernments />} />
           <Route path="/admin/points" element={<AdminPoints />} />
