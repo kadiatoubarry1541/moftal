@@ -817,7 +817,7 @@ export default function TerreAdam() {
                   style={{
                     borderRadius: 10,
                     minWidth: 60,
-                    height: 25,
+                    height: 21,
                     background: activeTab === tab.id ? '#1a8f1a' : 'rgba(255,255,255,0.06)',
                     color: activeTab === tab.id ? 'white' : '#94a3b8',
                   }}
