@@ -1235,7 +1235,7 @@ const enhancedUser: UserData = useMemo(() => {
             <div>
               <div className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-[75vh] bg-white">
                 {/* En-tête — même style que les groupes Terre ADAM (Quartier) */}
-                <div className="bg-gray-800 text-white px-4 py-3 flex items-center justify-between">
+                <div className="bg-gray-800 text-white px-4 py-[10px] flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                       {(effectiveUser.nomFamille || 'A').charAt(0).toUpperCase()}
