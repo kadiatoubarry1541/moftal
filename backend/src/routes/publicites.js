@@ -149,12 +149,14 @@ router.get('/prix', authenticate, (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/soumettre', authenticate, upload.single('image'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'Une image est requise.' });
-    }
     const nom = `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim();
-    const imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'publicites');
-    uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'publicites').catch(() => {});
+    // Aucun champ n'est obligatoire, y compris l'image : sans fichier envoyé,
+    // on utilise le logo Moftal comme image par défaut de la publicité.
+    let imageUrl = '/icon-moftal-512.png';
+    if (req.file) {
+      imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'publicites');
+      uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'publicites').catch(() => {});
+    }
     const lien = (req.body.lien || '').toString().trim().slice(0, 500) || null;
     const titre = (req.body.titre || '').toString().trim().slice(0, 120) || null;
     const description = (req.body.description || '').toString().trim().slice(0, 300) || null;

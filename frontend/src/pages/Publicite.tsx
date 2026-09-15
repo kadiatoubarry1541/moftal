@@ -54,14 +54,11 @@ export default function Publicite() {
     e.preventDefault()
     setErreur('')
 
-    if (!image) return setErreur('Choisissez une image pour votre publicité.')
-    if (!titre.trim()) return setErreur('Donnez un titre à votre publicité.')
-
     setLoading(true)
     try {
       const formData = new FormData()
-      formData.append('image', image)
-      formData.append('titre', titre.trim())
+      if (image) formData.append('image', image)
+      if (titre.trim()) formData.append('titre', titre.trim())
       if (description.trim()) formData.append('description', description.trim())
       if (boutonTexte.trim()) formData.append('boutonTexte', boutonTexte.trim())
       if (lien.trim()) formData.append('lien', lien.trim())
@@ -171,7 +168,9 @@ export default function Publicite() {
 
             <form onSubmit={soumettre} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Image de la publicité *</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Image de la publicité <span className="font-normal text-gray-400">(optionnel)</span>
+                </label>
                 <input ref={fileRef} type="file" accept="image/*"
                   onChange={e => setImage(e.target.files?.[0] || null)}
                   className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-emerald-600 file:text-white file:font-semibold file:text-sm" />
@@ -181,7 +180,9 @@ export default function Publicite() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Titre *</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Titre <span className="font-normal text-gray-400">(optionnel)</span>
+                </label>
                 <input type="text" value={titre} onChange={e => setTitre(e.target.value)} maxLength={120}
                   placeholder="Ex : Menuiserie Barry — meubles sur mesure"
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400" />
@@ -222,7 +223,7 @@ export default function Publicite() {
                 </div>
               )}
 
-              <button type="submit" disabled={loading || !image || !titre.trim()}
+              <button type="submit" disabled={loading}
                 className="w-full py-3.5 rounded-xl font-black text-white text-sm disabled:opacity-50 transition-all bg-emerald-600 hover:bg-emerald-700">
                 {loading ? '⏳ Envoi en cours...' : admin ? '🚀 Publier maintenant' : '📤 Envoyer pour approbation'}
               </button>
