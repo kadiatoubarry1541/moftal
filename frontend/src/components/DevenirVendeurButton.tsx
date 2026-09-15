@@ -98,7 +98,11 @@ export function DevenirVendeurButton({ secteur, className }: Props) {
                   <button onClick={() => setChoix('vendeur')} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold transition-colors">
                     💰 Devenir vendeur
                   </button>
-                  <button onClick={goToFournisseur} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors">
+                  <button
+                    onClick={goToFournisseur}
+                    disabled={!fournisseurPath}
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors"
+                  >
                     🚚 Devenir fournisseur
                   </button>
                   {!fournisseurPath && (
