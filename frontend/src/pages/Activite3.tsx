@@ -85,6 +85,22 @@ export default function Activite3() {
   const [activityValue, setActivityValue] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<Activity3Group | null>(null);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+
+  const toggleLikePost = (postId: string) => {
+    const me = userData?.numeroH || '';
+    setSelectedGroup(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        posts: prev.posts.map(p => {
+          if (p.id !== postId) return p;
+          const already = p.likes.includes(me);
+          return { ...p, likes: already ? p.likes.filter(id => id !== me) : [...p.likes, me] };
+        }),
+      };
+    });
+  };
   const [showExhibitionForm, setShowExhibitionForm] = useState(false);
   const [showPerformanceForm, setShowPerformanceForm] = useState(false);
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -1071,15 +1087,35 @@ export default function Activite3() {
                       <p className="text-sm text-gray-500">{new Date(post.createdAt).toLocaleString()}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="p-1 text-gray-400 hover:text-red-500">
-                        ❤️ {post.likes.length}
+                      <button
+                        onClick={() => toggleLikePost(post.id)}
+                        className={`p-1 ${post.likes.includes(userData?.numeroH || '') ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                      >
+                        {post.likes.includes(userData?.numeroH || '') ? '❤️' : '🤍'} {post.likes.length}
                       </button>
-                      <button className="p-1 text-gray-400 hover:text-blue-500">
+                      <button
+                        onClick={() => setExpandedComments(prev => {
+                          const next = new Set(prev);
+                          if (next.has(post.id)) next.delete(post.id); else next.add(post.id);
+                          return next;
+                        })}
+                        className="p-1 text-gray-400 hover:text-blue-500"
+                      >
                         💬 {post.comments.length}
                       </button>
                     </div>
                   </div>
-                  
+                  {expandedComments.has(post.id) && post.comments.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {post.comments.map(c => (
+                        <div key={c.id} className="bg-gray-50 rounded-lg px-3 py-2">
+                          <p className="text-xs font-semibold text-gray-800">{c.authorName}</p>
+                          <p className="text-sm text-gray-700">{c.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <p className="text-gray-700 mb-3">{post.content}</p>
                   
                   {/* Détails d'exposition */}
