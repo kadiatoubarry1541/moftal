@@ -57,19 +57,35 @@ interface FamilyMessage {
 }
 
 const FAMILLE_CATEGORIES = [
-  { id: 'information', label: 'Information', icon: '📰' },
-  { id: 'rencontre',   label: 'Rencontre',   icon: '🤝' },
-  { id: 'deces',       label: 'Décès',       icon: '🕯️' },
-  { id: 'mariage',     label: 'Mariage',     icon: '💒' },
-  { id: 'bapteme',     label: 'Baptême',     icon: '⛪' },
-  { id: 'naissance',   label: 'Naissance',   icon: '👶' },
-  { id: 'solidarite',  label: 'Solidarité / Entraide', icon: '🤲' },
-  { id: 'fete',        label: 'Fête / Événement', icon: '🎉' },
-  { id: 'annonce',     label: 'Annonce',     icon: '📢' },
-  { id: 'opportunite', label: 'Opportunité', icon: '🌟' },
-  { id: 'urgence',     label: 'Urgence',     icon: '🚨' },
-  { id: 'reunion',     label: 'Réunion',     icon: '👥' },
+  { id: 'information', label: 'Information', icon: '📰', color: 'blue' },
+  { id: 'rencontre',   label: 'Rencontre',   icon: '🤝', color: 'teal' },
+  { id: 'deces',       label: 'Décès',       icon: '🕯️', color: 'stone' },
+  { id: 'mariage',     label: 'Mariage',     icon: '💒', color: 'pink' },
+  { id: 'bapteme',     label: 'Baptême',     icon: '⛪', color: 'purple' },
+  { id: 'naissance',   label: 'Naissance',   icon: '👶', color: 'yellow' },
+  { id: 'solidarite',  label: 'Solidarité / Entraide', icon: '🤲', color: 'green' },
+  { id: 'fete',        label: 'Fête / Événement', icon: '🎉', color: 'amber' },
+  { id: 'annonce',     label: 'Annonce',     icon: '📢', color: 'orange' },
+  { id: 'opportunite', label: 'Opportunité', icon: '🌟', color: 'amber' },
+  { id: 'urgence',     label: 'Urgence',     icon: '🚨', color: 'red' },
+  { id: 'reunion',     label: 'Réunion',     icon: '👥', color: 'indigo' },
 ] as const;
+
+// Même palette que la page Quartier (Terre ADAM) — pour que les messages de la
+// messagerie familiale aient le même style de bannière colorée par catégorie.
+const FAMILLE_COLORS: Record<string, { header: string }> = {
+  red:    { header: 'bg-red-600' },
+  orange: { header: 'bg-orange-500' },
+  blue:   { header: 'bg-blue-600' },
+  stone:  { header: 'bg-stone-600' },
+  pink:   { header: 'bg-pink-500' },
+  purple: { header: 'bg-purple-600' },
+  yellow: { header: 'bg-yellow-500' },
+  green:  { header: 'bg-green-600' },
+  amber:  { header: 'bg-amber-500' },
+  indigo: { header: 'bg-indigo-600' },
+  teal:   { header: 'bg-teal-600' },
+};
 
 interface GalleryItem {
   id: string
@@ -1225,7 +1241,6 @@ const enhancedUser: UserData = useMemo(() => {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-800 text-sm">Famille {effectiveUser.nomFamille || 'ADAM'}</p>
-                  <p className="text-xs text-gray-400">Discussion de groupe</p>
                 </div>
               </div>
             </div>
@@ -1242,7 +1257,6 @@ const enhancedUser: UserData = useMemo(() => {
                       <p className="font-semibold">
                         Famille {effectiveUser.nomFamille || 'ADAM'}
                       </p>
-                      <p className="text-xs text-green-100">Espace privé entre membres de la famille</p>
                     </div>
                   </div>
                   {/* Boutons appel (visible si conjoint lié) */}
@@ -1311,63 +1325,59 @@ const enhancedUser: UserData = useMemo(() => {
                         const isMe = msg.numeroH === effectiveUser.numeroH
                         const createdAt =
                           msg.createdAt || msg.created_at || new Date().toISOString()
+                        const cat = FAMILLE_CATEGORIES.find(c => c.id === (msg.category || 'information'))
+                        const colors = FAMILLE_COLORS[cat?.color || 'blue']
 
                         return (
                           <div
                             key={msg.id}
                             className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                           >
-                            <div
-                              className={`max-w-xs sm:max-w-md px-3 py-2 rounded-2xl shadow-sm ${
-                                isMe
-                                  ? 'bg-green-500 text-white rounded-br-sm'
-                                  : 'bg-white text-gray-900 rounded-bl-sm'
-                              }`}
-                            >
-                              {!isMe && (
-                                <p className="text-xs font-semibold mb-0.5 opacity-80">
-                                  {msg.authorName || 'Membre de la famille'}
+                            <div className={`max-w-[82%] rounded-2xl shadow-sm overflow-hidden border-2 bg-white ${
+                              isMe ? 'border-green-300' : 'border-gray-100'
+                            }`}>
+                              {/* Bannière colorée — même style que la page Quartier */}
+                              <div className={`${colors.header} px-4 py-2.5 flex items-center gap-3`}>
+                                <span className="text-3xl leading-none">{cat?.icon || '📰'}</span>
+                                <span className="text-white font-bold text-sm tracking-wide uppercase">
+                                  {cat?.label || 'Information'}
+                                </span>
+                              </div>
+                              <div className="px-4 py-3">
+                                <p className={`text-[11px] font-bold mb-1.5 ${isMe ? 'text-right text-green-600' : 'text-green-600'}`}>
+                                  {isMe ? 'Moi' : (msg.authorName || 'Membre de la famille')}
                                 </p>
-                              )}
-                              {(msg.messageType === 'text' || !msg.messageType) && (
-                                <p className="text-sm whitespace-pre-line">
-                                  {msg.category && msg.category !== 'information' && (
-                                    <span className="mr-1">{FAMILLE_CATEGORIES.find(c => c.id === msg.category)?.icon}</span>
-                                  )}
-                                  {msg.content}
+                                {(msg.messageType === 'text' || !msg.messageType) && msg.content && (
+                                  <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-line">{msg.content}</p>
+                                )}
+                                {msg.mediaUrl && msg.messageType === 'image' && (
+                                  <img
+                                    src={msg.mediaUrl}
+                                    alt="Pièce jointe"
+                                    className="rounded-lg max-h-60 object-cover w-full"
+                                  />
+                                )}
+                                {msg.mediaUrl && msg.messageType === 'video' && (
+                                  <video
+                                    src={msg.mediaUrl}
+                                    controls
+                                    className="rounded-lg max-h-60 w-full"
+                                  />
+                                )}
+                                {msg.mediaUrl && msg.messageType === 'audio' && (
+                                  <audio
+                                    src={msg.mediaUrl}
+                                    controls
+                                    className="w-full"
+                                  />
+                                )}
+                                <p className="text-[10px] text-gray-400 mt-2 text-right">
+                                  {new Date(createdAt).toLocaleTimeString('fr-FR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
                                 </p>
-                              )}
-                              {msg.mediaUrl && msg.messageType === 'image' && (
-                                <img
-                                  src={msg.mediaUrl}
-                                  alt="Pièce jointe"
-                                  className="mt-1 rounded-lg max-h-60 object-cover"
-                                />
-                              )}
-                              {msg.mediaUrl && msg.messageType === 'video' && (
-                                <video
-                                  src={msg.mediaUrl}
-                                  controls
-                                  className="mt-1 rounded-lg max-h-60 w-full"
-                                />
-                              )}
-                              {msg.mediaUrl && msg.messageType === 'audio' && (
-                                <audio
-                                  src={msg.mediaUrl}
-                                  controls
-                                  className="mt-1 w-full"
-                                />
-                              )}
-                              <p
-                                className={`text-[10px] mt-1 ${
-                                  isMe ? 'text-green-100' : 'text-gray-500'
-                                }`}
-                              >
-                                {new Date(createdAt).toLocaleTimeString('fr-FR', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </p>
+                              </div>
                             </div>
                           </div>
                         )
