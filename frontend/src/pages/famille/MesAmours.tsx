@@ -1701,7 +1701,10 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               >
                 Fermer
               </button>
-              <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors">
+              <button
+                onClick={() => { setShowInfoModal(false); setChatFriend(selectedFriend); }}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
+              >
                 Envoyer un message
               </button>
             </div>

@@ -504,12 +504,17 @@ export default function Sante() {
                     </div>
 
                     <div className="flex space-x-2">
-                      <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
+                      <a href={`tel:${hospital.phone}`} className="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
                         Appeler
-                      </button>
-                      <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors">
+                      </a>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hospital.name + ', ' + hospital.address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 text-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
+                      >
                         Itinéraire
-                      </button>
+                      </a>
                     </div>
                   </div>
                   );
@@ -573,12 +578,15 @@ export default function Sante() {
                     </div>
 
                     <div className="flex space-x-2">
-                      <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
+                      <a
+                        href={`sms:${doctor.phone}?body=${encodeURIComponent('Bonjour, je souhaite prendre rendez-vous.')}`}
+                        className="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
+                      >
                         Prendre RDV
-                      </button>
-                      <button className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors">
+                      </a>
+                      <a href={`tel:${doctor.phone}`} className="flex-1 text-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors">
                         Contacter
-                      </button>
+                      </a>
                     </div>
                   </div>
                   );

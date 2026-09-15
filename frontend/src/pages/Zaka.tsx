@@ -182,6 +182,7 @@ interface Certificate {
 
 export default function Zaka() {
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState<'pauvres' | 'mon-compte' | 'dons' | 'zakat' | 'communaute' | 'formation-religieux'>('pauvres');
   const [poorPeople, setPoorPeople] = useState<PoorPerson[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
@@ -1078,9 +1079,18 @@ export default function Zaka() {
                       >
                         🤲 Donner Zakat
                     </button>
-                      <button className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors">
-                        📞 Contacter
-                    </button>
+                      {person.contactInfo.phone ? (
+                        <a
+                          href={`tel:${person.contactInfo.phone}`}
+                          className="flex-1 text-center bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
+                        >
+                          📞 Contacter
+                        </a>
+                      ) : (
+                        <button disabled className="flex-1 bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed">
+                          📞 Contacter
+                        </button>
+                      )}
                   </div>
                 </div>
               ))}
@@ -1445,9 +1455,9 @@ export default function Zaka() {
                       >
                         Demander
                       </button>
-                      <button className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
+                      <a href={`tel:${stage.phone}`} className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-center">
                         Contacter
-                      </button>
+                      </a>
                     </div>
                   </div>
                 )) : (
@@ -1536,7 +1546,7 @@ export default function Zaka() {
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
-                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
+                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
                               Écouter
                             </button>
                           </div>
@@ -1560,7 +1570,7 @@ export default function Zaka() {
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
-                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
+                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
                               Regarder
                             </button>
                           </div>
@@ -1584,7 +1594,7 @@ export default function Zaka() {
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">Pages: {course.duration}</span>
-                            <button className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
+                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
                               Lire
                             </button>
                           </div>
@@ -1626,7 +1636,7 @@ export default function Zaka() {
                               <div key={index} className="text-sm text-gray-500">• {material}</div>
                             ))}
                           </div>
-                          <button className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
+                          <button onClick={() => setSelectedCourse(course)} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
                             Consulter
                           </button>
                         </div>
@@ -1689,9 +1699,15 @@ export default function Zaka() {
                           <p className="text-sm text-gray-600 mb-3">
                             Par: {certificate.issuedBy}
                           </p>
-                          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm">
+                          <a
+                            href={certificate.badgeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            className="block text-center w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm"
+                          >
                             Télécharger
-                          </button>
+                          </a>
                         </div>
                       )) : (
                         <div className="col-span-full text-center py-8">
@@ -1706,6 +1722,39 @@ export default function Zaka() {
           </div>
         )}
           </div>
+
+      {/* Modal de consultation d'un cours */}
+      {selectedCourse && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">{selectedCourse.title}</h3>
+              <button onClick={() => setSelectedCourse(null)} className="text-gray-500 hover:text-gray-700 text-2xl">
+                x
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Par {selectedCourse.instructor}</p>
+            {selectedCourse.type === 'audio' && selectedCourse.content && (
+              <audio controls className="w-full mb-4"><source src={selectedCourse.content} /></audio>
+            )}
+            {selectedCourse.type === 'video' && selectedCourse.content && (
+              <video controls className="w-full rounded-lg mb-4"><source src={selectedCourse.content} /></video>
+            )}
+            {(selectedCourse.type === 'written' || selectedCourse.type === 'library') && selectedCourse.content && (
+              <div className="whitespace-pre-wrap text-gray-700 leading-relaxed mb-4">{selectedCourse.content}</div>
+            )}
+            {!selectedCourse.content && (
+              <p className="text-center text-gray-500 py-8">Le contenu de ce cours n&apos;est pas encore disponible.</p>
+            )}
+            <button
+              onClick={() => setSelectedCourse(null)}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de don */}
       {showDonationForm && selectedPoorPerson && (

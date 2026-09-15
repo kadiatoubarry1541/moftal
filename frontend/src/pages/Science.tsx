@@ -39,6 +39,30 @@ export default function Science() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'recentes' | 'recherches' | 'anciens'>('recentes');
   const [posts, setPosts] = useState<SciencePost[]>([]);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+
+  const toggleLike = (postId: string) => {
+    const me = userData?.numeroH || '';
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const already = p.likes.includes(me);
+      return { ...p, likes: already ? p.likes.filter(id => id !== me) : [...p.likes, me] };
+    }));
+  };
+
+  const sharePost = async (post: SciencePost) => {
+    const url = `${window.location.origin}/science?post=${post.id}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Science — Moftal', text: post.content, url }); } catch { /* annulé */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('Lien copié !');
+      } catch {
+        alert(url);
+      }
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -565,16 +589,29 @@ export default function Science() {
                       {/* Actions */}
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <div className="flex items-center space-x-4">
-                          <button className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors">
-                            <span>👍</span>
+                          <button
+                            onClick={() => toggleLike(post.id)}
+                            className={`flex items-center space-x-1 transition-colors ${post.likes.includes(userData?.numeroH || '') ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+                          >
+                            <span>{post.likes.includes(userData?.numeroH || '') ? '👍' : '🤍'}</span>
                             <span className="text-xs">{post.likes.length}</span>
                           </button>
-                          <button className="flex items-center space-x-1 text-gray-600 hover:text-green-600 transition-colors">
+                          <button
+                            onClick={() => setExpandedComments(prev => {
+                              const next = new Set(prev);
+                              if (next.has(post.id)) next.delete(post.id); else next.add(post.id);
+                              return next;
+                            })}
+                            className="flex items-center space-x-1 text-gray-600 hover:text-green-600 transition-colors"
+                          >
                             <span>💬</span>
                             <span className="text-xs">{post.comments.length}</span>
                           </button>
                         </div>
-                        <button className="flex items-center space-x-1 text-gray-600 hover:text-purple-600 transition-colors text-xs">
+                        <button
+                          onClick={() => sharePost(post)}
+                          className="flex items-center space-x-1 text-gray-600 hover:text-purple-600 transition-colors text-xs"
+                        >
                           <span>📤</span>
                           <span>Partager</span>
                         </button>
@@ -583,9 +620,26 @@ export default function Science() {
                       {/* Commentaires (affichage réduit) */}
                       {post.comments.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-gray-100">
-                          <button className="text-xs text-blue-600 hover:text-blue-800">
-                            Voir {post.comments.length} commentaire{post.comments.length > 1 ? 's' : ''} →
+                          <button
+                            onClick={() => setExpandedComments(prev => {
+                              const next = new Set(prev);
+                              if (next.has(post.id)) next.delete(post.id); else next.add(post.id);
+                              return next;
+                            })}
+                            className="text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            {expandedComments.has(post.id) ? 'Masquer les commentaires' : `Voir ${post.comments.length} commentaire${post.comments.length > 1 ? 's' : ''} →`}
                           </button>
+                          {expandedComments.has(post.id) && (
+                            <div className="mt-2 space-y-2">
+                              {post.comments.map(c => (
+                                <div key={c.id} className="bg-gray-50 rounded-lg px-3 py-2">
+                                  <p className="text-xs font-semibold text-gray-800">{c.authorName}</p>
+                                  <p className="text-sm text-gray-700">{c.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

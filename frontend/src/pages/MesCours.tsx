@@ -853,7 +853,10 @@ export default function MesCours() {
                 <h3 className="text-xl font-semibold text-green-900 mb-4">🎯 Cours suggérés pour vous</h3>
                 <p className="text-green-800 mb-4">Vous progressez bien ! Voici d'autres cours qui pourraient vous intéresser :</p>
                 <div className="flex gap-4">
-                  <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+                  <button
+                    onClick={() => navigate('/education')}
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                  >
                     📚 Explorer les cours
                   </button>
                 </div>
