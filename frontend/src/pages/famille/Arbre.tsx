@@ -1231,8 +1231,12 @@ const enhancedUser: UserData = useMemo(() => {
         )}
 
         {activeTab === 'echanges' && (
-          <div>
-            <div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+            <div className="lg:col-span-1">
+              <h2 className="text-xl font-bold text-gray-800">Messagerie</h2>
+            </div>
+
+            <div className="lg:col-span-2">
               <div className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-[340px] sm:h-[480px] bg-white">
                 {/* En-tête — même style que les groupes Terre ADAM (Quartier) */}
                 <div className="bg-gray-800 text-white px-4 py-3 flex items-center justify-between">
