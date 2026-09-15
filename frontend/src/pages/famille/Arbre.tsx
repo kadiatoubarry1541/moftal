@@ -487,6 +487,11 @@ const enhancedUser: UserData = useMemo(() => {
 }, [effectiveUser, partner, parentsLinks])
 
   const familyMembers = useMemo(() => buildFamilyTree(enhancedUser), [enhancedUser])
+  // +1 pour compter l'utilisateur lui-même, en plus des membres réels (confirmés, pas des placeholders)
+  const realMembersCount = useMemo(
+    () => 1 + familyMembers.filter(m => m.numeroH && m.numeroH !== 'N/A').length,
+    [familyMembers]
+  )
   const cercleCounts = useMemo(
     () => getCercleDesRacinesCounts(enhancedUser, familyMembers),
     [enhancedUser, familyMembers]
@@ -1247,31 +1252,34 @@ const enhancedUser: UserData = useMemo(() => {
 
             <div className="lg:col-span-2">
               <div className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-[340px] sm:h-[480px] bg-white">
-                {/* Header style WhatsApp */}
-                <div className="bg-green-600 text-white px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-xl">
-                      👨‍👩‍👧‍👦
+                {/* En-tête — même style que les groupes Terre ADAM (Quartier) */}
+                <div className="bg-gray-800 text-white px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                      {(effectiveUser.nomFamille || 'A').charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <p className="font-semibold">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm truncate">
                         Famille {effectiveUser.nomFamille || 'ADAM'}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {realMembersCount} membre{realMembersCount > 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
                   {/* Boutons appel (visible si conjoint lié) */}
                   {partner && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => startCall(partner.numeroH, `${partner.prenom} ${partner.nomFamille}`, 'audio')}
-                        className="w-9 h-9 rounded-full bg-green-500 hover:bg-green-400 flex items-center justify-center text-lg transition-colors"
+                        className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-lg transition-colors"
                         title="Appel audio"
                       >
                         📞
                       </button>
                       <button
                         onClick={() => startCall(partner.numeroH, `${partner.prenom} ${partner.nomFamille}`, 'video')}
-                        className="w-9 h-9 rounded-full bg-green-500 hover:bg-green-400 flex items-center justify-center text-lg transition-colors"
+                        className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-lg transition-colors"
                         title="Appel vidéo"
                       >
                         📹
@@ -1399,52 +1407,15 @@ const enhancedUser: UserData = useMemo(() => {
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    {/* Bouton photo / vidéo */}
-                    <label
-                      className={`w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xl text-gray-500 hover:bg-gray-100 cursor-pointer transition-colors ${isSending ? 'opacity-50 pointer-events-none' : ''}`}
-                      title="Envoyer une photo ou vidéo"
-                    >
-                      📷
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,video/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) sendFamilyMediaMessage(file)
-                          e.target.value = ''
-                        }}
-                      />
-                    </label>
-
-                    {/* Bouton fichier audio */}
-                    <label
-                      className={`w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center text-xl text-gray-500 hover:bg-gray-100 cursor-pointer transition-colors ${isSending ? 'opacity-50 pointer-events-none' : ''}`}
-                      title="Envoyer un fichier audio"
-                    >
-                      🎵
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) sendFamilyMediaMessage(file)
-                          e.target.value = ''
-                        }}
-                      />
-                    </label>
-
                     <div className="flex-1 min-w-0 relative">
                       {/* Catégorie — intégrée dans le champ, à gauche */}
                       <button
                         type="button"
                         onClick={() => setShowCategoryGrid(v => !v)}
                         title="Choisir le type d'information"
-                        className={`absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+                        className={`absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-green-100' : 'hover:bg-gray-200'}`}
                       >
-                        <span className="text-base leading-none">{FAMILLE_CATEGORIES.find(c => c.id === newMessageCategory)?.icon}</span>
+                        <span className="text-lg leading-none">{FAMILLE_CATEGORIES.find(c => c.id === newMessageCategory)?.icon}</span>
                       </button>
                       <input
                         type="text"
@@ -1456,9 +1427,37 @@ const enhancedUser: UserData = useMemo(() => {
                             sendFamilyMessage()
                           }
                         }}
-                        placeholder="Écrivez un message familial..."
-                        className="w-full min-w-0 pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
+                        placeholder={`${FAMILLE_CATEGORIES.find(c => c.id === newMessageCategory)?.label || 'Information'}...`}
+                        className="w-full min-w-0 pl-12 pr-20 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-300 bg-gray-50 text-sm"
                       />
+                      {/* Photo / vidéo — intégrée dans le champ, à droite */}
+                      <label
+                        className={`absolute right-10 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-lg leading-none text-gray-500 hover:text-gray-700 cursor-pointer ${isSending ? 'opacity-50 pointer-events-none' : ''}`}
+                        title="Envoyer une photo ou une vidéo"
+                      >
+                        📷
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*,video/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) sendFamilyMediaMessage(file)
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                      {/* Envoyer — intégré dans le champ */}
+                      <button
+                        type="button"
+                        onClick={sendFamilyMessage}
+                        disabled={isSending || !newMessage.trim()}
+                        title="Envoyer"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold transition-colors"
+                      >
+                        ✓
+                      </button>
                       {showCategoryGrid && (
                         <div className="absolute bottom-11 left-0 z-20 bg-white rounded-xl shadow-lg border border-gray-200 p-2 grid grid-cols-4 gap-1 w-64">
                           {FAMILLE_CATEGORIES.map(cat => (
@@ -1484,27 +1483,15 @@ const enhancedUser: UserData = useMemo(() => {
                       onTouchStart={(e) => { e.preventDefault(); startRecording() }}
                       onTouchEnd={(e) => { e.preventDefault(); stopRecording() }}
                       disabled={isSending}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
+                      className={`flex-shrink-0 w-11 h-11 rounded-full overflow-hidden flex items-center justify-center text-xl leading-none transition-all ${
                         isRecording
-                          ? 'bg-red-500 scale-110 shadow-lg'
-                          : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-100'
+                          ? 'bg-red-500 scale-110 shadow-lg text-white'
+                          : 'bg-gray-200 hover:bg-green-100 text-gray-600 hover:text-green-700'
                       }`}
                       title="Maintenir pour enregistrer un message vocal"
                     >
                       🎤
                     </button>
-
-                    {/* Envoyer texte */}
-                    {newMessage.trim() && (
-                      <button
-                        type="button"
-                        onClick={sendFamilyMessage}
-                        disabled={isSending}
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg bg-green-600 hover:bg-green-700 transition-colors"
-                      >
-                        ➤
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
