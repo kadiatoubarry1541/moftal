@@ -6,7 +6,7 @@ interface Publicite {
   id: string;
   numero_h: string;
   nom: string;
-  image_url: string;
+  image_url?: string | null;
   lien?: string;
   titre?: string;
   description?: string;
@@ -147,7 +147,9 @@ export default function AdminPublicites() {
               const enLigne = p.is_active && (p.en_ligne === true || (p as any).en_ligne === "t");
               return (
                 <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                  <img src={imgUrl(p.image_url)} alt="" className="w-full h-40 object-cover bg-gray-100" />
+                  {p.image_url
+                    ? <img src={imgUrl(p.image_url)} alt="" className="w-full h-40 object-cover bg-gray-100" />
+                    : <div className="w-full h-40 bg-gray-100 flex items-center justify-center text-gray-400 text-sm">Sans image</div>}
                   <div className="p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${enLigne ? "bg-green-100 text-green-700" : info.bg + " " + info.text}`}>

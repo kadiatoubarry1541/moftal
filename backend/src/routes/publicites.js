@@ -33,6 +33,8 @@ async function ensurePublicitesTable() {
     `);
     await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_pub_numero_h ON "publicites" ("numero_h");`).catch(() => {});
     await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_pub_actives ON "publicites" ("is_active", "expire_le");`).catch(() => {});
+    // Aucun champ n'est obligatoire pour proposer une publicité, image comprise.
+    await sequelize.query(`ALTER TABLE "publicites" ALTER COLUMN "image_url" DROP NOT NULL;`).catch(() => {});
     // Ajoute les colonnes si la table existait déjà avant leur introduction
     await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "lien" VARCHAR(500);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "publicites" ADD COLUMN IF NOT EXISTS "titre" VARCHAR(120);`).catch(() => {});
@@ -151,8 +153,8 @@ router.post('/soumettre', authenticate, upload.single('image'), async (req, res)
   try {
     const nom = `${req.user.prenom || ''} ${req.user.nomFamille || ''}`.trim();
     // Aucun champ n'est obligatoire, y compris l'image : sans fichier envoyé,
-    // on utilise le logo Moftal comme image par défaut de la publicité.
-    let imageUrl = '/icon-moftal-512.png';
+    // la publicité n'a simplement pas d'image.
+    let imageUrl = null;
     if (req.file) {
       imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname, 'publicites');
       uploadToIDrive(req.file.buffer, req.file.originalname, req.file.mimetype, 'publicites').catch(() => {});
