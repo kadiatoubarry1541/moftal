@@ -77,7 +77,7 @@ interface MesAmoursStory {
   publishedAt: string;
 }
 
-export default function MesAmours() {
+export default function MesAmours({ embedded = false }: { embedded?: boolean } = {}) {
   const [searchParams] = useSearchParams();
   const [userData, setUserData] = useState<UserData | null>(null);
   const initialTab = (searchParams.get('tab') as 'friends' | 'requests' | 'info') || 'friends';
@@ -826,25 +826,27 @@ export default function MesAmours() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Bouton Retour */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <Link
-            to="/famille"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
-          >
-            <span aria-hidden>←</span>
-            Retour à Famille
-          </Link>
+      {/* Bouton Retour — inutile en mode intégré (Famille.tsx a déjà l'entête + le retour) */}
+      {!embedded && (
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+            <Link
+              to="/famille"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
+            >
+              <span aria-hidden>←</span>
+              Retour à Famille
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">💕 Amitié</h1>
-              <Link to="/famille/inspir" className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300">
+              {!embedded && <h1 className="text-3xl font-bold text-gray-900">💕 Amitié</h1>}
+              <Link to="/famille/inspir" className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${embedded ? '' : 'mt-2'} bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300`}>
                 🤝 Inspir
               </Link>
             </div>
