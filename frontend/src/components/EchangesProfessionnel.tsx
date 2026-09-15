@@ -187,13 +187,13 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               type="button"
               onClick={() => navigate('/compte')}
               aria-label="Retour à l'accueil"
-              style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 16, fontWeight: 700, lineHeight: 1, opacity: 1 }}
+              style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 20, fontWeight: 700, lineHeight: 1, opacity: 1 }}
             >
               ‹
             </button>
             <div>
-              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 Échanges</h1>
-              <p style={{ color: '#94a3b8', fontSize: 7, margin: 0, lineHeight: 1 }}>Fais défiler pour tout voir</p>
+              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 10, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 Échanges</h1>
+              <p style={{ color: '#94a3b8', fontSize: 6, margin: 0, lineHeight: 1 }}>Fais défiler pour tout voir</p>
             </div>
           </div>
           {canPublish ? (
@@ -211,8 +211,8 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
           )}
         </div>
 
-        {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir, remontée contre le titre */}
-        <div className="flex gap-1" style={{ padding: '0 8px 1px', marginTop: -6 }}>
+        {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir. Espacement (gap) garanti entre chaque bouton pour qu'aucun n'en touche un autre. */}
+        <div className="flex gap-1.5" style={{ padding: '0 8px 0', marginTop: -1 }}>
           {SECTIONS.map(section => {
             const c = COLOR_CLASSES[section.color];
             const active = activeSection === section.id;
@@ -221,12 +221,12 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                 key={section.id}
                 type="button"
                 onClick={() => scrollToSection(section.id)}
-                className={`flex-1 flex flex-col items-center justify-center gap-0 py-0 text-[7px] font-bold transition rounded-lg leading-none ${
+                className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0 py-0 text-[7px] font-bold transition rounded-lg leading-none ${
                   active ? c.bg + ' text-white' : 'bg-white/10 text-gray-300'
                 }`}
               >
-                <span className="text-[10px] leading-none">{section.icons[0]}</span>
-                <span className="truncate max-w-[60px] leading-none">{section.label}</span>
+                <span className="text-[9px] leading-none">{section.icons[0]}</span>
+                <span className="truncate max-w-full leading-none">{section.label}</span>
               </button>
             );
           })}
