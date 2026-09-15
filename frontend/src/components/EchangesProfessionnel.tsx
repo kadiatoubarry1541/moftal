@@ -212,7 +212,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
         </div>
 
         {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir, remontée contre le titre */}
-        <div className="flex gap-1" style={{ padding: '0 8px 1px', marginTop: -3 }}>
+        <div className="flex gap-1" style={{ padding: '0 8px 1px', marginTop: -6 }}>
           {SECTIONS.map(section => {
             const c = COLOR_CLASSES[section.color];
             const active = activeSection === section.id;

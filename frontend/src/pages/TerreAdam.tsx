@@ -807,7 +807,7 @@ export default function TerreAdam() {
             </div>
 
             {/* Les 7 niveaux propres à Terre ADAM — tous sur une seule ligne fixe, largeur égale, jamais de défilement, remontée contre le titre */}
-            <div className="flex gap-1" style={{ padding: '0 6px 1px', marginTop: -7 }}>
+            <div className="flex gap-1" style={{ padding: '0 6px 1px', marginTop: -10 }}>
               {navTabs.map(tab => (
                 <button
                   key={tab.id}
