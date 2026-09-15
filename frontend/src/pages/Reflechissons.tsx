@@ -43,6 +43,33 @@ export default function Reflechissons() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedReflection, setSelectedReflection] = useState<ReflectionContent | null>(null);
+  const [likedReflections, setLikedReflections] = useState<Set<string>>(new Set());
+  const [savedReflections, setSavedReflections] = useState<Set<string>>(new Set());
+
+  const toggleLikeReflection = (id: string) => {
+    setLikedReflections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSaveReflection = (id: string) => {
+    setSavedReflections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const shareReflection = async (reflection: ReflectionContent) => {
+    const url = `${window.location.origin}/reflechissons?id=${reflection.id}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: reflection.title, text: reflection.description, url }); } catch { /* annulé */ }
+    } else {
+      try { await navigator.clipboard.writeText(url); alert('Lien copié !'); } catch { alert(url); }
+    }
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -480,8 +507,11 @@ export default function Reflechissons() {
                   {reflection.type === 'audio' && '🎵 Écouter'}
                   {reflection.type === 'message' && '📖 Lire'}
                 </button>
-                <button className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 text-sm">
-                  ❤️
+                <button
+                  onClick={() => toggleLikeReflection(reflection.id)}
+                  className={`px-4 py-2 rounded-lg transition-colors duration-200 text-sm text-white ${likedReflections.has(reflection.id) ? 'bg-pink-600 hover:bg-pink-700' : 'bg-gray-500 hover:bg-gray-600'}`}
+                >
+                  {likedReflections.has(reflection.id) ? '❤️' : '🤍'}
                 </button>
               </div>
             </div>
@@ -659,14 +689,23 @@ export default function Reflechissons() {
               
               {/* Actions */}
               <div className="flex gap-4">
-                <button className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">
-                  ❤️ J'aime
+                <button
+                  onClick={() => toggleLikeReflection(selectedReflection.id)}
+                  className={`px-6 py-2 text-white rounded-lg transition-colors duration-200 ${likedReflections.has(selectedReflection.id) ? 'bg-pink-600 hover:bg-pink-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                >
+                  {likedReflections.has(selectedReflection.id) ? '❤️ Aimé' : '🤍 J\'aime'}
                 </button>
-                <button className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200">
+                <button
+                  onClick={() => shareReflection(selectedReflection)}
+                  className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                >
                   📤 Partager
                 </button>
-                <button className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200">
-                  💾 Sauvegarder
+                <button
+                  onClick={() => toggleSaveReflection(selectedReflection.id)}
+                  className={`px-6 py-2 text-white rounded-lg transition-colors duration-200 ${savedReflections.has(selectedReflection.id) ? 'bg-green-700' : 'bg-green-500 hover:bg-green-600'}`}
+                >
+                  {savedReflections.has(selectedReflection.id) ? '✅ Sauvegardé' : '💾 Sauvegarder'}
                 </button>
               </div>
             </div>

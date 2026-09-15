@@ -295,11 +295,17 @@ Plusieurs villes guinéennes sont devenues des centres commerciaux importants :
           <span className="text-xl">➕</span>
           <span className="font-semibold">Ajouter une Section</span>
         </button>
-        <button className="px-8 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl">
+        <button
+          onClick={() => alert('Les cartes historiques arrivent bientôt.')}
+          className="px-8 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl"
+        >
           <span className="text-xl">🗺️</span>
           <span className="font-semibold">Cartes Historiques</span>
         </button>
-        <button className="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl">
+        <button
+          onClick={() => alert('Les sources antiques arrivent bientôt.')}
+          className="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl"
+        >
           <span className="text-xl">📚</span>
           <span className="font-semibold">Sources Antiques</span>
         </button>
@@ -455,13 +461,13 @@ Plusieurs villes guinéennes sont devenues des centres commerciaux importants :
                 </div>
                 
                 <div className="flex gap-3">
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 text-sm font-medium">
+                  <button onClick={() => setSelectedSection(section)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 text-sm font-medium">
                     📷 Images
                   </button>
-                  <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-sm font-medium">
+                  <button onClick={() => setSelectedSection(section)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 text-sm font-medium">
                     🎥 Vidéos
                   </button>
-                  <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 text-sm font-medium">
+                  <button onClick={() => setSelectedSection(section)} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200 text-sm font-medium">
                     📄 Documents
                   </button>
                 </div>
