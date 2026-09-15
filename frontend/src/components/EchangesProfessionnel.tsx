@@ -181,7 +181,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
     <>
       {/* Header + raccourcis — jamais besoin de quitter cette page */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0.5px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               type="button"
@@ -211,8 +211,8 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
           )}
         </div>
 
-        {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir */}
-        <div className="flex gap-1" style={{ padding: '0 8px 1px' }}>
+        {/* Barre de raccourcis — reste toujours visible, fait descendre la page sans jamais en sortir, remontée contre le titre */}
+        <div className="flex gap-1" style={{ padding: '0 8px 1px', marginTop: -3 }}>
           {SECTIONS.map(section => {
             const c = COLOR_CLASSES[section.color];
             const active = activeSection === section.id;
