@@ -221,13 +221,12 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                 key={section.id}
                 type="button"
                 onClick={() => scrollToSection(section.id)}
-                className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold transition rounded-lg ${
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-1 text-[9px] font-bold transition rounded-lg leading-none ${
                   active ? c.bg + ' text-white' : 'bg-white/10 text-gray-300'
                 }`}
-                style={{ height: 19 }}
               >
-                <span className="text-base leading-none">{section.icons[0]}</span>
-                <span className="truncate max-w-[60px]">{section.label}</span>
+                <span className="text-sm leading-none">{section.icons[0]}</span>
+                <span className="truncate max-w-[60px] leading-none">{section.label}</span>
               </button>
             );
           })}
