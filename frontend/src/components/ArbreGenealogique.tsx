@@ -774,19 +774,31 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             {pendingInvitationCount > 0 &&
               ` | ${pendingInvitationCount} invitation${pendingInvitationCount > 1 ? 's' : ''} en attente`}
           </strong>
-        </div>
-        
-        <div className="arbre-controls">
-          <div className="view-controls">
-            <button 
-              className="view-btn add-member-btn"
+          <div>
+            <button
               onClick={() => {
                 setShowAddMemberForm(!showAddMemberForm)
                 setAddMemberType(null)
               }}
+              style={{
+                marginTop: '6px',
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                color: '#0284C7',
+                fontSize: '10px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
             >
               ➕ Ajouter
             </button>
+          </div>
+        </div>
+
+        <div className="arbre-controls">
+          <div className="view-controls">
             <button
               className={`view-btn ${showStats ? 'active' : ''}`}
               onClick={() => setShowStats(!showStats)}
