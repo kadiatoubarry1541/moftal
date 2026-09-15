@@ -249,7 +249,9 @@ export default function Publicite() {
               return (
                 <div key={p.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
                   <div className="flex items-start gap-3">
-                    <img src={p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`} alt="" className="w-20 h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
+                    {p.image_url
+                      ? <img src={p.image_url.startsWith('http') ? p.image_url : `${API}${p.image_url}`} alt="" className="w-20 h-20 object-cover rounded-xl border border-gray-200 flex-shrink-0" />
+                      : <div className="w-20 h-20 rounded-xl border border-gray-200 flex-shrink-0 bg-gray-100 flex items-center justify-center text-gray-400 text-[10px] text-center">Sans image</div>}
                     <div className="flex-1 min-w-0">
                       {p.titre && <p className="font-bold text-gray-900 text-sm truncate">{p.titre}</p>}
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${enLigne ? 'bg-green-100 text-green-700' : statutInfo.bg + ' ' + statutInfo.text}`}>

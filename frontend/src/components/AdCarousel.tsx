@@ -6,7 +6,7 @@ const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || ''
 
 interface Pub {
   id: string
-  image_url: string
+  image_url?: string | null
   lien?: string | null
   titre?: string | null
   description?: string | null
@@ -35,6 +35,7 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
   }, [pubs.length])
 
   const imgUrl = (path: string) => (path.startsWith('http') ? path : `${API_ORIGIN}${path}`)
+  const hasImage = (pub: Pub): pub is Pub & { image_url: string } => !!pub.image_url
 
   const goPrev = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -72,7 +73,7 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             className="absolute inset-0 transition-opacity duration-300"
             style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
           >
-            <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            {hasImage(pub) && <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />}
             {(pub.titre || pub.description || pub.bouton_texte) && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center bg-black/50 px-2 py-1 gap-0.5">
                 {pub.titre && <p className="text-white font-extrabold leading-tight w-full break-words drop-shadow text-[clamp(12px,4.2vw,18px)]">{pub.titre}</p>}
@@ -123,14 +124,18 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             className="absolute inset-0 transition-opacity duration-300"
             style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
           >
-            <img
-              src={imgUrl(pub.image_url)}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
-            {pub.titre && (
+            {hasImage(pub) && (
+              <img
+                src={imgUrl(pub.image_url)}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            )}
+            {(pub.titre || pub.description || pub.bouton_texte) && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center bg-black/50 p-3 gap-1.5">
-                <p className="text-white font-extrabold leading-tight drop-shadow w-full break-words text-[clamp(16px,5.5vw,34px)]">{pub.titre}</p>
+                {pub.titre && (
+                  <p className="text-white font-extrabold leading-tight drop-shadow w-full break-words text-[clamp(16px,5.5vw,34px)]">{pub.titre}</p>
+                )}
                 {pub.description && (
                   <p className="text-white/90 leading-tight drop-shadow w-full break-words text-[clamp(12px,3.6vw,20px)]">{pub.description}</p>
                 )}
