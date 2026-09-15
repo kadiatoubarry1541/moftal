@@ -863,9 +863,10 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               onClick={() => storyInputRef.current?.click()}
               disabled={uploadingStory}
               aria-label="Ajouter une story"
-              className="flex-shrink-0 w-[40px] h-[40px] rounded-md bg-emerald-100 hover:bg-emerald-200 disabled:opacity-60 border border-emerald-300 text-emerald-700 flex items-center justify-center text-sm font-bold"
+              className="flex-shrink-0 flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm disabled:opacity-60"
             >
-              +
+              <span className="text-3xl leading-none">➕</span>
+              <span className="text-sm font-bold text-gray-900 text-center">Story</span>
             </button>
             <input
               ref={storyInputRef}
@@ -882,13 +883,16 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                   type="button"
                   onClick={() => setViewingStory(story)}
                   title={story.authorName}
-                  className="flex-shrink-0 w-[40px] h-[40px] rounded-md overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center"
+                  className="flex-shrink-0 flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
                 >
-                  {mediaUrl ? (
-                    <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-[10px] text-gray-400">{(story.authorName || '?')[0]}</span>
-                  )}
+                  <span className="w-9 h-9 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center text-sm text-gray-400 leading-none">
+                    {mediaUrl ? (
+                      <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
+                    ) : (
+                      (story.authorName || '?')[0]
+                    )}
+                  </span>
+                  <span className="text-sm font-bold text-gray-900 text-center truncate max-w-[80px]">{story.authorName}</span>
                 </button>
               );
             })}
