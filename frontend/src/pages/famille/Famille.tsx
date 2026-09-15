@@ -52,8 +52,15 @@ export default function Famille() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               type="button"
-              onClick={() => navigate('/compte')}
-              aria-label="Retour à l'accueil"
+              onClick={() => {
+                if (activeTab) {
+                  setActiveTab(null)
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                } else {
+                  navigate('/compte')
+                }
+              }}
+              aria-label={activeTab ? 'Retour aux catégories Famille' : "Retour à l'accueil"}
               style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
             >
               ‹
@@ -107,7 +114,7 @@ export default function Famille() {
             </div>
           }>
             {activeTab === 'heritage'   && <HeritageTab />}
-            {activeTab === 'amitie'     && <AmitieTab />}
+            {activeTab === 'amitie'     && <AmitieTab embedded />}
             {activeTab === 'recit'      && <RecitTab />}
             {activeTab === 'solidarite' && <SolidariteTab />}
           </Suspense>
