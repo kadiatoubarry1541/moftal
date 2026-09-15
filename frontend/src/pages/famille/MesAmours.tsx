@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
@@ -78,10 +78,7 @@ interface MesAmoursStory {
 }
 
 export default function MesAmours({ embedded = false }: { embedded?: boolean } = {}) {
-  const [searchParams] = useSearchParams();
   const [userData, setUserData] = useState<UserData | null>(null);
-  const initialTab = (searchParams.get('tab') as 'friends' | 'requests' | 'info') || 'friends';
-  const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'info'>(initialTab);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -161,9 +158,9 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
 
   // Stories Mes Amours (type Facebook/WhatsApp)
   const [stories, setStories] = useState<MesAmoursStory[]>([]);
-  const [storyFile, setStoryFile] = useState<File | null>(null);
-  const [storyMessage, setStoryMessage] = useState('');
   const [uploadingStory, setUploadingStory] = useState(false);
+  const [viewingStory, setViewingStory] = useState<MesAmoursStory | null>(null);
+  const storyInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -290,14 +287,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
     }
   };
 
-  const handleStoryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setStoryFile(file);
-  };
-
-  const submitStory = async () => {
-    if (!storyFile) return;
-
+  const uploadStoryFile = async (file: File) => {
     try {
       const token = localStorage.getItem("token");
       if (!token || !userData?.numeroH) {
@@ -306,10 +296,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
       }
 
       const formData = new FormData();
-      formData.append('file', storyFile);
-      if (storyMessage.trim()) {
-        formData.append('content', storyMessage.trim());
-      }
+      formData.append('file', file);
 
       setUploadingStory(true);
       const response = await fetch(`${API_BASE}/api/user-stories/mes-amours/story`, {
@@ -322,8 +309,6 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
 
       const data = await response.json();
       if (response.ok && data.success) {
-        setStoryFile(null);
-        setStoryMessage('');
         await loadStories();
       } else {
         alert(data?.message || 'Erreur lors de la publication de la story');
@@ -334,6 +319,13 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
     } finally {
       setUploadingStory(false);
     }
+  };
+
+  const handleQuickStoryFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    await uploadStoryFile(file);
   };
 
   const getDefaultFriends = (): Friend[] => [
@@ -843,325 +835,207 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              {!embedded && <h1 className="text-3xl font-bold text-gray-900">💕 Amitié</h1>}
-              <Link to="/famille/inspir" className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${embedded ? '' : 'mt-2'} bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-sm font-medium rounded-lg transition-colors border border-yellow-300`}>
+          <div className="flex justify-between items-center py-3">
+            <div className="flex items-center gap-2">
+              {!embedded && <h1 className="text-xl sm:text-2xl font-bold text-gray-900">💕 Amitié</h1>}
+              <Link to="/famille/inspir" className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-medium rounded-lg transition-colors border border-yellow-300">
                 🤝 Inspir
               </Link>
             </div>
-            <div className="flex space-x-4">
-              <button
-                onClick={handleAddFriend}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                ➕ Ajouter un ami
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleAddFriend}
+              aria-label="Rechercher un ami"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors text-lg shrink-0"
+            >
+              🔍
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Stories */}
       <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
-            {[
-              { id: 'friends', label: 'Mes Amis', icon: '👥', count: 0 },
-              { id: 'requests', label: 'Demandes', icon: '📨', count: friendRequests.length },
-              { id: 'info', label: 'Mes Stories', icon: '📢', count: 0 }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`relative flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-emerald-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <span className="text-base sm:text-lg">{tab.icon}</span>
-                <span className="text-center leading-tight">{tab.label}</span>
-                {tab.count > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex gap-3 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => storyInputRef.current?.click()}
+              disabled={uploadingStory}
+              aria-label="Ajouter une story"
+              className="flex-shrink-0 w-[30px] h-[30px] rounded-md bg-emerald-100 hover:bg-emerald-200 disabled:opacity-60 border border-emerald-300 text-emerald-700 flex items-center justify-center text-sm font-bold"
+            >
+              +
+            </button>
+            <input
+              ref={storyInputRef}
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={handleQuickStoryFile}
+            />
+            {stories.map((story) => {
+              const mediaUrl = (story.photos && story.photos[0]) || (story.videos && story.videos[0]) || '';
+              return (
+                <button
+                  key={story.id}
+                  type="button"
+                  onClick={() => setViewingStory(story)}
+                  title={story.authorName}
+                  className="flex-shrink-0 w-[30px] h-[30px] rounded-md overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center"
+                >
+                  {mediaUrl ? (
+                    <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-gray-400">{(story.authorName || '?')[0]}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'friends' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">👥 Ma Liste d'Amis</h2>
-              {friends.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-5xl mb-3">👥</div>
-                  <p className="text-gray-500 text-lg font-medium">Vous n'avez pas encore d'amis</p>
-                  <p className="text-gray-400 text-sm mt-2">Utilisez le bouton "➕ Ajouter un ami" pour envoyer une invitation</p>
+      {/* Liste amis + invitations */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">📨 Invitations</h2>
+              {friendRequests.length > 0 && (
+                <span className="bg-red-500 text-white text-sm font-bold rounded-full px-2.5 py-0.5">
+                  {friendRequests.length}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleAddFriend}
+              className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+            >
+              ➕ Ajouter
+            </button>
+          </div>
+
+          {userIsAdmin && friends.length === 0 && (
+            <div className="border-2 border-dashed border-emerald-300 bg-emerald-50 rounded-lg p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">🧪 Espace de test admin</p>
+                <p className="text-xs text-gray-600">Aucun ami réel n'est nécessaire pour vérifier que la messagerie fonctionne correctement.</p>
+              </div>
+              <button
+                onClick={() => setChatFriend(adminDemoFriend)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
+              >
+                💬 Tester la messagerie
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {friendRequests.map((request) => (
+              <div key={request.id} className="border border-emerald-100 bg-emerald-50 rounded-xl p-3 sm:p-4 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-xl shrink-0">
+                  {(request.fromUserName || '?')[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">
+                    {request.fromUserName || 'Utilisateur inconnu'}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(request.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
                   <button
-                    onClick={handleAddFriend}
-                    className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg transition-colors font-medium"
+                    onClick={() => handleFriendRequest(request.id, 'accept')}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-lg font-medium transition-colors text-xs sm:text-sm"
                   >
-                    ➕ Ajouter mon premier ami
+                    Confirmer
+                  </button>
+                  <button
+                    onClick={() => handleFriendRequest(request.id, 'reject')}
+                    className="bg-white hover:bg-red-50 text-red-600 border border-red-300 py-2 px-3 rounded-lg font-medium transition-colors text-xs sm:text-sm"
+                  >
+                    Supprimer
                   </button>
                 </div>
-              )}
-              {userIsAdmin && friends.length === 0 && (
-                <div className="border-2 border-dashed border-emerald-300 bg-emerald-50 rounded-lg p-5 mb-6 flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <p className="font-semibold text-gray-900">🧪 Espace de test admin</p>
-                    <p className="text-sm text-gray-600">Aucun ami réel n'est nécessaire pour vérifier que la messagerie fonctionne correctement.</p>
-                  </div>
-                  <button
-                    onClick={() => setChatFriend(adminDemoFriend)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg transition-colors font-medium whitespace-nowrap"
-                  >
-                    💬 Tester la messagerie
-                  </button>
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {friends.map((friend) => (
-                  <div key={friend.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-center mb-4">
-                      <div className="relative">
-                        <img
-                          src={friend.profilePicture || '/api/placeholder/60/60'}
-                          alt={`${friend.prenom} ${friend.nomFamille}`}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
-                        {friend.isOnline && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                        )}
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="font-semibold text-gray-900">
-                          {friend.prenom} {friend.nomFamille}
-                        </h3>
-                        <p className="text-sm text-gray-600">{getNumeroHForDisplay(friend.numeroH, false)}</p>
-                        {friend.isOnline ? (
-                          <p className="text-xs text-green-600">En ligne</p>
-                        ) : (
-                          <p className="text-xs text-gray-500">
-                            Vu {new Date(friend.lastSeen || '').toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {friend.bio && (
-                      <p className="text-sm text-gray-600 mb-3">{friend.bio}</p>
-                    )}
-
-                    <div className="space-y-2 mb-4">
-                      {friend.location && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <span className="mr-2">📍</span>
-                          <span>{friend.location}</span>
-                        </div>
-                      )}
-                      {friend.occupation && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <span className="mr-2">💼</span>
-                          <span>{friend.occupation}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center text-sm text-gray-600">
-                        <span className="mr-2">👥</span>
-                        <span>{friend.mutualFriends} amis en commun</span>
-                      </div>
-                    </div>
-
-                    {friend.commonInterests.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-gray-900 mb-2">Intérêts communs:</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {friend.commonInterests.map((interest, index) => (
-                            <span key={index} className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-xs">
-                              {interest}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleViewFriendInfo(friend)}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg transition-colors"
-                      >
-                        Voir infos
-                      </button>
-                      <button
-                        onClick={() => setChatFriend(friend)}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
-                      >
-                        💬 Message
-                      </button>
-                    </div>
-                  </div>
-                ))}
               </div>
-            </div>
-          </div>
-        )}
+            ))}
 
-        {activeTab === 'requests' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">📨 Invitations reçues</h2>
-                {friendRequests.length > 0 && (
-                  <span className="bg-red-500 text-white text-sm font-bold rounded-full px-2.5 py-0.5">
-                    {friendRequests.length}
-                  </span>
-                )}
-              </div>
-              <div className="space-y-4">
-                {friendRequests.map((request) => (
-                  <div key={request.id} className="border border-emerald-100 bg-emerald-50 rounded-xl p-4 sm:p-5">
-                    <div className="flex items-start gap-4">
-                      {/* Avatar initiale */}
-                      <div className="w-12 h-12 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-xl shrink-0">
-                        {(request.fromUserName || '?')[0].toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-base">
-                          {request.fromUserName || 'Utilisateur inconnu'}
-                        </p>
-                        <p className="text-xs text-gray-500 font-mono mb-1">{request.fromUser}</p>
-                        {request.message && (
-                          <p className="text-sm text-gray-600 bg-white rounded-lg px-3 py-2 border border-gray-200 mb-2">
-                            "{request.message}"
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-400">
-                          Reçue le {new Date(request.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 mt-4">
-                      <button
-                        onClick={() => handleFriendRequest(request.id, 'accept')}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-lg font-medium transition-colors text-sm"
-                      >
-                        ✓ Accepter
-                      </button>
-                      <button
-                        onClick={() => handleFriendRequest(request.id, 'reject')}
-                        className="flex-1 bg-white hover:bg-red-50 text-red-600 border border-red-300 py-2.5 px-4 rounded-lg font-medium transition-colors text-sm"
-                      >
-                        ✗ Refuser
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {friendRequests.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="text-5xl mb-3">📭</div>
-                    <p className="text-gray-500 font-medium">Aucune invitation en attente</p>
-                    <p className="text-gray-400 text-sm mt-1">Quand quelqu'un vous enverra une invitation, elle apparaîtra ici</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'info' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">📢 Publier une Story</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Visible par toi et tes amis pendant 24h</p>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={handleStoryFileChange}
-                    className="block w-full text-xs sm:text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            {friends.map((friend) => (
+              <div
+                key={friend.id}
+                onClick={() => setChatFriend(friend)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setChatFriend(friend); }}
+                className="border border-gray-100 rounded-xl p-3 sm:p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors"
+              >
+                <div className="relative shrink-0">
+                  <img
+                    src={friend.profilePicture || '/api/placeholder/48/48'}
+                    alt={`${friend.prenom} ${friend.nomFamille}`}
+                    className="w-12 h-12 rounded-full object-cover"
                   />
+                  {friend.isOnline && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{friend.prenom} {friend.nomFamille}</p>
+                  <p className="text-xs text-gray-500">
+                    {friend.isOnline ? <span className="text-green-600">En ligne</span> : 'Ami(e)'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
                   <button
-                    type="button"
-                    disabled={!storyFile || uploadingStory}
-                    onClick={submitStory}
-                    className="inline-flex items-center justify-center px-3 sm:px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-medium shadow-sm transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleViewFriendInfo(friend); }}
+                    aria-label="Voir infos"
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm"
                   >
-                    {uploadingStory ? 'Publication...' : '📤 Publier'}
+                    ℹ️
                   </button>
+                  <span className="text-emerald-600 text-xs font-medium hidden sm:inline">💬 Message</span>
                 </div>
               </div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-3">
-                Choisis <strong>une photo</strong> ou <strong>une courte vidéo</strong> et publie ta story. Elle sera
-                visible par toi et tes amis pendant <strong>24 heures</strong>.
-              </p>
+            ))}
 
-              {stories.length === 0 ? (
-                <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-400 text-sm">
-                  Aucune story active pour le moment. Publie ta première story Mes Amours.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-800">Stories de toi et de tes amis (24h)</h3>
-                  <div className="flex gap-4 overflow-x-auto pb-2">
-                    {stories.map((story) => {
-                      const mediaUrl =
-                        (story.photos && story.photos[0]) ||
-                        (story.videos && story.videos[0]) ||
-                        '';
-                      const isVideo = mediaUrl?.toLowerCase().match(/\\.mp4$|\\.webm$|\\.ogg$/);
-                      return (
-                        <div
-                          key={story.id}
-                          className="flex-shrink-0 w-32 sm:w-40 rounded-xl bg-gray-50 border border-gray-200 overflow-hidden shadow-sm"
-                        >
-                          <div className="relative w-full h-32 bg-black/5 flex items-center justify-center overflow-hidden">
-                            {mediaUrl ? (
-                              isVideo ? (
-                                <video src={mediaUrl} className="w-full h-full object-cover" muted autoPlay loop />
-                              ) : (
-                                <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
-                              )
-                            ) : (
-                              <span className="text-gray-400 text-xs px-2 text-center">
-                                Story sans média
-                              </span>
-                            )}
-                          </div>
-                          <div className="p-2">
-                            <p className="text-xs font-semibold text-gray-900 truncate">
-                              {story.authorName}
-                            </p>
-                            {story.content && (
-                              <p className="text-[11px] text-gray-600 line-clamp-2 mt-0.5">
-                                {story.content}
-                              </p>
-                            )}
-                            <p className="text-[10px] text-gray-400 mt-1">
-                              {new Date(story.publishedAt).toLocaleTimeString('fr-FR', {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+            {friendRequests.length === 0 && friends.length === 0 && (
+              <div className="text-center py-12">
+                <div className="text-5xl mb-3">👥</div>
+                <p className="text-gray-500 text-lg font-medium">Vous n'avez pas encore d'amis</p>
+                <p className="text-gray-400 text-sm mt-2">Utilisez le bouton "➕ Ajouter" pour envoyer une invitation</p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
+
+      {/* Visionnage d'une story */}
+      {viewingStory && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4" onClick={() => setViewingStory(null)}>
+          <div className="max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-white font-semibold text-sm">{viewingStory.authorName}</p>
+              <button onClick={() => setViewingStory(null)} className="text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div className="rounded-xl overflow-hidden bg-black">
+              {(() => {
+                const mediaUrl = (viewingStory.photos && viewingStory.photos[0]) || (viewingStory.videos && viewingStory.videos[0]) || '';
+                const isVideo = mediaUrl?.toLowerCase().match(/\.mp4$|\.webm$|\.ogg$/);
+                if (!mediaUrl) return <p className="text-white text-center p-8">Story sans média</p>;
+                return isVideo ? (
+                  <video src={mediaUrl} className="w-full max-h-[70vh] object-contain" controls autoPlay />
+                ) : (
+                  <img src={mediaUrl} alt={viewingStory.authorName} className="w-full max-h-[70vh] object-contain" />
+                );
+              })()}
+            </div>
+            {viewingStory.content && <p className="text-white text-sm mt-2">{viewingStory.content}</p>}
+          </div>
+        </div>
+      )}
 
       {/* Modal d'ajout d'ami */}
       {showAddFriend && (
