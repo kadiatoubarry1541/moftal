@@ -770,9 +770,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           borderRadius: '6px'
         }}>
           <strong style={{ color: '#0C4A6E' }}>
-            📊 Progression de l'arbre : {visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''} visible{visibleMembers.length > 1 ? 's' : ''}
-            {pendingInvitationCount > 0 &&
-              ` | ${pendingInvitationCount} invitation${pendingInvitationCount > 1 ? 's' : ''} en attente`}
+            {visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''}
           </strong>
           <div>
             <button
