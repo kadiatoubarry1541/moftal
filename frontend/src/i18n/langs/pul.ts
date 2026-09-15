@@ -121,7 +121,7 @@ const pul: Record<string, string> = {
   'option.select_placeholder': 'Suɓo',
   'msg.saving': 'Nana winndoo...',
   'login.title': 'Ceŋagol',
-  'login.numeroh': 'NuméroH, téléphone ou email',
+  'login.numeroh': 'NuméroH, Noddaali wala Imeel',
   'login.password': 'Finnde',
   'login.submit': 'Ceŋo',
   'login.signup_prompt': 'A wonaa winndaaki?',
@@ -143,7 +143,7 @@ const pul: Record<string, string> = {
   'member.footer.a': 'Jokkondir e jeynguɗo lowre ngam ɗaɓɓude jokkondiral.',
 
   // Header / Navigation
-  'header.manage_pro': 'Activité',
+  'header.manage_pro': 'Gollu',
   'header.language': 'Ɗemngal',
   'header.favorites': 'Ñalnde',
   'nav.famille': 'Galle',
