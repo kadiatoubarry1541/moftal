@@ -863,7 +863,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               onClick={() => storyInputRef.current?.click()}
               disabled={uploadingStory}
               aria-label="Ajouter une story"
-              className="flex-shrink-0 w-[30px] h-[30px] rounded-md bg-emerald-100 hover:bg-emerald-200 disabled:opacity-60 border border-emerald-300 text-emerald-700 flex items-center justify-center text-sm font-bold"
+              className="flex-shrink-0 w-[40px] h-[40px] rounded-md bg-emerald-100 hover:bg-emerald-200 disabled:opacity-60 border border-emerald-300 text-emerald-700 flex items-center justify-center text-sm font-bold"
             >
               +
             </button>
@@ -882,7 +882,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                   type="button"
                   onClick={() => setViewingStory(story)}
                   title={story.authorName}
-                  className="flex-shrink-0 w-[30px] h-[30px] rounded-md overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center"
+                  className="flex-shrink-0 w-[40px] h-[40px] rounded-md overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center"
                 >
                   {mediaUrl ? (
                     <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
