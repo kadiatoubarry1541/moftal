@@ -66,6 +66,7 @@ export default function EchangeNourriture() {
   const [newVendor, setNewVendor] = useState({ nomBoutique: '', description: '', secteur: 'nourriture', telephone: '', ville: '' });
   const [vendorSubmitting, setVendorSubmitting] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
+  const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
 
   const [newProduct, setNewProduct] = useState({
@@ -730,8 +731,20 @@ export default function EchangeNourriture() {
                   >
                     📞 Contacter
                   </button>
-                  <button className="px-4 py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl hover:from-pink-600 hover:to-rose-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
-                    ❤️
+                  <button
+                    onClick={() => setLikedProducts(prev => {
+                      const next = new Set(prev);
+                      if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
+                      return next;
+                    })}
+                    aria-label={likedProducts.has(product.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    className={`px-4 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 ${
+                      likedProducts.has(product.id)
+                        ? 'bg-gradient-to-r from-pink-600 to-rose-600 ring-2 ring-pink-300'
+                        : 'bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600'
+                    } text-white`}
+                  >
+                    {likedProducts.has(product.id) ? '❤️' : '🤍'}
                   </button>
                 </div>
                 </div>

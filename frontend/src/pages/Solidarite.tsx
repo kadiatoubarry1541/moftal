@@ -81,6 +81,7 @@ export default function Solidarite() {
   const [selectedPoorPerson, setSelectedPoorPerson] = useState<PoorPerson | null>(null);
   const [showReflexionsModal, setShowReflexionsModal] = useState(false);
   const [selectedBookForReflexions, setSelectedBookForReflexions] = useState<HolyBook | null>(null);
+  const [selectedBookForReading, setSelectedBookForReading] = useState<HolyBook | null>(null);
   const [showAddBookForm, setShowAddBookForm] = useState(false);
   const [newBook, setNewBook] = useState({ title: '', description: '', author: '', language: 'Français', category: 'Islam' });
   const [bookPdfFile, setBookPdfFile] = useState<File | null>(null);
@@ -945,7 +946,10 @@ export default function Solidarite() {
 
                     <div className="flex flex-col space-y-2">
                       <div className="flex space-x-2">
-                        <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-sm">
+                        <button
+                          onClick={() => setSelectedBookForReading(book)}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-sm"
+                        >
                           📖 Lire
                         </button>
                         {(book as any).pdfUrl && (
@@ -1194,6 +1198,45 @@ export default function Solidarite() {
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg transition-colors"
               >
                 Effectuer le don
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de lecture d'un livre */}
+      {selectedBookForReading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                📖 {selectedBookForReading.title}
+              </h3>
+              <button
+                onClick={() => setSelectedBookForReading(null)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                x
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">{selectedBookForReading.author}</p>
+            <div className="prose max-w-none">
+              {selectedBookForReading.content ? (
+                <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                  {selectedBookForReading.content}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Le contenu de ce livre n&apos;est pas encore disponible.</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedBookForReading(null)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
+              >
+                Fermer
               </button>
             </div>
           </div>
