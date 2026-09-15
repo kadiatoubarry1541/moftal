@@ -763,36 +763,36 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
         {/* Indicateur de progression */}
         <div className="tree-progress" style={{
-          marginBottom: '15px',
-          padding: '12px',
+          marginBottom: '8px',
+          padding: '6px 10px',
           backgroundColor: '#E0F2FE',
           border: '1px solid #0284C7',
-          borderRadius: '6px'
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
         }}>
           <strong style={{ color: '#0C4A6E' }}>
             {visibleMembers.length} membre{visibleMembers.length > 1 ? 's' : ''}
           </strong>
-          <div>
-            <button
-              onClick={() => {
-                setShowAddMemberForm(!showAddMemberForm)
-                setAddMemberType(null)
-              }}
-              style={{
-                marginTop: '6px',
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                color: '#0284C7',
-                fontSize: '10px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                textDecoration: 'underline',
-              }}
-            >
-              ➕ Ajouter
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setShowAddMemberForm(!showAddMemberForm)
+              setAddMemberType(null)
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              color: '#0284C7',
+              fontSize: '10px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            ➕ Ajouter
+          </button>
         </div>
 
         <div className="arbre-controls">
