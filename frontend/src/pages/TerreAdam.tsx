@@ -798,30 +798,30 @@ export default function TerreAdam() {
                   type="button"
                   onClick={() => navigate('/compte')}
                   aria-label="Retour à l'accueil"
-                  style={{ background: 'none', color: 'white', border: 'none', padding: 0.5, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
+                  style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 22, fontWeight: 700, lineHeight: 1, opacity: 1 }}
                 >
                   ‹
                 </button>
-                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>🌍 Terre ADAM</h1>
+                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 14, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🌍 Terre ADAM</h1>
               </div>
             </div>
 
             {/* Les 7 niveaux propres à Terre ADAM — barre défilante pour rester lisible même avec beaucoup d'onglets */}
-            <div className="flex gap-1.5 overflow-x-auto" style={{ padding: '0 6px 2px', WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex gap-1 overflow-x-auto" style={{ padding: '0 6px 1px', WebkitOverflowScrolling: 'touch' }}>
               {navTabs.map(tab => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 px-1 py-1 text-[9px] font-bold transition leading-none"
+                  className="flex-shrink-0 flex flex-col items-center justify-center gap-0 px-1 py-0.5 text-[8px] font-bold transition leading-none"
                   style={{
-                    borderRadius: 10,
-                    minWidth: 60,
+                    borderRadius: 8,
+                    minWidth: 52,
                     background: activeTab === tab.id ? '#1a8f1a' : 'rgba(255,255,255,0.06)',
                     color: activeTab === tab.id ? 'white' : '#94a3b8',
                   }}
                 >
-                  <span className={`text-sm leading-none transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
+                  <span className={`text-xs leading-none transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
                   <span className="truncate max-w-[70px] leading-none">{tab.label}</span>
                 </button>
               ))}
