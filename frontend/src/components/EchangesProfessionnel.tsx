@@ -187,26 +187,26 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               type="button"
               onClick={() => navigate('/compte')}
               aria-label="Retour à l'accueil"
-              style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 22, fontWeight: 700, lineHeight: 1, opacity: 1 }}
+              style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 16, fontWeight: 700, lineHeight: 1, opacity: 1 }}
             >
               ‹
             </button>
             <div>
-              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 14, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 Échanges</h1>
-              <p style={{ color: '#94a3b8', fontSize: 8, margin: 0, lineHeight: 1.1 }}>Fais défiler pour tout voir</p>
+              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 Échanges</h1>
+              <p style={{ color: '#94a3b8', fontSize: 7, margin: 0, lineHeight: 1 }}>Fais défiler pour tout voir</p>
             </div>
           </div>
           {canPublish ? (
             <button
               type="button"
               onClick={() => navigate('/echange/publier')}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#22a722', border: 'none', borderRadius: 10, padding: '4px 10px', color: 'white', fontWeight: 700, fontSize: 11, lineHeight: 1.2, cursor: 'pointer', flexShrink: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#22a722', border: 'none', borderRadius: 8, padding: '2px 8px', color: 'white', fontWeight: 700, fontSize: 10, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}
             >
               ＋ Publier
             </button>
           ) : (
             <DevenirVendeurButton
-              className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 rounded-lg px-3 py-1 text-white font-bold text-xs flex-shrink-0"
+              className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 rounded-lg px-2 py-0.5 text-white font-bold text-[10px] leading-none flex-shrink-0"
             />
           )}
         </div>
@@ -221,11 +221,11 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                 key={section.id}
                 type="button"
                 onClick={() => scrollToSection(section.id)}
-                className={`flex-1 flex flex-col items-center justify-center gap-0 py-0.5 text-[8px] font-bold transition rounded-lg leading-none ${
+                className={`flex-1 flex flex-col items-center justify-center gap-0 py-0 text-[7px] font-bold transition rounded-lg leading-none ${
                   active ? c.bg + ' text-white' : 'bg-white/10 text-gray-300'
                 }`}
               >
-                <span className="text-xs leading-none">{section.icons[0]}</span>
+                <span className="text-[10px] leading-none">{section.icons[0]}</span>
                 <span className="truncate max-w-[60px] leading-none">{section.label}</span>
               </button>
             );
