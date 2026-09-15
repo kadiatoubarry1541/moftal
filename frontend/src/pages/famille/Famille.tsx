@@ -48,7 +48,7 @@ export default function Famille() {
 
       {/* ── Header (style Espace Gestion) ── */}
       <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '6px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <button
               type="button"
@@ -61,7 +61,7 @@ export default function Famille() {
                 }
               }}
               aria-label={activeTab ? 'Retour aux catégories Famille' : "Retour à l'accueil"}
-              style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
+              style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
             >
               ‹
             </button>
