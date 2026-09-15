@@ -187,7 +187,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               type="button"
               onClick={() => navigate('/compte')}
               aria-label="Retour à l'accueil"
-              style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 20, fontWeight: 700, lineHeight: 1, opacity: 1 }}
+              style={{ background: 'none', color: 'white', border: 'none', padding: 2, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
             >
               ‹
             </button>
