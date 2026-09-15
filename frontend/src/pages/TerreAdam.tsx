@@ -806,23 +806,22 @@ export default function TerreAdam() {
               </div>
             </div>
 
-            {/* Les 7 niveaux propres à Terre ADAM — barre défilante pour rester lisible même avec beaucoup d'onglets */}
-            <div className="flex gap-1 overflow-x-auto" style={{ padding: '0 6px 1px', WebkitOverflowScrolling: 'touch' }}>
+            {/* Les 7 niveaux propres à Terre ADAM — tous sur une seule ligne fixe, largeur égale, jamais de défilement */}
+            <div className="flex gap-1" style={{ padding: '0 6px 1px' }}>
               {navTabs.map(tab => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className="flex-shrink-0 flex flex-col items-center justify-center gap-0 px-1 py-0.5 text-[8px] font-bold transition leading-none"
+                  className="flex-1 min-w-0 flex flex-col items-center justify-center gap-0 px-0.5 py-0.5 text-[8px] font-bold transition leading-none"
                   style={{
                     borderRadius: 8,
-                    minWidth: 52,
                     background: activeTab === tab.id ? '#1a8f1a' : 'rgba(255,255,255,0.06)',
                     color: activeTab === tab.id ? 'white' : '#94a3b8',
                   }}
                 >
                   <span className={`text-xs leading-none transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
-                  <span className="truncate max-w-[70px] leading-none">{tab.label}</span>
+                  <span className="truncate max-w-full leading-none">{tab.label}</span>
                 </button>
               ))}
             </div>
