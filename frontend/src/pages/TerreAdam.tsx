@@ -798,11 +798,11 @@ export default function TerreAdam() {
                   type="button"
                   onClick={() => navigate('/compte')}
                   aria-label="Retour à l'accueil"
-                  style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 22, fontWeight: 700, lineHeight: 1, opacity: 1 }}
+                  style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 16, fontWeight: 700, lineHeight: 1, opacity: 1 }}
                 >
                   ‹
                 </button>
-                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 14, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🌍 Terre ADAM</h1>
+                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🌍 Terre ADAM</h1>
               </div>
             </div>
 
@@ -813,14 +813,14 @@ export default function TerreAdam() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className="flex-1 min-w-0 flex flex-col items-center justify-center gap-0 px-0.5 py-0.5 text-[8px] font-bold transition leading-none"
+                  className="flex-1 min-w-0 flex flex-col items-center justify-center gap-0 px-0.5 py-0 text-[7px] font-bold transition leading-none"
                   style={{
                     borderRadius: 8,
                     background: activeTab === tab.id ? '#1a8f1a' : 'rgba(255,255,255,0.06)',
                     color: activeTab === tab.id ? 'white' : '#94a3b8',
                   }}
                 >
-                  <span className={`text-xs leading-none transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
+                  <span className={`text-[10px] leading-none transition-transform ${activeTab === tab.id ? 'scale-110' : ''}`}>{tab.icon}</span>
                   <span className="truncate max-w-full leading-none">{tab.label}</span>
                 </button>
               ))}
