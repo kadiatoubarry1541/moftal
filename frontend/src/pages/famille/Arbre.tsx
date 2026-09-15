@@ -1231,8 +1231,26 @@ const enhancedUser: UserData = useMemo(() => {
         )}
 
         {activeTab === 'echanges' && (
-          <div>
-            <div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+            <div className="lg:col-span-1 space-y-4">
+              <h2 className="text-xl font-bold text-gray-800">Messagerie familiale</h2>
+              <p className="text-sm text-gray-500">
+                Espace privé réservé aux membres de la famille{' '}
+                <span className="font-semibold text-gray-700">
+                  {effectiveUser.nomFamille ? `${effectiveUser.nomFamille}` : ''}
+                </span>
+              </p>
+              <div className="flex items-center gap-3 mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-lg flex-shrink-0">
+                  👨‍👩‍👧‍👦
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Famille {effectiveUser.nomFamille || 'ADAM'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2">
               <div className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-[340px] sm:h-[480px] bg-white">
                 {/* En-tête — même style que les groupes Terre ADAM (Quartier) */}
                 <div className="bg-gray-800 text-white px-4 py-3 flex items-center justify-between">
