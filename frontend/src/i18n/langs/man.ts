@@ -121,7 +121,7 @@ const man: Record<string, string> = {
   'option.select_placeholder': 'Faamu',
   'msg.saving': 'Sigin kɛ...',
   'login.title': 'Sigin',
-  'login.numeroh': 'NuméroH, téléphone ou email',
+  'login.numeroh': 'NuméroH, Sɔni wala email',
   'login.password': 'Baara kɔrɔ',
   'login.submit': 'Sigin',
   'login.signup_prompt': 'Sigin ma kɛ? ',
@@ -143,7 +143,7 @@ const man: Record<string, string> = {
   'member.footer.a': 'Kana kɔfɛ jɛman sɛbɛn inivite kɛ ka ban.',
 
   // Header / Navigation
-  'header.manage_pro': 'Activité',
+  'header.manage_pro': 'Bolo',
   'header.language': 'Kan',
   'header.favorites': 'Mɛnɛ',
   'nav.famille': 'Denbaya',
