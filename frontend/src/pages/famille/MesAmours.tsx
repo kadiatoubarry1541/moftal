@@ -857,13 +857,13 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
       {/* Stories */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex gap-3 overflow-x-auto">
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={() => storyInputRef.current?.click()}
               disabled={uploadingStory}
               aria-label="Ajouter une story"
-              className="flex-shrink-0 flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm disabled:opacity-60"
+              className="flex-shrink-0 flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-2 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm disabled:opacity-60"
             >
               <span className="text-3xl leading-none">➕</span>
               <span className="text-sm font-bold text-gray-900 text-center">Story</span>
@@ -875,27 +875,29 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               className="hidden"
               onChange={handleQuickStoryFile}
             />
-            {stories.map((story) => {
-              const mediaUrl = (story.photos && story.photos[0]) || (story.videos && story.videos[0]) || '';
-              return (
-                <button
-                  key={story.id}
-                  type="button"
-                  onClick={() => setViewingStory(story)}
-                  title={story.authorName}
-                  className="flex-shrink-0 flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
-                >
-                  <span className="w-9 h-9 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center text-sm text-gray-400 leading-none">
-                    {mediaUrl ? (
-                      <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
-                    ) : (
-                      (story.authorName || '?')[0]
-                    )}
-                  </span>
-                  <span className="text-sm font-bold text-gray-900 text-center truncate max-w-[80px]">{story.authorName}</span>
-                </button>
-              );
-            })}
+            <div className="flex gap-3 overflow-x-auto">
+              {stories.map((story) => {
+                const mediaUrl = (story.photos && story.photos[0]) || (story.videos && story.videos[0]) || '';
+                return (
+                  <button
+                    key={story.id}
+                    type="button"
+                    onClick={() => setViewingStory(story)}
+                    title={story.authorName}
+                    className="flex-shrink-0 w-[100px] flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-2 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+                  >
+                    <span className="w-9 h-9 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center text-sm text-gray-400 leading-none">
+                      {mediaUrl ? (
+                        <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
+                      ) : (
+                        (story.authorName || '?')[0]
+                      )}
+                    </span>
+                    <span className="text-sm font-bold text-gray-900 text-center truncate max-w-full">{story.authorName}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
