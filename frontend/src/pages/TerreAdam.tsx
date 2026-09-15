@@ -792,7 +792,7 @@ export default function TerreAdam() {
         return (
           <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
             {/* Retour + titre + badge du niveau actif */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0.5px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0 12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <button
                   type="button"
@@ -806,8 +806,8 @@ export default function TerreAdam() {
               </div>
             </div>
 
-            {/* Les 7 niveaux propres à Terre ADAM — tous sur une seule ligne fixe, largeur égale, jamais de défilement */}
-            <div className="flex gap-1" style={{ padding: '0 6px 1px' }}>
+            {/* Les 7 niveaux propres à Terre ADAM — tous sur une seule ligne fixe, largeur égale, jamais de défilement, remontée contre le titre */}
+            <div className="flex gap-1" style={{ padding: '0 6px 1px', marginTop: -3 }}>
               {navTabs.map(tab => (
                 <button
                   key={tab.id}
