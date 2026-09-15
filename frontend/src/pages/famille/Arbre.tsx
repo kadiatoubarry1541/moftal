@@ -1231,12 +1231,8 @@ const enhancedUser: UserData = useMemo(() => {
         )}
 
         {activeTab === 'echanges' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
-            <div className="lg:col-span-1">
-              <h2 className="text-xl font-bold text-gray-800">Messagerie</h2>
-            </div>
-
-            <div className="lg:col-span-2">
+          <div>
+            <div>
               <div className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-[340px] sm:h-[480px] bg-white">
                 {/* En-tête — même style que les groupes Terre ADAM (Quartier) */}
                 <div className="bg-gray-800 text-white px-4 py-3 flex items-center justify-between">
@@ -1274,26 +1270,34 @@ const enhancedUser: UserData = useMemo(() => {
                   )}
                 </div>
 
-                {/* Filtre par catégorie */}
-                {familyMessages.length > 0 && (
-                  <div className="flex gap-1.5 overflow-x-auto px-3 py-2 bg-white border-b border-gray-100">
-                    <button
-                      onClick={() => setFeedFilter('all')}
-                      className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === 'all' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'}`}
-                    >
-                      💬 Tout
-                    </button>
-                    {FAMILLE_CATEGORIES.map(cat => (
+                {/* Filtre par catégorie — toujours visible, comme dans Quartier */}
+                <div className="flex gap-1.5 overflow-x-auto px-3 py-2 bg-white border-b border-gray-100">
+                  <button
+                    onClick={() => setFeedFilter('all')}
+                    className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}
+                  >
+                    💬 Tout ({familyMessages.length})
+                  </button>
+                  {FAMILLE_CATEGORIES.map(cat => {
+                    const count = familyMessages.filter(m => (m.category || 'information') === cat.id).length
+                    const colors = FAMILLE_COLORS[cat.color]
+                    return (
                       <button
                         key={cat.id}
-                        onClick={() => setFeedFilter(cat.id)}
-                        className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === cat.id ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                        onClick={() => setFeedFilter(feedFilter === cat.id ? 'all' : cat.id)}
+                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${feedFilter === cat.id ? colors.header + ' text-white' : 'bg-gray-100 text-gray-600'}`}
                       >
                         {cat.icon} {cat.label}
+                        {count > 0 && (
+                          <span className={`flex items-center gap-0.5 ${feedFilter === cat.id ? 'text-white' : 'text-red-600'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${feedFilter === cat.id ? 'bg-white' : 'bg-red-500'}`} />
+                            <span className="text-[9px] font-bold">{count}</span>
+                          </span>
+                        )}
                       </button>
-                    ))}
-                  </div>
-                )}
+                    )
+                  })}
+                </div>
 
                 {/* Zone de messages */}
                 <div className="flex-1 bg-gray-100 px-3 py-3 overflow-y-auto">
