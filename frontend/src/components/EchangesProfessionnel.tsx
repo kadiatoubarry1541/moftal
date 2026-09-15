@@ -192,7 +192,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               ‹
             </button>
             <div>
-              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 10, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 Échanges</h1>
+              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 Échanges</h1>
               <p style={{ color: '#94a3b8', fontSize: 6, margin: 0, lineHeight: 1 }}>Fais défiler pour tout voir</p>
             </div>
           </div>
