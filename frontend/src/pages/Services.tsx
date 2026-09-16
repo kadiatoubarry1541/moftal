@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { FavorisDropdown, FavorisDropdownItem } from '../components/FavorisDropdown'
 import { AdCarousel } from '../components/AdCarousel'
+import { useI18n } from '../i18n/useI18n'
 
 interface ServicesProps {
   onClose?: () => void
@@ -48,6 +49,7 @@ function ServiceIcon({ to, emoji, label, bg, isFavorite }: ServiceItem & { isFav
 }
 
 export default function Services({ onClose }: ServicesProps = {}) {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const [numeroH, setNumeroH] = useState('')
   const [favoriteIds, setFavoriteIds] = useState<string[]>([])
@@ -66,23 +68,23 @@ export default function Services({ onClose }: ServicesProps = {}) {
   }, [numeroH, favoriteIds])
 
   const services: ServiceItem[] = [
-    { to: '/sante',                                    emoji: '🏥', label: 'Santé',        bg: 'bg-red-100'    },
-    { to: '/securite',                                 emoji: '🛡️', label: 'Sécurité',     bg: 'bg-slate-100'  },
-    { to: '/immobilier',                               emoji: '🏠', label: 'Immobilier',   bg: 'bg-amber-100'  },
-    { to: '/education',                                emoji: '🎓', label: 'Éducation',    bg: 'bg-amber-100'  },
-    { to: '/madrasa',                                  emoji: '📖', label: 'Madrasa',      bg: 'bg-teal-100'   },
-    { to: '/commerce',                                  emoji: '🏪', label: 'Commerce',     bg: 'bg-yellow-100' },
-    { to: '/entreprise',                               emoji: '🏢', label: 'Entreprise',   bg: 'bg-violet-100' },
-    { to: '/journalistes',                             emoji: '📰', label: 'Journalistes', bg: 'bg-orange-100' },
-    { to: '/science',                                  emoji: '🔬', label: 'Science',      bg: 'bg-indigo-100' },
-    { to: '/fournisseurs',                             emoji: '🚚', label: 'Fournisseurs', bg: 'bg-cyan-100'   },
-    { to: '/restaurants',                              emoji: '🍽️', label: 'Restaurant',   bg: 'bg-orange-100' },
-    { to: '/transport',                                emoji: '🚌', label: 'Transport',    bg: 'bg-blue-100'   },
-    { to: '/beaute',                                   emoji: '💈', label: 'Beauté',       bg: 'bg-pink-100'   },
-    { to: '/artisans',                                 emoji: '🔧', label: 'Artisanat',    bg: 'bg-stone-100'  },
-    { to: '/reseau',                                   emoji: '🔗', label: 'Réseau',       bg: 'bg-purple-100' },
-    { to: '/vendeurs',                                 emoji: '🛍️', label: 'Vendeurs',     bg: 'bg-sky-100'    },
-    { to: '/producteurs',                              emoji: '🌾', label: 'Producteurs',  bg: 'bg-lime-100'   },
+    { to: '/sante',                                    emoji: '🏥', label: t('services.cat_sante'),        bg: 'bg-red-100'    },
+    { to: '/securite',                                 emoji: '🛡️', label: t('services.cat_securite'),     bg: 'bg-slate-100'  },
+    { to: '/immobilier',                               emoji: '🏠', label: t('services.cat_immobilier'),   bg: 'bg-amber-100'  },
+    { to: '/education',                                emoji: '🎓', label: t('services.cat_education'),    bg: 'bg-amber-100'  },
+    { to: '/madrasa',                                  emoji: '📖', label: t('services.cat_madrasa'),      bg: 'bg-teal-100'   },
+    { to: '/commerce',                                  emoji: '🏪', label: t('services.cat_commerce'),     bg: 'bg-yellow-100' },
+    { to: '/entreprise',                               emoji: '🏢', label: t('services.cat_entreprise'),   bg: 'bg-violet-100' },
+    { to: '/journalistes',                             emoji: '📰', label: t('services.cat_journalistes'), bg: 'bg-orange-100' },
+    { to: '/science',                                  emoji: '🔬', label: t('services.cat_science'),      bg: 'bg-indigo-100' },
+    { to: '/fournisseurs',                             emoji: '🚚', label: t('services.cat_fournisseurs'), bg: 'bg-cyan-100'   },
+    { to: '/restaurants',                              emoji: '🍽️', label: t('services.cat_restaurant'),   bg: 'bg-orange-100' },
+    { to: '/transport',                                emoji: '🚌', label: t('services.cat_transport'),   bg: 'bg-blue-100'   },
+    { to: '/beaute',                                   emoji: '💈', label: t('services.cat_beaute'),       bg: 'bg-pink-100'   },
+    { to: '/artisans',                                 emoji: '🔧', label: t('services.cat_artisanat'),    bg: 'bg-stone-100'  },
+    { to: '/reseau',                                   emoji: '🔗', label: t('services.cat_reseau'),       bg: 'bg-purple-100' },
+    { to: '/vendeurs',                                 emoji: '🛍️', label: t('services.cat_vendeurs'),     bg: 'bg-sky-100'    },
+    { to: '/producteurs',                              emoji: '🌾', label: t('services.cat_producteurs'),  bg: 'bg-lime-100'   },
   ]
 
   const toggleFavorite = (to: string) => {
@@ -109,12 +111,12 @@ export default function Services({ onClose }: ServicesProps = {}) {
           <button
             type="button"
             onClick={() => navigate('/compte')}
-            aria-label="Retour à l'accueil"
+            aria-label={t('services.back_aria')}
             style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
           >
             ‹
           </button>
-          <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0 }}>💼 Services</h1>
+          <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0 }}>💼 {t('services.title')}</h1>
         </div>
         {/* Pub — même ligne que le bouton Favoris, juste avant lui ; Favoris ne bouge pas */}
         <div className="flex-1 min-w-0 h-[74px]">
@@ -122,9 +124,9 @@ export default function Services({ onClose }: ServicesProps = {}) {
         </div>
         {numeroH && (
           <FavorisDropdown
-            headerLabel={`Services favoris (${favoriteIds.length}/${MAX_FAVORITES})`}
-            ariaLabel="Choisissez jusqu'à 4 services favoris : ils s'affichent en premier"
-            title="Services favoris"
+            headerLabel={`${t('services.favorites_label')} (${favoriteIds.length}/${MAX_FAVORITES})`}
+            ariaLabel={t('services.favorites_aria')}
+            title={t('services.favorites_label')}
             widthClassName="w-56"
           >
             {() => services.map(s => {
@@ -161,7 +163,7 @@ export default function Services({ onClose }: ServicesProps = {}) {
         onClick={() => navigate('/inscription-pro')}
         className="w-full flex items-center justify-center gap-1.5 px-3 py-3 mt-4 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors"
       >
-        ➕ Proposer votre service
+        {t('services.propose_btn')}
       </button>
     </div>
     </>
