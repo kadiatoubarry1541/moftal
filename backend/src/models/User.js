@@ -226,6 +226,20 @@ User.init({
     // Utiliser TEXT pour supporter les longues données (ex: base64)
     type: DataTypes.TEXT,
   },
+  // Vitrine du profil : ce que les autres voient de la carte de profil de
+  // l'utilisateur (badge d'identité) — 2 photos + 1 courte vidéo (5s max)
+  vitrinePhoto1: {
+    type: DataTypes.TEXT,
+    field: 'vitrine_photo1'
+  },
+  vitrinePhoto2: {
+    type: DataTypes.TEXT,
+    field: 'vitrine_photo2'
+  },
+  vitrineVideo: {
+    type: DataTypes.TEXT,
+    field: 'vitrine_video'
+  },
   fingerprint: {
     type: DataTypes.TEXT, // Données biométriques
   },

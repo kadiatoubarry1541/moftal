@@ -5,6 +5,7 @@ import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay, isAdmin } from '../../utils/auth';
 import { FriendChat } from '../../components/FriendChat';
+import ProfileBadge from '../../components/ProfileBadge';
 import { useI18n } from '../../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -35,6 +36,10 @@ interface Friend {
   lastSeen?: string;
   isOnline?: boolean;
   profilePicture?: string;
+  activite1?: string | null;
+  vitrinePhoto1?: string | null;
+  vitrinePhoto2?: string | null;
+  vitrineVideo?: string | null;
 }
 
 interface FriendRequest {
@@ -1061,6 +1066,17 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                   {friend.isOnline && (
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                   )}
+                  <div className="absolute -top-1 -right-1">
+                    <ProfileBadge
+                      numeroH={friend.numeroH}
+                      prenom={friend.prenom}
+                      nomFamille={friend.nomFamille}
+                      activite1={friend.activite1}
+                      vitrinePhoto1={friend.vitrinePhoto1}
+                      vitrinePhoto2={friend.vitrinePhoto2}
+                      vitrineVideo={friend.vitrineVideo}
+                    />
+                  </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 text-sm truncate">{friend.prenom} {friend.nomFamille}</p>

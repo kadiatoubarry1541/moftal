@@ -120,17 +120,21 @@ router.get('/groups', async (req, res) => {
     }
 
     // Remplace chaque numeroH de "members" par les infos de base du membre
-    // (prénom, nom, photo) — nécessaire pour afficher la liste des membres
-    // et leurs papiers de résidence côté admin du quartier.
+    // (prénom, nom, photo, vitrine du badge de profil) — nécessaire pour
+    // afficher la liste des membres, leurs papiers de résidence et leur
+    // badge de profil côté admin du quartier.
     const allNumeroHs = [...new Set(groups.flatMap(g => g.members || []))];
     let usersByNumeroH = {};
     if (allNumeroHs.length > 0) {
       const users = await User.findAll({
         where: { numeroH: { [Op.in]: allNumeroHs } },
-        attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+        attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'activite1', 'vitrinePhoto1', 'vitrinePhoto2', 'vitrineVideo']
       });
       usersByNumeroH = Object.fromEntries(
-        users.map(u => [u.numeroH, { numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo }])
+        users.map(u => [u.numeroH, {
+          numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo,
+          activite1: u.activite1, vitrinePhoto1: u.vitrinePhoto1, vitrinePhoto2: u.vitrinePhoto2, vitrineVideo: u.vitrineVideo
+        }])
       );
     }
     const hydratedGroups = groups.map(g => {

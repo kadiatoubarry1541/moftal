@@ -811,7 +811,10 @@ async function initAllTables() {
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "nb_femmes" INTEGER DEFAULT 0;`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "annees_avant_naissance" INTEGER;`,
     `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "annees_depuis_deces" INTEGER;`,
-    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "fingerprint" TEXT;`
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "fingerprint" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "vitrine_photo1" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "vitrine_photo2" TEXT;`,
+    `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "vitrine_video" TEXT;`
   ];
   for (const sql of userAlters) {
     await sequelize.query(sql).catch(() => {});
