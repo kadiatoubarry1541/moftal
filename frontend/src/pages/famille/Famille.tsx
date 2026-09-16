@@ -4,6 +4,7 @@ import { isAdmin } from '../../utils/auth'
 import { AdCarousel } from '../../components/AdCarousel'
 import { useI18n } from '../../i18n/useI18n'
 import HeritageTab from './Arbre'
+import type { MesAmoursHandle } from './MesAmours'
 
 const AmitieTab     = lazy(() => import('./MesAmours'))
 const RecitTab      = lazy(() => import('../HistoireHumanite'))
@@ -30,6 +31,7 @@ export default function Famille() {
   )
   const [user, setUser]           = useState<any>(null)
   const contentRef                = useRef<HTMLDivElement>(null)
+  const amitieRef                 = useRef<MesAmoursHandle>(null)
 
   useEffect(() => {
     const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
@@ -67,24 +69,34 @@ export default function Famille() {
             >
               ‹
             </button>
-            {activeTab && activeTab !== 'heritage' && current ? (
+            {activeTab && current ? (
               <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>
                 {current.emoji} {t(current.labelKey)}
               </h1>
             ) : (
-              <>
-                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>👨‍👩‍👧‍👦 {t('nav.famille')}</h1>
-                {current && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
-                    <span>{current.emoji}</span>
-                    <span>{t(current.labelKey)}</span>
-                  </span>
-                )}
-              </>
+              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>👨‍👩‍👧‍👦 {t('nav.famille')}</h1>
             )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {activeTab === 'amitie' && (
+              <>
+                <Link
+                  to="/famille/inspir"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-medium rounded-lg transition-colors border border-yellow-300 flex-shrink-0"
+                >
+                  🤝 Inspir
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => amitieRef.current?.openAddFriend()}
+                  aria-label={t('amitie.search_aria')}
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors text-base flex-shrink-0"
+                >
+                  🔍
+                </button>
+              </>
+            )}
             {user && isAdmin(user) && (
               <Link
                 to="/famille/admin"
@@ -123,7 +135,7 @@ export default function Famille() {
             </div>
           }>
             {activeTab === 'heritage'   && <HeritageTab />}
-            {activeTab === 'amitie'     && <AmitieTab embedded />}
+            {activeTab === 'amitie'     && <AmitieTab embedded ref={amitieRef} />}
             {activeTab === 'recit'      && <RecitTab />}
             {activeTab === 'solidarite' && <SolidariteTab />}
           </Suspense>
