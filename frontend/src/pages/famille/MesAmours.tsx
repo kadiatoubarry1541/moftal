@@ -866,7 +866,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
     <div className="min-h-screen bg-gray-50">
       {/* Bouton Retour — inutile en mode intégré (Famille.tsx a déjà l'entête + le retour) */}
       {!embedded && (
-        <div className="bg-white shadow-sm border-b">
+        <div className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
             <Link
               to="/famille"
@@ -879,7 +879,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
         </div>
       )}
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center gap-2">
@@ -901,7 +901,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
       </div>
 
       {/* Stories */}
-      <div className="bg-white border-b">
+      <div className="bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex gap-2">
             <input
