@@ -3,14 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
 import { DevenirVendeurButton } from './DevenirVendeurButton';
 import PaymentModal from './PaymentModal';
-
-const SUB_SECTOR_LABELS: Record<string, string> = {
-  primaire: 'Alimentation',
-  secondaire: 'Mode & Beauté',
-  tertiaire: 'Maison & Construction',
-  quaternaire: 'Technologie & Véhicules',
-  nourriture: 'Restaurants',
-};
+import { useI18n } from '../i18n/useI18n';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -41,44 +34,46 @@ function buildImageUrl(path: string | undefined): string | undefined {
   return `${API_ORIGIN}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
-const SECTIONS = [
-  {
-    id: 'primaire',
-    label: 'Primaire',
-    subtitle: 'Céréales · Légumes · Animaux · Poissons',
-    icons: ['🌾', '🐓', '🥬', '🐟'],
-    color: 'green',
-    placeholder: '🌾',
-    path: '/echange/primaire',
-  },
-  {
-    id: 'secondaire',
-    label: 'Secondaire',
-    subtitle: 'Habits · Chaussures · Sacs · Cosmétiques',
-    icons: ['👗', '👟', '👜', '💄'],
-    color: 'blue',
-    placeholder: '🏭',
-    path: '/echange/secondaire',
-  },
-  {
-    id: 'tertiaire',
-    label: 'Tertiaire',
-    subtitle: 'Meubles · Électroménager · Matériaux · Outils',
-    icons: ['🛋️', '❄️', '🧱', '🔧'],
-    color: 'amber',
-    placeholder: '🧱',
-    path: '/echange/tertiaire',
-  },
-  {
-    id: 'quaternaire',
-    label: 'Quaternaire',
-    subtitle: 'Téléphones · Ordinateurs · TV · Voitures',
-    icons: ['📱', '💻', '📺', '🚗'],
-    color: 'violet',
-    placeholder: '💻',
-    path: '/echange/quaternaire',
-  },
-] as const;
+function getSections(t: (key: string) => string) {
+  return [
+    {
+      id: 'primaire',
+      label: t('echange.sector_primaire'),
+      subtitle: t('echange.sector_primaire_subtitle'),
+      icons: ['🌾', '🐓', '🥬', '🐟'],
+      color: 'green',
+      placeholder: '🌾',
+      path: '/echange/primaire',
+    },
+    {
+      id: 'secondaire',
+      label: t('echange.sector_secondaire'),
+      subtitle: t('echange.sector_secondaire_subtitle'),
+      icons: ['👗', '👟', '👜', '💄'],
+      color: 'blue',
+      placeholder: '🏭',
+      path: '/echange/secondaire',
+    },
+    {
+      id: 'tertiaire',
+      label: t('echange.sector_tertiaire'),
+      subtitle: t('echange.sector_tertiaire_subtitle'),
+      icons: ['🛋️', '❄️', '🧱', '🔧'],
+      color: 'amber',
+      placeholder: '🧱',
+      path: '/echange/tertiaire',
+    },
+    {
+      id: 'quaternaire',
+      label: t('echange.sector_quaternaire'),
+      subtitle: t('echange.sector_quaternaire_subtitle'),
+      icons: ['📱', '💻', '📺', '🚗'],
+      color: 'violet',
+      placeholder: '💻',
+      path: '/echange/quaternaire',
+    },
+  ] as const;
+}
 
 const COLOR_CLASSES: Record<string, { bg: string; border: string; text: string }> = {
   green:  { bg: 'bg-green-600',  border: 'border-green-200',  text: 'text-green-600' },
@@ -88,6 +83,15 @@ const COLOR_CLASSES: Record<string, { bg: string; border: string; text: string }
 };
 
 export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelProps) {
+  const { t } = useI18n();
+  const SECTIONS = getSections(t);
+  const SUB_SECTOR_LABELS: Record<string, string> = {
+    primaire: t('echange.sub_sector_alimentation'),
+    secondaire: t('echange.sub_sector_mode_beaute'),
+    tertiaire: t('echange.sub_sector_maison_construction'),
+    quaternaire: t('echange.sub_sector_techno_vehicules'),
+    nourriture: t('echange.sub_sector_restaurants'),
+  };
   const navigate = useNavigate();
   const [productsBySection, setProductsBySection] = useState<Record<string, ExchangeProduct[]>>({});
   const [loadingBySection, setLoadingBySection] = useState<Record<string, boolean>>({
@@ -186,14 +190,14 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             <button
               type="button"
               onClick={() => navigate('/compte')}
-              aria-label="Retour à l'accueil"
+              aria-label={t('services.back_aria')}
               style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
             >
               ‹
             </button>
             <div>
-              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 Échanges</h1>
-              <p style={{ color: '#94a3b8', fontSize: 6, margin: 0, lineHeight: 1 }}>Fais défiler pour tout voir</p>
+              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🔄 {t('nav.echanges')}</h1>
+              <p style={{ color: '#94a3b8', fontSize: 6, margin: 0, lineHeight: 1 }}>{t('echange.subtitle_scroll')}</p>
             </div>
           </div>
           {canPublish ? (
@@ -202,7 +206,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               onClick={() => navigate('/echange/publier')}
               style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#22a722', border: 'none', borderRadius: 8, padding: '2px 8px', color: 'white', fontWeight: 700, fontSize: 10, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}
             >
-              ＋ Publier
+              {t('echange.publish_btn')}
             </button>
           ) : (
             <DevenirVendeurButton
@@ -238,14 +242,14 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
           {unpaidVendorAccounts.map(a => (
             <div key={a.id} className="flex items-center justify-between gap-2 mb-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl">
               <p className="text-xs text-red-700 font-semibold">
-                ⚠️ Abonnement vendeur ({SUB_SECTOR_LABELS[a.subSector] || a.subSector}) non payé — publication bloquée.
+                {t('echange.vendor_subscription_unpaid_before')}{SUB_SECTOR_LABELS[a.subSector] || a.subSector}{t('echange.vendor_subscription_unpaid_after')}
               </p>
               <button
                 type="button"
                 onClick={() => openVendorPayment(a)}
                 className="flex-shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
               >
-                Payer
+                {t('echange.pay_btn')}
               </button>
             </div>
           ))}
@@ -280,13 +284,13 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                   {[1, 2].map(i => (
                     <div key={i} className="h-48 rounded-xl border border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2 animate-pulse">
                       <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-400 rounded-full animate-spin" />
-                      <span className="text-xs text-gray-400">Chargement...</span>
+                      <span className="text-xs text-gray-400">{t('terre_adam.loading')}</span>
                     </div>
                   ))}
                 </div>
               ) : products.length === 0 ? (
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
-                  <p className="text-sm text-gray-500">Aucun produit pour l'instant dans {section.label}</p>
+                  <p className="text-sm text-gray-500">{t('echange.no_product_in')} {section.label}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -343,7 +347,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
             {selectedProduct.audio?.[0] && (
               <audio src={buildImageUrl(selectedProduct.audio[0])} controls className="w-full mb-4" />
             )}
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Contacter le vendeur</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">{t('echange.contact_seller')}</h3>
             <div className="space-y-3">
               <div>
                 <p className="font-bold text-gray-900">{selectedProduct.title}</p>
@@ -355,7 +359,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
                 </p>
               )}
               <p className="text-sm text-gray-600">
-                📞 {selectedProduct.contactInfo?.phone || 'Non renseigné'}
+                📞 {selectedProduct.contactInfo?.phone || t('echange.phone_not_provided')}
               </p>
               {selectedProduct.location && (
                 <p className="text-sm text-gray-600">📍 {selectedProduct.location}</p>
@@ -366,7 +370,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
               onClick={() => setSelectedProduct(null)}
               className="mt-6 w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
             >
-              Fermer
+              {t('btn.close')}
             </button>
           </div>
         </div>
@@ -385,7 +389,7 @@ export function EchangesProfessionnel({ userData: _u }: EchangesProfessionnelPro
           currency="GNF"
           purpose="vendeur_mois"
           relatedId={payingAccount.id}
-          description={`Abonnement vendeur Échange (${SUB_SECTOR_LABELS[payingAccount.subSector] || payingAccount.subSector}) — 1 mois`}
+          description={`${t('echange.subscription_desc_before')}${SUB_SECTOR_LABELS[payingAccount.subSector] || payingAccount.subSector}${t('echange.subscription_desc_after')}`}
         />
       )}
     </>
