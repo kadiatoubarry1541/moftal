@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { isAdmin } from '../utils/auth';
 import ProSection from '../components/ProSection';
 import { sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
+import { useI18n } from '../i18n/useI18n';
 
 interface UserData {
   numeroH: string;
@@ -67,6 +68,7 @@ interface HolyBook {
 }
 
 export default function Solidarite() {
+  const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'dons' | 'zaka' | 'livres' | 'realite' | 'ong'>('dons');
   const [donsSubTab, setDonsSubTab] = useState<'pauvres' | 'mes-dons'>('pauvres');
@@ -365,11 +367,11 @@ export default function Solidarite() {
 
   const getUrgencyLabel = (urgency: string) => {
     switch (urgency) {
-      case 'critical': return 'Critique';
-      case 'high': return 'Élevée';
-      case 'medium': return 'Moyenne';
-      case 'low': return 'Faible';
-      default: return 'Inconnue';
+      case 'critical': return t('solidarite.urgency_critical');
+      case 'high': return t('solidarite.urgency_high');
+      case 'medium': return t('solidarite.urgency_medium');
+      case 'low': return t('solidarite.urgency_low');
+      default: return t('solidarite.urgency_unknown');
     }
   };
 
@@ -568,14 +570,14 @@ export default function Solidarite() {
           <div className="flex justify-between items-center py-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">🤝 Solidarité</h1>
-              <p className="mt-2 text-gray-600">Aide aux pauvres - Solidarité pour tous, toutes religions confondues</p>
+              <p className="mt-2 text-gray-600">{t('solidarite.subtitle')}</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => navigate('/moi')}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
-                ← Retour
+                {t('btn.back_arrow')}
               </button>
             </div>
           </div>
@@ -587,15 +589,15 @@ export default function Solidarite() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="flex flex-nowrap gap-1 py-2">
             {[
-              { id: 'dons', label: 'Dons', icon: '🤝' },
+              { id: 'dons', label: t('solidarite.tab_dons'), icon: '🤝' },
               // Onglet Zaka uniquement pour les musulmans (ou admin)
               ...(userData && (userData.religion === 'Islam' || isAdmin(userData))
-                ? [{ id: 'zaka', label: 'Zaka (Musulmans)', icon: '🤲' as const }]
+                ? [{ id: 'zaka', label: t('solidarite.tab_zaka'), icon: '🤲' as const }]
                 : []),
-              { id: 'realite', label: 'Réalité', icon: '📷' },
-              { id: 'ong', label: 'ONG', icon: '🌍' },
-              { id: 'racines', label: 'Racines', icon: '🌿' },
-              { id: 'livres', label: 'Les Livres de Dieu Unique', icon: '📖' }
+              { id: 'realite', label: t('solidarite.tab_realite'), icon: '📷' },
+              { id: 'ong', label: t('solidarite.tab_ong'), icon: '🌍' },
+              { id: 'racines', label: t('solidarite.tab_racines'), icon: '🌿' },
+              { id: 'livres', label: t('solidarite.tab_livres'), icon: '📖' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -628,8 +630,8 @@ export default function Solidarite() {
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
                   {[
-                    { id: 'pauvres', label: 'Liste des Pauvres', icon: '👥' },
-                    { id: 'mes-dons', label: 'Mes Dons', icon: '💝' }
+                    { id: 'pauvres', label: t('solidarite.subtab_pauvres'), icon: '👥' },
+                    { id: 'mes-dons', label: t('solidarite.subtab_mes_dons'), icon: '💝' }
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -656,7 +658,7 @@ export default function Solidarite() {
                     <div className="flex-1">
                       <input
                         type="text"
-                        placeholder="Rechercher par nom ou localisation..."
+                        placeholder={t('solidarite.search_placeholder')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -667,18 +669,18 @@ export default function Solidarite() {
                       onChange={(e) => setSelectedUrgency(e.target.value)}
                       className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Toutes les urgences</option>
-                      <option value="critical">Critique</option>
-                      <option value="high">Élevée</option>
-                      <option value="medium">Moyenne</option>
-                      <option value="low">Faible</option>
+                      <option value="">{t('solidarite.all_urgencies')}</option>
+                      <option value="critical">{t('solidarite.urgency_critical')}</option>
+                      <option value="high">{t('solidarite.urgency_high')}</option>
+                      <option value="medium">{t('solidarite.urgency_medium')}</option>
+                      <option value="low">{t('solidarite.urgency_low')}</option>
                     </select>
                     <select
                       value={selectedLocation}
                       onChange={(e) => setSelectedLocation(e.target.value)}
                       className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Toutes les villes</option>
+                      <option value="">{t('solidarite.all_cities')}</option>
                       <option value="Conakry">Conakry</option>
                       <option value="Kindia">Kindia</option>
                       <option value="Kankan">Kankan</option>
@@ -690,7 +692,7 @@ export default function Solidarite() {
 
                 {/* Liste des pauvres */}
                 <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">👥 Liste des Pauvres</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">👥 {t('solidarite.subtab_pauvres')}</h2>
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg space-y-2">
                     <p className="text-sm text-gray-700">
                       <strong>Note importante :</strong> Cette page est destinée aux <strong>dons généraux (Sadaqah)</strong> qui peuvent être donnés à tous les pauvres, quelle que soit leur religion. Pour les dons spécifiques aux musulmans (Zakat), veuillez utiliser la page <strong>Zaka (Musulman)</strong>.
@@ -727,7 +729,7 @@ export default function Solidarite() {
                         <div className="space-y-2 mb-4">
                           <div className="flex items-center text-sm text-gray-600">
                             <span className="mr-2">🎂</span>
-                            <span>{person.age} ans</span>
+                            <span>{person.age} {t('solidarite.years_old')}</span>
                           </div>
                           <div className="flex items-center text-sm text-gray-600">
                             <span className="mr-2">📍</span>
@@ -736,18 +738,18 @@ export default function Solidarite() {
                           {person.familySize && (
                             <div className="flex items-center text-sm text-gray-600">
                               <span className="mr-2">👥</span>
-                              <span>{person.familySize} personnes</span>
+                              <span>{person.familySize} {t('solidarite.people_count')}</span>
                             </div>
                           )}
                         </div>
 
                         <div className="mb-4">
-                          <h4 className="font-medium text-gray-900 mb-2">Situation:</h4>
+                          <h4 className="font-medium text-gray-900 mb-2">{t('solidarite.situation_label')}</h4>
                           <p className="text-sm text-gray-600">{person.situation}</p>
                         </div>
 
                         <div className="mb-4">
-                          <h4 className="font-medium text-gray-900 mb-2">Besoins:</h4>
+                          <h4 className="font-medium text-gray-900 mb-2">{t('solidarite.needs_label')}</h4>
                           <div className="flex flex-wrap gap-1">
                             {person.needs.map((need, index) => (
                               <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
@@ -761,14 +763,14 @@ export default function Solidarite() {
                           onClick={() => handleDonation(person)}
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
                         >
-                          💝 Faire un Don
+                          {t('solidarite.donate_btn')}
                         </button>
                       </div>
                     ))}
                   </div>
                   {filteredPoorPeople.length === 0 && (
                     <div className="text-center py-8">
-                      <p className="text-gray-500">Aucune personne trouvée</p>
+                      <p className="text-gray-500">{t('solidarite.no_person_found')}</p>
                     </div>
                   )}
                 </div>
@@ -778,29 +780,29 @@ export default function Solidarite() {
             {donsSubTab === 'mes-dons' && (
               <div className="space-y-6">
                 <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">💝 Mes Dons</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">💝 {t('solidarite.subtab_mes_dons')}</h2>
                   <div className="space-y-4">
                     {donations.map((donation) => (
                       <div key={donation.id} className="border rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div>
                             <h3 className="font-semibold text-gray-900">
-                              Don à {donation.recipientName}
+                              {t('solidarite.donation_to')} {donation.recipientName}
                             </h3>
                             <p className="text-sm text-gray-600">
-                              Montant: {donation.amount.toLocaleString()} {donation.currency}
+                              {t('solidarite.amount_label')} {donation.amount.toLocaleString()} {donation.currency}
                             </p>
                             <p className="text-sm text-gray-600">
-                              Type: {donation.type === 'money' ? 'Argent' :
-                                     donation.type === 'food' ? 'Nourriture' :
-                                     donation.type === 'clothing' ? 'Vêtements' :
-                                     donation.type === 'medicine' ? 'Médicaments' : 'Autre'}
+                              {t('solidarite.type_label')} {donation.type === 'money' ? t('solidarite.type_money') :
+                                     donation.type === 'food' ? t('solidarite.type_food') :
+                                     donation.type === 'clothing' ? t('solidarite.type_clothing') :
+                                     donation.type === 'medicine' ? t('solidarite.type_medicine') : t('solidarite.type_other')}
                             </p>
                             {donation.description && (
-                              <p className="text-sm text-gray-600">Description: {donation.description}</p>
+                              <p className="text-sm text-gray-600">{t('solidarite.description_label')} {donation.description}</p>
                             )}
                             <p className="text-sm text-gray-600">
-                              Date: {new Date(donation.createdAt).toLocaleDateString()}
+                              {t('solidarite.date_label')} {new Date(donation.createdAt).toLocaleDateString()}
                             </p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -808,15 +810,15 @@ export default function Solidarite() {
                             donation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-red-100 text-red-800'
                           }`}>
-                            {donation.status === 'completed' ? 'Effectué' :
-                             donation.status === 'pending' ? 'En attente' : 'Annulé'}
+                            {donation.status === 'completed' ? t('solidarite.status_completed') :
+                             donation.status === 'pending' ? t('solidarite.status_pending') : t('solidarite.status_cancelled')}
                           </span>
                         </div>
                       </div>
                     ))}
                     {donations.length === 0 && (
                       <div className="text-center py-8">
-                        <p className="text-gray-500">Aucun don effectué</p>
+                        <p className="text-gray-500">{t('solidarite.no_donation')}</p>
                       </div>
                     )}
                   </div>
@@ -829,14 +831,14 @@ export default function Solidarite() {
         {activeTab === 'zaka' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">🤲 Zaka (Musulmans)</h2>
-              <p className="text-gray-600 mb-6">Aumône obligatoire pour les musulmans uniquement</p>
-              <p className="text-gray-600 mb-6">Cette section a été déplacée vers une page dédiée.</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">🤲 {t('solidarite.tab_zaka')}</h2>
+              <p className="text-gray-600 mb-6">{t('solidarite.zaka_desc')}</p>
+              <p className="text-gray-600 mb-6">{t('solidarite.zaka_moved')}</p>
               <Link
                 to="/zaka"
                 className="inline-block bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg transition-colors"
               >
-                Ouvrir la page Zaka
+                {t('solidarite.zaka_open_btn')}
               </Link>
             </div>
           </div>
@@ -846,7 +848,7 @@ export default function Solidarite() {
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
-                <h2 className="text-2xl font-bold text-gray-900">📖 Les Livres de Dieu Unique</h2>
+                <h2 className="text-2xl font-bold text-gray-900">📖 {t('solidarite.tab_livres')}</h2>
                 <button
                   onClick={() => setShowAddBookForm(!showAddBookForm)}
                   className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-medium rounded-lg text-sm transition-colors"
@@ -985,7 +987,7 @@ export default function Solidarite() {
         {activeTab === 'realite' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">📷 Réalité (Publications Admin)</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">📷 {t('solidarite.realite_title')}</h2>
               {userData?.numeroH === 'G0C0P0R0E0F0 0' || userData?.role === 'admin' ? (
                 <div className="bg-blue-50 rounded-lg p-6 mb-6">
                   <h3 className="font-semibold text-blue-900 mb-2">Vous êtes administrateur</h3>
@@ -1106,7 +1108,7 @@ export default function Solidarite() {
           <div className="space-y-6">
 
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">🌍 ONG & Associations</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">🌍 {t('solidarite.ong_title')}</h2>
               <p className="text-gray-600 mb-6">
                 Découvrez les organisations non gouvernementales inscrites. Vous pouvez les contacter pour des projets de solidarité, prendre rendez-vous ou leur envoyer des messages.
               </p>
