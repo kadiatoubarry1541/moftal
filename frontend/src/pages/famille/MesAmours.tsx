@@ -162,34 +162,50 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
   const [viewingStory, setViewingStory] = useState<MesAmoursStory | null>(null);
   const storyInputRef = useRef<HTMLInputElement>(null);
   const storiesScrollRef = useRef<HTMLDivElement>(null);
-  const autoScrollPausedRef = useRef(false);
-  const resumeAutoScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchPausedRef = useRef(false);
+  const viewingStoryRef = useRef<MesAmoursStory | null>(null);
+  const resumeTouchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const pauseAutoScroll = useCallback(() => {
-    autoScrollPausedRef.current = true;
-    if (resumeAutoScrollTimeoutRef.current) clearTimeout(resumeAutoScrollTimeoutRef.current);
-    resumeAutoScrollTimeoutRef.current = setTimeout(() => {
-      autoScrollPausedRef.current = false;
-    }, 4000);
+  const handleStoriesPointerDown = useCallback(() => {
+    touchPausedRef.current = true;
+    if (resumeTouchTimeoutRef.current) clearTimeout(resumeTouchTimeoutRef.current);
   }, []);
 
-  // Défilement automatique des stories toutes les 3 secondes (comme un
-  // diaporama) ; une interaction manuelle (glisser du doigt) met en pause.
+  const handleStoriesPointerUp = useCallback(() => {
+    if (resumeTouchTimeoutRef.current) clearTimeout(resumeTouchTimeoutRef.current);
+    resumeTouchTimeoutRef.current = setTimeout(() => {
+      touchPausedRef.current = false;
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    viewingStoryRef.current = viewingStory;
+  }, [viewingStory]);
+
+  // Défilement automatique en continu, à vitesse constante (comme un
+  // manège) ; se met en pause pendant qu'on glisse le doigt ou qu'on
+  // regarde une image, et reprend dès qu'on relâche / referme l'image.
   useEffect(() => {
     if (stories.length <= 3) return;
-    const interval = setInterval(() => {
+    const SPEED_PX_PER_SEC = 18;
+    let rafId: number;
+    let lastTime: number | null = null;
+    const tick = (time: number) => {
       const el = storiesScrollRef.current;
-      if (!el || autoScrollPausedRef.current) return;
-      const firstCard = el.firstElementChild as HTMLElement | null;
-      const step = firstCard ? firstCard.offsetWidth + 8 : 120;
-      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
-      if (atEnd) {
-        el.scrollTo({ left: 0, behavior: 'smooth' });
+      if (el && !touchPausedRef.current && !viewingStoryRef.current) {
+        if (lastTime !== null) {
+          const dt = (time - lastTime) / 1000;
+          const next = el.scrollLeft + SPEED_PX_PER_SEC * dt;
+          el.scrollLeft = next + el.clientWidth >= el.scrollWidth ? 0 : next;
+        }
+        lastTime = time;
       } else {
-        el.scrollBy({ left: step, behavior: 'smooth' });
+        lastTime = null;
       }
-    }, 3000);
-    return () => clearInterval(interval);
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [stories.length]);
 
   useEffect(() => {
@@ -897,7 +913,9 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
             />
             <div
               ref={storiesScrollRef}
-              onPointerDown={pauseAutoScroll}
+              onPointerDown={handleStoriesPointerDown}
+              onPointerUp={handleStoriesPointerUp}
+              onPointerLeave={handleStoriesPointerUp}
               className="flex-1 min-w-0 flex gap-2 overflow-x-auto"
             >
               {stories.map((story) => {
@@ -929,16 +947,18 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               aria-label="Ajouter une story"
               className={`flex-shrink-0 w-[64px] h-[120px] flex flex-col items-center justify-center gap-1 rounded-xl border shadow-sm transition-colors ${
                 uploadingStory
-                  ? 'bg-emerald-500 border-emerald-500 animate-pulse'
+                  ? 'bg-emerald-500 border-emerald-500'
                   : 'bg-white border-gray-200 hover:bg-gray-50 active:bg-gray-100'
               }`}
             >
-              <span className={`text-2xl leading-none ${uploadingStory ? 'animate-spin' : ''}`}>
-                {uploadingStory ? '⏳' : '➕'}
-              </span>
-              <span className={`text-[10px] font-bold text-center leading-tight ${uploadingStory ? 'text-white' : 'text-gray-900'}`}>
-                {uploadingStory ? 'Publication...' : 'Story'}
-              </span>
+              {uploadingStory ? (
+                <span className="w-7 h-7 rounded-full border-[3px] border-white border-t-transparent animate-spin" />
+              ) : (
+                <>
+                  <span className="text-2xl leading-none">➕</span>
+                  <span className="text-[10px] font-bold text-center leading-tight text-gray-900">Story</span>
+                </>
+              )}
             </button>
           </div>
         </div>
