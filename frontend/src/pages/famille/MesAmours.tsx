@@ -1113,19 +1113,19 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
           <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-3">
-              <h3 className="text-xl font-bold text-gray-900">➕ Ajouter un Ami</h3>
+              <h3 className="text-xl font-bold text-gray-900">{t('amitie.add_friend.title')}</h3>
               <button onClick={() => { stopQRScanner(); setShowAddFriend(false); }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
             </div>
 
             {/* Tabs mode */}
             <div className="flex border-b mx-6 mb-4">
               {([
-                { key: 'numeroh', label: '🔢 NumH' },
-                { key: 'phone',   label: '📞 Tél.' },
-                { key: 'email',   label: '✉️ Email' },
-                { key: 'qr',      label: '📷 QR' },
-                { key: 'ecrit',   label: '✍️ Écrit' },
-                { key: 'video',   label: '🎬 Vidéo' },
+                { key: 'numeroh', label: t('amitie.add_friend.tab_numeroh') },
+                { key: 'phone',   label: t('amitie.add_friend.tab_phone') },
+                { key: 'email',   label: t('amitie.add_friend.tab_email') },
+                { key: 'qr',      label: t('amitie.add_friend.tab_qr') },
+                { key: 'ecrit',   label: t('amitie.add_friend.tab_ecrit') },
+                { key: 'video',   label: t('amitie.add_friend.tab_video') },
               ] as const).map(tab => (
                 <button
                   key={tab.key}
@@ -1151,28 +1151,28 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               {addMode === 'numeroh' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">NumeroH de l'ami</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('amitie.add_friend.numeroh_label')}</label>
                     <input
                       type="text"
                       value={addFriendForm.numeroH}
                       onChange={(e) => setAddFriendForm({...addFriendForm, numeroH: e.target.value})}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      placeholder="Ex: H-2024-XXXX"
+                      placeholder={t('amitie.add_friend.numeroh_placeholder')}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Message (optionnel)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('amitie.add_friend.message_label')}</label>
                     <textarea
                       value={addFriendForm.message}
                       onChange={(e) => setAddFriendForm({...addFriendForm, message: e.target.value})}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       rows={2}
-                      placeholder="Message d'invitation..."
+                      placeholder={t('amitie.add_friend.message_placeholder')}
                     />
                   </div>
                   <div className="flex space-x-3 pt-2">
-                    <button onClick={() => setShowAddFriend(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg transition-colors">Annuler</button>
-                    <button onClick={submitAddFriend} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition-colors">Envoyer</button>
+                    <button onClick={() => setShowAddFriend(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg transition-colors">{t('btn.cancel')}</button>
+                    <button onClick={submitAddFriend} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition-colors">{t('btn.send')}</button>
                   </div>
                 </>
               )}
@@ -1180,7 +1180,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               {/* ── Mode Téléphone ── */}
               {addMode === 'phone' && (
                 <>
-                  <p className="text-sm text-gray-500">Saisissez le numéro de téléphone de la personne pour la trouver.</p>
+                  <p className="text-sm text-gray-500">{t('amitie.add_friend.phone_desc')}</p>
                   <div className="flex gap-2">
                     <input
                       type="tel"
@@ -1195,7 +1195,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                       disabled={phoneSearchLoading || !phoneInput.trim()}
                       className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
                     >
-                      {phoneSearchLoading ? '...' : 'Chercher'}
+                      {phoneSearchLoading ? '...' : t('amitie.add_friend.search_btn')}
                     </button>
                   </div>
 
@@ -1215,27 +1215,27 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Message (optionnel)</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{t('amitie.add_friend.message_label')}</label>
                         <textarea
                           value={addFriendForm.message}
                           onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value }))}
                           className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           rows={2}
-                          placeholder="Message d'invitation..."
+                          placeholder={t('amitie.add_friend.message_placeholder')}
                         />
                       </div>
                       <button
                         onClick={sendFriendFromPhoneResult}
                         className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition-colors text-sm font-medium"
                       >
-                        Envoyer l'invitation
+                        {t('amitie.add_friend.send_invitation')}
                       </button>
                     </div>
                   )}
 
                   {!phoneResult && !phoneSearchError && (
                     <div className="flex justify-end pt-2">
-                      <button onClick={() => setShowAddFriend(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">Annuler</button>
+                      <button onClick={() => setShowAddFriend(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">{t('btn.cancel')}</button>
                     </div>
                   )}
                 </>
@@ -1244,7 +1244,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               {/* ── Mode Email ── */}
               {addMode === 'email' && (
                 <>
-                  <p className="text-sm text-gray-500">Saisissez l'email de la personne pour la trouver.</p>
+                  <p className="text-sm text-gray-500">{t('amitie.add_friend.email_desc')}</p>
                   <div className="flex gap-2">
                     <input
                       type="email"
@@ -1259,7 +1259,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                       disabled={emailSearchLoading || !emailInput.trim()}
                       className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
                     >
-                      {emailSearchLoading ? '...' : 'Chercher'}
+                      {emailSearchLoading ? '...' : t('amitie.add_friend.search_btn')}
                     </button>
                   </div>
 
@@ -1279,27 +1279,27 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Message (optionnel)</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">{t('amitie.add_friend.message_label')}</label>
                         <textarea
                           value={addFriendForm.message}
                           onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value }))}
                           className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           rows={2}
-                          placeholder="Message d'invitation..."
+                          placeholder={t('amitie.add_friend.message_placeholder')}
                         />
                       </div>
                       <button
                         onClick={sendFriendFromEmailResult}
                         className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg transition-colors text-sm font-medium"
                       >
-                        Envoyer l'invitation
+                        {t('amitie.add_friend.send_invitation')}
                       </button>
                     </div>
                   )}
 
                   {!emailResult && !emailSearchError && (
                     <div className="flex justify-end pt-2">
-                      <button onClick={() => setShowAddFriend(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">Annuler</button>
+                      <button onClick={() => setShowAddFriend(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">{t('btn.cancel')}</button>
                     </div>
                   )}
                 </>
@@ -1314,13 +1314,13 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                       onClick={() => { stopQRScanner(); setQrSubMode('show'); setQrScannedUser(null); setQrScanError(''); }}
                       className={`flex-1 py-2 text-sm font-medium transition-colors ${qrSubMode === 'show' ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
                     >
-                      📱 Mon QR Code
+                      {t('amitie.add_friend.qr_mine')}
                     </button>
                     <button
                       onClick={() => { setQrSubMode('scan'); }}
                       className={`flex-1 py-2 text-sm font-medium transition-colors ${qrSubMode === 'scan' ? 'bg-emerald-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
                     >
-                      📷 Scanner
+                      {t('amitie.add_friend.qr_scan')}
                     </button>
                   </div>
 
@@ -1336,7 +1336,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                         />
                       </div>
                       <p className="text-sm font-semibold text-gray-800">{userData.prenom} {userData.nomFamille}</p>
-                      <p className="text-xs text-gray-500">Fais scanner ce QR pour qu'on t'ajoute</p>
+                      <p className="text-xs text-gray-500">{t('amitie.add_friend.qr_hint')}</p>
                     </div>
                   )}
 
@@ -1353,22 +1353,22 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                       {qrScannedUser ? (
                         <div className="border-2 border-emerald-400 bg-emerald-50 rounded-xl p-4 text-center space-y-3">
                           <div className="text-4xl">✅</div>
-                          <p className="font-bold text-gray-900">{qrScannedUser.prenom || 'Utilisateur trouvé'}</p>
+                          <p className="font-bold text-gray-900">{qrScannedUser.prenom || t('amitie.add_friend.user_found')}</p>
                           <p className="text-xs text-gray-500 font-mono">{qrScannedUser.numeroH}</p>
                           <button onClick={sendFriendFromQR}
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-sm font-bold">
-                            Envoyer l'invitation d'amitié
+                            {t('amitie.add_friend.send_friend_invitation')}
                           </button>
                           <button onClick={() => { setQrScannedUser(null); setQrScanError(''); stopQRScanner(); }}
                             className="w-full bg-gray-100 text-gray-600 py-2 rounded-xl text-xs">
-                            Scanner un autre
+                            {t('amitie.add_friend.scan_another')}
                           </button>
                         </div>
 
                       ) : qrImageScanning ? (
                         <div className="flex flex-col items-center gap-3 py-6">
                           <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                          <p className="text-sm text-gray-500">Analyse du QR Code...</p>
+                          <p className="text-sm text-gray-500">{t('amitie.add_friend.qr_analyzing')}</p>
                         </div>
 
                       ) : qrScannerActive ? (
@@ -1378,11 +1378,11 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                             <canvas ref={canvasRef} className="hidden" />
                           </div>
                           <p className="text-center text-xs text-emerald-600 font-medium">
-                            🎯 Pointez vers le QR Code Moftal — il sera détecté automatiquement
+                            {t('amitie.add_friend.qr_point_hint')}
                           </p>
                           <button onClick={stopQRScanner}
                             className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2.5 rounded-xl text-sm font-semibold">
-                            ⏹ Arrêter
+                            {t('amitie.add_friend.stop')}
                           </button>
                         </div>
 
@@ -1393,12 +1393,12 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                             <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3">
                               {qrScanError === 'denied' ? (
                                 <>
-                                  <p className="font-bold text-amber-800 text-sm">🔒 Caméra bloquée dans Chrome</p>
+                                  <p className="font-bold text-amber-800 text-sm">{t('amitie.add_friend.qr_err_camera_blocked_title')}</p>
                                   <div className="space-y-2">
                                     {[
-                                      'Appuyez sur le 🔒 cadenas dans la barre d\'adresse',
-                                      'Tapez "Autorisations du site"',
-                                      'Tapez "Caméra" → Autoriser',
+                                      t('amitie.add_friend.qr_err_step1'),
+                                      t('amitie.add_friend.qr_err_step2'),
+                                      t('amitie.add_friend.qr_err_step3'),
                                     ].map((s, i) => (
                                       <div key={i} className="flex items-start gap-2">
                                         <div className="w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i+1}</div>
@@ -1408,20 +1408,20 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                                   </div>
                                 </>
                               ) : qrScanError === 'busy' ? (
-                                <p className="text-sm text-amber-800">⚠️ La caméra est utilisée par une autre app. Fermez-la et réessayez.</p>
+                                <p className="text-sm text-amber-800">{t('amitie.add_friend.qr_err_busy')}</p>
                               ) : qrScanError === 'no_qr' ? (
-                                <p className="text-sm text-amber-800">❌ Aucun QR Code Moftal trouvé. Assurez-vous que le QR Code est bien visible et net.</p>
+                                <p className="text-sm text-amber-800">{t('amitie.add_friend.qr_err_not_found')}</p>
                               ) : (
-                                <p className="text-sm text-amber-800">⚠️ Impossible d'accéder à la caméra. Utilisez "Prendre une photo" à la place.</p>
+                                <p className="text-sm text-amber-800">{t('amitie.add_friend.qr_err_generic')}</p>
                               )}
                               <div className="flex gap-2">
                                 <button onClick={() => { setQrScanError(''); startQRScanner(); }}
                                   className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold">
-                                  🔄 Réessayer
+                                  {t('amitie.add_friend.retry')}
                                 </button>
                                 <button onClick={() => { setQrScanError(''); qrCameraRef.current?.click(); }}
                                   className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold">
-                                  📸 Photo
+                                  {t('amitie.add_friend.photo_short')}
                                 </button>
                               </div>
                             </div>
@@ -1434,20 +1434,20 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                                 className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-2xl font-bold text-base flex items-center justify-center gap-3 shadow-md">
                                 <span className="text-2xl">📷</span>
                                 <div className="text-left">
-                                  <div>Scanner en direct</div>
-                                  <div className="text-xs font-normal opacity-80">Ouverture de la caméra</div>
+                                  <div>{t('amitie.add_friend.qr_scan_live')}</div>
+                                  <div className="text-xs font-normal opacity-80">{t('amitie.add_friend.qr_opening_camera')}</div>
                                 </div>
                               </button>
                               <div className="flex items-center gap-2">
-                                <hr className="flex-1 border-gray-200" /><span className="text-xs text-gray-400">ou</span><hr className="flex-1 border-gray-200" />
+                                <hr className="flex-1 border-gray-200" /><span className="text-xs text-gray-400">{t('amitie.add_friend.or')}</span><hr className="flex-1 border-gray-200" />
                               </div>
                               <button onClick={() => qrCameraRef.current?.click()}
                                 className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
-                                📸 Prendre une photo du QR Code
+                                {t('amitie.add_friend.qr_take_photo')}
                               </button>
                               <button onClick={() => qrGalleryRef.current?.click()}
                                 className="w-full py-2.5 border border-gray-200 text-gray-500 rounded-xl text-xs flex items-center justify-center gap-2">
-                                🖼️ Choisir depuis la galerie
+                                {t('amitie.add_friend.choose_gallery')}
                               </button>
                             </>
                           )}
@@ -1457,7 +1457,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                   )}
 
                   <div className="flex justify-end pt-1">
-                    <button onClick={() => { stopQRScanner(); setShowAddFriend(false); }} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">Fermer</button>
+                    <button onClick={() => { stopQRScanner(); setShowAddFriend(false); }} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">{t('btn.close')}</button>
                   </div>
                 </>
               )}
@@ -1465,18 +1465,18 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               {/* ── Mode Écrit ── */}
               {addMode === 'ecrit' && (
                 <>
-                  <p className="text-sm text-gray-500">Recherchez une personne par son prénom ou son nom.</p>
+                  <p className="text-sm text-gray-500">{t('amitie.add_friend.ecrit_desc')}</p>
                   <div className="flex gap-2">
                     <input type="text" value={ecritPrenom} onChange={e => { setEcritPrenom(e.target.value); setEcritResults([]); setEcritError(''); }}
                       onKeyDown={e => e.key === 'Enter' && searchFriendByName()}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Prénom" autoFocus />
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder={t('amitie.add_friend.firstname_placeholder')} autoFocus />
                     <input type="text" value={ecritNom} onChange={e => { setEcritNom(e.target.value); setEcritResults([]); setEcritError(''); }}
                       onKeyDown={e => e.key === 'Enter' && searchFriendByName()}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Nom" />
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder={t('amitie.add_friend.lastname_placeholder')} />
                   </div>
                   <button onClick={searchFriendByName} disabled={ecritLoading || (!ecritPrenom.trim() && !ecritNom.trim())}
                     className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-medium text-sm transition-colors">
-                    {ecritLoading ? 'Recherche...' : '🔍 Chercher'}
+                    {ecritLoading ? t('amitie.add_friend.searching_text') : `🔍 ${t('amitie.add_friend.search_btn')}`}
                   </button>
                   {ecritError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{ecritError}</p>}
                   {ecritResults.map(u => (
@@ -1487,7 +1487,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                         <p className="text-xs text-gray-500 truncate">{u.numeroH}</p>
                       </div>
                       <button onClick={() => sendFriendRequestTo(u.numeroH)}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shrink-0">Inviter</button>
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shrink-0">{t('amitie.add_friend.invite_btn')}</button>
                     </div>
                   ))}
                 </>
@@ -1496,15 +1496,15 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               {/* ── Mode Vidéo ── */}
               {addMode === 'video' && (
                 <>
-                  <p className="text-sm text-gray-500">Filmez ou choisissez une vidéo de présentation, puis saisissez le NumeroH.</p>
+                  <p className="text-sm text-gray-500">{t('amitie.add_friend.video_desc')}</p>
                   <input ref={friendVideoInputRef} type="file" accept="video/*" className="hidden"
                     onChange={e => setFriendVideoFile(e.target.files?.[0] || null)} />
                   {!friendVideoFile ? (
                     <div className="flex gap-2">
                       <button onClick={() => { if (friendVideoInputRef.current) { friendVideoInputRef.current.setAttribute('capture', 'user'); friendVideoInputRef.current.click(); } }}
-                        className="flex-1 py-3 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-medium hover:bg-emerald-50">📹 Filmer</button>
+                        className="flex-1 py-3 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-medium hover:bg-emerald-50">{t('amitie.add_friend.film')}</button>
                       <button onClick={() => { if (friendVideoInputRef.current) { friendVideoInputRef.current.removeAttribute('capture'); friendVideoInputRef.current.click(); } }}
-                        className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-50">🎞️ Galerie</button>
+                        className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-50">{t('amitie.add_friend.gallery')}</button>
                     </div>
                   ) : (
                     <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-3 flex items-center gap-2">
@@ -1517,7 +1517,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                     </div>
                   )}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">NumeroH de la personne</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('amitie.add_friend.numeroh_person_label')}</label>
                     <input type="text" value={friendVideoNumeroH} onChange={e => setFriendVideoNumeroH(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && friendVideoFile && friendVideoNumeroH.trim()) sendFriendRequestTo(friendVideoNumeroH.trim()); }}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Ex: G1C1P2R1E1F1 1" />
@@ -1525,7 +1525,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                   <button onClick={() => friendVideoFile && friendVideoNumeroH.trim() && sendFriendRequestTo(friendVideoNumeroH.trim())}
                     disabled={!friendVideoFile || !friendVideoNumeroH.trim()}
                     className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-medium text-sm transition-colors">
-                    Envoyer l'invitation →
+                    {t('amitie.add_friend.send_invitation_arrow')}
                   </button>
                 </>
               )}
