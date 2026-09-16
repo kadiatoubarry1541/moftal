@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { isAdmin } from '../utils/auth';
 import PaymentModal from '../components/PaymentModal';
+import { useI18n } from '../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -181,6 +182,7 @@ interface Certificate {
 }
 
 export default function Zaka() {
+  const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState<'pauvres' | 'mon-compte' | 'dons' | 'zakat' | 'communaute' | 'formation-religieux'>('pauvres');
@@ -857,11 +859,11 @@ export default function Zaka() {
 
   const getUrgencyLabel = (urgency: string) => {
     switch (urgency) {
-      case 'critical': return 'Critique';
-      case 'high': return 'Élevée';
-      case 'medium': return 'Moyenne';
-      case 'low': return 'Faible';
-      default: return 'Inconnue';
+      case 'critical': return t('zaka.urgency_critical');
+      case 'high': return t('zaka.urgency_high');
+      case 'medium': return t('zaka.urgency_medium');
+      case 'low': return t('zaka.urgency_low');
+      default: return t('zaka.urgency_unknown');
     }
   };
 
@@ -870,7 +872,7 @@ export default function Zaka() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des données de zakat...</p>
+          <p className="mt-4 text-gray-600">{t('zaka.loading')}</p>
         </div>
       </div>
     );
@@ -883,11 +885,11 @@ export default function Zaka() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">🤲 Zaka (Musulmans)</h1>
+              <h1 className="text-3xl font-bold text-gray-900">🤲 {t('zaka.title')}</h1>
               <p className="mt-2 text-gray-600">
                 {userData && isAdmin(userData) 
-                  ? "Aide aux pauvres, calcul de la zakat, communauté et formation religieuse - Vue admin (toutes les données)"
-                  : "Aide aux pauvres musulmans, calcul de la zakat, communauté et formation religieuse"}
+                  ? t('zaka.subtitle_admin')
+                  : t('zaka.subtitle')}
               </p>
             </div>
             <div className="flex space-x-4">
@@ -895,13 +897,13 @@ export default function Zaka() {
                 onClick={() => setShowZakatForm(true)}
                 className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
-                🧮 Calculer Zakat
+                {t('zaka.calculate_zakat_btn')}
               </button>
               <button
                 onClick={() => navigate('/moi')}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
-                ← Retour
+                {t('btn.back_arrow')}
               </button>
             </div>
           </div>
@@ -913,12 +915,12 @@ export default function Zaka() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
-              { id: 'pauvres', label: 'Personnes dans le besoin', icon: '👥' },
-              { id: 'mon-compte', label: 'Mon Compte Zakat', icon: '💰' },
-              { id: 'dons', label: 'Mes Dons', icon: '💝' },
-              { id: 'zakat', label: 'Calcul Zakat', icon: '🧮' },
-              { id: 'communaute', label: 'Communauté', icon: '🕌' },
-              { id: 'formation-religieux', label: 'Formation', icon: '📚' }
+              { id: 'pauvres', label: t('zaka.tab_pauvres'), icon: '👥' },
+              { id: 'mon-compte', label: t('zaka.tab_mon_compte'), icon: '💰' },
+              { id: 'dons', label: t('zaka.tab_dons'), icon: '💝' },
+              { id: 'zakat', label: t('zaka.tab_zakat'), icon: '🧮' },
+              { id: 'communaute', label: t('zaka.tab_communaute'), icon: '🕌' },
+              { id: 'formation-religieux', label: t('zaka.tab_formation'), icon: '📚' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -947,7 +949,7 @@ export default function Zaka() {
               <div className="flex-1">
                 <input
                   type="text"
-                    placeholder="Rechercher par nom ou localisation..."
+                    placeholder={t('zaka.search_placeholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -958,18 +960,18 @@ export default function Zaka() {
                 onChange={(e) => setSelectedUrgency(e.target.value)}
                   className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="">Toutes les urgences</option>
-                  <option value="critical">Critique</option>
-                  <option value="high">Élevée</option>
-                  <option value="medium">Moyenne</option>
-                  <option value="low">Faible</option>
+                  <option value="">{t('zaka.all_urgencies')}</option>
+                  <option value="critical">{t('zaka.urgency_critical')}</option>
+                  <option value="high">{t('zaka.urgency_high')}</option>
+                  <option value="medium">{t('zaka.urgency_medium')}</option>
+                  <option value="low">{t('zaka.urgency_low')}</option>
                 </select>
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
                   className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="">Toutes les villes</option>
+                  <option value="">{t('zaka.all_cities')}</option>
                   <option value="Conakry">Conakry</option>
                   <option value="Kindia">Kindia</option>
                   <option value="Kankan">Kankan</option>
@@ -982,18 +984,18 @@ export default function Zaka() {
             {/* Liste des pauvres */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                {userData && isAdmin(userData) ? "👥 Tous les Pauvres (Vue Admin)" : "👥 Pauvres Musulmans"}
+                {userData && isAdmin(userData) ? t('zaka.all_poor_admin_title') : t('zaka.poor_muslims_title')}
               </h2>
               {userData && isAdmin(userData) ? (
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                   <p className="text-sm text-blue-700">
-                    <strong>🔐 Vue Admin :</strong> Vous voyez toutes les données. En mode normal, seuls les pauvres musulmans sont affichés.
+                    <strong>{t('zaka.admin_view_badge')}</strong> {t('zaka.admin_view_poor_desc')}
                   </p>
                 </div>
               ) : (
                 <div className="mb-4 p-4 bg-green-50 rounded-lg">
                   <p className="text-sm text-gray-700">
-                    <strong>Note importante :</strong> La <strong>Zakat</strong> (aumône obligatoire) est destinée aux pauvres musulmans uniquement. Cette page affiche uniquement les personnes musulmanes éligibles à recevoir la zakat.
+                    <strong>{t('zaka.important_note_label')}</strong> {t('zaka.zakat_note_desc')}
                   </p>
                 </div>
               )}
@@ -1031,7 +1033,7 @@ export default function Zaka() {
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <span className="mr-2">👥</span>
-                        <span>{person.familySize} personnes</span>
+                        <span>{person.familySize} {t('zaka.family_size_suffix')}</span>
                       </div>
                       {person.occupation && (
                         <div className="flex items-center text-sm text-gray-600">
@@ -1042,12 +1044,12 @@ export default function Zaka() {
                   </div>
                   
                   <div className="mb-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Situation:</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">{t('zaka.situation_label')}</h4>
                       <p className="text-sm text-gray-600">{person.situation}</p>
                   </div>
                   
                   <div className="mb-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Besoins:</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">{t('zaka.needs_label')}</h4>
                     <div className="flex flex-wrap gap-1">
                       {person.needs.map((need, index) => (
                           <span key={index} className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
@@ -1059,13 +1061,13 @@ export default function Zaka() {
                   
                     {person.healthCondition && (
                   <div className="mb-4">
-                        <h4 className="font-medium text-gray-900 mb-1">État de santé:</h4>
+                        <h4 className="font-medium text-gray-900 mb-1">{t('zaka.health_condition_label')}</h4>
                         <p className="text-sm text-gray-600">{person.healthCondition}</p>
                   </div>
                     )}
 
                     <div className="mb-4">
-                      <h4 className="font-medium text-gray-900 mb-1">Contact:</h4>
+                      <h4 className="font-medium text-gray-900 mb-1">{t('echange_primaire.contact_colon')}</h4>
                       {person.contactInfo.phone && (
                         <p className="text-sm text-gray-600">📞 {person.contactInfo.phone}</p>
                       )}
@@ -1077,18 +1079,18 @@ export default function Zaka() {
                         onClick={() => handleDonation(person)}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
                       >
-                        🤲 Donner Zakat
+                        {t('zaka.give_zakat_btn')}
                     </button>
                       {person.contactInfo.phone ? (
                         <a
                           href={`tel:${person.contactInfo.phone}`}
                           className="flex-1 text-center bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
                         >
-                          📞 Contacter
+                          📞 {t('sante.contact_btn')}
                         </a>
                       ) : (
                         <button disabled className="flex-1 bg-gray-300 text-gray-500 py-2 px-4 rounded-lg cursor-not-allowed">
-                          📞 Contacter
+                          📞 {t('sante.contact_btn')}
                         </button>
                       )}
                   </div>
@@ -1097,7 +1099,7 @@ export default function Zaka() {
             </div>
             {filteredPoorPeople.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-500">Aucun pauvre musulman trouvé</p>
+                <p className="text-gray-500">{t('zaka.no_poor_found')}</p>
               </div>
             )}
             </div>
@@ -1108,18 +1110,18 @@ export default function Zaka() {
           <div className="space-y-6">
             {/* Solde du compte Zakat */}
             <div className="rounded-2xl p-6 text-white" style={{ background: 'linear-gradient(135deg,#0f4b0f,#1a8f1a)' }}>
-              <p className="text-green-200 text-xs font-bold uppercase tracking-wider mb-1">Mon Compte Zakat</p>
+              <p className="text-green-200 text-xs font-bold uppercase tracking-wider mb-1">{t('zaka.tab_mon_compte')}</p>
               <p className="text-white font-black text-3xl mb-1">
                 {(monCompteZakat?.solde || 0).toLocaleString('fr-GN')} GNF
               </p>
-              <p className="text-green-200 text-sm">disponible pour donner</p>
+              <p className="text-green-200 text-sm">{t('zaka.available_to_give')}</p>
               <div className="flex gap-6 mt-4">
                 <div>
-                  <p className="text-green-300 text-xs">Total déposé</p>
+                  <p className="text-green-300 text-xs">{t('zaka.total_deposited')}</p>
                   <p className="text-white font-bold">{(monCompteZakat?.totalDepose || 0).toLocaleString('fr-GN')} GNF</p>
                 </div>
                 <div>
-                  <p className="text-green-300 text-xs">Total donné</p>
+                  <p className="text-green-300 text-xs">{t('zaka.total_given')}</p>
                   <p className="text-white font-bold">{(monCompteZakat?.totalDonne || 0).toLocaleString('fr-GN')} GNF</p>
                 </div>
               </div>
@@ -1127,19 +1129,19 @@ export default function Zaka() {
 
             {/* Explication */}
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
-              <p className="font-bold mb-1">Comment ça marche ?</p>
+              <p className="font-bold mb-1">{t('zaka.how_it_works')}</p>
               <ol className="space-y-1 list-decimal list-inside text-green-700">
-                <li>Déposez de l'argent dans votre compte Zakat ci-dessous</li>
-                <li>Allez dans l'onglet <strong>"Personnes dans le besoin"</strong></li>
-                <li>Choisissez une personne et cliquez <strong>"Donner Zakat"</strong></li>
-                <li>La personne reçoit l'argent et peut payer une clinique ou un fournisseur depuis la plateforme</li>
+                <li>{t('zaka.step1')}</li>
+                <li>{t('zaka.step2_prefix')} <strong>"{t('zaka.tab_pauvres')}"</strong></li>
+                <li>{t('zaka.step3_prefix')} <strong>"{t('zaka.give_zakat_label')}"</strong></li>
+                <li>{t('zaka.step4')}</li>
               </ol>
             </div>
 
             {/* Formulaire de dépôt */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-bold text-gray-800 mb-1">Déposer dans mon compte Zakat</h3>
-              <p className="text-gray-400 text-xs mb-4">Minimum : 1 000 GNF</p>
+              <h3 className="font-bold text-gray-800 mb-1">{t('zaka.deposit_title')}</h3>
+              <p className="text-gray-400 text-xs mb-4">{t('zaka.deposit_minimum')}</p>
               <div className="flex gap-3">
                 <input
                   type="number"
@@ -1147,14 +1149,14 @@ export default function Zaka() {
                   step="1000"
                   value={montantDepotZakat}
                   onChange={e => setMontantDepotZakat(e.target.value)}
-                  placeholder="Montant en GNF"
+                  placeholder={t('zaka.amount_placeholder')}
                   className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
                 <button
                   onClick={deposerDansCompteZakat}
                   className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm disabled:opacity-50 transition-colors"
                 >
-                  Déposer
+                  {t('zaka.deposit_btn')}
                 </button>
               </div>
             </div>
@@ -1164,29 +1166,29 @@ export default function Zaka() {
         {activeTab === 'dons' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">💝 Mes Dons Zakat</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('zaka.my_donations_title')}</h2>
               <div className="space-y-4">
                 {donations.map((donation) => (
                   <div key={donation.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start">
                     <div>
                         <h3 className="font-semibold text-gray-900">
-                          Zakat à {donation.recipientName}
+                          {t('zaka.zakat_to_prefix')} {donation.recipientName}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          Montant: {donation.amount.toLocaleString()} {donation.currency}
+                          {t('zaka.amount_label')} {donation.amount.toLocaleString()} {donation.currency}
                         </p>
                         <p className="text-sm text-gray-600">
-                          Type: {donation.type === 'money' ? 'Argent' :
-                                 donation.type === 'food' ? 'Nourriture' :
-                                 donation.type === 'clothing' ? 'Vêtements' :
-                                 donation.type === 'medicine' ? 'Médicaments' : 'Autre'}
+                          {t('zaka.type_label')} {donation.type === 'money' ? t('zaka.type_money') :
+                                 donation.type === 'food' ? t('zaka.type_food') :
+                                 donation.type === 'clothing' ? t('zaka.type_clothing') :
+                                 donation.type === 'medicine' ? t('zaka.type_medicine') : t('zaka.type_other')}
                         </p>
                         {donation.description && (
-                          <p className="text-sm text-gray-600">Description: {donation.description}</p>
+                          <p className="text-sm text-gray-600">{t('zaka.description_colon')} {donation.description}</p>
                         )}
                         <p className="text-sm text-gray-600">
-                          Date: {new Date(donation.createdAt).toLocaleDateString()}
+                          {t('zaka.date_label')} {new Date(donation.createdAt).toLocaleDateString()}
                         </p>
                     </div>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -1194,15 +1196,15 @@ export default function Zaka() {
                         donation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {donation.status === 'completed' ? 'Effectuée' :
-                         donation.status === 'pending' ? 'En attente' : 'Annulée'}
+                        {donation.status === 'completed' ? t('zaka.status_completed') :
+                         donation.status === 'pending' ? t('education.status_pending') : t('zaka.status_cancelled')}
                       </span>
                     </div>
                   </div>
                 ))}
                 {donations.length === 0 && (
                   <div className="text-center py-8">
-                    <p className="text-gray-500">Aucune zakat effectuée</p>
+                    <p className="text-gray-500">{t('zaka.no_donations')}</p>
                   </div>
                 )}
                   </div>
@@ -1213,41 +1215,41 @@ export default function Zaka() {
         {activeTab === 'zakat' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">🧮 Calculs Zakat</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('zaka.calculations_title')}</h2>
               <div className="space-y-4">
                 {zakatCalculations.map((calculation) => (
                   <div key={calculation.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start">
                     <div>
                         <h3 className="font-semibold text-gray-900">
-                          Calcul du {new Date(calculation.calculationDate).toLocaleDateString()}
+                          {t('zaka.calculation_of_prefix')} {new Date(calculation.calculationDate).toLocaleDateString()}
                         </h3>
                       <p className="text-sm text-gray-600">
-                          Patrimoine total: {calculation.totalWealth.toLocaleString()} {calculation.currency}
+                          {t('zaka.wealth_label')} {calculation.totalWealth.toLocaleString()} {calculation.currency}
                         </p>
                         <p className="text-sm text-gray-600">
-                          Zakat due: {calculation.zakatAmount.toLocaleString()} {calculation.currency}
+                          {t('zaka.zakat_due_label')} {calculation.zakatAmount.toLocaleString()} {calculation.currency}
                         </p>
                         <p className="text-sm text-gray-600">
-                          Statut: {calculation.isPaid ? 'Payée' : 'Non payée'}
+                          {t('zaka.status_label')} {calculation.isPaid ? t('zaka.paid') : t('zaka.not_paid')}
                         </p>
                         {calculation.paidAt && (
                           <p className="text-sm text-gray-600">
-                            Payée le: {new Date(calculation.paidAt).toLocaleDateString()}
+                            {t('zaka.paid_on_label')} {new Date(calculation.paidAt).toLocaleDateString()}
                           </p>
                         )}
                     </div>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         calculation.isPaid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                        {calculation.isPaid ? 'Payée' : 'Non payée'}
+                        {calculation.isPaid ? t('zaka.paid') : t('zaka.not_paid')}
                       </span>
                     </div>
                   </div>
                 ))}
                 {zakatCalculations.length === 0 && (
                   <div className="text-center py-8">
-                    <p className="text-gray-500">Aucun calcul de zakat effectué</p>
+                    <p className="text-gray-500">{t('zaka.no_calculations')}</p>
                   </div>
                 )}
                   </div>
@@ -1267,8 +1269,8 @@ export default function Zaka() {
                 🕌
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-base text-teal-800">Mosquées & Imams</div>
-                <div className="text-xs text-gray-500 mt-0.5">Mosquées et imams enregistrés dans votre région</div>
+                <div className="font-bold text-base text-teal-800">{t('zaka.mosques_imams_title')}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{t('zaka.mosques_imams_desc')}</div>
               </div>
               <span className="text-gray-400 text-lg flex-shrink-0">→</span>
             </a>
@@ -1276,12 +1278,12 @@ export default function Zaka() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-900">
-                {userData && isAdmin(userData) ? "👥 Toutes les Communautés (Vue Admin)" : "👥 Communautés Musulmanes"}
+                {userData && isAdmin(userData) ? t('zaka.all_communities_admin_title') : t('zaka.muslim_communities_title')}
               </h2>
               {userData && isAdmin(userData) && (
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                   <p className="text-sm text-blue-700">
-                    <strong>🔐 Vue Admin :</strong> Vous voyez toutes les communautés. En mode normal, seules les communautés musulmanes sont affichées.
+                    <strong>{t('zaka.admin_view_badge')}</strong> {t('zaka.admin_view_community_desc')}
                   </p>
                 </div>
               )}
@@ -1289,7 +1291,7 @@ export default function Zaka() {
                   onClick={() => setShowCreateCommunity(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                 >
-                  ➕ Créer Communauté
+                  {t('zaka.create_community_btn')}
                 </button>
               </div>
               
@@ -1306,11 +1308,11 @@ export default function Zaka() {
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <span className="mr-2">👥</span>
-                        <span>{community.members.length} membres</span>
+                        <span>{community.members.length} {t('zaka.members_suffix')}</span>
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <span className="mr-2">📅</span>
-                        <span>Créé le {new Date(community.createdAt).toLocaleDateString()}</span>
+                        <span>{t('zaka.created_on_prefix')} {new Date(community.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
                   
@@ -1318,7 +1320,7 @@ export default function Zaka() {
                       onClick={() => handleJoinCommunity(community.id)}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
                     >
-                      Rejoindre
+                      {t('zaka.join_btn')}
                     </button>
                   </div>
                 ))}
@@ -1335,7 +1337,7 @@ export default function Zaka() {
                 <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-2xl">
                   📚
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900">Formations Disponibles</h2>
+                <h2 className="text-3xl font-bold text-gray-900">{t('education.available_formations_title')}</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {formations.length > 0 ? formations.map((formation) => (
@@ -1344,19 +1346,19 @@ export default function Zaka() {
                     <p className="text-gray-600 mb-4">{formation.description}</p>
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Catégorie:</span>
+                        <span className="text-sm text-gray-500">{t('education.category_label')}</span>
                         <span className="text-sm font-medium">{formation.category}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Durée:</span>
-                        <span className="text-sm font-medium">{formation.duration} mois</span>
+                        <span className="text-sm text-gray-500">{t('education.duration_label')}</span>
+                        <span className="text-sm font-medium">{formation.duration} {t('education.duration_months')}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Niveau:</span>
+                        <span className="text-sm text-gray-500">{t('education.level_label')}</span>
                         <span className="text-sm font-medium">{formation.level}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Prix:</span>
+                        <span className="text-sm text-gray-500">{t('education.price_label')}</span>
                         <span className="text-sm font-medium">{formation.price.toLocaleString()} FG</span>
                       </div>
                     </div>
@@ -1367,12 +1369,12 @@ export default function Zaka() {
                       }}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
                     >
-                      S'inscrire
+                      {t('education.register_btn')}
                     </button>
                   </div>
                 )) : (
                   <div className="col-span-full text-center py-8">
-                    <p className="text-gray-500">Aucune formation disponible pour le moment</p>
+                    <p className="text-gray-500">{t('zaka.no_formation_available')}</p>
                   </div>
                 )}
               </div>
@@ -1385,7 +1387,7 @@ export default function Zaka() {
                   <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-2xl">
                     ✅
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Mes Inscriptions</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{t('education.my_registrations_title')}</h3>
                 </div>
                 <div className="space-y-4">
                   {myRegistrations.map((registration) => (
@@ -1393,15 +1395,15 @@ export default function Zaka() {
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-semibold text-gray-900">{registration.formationTitle}</h4>
-                          <p className="text-sm text-gray-600">Inscrit le: {new Date(registration.registeredAt).toLocaleDateString()}</p>
+                          <p className="text-sm text-gray-600">{t('education.registered_on')} {new Date(registration.registeredAt).toLocaleDateString()}</p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                           registration.status === 'approved' ? 'bg-green-100 text-green-800' :
                           registration.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {registration.status === 'approved' ? 'Approuvé' :
-                           registration.status === 'pending' ? 'En attente' : 'Rejeté'}
+                          {registration.status === 'approved' ? t('education.status_approved') :
+                           registration.status === 'pending' ? t('education.status_pending') : t('education.status_rejected')}
                         </span>
                       </div>
                     </div>
@@ -1416,7 +1418,7 @@ export default function Zaka() {
                 <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-2xl">
                   🕌
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900">Oustage Disponible</h2>
+                <h2 className="text-3xl font-bold text-gray-900">{t('zaka.oustage_available_title')}</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {stages.length > 0 ? stages.map((stage) => (
@@ -1425,23 +1427,23 @@ export default function Zaka() {
                     <p className="text-gray-600 mb-2">{stage.description}</p>
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Spécialités:</span>
+                        <span className="text-sm text-gray-500">{t('sante.specialties_label')}</span>
                         <span className="text-sm font-medium">{stage.specialties.join(', ')}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Expérience:</span>
-                        <span className="text-sm font-medium">{stage.experience} ans</span>
+                        <span className="text-sm text-gray-500">{t('education.experience_label')}</span>
+                        <span className="text-sm font-medium">{stage.experience} {t('education.years_suffix')}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Ville:</span>
+                        <span className="text-sm text-gray-500">{t('education.city_label')}</span>
                         <span className="text-sm font-medium">{stage.city}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Tarif:</span>
+                        <span className="text-sm text-gray-500">{t('education.rate_label')}</span>
                         <span className="text-sm font-medium">{stage.consultationFee.toLocaleString()} FG</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Note:</span>
+                        <span className="text-sm text-gray-500">{t('education.note_label')}</span>
                         <span className="text-sm font-medium">⭐ {stage.ratings}/5</span>
                       </div>
                     </div>
@@ -1453,16 +1455,16 @@ export default function Zaka() {
                         }}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
                       >
-                        Demander
+                        {t('education.request_btn')}
                       </button>
                       <a href={`tel:${stage.phone}`} className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-center">
-                        Contacter
+                        {t('sante.contact_btn')}
                       </a>
                     </div>
                   </div>
                 )) : (
                   <div className="col-span-full text-center py-8">
-                    <p className="text-gray-500">Aucun oustage disponible pour le moment</p>
+                    <p className="text-gray-500">{t('zaka.no_oustage_available')}</p>
                   </div>
                 )}
               </div>
@@ -1475,7 +1477,7 @@ export default function Zaka() {
                   <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center text-2xl">
                     📝
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Mes Demandes d'Oustage</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{t('zaka.my_oustage_requests_title')}</h3>
                 </div>
                 <div className="space-y-4">
                   {myStageRequests.map((request) => (
@@ -1483,16 +1485,16 @@ export default function Zaka() {
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-semibold text-gray-900">{request.stageTitle}</h4>
-                          <p className="text-sm text-gray-600">Sujet: {request.subject}</p>
-                          <p className="text-sm text-gray-600">Demandé le: {new Date(request.requestedAt).toLocaleDateString()}</p>
+                          <p className="text-sm text-gray-600">{t('education.subject_colon')} {request.subject}</p>
+                          <p className="text-sm text-gray-600">{t('education.requested_on')} {new Date(request.requestedAt).toLocaleDateString()}</p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                           request.status === 'approved' ? 'bg-green-100 text-green-800' :
                           request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {request.status === 'approved' ? 'Approuvé' :
-                           request.status === 'pending' ? 'En attente' : 'Rejeté'}
+                          {request.status === 'approved' ? t('education.status_approved') :
+                           request.status === 'pending' ? t('education.status_pending') : t('education.status_rejected')}
                         </span>
                       </div>
                     </div>
@@ -1507,17 +1509,17 @@ export default function Zaka() {
                 <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center text-2xl">
                   🎯
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900">Mes Cours</h2>
+                <h2 className="text-3xl font-bold text-gray-900">{t('education.tab_mes_cours')}</h2>
               </div>
               <nav className="flex space-x-4 mb-6 overflow-x-auto">
                 {[
-                  { id: 'audio', label: 'Audio', icon: '🎵' },
-                  { id: 'video', label: 'Vidéo', icon: '🎥' },
-                  { id: 'written', label: 'Écrit', icon: '📝' },
-                  { id: 'exercice', label: 'Exercice', icon: '📝' },
-                  { id: 'library', label: 'Bibliothèque', icon: '📚' },
-                  { id: 'progress', label: 'Progrès', icon: '📊' },
-                  { id: 'certificates', label: 'Certificats', icon: '🏆' }
+                  { id: 'audio', label: t('education.tab_audio'), icon: '🎵' },
+                  { id: 'video', label: t('education.tab_video'), icon: '🎥' },
+                  { id: 'written', label: t('education.tab_written'), icon: '📝' },
+                  { id: 'exercice', label: t('education.tab_exercice'), icon: '📝' },
+                  { id: 'library', label: t('education.tab_library'), icon: '📚' },
+                  { id: 'progress', label: t('education.tab_progress'), icon: '📊' },
+                  { id: 'certificates', label: t('education.tab_certificates'), icon: '🏆' }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1538,22 +1540,22 @@ export default function Zaka() {
               <div className="space-y-6">
                 {activeCourseTab === 'audio' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">🎵 Cours Audio</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.audio_courses_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courses.filter(c => c.type === 'audio').length > 0 ? courses.filter(c => c.type === 'audio').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4 bg-white">
                           <h4 className="font-semibold text-gray-900 mb-2">{course.title}</h4>
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
+                            <span className="text-sm text-gray-500">{t('education.duration_label')} {course.duration} {t('education.minutes_suffix')}</span>
                             <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                              Écouter
+                              {t('education.listen_btn')}
                             </button>
                           </div>
                         </div>
                       )) : (
                         <div className="col-span-full text-center py-8">
-                          <p className="text-gray-500">Aucun cours audio disponible</p>
+                          <p className="text-gray-500">{t('zaka.no_audio_courses')}</p>
                         </div>
                       )}
                     </div>
@@ -1562,22 +1564,22 @@ export default function Zaka() {
 
                 {activeCourseTab === 'video' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">🎥 Cours Vidéo</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.video_courses_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courses.filter(c => c.type === 'video').length > 0 ? courses.filter(c => c.type === 'video').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4 bg-white">
                           <h4 className="font-semibold text-gray-900 mb-2">{course.title}</h4>
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
+                            <span className="text-sm text-gray-500">{t('education.duration_label')} {course.duration} {t('education.minutes_suffix')}</span>
                             <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                              Regarder
+                              {t('education.watch_btn')}
                             </button>
                           </div>
                         </div>
                       )) : (
                         <div className="col-span-full text-center py-8">
-                          <p className="text-gray-500">Aucun cours vidéo disponible</p>
+                          <p className="text-gray-500">{t('zaka.no_video_courses')}</p>
                         </div>
                       )}
                     </div>
@@ -1586,22 +1588,22 @@ export default function Zaka() {
 
                 {activeCourseTab === 'written' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">📝 Cours Écrits</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.written_courses_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courses.filter(c => c.type === 'written').length > 0 ? courses.filter(c => c.type === 'written').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4 bg-white">
                           <h4 className="font-semibold text-gray-900 mb-2">{course.title}</h4>
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Pages: {course.duration}</span>
+                            <span className="text-sm text-gray-500">{t('education.pages_label')} {course.duration}</span>
                             <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                              Lire
+                              {t('education.read_btn')}
                             </button>
                           </div>
                         </div>
                       )) : (
                         <div className="col-span-full text-center py-8">
-                          <p className="text-gray-500">Aucun cours écrit disponible</p>
+                          <p className="text-gray-500">{t('zaka.no_written_courses')}</p>
                         </div>
                       )}
                     </div>
@@ -1610,13 +1612,13 @@ export default function Zaka() {
 
                 {activeCourseTab === 'exercice' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">📝 Exercices</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('zaka.exercises_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="border rounded-lg p-4 bg-white">
-                        <h4 className="font-semibold text-gray-900 mb-2">Exercices disponibles</h4>
-                        <p className="text-gray-600 text-sm mb-4">Pratiquez avec des exercices interactifs</p>
+                        <h4 className="font-semibold text-gray-900 mb-2">{t('zaka.exercises_available')}</h4>
+                        <p className="text-gray-600 text-sm mb-4">{t('zaka.practice_interactive')}</p>
                         <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm">
-                          Commencer
+                          {t('education.ai_start_btn')}
                         </button>
                       </div>
                     </div>
@@ -1625,7 +1627,7 @@ export default function Zaka() {
 
                 {activeCourseTab === 'library' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">📚 Bibliothèque</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.library_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {courses.filter(c => c.type === 'library').length > 0 ? courses.filter(c => c.type === 'library').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4 bg-white">
@@ -1637,12 +1639,12 @@ export default function Zaka() {
                             ))}
                           </div>
                           <button onClick={() => setSelectedCourse(course)} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                            Consulter
+                            {t('education.consult_btn')}
                           </button>
                         </div>
                       )) : (
                         <div className="col-span-full text-center py-8">
-                          <p className="text-gray-500">Aucun matériel de bibliothèque disponible</p>
+                          <p className="text-gray-500">{t('zaka.no_library_material')}</p>
                         </div>
                       )}
                     </div>
@@ -1651,7 +1653,7 @@ export default function Zaka() {
             
                 {activeCourseTab === 'progress' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">📊 Mon Progrès</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.my_progress_title')}</h3>
                     <div className="space-y-4">
                       {myProgress.length > 0 ? myProgress.map((progress) => (
                         <div key={progress.id} className="border rounded-lg p-4 bg-white">
@@ -1666,13 +1668,13 @@ export default function Zaka() {
                             ></div>
                           </div>
                           <div className="flex justify-between text-sm text-gray-500">
-                            <span>Temps passé: {progress.totalTimeSpent} min</span>
-                            <span>Dernière fois: {new Date(progress.lastAccessed).toLocaleDateString()}</span>
+                            <span>{t('education.time_spent')} {progress.totalTimeSpent} {t('education.minutes_suffix')}</span>
+                            <span>{t('education.last_time')} {new Date(progress.lastAccessed).toLocaleDateString()}</span>
                           </div>
                         </div>
                       )) : (
                         <div className="text-center py-8">
-                          <p className="text-gray-500">Aucun progrès enregistré</p>
+                          <p className="text-gray-500">{t('zaka.no_progress')}</p>
                         </div>
                       )}
                     </div>
@@ -1681,7 +1683,7 @@ export default function Zaka() {
 
                 {activeCourseTab === 'certificates' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">🏆 Mes Certificats</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.my_certificates_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {myCertificates.length > 0 ? myCertificates.map((certificate) => (
                         <div key={certificate.id} className="border rounded-lg p-4 bg-white">
@@ -1690,14 +1692,14 @@ export default function Zaka() {
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
                               certificate.isValid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
-                              {certificate.isValid ? 'Valide' : 'Expiré'}
+                              {certificate.isValid ? t('education.valid') : t('education.expired')}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 mb-2">
-                            Émis le: {new Date(certificate.issuedAt).toLocaleDateString()}
+                            {t('education.issued_on')} {new Date(certificate.issuedAt).toLocaleDateString()}
                           </p>
                           <p className="text-sm text-gray-600 mb-3">
-                            Par: {certificate.issuedBy}
+                            {t('education.issued_by')} {certificate.issuedBy}
                           </p>
                           <a
                             href={certificate.badgeUrl}
@@ -1706,12 +1708,12 @@ export default function Zaka() {
                             download
                             className="block text-center w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm"
                           >
-                            Télécharger
+                            {t('education.download_btn')}
                           </a>
                         </div>
                       )) : (
                         <div className="col-span-full text-center py-8">
-                          <p className="text-gray-500">Aucun certificat disponible</p>
+                          <p className="text-gray-500">{t('zaka.no_certificates')}</p>
                         </div>
                       )}
                     </div>
@@ -1733,7 +1735,7 @@ export default function Zaka() {
                 x
               </button>
             </div>
-            <p className="text-sm text-gray-500 mb-4">Par {selectedCourse.instructor}</p>
+            <p className="text-sm text-gray-500 mb-4">{t('education.by_instructor')} {selectedCourse.instructor}</p>
             {selectedCourse.type === 'audio' && selectedCourse.content && (
               <audio controls className="w-full mb-4"><source src={selectedCourse.content} /></audio>
             )}
@@ -1744,13 +1746,13 @@ export default function Zaka() {
               <div className="whitespace-pre-wrap text-gray-700 leading-relaxed mb-4">{selectedCourse.content}</div>
             )}
             {!selectedCourse.content && (
-              <p className="text-center text-gray-500 py-8">Le contenu de ce cours n&apos;est pas encore disponible.</p>
+              <p className="text-center text-gray-500 py-8">{t('education.content_not_available')}</p>
             )}
             <button
               onClick={() => setSelectedCourse(null)}
               className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors"
             >
-              Fermer
+              {t('btn.close')}
             </button>
           </div>
         </div>
@@ -1761,66 +1763,66 @@ export default function Zaka() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              🤲 Donner Zakat à {selectedPoorPerson.prenom} {selectedPoorPerson.nomFamille}
+              {t('zaka.give_zakat_to_prefix')} {selectedPoorPerson.prenom} {selectedPoorPerson.nomFamille}
               </h3>
             <div className="mb-4 p-3 bg-green-50 rounded-lg">
               <p className="text-sm text-gray-700">
-                <strong>Note :</strong> La Zakat est une aumône obligatoire destinée aux pauvres musulmans uniquement.
+                <strong>{t('zaka.note_label_colon')}</strong> {t('zaka.zakat_definition')}
               </p>
             </div>
               <div className="space-y-4">
                 <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type de don
+                  {t('zaka.donation_type_label')}
                 </label>
                 <select
                   value={donationForm.type}
                   onChange={(e) => setDonationForm({...donationForm, type: e.target.value as any})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="money">Argent</option>
-                  <option value="food">Nourriture</option>
-                  <option value="clothing">Vêtements</option>
-                  <option value="medicine">Médicaments</option>
-                  <option value="other">Autre</option>
+                  <option value="money">{t('zaka.type_money')}</option>
+                  <option value="food">{t('zaka.type_food')}</option>
+                  <option value="clothing">{t('zaka.type_clothing')}</option>
+                  <option value="medicine">{t('zaka.type_medicine')}</option>
+                  <option value="other">{t('zaka.type_other')}</option>
                 </select>
                 </div>
                 <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Montant/Valeur
+                  {t('zaka.amount_value_label')}
                 </label>
                 <input
                   type="number"
                   value={donationForm.amount}
                   onChange={(e) => setDonationForm({...donationForm, amount: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Montant en FG"
+                  placeholder={t('zaka.amount_fg_placeholder')}
                 />
                 </div>
                 <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Devise
+                  {t('zaka.currency_label')}
                 </label>
                 <select
                   value={donationForm.currency}
                   onChange={(e) => setDonationForm({...donationForm, currency: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="FG">Franc Guinéen (FG)</option>
-                  <option value="USD">Dollar US (USD)</option>
-                  <option value="EUR">Euro (EUR)</option>
+                  <option value="FG">{t('zaka.currency_fg')}</option>
+                  <option value="USD">{t('zaka.currency_usd')}</option>
+                  <option value="EUR">{t('zaka.currency_eur')}</option>
                 </select>
                   </div>
                   <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optionnel)
+                  {t('zaka.description_optional_label')}
                 </label>
                 <textarea
                   value={donationForm.description}
                   onChange={(e) => setDonationForm({...donationForm, description: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   rows={3}
-                  placeholder="Description de la zakat..."
+                  placeholder={t('zaka.description_zakat_placeholder')}
                 />
                   </div>
               </div>
@@ -1829,13 +1831,13 @@ export default function Zaka() {
                 onClick={() => setShowDonationForm(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
               >
-                Annuler
+                {t('btn.cancel')}
                 </button>
                 <button
                 onClick={submitDonation}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
                 >
-                Effectuer la Zakat
+                {t('zaka.perform_zakat_btn')}
                 </button>
               </div>
             </div>
@@ -1846,38 +1848,38 @@ export default function Zaka() {
       {showZakatForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">🧮 Calculer ma Zakat</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">{t('zaka.calculate_my_zakat_title')}</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Patrimoine total
+                  {t('zaka.total_wealth_label')}
                 </label>
                 <input
                   type="number"
                   value={zakatForm.totalWealth}
                   onChange={(e) => setZakatForm({...zakatForm, totalWealth: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Montant total de votre patrimoine"
+                  placeholder={t('zaka.total_wealth_placeholder')}
                 />
           </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Devise
+                  {t('zaka.currency_label')}
                 </label>
                 <select
                   value={zakatForm.currency}
                   onChange={(e) => setZakatForm({...zakatForm, currency: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="FG">Franc Guinéen (FG)</option>
-                  <option value="USD">Dollar US (USD)</option>
-                  <option value="EUR">Euro (EUR)</option>
+                  <option value="FG">{t('zaka.currency_fg')}</option>
+                  <option value="USD">{t('zaka.currency_usd')}</option>
+                  <option value="EUR">{t('zaka.currency_eur')}</option>
                 </select>
       </div>
               <div className="bg-green-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">Information:</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">{t('zaka.information_label')}</h4>
                 <p className="text-sm text-gray-600">
-                  La zakat est calculée à 2.5% de votre patrimoine total si celui-ci dépasse le seuil minimum (Nisab).
+                  {t('zaka.zakat_calc_info')}
                 </p>
               </div>
             </div>
@@ -1886,13 +1888,13 @@ export default function Zaka() {
                 onClick={() => setShowZakatForm(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
               >
-                Annuler
+                {t('btn.cancel')}
               </button>
               <button
                 onClick={submitZakatCalculation}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
               >
-                Calculer
+                {t('zaka.calculate_btn')}
               </button>
             </div>
           </div>
@@ -1903,23 +1905,23 @@ export default function Zaka() {
       {showCreateCommunity && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">👥 Créer une Communauté</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">{t('zaka.create_community_title')}</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de la communauté
+                  {t('zaka.community_name_label')}
                 </label>
                 <input
                   type="text"
                   value={newCommunity.name}
                   onChange={(e) => setNewCommunity({...newCommunity, name: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nom de la communauté"
+                  placeholder={t('zaka.community_name_label')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Religion
+                  {t('zaka.religion_label')}
                 </label>
                 <select
                   value={newCommunity.religion}
@@ -1931,14 +1933,14 @@ export default function Zaka() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                  {t('echange_tertiaire.description_label')}
                 </label>
                 <textarea
                   value={newCommunity.description}
                   onChange={(e) => setNewCommunity({...newCommunity, description: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
-                  placeholder="Description de la communauté"
+                  placeholder={t('zaka.community_description_placeholder')}
                 />
               </div>
             </div>
@@ -1947,7 +1949,7 @@ export default function Zaka() {
                 onClick={() => setShowCreateCommunity(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
               >
-                Annuler
+                {t('btn.cancel')}
               </button>
               <button
                 onClick={() => {
@@ -1956,7 +1958,7 @@ export default function Zaka() {
                 }}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
               >
-                Créer
+                {t('zaka.create_btn')}
               </button>
             </div>
           </div>
@@ -1968,31 +1970,31 @@ export default function Zaka() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              S'inscrire à: {selectedFormation.title}
+              {t('echange_primaire.register_for')} {selectedFormation.title}
             </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  NumeroH
+                  {t('zaka.numeroh_label')}
                 </label>
                 <input
                   type="text"
                   value={registrationForm.numeroH}
                   onChange={(e) => setRegistrationForm({...registrationForm, numeroH: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Votre NumeroH"
+                  placeholder={t('zaka.your_numeroh_placeholder')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Motivation
+                  {t('echange_primaire.motivation_label')}
                 </label>
                 <textarea
                   value={registrationForm.motivation}
                   onChange={(e) => setRegistrationForm({...registrationForm, motivation: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
-                  placeholder="Pourquoi voulez-vous suivre cette formation ?"
+                  placeholder={t('echange_primaire.motivation_placeholder')}
                 />
               </div>
             </div>
@@ -2001,13 +2003,13 @@ export default function Zaka() {
                 onClick={() => setShowRegistrationForm(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
               >
-                Annuler
+                {t('btn.cancel')}
               </button>
               <button
                 onClick={submitFormationRegistration}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
               >
-                Envoyer la demande
+                {t('echange_primaire.send_request_btn')}
               </button>
             </div>
           </div>
@@ -2019,43 +2021,43 @@ export default function Zaka() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Demander: {selectedStage.title}
+              {t('echange_primaire.request_from')} {selectedStage.title}
             </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  NumeroH
+                  {t('zaka.numeroh_label')}
                 </label>
                 <input
                   type="text"
                   value={stageRequestForm.numeroH}
                   onChange={(e) => setStageRequestForm({...stageRequestForm, numeroH: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Votre NumeroH"
+                  placeholder={t('zaka.your_numeroh_placeholder')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sujet
+                  {t('echange_primaire.subject_input_label')}
                 </label>
                 <input
                   type="text"
                   value={stageRequestForm.subject}
                   onChange={(e) => setStageRequestForm({...stageRequestForm, subject: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Sujet de votre demande"
+                  placeholder={t('echange_primaire.subject_placeholder')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Message
+                  {t('echange_primaire.message_label')}
                 </label>
                 <textarea
                   value={stageRequestForm.message}
                   onChange={(e) => setStageRequestForm({...stageRequestForm, message: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
-                  placeholder="Décrivez votre demande..."
+                  placeholder={t('echange_primaire.message_placeholder')}
                 />
               </div>
             </div>
@@ -2064,13 +2066,13 @@ export default function Zaka() {
                 onClick={() => setShowStageRequestForm(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
               >
-                Annuler
+                {t('btn.cancel')}
               </button>
               <button
                 onClick={submitStageRequest}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
               >
-                Envoyer la demande
+                {t('echange_primaire.send_request_btn')}
               </button>
             </div>
           </div>
