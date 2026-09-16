@@ -119,9 +119,31 @@ router.get('/groups', async (req, res) => {
       }
     }
 
+    // Remplace chaque numeroH de "members" par les infos de base du membre
+    // (prénom, nom, photo) — nécessaire pour afficher la liste des membres
+    // et leurs papiers de résidence côté admin du quartier.
+    const allNumeroHs = [...new Set(groups.flatMap(g => g.members || []))];
+    let usersByNumeroH = {};
+    if (allNumeroHs.length > 0) {
+      const users = await User.findAll({
+        where: { numeroH: { [Op.in]: allNumeroHs } },
+        attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+      });
+      usersByNumeroH = Object.fromEntries(
+        users.map(u => [u.numeroH, { numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo }])
+      );
+    }
+    const hydratedGroups = groups.map(g => {
+      const plain = g.toJSON ? g.toJSON() : g;
+      return {
+        ...plain,
+        members: (plain.members || []).map(nh => usersByNumeroH[nh] || { numeroH: nh, prenom: '', nomFamille: '' })
+      };
+    });
+
     res.json({
       success: true,
-      groups
+      groups: hydratedGroups
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des organisations:', error);
