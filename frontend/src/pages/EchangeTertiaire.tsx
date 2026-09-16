@@ -6,6 +6,7 @@ import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
+import { useI18n } from '../i18n/useI18n';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -43,19 +44,23 @@ function buildImageUrl(path: string | undefined): string | undefined {
 
 type MateriauxTab = 'tous' | 'meubles' | 'electromenager' | 'ustensiles' | 'gros_oeuvre' | 'finition' | 'plomberie' | 'electricite' | 'outils';
 
-const MATERIAUX_TABS: { key: MateriauxTab; emoji: string; label: string; keywords: string[] }[] = [
-  { key: 'tous',          emoji: '🏠', label: 'Tous',          keywords: [] },
-  { key: 'meubles',       emoji: '🛋️', label: 'Meubles',       keywords: ['meuble','table','chaise','lit','armoire','canapé','canape','bureau','étagère','etagere','commode','dressing','bibliothèque'] },
-  { key: 'electromenager',emoji: '❄️', label: 'Électroménager', keywords: ['réfrigérateur','refrigerateur','frigo','climatiseur','clim','machine à laver','congélateur','congelateur','four','mixeur','cuisinière','cuisiniere','ventilateur','électroménager'] },
-  { key: 'ustensiles',    emoji: '🍳', label: 'Ustensiles',    keywords: ['casserole','marmite','poêle','poele','vaisselle','assiette','bol','verre','couteau','ustensile','service de table','bassine','seau','bouilloire'] },
-  { key: 'gros_oeuvre',   emoji: '🧱', label: 'Gros œuvre',   keywords: ['ciment','fer','tôle','tole','bois','parpaing','béton','beton','brique','sable','gravier','acier','charpente','dalle','zinc'] },
-  { key: 'finition',      emoji: '🎨', label: 'Finition',      keywords: ['carrelage','faïence','faienc','peinture','enduit','plâtre','platre','menuiserie','porte','fenêtre','fenetre','aluminium','vitrage','faux plafond','revêtement'] },
-  { key: 'plomberie',     emoji: '🚿', label: 'Plomberie',     keywords: ['plomberie','tuyau','robinet','sanitaire','wc','lavabo','douche','réservoir','reservoir','forage','château d\'eau','pvc','évier'] },
-  { key: 'electricite',   emoji: '⚡', label: 'Électricité',   keywords: ['câble','cable','électricité','electricite','interrupteur','prise','tableau','disjoncteur','fil','gaine','panneau solaire','onduleur','groupe électrogène'] },
-  { key: 'outils',        emoji: '🔧', label: 'Outils',        keywords: ['outil','marteau','perceuse','clé','cle','vis','clou','boulon','serrure','quincaillerie','scie','tournevis','pince','niveau'] },
-];
+function getMateriauxTabs(t: (key: string) => string): { key: MateriauxTab; emoji: string; label: string; keywords: string[] }[] {
+  return [
+    { key: 'tous',          emoji: '🏠', label: t('echange_tertiaire.tab_tous'),          keywords: [] },
+    { key: 'meubles',       emoji: '🛋️', label: t('echange_tertiaire.tab_meubles'),       keywords: ['meuble','table','chaise','lit','armoire','canapé','canape','bureau','étagère','etagere','commode','dressing','bibliothèque'] },
+    { key: 'electromenager',emoji: '❄️', label: t('echange_tertiaire.tab_electromenager'), keywords: ['réfrigérateur','refrigerateur','frigo','climatiseur','clim','machine à laver','congélateur','congelateur','four','mixeur','cuisinière','cuisiniere','ventilateur','électroménager'] },
+    { key: 'ustensiles',    emoji: '🍳', label: t('echange_tertiaire.tab_ustensiles'),    keywords: ['casserole','marmite','poêle','poele','vaisselle','assiette','bol','verre','couteau','ustensile','service de table','bassine','seau','bouilloire'] },
+    { key: 'gros_oeuvre',   emoji: '🧱', label: t('echange_tertiaire.tab_gros_oeuvre'),   keywords: ['ciment','fer','tôle','tole','bois','parpaing','béton','beton','brique','sable','gravier','acier','charpente','dalle','zinc'] },
+    { key: 'finition',      emoji: '🎨', label: t('echange_tertiaire.tab_finition'),      keywords: ['carrelage','faïence','faienc','peinture','enduit','plâtre','platre','menuiserie','porte','fenêtre','fenetre','aluminium','vitrage','faux plafond','revêtement'] },
+    { key: 'plomberie',     emoji: '🚿', label: t('echange_tertiaire.tab_plomberie'),     keywords: ['plomberie','tuyau','robinet','sanitaire','wc','lavabo','douche','réservoir','reservoir','forage','château d\'eau','pvc','évier'] },
+    { key: 'electricite',   emoji: '⚡', label: t('echange_tertiaire.tab_electricite'),   keywords: ['câble','cable','électricité','electricite','interrupteur','prise','tableau','disjoncteur','fil','gaine','panneau solaire','onduleur','groupe électrogène'] },
+    { key: 'outils',        emoji: '🔧', label: t('echange_tertiaire.tab_outils'),        keywords: ['outil','marteau','perceuse','clé','cle','vis','clou','boulon','serrure','quincaillerie','scie','tournevis','pince','niveau'] },
+  ];
+}
 
 export default function EchangeTertiaire() {
+  const { t } = useI18n();
+  const MATERIAUX_TABS = useMemo(() => getMateriauxTabs(t), [t]);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
@@ -203,7 +208,7 @@ export default function EchangeTertiaire() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center h-64">
-          <p className="text-lg text-gray-600 dark:text-gray-400">Chargement…</p>
+          <p className="text-lg text-gray-600 dark:text-gray-400">{t('echange_tertiaire.loading')}</p>
         </div>
       </div>
     );
@@ -218,7 +223,7 @@ export default function EchangeTertiaire() {
         onClick={() => navigate('/echange')}
         className="mb-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors flex items-center gap-2"
       >
-        ← Retour
+        {t('btn.back_arrow')}
       </button>
 
       {(userGeo.city || userGeo.country || gpsActive) && (
@@ -226,8 +231,8 @@ export default function EchangeTertiaire() {
           <span>{gpsActive ? '📡' : '📍'}</span>
           <span>
             {gpsActive
-              ? 'Annonces triées par distance GPS — les plus proches apparaissent en premier'
-              : `Annonces de ${userGeo.city || userGeo.country} apparaissent en premier`}
+              ? t('echange_tertiaire.gps_sorted')
+              : `${t('echange_tertiaire.location_sorted_before')} ${userGeo.city || userGeo.country} ${t('echange_tertiaire.location_sorted_after')}`}
           </span>
         </div>
       )}
@@ -236,22 +241,22 @@ export default function EchangeTertiaire() {
       <div className="mb-6 rounded-2xl overflow-hidden shadow-lg border-2 border-yellow-400 dark:border-yellow-500">
         <div className="bg-gradient-to-r from-yellow-500 to-amber-500 px-4 py-2 flex items-center gap-2">
           <span className="text-lg">⭐</span>
-          <span className="text-white font-bold text-sm tracking-wide uppercase">Vendeur Officiel Moftal</span>
-          <span className="ml-auto bg-white text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">OFFICIEL</span>
+          <span className="text-white font-bold text-sm tracking-wide uppercase">{t('echange_tertiaire.official_vendor_label')}</span>
+          <span className="ml-auto bg-white text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">{t('echange_tertiaire.official_badge')}</span>
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <span className="text-5xl">🧱</span>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-900 dark:text-white">Matériaux de construction — Stocks disponibles</p>
+            <p className="font-bold text-gray-900 dark:text-white">{t('echange_tertiaire.materials_stock_title')}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Ciment, fer à béton, tôles, bois, carrelage. Contactez-nous pour un devis ou une commande.
+              {t('echange_tertiaire.materials_stock_desc')}
             </p>
           </div>
           <a
             href="mailto:support@moftal.com"
             className="flex-shrink-0 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-semibold transition-colors"
           >
-            Nous contacter
+            {t('echange_tertiaire.contact_us_btn')}
           </a>
         </div>
       </div>
@@ -262,16 +267,16 @@ export default function EchangeTertiaire() {
           <div className="flex gap-2 text-4xl">
             <span>🛋️</span><span>❄️</span><span>🧱</span><span>🔧</span>
           </div>
-          <h1 className="text-2xl font-bold">Maison & Construction</h1>
+          <h1 className="text-2xl font-bold">{t('echange_tertiaire.header_title')}</h1>
           <p className="text-amber-100 text-sm">
-            Meubles · Électroménager · Ustensiles · Matériaux · Outils
+            {t('echange_tertiaire.header_subtitle')}
           </p>
         </div>
       </div>
 
       {/* Onglets visuels */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Que cherches-tu ?</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{t('echange_tertiaire.what_looking_for')}</p>
         <div className="overflow-x-auto pb-2 -mx-1">
           <div className="flex gap-2 px-1 min-w-max">
             {MATERIAUX_TABS.map(tab => (
@@ -295,7 +300,7 @@ export default function EchangeTertiaire() {
             {canPublish ? (
               <PublierAnnonceButtons
                 onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
-                title="Vendre un article"
+                title={t('echange_tertiaire.sell_item_title')}
               />
             ) : (
               <DevenirVendeurButton secteur="tertiaire" />
@@ -311,9 +316,9 @@ export default function EchangeTertiaire() {
       >
         <span className="text-3xl">🏘️</span>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-lime-800 dark:text-lime-200 text-sm">Vous cherchez un logement ?</p>
+          <p className="font-semibold text-lime-800 dark:text-lime-200 text-sm">{t('echange_tertiaire.real_estate_title')}</p>
           <p className="text-xs text-lime-600 dark:text-lime-400 mt-0.5">
-            Consultez nos agents immobiliers agréés → Location &amp; Vente de maisons
+            {t('echange_tertiaire.real_estate_desc')}
           </p>
         </div>
         <span className="text-lime-500 text-xl font-bold">›</span>
@@ -326,27 +331,27 @@ export default function EchangeTertiaire() {
             <button onClick={() => { setPublishMode(null); setShowCreateProduct(false); }} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">←</button>
             <span className="text-2xl">{currentTab.emoji}</span>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              {publishMode === 'ecrit' && 'Publier par écrit (champs + photo)'}
-              {publishMode === 'photo_audio' && 'Publier par photo + audio'}
-              {publishMode === 'video' && 'Publier par vidéo'}
+              {publishMode === 'ecrit' && t('echange_tertiaire.publish_written_title')}
+              {publishMode === 'photo_audio' && t('echange_tertiaire.publish_photo_audio_title')}
+              {publishMode === 'video' && t('echange_tertiaire.publish_video_title')}
             </h3>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Titre</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.title_label')}</label>
               <input type="text" value={newProduct.title}
                 onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="Ex: Ciment Portland 50kg, Fer à béton 12mm…" />
+                placeholder={t('echange_tertiaire.title_placeholder')} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Catégorie</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.category_label')}</label>
               <select value={newProduct.category}
                 onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
-                <option value="">Choisir une catégorie</option>
-                <optgroup label="🧱 Gros œuvre">
+                <option value="">{t('echange_tertiaire.choose_category')}</option>
+                <optgroup label={t('echange_tertiaire.optgroup_gros_oeuvre')}>
                   <option value="Ciment">Ciment</option>
                   <option value="Fer à béton">Fer à béton</option>
                   <option value="Tôle">Tôle ondulée / Tôle plate</option>
@@ -355,20 +360,20 @@ export default function EchangeTertiaire() {
                   <option value="Sable / Gravier">Sable / Gravier</option>
                   <option value="Acier / Charpente">Acier / Charpente métallique</option>
                 </optgroup>
-                <optgroup label="🎨 Finition">
+                <optgroup label={t('echange_tertiaire.optgroup_finition')}>
                   <option value="Carrelage / Faïence">Carrelage / Faïence</option>
                   <option value="Peinture / Enduit">Peinture / Enduit</option>
                   <option value="Porte / Fenêtre">Porte / Fenêtre</option>
                   <option value="Menuiserie aluminium">Menuiserie aluminium</option>
                   <option value="Faux plafond">Faux plafond</option>
                 </optgroup>
-                <optgroup label="🚿 Plomberie">
+                <optgroup label={t('echange_tertiaire.optgroup_plomberie')}>
                   <option value="Tuyaux PVC">Tuyaux PVC</option>
                   <option value="Robinetterie">Robinetterie / Sanitaires</option>
                   <option value="Pompe à eau">Pompe à eau</option>
                   <option value="Château d'eau">Château d'eau / Réservoir</option>
                 </optgroup>
-                <optgroup label="⚡ Électricité">
+                <optgroup label={t('echange_tertiaire.optgroup_electricite')}>
                   <option value="Câbles électriques">Câbles électriques</option>
                   <option value="Panneau solaire">Panneau solaire / Onduleur</option>
                   <option value="Tableau électrique">Tableau / Disjoncteur</option>
@@ -377,7 +382,7 @@ export default function EchangeTertiaire() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Prix</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.price_label')}</label>
               <div className="flex gap-2">
                 <input type="number" value={newProduct.price || ''}
                   onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) || 0 })}
@@ -393,31 +398,31 @@ export default function EchangeTertiaire() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Localisation</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.location_label')}</label>
               <input type="text" value={newProduct.location}
                 onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="Ex: Conakry, Kindia…" />
+                placeholder={t('echange_tertiaire.location_placeholder')} />
             </div>
 
             {publishMode === 'photo_audio' && (
               <div className="lg:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Photo + message vocal (max 10 s)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.photo_audio_label')}</label>
                 <div className="rounded-xl border-2 border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/20 p-4 space-y-3">
                   <div>
-                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Photo du matériau</span>
+                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('echange_tertiaire.photo_material_label')}</span>
                     <input type="file" accept="image/*" capture="environment"
                       onChange={(e) => setNewProduct(prev => ({ ...prev, photoForAudio: e.target.files?.[0] || null }))}
                       className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-amber-100 file:text-amber-800 dark:file:bg-amber-900/30 dark:file:text-amber-200" />
-                    {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ Photo sélectionnée</p>}
+                    {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600 dark:text-green-400">{t('echange_tertiaire.photo_selected')}</p>}
                   </div>
                   <div>
-                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Message vocal (max 10 secondes)</span>
+                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('echange_tertiaire.voice_message_label')}</span>
                     <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
                       const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
                       setNewProduct(prev => ({ ...prev, audio30s: file }));
                     }} />
-                    {newProduct.audio30s && <p className="mt-2 text-xs text-green-600 dark:text-green-400">✓ Audio enregistré</p>}
+                    {newProduct.audio30s && <p className="mt-2 text-xs text-green-600 dark:text-green-400">{t('echange_tertiaire.audio_recorded')}</p>}
                   </div>
                 </div>
               </div>
@@ -425,13 +430,13 @@ export default function EchangeTertiaire() {
 
             {publishMode === 'video' && (
               <div className="lg:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Vidéo (max 10 secondes)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.video_label')}</label>
                 <div className="rounded-xl border-2 border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/20 p-4">
                   <VideoRecorder maxDuration={10} onVideoRecorded={(blob) => {
                     const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                     setNewProduct(prev => ({ ...prev, videos: [file, ...prev.videos] }));
                   }} />
-                  {newProduct.videos.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400 font-medium">✓ Vidéo enregistrée</p>}
+                  {newProduct.videos.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400 font-medium">{t('echange_tertiaire.video_recorded')}</p>}
                 </div>
               </div>
             )}
@@ -439,29 +444,29 @@ export default function EchangeTertiaire() {
             {publishMode === 'ecrit' && (
               <>
                 <div className="lg:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📷 Photos</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.photos_label')}</label>
                   <input type="file" accept="image/*" multiple
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
                       setNewProduct(p => ({ ...p, images: [...p.images, ...files] }));
                     }}
                     className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-amber-100 file:text-amber-800 dark:file:bg-amber-900/30 dark:file:text-amber-200" />
-                  {newProduct.images.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400">{newProduct.images.length} photo(s)</p>}
+                  {newProduct.images.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400">{newProduct.images.length} {t('echange_tertiaire.photos_count_suffix')}</p>}
                 </div>
                 <div className="lg:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.description_label')}</label>
                   <textarea value={newProduct.description}
                     onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                    rows={4} placeholder="Décrivez vos matériaux (quantité, qualité, origine…)" />
+                    rows={4} placeholder={t('echange_tertiaire.description_placeholder')} />
                 </div>
               </>
             )}
           </div>
 
           <div className="flex gap-4 mt-6">
-            <button onClick={createProduct} className="px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-semibold">✅ Publier</button>
-            <button onClick={() => { setShowCreateProduct(false); setPublishMode(null); }} className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-semibold">Annuler</button>
+            <button onClick={createProduct} className="px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-semibold">{t('echange_tertiaire.publish_btn')}</button>
+            <button onClick={() => { setShowCreateProduct(false); setPublishMode(null); }} className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-semibold">{t('btn.cancel')}</button>
           </div>
         </div>
       )}
@@ -480,11 +485,11 @@ export default function EchangeTertiaire() {
           <div className="col-span-full text-center py-14 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800">
             <span className="text-6xl block mb-4">{currentTab.emoji}</span>
             <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
-              Aucune annonce dans <strong>{currentTab.label}</strong> pour le moment.
+              {t('echange_tertiaire.no_ads_before')} <strong>{currentTab.label}</strong> {t('echange_tertiaire.no_ads_after')}
             </p>
             {userData && (
               <button onClick={() => { setShowCreateProduct(true); setPublishMode(null); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700">
-                ➕ Publier la première annonce
+                {t('echange_tertiaire.publish_first_btn')}
               </button>
             )}
           </div>
@@ -500,20 +505,20 @@ export default function EchangeTertiaire() {
               ) : product.audio && product.audio.length > 0 ? (
                 <div className="w-full h-48 bg-amber-50 dark:bg-amber-900/20 flex flex-col items-center justify-center gap-2 px-4">
                   <span className="text-4xl">🎙️</span>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Message vocal du vendeur</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">{t('echange_tertiaire.voice_message_vendor')}</p>
                   <audio src={buildImageUrl(product.audio[0])} controls className="w-full" />
                 </div>
               ) : (
                 <div className="w-full h-48 bg-amber-50 dark:bg-amber-900/20 flex flex-col items-center justify-center gap-2">
                   <span className="text-5xl">{currentTab.emoji}</span>
-                  <p className="text-xs text-gray-400">Pas encore de photo</p>
+                  <p className="text-xs text-gray-400">{t('echange_tertiaire.no_photo_yet')}</p>
                 </div>
               )}
               <div className="p-5">
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <h3 className="font-bold text-gray-900 dark:text-white text-base leading-snug">{product.title}</h3>
                   <span className="flex-shrink-0 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold">
-                    {product.category || 'Matériaux'}
+                    {product.category || t('echange_tertiaire.materials_fallback')}
                   </span>
                 </div>
                 {product.description && (
@@ -531,7 +536,7 @@ export default function EchangeTertiaire() {
                 )}
                 <button onClick={() => setSelectedProduct(product)}
                   className="w-full py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium text-sm transition-colors">
-                  📞 Contacter le vendeur
+                  {t('echange_tertiaire.contact_vendor_btn')}
                 </button>
               </div>
             </div>
@@ -544,7 +549,7 @@ export default function EchangeTertiaire() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{selectedProduct.title}</h3>
             <span className="inline-block px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold mb-3">
-              {selectedProduct.category || 'Matériaux'}
+              {selectedProduct.category || t('echange_tertiaire.materials_fallback')}
             </span>
             {selectedProduct.description && (
               <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm">{selectedProduct.description}</p>
@@ -556,9 +561,9 @@ export default function EchangeTertiaire() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">📍 {selectedProduct.location}</p>
             )}
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-              Pour contacter le vendeur, utilisez la messagerie interne ou les coordonnées de l'annonce.
+              {t('echange_tertiaire.contact_instructions')}
             </p>
-            <button onClick={() => setSelectedProduct(null)} className="w-full py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-medium">Fermer</button>
+            <button onClick={() => setSelectedProduct(null)} className="w-full py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-medium">{t('btn.close')}</button>
           </div>
         </div>
       )}
