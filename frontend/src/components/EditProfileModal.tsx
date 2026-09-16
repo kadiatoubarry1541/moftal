@@ -37,6 +37,9 @@ interface UserData {
   lieu2?: string;
   lieu3?: string;
   sousPrefecture?: string;
+  vitrinePhoto1?: string;
+  vitrinePhoto2?: string;
+  vitrineVideo?: string;
   [key: string]: any;
 }
 
@@ -58,6 +61,13 @@ export default function EditProfileModal({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [vitrinePhoto1File, setVitrinePhoto1File] = useState<File | null>(null);
+  const [vitrinePhoto1Preview, setVitrinePhoto1Preview] = useState<string | null>(null);
+  const [vitrinePhoto2File, setVitrinePhoto2File] = useState<File | null>(null);
+  const [vitrinePhoto2Preview, setVitrinePhoto2Preview] = useState<string | null>(null);
+  const [vitrineVideoFile, setVitrineVideoFile] = useState<File | null>(null);
+  const [vitrineVideoPreview, setVitrineVideoPreview] = useState<string | null>(null);
+  const [vitrineVideoError, setVitrineVideoError] = useState<string | null>(null);
   const [preuveFile, setPreuveFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +75,9 @@ export default function EditProfileModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const preuveInputRef = useRef<HTMLInputElement>(null);
+  const vitrinePhoto1InputRef = useRef<HTMLInputElement>(null);
+  const vitrinePhoto2InputRef = useRef<HTMLInputElement>(null);
+  const vitrineVideoInputRef = useRef<HTMLInputElement>(null);
   const allLocations = useMemo(() => getAllLocationsForGroups(), []);
 
   const ACTIVITY_OPTIONS = [
@@ -153,6 +166,13 @@ export default function EditProfileModal({
       setPhotoFile(null);
       setVideoFile(null);
       setVideoPreview(null);
+      setVitrinePhoto1File(null);
+      setVitrinePhoto1Preview(userData.vitrinePhoto1 ? getPhotoUrl(userData.vitrinePhoto1) : null);
+      setVitrinePhoto2File(null);
+      setVitrinePhoto2Preview(userData.vitrinePhoto2 ? getPhotoUrl(userData.vitrinePhoto2) : null);
+      setVitrineVideoFile(null);
+      setVitrineVideoPreview(null);
+      setVitrineVideoError(null);
       setError(null);
       setSuccess(false);
     }
@@ -180,6 +200,33 @@ export default function EditProfileModal({
       const url = URL.createObjectURL(file);
       setVideoPreview(url);
     }
+  };
+
+  const handleVitrinePhotoChange = (slot: 1 | 2) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    if (slot === 1) { setVitrinePhoto1File(file); setVitrinePhoto1Preview(url); }
+    else { setVitrinePhoto2File(file); setVitrinePhoto2Preview(url); }
+  };
+
+  const handleVitrineVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const probe = document.createElement("video");
+    probe.preload = "metadata";
+    probe.onloadedmetadata = () => {
+      if (probe.duration > 5.5) {
+        setVitrineVideoError(`Cette vidéo dure ${probe.duration.toFixed(1)}s — elle doit durer 5 secondes maximum.`);
+        URL.revokeObjectURL(url);
+        return;
+      }
+      setVitrineVideoError(null);
+      setVitrineVideoFile(file);
+      setVitrineVideoPreview(url);
+    };
+    probe.src = url;
   };
 
   // Fonction pour appeler l'API (essaie URL directe, puis proxy Vite)
@@ -257,6 +304,33 @@ export default function EditProfileModal({
         }
       }
 
+      // 2bis. Vitrine du profil (badge) : 2 photos + 1 courte vidéo
+      let uploadedVitrinePhoto1Url: string | undefined = formData.vitrinePhoto1;
+      let uploadedVitrinePhoto2Url: string | undefined = formData.vitrinePhoto2;
+      let uploadedVitrineVideoUrl: string | undefined = formData.vitrineVideo;
+
+      if (vitrinePhoto1File) {
+        const fd = new FormData();
+        fd.append("photo", vitrinePhoto1File);
+        fd.append("numeroH", formData.numeroH);
+        const r = await apiFetch("/auth/profile/vitrine-photo1", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
+        if (r.ok) { const d = await r.json(); uploadedVitrinePhoto1Url = d.photoUrl || uploadedVitrinePhoto1Url; }
+      }
+      if (vitrinePhoto2File) {
+        const fd = new FormData();
+        fd.append("photo", vitrinePhoto2File);
+        fd.append("numeroH", formData.numeroH);
+        const r = await apiFetch("/auth/profile/vitrine-photo2", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
+        if (r.ok) { const d = await r.json(); uploadedVitrinePhoto2Url = d.photoUrl || uploadedVitrinePhoto2Url; }
+      }
+      if (vitrineVideoFile) {
+        const fd = new FormData();
+        fd.append("video", vitrineVideoFile);
+        fd.append("numeroH", formData.numeroH);
+        const r = await apiFetch("/auth/profile/vitrine-video", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
+        if (r.ok) { const d = await r.json(); uploadedVitrineVideoUrl = d.videoUrl || uploadedVitrineVideoUrl; }
+      }
+
       // 3. Mettre à jour les informations textuelles
       let serverUser: any = {};
       try {
@@ -323,6 +397,9 @@ export default function EditProfileModal({
         ...serverUser,
         photo: finalPhoto,
         video: finalVideo,
+        vitrinePhoto1: uploadedVitrinePhoto1Url || (serverUser as any).vitrinePhoto1 || formData.vitrinePhoto1,
+        vitrinePhoto2: uploadedVitrinePhoto2Url || (serverUser as any).vitrinePhoto2 || formData.vitrinePhoto2,
+        vitrineVideo: uploadedVitrineVideoUrl || (serverUser as any).vitrineVideo || formData.vitrineVideo,
       };
 
       console.log('✅ Profil mis à jour - photo:', finalPhoto);
@@ -466,6 +543,62 @@ export default function EditProfileModal({
               <p className="text-xs text-gray-400 mt-2">
                 La vidéo ne peut pas être supprimée — vous pouvez seulement la remplacer.
               </p>
+            )}
+          </div>
+
+          {/* Vitrine du profil — ce que les autres voient de vous sur votre carte (badge 🪪) */}
+          <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50">
+            <h4 className="text-base font-semibold text-emerald-800 mb-1">🪪 Ma vitrine (badge de profil)</h4>
+            <p className="text-xs text-emerald-700 mb-3">
+              C'est ce que les autres verront de vous sur votre carte de profil : votre activité,
+              2 photos et une courte vidéo (5 secondes maximum). Une fois les 4 éléments remplis,
+              un V s'affiche sur votre badge.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="text-center">
+                {vitrinePhoto1Preview ? (
+                  <img src={vitrinePhoto1Preview} alt="Photo vitrine 1" className="w-full h-28 object-cover rounded-lg border border-emerald-200 mb-1" />
+                ) : (
+                  <div className="w-full h-28 rounded-lg border border-dashed border-emerald-300 bg-white flex items-center justify-center text-xs text-gray-400 mb-1">Photo 1</div>
+                )}
+                <input ref={vitrinePhoto1InputRef} type="file" accept="image/*" onChange={handleVitrinePhotoChange(1)} style={{ display: "none" }} />
+                <button type="button" onClick={() => vitrinePhoto1InputRef.current?.click()} className="text-xs px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
+                  📷 {formData.vitrinePhoto1 ? "Remplacer" : "Choisir"}
+                </button>
+              </div>
+              <div className="text-center">
+                {vitrinePhoto2Preview ? (
+                  <img src={vitrinePhoto2Preview} alt="Photo vitrine 2" className="w-full h-28 object-cover rounded-lg border border-emerald-200 mb-1" />
+                ) : (
+                  <div className="w-full h-28 rounded-lg border border-dashed border-emerald-300 bg-white flex items-center justify-center text-xs text-gray-400 mb-1">Photo 2</div>
+                )}
+                <input ref={vitrinePhoto2InputRef} type="file" accept="image/*" onChange={handleVitrinePhotoChange(2)} style={{ display: "none" }} />
+                <button type="button" onClick={() => vitrinePhoto2InputRef.current?.click()} className="text-xs px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
+                  📷 {formData.vitrinePhoto2 ? "Remplacer" : "Choisir"}
+                </button>
+              </div>
+            </div>
+
+            {(vitrineVideoPreview || formData.vitrineVideo) && (
+              <video
+                src={vitrineVideoPreview || (formData.vitrineVideo as string)}
+                controls
+                className="w-full max-w-sm rounded-xl border border-emerald-200 shadow-sm mb-2"
+                style={{ maxHeight: 200 }}
+              />
+            )}
+            <div className="flex items-center gap-3 flex-wrap">
+              <input ref={vitrineVideoInputRef} type="file" accept="video/*" onChange={handleVitrineVideoChange} style={{ display: "none" }} />
+              <button type="button" onClick={() => vitrineVideoInputRef.current?.click()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm transition-colors">
+                {formData.vitrineVideo ? "🔄 Remplacer la vidéo (5s max)" : "🎥 Ajouter une vidéo (5s max)"}
+              </button>
+              {vitrineVideoFile && (
+                <span className="text-sm text-green-700 font-medium">✓ Nouvelle vidéo prête</span>
+              )}
+            </div>
+            {vitrineVideoError && (
+              <p className="text-sm text-red-600 mt-2">{vitrineVideoError}</p>
             )}
           </div>
 

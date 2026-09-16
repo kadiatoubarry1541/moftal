@@ -16,6 +16,10 @@ interface UserData {
   prenomMere?: string;
   numeroHPere?: string;
   numeroHMere?: string;
+  activite1?: string;
+  vitrinePhoto1?: string;
+  vitrinePhoto2?: string;
+  vitrineVideo?: string;
   [key: string]: any;
 }
 
@@ -322,6 +326,34 @@ export default function IdentiteModal({
             />
           </div>
         )}
+
+        {/* ── Vitrine de profil (badge 🪪) ── */}
+        <div className="mt-5 pt-4 border-t border-gray-100">
+          <h4 className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
+            🪪 {t('identite.vitrine_title')}
+          </h4>
+          <p className="text-xs text-slate-400 mb-2">
+            {t('identite.vitrine_desc')}
+          </p>
+          {!(userData!.activite1 || userData!.vitrinePhoto1 || userData!.vitrinePhoto2 || userData!.vitrineVideo) ? (
+            <p className="text-sm text-gray-400">{t('identite.vitrine_empty')}</p>
+          ) : (
+            <div className="space-y-2">
+              {userData!.activite1 && (
+                <p className="text-sm text-slate-700"><span className="font-semibold">{t('profile_badge.activity_label')} :</span> {userData!.activite1}</p>
+              )}
+              {(userData!.vitrinePhoto1 || userData!.vitrinePhoto2) && (
+                <div className="grid grid-cols-2 gap-2 max-w-sm">
+                  {userData!.vitrinePhoto1 && <img src={getPhotoUrl(userData!.vitrinePhoto1)} alt="" className="w-full h-28 object-cover rounded-lg border border-slate-200" />}
+                  {userData!.vitrinePhoto2 && <img src={getPhotoUrl(userData!.vitrinePhoto2)} alt="" className="w-full h-28 object-cover rounded-lg border border-slate-200" />}
+                </div>
+              )}
+              {userData!.vitrineVideo && (
+                <video src={getPhotoUrl(userData!.vitrineVideo)} controls className="w-full max-w-sm rounded-xl border border-slate-200 shadow-sm" style={{ maxHeight: 200 }} />
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Zone « Sécurité du compte » en bas, à part */}
         <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap items-center gap-4">

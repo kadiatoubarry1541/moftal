@@ -985,6 +985,72 @@ router.post('/profile/video', (req, res) => {
   });
 });
 
+// @route   POST /api/auth/profile/vitrine-photo1
+// @route   POST /api/auth/profile/vitrine-photo2
+// @desc    Mettre à jour l'une des 2 photos de la vitrine de profil (badge)
+// @access  Private
+function registerVitrinePhotoRoute(slot) {
+  router.post(`/profile/vitrine-${slot}`, (req, res) => {
+    upload.single('photo')(req, res, async (multerErr) => {
+      if (multerErr) {
+        return res.status(400).json({ success: false, message: multerErr.message || 'Erreur lors de l\'upload du fichier' });
+      }
+      try {
+        const { numeroH } = req.body;
+        if (!numeroH) return res.status(400).json({ success: false, message: 'NumeroH requis' });
+        if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
+
+        const user = await User.findByNumeroH(numeroH);
+        if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+
+        const photoUrl = `/uploads/${req.file.filename}`;
+        const field = slot === 'photo1' ? 'vitrinePhoto1' : 'vitrinePhoto2';
+        await user.update({ [field]: photoUrl });
+
+        const userWithoutPassword = { ...user.dataValues };
+        delete userWithoutPassword.password;
+
+        res.json({ success: true, message: 'Photo de vitrine mise à jour avec succès', photoUrl, user: userWithoutPassword });
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour de la photo de vitrine:', error);
+        res.status(500).json({ success: false, message: 'Erreur serveur lors de la mise à jour de la photo de vitrine' });
+      }
+    });
+  });
+}
+registerVitrinePhotoRoute('photo1');
+registerVitrinePhotoRoute('photo2');
+
+// @route   POST /api/auth/profile/vitrine-video
+// @desc    Mettre à jour la courte vidéo (5s max, vérifié côté client) de la vitrine de profil
+// @access  Private
+router.post('/profile/vitrine-video', (req, res) => {
+  upload.single('video')(req, res, async (multerErr) => {
+    if (multerErr) {
+      return res.status(400).json({ success: false, message: multerErr.message || 'Erreur upload vidéo' });
+    }
+    try {
+      const { numeroH } = req.body;
+      if (!numeroH) return res.status(400).json({ success: false, message: 'NumeroH requis' });
+      if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
+
+      const user = await User.findByNumeroH(numeroH);
+      if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+
+      const videoUrl = `/uploads/${req.file.filename}`;
+      await user.update({ vitrineVideo: videoUrl });
+
+      const userWithoutPassword = { ...user.dataValues };
+      delete userWithoutPassword.password;
+
+      res.json({ success: true, message: 'Vidéo de vitrine mise à jour avec succès', videoUrl, user: userWithoutPassword });
+    } catch (error) {
+      console.error('Erreur upload vidéo de vitrine:', error);
+      res.status(500).json({ success: false, message: 'Erreur serveur lors de la mise à jour de la vidéo de vitrine' });
+    }
+  });
+});
+
 // @route   PUT /api/auth/me/visibility
 // @desc    Définir ce que les autres voient de moi dans l'arbre (name_only | name_photo | name_photo_numeroH)
 // @access  Private
