@@ -186,7 +186,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
   // manège) ; se met en pause pendant qu'on glisse le doigt ou qu'on
   // regarde une image, et reprend dès qu'on relâche / referme l'image.
   useEffect(() => {
-    if (stories.length <= 3) return;
+    if (stories.length === 0) return;
     const SPEED_PX_PER_SEC = 18;
     let rafId: number;
     let lastTime: number | null = null;
