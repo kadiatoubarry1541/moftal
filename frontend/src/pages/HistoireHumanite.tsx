@@ -2,14 +2,15 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { hideIncrement } from '../utils/formatNumeroH';
+import { useI18n } from '../i18n/useI18n';
 
 // ── Calcul automatique des périodes (Adam = 4004 av. J.-C., 63 ans/génération)
 const ADAM_YEAR = -4004;
 const GEN_LENGTH = 63;
-function getGenPeriod(gen: number): string {
+function getGenPeriod(gen: number, bcLabel = 'av. J.-C.', adLabel = 'ap. J.-C.'): string {
   const start = ADAM_YEAR + (gen - 1) * GEN_LENGTH;
   const end = start + GEN_LENGTH - 1;
-  const fmt = (y: number) => `${Math.abs(y)} ${y < 0 ? 'av. J.-C.' : 'ap. J.-C.'}`;
+  const fmt = (y: number) => `${Math.abs(y)} ${y < 0 ? bcLabel : adLabel}`;
   return `${fmt(start)} — ${fmt(end)}`;
 }
 
@@ -514,6 +515,7 @@ const sectionIcons: Record<string, string> = {
 };
 
 export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boolean }) {
+  const { t } = useI18n();
   const [stories, setStories] = useState<PublishedStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -674,21 +676,21 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-8 flex-wrap gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">📚 Histoire de l'Humanité</h1>
-              <p className="text-blue-100 text-lg">De la Génération 1 à aujourd'hui — 95 générations historiques + récits personnels</p>
+              <h1 className="text-4xl font-bold text-white mb-2">{t('recit.page_title')}</h1>
+              <p className="text-blue-100 text-lg">{t('recit.subtitle')}</p>
               <div className="mt-3 flex gap-5 text-blue-100 flex-wrap">
-                <span><strong className="text-2xl">95</strong> générations historiques</span>
-                {stats && <span><strong className="text-2xl">{stats.totalStories}</strong> récits de membres</span>}
+                <span><strong className="text-2xl">95</strong> {t('recit.stat_generations')}</span>
+                {stats && <span><strong className="text-2xl">{stats.totalStories}</strong> {t('recit.stat_stories')}</span>}
               </div>
             </div>
             <div className="flex gap-3 flex-wrap">
               <button onClick={() => navigate('/a-retenir')}
                 className="bg-white text-indigo-700 px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg text-sm">
-                ✍️ Écrire mon histoire (G96)
+                ✍️ {t('recit.write_my_story')} (G96)
               </button>
               <button onClick={() => navigate(-1)}
                 className="bg-white text-indigo-700 px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-md text-sm border-2 border-white">
-                ← Retour
+                {t('btn.back_arrow')}
               </button>
             </div>
           </div>
@@ -699,8 +701,8 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
       <div className="bg-amber-50 border-b border-amber-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <p className="text-amber-800 text-sm">
-            <strong>📜 Générations 1–95 :</strong> leur histoire a été racontée par d'autres — historiens, traditions, transmetteurs.&nbsp;
-            <strong>👤 Génération 96 :</strong> pour la première fois, chaque personne est l'auteur de sa propre histoire — utilisez le bouton <em>"Écrire mon histoire"</em> ci-dessus.
+            <strong>📜 {t('recit.note_g1_95_label')}</strong> {t('recit.note_g1_95_text')}&nbsp;
+            <strong>👤 {t('recit.note_g96_label')}</strong> {t('recit.note_g96_text_before')} <em>"{t('recit.write_my_story')}"</em> {t('recit.note_g96_text_after')}
           </p>
         </div>
       </div>
@@ -712,28 +714,28 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
 
             {/* Recherche */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">🔍 Rechercher</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">🔍 {t('recit.search_label')}</label>
               <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Titre, époque, personnage..."
+                placeholder={t('recit.search_placeholder')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" />
             </div>
 
             {/* Génération */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">👥 Génération</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">👥 {t('recit.generation_label')}</label>
               <select value={selectedGeneration} onChange={e => setSelectedGeneration(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
-                <option value="all">Toutes les générations</option>
+                <option value="all">{t('recit.all_generations')}</option>
                 {Array.from({ length: 95 }, (_, i) => i + 1).map(g => (
-                  <option key={g} value={`G${g}`}>Génération {g}{g === 95 ? ' (premières histoires personnelles)' : ''}</option>
+                  <option key={g} value={`G${g}`}>{t('recit.generation_n')} {g}{g === 95 ? t('recit.gen_95_suffix') : ''}</option>
                 ))}
-                <option value="G96">Génération 96 (notre époque)</option>
+                <option value="G96">{t('recit.generation_96_label')}</option>
               </select>
             </div>
 
             {/* Section (pour les récits membres) */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">📖 Section (récits membres)</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">📖 {t('recit.section_label')}</label>
               <select value={selectedSection} onChange={e => setSelectedSection(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
                 {sections.map(s => <option key={s.id} value={s.id}>{s.icon} {s.title}</option>)}
@@ -742,15 +744,15 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
 
             {/* Aller à la génération */}
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">⚡ Aller à la génération</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">⚡ {t('recit.jump_to_generation_label')}</label>
               <div className="flex gap-2">
-                <input type="number" min={1} max={95} placeholder="1 – 95" value={jumpInput}
+                <input type="number" min={1} max={95} placeholder={t('recit.jump_placeholder')} value={jumpInput}
                   onChange={e => setJumpInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleJump()}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm" />
                 <button onClick={handleJump}
                   className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-semibold text-sm whitespace-nowrap">
-                  Voir
+                  {t('recit.view_btn')}
                 </button>
               </div>
             </div>
@@ -767,15 +769,15 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
             <div className="flex items-center gap-3 mb-2">
               <div className="flex-1 h-px bg-amber-300"></div>
               <h2 className="text-lg font-bold text-amber-800 flex items-center gap-2 whitespace-nowrap">
-                📜 Patrimoine Historique
+                📜 {t('recit.historical_heritage_title')}
                 <span className="text-sm font-normal bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                  {filteredHistorical.length} génération{filteredHistorical.length > 1 ? 's' : ''}
+                  {filteredHistorical.length} {t('recit.generation_word')}{filteredHistorical.length > 1 ? 's' : ''}
                 </span>
               </h2>
               <div className="flex-1 h-px bg-amber-300"></div>
             </div>
             <p className="text-xs text-amber-700 mb-5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
-              Contenu mis à disposition par la plateforme <strong>Moftal</strong>. Ces histoires couvrent l'humanité depuis Adam jusqu'à aujourd'hui, racontées par les historiens, les traditions et les transmetteurs de chaque époque.
+              {t('recit.historical_desc')}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -797,7 +799,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
 
                   {/* Title */}
                   <h3 className="text-base font-bold text-gray-900 mb-1 leading-snug">{entry.title}</h3>
-                  <p className="text-xs text-gray-400 mb-3">{getGenPeriod(entry.generation)}</p>
+                  <p className="text-xs text-gray-400 mb-3">{getGenPeriod(entry.generation, t('recit.bc'), t('recit.ad'))}</p>
 
                   {/* Description courte */}
                   <p className={`text-gray-600 text-sm mb-4 flex-1 ${expandedGens.has(entry.generation) ? '' : 'line-clamp-3'}`}>{entry.content}</p>
@@ -818,7 +820,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                       onClick={e => toggleGen(entry.generation, e)}
                       className="mt-2 text-xs text-amber-600 hover:text-amber-800 font-semibold flex items-center gap-1"
                     >
-                      {expandedGens.has(entry.generation) ? '▲ Voir moins' : '▼ Voir plus'}
+                      {expandedGens.has(entry.generation) ? t('recit.see_less') : t('recit.see_more')}
                     </button>
                   </div>
                 </div>
@@ -832,31 +834,31 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
           <div className="flex items-center gap-3 mb-2">
             <div className="flex-1 h-px bg-indigo-300"></div>
             <h2 className="text-lg font-bold text-indigo-800 flex items-center gap-2 whitespace-nowrap">
-              📖 Récits Personnels — Nos Membres Racontent Leur Vie
-              {!estAbonne && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">🔒 Abonnement requis</span>}
+              📖 {t('recit.personal_stories_title')}
+              {!estAbonne && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">🔒 {t('recit.subscription_required')}</span>}
               {!loading && (
                 <span className="text-sm font-normal bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
-                  {filteredStories.length} récit{filteredStories.length > 1 ? 's' : ''}
+                  {filteredStories.length} {t('recit.story_word')}{filteredStories.length > 1 ? 's' : ''}
                 </span>
               )}
             </h2>
             <div className="flex-1 h-px bg-indigo-300"></div>
           </div>
           <p className="text-xs text-indigo-700 mb-5 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2">
-            Chaque membre de la plateforme raconte <strong>sa propre vie</strong> — son histoire personnelle, sa famille, ses épreuves et ses joies.
+            {t('recit.personal_stories_desc')}
           </p>
 
           {!estAbonne ? (
             /* ── Paywall récits ── */
             <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-8 text-center">
               <div className="text-5xl mb-3">🔒</div>
-              <h3 className="font-black text-lg text-amber-900 mb-2">Lisez les récits de nos membres</h3>
+              <h3 className="font-black text-lg text-amber-900 mb-2">{t('recit.paywall_title')}</h3>
               <p className="text-sm text-amber-700 mb-5 leading-relaxed">
-                Des centaines de membres ont partagé leur vie ici. Abonnez-vous pour lire leurs témoignages, leurs joies et leurs épreuves.
+                {t('recit.paywall_desc')}
               </p>
               <div className="rounded-xl bg-white border border-amber-200 px-4 py-3 mb-5 inline-block">
-                <p className="font-black text-xl text-amber-900">{stats?.totalStories || 0} récits disponibles</p>
-                <p className="text-xs text-amber-600">Accès annuel · paiement unique</p>
+                <p className="font-black text-xl text-amber-900">{stats?.totalStories || 0} {t('recit.stories_available')}</p>
+                <p className="text-xs text-amber-600">{t('recit.annual_access')}</p>
               </div>
               <br />
               <button
@@ -864,24 +866,24 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                 className="px-6 py-3 rounded-xl font-black text-white text-sm"
                 style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
               >
-                📜 S'abonner pour lire les récits
+                {t('recit.subscribe_btn')}
               </button>
-              <p className="text-xs text-amber-500 mt-3">Vous pouvez quand même publier votre propre récit librement ✍️</p>
+              <p className="text-xs text-amber-500 mt-3">{t('recit.paywall_free_publish_note')}</p>
             </div>
           ) : loading ? (
-            <div className="text-center py-12 text-gray-500">Chargement des récits...</div>
+            <div className="text-center py-12 text-gray-500">{t('recit.loading_stories')}</div>
           ) : filteredStories.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-indigo-100">
               <div className="text-5xl mb-3">✍️</div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">
                 {selectedGeneration !== 'all'
-                  ? `Aucun membre n'a encore partagé son récit pour ${selectedGeneration}`
-                  : 'Aucun récit de membre trouvé'}
+                  ? `${t('recit.no_story_for_gen')} ${selectedGeneration}`
+                  : t('recit.no_story_found')}
               </h3>
-              <p className="text-gray-500 mb-5 text-sm">Soyez le premier à raconter votre propre vie !</p>
+              <p className="text-gray-500 mb-5 text-sm">{t('recit.be_first')}</p>
               <button onClick={() => navigate('/a-retenir')}
                 className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700">
-                ✍️ Écrire mon histoire
+                ✍️ {t('recit.write_my_story')}
               </button>
             </div>
           ) : (
@@ -901,7 +903,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                     </div>
                     <div className="text-right flex-shrink-0">
                       <span className="text-xs bg-white/20 text-white px-2 py-1 rounded-full">
-                        📖 {Object.keys(author.bySection).length} section{Object.keys(author.bySection).length > 1 ? 's' : ''}
+                        📖 {Object.keys(author.bySection).length} {t('recit.section_word')}{Object.keys(author.bySection).length > 1 ? 's' : ''}
                       </span>
                     </div>
                   </div>
@@ -949,7 +951,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                           {witnessesVisible.has(bookKey) && (
                             <div className="mb-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">🤝 Témoins ({firstStory.witnesses?.length || 0}/4)</span>
+                                <span className="text-xs font-bold text-indigo-700 uppercase tracking-wide">🤝 {t('recit.witnesses_word')} ({firstStory.witnesses?.length || 0}/4)</span>
                                 {currentUserNumeroH && currentUserNumeroH !== firstStory.numeroH &&
                                   !(firstStory.witnesses || []).some(w => w.numeroH === currentUserNumeroH) &&
                                   (firstStory.witnesses?.length || 0) < 4 && (
@@ -958,12 +960,12 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                                       disabled={testifyingId === firstStory.id}
                                       className="px-2.5 py-1 bg-indigo-600 text-white text-xs rounded-full disabled:opacity-50 font-semibold hover:bg-indigo-700"
                                     >
-                                      {testifyingId === firstStory.id ? '⏳' : '✋ Témoigner'}
+                                      {testifyingId === firstStory.id ? '⏳' : t('recit.testify_btn')}
                                     </button>
                                   )
                                 }
                                 {(firstStory.witnesses || []).some(w => w.numeroH === currentUserNumeroH) && (
-                                  <span className="text-xs text-green-600 font-semibold">✅ Vous avez témoigné</span>
+                                  <span className="text-xs text-green-600 font-semibold">{t('recit.testified_label')}</span>
                                 )}
                               </div>
                               <div className="grid grid-cols-2 gap-1.5">
@@ -978,13 +980,13 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                                           </div>
                                           <div className="min-w-0">
                                             <p className="font-semibold text-indigo-900 truncate">{w.name}</p>
-                                            {w.age && <p className="text-gray-400">{w.age} ans</p>}
+                                            {w.age && <p className="text-gray-400">{w.age} {t('recit.age_years')}</p>}
                                           </div>
                                         </>
                                       ) : (
                                         <>
                                           <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 flex-shrink-0">?</div>
-                                          <p className="text-gray-400 italic">Témoin {i + 1}</p>
+                                          <p className="text-gray-400 italic">{t('recit.witness_n')} {i + 1}</p>
                                         </>
                                       )}
                                     </div>
@@ -1023,7 +1025,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                             onClick={() => toggleBookSection(bookKey)}
                             className="mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                           >
-                            {isExpanded ? '▲ Réduire' : '▼ Lire plus'}
+                            {isExpanded ? t('recit.reduce_btn') : t('recit.read_more_btn')}
                           </button>
                         </div>
                       );
@@ -1048,10 +1050,10 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-xs font-bold bg-white/25 text-white px-2 py-0.5 rounded-full">G{selectedHistorical.generation}</span>
                     <span className="text-xs bg-white/20 text-white/90 px-2 py-0.5 rounded-full">{selectedHistorical.era}</span>
-                    <span className="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">📜 Patrimoine</span>
+                    <span className="text-xs font-semibold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">📜 {t('recit.heritage_short')}</span>
                   </div>
                   <h2 className="text-xl font-bold text-white">{selectedHistorical.title}</h2>
-                  <p className="text-white/80 text-sm">{getGenPeriod(selectedHistorical.generation)}</p>
+                  <p className="text-white/80 text-sm">{getGenPeriod(selectedHistorical.generation, t('recit.bc'), t('recit.ad'))}</p>
                 </div>
               </div>
               <button onClick={() => setSelectedHistorical(null)} className="text-white/70 hover:text-white text-2xl font-bold ml-4 flex-shrink-0">✕</button>
@@ -1059,17 +1061,17 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
             <div className="overflow-y-auto flex-1 p-6 space-y-5">
               <p className="text-gray-800 leading-relaxed text-base">{selectedHistorical.content}</p>
               <div className="border-t border-amber-100 pt-4 space-y-2">
-                <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">📅 Événements clés</p>
+                <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">📅 {t('recit.key_events')}</p>
                 {selectedHistorical.keyEvents.map((ev, i) => <p key={i} className="text-sm text-gray-700 flex gap-2"><span>•</span>{ev}</p>)}
               </div>
               <div className="border-t border-amber-100 pt-4 space-y-2">
-                <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">👑 Figures importantes</p>
+                <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">👑 {t('recit.important_figures')}</p>
                 {selectedHistorical.figures.map((fig, i) => <p key={i} className="text-sm text-gray-700 flex gap-2"><span>•</span>{fig}</p>)}
               </div>
             </div>
             <div className="flex items-center justify-between px-6 py-3 border-t border-amber-100 bg-amber-50 flex-shrink-0">
-              <span className="text-sm text-amber-700 font-medium">🏛️ Moftal — Patrimoine Historique</span>
-              <button onClick={() => setSelectedHistorical(null)} className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700">Fermer</button>
+              <span className="text-sm text-amber-700 font-medium">{t('recit.footer_brand')}</span>
+              <button onClick={() => setSelectedHistorical(null)} className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700">{t('btn.close')}</button>
             </div>
           </div>
         </div>
@@ -1085,7 +1087,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
                 <span className="text-3xl">{sectionIcons[selectedStory.sectionId] || '📖'}</span>
                 <div>
                   <h2 className="text-lg font-bold text-white">{selectedStory.sectionTitle}</h2>
-                  <p className="text-indigo-100 text-sm">📖 {selectedStory.authorName} raconte sa propre histoire{selectedStory.generation && ` • ${selectedStory.generation}`}</p>
+                  <p className="text-indigo-100 text-sm">📖 {selectedStory.authorName} {t('recit.author_tells_story')}{selectedStory.generation && ` • ${selectedStory.generation}`}</p>
                 </div>
               </div>
               <button onClick={() => setSelectedStory(null)} className="text-white/70 hover:text-white text-2xl font-bold ml-4 flex-shrink-0">✕</button>
@@ -1093,20 +1095,20 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
             <div className="overflow-y-auto flex-1 p-6 space-y-4">
               <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap">{selectedStory.content}</p>
               {selectedStory.photos?.length > 0 && (
-                <div><p className="text-xs font-semibold text-gray-500 uppercase mb-2">📷 Photos</p>
+                <div><p className="text-xs font-semibold text-gray-500 uppercase mb-2">📷 {t('recit.photos_label')}</p>
                   <div className="grid grid-cols-2 gap-2">
                     {selectedStory.photos.map((p, i) => <img key={i} src={mediaSrc(p)} alt="" className="w-full h-40 object-cover rounded-xl" />)}
                   </div></div>
               )}
               {selectedStory.videos?.length > 0 && (
-                <div><p className="text-xs font-semibold text-gray-500 uppercase mb-2">🎥 Vidéos</p>
+                <div><p className="text-xs font-semibold text-gray-500 uppercase mb-2">🎥 {t('recit.videos_label')}</p>
                   {selectedStory.videos.map((v, i) => <video key={i} src={mediaSrc(v)} controls className="w-full rounded-xl mb-2" />)}
                 </div>
               )}
             </div>
             <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50 flex-shrink-0">
-              <span className="text-sm text-gray-500">Publié le {new Date(selectedStory.publishedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-              <button onClick={() => setSelectedStory(null)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">Fermer</button>
+              <span className="text-sm text-gray-500">{t('recit.published_on')} {new Date(selectedStory.publishedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              <button onClick={() => setSelectedStory(null)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700">{t('btn.close')}</button>
             </div>
           </div>
         </div>
