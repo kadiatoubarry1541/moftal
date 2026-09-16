@@ -5,6 +5,7 @@ import { sortAnyByProximity, anyProximityLabel, getUserGeoContext, requestGPS, t
 import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
+import { useI18n } from '../i18n/useI18n';
 
 interface UserData {
   numeroH: string;
@@ -52,6 +53,7 @@ interface Supplier {
 }
 
 export default function EchangeNourriture() {
+  const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
@@ -263,7 +265,7 @@ export default function EchangeNourriture() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg text-gray-600">Chargement des produits alimentaires...</div>
+          <div className="text-lg text-gray-600">{t('echange_nourriture.loading')}</div>
         </div>
       </div>
     );
@@ -277,14 +279,14 @@ export default function EchangeNourriture() {
         onClick={() => navigate('/echange')}
         className="mb-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
       >
-        ← Retour
+        {t('btn.back_arrow')}
       </button>
 
       {/* Bannière proximité */}
       {(userGeo.city || userGeo.country || gpsActive) && (
         <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mb-4">
           <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
-          <span>{gpsActive ? "Annonces triées par distance GPS — les plus proches apparaissent en premier" : `Annonces de ${userGeo.city || userGeo.country} apparaissent en premier`}</span>
+          <span>{gpsActive ? t('echange_tertiaire.gps_sorted') : `${t('echange_tertiaire.location_sorted_before')} ${userGeo.city || userGeo.country} ${t('echange_tertiaire.location_sorted_after')}`}</span>
         </div>
       )}
 
@@ -294,32 +296,32 @@ export default function EchangeNourriture() {
           {(canPublish || isAdmin) ? (
             <>
               {vendorName && !isAdmin && (
-                <p className="text-xs text-green-700 font-medium">Vendeur Moftal : {vendorName}</p>
+                <p className="text-xs text-green-700 font-medium">{t('echange_nourriture.vendor_moftal_prefix')} {vendorName}</p>
               )}
               <PublierAnnonceButtons
                 onSelect={() => setShowCreateProduct(true)}
-                title="Publier une annonce"
+                title={t('echange_secondaire.publish_ad_title')}
               />
             </>
           ) : hasPendingRequest ? (
             <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
               <span className="text-2xl">⏳</span>
               <div>
-                <p className="font-semibold text-blue-800 text-sm">Demande en cours d'examen</p>
-                <p className="text-blue-700 text-xs mt-1">Votre inscription comme vendeur Moftal est en attente d'approbation par un administrateur. Vous serez notifié dès qu'elle sera validée.</p>
+                <p className="font-semibold text-blue-800 text-sm">{t('echange_nourriture.request_under_review_title')}</p>
+                <p className="text-blue-700 text-xs mt-1">{t('echange_nourriture.request_under_review_desc')}</p>
               </div>
             </div>
           ) : (
             <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
               <span className="text-2xl">🔒</span>
               <div>
-                <p className="font-semibold text-amber-800 text-sm">Réservé aux vendeurs Moftal</p>
-                <p className="text-amber-700 text-xs mt-1">Pour publier des produits ici, vous devez vous inscrire comme vendeur sur la plateforme Échange Moftal et attendre l'approbation de votre compte.</p>
+                <p className="font-semibold text-amber-800 text-sm">{t('echange_nourriture.vendors_only_title')}</p>
+                <p className="text-amber-700 text-xs mt-1">{t('echange_nourriture.vendors_only_desc')}</p>
                 <button
                   onClick={() => setShowVendorRegistration(true)}
                   className="mt-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-colors"
                 >
-                  S'inscrire comme vendeur Moftal
+                  {t('echange_nourriture.register_vendor_btn')}
                 </button>
               </div>
             </div>
@@ -332,37 +334,37 @@ export default function EchangeNourriture() {
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
           <div className="flex items-center gap-4 mb-6">
             <div className="text-3xl">📦</div>
-            <h3 className="text-2xl font-bold text-gray-900">Publier un produit alimentaire</h3>
+            <h3 className="text-2xl font-bold text-gray-900">{t('echange_nourriture.publish_food_title')}</h3>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Titre du produit</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_primaire.product_title_label')}</label>
               <input
                 type="text"
                 value={newProduct.title}
                 onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                placeholder="Ex: Riz Local Premium"
+                placeholder={t('echange_primaire.product_title_placeholder')}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Catégorie</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_tertiaire.category_label')}</label>
               <select
                 value={newProduct.category}
                 onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
               >
-                <option value="">Sélectionner une catégorie</option>
-                <option value="Alimentation">Alimentation</option>
-                <option value="Restaurant">Restaurant</option>
-                <option value="Produit transformé">Produit transformé</option>
-                <option value="Aliments">Aliments</option>
-                <option value="Autre">Autre</option>
+                <option value="">{t('echange_primaire.select_category')}</option>
+                <option value="Alimentation">{t('echange_primaire.cat_alimentation')}</option>
+                <option value="Restaurant">{t('echange_nourriture.cat_restaurant')}</option>
+                <option value="Produit transformé">{t('echange_nourriture.cat_produit_transforme')}</option>
+                <option value="Aliments">{t('echange_primaire.cat_aliments')}</option>
+                <option value="Autre">{t('echange_primaire.cat_autre')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Prix</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_tertiaire.price_label')}</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -383,47 +385,47 @@ export default function EchangeNourriture() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">État</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_quaternaire.condition_label')}</label>
               <select
                 value={newProduct.condition}
                 onChange={(e) => setNewProduct({...newProduct, condition: e.target.value as any})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
               >
-                <option value="neuf">Neuf</option>
-                <option value="bon">Bon état</option>
-                <option value="moyen">État moyen</option>
-                <option value="usé">Usé</option>
+                <option value="neuf">{t('echange_primaire.condition_new')}</option>
+                <option value="bon">{t('echange_quaternaire.condition_good')}</option>
+                <option value="moyen">{t('echange_quaternaire.condition_medium')}</option>
+                <option value="usé">{t('echange_quaternaire.condition_worn_badge')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Localisation</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_tertiaire.location_label')}</label>
               <input
                 type="text"
                 value={newProduct.location}
                 onChange={(e) => setNewProduct({...newProduct, location: e.target.value})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
-                placeholder="Ex: Ville Principale"
+                placeholder={t('echange_primaire.location_placeholder')}
               />
             </div>
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Photo + message vocal (max 10 secondes)</label>
-              <p className="text-xs text-gray-500 mb-2">Prenez une photo de votre produit et enregistrez un message vocal (max 10 s) pour le présenter.</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_nourriture.photo_audio_label')}</label>
+              <p className="text-xs text-gray-500 mb-2">{t('echange_nourriture.photo_audio_desc')}</p>
               <div className="rounded-xl border-2 border-slate-200 bg-slate-50 p-4 mb-4 space-y-3">
                 <div>
-                  <span className="block text-xs font-medium text-gray-600 mb-1">Photo du produit</span>
+                  <span className="block text-xs font-medium text-gray-600 mb-1">{t('echange_primaire.photo_product_label')}</span>
                   <input type="file" accept="image/*" capture="environment" onChange={(e) => setNewProduct((prev) => ({ ...prev, photoForAudio: e.target.files?.[0] || null }))} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-green-100 file:text-green-800" />
-                  {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600">✓ Photo sélectionnée</p>}
+                  {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600">{t('echange_tertiaire.photo_selected')}</p>}
                 </div>
                 <div>
-                  <span className="block text-xs font-medium text-gray-600 mb-1">Message vocal (max 10 secondes)</span>
+                  <span className="block text-xs font-medium text-gray-600 mb-1">{t('echange_nourriture.voice_message_label')}</span>
                   <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => setNewProduct((prev) => ({ ...prev, audio30s: new File([blob], `audio-30s-${Date.now()}.webm`, { type: blob.type || 'audio/webm' }) }))} />
-                  {newProduct.audio30s && <p className="mt-2 text-xs text-emerald-600">✓ Message vocal enregistré</p>}
+                  {newProduct.audio30s && <p className="mt-2 text-xs text-emerald-600">{t('echange_nourriture.voice_recorded')}</p>}
                 </div>
               </div>
             </div>
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Vidéo (max 10 secondes)</label>
-              <p className="text-xs text-gray-500 mb-2">Enregistrez une vidéo de 5 à 10 secondes pour présenter votre produit.</p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_nourriture.video_label')}</label>
+              <p className="text-xs text-gray-500 mb-2">{t('echange_nourriture.video_desc')}</p>
               <div className="rounded-xl border-2 border-green-200 bg-green-50/50 p-4 mb-4">
                 <VideoRecorder
                   maxDuration={10}
@@ -435,7 +437,7 @@ export default function EchangeNourriture() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">📷 Photos et Vidéos</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_nourriture.photos_videos_label')}</label>
               <div className="space-y-3">
                 <input
                   type="file"
@@ -478,20 +480,20 @@ export default function EchangeNourriture() {
                     htmlFor="media-capture"
                     className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors duration-200 cursor-pointer text-center font-medium flex items-center justify-center gap-2"
                   >
-                    📷 Prendre une photo/vidéo
+                    {t('echange_nourriture.take_photo_video_btn')}
                   </label>
                   <label
                     htmlFor="media-gallery"
                     className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors duration-200 cursor-pointer text-center font-medium flex items-center justify-center gap-2"
                   >
-                    🖼️ Choisir depuis galerie
+                    {t('echange_primaire.choose_gallery_btn')}
                   </label>
                 </div>
                 
                 {(newProduct.images.length > 0 || newProduct.videos.length > 0) && (
                   <div className="mt-4">
                     <p className="text-sm text-green-600 font-medium mb-3">
-                      ✅ {newProduct.images.length} photo(s) et {newProduct.videos.length} vidéo(s) sélectionnée(s)
+                      ✅ {newProduct.images.length} {t('echange_nourriture.photo_count_suffix')} {newProduct.videos.length} {t('echange_nourriture.video_count_suffix')}
                     </p>
                     <div className="grid grid-cols-3 gap-3">
                       {newProduct.images.map((img, idx) => (
@@ -536,13 +538,13 @@ export default function EchangeNourriture() {
               </div>
             </div>
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Description</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">{t('echange_tertiaire.description_label')}</label>
               <textarea
                 value={newProduct.description}
                 onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
                 rows={4}
-                placeholder="Décrivez votre produit en détail..."
+                placeholder={t('echange_primaire.description_placeholder')}
               />
             </div>
           </div>
@@ -552,13 +554,13 @@ export default function EchangeNourriture() {
               onClick={createProduct}
               className="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl"
             >
-              ✅ Publier le Produit
+              {t('echange_primaire.publish_product_btn')}
             </button>
             <button
               onClick={() => setShowCreateProduct(false)}
               className="px-8 py-4 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all duration-200 font-semibold"
             >
-              ❌ Annuler
+              {t('echange_primaire.cancel_with_icon')}
             </button>
           </div>
         </div>
@@ -570,55 +572,55 @@ export default function EchangeNourriture() {
           <div className="flex items-center gap-4 mb-2">
             <div className="text-3xl">🏪</div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900">S'inscrire comme vendeur Moftal</h3>
-              <p className="text-sm text-gray-500">Votre demande sera examinée par un administrateur avant activation.</p>
+              <h3 className="text-2xl font-bold text-gray-900">{t('echange_nourriture.register_vendor_btn')}</h3>
+              <p className="text-sm text-gray-500">{t('echange_nourriture.vendor_request_review_note')}</p>
             </div>
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-            <p className="text-sm text-amber-800 font-medium">Secteur de vente : Restaurants</p>
-            <p className="text-xs text-amber-700 mt-1">Plats du jour, repas à emporter, traiteurs. Votre demande sera examinée pour ce secteur.</p>
+            <p className="text-sm text-amber-800 font-medium">{t('echange_nourriture.sale_sector_label')}</p>
+            <p className="text-xs text-amber-700 mt-1">{t('echange_nourriture.sale_sector_desc')}</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Nom de la boutique / activité *</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_nourriture.shop_name_label')}</label>
               <input
                 type="text"
                 value={newVendor.nomBoutique}
                 onChange={(e) => setNewVendor({ ...newVendor, nomBoutique: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="Ex: Boutique Fatou, Marché Central..."
+                placeholder={t('echange_nourriture.shop_name_placeholder')}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Téléphone</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_primaire.phone_label')}</label>
               <input
                 type="tel"
                 value={newVendor.telephone}
                 onChange={(e) => setNewVendor({ ...newVendor, telephone: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="+224 XXX XXX XXX"
+                placeholder={t('echange_nourriture.phone_placeholder')}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Ville</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_primaire.city_label')}</label>
               <input
                 type="text"
                 value={newVendor.ville}
                 onChange={(e) => setNewVendor({ ...newVendor, ville: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                placeholder="Conakry, Kindia..."
+                placeholder={t('echange_nourriture.city_placeholder2')}
               />
             </div>
             <div className="lg:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Description de votre activité</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t('echange_nourriture.activity_desc_label')}</label>
               <textarea
                 value={newVendor.description}
                 onChange={(e) => setNewVendor({ ...newVendor, description: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 rows={3}
-                placeholder="Décrivez ce que vous vendez..."
+                placeholder={t('echange_nourriture.activity_placeholder')}
               />
             </div>
           </div>
@@ -629,13 +631,13 @@ export default function EchangeNourriture() {
               disabled={vendorSubmitting}
               className="px-8 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-all font-semibold shadow-md disabled:opacity-60"
             >
-              {vendorSubmitting ? 'Envoi...' : 'Envoyer ma demande'}
+              {vendorSubmitting ? t('echange_nourriture.sending') : t('echange_nourriture.send_my_request_btn')}
             </button>
             <button
               onClick={() => setShowVendorRegistration(false)}
               className="px-8 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all font-semibold"
             >
-              Annuler
+              {t('btn.cancel')}
             </button>
           </div>
         </div>
@@ -646,13 +648,13 @@ export default function EchangeNourriture() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {getFilteredProducts().length === 0 ? (
             <div className="col-span-full text-center py-12 bg-gray-50 rounded-xl">
-              <p className="text-gray-600 text-lg">Aucun produit dans cette catégorie pour le moment.</p>
+              <p className="text-gray-600 text-lg">{t('echange_primaire.no_products')}</p>
               {(canPublish || isAdmin) && (
                 <button
                   onClick={() => setShowCreateProduct(true)}
                   className="mt-4 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200"
                 >
-                  ➕ Publier le premier produit
+                  {t('echange_primaire.publish_first_product_btn')}
                 </button>
               )}
             </div>
@@ -673,13 +675,13 @@ export default function EchangeNourriture() {
                 ) : (product as any).audio && (product as any).audio.length > 0 ? (
                   <div className="w-full h-48 bg-amber-50 flex flex-col items-center justify-center gap-2 px-4">
                     <span className="text-4xl">🎙️</span>
-                    <p className="text-xs text-amber-700 font-medium text-center">Message vocal du vendeur</p>
+                    <p className="text-xs text-amber-700 font-medium text-center">{t('echange_tertiaire.voice_message_vendor')}</p>
                     <audio src={`${(config.API_BASE_URL || '').replace(/\/api\/?$/, '')}${(product as any).audio[0].startsWith('/') ? '' : '/'}${(product as any).audio[0]}`} controls className="w-full" />
                   </div>
                 ) : (
                   <div className="w-full h-48 bg-green-50 flex flex-col items-center justify-center gap-2">
                     <span className="text-5xl">📷</span>
-                    <p className="text-xs text-gray-400">Pas encore de photo</p>
+                    <p className="text-xs text-gray-400">{t('echange_tertiaire.no_photo_yet')}</p>
                   </div>
                 )}
                 <div className="p-6">
@@ -690,7 +692,7 @@ export default function EchangeNourriture() {
                     <div className="flex-1 min-w-0">
                       <span className="font-semibold text-amber-900 text-sm truncate block">{product.sellerName}</span>
                     </div>
-                    <span className="text-xs bg-amber-600 text-white px-2 py-0.5 rounded-full whitespace-nowrap">Vendeur Moftal</span>
+                    <span className="text-xs bg-amber-600 text-white px-2 py-0.5 rounded-full whitespace-nowrap">{t('echange_nourriture.vendor_moftal_badge')}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-start mb-4">
@@ -713,7 +715,7 @@ export default function EchangeNourriture() {
                 <p className="text-gray-700 mb-4 text-sm leading-relaxed line-clamp-2">{product.description}</p>
                 
                 <div className="mb-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-4 text-white shadow-lg">
-                  <div className="text-xs uppercase tracking-wide mb-1">Prix</div>
+                  <div className="text-xs uppercase tracking-wide mb-1">{t('echange_tertiaire.price_label')}</div>
                   <div className="text-2xl font-black">
                     {product.price.toLocaleString()} {product.currency}
                   </div>
@@ -729,7 +731,7 @@ export default function EchangeNourriture() {
                     onClick={() => setSelectedProduct(product)}
                     className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 text-sm font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
-                    📞 Contacter
+                    {t('echange_primaire.contact_btn')}
                   </button>
                   <button
                     onClick={() => setLikedProducts(prev => {
@@ -737,7 +739,7 @@ export default function EchangeNourriture() {
                       if (next.has(product.id)) next.delete(product.id); else next.add(product.id);
                       return next;
                     })}
-                    aria-label={likedProducts.has(product.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    aria-label={likedProducts.has(product.id) ? t('echange_nourriture.remove_favorite') : t('echange_nourriture.add_favorite')}
                     className={`px-4 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 ${
                       likedProducts.has(product.id)
                         ? 'bg-gradient-to-r from-pink-600 to-rose-600 ring-2 ring-pink-300'
@@ -760,7 +762,7 @@ export default function EchangeNourriture() {
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">
-              Contacter le vendeur
+              {t('echange_primaire.contact_vendor_title')}
             </h3>
             <div className="space-y-4">
               <div>
@@ -773,9 +775,9 @@ export default function EchangeNourriture() {
                 </p>
               </div>
               <div>
-                <h5 className="font-semibold text-gray-900 mb-2">Informations de contact :</h5>
+                <h5 className="font-semibold text-gray-900 mb-2">{t('echange_primaire.contact_info_label')}</h5>
                 <p className="text-sm text-gray-600">
-                  📞 {selectedProduct.contactInfo?.phone || 'Non renseigné'}
+                  📞 {selectedProduct.contactInfo?.phone || t('echange_primaire.not_provided')}
                 </p>
               </div>
             </div>
@@ -784,13 +786,13 @@ export default function EchangeNourriture() {
                 onClick={() => setSelectedProduct(null)}
                 className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-semibold"
               >
-                📞 Appeler maintenant
+                {t('echange_primaire.call_now_btn')}
               </button>
               <button
                 onClick={() => setSelectedProduct(null)}
                 className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 transition-all duration-200 font-semibold"
               >
-                ✕ Fermer
+                ✕ {t('btn.close')}
               </button>
             </div>
           </div>
@@ -800,19 +802,19 @@ export default function EchangeNourriture() {
       {getFilteredProducts().length === 0 && products.length === 0 && (
         <div className="text-center text-gray-500 py-20">
           <div className="text-8xl mb-6">🍽️</div>
-          <h3 className="text-2xl font-bold mb-4">Aucun produit alimentaire</h3>
+          <h3 className="text-2xl font-bold mb-4">{t('echange_nourriture.no_food_products')}</h3>
           {(canPublish || isAdmin) ? (
             <>
-              <p className="text-lg mb-6">Soyez le premier à publier un produit alimentaire !</p>
+              <p className="text-lg mb-6">{t('echange_nourriture.be_first_food')}</p>
               <button
                 onClick={() => setShowCreateProduct(true)}
                 className="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-semibold shadow-lg"
               >
-                ➕ Publier le premier produit
+                {t('echange_primaire.publish_first_product_btn')}
               </button>
             </>
           ) : (
-            <p className="text-base text-gray-500">Les vendeurs professionnels approuvés peuvent publier leurs produits ici.</p>
+            <p className="text-base text-gray-500">{t('echange_nourriture.approved_vendors_only_note')}</p>
           )}
         </div>
       )}
