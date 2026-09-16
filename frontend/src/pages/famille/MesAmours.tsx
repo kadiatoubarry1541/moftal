@@ -927,10 +927,18 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               onClick={() => storyInputRef.current?.click()}
               disabled={uploadingStory}
               aria-label="Ajouter une story"
-              className="flex-shrink-0 w-[64px] h-[120px] flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm disabled:opacity-60"
+              className={`flex-shrink-0 w-[64px] h-[120px] flex flex-col items-center justify-center gap-1 rounded-xl border shadow-sm transition-colors ${
+                uploadingStory
+                  ? 'bg-emerald-500 border-emerald-500 animate-pulse'
+                  : 'bg-white border-gray-200 hover:bg-gray-50 active:bg-gray-100'
+              }`}
             >
-              <span className="text-2xl leading-none">➕</span>
-              <span className="text-xs font-bold text-gray-900 text-center">Story</span>
+              <span className={`text-2xl leading-none ${uploadingStory ? 'animate-spin' : ''}`}>
+                {uploadingStory ? '⏳' : '➕'}
+              </span>
+              <span className={`text-[10px] font-bold text-center leading-tight ${uploadingStory ? 'text-white' : 'text-gray-900'}`}>
+                {uploadingStory ? 'Publication...' : 'Story'}
+              </span>
             </button>
           </div>
         </div>
