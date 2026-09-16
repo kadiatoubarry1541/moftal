@@ -147,22 +147,29 @@ router.post('/send-request', async (req, res) => {
 
     const toUserTrimmed = toUser.trim();
 
-    if (fromUser === toUserTrimmed) {
-      return res.status(400).json({ success: false, message: 'Vous ne pouvez pas vous ajouter vous-même' });
-    }
-
-    // Vérifier que l'utilisateur destinataire existe
+    // Vérifier que l'utilisateur destinataire existe et récupérer son NumeroH
+    // canonique (tel qu'enregistré en base) : le texte saisi/scanné par
+    // l'expéditeur peut différer légèrement (espaces, casse) de la valeur
+    // stockée, et un simple trim() ne suffit pas à les faire correspondre.
+    // Si on stockait toUserTrimmed tel quel, la requête GET /requests du
+    // destinataire — qui compare toUser à son numeroH canonique par égalité
+    // stricte — ne la retrouverait jamais : la demande semblerait "perdue".
     const targetUser = await User.findByNumeroH(toUserTrimmed);
     if (!targetUser) {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce NumeroH' });
+    }
+    const toUserCanonical = targetUser.numeroH;
+
+    if (fromUser === toUserCanonical) {
+      return res.status(400).json({ success: false, message: 'Vous ne pouvez pas vous ajouter vous-même' });
     }
 
     // Vérifier si une demande est déjà en cours (dans les deux sens)
     const existingRequest = await FriendRequest.findOne({
       where: {
         [Op.or]: [
-          { fromUser, toUser: toUserTrimmed, status: 'pending' },
-          { fromUser: toUserTrimmed, toUser: fromUser, status: 'pending' }
+          { fromUser, toUser: toUserCanonical, status: 'pending' },
+          { fromUser: toUserCanonical, toUser: fromUser, status: 'pending' }
         ]
       }
     });
@@ -174,8 +181,8 @@ router.post('/send-request', async (req, res) => {
     const alreadyFriends = await Friend.findOne({
       where: {
         [Op.or]: [
-          { userNumeroH: fromUser, friendNumeroH: toUserTrimmed },
-          { userNumeroH: toUserTrimmed, friendNumeroH: fromUser }
+          { userNumeroH: fromUser, friendNumeroH: toUserCanonical },
+          { userNumeroH: toUserCanonical, friendNumeroH: fromUser }
         ],
         status: 'accepted'
       }
@@ -189,7 +196,7 @@ router.post('/send-request', async (req, res) => {
     const request = await FriendRequest.create({
       fromUser,
       fromUserName,
-      toUser: toUserTrimmed,
+      toUser: toUserCanonical,
       message: message?.trim() || null,
       status: 'pending'
     });
@@ -197,7 +204,7 @@ router.post('/send-request', async (req, res) => {
     // Notifier le destinataire
     try {
       await Notification.createNotification({
-        recipientNumeroH: toUserTrimmed,
+        recipientNumeroH: toUserCanonical,
         type: 'friend_request',
         title: 'Nouvelle demande d\'amitié',
         message: `${fromUserName} vous a envoyé une demande d'amitié.`,
