@@ -1229,20 +1229,16 @@ const enhancedUser: UserData = useMemo(() => {
           <div>
             <div>
               <div className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-[75vh] bg-white">
-                {/* En-tête — même style que les groupes Terre ADAM (Quartier) */}
-                <div className="bg-gray-800 text-white px-4 py-[8px] flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                      {(effectiveUser.nomFamille || 'A').charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-sm truncate">
-                        Famille {effectiveUser.nomFamille || 'ADAM'}
-                      </h3>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {realMembersCount} membre{realMembersCount > 1 ? 's' : ''}
-                      </p>
-                    </div>
+                {/* En-tête — même style que les groupes Terre ADAM (Quartier). Pas de
+                    logo : une famille n'a pas besoin d'un logo comme un quartier. */}
+                <div className="bg-gray-800 text-white px-4 py-[4px] flex items-center justify-between">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm truncate">
+                      Famille {effectiveUser.nomFamille || 'ADAM'}
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {realMembersCount} membre{realMembersCount > 1 ? 's' : ''}
+                    </p>
                   </div>
                   {/* Boutons appel (visible si conjoint lié) */}
                   {partner && (
