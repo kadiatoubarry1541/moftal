@@ -936,7 +936,7 @@ const enhancedUser: UserData = useMemo(() => {
 
       {/* En-tête */}
       <div className="flex items-center pt-2 pb-1">
-        <h1 className="text-2xl font-bold text-gray-900">Héritage</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('famille.menu.heritage')}</h1>
       </div>
 
       {/* Navigation — une seule ligne compacte, 4 boutons. Galerie et
@@ -953,7 +953,7 @@ const enhancedUser: UserData = useMemo(() => {
             }`}
           >
             <span className="text-lg leading-none">💬</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Messages</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_messages')}</span>
           </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
@@ -965,7 +965,7 @@ const enhancedUser: UserData = useMemo(() => {
             }`}
           >
             <span className="text-lg leading-none">🌳</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Arbre</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_arbre')}</span>
           </button>
 
           <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
@@ -977,7 +977,7 @@ const enhancedUser: UserData = useMemo(() => {
             }`}
           >
             <span className="text-lg leading-none">🏠</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Foyer</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_foyer')}</span>
           </button>
 
           <button type="button"
@@ -985,7 +985,7 @@ const enhancedUser: UserData = useMemo(() => {
             className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           >
             <span className="text-lg leading-none">🏛️</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">Mairie</span>
+            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_mairie')}</span>
           </button>
 
         </nav>
@@ -1032,7 +1032,7 @@ const enhancedUser: UserData = useMemo(() => {
                   ? <img src={partner.photo} alt={partner.prenom} className="w-5 h-5 rounded-full object-cover" />
                   : <span>💑</span>
                 }
-                Voir l'arbre de {partner.prenom}
+                {t('heritage.view_partner_tree')} {partner.prenom}
               </button>
             )}
 
@@ -1041,13 +1041,13 @@ const enhancedUser: UserData = useMemo(() => {
               <div className="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 mb-4 flex items-center gap-3">
                 <span className="text-2xl">🩸</span>
                 <div className="flex-1">
-                  <p className="font-black text-sm text-indigo-900">Numéro de sang familial</p>
-                  <p className="text-xs text-indigo-600 mt-0.5">Identifiant unique de votre lignée — jamais répété</p>
+                  <p className="font-black text-sm text-indigo-900">{t('heritage.blood_number_title')}</p>
+                  <p className="text-xs text-indigo-600 mt-0.5">{t('heritage.blood_number_desc')}</p>
                 </div>
                 <div className="text-right">
                   <span className="font-black text-xl text-indigo-800 tracking-widest">{treeInfo.familyCode}</span>
                   {treeInfo.bloodNumber && (
-                    <p className="text-xs text-indigo-500">Sang n°{treeInfo.bloodNumber}</p>
+                    <p className="text-xs text-indigo-500">{t('heritage.blood_number_label')}{treeInfo.bloodNumber}</p>
                   )}
                 </div>
               </div>
@@ -1065,25 +1065,25 @@ const enhancedUser: UserData = useMemo(() => {
                 >
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span className="text-base leading-none">👑</span>
-                    <p className="text-xs font-bold text-amber-900">Chefs de lignée</p>
+                    <p className="text-xs font-bold text-amber-900">{t('heritage.chefs_title')}</p>
                   </div>
                   {(() => {
                     const chefs = [
-                      { role: 'Patriarche',   nom: fund.conseillerNom, photo: fund.conseillerPhoto, color: '#92400e' },
-                      { role: 'Porte-parole', nom: fund.gerant1Nom,    photo: fund.gerant1Photo,    color: '#1e40af' },
-                      { role: 'Délégué',      nom: fund.gerant2Nom,    photo: fund.gerant2Photo,    color: '#374151' },
+                      { role: 'Patriarche',   label: t('heritage.role_patriarche'),   nom: fund.conseillerNom, photo: fund.conseillerPhoto, color: '#92400e' },
+                      { role: 'Porte-parole', label: t('heritage.role_porte_parole'), nom: fund.gerant1Nom,    photo: fund.gerant1Photo,    color: '#1e40af' },
+                      { role: 'Délégué',      label: t('heritage.role_delegue'),      nom: fund.gerant2Nom,    photo: fund.gerant2Photo,    color: '#374151' },
                     ]
                     return (
                       <div className="flex items-center gap-4">
                         {chefs.map(chef => (
                           <div key={chef.role} className="flex flex-col items-center gap-0.5">
                             {chef.photo
-                              ? <img src={chef.photo} alt={chef.nom || chef.role} className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" />
+                              ? <img src={chef.photo} alt={chef.nom || chef.label} className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" />
                               : <div className="w-8 h-8 rounded-full bg-white border border-amber-200 flex items-center justify-center text-xs font-bold shadow-sm" style={{ color: chef.color }}>
                                   {chef.nom ? chef.nom.charAt(0) : '—'}
                                 </div>
                             }
-                            <span className="text-[8px] text-gray-500 leading-tight">{chef.role}</span>
+                            <span className="text-[8px] text-gray-500 leading-tight">{chef.label}</span>
                           </div>
                         ))}
                         <span className="text-amber-600 text-xs">{showDesignerChefs ? '▲' : '▼'}</span>
@@ -1255,14 +1255,14 @@ const enhancedUser: UserData = useMemo(() => {
                       <button
                         onClick={() => startCall(partner.numeroH, `${partner.prenom} ${partner.nomFamille}`, 'audio')}
                         className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-lg transition-colors"
-                        title="Appel audio"
+                        title={t('heritage.call_audio')}
                       >
                         📞
                       </button>
                       <button
                         onClick={() => startCall(partner.numeroH, `${partner.prenom} ${partner.nomFamille}`, 'video')}
                         className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-lg transition-colors"
-                        title="Appel vidéo"
+                        title={t('heritage.call_video')}
                       >
                         📹
                       </button>
@@ -1402,7 +1402,7 @@ const enhancedUser: UserData = useMemo(() => {
                       <button
                         type="button"
                         onClick={() => setShowCategoryGrid(v => !v)}
-                        title="Choisir le type d'information"
+                        title={t('heritage.choose_info_type')}
                         className={`absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-green-100' : 'hover:bg-gray-200'}`}
                       >
                         <span className="text-lg leading-none">{FAMILLE_CATEGORIES.find(c => c.id === newMessageCategory)?.icon}</span>
@@ -1423,7 +1423,7 @@ const enhancedUser: UserData = useMemo(() => {
                       {/* Photo / vidéo — intégrée dans le champ, à droite */}
                       <label
                         className={`absolute right-10 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-lg leading-none text-gray-500 hover:text-gray-700 cursor-pointer ${isSending ? 'opacity-50 pointer-events-none' : ''}`}
-                        title="Envoyer une photo ou une vidéo"
+                        title={t('heritage.send_photo_video')}
                       >
                         📷
                         <input
@@ -1443,7 +1443,7 @@ const enhancedUser: UserData = useMemo(() => {
                         type="button"
                         onClick={sendFamilyMessage}
                         disabled={isSending || !newMessage.trim()}
-                        title="Envoyer"
+                        title={t('btn.send')}
                         className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold transition-colors"
                       >
                         ✓
@@ -1478,7 +1478,7 @@ const enhancedUser: UserData = useMemo(() => {
                           ? 'bg-red-500 scale-110 shadow-lg text-white'
                           : 'bg-gray-200 hover:bg-green-100 text-gray-600 hover:text-green-700'
                       }`}
-                      title="Maintenir pour enregistrer un message vocal"
+                      title={t('heritage.hold_voice_message')}
                     >
                       🎤
                     </button>
@@ -1730,9 +1730,9 @@ const enhancedUser: UserData = useMemo(() => {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-sm text-gray-800"
                 >
                   <span className="text-lg leading-none">←</span>
-                  <span>Retour à l'arbre</span>
+                  <span>{t('heritage.back_to_tree')}</span>
                 </button>
-                <h3 className="text-base font-bold">Galerie familiale</h3>
+                <h3 className="text-base font-bold">{t('heritage.gallery_title')}</h3>
               </div>
             )}
 
@@ -1851,7 +1851,7 @@ const enhancedUser: UserData = useMemo(() => {
                     <span className="text-7xl mb-4 opacity-20">
                       {ALBUM_CONFIG.find(c => c.key === activeAlbum)?.emoji}
                     </span>
-                    <p className="text-sm font-medium text-gray-500">Aucune photo ni vidéo</p>
+                    <p className="text-sm font-medium text-gray-500">{t('heritage.gallery_empty')}</p>
                     <p className="text-xs text-gray-600 mt-1">Appuyez sur "＋ Ajouter" pour commencer</p>
                   </div>
                 ) : (
