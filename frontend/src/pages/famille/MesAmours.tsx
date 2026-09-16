@@ -161,6 +161,36 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
   const [uploadingStory, setUploadingStory] = useState(false);
   const [viewingStory, setViewingStory] = useState<MesAmoursStory | null>(null);
   const storyInputRef = useRef<HTMLInputElement>(null);
+  const storiesScrollRef = useRef<HTMLDivElement>(null);
+  const autoScrollPausedRef = useRef(false);
+  const resumeAutoScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const pauseAutoScroll = useCallback(() => {
+    autoScrollPausedRef.current = true;
+    if (resumeAutoScrollTimeoutRef.current) clearTimeout(resumeAutoScrollTimeoutRef.current);
+    resumeAutoScrollTimeoutRef.current = setTimeout(() => {
+      autoScrollPausedRef.current = false;
+    }, 4000);
+  }, []);
+
+  // Défilement automatique des stories toutes les 3 secondes (comme un
+  // diaporama) ; une interaction manuelle (glisser du doigt) met en pause.
+  useEffect(() => {
+    if (stories.length <= 3) return;
+    const interval = setInterval(() => {
+      const el = storiesScrollRef.current;
+      if (!el || autoScrollPausedRef.current) return;
+      const firstCard = el.firstElementChild as HTMLElement | null;
+      const step = firstCard ? firstCard.offsetWidth + 8 : 120;
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+      if (atEnd) {
+        el.scrollTo({ left: 0, behavior: 'smooth' });
+      } else {
+        el.scrollBy({ left: step, behavior: 'smooth' });
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [stories.length]);
 
   useEffect(() => {
     const session = localStorage.getItem("session_user");
@@ -857,7 +887,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
       {/* Stories */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <input
               ref={storyInputRef}
               type="file"
@@ -865,7 +895,11 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               className="hidden"
               onChange={handleQuickStoryFile}
             />
-            <div className="flex gap-3 overflow-x-auto">
+            <div
+              ref={storiesScrollRef}
+              onPointerDown={pauseAutoScroll}
+              className="flex-1 min-w-0 flex gap-2 overflow-x-auto"
+            >
               {stories.map((story) => {
                 const mediaUrl = (story.photos && story.photos[0]) || (story.videos && story.videos[0]) || '';
                 return (
@@ -874,16 +908,16 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                     type="button"
                     onClick={() => setViewingStory(story)}
                     title={story.authorName}
-                    className="flex-shrink-0 w-[100px] flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-2 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
+                    className="relative flex-shrink-0 w-[calc((100%-16px)/3)] h-[120px] rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm overflow-hidden"
                   >
-                    <span className="w-9 h-9 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center text-sm text-gray-400 leading-none">
+                    <span className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full overflow-hidden bg-gray-100 border-2 border-white shadow flex items-center justify-center text-xs text-gray-400 leading-none">
                       {mediaUrl ? (
                         <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
                       ) : (
                         (story.authorName || '?')[0]
                       )}
                     </span>
-                    <span className="text-sm font-bold text-gray-900 text-center truncate max-w-full">{story.authorName}</span>
+                    <span className="absolute bottom-2 left-2 right-2 text-xs font-bold text-gray-900 text-left truncate">{story.authorName}</span>
                   </button>
                 );
               })}
@@ -893,10 +927,10 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               onClick={() => storyInputRef.current?.click()}
               disabled={uploadingStory}
               aria-label="Ajouter une story"
-              className="flex-shrink-0 flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-2 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm disabled:opacity-60"
+              className="flex-shrink-0 w-[64px] h-[120px] flex flex-col items-center justify-center gap-1 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm disabled:opacity-60"
             >
-              <span className="text-3xl leading-none">➕</span>
-              <span className="text-sm font-bold text-gray-900 text-center">Story</span>
+              <span className="text-2xl leading-none">➕</span>
+              <span className="text-xs font-bold text-gray-900 text-center">Story</span>
             </button>
           </div>
         </div>
