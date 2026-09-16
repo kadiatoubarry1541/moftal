@@ -65,13 +65,20 @@ export default function Famille() {
             >
               ‹
             </button>
-            <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>👨‍👩‍👧‍👦 Famille</h1>
-
-            {current && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
-                <span>{current.emoji}</span>
-                <span>{current.label}</span>
-              </span>
+            {activeTab && activeTab !== 'heritage' && current ? (
+              <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>
+                {current.emoji} {current.label}
+              </h1>
+            ) : (
+              <>
+                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>👨‍👩‍👧‍👦 Famille</h1>
+                {current && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
+                    <span>{current.emoji}</span>
+                    <span>{current.label}</span>
+                  </span>
+                )}
+              </>
             )}
           </div>
 
