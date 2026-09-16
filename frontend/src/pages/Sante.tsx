@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProSection from '../components/ProSection';
 import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from '../utils/proximity';
+import { useI18n } from '../i18n/useI18n';
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -55,6 +56,7 @@ interface Doctor {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
 export default function Sante() {
+  const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'hopitaux' | 'medecins'>('hopitaux');
   const [rawHospitals, setRawHospitals] = useState<Hospital[]>([]);
@@ -309,7 +311,7 @@ export default function Sante() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des données de santé...</p>
+          <p className="mt-4 text-gray-600">{t('sante.loading')}</p>
         </div>
       </div>
     );
@@ -322,21 +324,21 @@ export default function Sante() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">🏥 Santé</h1>
-              <p className="mt-2 text-gray-600">Hôpitaux, médecins et produits de santé</p>
+              <h1 className="text-3xl font-bold text-gray-900">🏥 {t('sante.title')}</h1>
+              <p className="mt-2 text-gray-600">{t('sante.subtitle')}</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={callEmergency}
                 className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
               >
-                🚨 Urgence: 117
+                {t('sante.emergency_btn')}
               </button>
               <button
                 onClick={() => navigate('/moi')}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
-                ← Retour
+                {t('btn.back_arrow')}
               </button>
             </div>
           </div>
@@ -348,8 +350,8 @@ export default function Sante() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
-              { id: 'hopitaux', label: 'Trouver un hôpital', icon: '🏥' },
-              { id: 'medecins', label: 'Trouver un médecin', icon: '👨‍⚕️' }
+              { id: 'hopitaux', label: t('sante.tab_find_hospital'), icon: '🏥' },
+              { id: 'medecins', label: t('sante.tab_find_doctor'), icon: '👨‍⚕️' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -377,8 +379,8 @@ export default function Sante() {
             <span className="text-base">{gpsActive ? "📡" : "📍"}</span>
             <span>
               {gpsActive
-                ? "Les établissements les plus proches de vous apparaissent en premier"
-                : `Résultats personnalisés — les établissements de ${userGeo.city || userGeo.country} apparaissent en premier`
+                ? t('sante.gps_nearby')
+                : `${t('sante.personalized_results_before')} ${userGeo.city || userGeo.country} ${t('sante.personalized_results_after')}`
               }
             </span>
           </div>
@@ -390,7 +392,7 @@ export default function Sante() {
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="Rechercher..."
+                placeholder={t('sante.search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -402,7 +404,7 @@ export default function Sante() {
                 onChange={(e) => setSelectedCity(e.target.value)}
                 className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Toutes les villes</option>
+                <option value="">{t('solidarite.all_cities')}</option>
                 <option value="Conakry">Conakry</option>
                 <option value="Kindia">Kindia</option>
                 <option value="Kankan">Kankan</option>
@@ -417,7 +419,7 @@ export default function Sante() {
                   onChange={(e) => setSelectedCity(e.target.value)}
                   className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Toutes les villes</option>
+                  <option value="">{t('solidarite.all_cities')}</option>
                   <option value="Conakry">Conakry</option>
                   <option value="Kindia">Kindia</option>
                   <option value="Kankan">Kankan</option>
@@ -429,12 +431,12 @@ export default function Sante() {
                   onChange={(e) => setSelectedSpecialty(e.target.value)}
                   className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Toutes les spécialités</option>
-                  <option value="Cardiologie">Cardiologie</option>
-                  <option value="Gynécologie">Gynécologie</option>
-                  <option value="Pédiatrie">Pédiatrie</option>
-                  <option value="Médecine générale">Médecine générale</option>
-                  <option value="Chirurgie">Chirurgie</option>
+                  <option value="">{t('sante.all_specialties')}</option>
+                  <option value="Cardiologie">{t('sante.specialty_cardiology')}</option>
+                  <option value="Gynécologie">{t('sante.specialty_gynecology')}</option>
+                  <option value="Pédiatrie">{t('sante.specialty_pediatrics')}</option>
+                  <option value="Médecine générale">{t('sante.specialty_general_medicine')}</option>
+                  <option value="Chirurgie">{t('sante.specialty_surgery')}</option>
                 </select>
               </>
             )}
@@ -447,7 +449,7 @@ export default function Sante() {
           <div className="space-y-6">
 
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">🏥 Hôpitaux Guinéens</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">🏥 {t('sante.hospitals_title')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {filteredHospitals.map((hospital) => {
                   const hprox = proximityLabel(hospital, userGeo);
@@ -483,7 +485,7 @@ export default function Sante() {
                       {hospital.emergencyPhone && (
                         <div className="flex items-center text-sm text-red-600">
                           <span className="mr-2">🚨</span>
-                          <span>Urgences: {hospital.emergencyPhone}</span>
+                          <span>{t('sante.emergency_label')} {hospital.emergencyPhone}</span>
                         </div>
                       )}
                       <div className="flex items-center text-sm text-gray-600">
@@ -493,7 +495,7 @@ export default function Sante() {
                     </div>
 
                     <div className="mb-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Services:</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">{t('sante.services_label')}</h4>
                       <div className="flex flex-wrap gap-1">
                         {(hospital.services || []).map((service, index) => (
                           <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
@@ -505,7 +507,7 @@ export default function Sante() {
 
                     <div className="flex space-x-2">
                       <a href={`tel:${hospital.phone}`} className="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
-                        Appeler
+                        {t('sante.call_btn')}
                       </a>
                       <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hospital.name + ', ' + hospital.address)}`}
@@ -513,7 +515,7 @@ export default function Sante() {
                         rel="noopener noreferrer"
                         className="flex-1 text-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
                       >
-                        Itinéraire
+                        {t('sante.route_btn')}
                       </a>
                     </div>
                   </div>
@@ -527,7 +529,7 @@ export default function Sante() {
         {activeTab === 'medecins' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">👨‍⚕️ Médecins Compétents</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">👨‍⚕️ {t('sante.doctors_title')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                 {filteredDoctors.map((doctor) => {
                   const dprox = proximityLabel(doctor, userGeo);
@@ -549,7 +551,7 @@ export default function Sante() {
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <span className="mr-2">⭐</span>
-                        <span>{doctor.ratings}/5 ({doctor.experience} ans d'expérience)</span>
+                        <span>{doctor.ratings}/5 ({doctor.experience} {t('sante.years_experience')})</span>
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <span className="mr-2">💰</span>
@@ -558,7 +560,7 @@ export default function Sante() {
                     </div>
 
                     <div className="mb-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Spécialités:</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">{t('sante.specialties_label')}</h4>
                       <div className="flex flex-wrap gap-1">
                         {doctor.specialties.map((specialty, index) => (
                           <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
@@ -569,7 +571,7 @@ export default function Sante() {
                     </div>
 
                     <div className="mb-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Qualifications:</h4>
+                      <h4 className="font-medium text-gray-900 mb-2">{t('sante.qualifications_label')}</h4>
                       <div className="space-y-1">
                         {doctor.qualifications.map((qualification, index) => (
                           <div key={index} className="text-sm text-gray-600">• {qualification}</div>
@@ -579,13 +581,13 @@ export default function Sante() {
 
                     <div className="flex space-x-2">
                       <a
-                        href={`sms:${doctor.phone}?body=${encodeURIComponent('Bonjour, je souhaite prendre rendez-vous.')}`}
+                        href={`sms:${doctor.phone}?body=${encodeURIComponent(t('sante.appointment_msg'))}`}
                         className="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
                       >
-                        Prendre RDV
+                        {t('sante.book_appointment_btn')}
                       </a>
                       <a href={`tel:${doctor.phone}`} className="flex-1 text-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors">
-                        Contacter
+                        {t('sante.contact_btn')}
                       </a>
                     </div>
                   </div>
@@ -599,7 +601,7 @@ export default function Sante() {
         {/* Section Professionnels de Santé (Cliniques & Hôpitaux approuvés par l'admin) */}
         <ProSection
           type="clinic"
-          title="Cliniques & Hôpitaux"
+          title={t('sante.clinics_hospitals_title')}
           icon="🏥"
           description=""
         />
