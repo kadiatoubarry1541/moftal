@@ -519,14 +519,11 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const [stories, setStories] = useState<PublishedStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSection, setSelectedSection] = useState('all');
-  const [selectedGeneration, setSelectedGeneration] = useState('all');
   const [stats, setStats] = useState<any>(null);
   const [currentUserNumeroH, setCurrentUserNumeroH] = useState<string | null>(null);
   const [testifyingId, setTestifyingId] = useState<number | null>(null);
   const [selectedStory, setSelectedStory] = useState<PublishedStory | null>(null);
   const [selectedHistorical, setSelectedHistorical] = useState<HistoricalEntry | null>(null);
-  const [jumpInput, setJumpInput] = useState('');
   const [highlightedGen, setHighlightedGen] = useState<number | null>(null);
   const [expandedGens, setExpandedGens] = useState<Set<number>>(new Set());
   const [expandedBookSections, setExpandedBookSections] = useState<Set<string>>(new Set());
@@ -535,15 +532,30 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
   const navigate = useNavigate();
 
   const sections = [
-    { id: 'all', title: 'Toutes les sections', icon: '📚' },
-    { id: 'naissance', title: 'Naissance et Enfance', icon: '👶' },
-    { id: 'jeunesse', title: 'Jeunesse et Apprentissage', icon: '🌱' },
-    { id: 'mariage', title: 'Union et Engagement', icon: '💍' },
-    { id: 'revelation', title: 'Réalisation et Mission', icon: '✨' },
-    { id: 'persecution', title: 'Épreuves et Résilience', icon: '🛡️' },
-    { id: 'unification', title: 'Réalisation et Unification', icon: '🏆' },
-    { id: 'heritage', title: 'Héritage et Transmission', icon: '📜' }
+    { id: 'naissance', title: t('recit.sec_naissance'), icon: '👶' },
+    { id: 'jeunesse', title: t('recit.sec_jeunesse'), icon: '🌱' },
+    { id: 'mariage', title: t('recit.sec_mariage'), icon: '💍' },
+    { id: 'revelation', title: t('recit.sec_revelation'), icon: '✨' },
+    { id: 'persecution', title: t('recit.sec_persecution'), icon: '🛡️' },
+    { id: 'unification', title: t('recit.sec_unification'), icon: '🏆' },
+    { id: 'heritage', title: t('recit.sec_heritage'), icon: '📜' }
   ];
+
+  // ── Recherche unifiée : un seul champ détecte une génération (ex. "12" ou "G12"),
+  // une section (ex. "mariage") ou, à défaut, un mot-clé libre ──
+  const parsedSearch = useMemo(() => {
+    const raw = searchTerm.trim();
+    if (!raw) return { generation: null as number | null, sectionId: null as string | null, text: '' };
+    const genMatch = raw.match(/^g?\s*(\d{1,2})$/i);
+    if (genMatch) {
+      const n = parseInt(genMatch[1], 10);
+      if (n >= 1 && n <= 96) return { generation: n, sectionId: null, text: '' };
+    }
+    const lower = raw.toLowerCase();
+    const matchedSection = sections.find(s => s.id === lower || s.id.includes(lower) || s.title.toLowerCase().includes(lower));
+    if (matchedSection) return { generation: null, sectionId: matchedSection.id, text: '' };
+    return { generation: null, sectionId: null, text: raw };
+  }, [searchTerm, sections]);
 
   const mediaSrc = (url: string) =>
     url.startsWith('data:') || url.startsWith('http')
@@ -562,15 +574,15 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
     }
     loadStories();
     loadStats();
-  }, [selectedSection, selectedGeneration, searchTerm]);
+  }, [parsedSearch.generation, parsedSearch.sectionId, parsedSearch.text]);
 
   const loadStories = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedSection !== 'all') params.append('sectionId', selectedSection);
-      if (selectedGeneration !== 'all') params.append('generation', selectedGeneration);
-      if (searchTerm) params.append('search', searchTerm);
+      if (parsedSearch.sectionId) params.append('sectionId', parsedSearch.sectionId);
+      if (parsedSearch.generation) params.append('generation', `G${parsedSearch.generation}`);
+      if (parsedSearch.text) params.append('search', parsedSearch.text);
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5002'}/api/user-stories/published?${params}`);
       if (res.ok) { const d = await res.json(); setStories(d.stories || []); }
     } catch {}
@@ -601,29 +613,33 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
     finally { setTestifyingId(null); }
   };
 
-  const handleJump = () => {
-    const n = parseInt(jumpInput, 10);
-    if (isNaN(n) || n < 1 || n > 95) return;
-    setHighlightedGen(n);
-    setSelectedGeneration('all');
-    setTimeout(() => {
-      genRefs.current[n]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => setHighlightedGen(null), 2500);
-    }, 100);
-  };
+  useEffect(() => {
+    if (parsedSearch.generation && parsedSearch.generation <= 95) {
+      setHighlightedGen(parsedSearch.generation);
+      const t1 = setTimeout(() => {
+        genRefs.current[parsedSearch.generation as number]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      const t2 = setTimeout(() => setHighlightedGen(null), 2500);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+    setHighlightedGen(null);
+  }, [parsedSearch.generation]);
 
   const filteredStories = stories.filter(story => {
-    if (!searchTerm) return true;
-    const s = searchTerm.toLowerCase();
+    if (!parsedSearch.text) return true;
+    const s = parsedSearch.text.toLowerCase();
     return story.content.toLowerCase().includes(s) || story.authorName.toLowerCase().includes(s) || story.sectionTitle.toLowerCase().includes(s);
   });
 
   const filteredHistorical = HISTORICAL_DATA.filter(e => {
-    if (selectedGeneration !== 'all' && `G${e.generation}` !== selectedGeneration) return false;
-    if (!searchTerm) return true;
-    const s = searchTerm.toLowerCase();
+    if (parsedSearch.generation && e.generation !== parsedSearch.generation) return false;
+    if (!parsedSearch.text) return true;
+    const s = parsedSearch.text.toLowerCase();
     return e.title.toLowerCase().includes(s) || e.content.toLowerCase().includes(s) || e.era.toLowerCase().includes(s);
   });
+
+  // Les générations les plus récentes en premier, Adam (G1) en dernier
+  const orderedHistorical = useMemo(() => [...filteredHistorical].reverse(), [filteredHistorical]);
 
   const SECTION_ORDER = ['naissance','jeunesse','mariage','revelation','persecution','unification','heritage'];
 
@@ -674,14 +690,10 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
       {/* ── Header ── */}
       <div className="bg-gradient-to-r from-indigo-700 via-blue-700 to-indigo-800 shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-8 flex-wrap gap-4">
+          <div className="flex justify-between items-center py-6 flex-wrap gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">{t('recit.page_title')}</h1>
-              <p className="text-blue-100 text-lg">{t('recit.subtitle')}</p>
-              <div className="mt-3 flex gap-5 text-blue-100 flex-wrap">
-                <span><strong className="text-2xl">95</strong> {t('recit.stat_generations')}</span>
-                {stats && <span><strong className="text-2xl">{stats.totalStories}</strong> {t('recit.stat_stories')}</span>}
-              </div>
+              <h1 className="text-4xl font-bold text-white mb-1">{t('recit.page_title')}</h1>
+              <p className="text-blue-100 text-base">{t('recit.subtitle')}</p>
             </div>
             <div className="flex gap-3 flex-wrap">
               <button onClick={() => navigate('/a-retenir')}
@@ -697,66 +709,31 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
         </div>
       </div>
 
-      {/* ── Note G96 ── */}
-      <div className="bg-amber-50 border-b border-amber-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <p className="text-amber-800 text-sm">
-            <strong>📜 {t('recit.note_g1_95_label')}</strong> {t('recit.note_g1_95_text')}&nbsp;
-            <strong>👤 {t('recit.note_g96_label')}</strong> {t('recit.note_g96_text_before')} <em>"{t('recit.write_my_story')}"</em> {t('recit.note_g96_text_after')}
-          </p>
-        </div>
-      </div>
-
-      {/* ── Filtres + Navigation ── */}
+      {/* ── Recherche unifiée (génération, section ou mot-clé) ── */}
       <div className="bg-white shadow-md border-b sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-
-            {/* Recherche */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">🔍 {t('recit.search_label')}</label>
-              <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                placeholder={t('recit.search_placeholder')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" />
-            </div>
-
-            {/* Génération */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">👥 {t('recit.generation_label')}</label>
-              <select value={selectedGeneration} onChange={e => setSelectedGeneration(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
-                <option value="all">{t('recit.all_generations')}</option>
-                {Array.from({ length: 95 }, (_, i) => i + 1).map(g => (
-                  <option key={g} value={`G${g}`}>{t('recit.generation_n')} {g}{g === 95 ? t('recit.gen_95_suffix') : ''}</option>
-                ))}
-                <option value="G96">{t('recit.generation_96_label')}</option>
-              </select>
-            </div>
-
-            {/* Section (pour les récits membres) */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">📖 {t('recit.section_label')}</label>
-              <select value={selectedSection} onChange={e => setSelectedSection(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
-                {sections.map(s => <option key={s.id} value={s.id}>{s.icon} {s.title}</option>)}
-              </select>
-            </div>
-
-            {/* Aller à la génération */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">⚡ {t('recit.jump_to_generation_label')}</label>
-              <div className="flex gap-2">
-                <input type="number" min={1} max={95} placeholder={t('recit.jump_placeholder')} value={jumpInput}
-                  onChange={e => setJumpInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleJump()}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 text-sm" />
-                <button onClick={handleJump}
-                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-semibold text-sm whitespace-nowrap">
-                  {t('recit.view_btn')}
-                </button>
-              </div>
-            </div>
+          <div className="relative max-w-xl">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">🔍 {t('recit.search_label')}</label>
+            <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              placeholder={t('recit.search_placeholder')}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm pr-9" />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} aria-label={t('recit.clear_search')}
+                className="absolute right-2 top-[30px] text-gray-400 hover:text-gray-700 text-lg leading-none">✕</button>
+            )}
           </div>
+          {(parsedSearch.generation || parsedSearch.sectionId) ? (
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              <span className="text-gray-500">{t('recit.filter_active')}</span>
+              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">
+                {parsedSearch.generation
+                  ? `${t('recit.generation_n')} ${parsedSearch.generation}`
+                  : sections.find(s => s.id === parsedSearch.sectionId)?.title}
+              </span>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-gray-400">{t('recit.search_hint')}</p>
+          )}
         </div>
       </div>
 
@@ -781,7 +758,7 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredHistorical.map(entry => (
+              {orderedHistorical.map(entry => (
                 <div
                   key={entry.generation}
                   ref={el => { genRefs.current[entry.generation] = el; }}
@@ -876,8 +853,8 @@ export default function HistoireHumanite({ estAbonne = true }: { estAbonne?: boo
             <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-indigo-100">
               <div className="text-5xl mb-3">✍️</div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">
-                {selectedGeneration !== 'all'
-                  ? `${t('recit.no_story_for_gen')} ${selectedGeneration}`
+                {parsedSearch.generation
+                  ? `${t('recit.no_story_for_gen')} G${parsedSearch.generation}`
                   : t('recit.no_story_found')}
               </h3>
               <p className="text-gray-500 mb-5 text-sm">{t('recit.be_first')}</p>
