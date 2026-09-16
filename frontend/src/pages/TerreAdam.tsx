@@ -13,6 +13,7 @@ import DeveloppementSection, { type DeveloppementSectionHandle } from '../compon
 import LivreQuartier, { type LivreQuartierHandle } from '../components/LivreQuartier';
 import ReglesLocalite, { type ReglesLocaliteHandle } from '../components/ReglesLocalite';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
+import { useI18n } from '../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 const MAX_VIDEO_SECONDS = 5;
@@ -63,40 +64,42 @@ interface CanalItem {
   description: string;
 }
 
-const CANAL_SECTIONS: { id: string; label: string; icon: string; canaux: CanalItem[] }[] = [
-  {
-    id: 'alerte',
-    label: 'ALERTES & INFOS',
-    icon: '📌',
-    canaux: [
-      { id: 'securite',    label: 'Urgences',       icon: '🚨', color: 'red',    description: 'Alertes et urgences du quartier' },
-      { id: 'annonce',     label: 'Annonces',        icon: '📢', color: 'orange', description: 'Annonces importantes à partager' },
-      { id: 'information', label: 'Informations',    icon: 'ℹ️', color: 'blue',   description: 'Informations générales du quartier' },
-    ]
-  },
-  {
-    id: 'famille',
-    label: 'VIE FAMILIALE',
-    icon: '👨‍👩‍👧',
-    canaux: [
-      { id: 'deces',     label: 'Décès / Condoléances', icon: '🕯️', color: 'stone',  description: 'Annonces de décès et condoléances' },
-      { id: 'mariage',   label: 'Mariages',              icon: '💒', color: 'pink',   description: 'Annonces et félicitations de mariage' },
-      { id: 'bapteme',   label: 'Baptêmes',              icon: '⛪', color: 'purple', description: 'Annonces de baptême' },
-      { id: 'naissance', label: 'Naissances',            icon: '👶', color: 'yellow', description: 'Annonces et vœux de naissance' },
-    ]
-  },
-  {
-    id: 'communaute',
-    label: 'VIE COMMUNAUTAIRE',
-    icon: '🤝',
-    canaux: [
-      { id: 'solidarite', label: 'Solidarité / Entraide', icon: '🤲', color: 'green',  description: 'Entraide et soutien communautaire' },
-      { id: 'fete',       label: 'Fêtes & Événements',    icon: '🎉', color: 'amber',  description: 'Célébrations et événements du quartier' },
-      { id: 'reunion',    label: 'Réunions',              icon: '👥', color: 'indigo', description: 'Réunions et assemblées de quartier' },
-      { id: 'rencontre',  label: 'Rencontres',            icon: '🤝', color: 'teal',   description: 'Rencontres et activités sociales' },
-    ]
-  }
-];
+function getCanalSections(t: (key: string) => string): { id: string; label: string; icon: string; canaux: CanalItem[] }[] {
+  return [
+    {
+      id: 'alerte',
+      label: t('terre_adam.canal.alerte_section'),
+      icon: '📌',
+      canaux: [
+        { id: 'securite',    label: t('terre_adam.canal.securite.label'),    icon: '🚨', color: 'red',    description: t('terre_adam.canal.securite.desc') },
+        { id: 'annonce',     label: t('terre_adam.canal.annonce.label'),     icon: '📢', color: 'orange', description: t('terre_adam.canal.annonce.desc') },
+        { id: 'information', label: t('terre_adam.canal.information.label'), icon: 'ℹ️', color: 'blue',   description: t('terre_adam.canal.information.desc') },
+      ]
+    },
+    {
+      id: 'famille',
+      label: t('terre_adam.canal.famille_section'),
+      icon: '👨‍👩‍👧',
+      canaux: [
+        { id: 'deces',     label: t('terre_adam.canal.deces.label'),     icon: '🕯️', color: 'stone',  description: t('terre_adam.canal.deces.desc') },
+        { id: 'mariage',   label: t('terre_adam.canal.mariage.label'),   icon: '💒', color: 'pink',   description: t('terre_adam.canal.mariage.desc') },
+        { id: 'bapteme',   label: t('terre_adam.canal.bapteme.label'),   icon: '⛪', color: 'purple', description: t('terre_adam.canal.bapteme.desc') },
+        { id: 'naissance', label: t('terre_adam.canal.naissance.label'), icon: '👶', color: 'yellow', description: t('terre_adam.canal.naissance.desc') },
+      ]
+    },
+    {
+      id: 'communaute',
+      label: t('terre_adam.canal.communaute_section'),
+      icon: '🤝',
+      canaux: [
+        { id: 'solidarite', label: t('terre_adam.canal.solidarite.label'), icon: '🤲', color: 'green',  description: t('terre_adam.canal.solidarite.desc') },
+        { id: 'fete',       label: t('terre_adam.canal.fete.label'),       icon: '🎉', color: 'amber',  description: t('terre_adam.canal.fete.desc') },
+        { id: 'reunion',    label: t('terre_adam.canal.reunion.label'),    icon: '👥', color: 'indigo', description: t('terre_adam.canal.reunion.desc') },
+        { id: 'rencontre',  label: t('terre_adam.canal.rencontre.label'), icon: '🤝', color: 'teal',   description: t('terre_adam.canal.rencontre.desc') },
+      ]
+    }
+  ];
+}
 
 function getCanalColors(color: string) {
   const map: Record<string, { bg: string; border: string; text: string; header: string; ring: string }> = {
@@ -132,6 +135,8 @@ function formatShortNumeroH(numeroH?: string | null): string | null {
 }
 
 export default function TerreAdam() {
+  const { t } = useI18n();
+  const CANAL_SECTIONS = getCanalSections(t);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'lieux' | 'sous-prefecture' | 'prefecture' | 'region' | 'pays' | 'continent' | 'mondial'>('lieux');
   type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3';
@@ -139,7 +144,7 @@ export default function TerreAdam() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
-  const [tabLabels, setTabLabels] = useState<string>('Quartier');
+  const [tabLabels, setTabLabels] = useState<string>(t('terre_adam.default_quartier'));
   
   // États pour le système de messagerie
   const [groups, setGroups] = useState<ResidenceGroup[]>([]);
@@ -228,29 +233,29 @@ export default function TerreAdam() {
     {
       scope: 'sous-prefecture',
       location: userData?.sousPrefectureCode || userData?.sousPrefecture || '',
-      label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Commune')
+      label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : t('terre_adam.default_commune'))
     },
     {
       scope: 'prefecture',
       location: userData?.prefectureCode || userData?.prefecture || '',
-      label: userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : 'Préfecture')
+      label: userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : t('terre_adam.default_prefecture'))
     },
     {
       scope: 'region',
       location: userData?.regionCode || userData?.region || userData?.regionOrigine || '',
-      label: userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'
+      label: userRegion?.name || userData?.region || userData?.regionOrigine || t('terre_adam.default_region')
     },
     {
       scope: 'pays',
       location: userData?.paysCode || effectiveCountry?.code || userData?.pays || '',
-      label: effectiveCountry?.name || userData?.pays || 'Pays'
+      label: effectiveCountry?.name || userData?.pays || t('terre_adam.default_pays')
     },
     {
       scope: 'continent',
       location: userData?.continentCode || effectiveContinent?.code || userData?.continent || '',
-      label: effectiveContinent?.name || userData?.continent || 'Continent'
+      label: effectiveContinent?.name || userData?.continent || t('terre_adam.default_continent')
     },
-    { scope: 'mondial', location: 'mondial', label: 'Mondial' },
+    { scope: 'mondial', location: 'mondial', label: t('terre_adam.default_mondial') },
   ].filter(l => l.location);
 
   /** Niveaux strictement au-dessus de `scope` dans la chaîne géographique. */
@@ -292,8 +297,8 @@ export default function TerreAdam() {
     // ✅ Dynamiquement renommer le label du quartier (code géo ou saisie libre)
     const quartierName = user.quartierCode
       ? (findLocationByCode(user.quartierCode)?.name || user.lieu1 || user.quartier)
-      : (user.lieu1 || user.quartier || 'Quartier');
-    setTabLabels(quartierName || 'Quartier');
+      : (user.lieu1 || user.quartier || t('terre_adam.default_quartier'));
+    setTabLabels(quartierName || t('terre_adam.default_quartier'));
 
     // ✅ Choisir automatiquement le bon onglet de résidence:
     // - si seul le 1er quartier est renseigné → Résidence 1
@@ -535,18 +540,18 @@ export default function TerreAdam() {
 
   // Catégories quartier : besoins du quartier (décès, mariage, baptême, etc.)
   const QUARTIER_CATEGORIES = [
-    { id: 'information', label: 'Information', icon: '📰' },
-    { id: 'rencontre', label: 'Rencontre', icon: '🤝' },
-    { id: 'deces', label: 'Décès', icon: '🕯️' },
-    { id: 'mariage', label: 'Mariage', icon: '💒' },
-    { id: 'bapteme', label: 'Baptême', icon: '⛪' },
-    { id: 'naissance', label: 'Naissance', icon: '👶' },
-    { id: 'solidarite', label: 'Solidarité / Entraide', icon: '🤲' },
-    { id: 'fete', label: 'Fête / Événement', icon: '🎉' },
-    { id: 'annonce', label: 'Annonce', icon: '📢' },
-    { id: 'opportunite', label: 'Opportunité', icon: '🌟' },
-    { id: 'securite', label: 'Sécurité / Urgence', icon: '🚨' },
-    { id: 'reunion', label: 'Réunion', icon: '👥' }
+    { id: 'information', label: t('terre_adam.qcat.information'), icon: '📰' },
+    { id: 'rencontre', label: t('terre_adam.qcat.rencontre'), icon: '🤝' },
+    { id: 'deces', label: t('terre_adam.qcat.deces'), icon: '🕯️' },
+    { id: 'mariage', label: t('terre_adam.qcat.mariage'), icon: '💒' },
+    { id: 'bapteme', label: t('terre_adam.qcat.bapteme'), icon: '⛪' },
+    { id: 'naissance', label: t('terre_adam.qcat.naissance'), icon: '👶' },
+    { id: 'solidarite', label: t('terre_adam.canal.solidarite.label'), icon: '🤲' },
+    { id: 'fete', label: t('terre_adam.qcat.fete'), icon: '🎉' },
+    { id: 'annonce', label: t('terre_adam.qcat.annonce'), icon: '📢' },
+    { id: 'opportunite', label: t('terre_adam.qcat.opportunite'), icon: '🌟' },
+    { id: 'securite', label: t('terre_adam.qcat.securite'), icon: '🚨' },
+    { id: 'reunion', label: t('terre_adam.qcat.reunion'), icon: '👥' }
   ] as const;
 
   const getCategoryLogo = (category: string) => {
@@ -556,7 +561,7 @@ export default function TerreAdam() {
 
   const getCategoryName = (category: string) => {
     const c = QUARTIER_CATEGORIES.find((x) => x.id === category);
-    return c ? c.label : 'Information';
+    return c ? c.label : t('terre_adam.qcat.information');
   };
 
   const sendMessage = async () => {
@@ -672,7 +677,7 @@ export default function TerreAdam() {
     try {
       const cibles = shareLevels.filter(l => shareSelected.has(`${l.scope}:${l.location}`));
       const [premiere, ...reste] = cibles;
-      const categoryLabel = QUARTIER_CATEGORIES.find(c => c.id === (shareMsg.category || 'information'))?.label || 'Information';
+      const categoryLabel = QUARTIER_CATEGORIES.find(c => c.id === (shareMsg.category || 'information'))?.label || t('terre_adam.qcat.information');
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('titre', `${categoryLabel} — ${selectedGroup?.title || selectedGroup?.name || ''}`);
@@ -750,7 +755,7 @@ export default function TerreAdam() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
+          <p className="mt-4 text-gray-600">{t('terre_adam.loading')}</p>
         </div>
       </div>
     );
@@ -765,29 +770,29 @@ export default function TerreAdam() {
           {
             id: 'sous-prefecture',
             icon: '🏛️',
-            label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Commune')
+            label: userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : t('terre_adam.default_commune'))
           },
           {
             id: 'prefecture',
             icon: '🏢',
-            label: userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : 'Préfecture')
+            label: userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : t('terre_adam.default_prefecture'))
           },
           {
             id: 'region',
             icon: getRegionIcon(userData?.regionCode, userRegion?.name || userData?.region || userData?.regionOrigine),
-            label: userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'
+            label: userRegion?.name || userData?.region || userData?.regionOrigine || t('terre_adam.default_region')
           },
           {
             id: 'pays',
             icon: effectiveCountry ? getCountryFlag(userData?.paysCode || effectiveCountry.code, effectiveCountry.name) : '🏳️',
-            label: effectiveCountry?.name || userData?.pays || 'Pays'
+            label: effectiveCountry?.name || userData?.pays || t('terre_adam.default_pays')
           },
           {
             id: 'continent',
             icon: effectiveContinent ? getContinentIcon(userData?.continentCode || effectiveContinent.code, effectiveContinent.name) : '🌐',
-            label: effectiveContinent?.name || userData?.continent || 'Continent'
+            label: effectiveContinent?.name || userData?.continent || t('terre_adam.default_continent')
           },
-          { id: 'mondial', icon: '🌎', label: 'Mondial' }
+          { id: 'mondial', icon: '🌎', label: t('terre_adam.default_mondial') }
         ];
         return (
           <header style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 40, borderBottom: '2px solid #1e293b', boxShadow: '0 2px 12px rgba(0,0,0,0.3)' }}>
@@ -797,12 +802,12 @@ export default function TerreAdam() {
                 <button
                   type="button"
                   onClick={() => navigate('/compte')}
-                  aria-label="Retour à l'accueil"
+                  aria-label={t('services.back_aria')}
                   style={{ background: 'none', color: 'white', border: 'none', padding: 0, cursor: 'pointer', fontSize: 34, fontWeight: 700, lineHeight: 1, opacity: 1 }}
                 >
                   ‹
                 </button>
-                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🌍 Terre ADAM</h1>
+                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 12, letterSpacing: '-0.2px', margin: 0, lineHeight: 1 }}>🌍 {t('terre_adam.title')}</h1>
               </div>
             </div>
 
@@ -962,7 +967,7 @@ export default function TerreAdam() {
                             {groups.length === 0 ? (
                               <>
                                 <span className="text-4xl mb-2">💬</span>
-                                <p className="text-sm text-gray-500">Aucun groupe</p>
+                                <p className="text-sm text-gray-500">{t('terre_adam.no_group')}</p>
                               </>
                             ) : (
                               <div className="w-7 h-7 border-2 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" />
@@ -986,7 +991,7 @@ export default function TerreAdam() {
                                       type="button"
                                       onClick={() => setShowQuartierMenu(true)}
                                       className="relative w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 overflow-hidden cursor-pointer"
-                                      title="Voir les infos du quartier"
+                                      title={t('terre_adam.view_group_info')}
                                     >
                                       {logoSrc ? (
                                         <img src={logoSrc} alt="Logo du quartier" className="w-full h-full object-cover" />
@@ -1116,7 +1121,7 @@ export default function TerreAdam() {
                                     <p className="text-sm font-medium text-gray-500">
                                       {feedFilter === 'all' ? 'Aucun message pour le moment.' : 'Aucun message dans cette catégorie.'}
                                     </p>
-                                    <p className="text-xs text-gray-400 mt-1 italic">Soyez le premier à publier !</p>
+                                    <p className="text-xs text-gray-400 mt-1 italic">{t('terre_adam.be_first_to_post')}</p>
                                   </div>
                                 );
                               }
@@ -1135,7 +1140,7 @@ export default function TerreAdam() {
                                       <div className={`${colors.header} px-4 py-2.5 flex items-center gap-3`}>
                                         <span className="text-3xl leading-none">{canalData?.icon || categoryData?.icon || 'ℹ️'}</span>
                                         <span className="text-white font-bold text-sm tracking-wide uppercase">
-                                          {canalData?.label || categoryData?.label || 'Information'}
+                                          {canalData?.label || categoryData?.label || t('terre_adam.qcat.information')}
                                         </span>
                                       </div>
                                       {/* Contenu */}
@@ -1160,7 +1165,7 @@ export default function TerreAdam() {
                                             <button
                                               onClick={() => openShare(msg)}
                                               className="text-[10px] text-gray-400 hover:text-emerald-600 font-semibold"
-                                              title="Partager vers un niveau au-dessus"
+                                              title={t('terre_adam.share_to_level')}
                                             >
                                               ↗️ Partager
                                             </button>
@@ -1231,7 +1236,7 @@ export default function TerreAdam() {
                                       type="button"
                                       onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
                                       className="w-7 h-7 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
-                                      title="Envoyer"
+                                      title={t('btn.send')}
                                     >
                                       ✓
                                     </button>
@@ -1247,7 +1252,7 @@ export default function TerreAdam() {
                                         <button
                                           type="button"
                                           onClick={() => setShowCategoryGrid(!showCategoryGrid)}
-                                          title="Choisir le type de publication"
+                                          title={t('terre_adam.choose_publish_type')}
                                           className={`absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-colors ${
                                             showCategoryGrid ? `${cl.bg}` : 'hover:bg-gray-200'
                                           }`}
@@ -1261,13 +1266,13 @@ export default function TerreAdam() {
                                       value={newMessage.content}
                                       onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
                                       onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); setShowCategoryGrid(false); } }}
-                                      placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || 'Information'}...`}
+                                      placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || t('terre_adam.qcat.information')}...`}
                                       className="w-full min-w-0 pl-12 pr-20 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
                                     />
                                     {/* Pièce jointe (photo ou vidéo) — intégrée dans le champ, type détecté automatiquement */}
                                     <label
                                       className="absolute right-10 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-lg leading-none text-gray-500 hover:text-gray-700 cursor-pointer"
-                                      title="Envoyer une photo ou une vidéo"
+                                      title={t('heritage.send_photo_video')}
                                     >
                                       📷
                                       <input
@@ -1303,7 +1308,7 @@ export default function TerreAdam() {
                                       type="button"
                                       onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
                                       disabled={!newMessage.content.trim()}
-                                      title="Envoyer"
+                                      title={t('btn.send')}
                                       className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold transition-colors"
                                     >
                                       ✓
@@ -1317,7 +1322,7 @@ export default function TerreAdam() {
                                     type="button"
                                     onClick={() => setNewMessage({...newMessage, messageType: 'audio', mediaFile: null})}
                                     className="flex-shrink-0 w-11 h-11 rounded-full overflow-hidden bg-gray-200 hover:bg-emerald-100 text-gray-600 hover:text-emerald-700 flex items-center justify-center text-xl leading-none transition-colors"
-                                    title="Envoyer un message vocal"
+                                    title={t('terre_adam.send_voice')}
                                   >
                                     🎤
                                   </button>
@@ -1327,7 +1332,7 @@ export default function TerreAdam() {
                           ) : (
                             <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex-shrink-0 text-center">
                               <p className="text-xs text-gray-500">
-                                Seuls les <strong>journalistes approuvés</strong> peuvent publier ici.
+                                Seuls les <strong>{t('terre_adam.approved_journalists')}</strong> peuvent publier ici.
                               </p>
                             </div>
                           )}
@@ -1340,7 +1345,7 @@ export default function TerreAdam() {
                 </div>
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 sm:p-3 md:p-4 rounded overflow-hidden">
-                  <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 font-bold break-words">⚠️ Aucun lieu de résidence enregistré</p>
+                  <p className="text-[10px] sm:text-xs md:text-sm text-yellow-800 font-bold break-words">{t('terre_adam.no_lieu_residence')}</p>
                 </div>
               )}
             </div>
@@ -1349,7 +1354,7 @@ export default function TerreAdam() {
 
         {/* 2. Commune (sous-préfecture) */}
         {activeTab === 'sous-prefecture' && (() => {
-          const name = userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : 'Commune');
+          const name = userSousPrefecture?.name || userData?.sousPrefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level3.label : t('terre_adam.default_commune'));
           const loc = userData?.sousPrefectureCode || userData?.sousPrefecture || name;
           return (
             <div className="space-y-3">
@@ -1358,7 +1363,7 @@ export default function TerreAdam() {
                   <DeveloppementGouvernemental scope="sous-prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('sous-prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                    <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune commune enregistrée</p>
+                    <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_commune')}</p>
                   </div>
                 )}
               </div>
@@ -1368,7 +1373,7 @@ export default function TerreAdam() {
 
         {/* 3. Préfecture */}
         {activeTab === 'prefecture' && (() => {
-          const name = userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : 'Préfecture');
+          const name = userPrefecture?.name || userData?.prefecture || (userData?.pays ? getCountryGeoLabels(userData.pays).level2.label : t('terre_adam.default_prefecture'));
           const loc = userData?.prefectureCode || userData?.prefecture || name;
           return (
             <div className="space-y-3">
@@ -1377,7 +1382,7 @@ export default function TerreAdam() {
                   <DeveloppementGouvernemental scope="prefecture" location={loc} locationName={name} isJournalist={isJournalist} isAdmin={isAdmin} higherLevels={higherLevelsFrom('prefecture')} />
                 ) : (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                    <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune préfecture enregistrée</p>
+                    <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_prefecture')}</p>
                   </div>
                 )}
               </div>
@@ -1393,14 +1398,14 @@ export default function TerreAdam() {
                 <DeveloppementGouvernemental
                   scope="region"
                   location={userData?.regionCode || userData?.region || userData?.regionOrigine || 'region'}
-                  locationName={userRegion?.name || userData?.region || userData?.regionOrigine || 'Région'}
+                  locationName={userRegion?.name || userData?.region || userData?.regionOrigine || t('terre_adam.default_region')}
                   isJournalist={isJournalist}
                   isAdmin={isAdmin}
                   higherLevels={higherLevelsFrom('region')}
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                  <p className="text-xs text-yellow-800 font-bold">⚠️ Aucune région enregistrée</p>
+                  <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_region')}</p>
                 </div>
               )}
             </div>
@@ -1415,14 +1420,14 @@ export default function TerreAdam() {
                 <DeveloppementGouvernemental
                   scope="pays"
                   location={userData?.paysCode || effectiveCountry?.code || userData?.pays || 'pays'}
-                  locationName={effectiveCountry?.name || userData?.pays || 'Pays'}
+                  locationName={effectiveCountry?.name || userData?.pays || t('terre_adam.default_pays')}
                   isJournalist={isJournalist}
                   isAdmin={isAdmin}
                   higherLevels={higherLevelsFrom('pays')}
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                  <p className="text-xs text-yellow-800 font-bold">⚠️ Aucun pays enregistré</p>
+                  <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_pays')}</p>
                 </div>
               )}
             </div>
@@ -1437,14 +1442,14 @@ export default function TerreAdam() {
                 <DeveloppementGouvernemental
                   scope="continent"
                   location={userData?.continentCode || effectiveContinent?.code || userData?.continent || 'continent'}
-                  locationName={effectiveContinent?.name || userData?.continent || 'Continent'}
+                  locationName={effectiveContinent?.name || userData?.continent || t('terre_adam.default_continent')}
                   isJournalist={isJournalist}
                   isAdmin={isAdmin}
                   higherLevels={higherLevelsFrom('continent')}
                 />
               ) : (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                  <p className="text-xs text-yellow-800 font-bold">⚠️ Aucun continent enregistré</p>
+                  <p className="text-xs text-yellow-800 font-bold">{t('terre_adam.no_continent')}</p>
                 </div>
               )}
             </div>
@@ -1472,7 +1477,7 @@ export default function TerreAdam() {
         return (
           <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col">
             <div className="bg-gray-800 text-white px-4 py-3 flex items-center gap-3 flex-shrink-0">
-              <button onClick={() => setShowQuartierMenu(false)} aria-label="Retour" className="text-3xl leading-none">‹</button>
+              <button onClick={() => setShowQuartierMenu(false)} aria-label={t('btn.back')} className="text-3xl leading-none">‹</button>
               <h2 className="font-bold text-base truncate">{selectedGroup.title || selectedGroup.name}</h2>
             </div>
             <div className="flex-1 overflow-y-auto p-5 flex flex-col items-center gap-5">
@@ -1504,7 +1509,7 @@ export default function TerreAdam() {
                   onClick={() => { setShowQuartierMenu(false); setShowMembersList(true); }}
                   className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
                 >
-                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">👥 Liste des membres</span>
+                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">{t('terre_adam.members_list')}</span>
                   <span className="text-gray-400">›</span>
                 </button>
                 {canEditLogo && (
@@ -1513,7 +1518,7 @@ export default function TerreAdam() {
                     disabled={uploadingLogo}
                     className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200 disabled:opacity-50"
                   >
-                    <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">🖼️ Photo de profil du quartier</span>
+                    <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">{t('terre_adam.group_photo')}</span>
                     <span className="text-gray-400">›</span>
                   </button>
                 )}
@@ -1521,14 +1526,14 @@ export default function TerreAdam() {
                   onClick={() => { setShowQuartierMenu(false); quartierDevRef.current?.openCaisse(); }}
                   className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-green-700 to-emerald-600 rounded-xl shadow"
                 >
-                  <span className="flex items-center gap-3 font-bold text-white text-sm">💰 Caisse</span>
+                  <span className="flex items-center gap-3 font-bold text-white text-sm">{t('terre_adam.caisse')}</span>
                   <span className="text-white/80">›</span>
                 </button>
                 <button
                   onClick={() => { setShowQuartierMenu(false); livreQuartierRef.current?.open(); }}
                   className="w-full flex items-center justify-between gap-3 p-4 bg-gradient-to-r from-amber-700 to-amber-600 rounded-xl shadow"
                 >
-                  <span className="flex items-center gap-3 font-bold text-white text-sm">📚 Livre</span>
+                  <span className="flex items-center gap-3 font-bold text-white text-sm">{t('terre_adam.livre')}</span>
                   <span className="text-white/80">›</span>
                 </button>
 
@@ -1536,7 +1541,7 @@ export default function TerreAdam() {
                   onClick={() => { setShowQuartierMenu(false); reglesQuartierRef.current?.open(); }}
                   className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
                 >
-                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">📜 Règles du quartier</span>
+                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">{t('terre_adam.rules')}</span>
                   <span className="text-gray-400">›</span>
                 </button>
               </div>
@@ -1555,22 +1560,22 @@ export default function TerreAdam() {
         />
       )}
 
-      <ReglesLocalite ref={reglesQuartierRef} title="Règles du quartier" />
+      <ReglesLocalite ref={reglesQuartierRef} title={t('terre_adam.rules_title')} />
 
       {/* Modal — Partager un message vers un niveau au-dessus */}
       {shareMsg && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShareMsg(null)}>
           <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="bg-emerald-700 px-4 py-3 flex items-center justify-between">
-              <h2 className="text-white font-bold text-base">↗️ Partager</h2>
+              <h2 className="text-white font-bold text-base">{t('terre_adam.share')}</h2>
               <button onClick={() => setShareMsg(null)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
             </div>
             <div className="p-4 space-y-3">
               <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-2.5 line-clamp-3">{shareMsg.content}</p>
               {shareChecking ? (
-                <div className="text-center text-sm text-gray-400 py-4">Vérification des droits...</div>
+                <div className="text-center text-sm text-gray-400 py-4">{t('terre_adam.verifying_rights')}</div>
               ) : shareLevels.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">Tu n'as le droit de publier à aucun niveau au-dessus pour l'instant.</p>
+                <p className="text-sm text-gray-400 text-center py-4">{t('terre_adam.no_publish_rights')}</p>
               ) : (
                 <div className="space-y-1.5">
                   {shareLevels.map(lvl => {
@@ -1607,7 +1612,7 @@ export default function TerreAdam() {
           <div className="bg-white rounded-2xl w-full max-w-sm max-h-[80vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="bg-emerald-700 px-4 py-3 flex items-center justify-between flex-shrink-0">
               <div>
-                <h2 className="text-white font-bold text-base">👥 Membres du quartier</h2>
+                <h2 className="text-white font-bold text-base">{t('terre_adam.group_members')}</h2>
                 <p className="text-emerald-200 text-xs mt-0.5">{selectedGroup.members?.length ?? 0} personne{(selectedGroup.members?.length ?? 0) > 1 ? 's' : ''}</p>
               </div>
               <button onClick={() => setShowMembersList(false)} className="text-white text-2xl font-bold leading-none">×</button>
@@ -1630,7 +1635,7 @@ export default function TerreAdam() {
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-white text-base truncate">{prenom} {nomFamille}</p>
                           {member.numeroH && (
-                            <p className="text-emerald-200 text-xs font-mono mt-0.5">NuméroH : {String(member.numeroH).split(' ')[0]}</p>
+                            <p className="text-emerald-200 text-xs font-mono mt-0.5">{t('terre_adam.numeroh_prefix')} {String(member.numeroH).split(' ')[0]}</p>
                           )}
                         </div>
                       </div>
@@ -1638,7 +1643,7 @@ export default function TerreAdam() {
                   );
                 })
               ) : (
-                <p className="text-center text-gray-400 text-sm py-8">Aucun membre trouvé</p>
+                <p className="text-center text-gray-400 text-sm py-8">{t('terre_adam.no_member_found')}</p>
               )}
             </div>
           </div>
