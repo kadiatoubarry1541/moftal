@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
@@ -78,7 +78,11 @@ interface MesAmoursStory {
   publishedAt: string;
 }
 
-export default function MesAmours({ embedded = false }: { embedded?: boolean } = {}) {
+export interface MesAmoursHandle {
+  openAddFriend: () => void;
+}
+
+const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function MesAmours({ embedded = false }, ref) {
   const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -726,6 +730,8 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
     setShowAddFriend(true);
   };
 
+  useImperativeHandle(ref, () => ({ openAddFriend: handleAddFriend }), []);
+
   const submitAddFriend = async () => {
     if (!addFriendForm.numeroH) return;
 
@@ -880,12 +886,15 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
           </div>
         </div>
       )}
-      {/* Header */}
+      {/* Header — en mode intégré, les boutons Inspir/Rechercher sont remontés
+          dans l'entête sticky de Famille.tsx (voir amitieRef) pour éviter une
+          deuxième barre d'entête redondante. */}
+      {!embedded && (
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center gap-2">
-              {!embedded && <h1 className="text-xl sm:text-2xl font-bold text-gray-900">💕 Amitié</h1>}
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">💕 Amitié</h1>
               <Link to="/famille/inspir" className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-medium rounded-lg transition-colors border border-yellow-300">
                 🤝 Inspir
               </Link>
@@ -901,6 +910,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
           </div>
         </div>
       </div>
+      )}
 
       {/* Stories */}
       <div className="bg-white">
@@ -1793,5 +1803,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
       )}
     </div>
   );
-}
+});
+
+export default MesAmours;
 

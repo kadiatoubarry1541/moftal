@@ -932,12 +932,7 @@ const enhancedUser: UserData = useMemo(() => {
   }, [sharedItems])
 
   return (
-    <div className="max-w-6xl mx-auto px-4 pb-6">
-
-      {/* En-tête */}
-      <div className="flex items-center pt-2 pb-1">
-        <h1 className="text-2xl font-bold text-gray-900">{t('famille.menu.heritage')}</h1>
-      </div>
+    <div className="max-w-6xl mx-auto px-4 pb-6 pt-2">
 
       {/* Navigation — une seule ligne compacte, 4 boutons. Galerie et
           Problèmes ont été déplacés dans l'onglet Arbre lui-même. */}
