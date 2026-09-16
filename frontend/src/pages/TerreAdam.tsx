@@ -12,6 +12,7 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
 import LivreQuartier, { type LivreQuartierHandle } from '../components/LivreQuartier';
 import ReglesLocalite, { type ReglesLocaliteHandle } from '../components/ReglesLocalite';
+import ResidenceProofs, { type ResidenceProofsHandle } from '../components/ResidenceProofs';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 import { useI18n } from '../i18n/useI18n';
 
@@ -181,6 +182,7 @@ export default function TerreAdam() {
   const quartierDevRef = useRef<DeveloppementSectionHandle>(null);
   const livreQuartierRef = useRef<LivreQuartierHandle>(null);
   const reglesQuartierRef = useRef<ReglesLocaliteHandle>(null);
+  const residenceProofsRef = useRef<ResidenceProofsHandle>(null);
 
   // Partage d'un message du chat vers un niveau supérieur (sous-préfecture,
   // préfecture...), comme sur WhatsApp — sans avoir à retaper l'information.
@@ -1536,6 +1538,13 @@ export default function TerreAdam() {
                   <span className="flex items-center gap-3 font-bold text-white text-sm">{t('terre_adam.livre')}</span>
                   <span className="text-white/80">›</span>
                 </button>
+                <button
+                  onClick={() => { setShowQuartierMenu(false); residenceProofsRef.current?.openMine(); }}
+                  className="w-full flex items-center justify-between gap-3 p-4 bg-white rounded-xl shadow border border-gray-200"
+                >
+                  <span className="flex items-center gap-3 font-bold text-gray-800 text-sm">📄 {t('terre_adam.my_residence_proof')}</span>
+                  <span className="text-gray-400">›</span>
+                </button>
 
                 <button
                   onClick={() => { setShowQuartierMenu(false); reglesQuartierRef.current?.open(); }}
@@ -1557,6 +1566,14 @@ export default function TerreAdam() {
           location={selectedGroup.location || ''}
           locationName={selectedGroup.title || selectedGroup.name || ''}
           canPublish={isJournalist || isAdmin}
+        />
+      )}
+
+      {selectedGroup && (
+        <ResidenceProofs
+          ref={residenceProofsRef}
+          groupId={selectedGroup.id}
+          myNumeroH={userData?.numeroH || ''}
         />
       )}
 
@@ -1626,6 +1643,7 @@ export default function TerreAdam() {
                   const nomFamille = member.nomFamille as string | undefined;
                   const photo = member.photo as string | undefined;
                   const initiale = (prenom || '?').charAt(0).toUpperCase();
+                  const canViewMemberProofs = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
                   return (
                     <div key={index} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                       <div className="bg-emerald-600 px-4 py-3 flex items-center gap-3">
@@ -1638,6 +1656,14 @@ export default function TerreAdam() {
                             <p className="text-emerald-200 text-xs font-mono mt-0.5">{t('terre_adam.numeroh_prefix')} {String(member.numeroH).split(' ')[0]}</p>
                           )}
                         </div>
+                        {canViewMemberProofs && member.numeroH && (
+                          <button
+                            onClick={() => residenceProofsRef.current?.openMember({ numeroH: member.numeroH, prenom, nomFamille })}
+                            className="flex-shrink-0 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg"
+                          >
+                            📄 {t('terre_adam.view_proofs_btn')}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

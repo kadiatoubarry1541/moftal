@@ -79,6 +79,7 @@ import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import quartierFundRoutes from './routes/quartierFund.js';
 import quartierDocumentsRoutes from './routes/quartierDocuments.js';
+import residenceProofsRoutes from './routes/residenceProofs.js';
 import locationChildrenRoutes from './routes/locationChildren.js';
 import withdrawalRequestsRoutes from './routes/withdrawalRequests.js';
 import djomyPaymentRoutes from './routes/djomyPayment.js';
@@ -696,6 +697,24 @@ async function initAllTables() {
         );`,
       indexes: [
         `CREATE INDEX IF NOT EXISTS idx_qdoc_scope_loc ON "quartier_documents" ("scope", "location");`
+      ],
+      alters: []
+    },
+    {
+      name: 'residence_proofs',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "residence_proofs" (
+          "id"          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "group_id"    UUID         NOT NULL,
+          "numero_h"    VARCHAR(255) NOT NULL,
+          "file_url"    TEXT         NOT NULL,
+          "file_name"   VARCHAR(255),
+          "created_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_rproof_group  ON "residence_proofs" ("group_id");`,
+        `CREATE INDEX IF NOT EXISTS idx_rproof_numero ON "residence_proofs" ("numero_h");`
       ],
       alters: []
     },
@@ -2740,6 +2759,7 @@ app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);
 app.use('/api/quartier-fund', quartierFundRoutes);
 app.use('/api/quartier-documents', quartierDocumentsRoutes);
+app.use('/api/residence-proofs', residenceProofsRoutes);
 app.use('/api/location-children', locationChildrenRoutes);
 app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);
 app.use('/api/djomy', djomyPaymentRoutes);
