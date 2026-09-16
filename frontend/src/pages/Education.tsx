@@ -4,6 +4,7 @@ import DefiEducatifContent from '../components/DefiEducatifContent';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
 import { sortByProximity, sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
+import { useI18n } from '../i18n/useI18n';
 
 interface UserData {
   numeroH: string;
@@ -157,6 +158,7 @@ interface School {
 }
 
 export default function Education() {
+  const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'formation-scientifique' | 'mes-cours' | 'defi-educatif'>('formation-scientifique');
@@ -994,7 +996,7 @@ export default function Education() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement des données éducatives...</p>
+          <p className="mt-4 text-gray-600">{t('education.loading')}</p>
         </div>
       </div>
     );
@@ -1007,21 +1009,21 @@ export default function Education() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">🎓 Éducation</h1>
-              <p className="mt-2 text-gray-600">Formations, professeurs et cours</p>
+              <h1 className="text-3xl font-bold text-gray-900">🎓 {t('education.title')}</h1>
+              <p className="mt-2 text-gray-600">{t('education.subtitle')}</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => navigate('/famille/inspir')}
                 className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-2"
               >
-                <span>💡</span> Inspire
+                <span>💡</span> {t('education.inspire_btn')}
               </button>
               <button
                 onClick={() => navigate('/moi')}
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
-                ← Retour
+                {t('btn.back_arrow')}
               </button>
             </div>
           </div>
@@ -1033,10 +1035,10 @@ export default function Education() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
-              { id: 'inscription-suivi', label: 'Inscription & suivi', icon: '👥' },
-              { id: 'formation-scientifique', label: 'Formation scientifique', icon: '📚' },
-              { id: 'mes-cours', label: 'Mes Cours', icon: '🎯' },
-              { id: 'defi-educatif', label: 'Défi éducatif', icon: '🏆' }
+              { id: 'inscription-suivi', label: t('education.tab_inscription_suivi'), icon: '👥' },
+              { id: 'formation-scientifique', label: t('education.tab_formation_scientifique'), icon: '📚' },
+              { id: 'mes-cours', label: t('education.tab_mes_cours'), icon: '🎯' },
+              { id: 'defi-educatif', label: t('education.tab_defi_educatif'), icon: '🏆' }
             ].map((tab) => (
             <button
               key={tab.id}
@@ -1070,29 +1072,29 @@ export default function Education() {
             <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="text-4xl">🚀</div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Vous souhaitez vous inscrire ?</h2>
-                <p className="text-gray-600 text-sm">Les inscriptions (professeur, apprenant, école) se font depuis votre profil. Cliquez sur <strong>Mon Profil &gt; Actions</strong>.</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">{t('education.want_to_register_title')}</h2>
+                <p className="text-gray-600 text-sm">{t('education.want_to_register_desc')} <strong>{t('education.mon_profil_actions')}</strong>.</p>
               </div>
               <button
                 onClick={() => navigate('/moi')}
                 className="flex-shrink-0 px-5 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-colors shadow-md"
               >
-                Aller dans Mon Profil
+                {t('education.go_to_profile_btn')}
               </button>
             </div>
 
             {/* Statut professeur si déjà inscrit */}
             {myProfessorProfile && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">🎓 Mon statut professeur</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-3">🎓 {t('education.my_professor_status')}</h3>
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800 font-medium">Inscrit comme professeur / guide</p>
-                  <p className="text-gray-700 text-sm mt-1">Matière : <strong>{myProfessorProfile.specialty}</strong>{myProfessorProfile.bio ? ` • ${myProfessorProfile.bio}` : ''}</p>
+                  <p className="text-green-800 font-medium">{t('education.registered_as_professor')}</p>
+                  <p className="text-gray-700 text-sm mt-1">{t('education.subject_label')} <strong>{myProfessorProfile.specialty}</strong>{myProfessorProfile.bio ? ` • ${myProfessorProfile.bio}` : ''}</p>
                   {!myProfessorProfile.isActive && (
-                    <p className="text-amber-700 text-sm mt-2">⏳ En attente de validation par l&apos;administrateur.</p>
+                    <p className="text-amber-700 text-sm mt-2">{t('education.pending_validation')}</p>
                   )}
                   {myProfessorProfile.isActive && (
-                    <p className="text-green-700 text-sm mt-2">✅ Compte validé — vous êtes visible dans la liste des professeurs.</p>
+                    <p className="text-green-700 text-sm mt-2">{t('education.account_validated')}</p>
                   )}
                 </div>
               </div>
@@ -1100,41 +1102,41 @@ export default function Education() {
 
             {/* Suivi des apprenants */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-3">👨‍👩‍👧 Suivi des apprenants</h3>
-              <p className="text-gray-700 mb-4">En tant que parent, liez les apprenants à votre compte pour suivre leur progression (formations, cours).</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">👨‍👩‍👧 {t('education.student_tracking_title')}</h3>
+              <p className="text-gray-700 mb-4">{t('education.student_tracking_desc')}</p>
               {userData?.numeroH && (
-                <p className="text-sm text-gray-600 mb-3">Votre NumeroH : <strong className="text-blue-600">{userData.numeroH}</strong></p>
+                <p className="text-sm text-gray-600 mb-3">{t('education.your_numeroh')} <strong className="text-blue-600">{userData.numeroH}</strong></p>
               )}
               <form onSubmit={handleLinkChildByNumeroH} className="flex flex-wrap items-end gap-3 mb-4 max-w-xl">
                 <div className="flex-1 min-w-[200px]">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">NumeroH de l&apos;apprenant</label>
-                  <input type="text" value={linkChildNumeroH} onChange={(e) => setLinkChildNumeroH(e.target.value)} placeholder="Ex : G0C0P0R0E0F0 0" className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.student_numeroh_label')}</label>
+                  <input type="text" value={linkChildNumeroH} onChange={(e) => setLinkChildNumeroH(e.target.value)} placeholder={t('education.student_numeroh_placeholder')} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
                 </div>
                 <button type="submit" disabled={linkChildLoading} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50">
-                  {linkChildLoading ? 'Envoi...' : 'Lier cet apprenant'}
+                  {linkChildLoading ? t('education.sending') : t('education.link_student_btn')}
                 </button>
               </form>
               {linkChildMessage && (
                 <p className={`text-sm mb-4 ${linkChildMessage.startsWith('Demande') ? 'text-green-600' : 'text-red-600'}`}>{linkChildMessage}</p>
               )}
               {childrenProgress.length === 0 ? (
-                <p className="text-gray-500 italic">Aucun apprenant lié. Saisissez le NumeroH ci-dessus pour commencer le suivi.</p>
+                <p className="text-gray-500 italic">{t('education.no_linked_student')}</p>
               ) : (
                 <div className="space-y-4">
                   {childrenProgress.map((child) => (
                     <div key={child.childNumeroH} className="bg-amber-50 rounded-lg border border-amber-200 p-4">
-                      <h4 className="font-bold text-gray-900 mb-1">👤 Apprenant</h4>
+                      <h4 className="font-bold text-gray-900 mb-1">👤 {t('education.student_label')}</h4>
                       <p className="text-sm text-gray-500 mb-2">{child.childNumeroH}</p>
                       {child.formations.length === 0 ? (
-                        <p className="text-gray-500 text-sm">Aucune formation inscrite pour le moment.</p>
+                        <p className="text-gray-500 text-sm">{t('education.no_formation_registered')}</p>
                       ) : (
                         <ul className="space-y-2">
                           {child.formations.map((f) => (
                             <li key={f.id} className="flex flex-wrap justify-between items-center text-sm border-b border-amber-100 pb-2 gap-2">
-                              <span className="font-medium">{f.formationTitle || 'Formation'}</span>
+                              <span className="font-medium">{f.formationTitle || t('education.formation_fallback')}</span>
                               <span className="text-gray-500">{f.category} • {f.level}</span>
                               <span className={`px-2 py-0.5 rounded text-xs font-medium ${f.status === 'approved' ? 'bg-green-100 text-green-800' : f.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
-                                {f.status === 'approved' ? 'Approuvé' : f.status === 'pending' ? 'En attente' : f.status}
+                                {f.status === 'approved' ? t('education.status_approved') : f.status === 'pending' ? t('education.status_pending') : f.status}
                               </span>
                               <span className="text-indigo-600 font-semibold">{f.progress}%</span>
                             </li>
@@ -1151,14 +1153,14 @@ export default function Education() {
             <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-200 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="text-4xl">🏫</div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Écoles & Professeurs</h3>
-                <p className="text-gray-600 text-sm">Consultez la liste de toutes les écoles partenaires et des professeurs disponibles.</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">{t('education.schools_professors_title')}</h3>
+                <p className="text-gray-600 text-sm">{t('education.schools_professors_desc')}</p>
               </div>
               <button
                 onClick={() => navigate('/ecoles')}
                 className="flex-shrink-0 px-5 py-3 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors shadow-md"
               >
-                Voir les écoles
+                {t('education.see_schools_btn')}
               </button>
             </div>
           </div>
@@ -1175,10 +1177,10 @@ export default function Education() {
                   </div>
                   <div>
                     <h2 className="text-4xl font-bold text-gray-900 mb-2">
-                      Assistant IA
+                      {t('education.ai_assistant_title')}
                     </h2>
                     <p className="text-lg text-gray-600">
-                      Capable de vous assister en <strong>Français</strong>, <strong>Mathématiques</strong> et <strong>Biologie</strong>.
+                      {t('education.ai_assistant_desc')}
                     </p>
                   </div>
                   <div className="ml-auto">
@@ -1186,7 +1188,7 @@ export default function Education() {
                       onClick={() => navigate('/professeur-ia')}
                       className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white py-3 px-6 rounded-lg font-bold text-lg transition-all shadow-lg"
                     >
-                      Commencer
+                      {t('education.ai_start_btn')}
                     </button>
                   </div>
                 </div>
@@ -1199,10 +1201,10 @@ export default function Education() {
                 <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-2xl">
                   📚
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900">Formations Disponibles</h2>
+                <h2 className="text-3xl font-bold text-gray-900">{t('education.available_formations_title')}</h2>
               </div>
             {formations.length === 0 ? (
-              <p className="text-gray-500 italic text-center py-4">Aucune formation disponible pour le moment. Les enseignants peuvent en proposer via l&apos;onglet Publier.</p>
+              <p className="text-gray-500 italic text-center py-4">{t('education.no_formation_available')}</p>
             ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {formations.map((formation) => (
@@ -1211,19 +1213,19 @@ export default function Education() {
                     <p className="text-gray-600 mb-4">{formation.description}</p>
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Catégorie:</span>
+                        <span className="text-sm text-gray-500">{t('education.category_label')}</span>
                         <span className="text-sm font-medium">{formation.category}</span>
                     </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Durée:</span>
-                        <span className="text-sm font-medium">{formation.duration} mois</span>
+                        <span className="text-sm text-gray-500">{t('education.duration_label')}</span>
+                        <span className="text-sm font-medium">{formation.duration} {t('education.duration_months')}</span>
                     </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Niveau:</span>
+                        <span className="text-sm text-gray-500">{t('education.level_label')}</span>
                         <span className="text-sm font-medium">{formation.level}</span>
                   </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Prix:</span>
+                        <span className="text-sm text-gray-500">{t('education.price_label')}</span>
                         <span className="text-sm font-medium">{formation.price.toLocaleString()} FG</span>
                   </div>
                     </div>
@@ -1231,7 +1233,7 @@ export default function Education() {
                       onClick={() => handleFormationRegistration(formation)}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
                     >
-                      S'inscrire
+                      {t('education.register_btn')}
                     </button>
                   </div>
                 ))}
@@ -1246,7 +1248,7 @@ export default function Education() {
                   <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-2xl">
                     ✅
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Mes Inscriptions</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{t('education.my_registrations_title')}</h3>
                 </div>
                 <div className="space-y-4">
                   {myRegistrations.map((registration) => (
@@ -1254,15 +1256,15 @@ export default function Education() {
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-semibold text-gray-900">{registration.formationTitle}</h4>
-                          <p className="text-sm text-gray-600">Inscrit le: {new Date(registration.registeredAt).toLocaleDateString()}</p>
+                          <p className="text-sm text-gray-600">{t('education.registered_on')} {new Date(registration.registeredAt).toLocaleDateString()}</p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                           registration.status === 'approved' ? 'bg-green-100 text-green-800' :
                           registration.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {registration.status === 'approved' ? 'Approuvé' :
-                           registration.status === 'pending' ? 'En attente' : 'Rejeté'}
+                          {registration.status === 'approved' ? t('education.status_approved') :
+                           registration.status === 'pending' ? t('education.status_pending') : t('education.status_rejected')}
                         </span>
                   </div>
                 </div>
@@ -1277,10 +1279,10 @@ export default function Education() {
                 <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-2xl">
                   👨‍🏫
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900">Professeurs Disponibles</h2>
+                <h2 className="text-3xl font-bold text-gray-900">{t('education.available_professors_title')}</h2>
               </div>
             {professors.length === 0 ? (
-              <p className="text-gray-500 italic text-center py-4">Aucun professeur disponible pour le moment. Les enseignants peuvent s&apos;inscrire via Mon Profil &gt; Actions.</p>
+              <p className="text-gray-500 italic text-center py-4">{t('education.no_professor_available')}</p>
             ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {professors.map((professor) => (
@@ -1288,23 +1290,23 @@ export default function Education() {
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">{professor.name}</h3>
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Spécialités:</span>
+                        <span className="text-sm text-gray-500">{t('sante.specialties_label')}</span>
                         <span className="text-sm font-medium">{professor.specialties.join(', ')}</span>
                     </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Expérience:</span>
-                        <span className="text-sm font-medium">{professor.experience} ans</span>
+                        <span className="text-sm text-gray-500">{t('education.experience_label')}</span>
+                        <span className="text-sm font-medium">{professor.experience} {t('education.years_suffix')}</span>
                     </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Ville:</span>
+                        <span className="text-sm text-gray-500">{t('education.city_label')}</span>
                         <span className="text-sm font-medium">{professor.city}</span>
                   </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Tarif:</span>
+                        <span className="text-sm text-gray-500">{t('education.rate_label')}</span>
                         <span className="text-sm font-medium">{professor.consultationFee.toLocaleString()} FG</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">Note:</span>
+                        <span className="text-sm text-gray-500">{t('education.note_label')}</span>
                         <span className="text-sm font-medium">⭐ {professor.ratings}/5</span>
                       </div>
                     </div>
@@ -1313,10 +1315,10 @@ export default function Education() {
                         onClick={() => handleProfessorRequest(professor)}
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
                       >
-                        Demander
+                        {t('education.request_btn')}
                       </button>
                       <a href={`tel:${professor.phone}`} className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors text-center">
-                        Contacter
+                        {t('sante.contact_btn')}
                       </a>
                     </div>
                   </div>
@@ -1332,7 +1334,7 @@ export default function Education() {
                   <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center text-2xl">
                     📝
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Mes Demandes</h3>
+                  <h3 className="text-2xl font-bold text-gray-900">{t('education.my_requests_title')}</h3>
                 </div>
                 <div className="space-y-4">
                   {myRequests.map((request) => (
@@ -1340,16 +1342,16 @@ export default function Education() {
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-semibold text-gray-900">{request.professorName}</h4>
-                          <p className="text-sm text-gray-600">Sujet: {request.subject}</p>
-                          <p className="text-sm text-gray-600">Demandé le: {new Date(request.requestedAt).toLocaleDateString()}</p>
+                          <p className="text-sm text-gray-600">{t('education.subject_colon')} {request.subject}</p>
+                          <p className="text-sm text-gray-600">{t('education.requested_on')} {new Date(request.requestedAt).toLocaleDateString()}</p>
                         </div>
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                           request.status === 'approved' ? 'bg-green-100 text-green-800' :
                           request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-red-100 text-red-800'
                         }`}>
-                          {request.status === 'approved' ? 'Approuvé' :
-                           request.status === 'pending' ? 'En attente' : 'Rejeté'}
+                          {request.status === 'approved' ? t('education.status_approved') :
+                           request.status === 'pending' ? t('education.status_pending') : t('education.status_rejected')}
                         </span>
                       </div>
                     </div>
@@ -1369,24 +1371,24 @@ export default function Education() {
                   🎯
                 </div>
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Mes Cours</h2>
+                  <h2 className="text-3xl font-bold text-gray-900">{t('education.tab_mes_cours')}</h2>
                   {linkedCourses.length > 0 && (
                     <p className="text-sm text-indigo-700 mt-1">
-                      📚 {linkedCourses.length} cours de votre professeur lié
+                      📚 {linkedCourses.length} {t('education.linked_courses_count')}
                     </p>
                   )}
                 </div>
               </div>
               <nav className="flex space-x-4 mb-6">
                 {[
-                  { id: 'audio', label: 'Audio', icon: '🎵' },
-                  { id: 'video', label: 'Vidéo', icon: '🎥' },
-                  { id: 'written', label: 'Écrit', icon: '📝' },
-                  { id: 'exercice', label: 'Exercice', icon: '📝' },
-                  { id: 'library', label: 'Bibliothèque', icon: '📚' },
-                  { id: 'publier', label: 'Publier', icon: '➕' },
-                  { id: 'progress', label: 'Progrès', icon: '📊' },
-                  { id: 'certificates', label: 'Certificats', icon: '🏆' }
+                  { id: 'audio', label: t('education.tab_audio'), icon: '🎵' },
+                  { id: 'video', label: t('education.tab_video'), icon: '🎥' },
+                  { id: 'written', label: t('education.tab_written'), icon: '📝' },
+                  { id: 'exercice', label: t('education.tab_exercice'), icon: '📝' },
+                  { id: 'library', label: t('education.tab_library'), icon: '📚' },
+                  { id: 'publier', label: t('education.tab_publier'), icon: '➕' },
+                  { id: 'progress', label: t('education.tab_progress'), icon: '📊' },
+                  { id: 'certificates', label: t('education.tab_certificates'), icon: '🏆' }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1407,21 +1409,21 @@ export default function Education() {
               <div className="space-y-6">
                 {activeCourseTab === 'audio' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">🎵 Cours Audio</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.audio_courses_title')}</h3>
                     {linkedCourses.filter(c => c.type === 'audio').length > 0 && (
                       <div className="mb-4">
-                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">📌 De votre professeur</p>
+                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">{t('education.from_your_professor')}</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {linkedCourses.filter(c => c.type === 'audio').map((course) => (
                             <div key={course.id} className="border-2 border-indigo-300 rounded-lg p-4 bg-indigo-50">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">Prof</span>
+                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">{t('education.prof_badge')}</span>
                                 <h4 className="font-semibold text-gray-900">{course.title}</h4>
                               </div>
                               <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                               <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
-                                <button onClick={() => setSelectedCourse(course)} className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">Écouter</button>
+                                <span className="text-sm text-gray-500">{t('education.duration_label')} {course.duration} {t('education.minutes_suffix')}</span>
+                                <button onClick={() => setSelectedCourse(course)} className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">{t('education.listen_btn')}</button>
                               </div>
                             </div>
                           ))}
@@ -1434,8 +1436,8 @@ export default function Education() {
                           <h4 className="font-semibold text-gray-900 mb-2">{course.title}</h4>
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
-                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">Écouter</button>
+                            <span className="text-sm text-gray-500">{t('education.duration_label')} {course.duration} {t('education.minutes_suffix')}</span>
+                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">{t('education.listen_btn')}</button>
                           </div>
                         </div>
                       ))}
@@ -1445,21 +1447,21 @@ export default function Education() {
 
                 {activeCourseTab === 'video' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">🎥 Cours Vidéo</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.video_courses_title')}</h3>
                     {linkedCourses.filter(c => c.type === 'video').length > 0 && (
                       <div className="mb-4">
-                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">📌 De votre professeur</p>
+                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">{t('education.from_your_professor')}</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {linkedCourses.filter(c => c.type === 'video').map((course) => (
                             <div key={course.id} className="border-2 border-indigo-300 rounded-lg p-4 bg-indigo-50">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">Prof</span>
+                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">{t('education.prof_badge')}</span>
                                 <h4 className="font-semibold text-gray-900">{course.title}</h4>
                               </div>
                               <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                               <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
-                                <button onClick={() => setSelectedCourse(course)} className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">Regarder</button>
+                                <span className="text-sm text-gray-500">{t('education.duration_label')} {course.duration} {t('education.minutes_suffix')}</span>
+                                <button onClick={() => setSelectedCourse(course)} className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">{t('education.watch_btn')}</button>
                               </div>
                             </div>
                           ))}
@@ -1472,8 +1474,8 @@ export default function Education() {
                           <h4 className="font-semibold text-gray-900 mb-2">{course.title}</h4>
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Durée: {course.duration} min</span>
-                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">Regarder</button>
+                            <span className="text-sm text-gray-500">{t('education.duration_label')} {course.duration} {t('education.minutes_suffix')}</span>
+                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">{t('education.watch_btn')}</button>
                           </div>
                         </div>
                       ))}
@@ -1483,21 +1485,21 @@ export default function Education() {
 
                 {activeCourseTab === 'written' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">📝 Cours Écrits</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.written_courses_title')}</h3>
                     {linkedCourses.filter(c => c.type === 'written').length > 0 && (
                       <div className="mb-4">
-                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">📌 De votre professeur</p>
+                        <p className="text-xs font-bold text-indigo-600 uppercase mb-2">{t('education.from_your_professor')}</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {linkedCourses.filter(c => c.type === 'written').map((course) => (
                             <div key={course.id} className="border-2 border-indigo-300 rounded-lg p-4 bg-indigo-50">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">Prof</span>
+                                <span className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">{t('education.prof_badge')}</span>
                                 <h4 className="font-semibold text-gray-900">{course.title}</h4>
                               </div>
                               <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                               <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-500">Pages: {course.duration}</span>
-                                <button onClick={() => setSelectedCourse(course)} className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">Lire</button>
+                                <span className="text-sm text-gray-500">{t('education.pages_label')} {course.duration}</span>
+                                <button onClick={() => setSelectedCourse(course)} className="bg-indigo-600 hover:bg-indigo-700 text-white py-1 px-3 rounded text-sm">{t('education.read_btn')}</button>
                               </div>
                             </div>
                           ))}
@@ -1510,8 +1512,8 @@ export default function Education() {
                           <h4 className="font-semibold text-gray-900 mb-2">{course.title}</h4>
                           <p className="text-gray-600 text-sm mb-2">{course.description}</p>
                           <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-500">Pages: {course.duration}</span>
-                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">Lire</button>
+                            <span className="text-sm text-gray-500">{t('education.pages_label')} {course.duration}</span>
+                            <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">{t('education.read_btn')}</button>
                           </div>
                         </div>
                       ))}
@@ -1521,7 +1523,7 @@ export default function Education() {
 
                 {activeCourseTab === 'exercice' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">📝 Exercices et tests</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.exercises_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {courses.filter(c => c.type === 'test').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4">
@@ -1530,19 +1532,19 @@ export default function Education() {
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-500">{course.category} • {course.level}</span>
                             <button onClick={() => setSelectedCourse(course)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                              Passer le test
+                              {t('education.take_test_btn')}
                             </button>
                           </div>
                         </div>
                       ))}
                       <div className="border rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-2">Exercices interactifs</h4>
-                        <p className="text-gray-600 text-sm mb-4">Pratiquez avec des exercices supplémentaires</p>
+                        <h4 className="font-semibold text-gray-900 mb-2">{t('education.interactive_exercises_title')}</h4>
+                        <p className="text-gray-600 text-sm mb-4">{t('education.interactive_exercises_desc')}</p>
                         <button
                           onClick={() => alert('Les exercices interactifs arrivent bientôt.')}
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm"
                         >
-                          Commencer
+                          {t('education.ai_start_btn')}
                         </button>
                       </div>
                     </div>
@@ -1551,84 +1553,84 @@ export default function Education() {
 
                 {activeCourseTab === 'publier' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">➕ Publier un cours, une vidéo, un audio ou un test</h3>
-                    <p className="text-gray-600 text-sm mb-6">Publiez du contenu éducatif : cours écrit, vidéo, audio ou test/quiz.</p>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.publish_title')}</h3>
+                    <p className="text-gray-600 text-sm mb-6">{t('education.publish_desc')}</p>
                     <form onSubmit={handlePublishCourse} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 max-w-2xl">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Type de contenu *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.content_type_label')}</label>
                         <select
                           value={publishForm.type}
                           onChange={(e) => setPublishForm({ ...publishForm, type: e.target.value as any })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           required
                         >
-                          <option value="written">📝 Cours écrit</option>
-                          <option value="video">🎥 Vidéo</option>
-                          <option value="audio">🎵 Audio</option>
-                          <option value="test">📋 Test / Quiz</option>
-                          <option value="library">📚 Bibliothèque / Ressources</option>
+                          <option value="written">{t('education.content_type_written')}</option>
+                          <option value="video">{t('education.content_type_video')}</option>
+                          <option value="audio">{t('education.content_type_audio')}</option>
+                          <option value="test">{t('education.content_type_test')}</option>
+                          <option value="library">{t('education.content_type_library')}</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.title_label')}</label>
                         <input
                           type="text"
                           value={publishForm.title}
                           onChange={(e) => setPublishForm({ ...publishForm, title: e.target.value })}
-                          placeholder="Ex : Grammaire française - Les accords"
+                          placeholder={t('education.title_placeholder')}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.description_label')}</label>
                         <textarea
                           value={publishForm.description}
                           onChange={(e) => setPublishForm({ ...publishForm, description: e.target.value })}
-                          placeholder="Décrivez brièvement le contenu..."
+                          placeholder={t('education.description_placeholder')}
                           rows={3}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.category_input_label')}</label>
                           <input
                             type="text"
                             value={publishForm.category}
                             onChange={(e) => setPublishForm({ ...publishForm, category: e.target.value })}
-                            placeholder="Ex : Langues, Sciences"
+                            placeholder={t('education.category_placeholder')}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Niveau</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.level_input_label')}</label>
                           <select
                             value={publishForm.level}
                             onChange={(e) => setPublishForm({ ...publishForm, level: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           >
-                            <option value="débutant">Débutant</option>
-                            <option value="intermédiaire">Intermédiaire</option>
-                            <option value="avancé">Avancé</option>
+                            <option value="débutant">{t('education.level_beginner')}</option>
+                            <option value="intermédiaire">{t('education.level_intermediate')}</option>
+                            <option value="avancé">{t('education.level_advanced')}</option>
                           </select>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Durée (minutes)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.duration_minutes_label')}</label>
                         <input
                           type="number"
                           min="1"
                           value={publishForm.duration}
                           onChange={(e) => setPublishForm({ ...publishForm, duration: e.target.value })}
-                          placeholder="Ex : 30"
+                          placeholder={t('education.duration_placeholder')}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                       {(publishForm.type === 'video' || publishForm.type === 'audio') && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {publishForm.type === 'video' ? 'Fichier vidéo' : 'Fichier audio'} *
+                            {publishForm.type === 'video' ? t('education.video_file_label') : t('education.audio_file_label')} *
                           </label>
                           <input
                             type="file"
@@ -1641,12 +1643,12 @@ export default function Education() {
                       {(publishForm.type === 'written' || publishForm.type === 'test') && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {publishForm.type === 'test' ? 'Contenu du test (questions, consignes)' : 'Contenu du cours (texte)'}
+                            {publishForm.type === 'test' ? t('education.test_content_label') : t('education.course_content_label')}
                           </label>
                           <textarea
                             value={publishForm.content}
                             onChange={(e) => setPublishForm({ ...publishForm, content: e.target.value })}
-                            placeholder={publishForm.type === 'test' ? 'Ex : Q1. Quelle est la bonne orthographe ? ...' : 'Collez ou écrivez le contenu du cours...'}
+                            placeholder={publishForm.type === 'test' ? t('education.test_content_placeholder') : t('education.course_content_placeholder')}
                             rows={6}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                           />
@@ -1654,7 +1656,7 @@ export default function Education() {
                       )}
                       {publishForm.type === 'library' && (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Fichier (PDF, document ou média)</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('education.library_file_label')}</label>
                           <input
                             type="file"
                             accept=".pdf,image/*,video/*,audio/*"
@@ -1667,9 +1669,9 @@ export default function Education() {
                       {linkedStudents.length > 0 && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            👨‍🎓 Assigner à des apprenants (optionnel)
+                            {t('education.assign_students_label')}
                           </label>
-                          <p className="text-xs text-gray-500 mb-2">Cochez les apprenants qui doivent voir ce cours dans leur espace "Mes Cours".</p>
+                          <p className="text-xs text-gray-500 mb-2">{t('education.assign_students_desc')}</p>
                           <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
                             {linkedStudents.map(student => (
                               <label key={student.numeroH} className="flex items-center gap-2 cursor-pointer">
@@ -1691,7 +1693,7 @@ export default function Education() {
                             ))}
                           </div>
                           {publishAssignedStudents.length === 0 && (
-                            <p className="text-xs text-gray-400 mt-1">Aucun sélectionné = visible par tous les apprenants liés</p>
+                            <p className="text-xs text-gray-400 mt-1">{t('education.none_selected_note')}</p>
                           )}
                         </div>
                       )}
@@ -1705,7 +1707,7 @@ export default function Education() {
                         disabled={publishLoading || !publishForm.title.trim()}
                         className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors"
                       >
-                        {publishLoading ? 'Publication en cours...' : 'Publier'}
+                        {publishLoading ? t('education.publishing') : t('education.publish_btn')}
                       </button>
                     </form>
                   </div>
@@ -1713,7 +1715,7 @@ export default function Education() {
 
                 {activeCourseTab === 'library' && (
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">📚 Bibliothèque</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.library_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {courses.filter(c => c.type === 'library').map((course) => (
                         <div key={course.id} className="border rounded-lg p-4">
@@ -1725,7 +1727,7 @@ export default function Education() {
                             ))}
                   </div>
                           <button onClick={() => setSelectedCourse(course)} className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded text-sm">
-                            Consulter
+                            {t('education.consult_btn')}
                           </button>
                   </div>
                       ))}
@@ -1735,7 +1737,7 @@ export default function Education() {
             
                 {activeCourseTab === 'progress' && (
             <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">📊 Mon Progrès</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.my_progress_title')}</h3>
                     <div className="space-y-4">
                       {myProgress.map((progress) => (
                         <div key={progress.id} className="border rounded-lg p-4">
@@ -1750,8 +1752,8 @@ export default function Education() {
                             ></div>
                   </div>
                           <div className="flex justify-between text-sm text-gray-500">
-                            <span>Temps passé: {progress.totalTimeSpent} min</span>
-                            <span>Dernière fois: {new Date(progress.lastAccessed).toLocaleDateString()}</span>
+                            <span>{t('education.time_spent')} {progress.totalTimeSpent} {t('education.minutes_suffix')}</span>
+                            <span>{t('education.last_time')} {new Date(progress.lastAccessed).toLocaleDateString()}</span>
                 </div>
                         </div>
                       ))}
@@ -1761,7 +1763,7 @@ export default function Education() {
 
                 {activeCourseTab === 'certificates' && (
                     <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">🏆 Mes Certificats</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('education.my_certificates_title')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {myCertificates.map((certificate) => (
                         <div key={certificate.id} className="border rounded-lg p-4">
@@ -1770,14 +1772,14 @@ export default function Education() {
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
                               certificate.isValid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
-                              {certificate.isValid ? 'Valide' : 'Expiré'}
+                              {certificate.isValid ? t('education.valid') : t('education.expired')}
                             </span>
                     </div>
                           <p className="text-sm text-gray-600 mb-2">
-                            Émis le: {new Date(certificate.issuedAt).toLocaleDateString()}
+                            {t('education.issued_on')} {new Date(certificate.issuedAt).toLocaleDateString()}
                           </p>
                           <p className="text-sm text-gray-600 mb-3">
-                            Par: {certificate.issuedBy}
+                            {t('education.issued_by')} {certificate.issuedBy}
                           </p>
                           <a
                             href={certificate.badgeUrl}
@@ -1786,7 +1788,7 @@ export default function Education() {
                             download
                             className="block text-center w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm"
                           >
-                            Télécharger
+                            {t('education.download_btn')}
                           </a>
                   </div>
                       ))}
@@ -1818,7 +1820,7 @@ export default function Education() {
                   x
                 </button>
               </div>
-              {selectedCourse.instructor && <p className="text-sm text-gray-500 mb-4">Par {selectedCourse.instructor}</p>}
+              {selectedCourse.instructor && <p className="text-sm text-gray-500 mb-4">{t('education.by_instructor')} {selectedCourse.instructor}</p>}
               {selectedCourse.type === 'audio' && mediaUrl && (
                 <audio controls className="w-full mb-4"><source src={mediaUrl} /></audio>
               )}
@@ -1829,13 +1831,13 @@ export default function Education() {
                 <div className="whitespace-pre-wrap text-gray-700 leading-relaxed mb-4">{text}</div>
               )}
               {!mediaUrl && !text && (
-                <p className="text-center text-gray-500 py-8">Le contenu de ce cours n&apos;est pas encore disponible.</p>
+                <p className="text-center text-gray-500 py-8">{t('education.content_not_available')}</p>
               )}
               <button
                 onClick={() => setSelectedCourse(null)}
                 className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors"
               >
-                Fermer
+                {t('btn.close')}
               </button>
             </div>
           </div>
@@ -1847,12 +1849,12 @@ export default function Education() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              S'inscrire à: {selectedFormation.title}
+              {t('education.register_for')} {selectedFormation.title}
               </h3>
               <div className="space-y-4">
                 <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Votre NumeroH (compte connecté)
+                  {t('education.numeroh_connected_label')}
                 </label>
                   <input
                     type="text"
@@ -1863,14 +1865,14 @@ export default function Education() {
                 </div>
                 <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Motivation
+                  {t('education.motivation_label')}
                 </label>
                   <textarea
                   value={registrationForm.motivation}
                   onChange={(e) => setRegistrationForm({...registrationForm, motivation: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
-                  placeholder="Pourquoi voulez-vous suivre cette formation ?"
+                  placeholder={t('education.motivation_placeholder')}
                   />
                 </div>
               </div>
@@ -1879,13 +1881,13 @@ export default function Education() {
                 onClick={() => setShowRegistrationForm(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
                 >
-                Annuler
+                {t('btn.cancel')}
                 </button>
                 <button
                 onClick={submitFormationRegistration}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
                 >
-                Envoyer la demande
+                {t('education.send_request_btn')}
                 </button>
               </div>
             </div>
@@ -1897,12 +1899,12 @@ export default function Education() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Demander: {selectedProfessor.name}
+              {t('education.request_from')} {selectedProfessor.name}
               </h3>
               <div className="space-y-4">
                 <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Votre NumeroH (compte connecté)
+                  {t('education.numeroh_connected_label')}
                 </label>
                   <input
                     type="text"
@@ -1913,26 +1915,26 @@ export default function Education() {
                 </div>
                 <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sujet
+                  {t('education.subject_input_label')}
                 </label>
                 <input
                   type="text"
                   value={professorRequestForm.subject}
                   onChange={(e) => setProfessorRequestForm({...professorRequestForm, subject: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Sujet de votre demande"
+                  placeholder={t('education.subject_placeholder')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Message
+                  {t('education.message_label')}
                 </label>
                   <textarea
                   value={professorRequestForm.message}
                   onChange={(e) => setProfessorRequestForm({...professorRequestForm, message: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
-                    placeholder="Décrivez votre demande..."
+                    placeholder={t('education.message_placeholder')}
                   />
                 </div>
               </div>
@@ -1941,13 +1943,13 @@ export default function Education() {
                 onClick={() => setShowProfessorRequestForm(false)}
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
                 >
-                Annuler
+                {t('btn.cancel')}
                 </button>
                 <button
                 onClick={submitProfessorRequest}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
                 >
-                Envoyer la demande
+                {t('education.send_request_btn')}
                 </button>
               </div>
             </div>
@@ -2020,7 +2022,7 @@ export default function Education() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <ProSection
           type="school"
-          title="Écoles & Professeurs"
+          title={t('education.schools_professors_title')}
           icon="🎓"
           description=""
         />
