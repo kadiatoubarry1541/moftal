@@ -1,36 +1,44 @@
 ﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getSessionUser } from "../utils/auth";
+import { useI18n } from "../i18n/useI18n";
 
-const CATEGORIES = [
-  { id: "actualites",    label: "Actualités",      emoji: "📰",  color: "#0891b2", bg: "#ecfeff",  unread: 0 },
-  { id: "opportunites",  label: "Opportunités",    emoji: "💼",  color: "#1a8f1a", bg: "#f0fdf0",  unread: 0 },
-  { id: "sante",         label: "Santé & Bien-être", emoji: "🏥", color: "#1a8f1a", bg: "#f0fdfa",  unread: 0 },
-  { id: "education",     label: "Éducation",       emoji: "🎓",  color: "#7c3aed", bg: "#f5f3ff",  unread: 0 },
-  { id: "religion",      label: "Religion & Foi",  emoji: "☪️",  color: "#1a8f1a", bg: "#f0fdf0",  unread: 0 },
-  { id: "economie",      label: "Économie",        emoji: "📊",  color: "#d97706", bg: "#fffbeb",  unread: 0 },
-  { id: "culture",       label: "Culture & Arts",  emoji: "🎭",  color: "#db2777", bg: "#fdf2f8",  unread: 0 },
-  { id: "technologie",   label: "Technologie",     emoji: "💡",  color: "#6366f1", bg: "#eef2ff",  unread: 0 },
-  { id: "environnement", label: "Environnement",   emoji: "🌿",  color: "#156315", bg: "#f0fdf0",  unread: 0 },
-  { id: "sport",         label: "Sport",           emoji: "⚽",  color: "#ea580c", bg: "#fff7ed",  unread: 0 },
-  { id: "securite",      label: "Sécurité",        emoji: "🛡️",  color: "#dc2626", bg: "#fef2f2",  unread: 0 },
-  { id: "international", label: "International",   emoji: "🌍",  color: "#64748b", bg: "#f8fafc",  unread: 0 },
-];
+function getCategories(t: (key: string) => string) {
+  return [
+    { id: "actualites",    label: t('info.cat_actualites'),    emoji: "📰",  color: "#0891b2", bg: "#ecfeff",  unread: 0 },
+    { id: "opportunites",  label: t('info.cat_opportunites'),  emoji: "💼",  color: "#1a8f1a", bg: "#f0fdf0",  unread: 0 },
+    { id: "sante",         label: t('info.cat_sante'),         emoji: "🏥", color: "#1a8f1a", bg: "#f0fdfa",  unread: 0 },
+    { id: "education",     label: t('info.cat_education'),     emoji: "🎓",  color: "#7c3aed", bg: "#f5f3ff",  unread: 0 },
+    { id: "religion",      label: t('info.cat_religion'),      emoji: "☪️",  color: "#1a8f1a", bg: "#f0fdf0",  unread: 0 },
+    { id: "economie",      label: t('info.cat_economie'),      emoji: "📊",  color: "#d97706", bg: "#fffbeb",  unread: 0 },
+    { id: "culture",       label: t('info.cat_culture'),       emoji: "🎭",  color: "#db2777", bg: "#fdf2f8",  unread: 0 },
+    { id: "technologie",   label: t('info.cat_technologie'),   emoji: "💡",  color: "#6366f1", bg: "#eef2ff",  unread: 0 },
+    { id: "environnement", label: t('info.cat_environnement'), emoji: "🌿",  color: "#156315", bg: "#f0fdf0",  unread: 0 },
+    { id: "sport",         label: t('info.cat_sport'),         emoji: "⚽",  color: "#ea580c", bg: "#fff7ed",  unread: 0 },
+    { id: "securite",      label: t('info.cat_securite'),      emoji: "🛡️",  color: "#dc2626", bg: "#fef2f2",  unread: 0 },
+    { id: "international", label: t('info.cat_international'), emoji: "🌍",  color: "#64748b", bg: "#f8fafc",  unread: 0 },
+  ];
+}
 
 // Pages qui bénéficient de notifications
-const PAGES_NOTIF = [
-  { label: "Messages privés",      emoji: "💬", pages: ["Mes Amours / Messenger"] },
-  { label: "Rendez-vous",          emoji: "📅", pages: ["Espace Pro", "Prendre RDV"] },
-  { label: "Actualités",           emoji: "📰", pages: ["Page Info", "À Retenir", "Histoire Humanité"] },
-  { label: "Opportunités",         emoji: "💼", pages: ["Activité", "Échanges", "Solidarité"] },
-  { label: "Science & Recherche",  emoji: "🔬", pages: ["Science"] },
-  { label: "Éducation",            emoji: "🎓", pages: ["Éducation", "Mes Cours"] },
-  { label: "Réseau professionnel", emoji: "🤝", pages: ["Réseau Imam", "Gestion Interne"] },
-  { label: "Famille",              emoji: "👨‍👩‍👧", pages: ["Famille", "Galerie Famille"] },
-];
+function getPagesNotif(t: (key: string) => string) {
+  return [
+    { label: t('info.notif_group_messages'),      emoji: "💬", pages: ["Mes Amours / Messenger"] },
+    { label: t('info.notif_group_rdv'),          emoji: "📅", pages: ["Espace Pro", "Prendre RDV"] },
+    { label: t('info.notif_group_actualites'),           emoji: "📰", pages: ["Page Info", "À Retenir", "Histoire Humanité"] },
+    { label: t('info.notif_group_opportunites'),         emoji: "💼", pages: ["Activité", "Échanges", "Solidarité"] },
+    { label: t('info.notif_group_science'),  emoji: "🔬", pages: ["Science"] },
+    { label: t('info.notif_group_education'),            emoji: "🎓", pages: ["Éducation", "Mes Cours"] },
+    { label: t('info.notif_group_reseau'), emoji: "🤝", pages: ["Réseau Imam", "Gestion Interne"] },
+    { label: t('info.notif_group_famille'),              emoji: "👨‍👩‍👧", pages: ["Famille", "Galerie Famille"] },
+  ];
+}
 
 export default function Info() {
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const CATEGORIES = getCategories(t);
+  const PAGES_NOTIF = getPagesNotif(t);
   const user = getSessionUser();
   const [activeTab, setActiveTab] = useState<"info" | "notif">("info");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -40,10 +48,10 @@ export default function Info() {
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
         <div className="text-center p-8">
           <div className="text-5xl mb-4">📰</div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Page Info</h2>
-          <p className="text-slate-500 mb-6">Connectez-vous pour accéder aux informations</p>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">{t('info.not_logged_title')}</h2>
+          <p className="text-slate-500 mb-6">{t('info.not_logged_desc')}</p>
           <button onClick={() => navigate("/login")} className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
-            Se connecter
+            {t('info.login_btn')}
           </button>
         </div>
       </div>
@@ -55,9 +63,9 @@ export default function Info() {
       {/* Hero */}
       <div className="bg-gradient-to-r from-indigo-700 to-blue-600 text-white px-4 py-10 text-center">
         <div className="text-5xl mb-3">📰</div>
-        <h1 className="text-3xl font-extrabold mb-2">Page Info</h1>
+        <h1 className="text-3xl font-extrabold mb-2">{t('info.hero_title')}</h1>
         <p className="text-indigo-100 text-base max-w-lg mx-auto">
-          Toutes les informations, actualités, opportunités et nouvelles de la communauté — classées et faciles à trouver
+          {t('info.hero_desc')}
         </p>
       </div>
 
@@ -68,13 +76,13 @@ export default function Info() {
             onClick={() => setActiveTab("info")}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${activeTab === "info" ? "bg-indigo-600 text-white shadow" : "bg-white text-slate-600 border hover:border-indigo-300"}`}
           >
-            📰 Informations
+            {t('info.tab_info')}
           </button>
           <button
             onClick={() => setActiveTab("notif")}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${activeTab === "notif" ? "bg-indigo-600 text-white shadow" : "bg-white text-slate-600 border hover:border-indigo-300"}`}
           >
-            🔔 Pages avec notifications
+            {t('info.tab_notif')}
           </button>
         </div>
 
@@ -82,9 +90,9 @@ export default function Info() {
         {activeTab === "info" && (
           <>
             <div className="mb-5">
-              <h2 className="text-xl font-bold text-slate-800">Catégories d'information</h2>
+              <h2 className="text-xl font-bold text-slate-800">{t('info.categories_title')}</h2>
               <p className="text-slate-500 text-sm mt-1">
-                Les informations non lues apparaissent toujours en premier. Sélectionnez une catégorie pour la suivre.
+                {t('info.categories_desc')}
               </p>
             </div>
 
@@ -92,9 +100,9 @@ export default function Info() {
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-5 flex items-start gap-3">
               <div className="text-2xl">💡</div>
               <div>
-                <p className="font-bold text-indigo-800 text-sm">Principe des données non lues</p>
+                <p className="font-bold text-indigo-800 text-sm">{t('info.unread_principle_title')}</p>
                 <p className="text-indigo-600 text-xs mt-1 leading-relaxed">
-                  Chaque fois qu'une nouvelle info, opportunité ou actualité est publiée dans une catégorie, un compteur s'affiche sur l'icône. Les contenus non vus sont toujours affichés en premier pour ne rien rater.
+                  {t('info.unread_principle_desc')}
                 </p>
               </div>
             </div>
@@ -128,9 +136,9 @@ export default function Info() {
                   </div>
                   <div className="bg-slate-50 rounded-xl p-6 text-center">
                     <div className="text-4xl mb-3">📝</div>
-                    <p className="text-slate-600 font-medium">Aucune publication pour l'instant</p>
+                    <p className="text-slate-600 font-medium">{t('info.no_publication_yet')}</p>
                     <p className="text-slate-400 text-sm mt-1">
-                      Les publications des administrateurs et chefs de service apparaîtront ici
+                      {t('info.publications_will_appear')}
                     </p>
                   </div>
                 </div>
@@ -143,9 +151,9 @@ export default function Info() {
         {activeTab === "notif" && (
           <>
             <div className="mb-5">
-              <h2 className="text-xl font-bold text-slate-800">Pages qui nécessitent des notifications</h2>
+              <h2 className="text-xl font-bold text-slate-800">{t('info.notif_pages_title')}</h2>
               <p className="text-slate-500 text-sm mt-1">
-                Ces pages génèrent des données non lues — un badge de comptage s'affichera pour alerter l'utilisateur
+                {t('info.notif_pages_desc')}
               </p>
             </div>
 
@@ -166,11 +174,9 @@ export default function Info() {
             </div>
 
             <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="font-bold text-amber-800 text-sm mb-1">📌 Principe : les non-lus toujours en premier</p>
+              <p className="font-bold text-amber-800 text-sm mb-1">{t('info.unread_first_title')}</p>
               <p className="text-amber-700 text-xs leading-relaxed">
-                Sur chaque page listée ci-dessus, les éléments non lus ou non vus par l'utilisateur apparaissent
-                en haut de la liste, mis en évidence. Un badge global dans la navigation indique le total des données
-                non consultées sur l'ensemble de la plateforme.
+                {t('info.unread_first_desc')}
               </p>
             </div>
           </>
@@ -178,19 +184,19 @@ export default function Info() {
 
         {/* Raccourcis */}
         <div className="mt-8 mb-8">
-          <h3 className="font-bold text-slate-800 mb-3">Accès rapides</h3>
+          <h3 className="font-bold text-slate-800 mb-3">{t('info.quick_access_title')}</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button onClick={() => navigate("/a-retenir")} className="flex flex-col items-center gap-1.5 p-3 bg-white border rounded-xl hover:shadow-sm transition-all text-center">
-              <span className="text-xl">📌</span><span className="text-xs font-semibold text-slate-700">À Retenir</span>
+              <span className="text-xl">📌</span><span className="text-xs font-semibold text-slate-700">{t('info.shortcut_a_retenir')}</span>
             </button>
             <button onClick={() => navigate("/histoire-humanite")} className="flex flex-col items-center gap-1.5 p-3 bg-white border rounded-xl hover:shadow-sm transition-all text-center">
-              <span className="text-xl">📜</span><span className="text-xs font-semibold text-slate-700">Histoire</span>
+              <span className="text-xl">📜</span><span className="text-xs font-semibold text-slate-700">{t('info.shortcut_histoire')}</span>
             </button>
             <button onClick={() => navigate("/science")} className="flex flex-col items-center gap-1.5 p-3 bg-white border rounded-xl hover:shadow-sm transition-all text-center">
-              <span className="text-xl">🔬</span><span className="text-xs font-semibold text-slate-700">Science</span>
+              <span className="text-xl">🔬</span><span className="text-xs font-semibold text-slate-700">{t('science.title')}</span>
             </button>
             <button onClick={() => navigate("/solidarite")} className="flex flex-col items-center gap-1.5 p-3 bg-white border rounded-xl hover:shadow-sm transition-all text-center">
-              <span className="text-xl">🤝</span><span className="text-xs font-semibold text-slate-700">Solidarité</span>
+              <span className="text-xl">🤝</span><span className="text-xs font-semibold text-slate-700">{t('famille.menu.solidarite')}</span>
             </button>
           </div>
         </div>
