@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QuickMediaCapture } from '../components/QuickMediaCapture';
 import ProSection from '../components/ProSection';
+import { useI18n } from '../i18n/useI18n';
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -36,6 +37,7 @@ interface ScienceComment {
 }
 
 export default function Science() {
+  const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'recentes' | 'recherches' | 'anciens'>('recentes');
   const [posts, setPosts] = useState<SciencePost[]>([]);
@@ -417,9 +419,9 @@ export default function Science() {
 
   const getTabLabel = (tab: string) => {
     const labels: { [key: string]: { title: string; icon: string; description: string } } = {
-      'recentes': { title: 'Récentes', icon: '🆕', description: 'Publications et découvertes récentes' },
-      'recherches': { title: 'Nos recherches', icon: '🔍', description: 'Études et investigations en cours' },
-      'anciens': { title: 'Les anciens', icon: '👴', description: 'Savoirs scientifiques des anciens' }
+      'recentes': { title: t('science.tab_recentes'), icon: '🆕', description: t('science.tab_recentes_desc') },
+      'recherches': { title: t('science.tab_recherches'), icon: '🔍', description: t('science.tab_recherches_desc') },
+      'anciens': { title: t('science.tab_anciens'), icon: '👴', description: t('science.tab_anciens_desc') }
     };
     return labels[tab] || { title: tab, icon: '📝', description: '' };
   };
@@ -431,7 +433,7 @@ export default function Science() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement de la science...</p>
+          <p className="mt-4 text-gray-600">{t('science.loading')}</p>
         </div>
       </div>
     );
@@ -447,8 +449,8 @@ export default function Science() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">⚛️ Science</h1>
-              <p className="mt-2 text-gray-600">Explorez et contribuez aux sciences</p>
+              <h1 className="text-3xl font-bold text-gray-900">⚛️ {t('science.title')}</h1>
+              <p className="mt-2 text-gray-600">{t('science.subtitle')}</p>
             </div>
             <div className="flex space-x-4 items-center">
               {hasPermission && (
@@ -490,9 +492,9 @@ export default function Science() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
-              { id: 'recentes', label: 'Récentes', icon: '🆕' },
-              { id: 'recherches', label: 'Nos recherches', icon: '🔍' },
-              { id: 'anciens', label: 'Les anciens', icon: '👴' }
+              { id: 'recentes', label: t('science.tab_recentes'), icon: '🆕' },
+              { id: 'recherches', label: t('science.tab_recherches'), icon: '🔍' },
+              { id: 'anciens', label: t('science.tab_anciens'), icon: '👴' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -613,7 +615,7 @@ export default function Science() {
                           className="flex items-center space-x-1 text-gray-600 hover:text-purple-600 transition-colors text-xs"
                         >
                           <span>📤</span>
-                          <span>Partager</span>
+                          <span>{t('science.share_btn')}</span>
                         </button>
                       </div>
 
@@ -649,7 +651,7 @@ export default function Science() {
             ) : (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">{tabInfo.icon}</div>
-                <p className="text-gray-500 text-lg mb-4">Aucun post dans cette section</p>
+                <p className="text-gray-500 text-lg mb-4">{t('science.no_post')}</p>
                 {hasPermission && (
                   <button
                     onClick={handleCreatePost}
@@ -702,7 +704,7 @@ export default function Science() {
                   value={newPost.title}
                   onChange={(e) => setNewPost({...newPost, title: e.target.value})}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Titre de votre post scientifique..."
+                  placeholder={t('science.post_title_placeholder')}
                 />
               </div>
 
@@ -722,7 +724,7 @@ export default function Science() {
                     }`}
                   >
                     <div className="text-3xl mb-2">💬</div>
-                    <div className="font-semibold text-sm">Texte</div>
+                    <div className="font-semibold text-sm">{t('science.text_label')}</div>
                   </button>
                   <button
                     type="button"
@@ -734,7 +736,7 @@ export default function Science() {
                     }`}
                   >
                     <div className="text-3xl mb-2">📷</div>
-                    <div className="font-semibold text-sm">Photo</div>
+                    <div className="font-semibold text-sm">{t('science.photo_label')}</div>
                   </button>
                   <button
                     type="button"
@@ -746,7 +748,7 @@ export default function Science() {
                     }`}
                   >
                     <div className="text-3xl mb-2">🎥</div>
-                    <div className="font-semibold text-sm">Vidéo</div>
+                    <div className="font-semibold text-sm">{t('science.video_label')}</div>
                   </button>
                   <button
                     type="button"
@@ -758,7 +760,7 @@ export default function Science() {
                     }`}
                   >
                     <div className="text-3xl mb-2">🎵</div>
-                    <div className="font-semibold text-sm">Audio</div>
+                    <div className="font-semibold text-sm">{t('science.audio_label')}</div>
                   </button>
                 </div>
               </div>
@@ -793,7 +795,7 @@ export default function Science() {
                       <div className="bg-white rounded-lg p-3 border border-green-300">
                         <p className="text-sm text-green-700 flex items-center gap-2">
                           <span>✓</span>
-                          <span className="font-medium">Fichier sélectionné :</span>
+                          <span className="font-medium">{t('science.file_selected')}</span>
                           <span>{selectedFile.name}</span>
                           <span className="text-xs text-gray-500">
                             ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
@@ -843,7 +845,7 @@ export default function Science() {
                 }`}
               >
                 <span>📤</span>
-                <span>Publier le post</span>
+                <span>{t('science.publish_post_btn')}</span>
               </button>
             </div>
           </div>
@@ -863,7 +865,7 @@ export default function Science() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <ProSection
           type="scientist"
-          title="Scientifiques & Chercheurs"
+          title={t('science.researchers_title')}
           icon="🔬"
           description=""
         />
@@ -874,40 +876,40 @@ export default function Science() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Accorder une permission de publication</h3>
+              <h3 className="text-xl font-bold text-gray-900">{t('science.grant_permission_title')}</h3>
               <button onClick={() => setShowPermissionForm(false)} className="text-gray-500 hover:text-gray-700">
                 ✕
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Numéro H de l'utilisateur *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('science.user_numero_label')}</label>
                 <input
                   type="text"
                   value={newPermission.numeroH}
                   onChange={(e) => setNewPermission({...newPermission, numeroH: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Ex: G1C1P1R1E1F1 1"
+                  placeholder={t('science.numero_placeholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date d'expiration (optionnel)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('science.expiration_date_label')}</label>
                 <input
                   type="date"
                   value={newPermission.expiresAt}
                   onChange={(e) => setNewPermission({...newPermission, expiresAt: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
-                <p className="text-xs text-gray-500 mt-1">Laissez vide pour une permission permanente</p>
+                <p className="text-xs text-gray-500 mt-1">{t('science.leave_empty_permanent')}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Notes (optionnel)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('science.notes_label')}</label>
                 <textarea
                   value={newPermission.notes}
                   onChange={(e) => setNewPermission({...newPermission, notes: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   rows={3}
-                  placeholder="Notes sur la permission..."
+                  placeholder={t('science.notes_placeholder')}
                 />
               </div>
               <div className="flex gap-4 mt-6">
