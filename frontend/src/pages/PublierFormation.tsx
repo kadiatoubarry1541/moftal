@@ -2,25 +2,33 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSessionUser } from '../utils/auth'
 import PaymentModal from '../components/PaymentModal'
+import { useI18n } from '../i18n/useI18n'
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
 
-const NIVEAUX = [
-  { value: 'tous',          label: 'Tous niveaux' },
-  { value: 'debutant',      label: 'Débutant' },
-  { value: 'intermediaire', label: 'Intermédiaire' },
-  { value: 'avance',        label: 'Avancé' },
-]
+function getNiveaux(t: (key: string) => string) {
+  return [
+    { value: 'tous',          label: t('publier_formation.level_all') },
+    { value: 'debutant',      label: t('education.level_beginner') },
+    { value: 'intermediaire', label: t('education.level_intermediate') },
+    { value: 'avance',        label: t('education.level_advanced') },
+  ]
+}
 
-const DUREES = [
-  { jours: 7,  label: '1 semaine' },
-  { jours: 14, label: '2 semaines' },
-  { jours: 21, label: '3 semaines' },
-  { jours: 30, label: '1 mois (maximum)' },
-]
+function getDurees(t: (key: string) => string) {
+  return [
+    { jours: 7,  label: t('publier_formation.duration_1week') },
+    { jours: 14, label: t('publier_formation.duration_2weeks') },
+    { jours: 21, label: t('publier_formation.duration_3weeks') },
+    { jours: 30, label: t('publier_formation.duration_1month') },
+  ]
+}
 
 export default function PublierFormation() {
   const navigate = useNavigate()
+  const { t } = useI18n()
+  const NIVEAUX = getNiveaux(t)
+  const DUREES = getDurees(t)
   const token = localStorage.getItem('token')
 
   const [prix, setPrix] = useState<number | null>(null)
@@ -70,8 +78,8 @@ export default function PublierFormation() {
     e.preventDefault()
     setErreur('')
 
-    if (!form.titre.trim()) return setErreur('Le titre est requis.')
-    if (!form.contact.trim()) return setErreur('Votre contact (téléphone ou email) est requis pour que les apprenants vous trouvent.')
+    if (!form.titre.trim()) return setErreur(t('publier_formation.err_title_required'))
+    if (!form.contact.trim()) return setErreur(t('publier_formation.err_contact_required'))
 
     setLoading(true)
     try {
@@ -82,13 +90,13 @@ export default function PublierFormation() {
         body: JSON.stringify({ ...form }),
       })
       const d1 = await r1.json()
-      if (!d1.success) { setErreur(d1.message || 'Erreur.'); return; }
+      if (!d1.success) { setErreur(d1.message || t('publier_formation.err_generic')); return; }
 
       // Étape 2 : paiement — l'annonce reste en attente jusqu'à confirmation
       setAnnonceId(d1.annonceId)
       setShowPayment(true)
     } catch {
-      setErreur('Erreur de connexion.')
+      setErreur(t('publier_formation.err_network'))
     } finally {
       setLoading(false)
     }
@@ -114,7 +122,7 @@ export default function PublierFormation() {
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100">←</button>
           <div className="h-5 w-px bg-gray-200" />
-          <h1 className="font-bold text-gray-800">Publications Formation</h1>
+          <h1 className="font-bold text-gray-800">{t('publier_formation.header_title')}</h1>
         </div>
       </header>
 
@@ -123,12 +131,12 @@ export default function PublierFormation() {
         {/* Onglets */}
         <div className="flex rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm">
           {([
-            { id: 'publier',      label: '➕ Publier une formation' },
-            { id: 'mes-annonces', label: '📋 Mes annonces' },
-          ] as const).map(t => (
-            <button key={t.id} onClick={() => setOnglet(t.id)}
-              className={`flex-1 py-3 text-sm font-bold transition-all ${onglet === t.id ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
-              {t.label}
+            { id: 'publier',      label: t('publier_formation.tab_publish') },
+            { id: 'mes-annonces', label: t('publier_formation.tab_my_listings') },
+          ] as const).map(tab => (
+            <button key={tab.id} onClick={() => setOnglet(tab.id)}
+              className={`flex-1 py-3 text-sm font-bold transition-all ${onglet === tab.id ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+              {tab.label}
             </button>
           ))}
         </div>
@@ -139,17 +147,17 @@ export default function PublierFormation() {
             {/* Prix et règle */}
             <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
-                <p className="font-bold text-indigo-900">Prix de publication</p>
+                <p className="font-bold text-indigo-900">{t('publier_formation.price_title')}</p>
                 {prix !== null && (
                   <span className="text-2xl font-black text-indigo-700">{fmt(prix)}</span>
                 )}
               </div>
               <ul className="text-sm text-indigo-700 space-y-1">
-                <li>• Votre annonce est visible sur la page Éducation</li>
-                <li>• Les apprenants vous contactent <strong>directement</strong></li>
-                <li>• Les paiements se font <strong>entre vous et l'apprenant</strong></li>
-                <li>• Durée : <strong>1 semaine à 1 mois</strong> selon votre choix</li>
-                {zone === 'hors_afrique' && <li className="text-amber-700">• Tarif international appliqué</li>}
+                <li>• {t('publier_formation.rule_visible')}</li>
+                <li>• {t('publier_formation.rule_contact_prefix')} <strong>{t('publier_formation.rule_contact_bold')}</strong></li>
+                <li>• {t('publier_formation.rule_payment_prefix')} <strong>{t('publier_formation.rule_payment_bold')}</strong></li>
+                <li>• {t('publier_formation.rule_duration_prefix')} <strong>{t('publier_formation.rule_duration_bold')}</strong> {t('publier_formation.rule_duration_suffix')}</li>
+                {zone === 'hors_afrique' && <li className="text-amber-700">• {t('publier_formation.rule_international')}</li>}
               </ul>
             </div>
 
@@ -157,23 +165,23 @@ export default function PublierFormation() {
             <form onSubmit={publier} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Titre de la formation *</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">{t('publier_formation.title_label')}</label>
                 <input type="text" required value={form.titre}
                   onChange={e => setForm({ ...form, titre: e.target.value })}
-                  placeholder="Ex: Cours de comptabilité pour entrepreneurs"
+                  placeholder={t('publier_formation.title_placeholder')}
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Matière / Domaine</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('publier_formation.subject_label')}</label>
                   <input type="text" value={form.matiere}
                     onChange={e => setForm({ ...form, matiere: e.target.value })}
-                    placeholder="Ex: Maths, Français, Informatique..."
+                    placeholder={t('publier_formation.subject_placeholder')}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Niveau</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('publier_formation.level_label')}</label>
                   <select value={form.niveau} onChange={e => setForm({ ...form, niveau: e.target.value })}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
                     {NIVEAUX.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
@@ -182,24 +190,24 @@ export default function PublierFormation() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
+                <label className="block text-sm font-bold text-gray-700 mb-1">{t('echange_tertiaire.description_label')}</label>
                 <textarea value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
-                  placeholder="Décrivez la formation, le programme, ce que les apprenants vont apprendre..."
+                  placeholder={t('publier_formation.description_placeholder')}
                   rows={3}
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Lieu</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('publier_formation.location_label')}</label>
                   <input type="text" value={form.lieu}
                     onChange={e => setForm({ ...form, lieu: e.target.value })}
-                    placeholder="Ex: En ligne, Conakry, Kindia..."
+                    placeholder={t('publier_formation.location_placeholder')}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Date de début</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('publier_formation.start_date_label')}</label>
                   <input type="date" value={form.dateDebut}
                     onChange={e => setForm({ ...form, dateDebut: e.target.value })}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
@@ -208,36 +216,36 @@ export default function PublierFormation() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Nombre de places</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('publier_formation.places_label')}</label>
                   <input type="number" min="0" value={form.nbPlaces}
                     onChange={e => setForm({ ...form, nbPlaces: e.target.value })}
-                    placeholder="0 = illimité"
+                    placeholder={t('publier_formation.places_placeholder')}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Votre tarif (info)</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">{t('publier_formation.your_rate_label')}</label>
                   <input type="text" value={form.prixInfo}
                     onChange={e => setForm({ ...form, prixInfo: e.target.value })}
-                    placeholder="Ex: 150 000 GNF / mois"
+                    placeholder={t('publier_formation.your_rate_placeholder')}
                     className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Votre contact pour les apprenants *
+                  {t('publier_formation.contact_label')}
                 </label>
                 <input type="text" required value={form.contact}
                   onChange={e => setForm({ ...form, contact: e.target.value })}
-                  placeholder="Téléphone, WhatsApp, email... — les apprenants vous contacteront directement"
+                  placeholder={t('publier_formation.contact_placeholder')}
                   className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-                <p className="text-xs text-gray-400 mt-1">Les apprenants vous paient directement — la plateforme n'intervient pas</p>
+                <p className="text-xs text-gray-400 mt-1">{t('publier_formation.contact_note')}</p>
               </div>
 
               {/* Durée de publication */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Durée de publication
+                  {t('publier_formation.duration_label')}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {DUREES.map(d => (
@@ -253,7 +261,7 @@ export default function PublierFormation() {
                   ))}
                 </div>
                 <p className="text-xs text-gray-400 mt-2">
-                  Votre annonce disparaîtra automatiquement le{' '}
+                  {t('publier_formation.expires_automatically_prefix')}{' '}
                   <strong>{new Date(Date.now() + form.dureejours * 86400000).toLocaleDateString('fr-GN', { day: '2-digit', month: 'long', year: 'numeric' })}</strong>
                 </p>
               </div>
@@ -268,8 +276,8 @@ export default function PublierFormation() {
                 className="w-full py-3.5 rounded-xl font-black text-white text-sm disabled:opacity-50 transition-all"
                 style={{ background: 'linear-gradient(135deg,#4f46e5,#1e3a5f)' }}>
                 {loading
-                  ? '⏳ Redirection vers le paiement...'
-                  : `💳 Publier ma formation — ${prix ? fmt(prix) : '...'}`}
+                  ? t('publier_formation.redirecting_payment')
+                  : `${t('publier_formation.publish_btn_prefix')} ${prix ? fmt(prix) : '...'}`}
               </button>
             </form>
           </>
@@ -281,10 +289,10 @@ export default function PublierFormation() {
             {mesAnnonces.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-gray-400">
                 <p className="text-3xl mb-3">📭</p>
-                <p className="font-semibold">Vous n'avez pas encore publié de formation.</p>
+                <p className="font-semibold">{t('publier_formation.no_listings')}</p>
                 <button onClick={() => setOnglet('publier')}
                   className="mt-4 px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">
-                  Publier ma première formation
+                  {t('publier_formation.publish_first_btn')}
                 </button>
               </div>
             ) : mesAnnonces.map(a => {
@@ -295,7 +303,7 @@ export default function PublierFormation() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${enLigne ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {enLigne ? '🟢 En ligne' : '⚪ Expirée'}
+                          {enLigne ? t('publier_formation.status_online') : t('publier_formation.status_expired')}
                         </span>
                         {a.niveau && a.niveau !== 'tous' && (
                           <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">{a.niveau}</span>
@@ -306,13 +314,13 @@ export default function PublierFormation() {
                       {a.lieu && <p className="text-xs text-gray-400">📍 {a.lieu}</p>}
                       {a.prix_info && <p className="text-xs text-indigo-600 font-semibold mt-1">💰 {a.prix_info}</p>}
                       <p className="text-xs text-gray-400 mt-1">
-                        Expire le {fmtDate(a.expire_le)}
+                        {t('publier_formation.expires_on')} {fmtDate(a.expire_le)}
                       </p>
                     </div>
                     {enLigne && (
                       <button onClick={() => supprimerAnnonce(a.id)}
                         className="text-xs text-red-500 hover:text-red-700 font-semibold flex-shrink-0">
-                        Retirer
+                        {t('publier_formation.remove_btn')}
                       </button>
                     )}
                   </div>
