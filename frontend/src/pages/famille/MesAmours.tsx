@@ -5,6 +5,7 @@ import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay, isAdmin } from '../../utils/auth';
 import { FriendChat } from '../../components/FriendChat';
+import { useI18n } from '../../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -78,6 +79,7 @@ interface MesAmoursStory {
 }
 
 export default function MesAmours({ embedded = false }: { embedded?: boolean } = {}) {
+  const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
@@ -891,7 +893,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
             <button
               type="button"
               onClick={handleAddFriend}
-              aria-label="Rechercher un ami"
+              aria-label={t('amitie.search_aria')}
               className="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors text-lg shrink-0"
             >
               🔍
@@ -944,7 +946,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               type="button"
               onClick={() => storyInputRef.current?.click()}
               disabled={uploadingStory}
-              aria-label="Ajouter une story"
+              aria-label={t('amitie.add_story_aria')}
               className={`flex-shrink-0 w-[64px] h-[120px] flex flex-col items-center justify-center gap-1 rounded-xl border shadow-sm transition-colors ${
                 uploadingStory
                   ? 'bg-emerald-500 border-emerald-500'
@@ -969,7 +971,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
         <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">📨 Invitations</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">📨 {t('amitie.invitations')}</h2>
               {friendRequests.length > 0 && (
                 <span className="bg-red-500 text-white text-sm font-bold rounded-full px-2.5 py-0.5">
                   {friendRequests.length}
@@ -981,21 +983,21 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               onClick={handleAddFriend}
               className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
             >
-              ➕ Ajouter
+              ➕ {t('btn.add')}
             </button>
           </div>
 
           {userIsAdmin && friends.length === 0 && (
             <div className="border-2 border-dashed border-emerald-300 bg-emerald-50 rounded-lg p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
               <div>
-                <p className="font-semibold text-gray-900 text-sm">🧪 Espace de test admin</p>
-                <p className="text-xs text-gray-600">Aucun ami réel n'est nécessaire pour vérifier que la messagerie fonctionne correctement.</p>
+                <p className="font-semibold text-gray-900 text-sm">{t('amitie.admin_test_title')}</p>
+                <p className="text-xs text-gray-600">{t('amitie.admin_test_desc')}</p>
               </div>
               <button
                 onClick={() => setChatFriend(adminDemoFriend)}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
               >
-                💬 Tester la messagerie
+                {t('amitie.admin_test_btn')}
               </button>
             </div>
           )}
@@ -1019,13 +1021,13 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                     onClick={() => handleFriendRequest(request.id, 'accept')}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-lg font-medium transition-colors text-xs sm:text-sm"
                   >
-                    Confirmer
+                    {t('btn.confirm')}
                   </button>
                   <button
                     onClick={() => handleFriendRequest(request.id, 'reject')}
                     className="bg-white hover:bg-red-50 text-red-600 border border-red-300 py-2 px-3 rounded-lg font-medium transition-colors text-xs sm:text-sm"
                   >
-                    Supprimer
+                    {t('btn.delete')}
                   </button>
                 </div>
               </div>
@@ -1053,18 +1055,18 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 text-sm truncate">{friend.prenom} {friend.nomFamille}</p>
                   <p className="text-xs text-gray-500">
-                    {friend.isOnline ? <span className="text-green-600">En ligne</span> : 'Ami(e)'}
+                    {friend.isOnline ? <span className="text-green-600">{t('amitie.online')}</span> : t('amitie.friend_status')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); handleViewFriendInfo(friend); }}
-                    aria-label="Voir infos"
+                    aria-label={t('amitie.view_info_aria')}
                     className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm"
                   >
                     ℹ️
                   </button>
-                  <span className="text-emerald-600 text-xs font-medium hidden sm:inline">💬 Message</span>
+                  <span className="text-emerald-600 text-xs font-medium hidden sm:inline">{t('amitie.message')}</span>
                 </div>
               </div>
             ))}
@@ -1072,8 +1074,8 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
             {friendRequests.length === 0 && friends.length === 0 && (
               <div className="text-center py-12">
                 <div className="text-5xl mb-3">👥</div>
-                <p className="text-gray-500 text-lg font-medium">Vous n'avez pas encore d'amis</p>
-                <p className="text-gray-400 text-sm mt-2">Utilisez le bouton "➕ Ajouter" pour envoyer une invitation</p>
+                <p className="text-gray-500 text-lg font-medium">{t('amitie.empty_title')}</p>
+                <p className="text-gray-400 text-sm mt-2">{t('amitie.empty_desc')}</p>
               </div>
             )}
           </div>
@@ -1092,7 +1094,7 @@ export default function MesAmours({ embedded = false }: { embedded?: boolean } =
               {(() => {
                 const mediaUrl = (viewingStory.photos && viewingStory.photos[0]) || (viewingStory.videos && viewingStory.videos[0]) || '';
                 const isVideo = mediaUrl?.toLowerCase().match(/\.mp4$|\.webm$|\.ogg$/);
-                if (!mediaUrl) return <p className="text-white text-center p-8">Story sans média</p>;
+                if (!mediaUrl) return <p className="text-white text-center p-8">{t('amitie.story_no_media')}</p>;
                 return isVideo ? (
                   <video src={mediaUrl} className="w-full max-h-[70vh] object-contain" controls autoPlay />
                 ) : (
