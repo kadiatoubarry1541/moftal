@@ -6,6 +6,7 @@ import { VideoRecorder } from '../components/VideoRecorder';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { PublierAnnonceButtons } from '../components/PublierAnnonceButtons';
 import { DevenirVendeurButton } from '../components/DevenirVendeurButton';
+import { useI18n } from '../i18n/useI18n';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || '';
 
@@ -43,16 +44,20 @@ function buildImageUrl(path: string | undefined): string | undefined {
 
 type TechTab = 'tous' | 'telephones' | 'ordinateurs' | 'tv' | 'accessoires' | 'vehicules';
 
-const TECH_TABS: { key: TechTab; emoji: string; label: string; keywords: string[] }[] = [
-  { key: 'tous',        emoji: '📦', label: 'Tous',        keywords: [] },
-  { key: 'telephones',  emoji: '📱', label: 'Téléphones',  keywords: ['téléphone','telephone','smartphone','mobile','iphone','samsung','huawei','tecno','infinix','itel','xiaomi','oppo','vivo','android','sim'] },
-  { key: 'ordinateurs', emoji: '💻', label: 'Ordinateurs', keywords: ['ordinateur','laptop','pc','tablette','ipad','macbook','dell','hp','lenovo','asus','acer','chromebook','desktop'] },
-  { key: 'tv',          emoji: '📺', label: 'TV & Son',    keywords: ['télévision','television','tv','écran','ecran','appareil photo','caméra','camera','projecteur','hifi','sono','enceinte','home cinéma','drone'] },
-  { key: 'accessoires', emoji: '🎧', label: 'Accessoires', keywords: ['écouteur','ecouteur','casque','chargeur','coque','câble','cable','batterie','powerbank','clé usb','souris','clavier','imprimante','disque dur','flash'] },
-  { key: 'vehicules',   emoji: '🚗', label: 'Véhicules',   keywords: ['voiture','moto','véhicule','vehicule','scooter','vélo','velo','camion','auto','4x4','suv','berline','pick-up','taxi','pièce auto','pneu'] },
-];
+function getTechTabs(t: (key: string) => string): { key: TechTab; emoji: string; label: string; keywords: string[] }[] {
+  return [
+    { key: 'tous',        emoji: '📦', label: t('echange_tertiaire.tab_tous'),        keywords: [] },
+    { key: 'telephones',  emoji: '📱', label: t('echange_quaternaire.tab_telephones'),  keywords: ['téléphone','telephone','smartphone','mobile','iphone','samsung','huawei','tecno','infinix','itel','xiaomi','oppo','vivo','android','sim'] },
+    { key: 'ordinateurs', emoji: '💻', label: t('echange_quaternaire.tab_ordinateurs'), keywords: ['ordinateur','laptop','pc','tablette','ipad','macbook','dell','hp','lenovo','asus','acer','chromebook','desktop'] },
+    { key: 'tv',          emoji: '📺', label: t('echange_quaternaire.tab_tv'),    keywords: ['télévision','television','tv','écran','ecran','appareil photo','caméra','camera','projecteur','hifi','sono','enceinte','home cinéma','drone'] },
+    { key: 'accessoires', emoji: '🎧', label: t('echange_quaternaire.tab_accessoires'), keywords: ['écouteur','ecouteur','casque','chargeur','coque','câble','cable','batterie','powerbank','clé usb','souris','clavier','imprimante','disque dur','flash'] },
+    { key: 'vehicules',   emoji: '🚗', label: t('echange_quaternaire.tab_vehicules'),   keywords: ['voiture','moto','véhicule','vehicule','scooter','vélo','velo','camion','auto','4x4','suv','berline','pick-up','taxi','pièce auto','pneu'] },
+  ];
+}
 
 export default function EchangeQuaternaire() {
+  const { t } = useI18n();
+  const TECH_TABS = useMemo(() => getTechTabs(t), [t]);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [rawProducts, setRawProducts] = useState<ExchangeProduct[]>([]);
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
@@ -200,7 +205,7 @@ export default function EchangeQuaternaire() {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
-          <p className="text-lg text-gray-600 dark:text-gray-400">Chargement…</p>
+          <p className="text-lg text-gray-600 dark:text-gray-400">{t('echange_tertiaire.loading')}</p>
         </div>
       </div>
     );
@@ -215,7 +220,7 @@ export default function EchangeQuaternaire() {
         onClick={() => navigate('/echange')}
         className="mb-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors flex items-center gap-2"
       >
-        ← Retour
+        {t('btn.back_arrow')}
       </button>
 
       {(userGeo.city || userGeo.country || gpsActive) && (
@@ -223,8 +228,8 @@ export default function EchangeQuaternaire() {
           <span>{gpsActive ? '📡' : '📍'}</span>
           <span>
             {gpsActive
-              ? 'Annonces triées par distance GPS — les plus proches apparaissent en premier'
-              : `Annonces de ${userGeo.city || userGeo.country} apparaissent en premier`}
+              ? t('echange_tertiaire.gps_sorted')
+              : `${t('echange_tertiaire.location_sorted_before')} ${userGeo.city || userGeo.country} ${t('echange_tertiaire.location_sorted_after')}`}
           </span>
         </div>
       )}
@@ -233,22 +238,22 @@ export default function EchangeQuaternaire() {
       <div className="mb-6 rounded-2xl overflow-hidden shadow-lg border-2 border-yellow-400 dark:border-yellow-500">
         <div className="bg-gradient-to-r from-yellow-500 to-amber-500 px-4 py-2 flex items-center gap-2">
           <span className="text-lg">⭐</span>
-          <span className="text-white font-bold text-sm tracking-wide uppercase">Vendeur Officiel Moftal</span>
-          <span className="ml-auto bg-white text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">OFFICIEL</span>
+          <span className="text-white font-bold text-sm tracking-wide uppercase">{t('echange_tertiaire.official_vendor_label')}</span>
+          <span className="ml-auto bg-white text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full">{t('echange_tertiaire.official_badge')}</span>
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <span className="text-5xl">📱</span>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-gray-900 dark:text-white">Appareils numériques — Téléphones, PC &amp; Accessoires</p>
+            <p className="font-bold text-gray-900 dark:text-white">{t('echange_quaternaire.devices_title')}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Smartphones, ordinateurs, tablettes, TV et accessoires certifiés. Contactez-nous pour commander.
+              {t('echange_quaternaire.devices_desc')}
             </p>
           </div>
           <a
             href="mailto:support@moftal.com"
             className="flex-shrink-0 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-sm font-semibold transition-colors"
           >
-            Nous contacter
+            {t('echange_tertiaire.contact_us_btn')}
           </a>
         </div>
       </div>
@@ -257,16 +262,16 @@ export default function EchangeQuaternaire() {
       <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-xl p-6 mb-6 text-white shadow-lg">
         <div className="flex flex-col items-center text-center gap-2">
           <span className="text-5xl">📱</span>
-          <h1 className="text-2xl font-bold">Technologie & Véhicules</h1>
+          <h1 className="text-2xl font-bold">{t('echange_quaternaire.header_title')}</h1>
           <p className="text-violet-100 text-sm">
-            Téléphones · Ordinateurs · TV · Voitures · Motos · Accessoires
+            {t('echange_quaternaire.header_subtitle')}
           </p>
         </div>
       </div>
 
       {/* Onglets visuels */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Que cherches-tu ?</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{t('echange_tertiaire.what_looking_for')}</p>
         <div className="overflow-x-auto pb-2 -mx-1">
           <div className="flex gap-2 px-1 min-w-max">
             {TECH_TABS.map(tab => (
@@ -290,7 +295,7 @@ export default function EchangeQuaternaire() {
             {canPublish ? (
               <PublierAnnonceButtons
                 onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }}
-                title="Vendre un article"
+                title={t('echange_tertiaire.sell_item_title')}
               />
             ) : (
               <DevenirVendeurButton secteur="quaternaire" />
@@ -311,50 +316,50 @@ export default function EchangeQuaternaire() {
             </button>
             <span className="text-2xl">{currentTab.emoji}</span>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              {publishMode === 'ecrit' && 'Publier par écrit (champs + photo)'}
-              {publishMode === 'photo_audio' && 'Publier par photo + audio'}
-              {publishMode === 'video' && 'Publier par vidéo'}
+              {publishMode === 'ecrit' && t('echange_tertiaire.publish_written_title')}
+              {publishMode === 'photo_audio' && t('echange_tertiaire.publish_photo_audio_title')}
+              {publishMode === 'video' && t('echange_tertiaire.publish_video_title')}
             </h3>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Titre de l'annonce</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_quaternaire.title_label')}</label>
               <input
                 type="text"
                 value={newProduct.title}
                 onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-                placeholder="Ex: Samsung Galaxy A54, MacBook Pro 2021…"
+                placeholder={t('echange_quaternaire.title_placeholder')}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Catégorie</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.category_label')}</label>
               <select
                 value={newProduct.category}
                 onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
               >
-                <option value="">Choisir une catégorie</option>
-                <optgroup label="📱 Téléphones">
+                <option value="">{t('echange_tertiaire.choose_category')}</option>
+                <optgroup label={t('echange_quaternaire.optgroup_telephones')}>
                   <option value="Smartphone">Smartphone</option>
                   <option value="Téléphone basique">Téléphone basique</option>
                   <option value="Téléphone double SIM">Téléphone double SIM</option>
                 </optgroup>
-                <optgroup label="💻 Ordinateurs & Tablettes">
+                <optgroup label={t('echange_quaternaire.optgroup_ordinateurs')}>
                   <option value="Laptop / PC portable">Laptop / PC portable</option>
                   <option value="PC de bureau">PC de bureau</option>
                   <option value="Tablette">Tablette</option>
                   <option value="Pièces & composants">Pièces &amp; composants</option>
                 </optgroup>
-                <optgroup label="📺 TV & Photo">
+                <optgroup label={t('echange_quaternaire.optgroup_tv')}>
                   <option value="Télévision">Télévision</option>
                   <option value="Appareil photo">Appareil photo</option>
                   <option value="Caméra">Caméra / Dashcam</option>
                   <option value="Enceinte / Sono">Enceinte / Sono</option>
                   <option value="Projecteur">Projecteur / Vidéoprojecteur</option>
                 </optgroup>
-                <optgroup label="🎧 Accessoires">
+                <optgroup label={t('echange_quaternaire.optgroup_accessoires')}>
                   <option value="Écouteurs / Casque">Écouteurs / Casque</option>
                   <option value="Chargeur">Chargeur / Câble</option>
                   <option value="Coque / Protection">Coque / Protection</option>
@@ -364,7 +369,7 @@ export default function EchangeQuaternaire() {
                   <option value="Imprimante / Scanner">Imprimante / Scanner</option>
                   <option value="Disque dur">Disque dur externe</option>
                 </optgroup>
-                <optgroup label="🚗 Véhicules">
+                <optgroup label={t('echange_quaternaire.optgroup_vehicules')}>
                   <option value="Voiture">Voiture / Auto</option>
                   <option value="Moto">Moto / Scooter</option>
                   <option value="Vélo">Vélo</option>
@@ -376,7 +381,7 @@ export default function EchangeQuaternaire() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Prix</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.price_label')}</label>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -397,47 +402,47 @@ export default function EchangeQuaternaire() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">État</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_quaternaire.condition_label')}</label>
               <select
                 value={newProduct.condition}
                 onChange={(e) => setNewProduct({ ...newProduct, condition: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
               >
-                <option value="neuf">Neuf (jamais utilisé)</option>
-                <option value="bon">Bon état</option>
-                <option value="moyen">État moyen</option>
-                <option value="usé">Usé / Pour pièces</option>
+                <option value="neuf">{t('echange_quaternaire.condition_new')}</option>
+                <option value="bon">{t('echange_quaternaire.condition_good')}</option>
+                <option value="moyen">{t('echange_quaternaire.condition_medium')}</option>
+                <option value="usé">{t('echange_quaternaire.condition_worn')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Localisation</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.location_label')}</label>
               <input
                 type="text"
                 value={newProduct.location}
                 onChange={(e) => setNewProduct({ ...newProduct, location: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-                placeholder="Ex: Conakry, Kindia, Labé…"
+                placeholder={t('echange_quaternaire.location_placeholder')}
               />
             </div>
 
             {publishMode === 'photo_audio' && (
               <div className="lg:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Photo + message vocal (max 10 s)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.photo_audio_label')}</label>
                 <div className="rounded-xl border-2 border-violet-200 dark:border-violet-700 bg-violet-50/50 dark:bg-violet-900/20 p-4 space-y-3">
                   <div>
-                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Photo de l'appareil</span>
+                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('echange_quaternaire.photo_device_label')}</span>
                     <input type="file" accept="image/*" capture="environment"
                       onChange={(e) => setNewProduct(prev => ({ ...prev, photoForAudio: e.target.files?.[0] || null }))}
                       className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-800 dark:file:bg-violet-900/30 dark:file:text-violet-200" />
-                    {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600 dark:text-green-400">✓ Photo sélectionnée</p>}
+                    {newProduct.photoForAudio && <p className="mt-1 text-xs text-green-600 dark:text-green-400">{t('echange_tertiaire.photo_selected')}</p>}
                   </div>
                   <div>
-                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Message vocal (max 10 secondes)</span>
+                    <span className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('echange_tertiaire.voice_message_label')}</span>
                     <AudioRecorder maxDuration={10} onAudioRecorded={(blob) => {
                       const file = new File([blob], `audio-${Date.now()}.webm`, { type: blob.type || 'audio/webm' });
                       setNewProduct(prev => ({ ...prev, audio30s: file }));
                     }} />
-                    {newProduct.audio30s && <p className="mt-2 text-xs text-green-600 dark:text-green-400">✓ Audio enregistré</p>}
+                    {newProduct.audio30s && <p className="mt-2 text-xs text-green-600 dark:text-green-400">{t('echange_tertiaire.audio_recorded')}</p>}
                   </div>
                 </div>
               </div>
@@ -445,13 +450,13 @@ export default function EchangeQuaternaire() {
 
             {publishMode === 'video' && (
               <div className="lg:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Vidéo (max 10 secondes)</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.video_label')}</label>
                 <div className="rounded-xl border-2 border-violet-200 dark:border-violet-700 bg-violet-50/50 dark:bg-violet-900/20 p-4">
                   <VideoRecorder maxDuration={10} onVideoRecorded={(blob) => {
                     const file = new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' });
                     setNewProduct(prev => ({ ...prev, videos: [file, ...prev.videos] }));
                   }} />
-                  {newProduct.videos.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400 font-medium">✓ Vidéo enregistrée</p>}
+                  {newProduct.videos.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400 font-medium">{t('echange_tertiaire.video_recorded')}</p>}
                 </div>
               </div>
             )}
@@ -459,7 +464,7 @@ export default function EchangeQuaternaire() {
             {publishMode === 'ecrit' && (
               <>
                 <div className="lg:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📷 Photos de l'appareil</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_quaternaire.photos_device_label')}</label>
                   <input type="file" accept="image/*" multiple
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
@@ -467,16 +472,16 @@ export default function EchangeQuaternaire() {
                     }}
                     className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-violet-100 file:text-violet-800 dark:file:bg-violet-900/30 dark:file:text-violet-200"
                   />
-                  {newProduct.images.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400">{newProduct.images.length} photo(s) ajoutée(s)</p>}
+                  {newProduct.images.length > 0 && <p className="mt-2 text-sm text-green-600 dark:text-green-400">{newProduct.images.length} {t('echange_quaternaire.photos_added_suffix')}</p>}
                 </div>
                 <div className="lg:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Description</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{t('echange_tertiaire.description_label')}</label>
                   <textarea
                     value={newProduct.description}
                     onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
                     rows={4}
-                    placeholder="Décrivez l'appareil : marque, modèle, stockage, couleur, raison de la vente…"
+                    placeholder={t('echange_quaternaire.description_placeholder')}
                   />
                 </div>
               </>
@@ -484,8 +489,8 @@ export default function EchangeQuaternaire() {
           </div>
 
           <div className="flex gap-4 mt-6">
-            <button onClick={createProduct} className="px-6 py-3 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-semibold">✅ Publier</button>
-            <button onClick={() => { setShowCreateProduct(false); setPublishMode(null); }} className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-semibold">Annuler</button>
+            <button onClick={createProduct} className="px-6 py-3 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-semibold">{t('echange_tertiaire.publish_btn')}</button>
+            <button onClick={() => { setShowCreateProduct(false); setPublishMode(null); }} className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-semibold">{t('btn.cancel')}</button>
           </div>
         </div>
       )}
@@ -504,11 +509,11 @@ export default function EchangeQuaternaire() {
           <div className="col-span-full text-center py-14 bg-violet-50 dark:bg-violet-900/10 rounded-2xl border border-violet-200 dark:border-violet-800">
             <span className="text-6xl block mb-4">{currentTab.emoji}</span>
             <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
-              Aucune annonce dans <strong>{currentTab.label}</strong> pour le moment.
+              {t('echange_tertiaire.no_ads_before')} <strong>{currentTab.label}</strong> {t('echange_tertiaire.no_ads_after')}
             </p>
             {userData && (
               <button onClick={() => { setShowCreateProduct(true); setPublishMode(null); }} className="px-6 py-3 bg-violet-600 text-white rounded-xl hover:bg-violet-700">
-                ➕ Publier la première annonce
+                {t('echange_tertiaire.publish_first_btn')}
               </button>
             )}
           </div>
@@ -524,20 +529,20 @@ export default function EchangeQuaternaire() {
               ) : product.audio && product.audio.length > 0 ? (
                 <div className="w-full h-48 bg-violet-50 dark:bg-violet-900/20 flex flex-col items-center justify-center gap-2 px-4">
                   <span className="text-4xl">🎙️</span>
-                  <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">Message vocal du vendeur</p>
+                  <p className="text-xs text-violet-700 dark:text-violet-300 font-medium">{t('echange_tertiaire.voice_message_vendor')}</p>
                   <audio src={buildImageUrl(product.audio[0])} controls className="w-full" />
                 </div>
               ) : (
                 <div className="w-full h-48 bg-violet-50 dark:bg-violet-900/20 flex flex-col items-center justify-center gap-2">
                   <span className="text-5xl">{currentTab.emoji}</span>
-                  <p className="text-xs text-gray-400">Pas encore de photo</p>
+                  <p className="text-xs text-gray-400">{t('echange_tertiaire.no_photo_yet')}</p>
                 </div>
               )}
               <div className="p-5">
                 <div className="flex justify-between items-start mb-2 gap-2">
                   <h3 className="font-bold text-gray-900 dark:text-white text-base leading-snug">{product.title}</h3>
                   <span className="flex-shrink-0 px-2 py-0.5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 rounded-full text-xs font-semibold">
-                    {product.category || 'Numérique'}
+                    {product.category || t('echange_quaternaire.digital_fallback')}
                   </span>
                 </div>
                 {product.condition && (
@@ -547,7 +552,7 @@ export default function EchangeQuaternaire() {
                     product.condition === 'moyen' ? 'bg-yellow-100 text-yellow-700' :
                     'bg-red-100 text-red-700'
                   }`}>
-                    {product.condition === 'neuf' ? 'Neuf' : product.condition === 'bon' ? 'Bon état' : product.condition === 'moyen' ? 'État moyen' : 'Usé'}
+                    {product.condition === 'neuf' ? t('echange_quaternaire.condition_new_badge') : product.condition === 'bon' ? t('echange_quaternaire.condition_good') : product.condition === 'moyen' ? t('echange_quaternaire.condition_medium') : t('echange_quaternaire.condition_worn_badge')}
                   </span>
                 )}
                 {product.description && (
@@ -565,7 +570,7 @@ export default function EchangeQuaternaire() {
                 )}
                 <button onClick={() => setSelectedProduct(product)}
                   className="w-full py-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 font-medium text-sm transition-colors">
-                  📞 Contacter le vendeur
+                  {t('echange_tertiaire.contact_vendor_btn')}
                 </button>
               </div>
             </div>
@@ -579,7 +584,7 @@ export default function EchangeQuaternaire() {
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{selectedProduct.title}</h3>
             <div className="flex gap-2 mb-3 flex-wrap">
               <span className="px-3 py-1 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 rounded-full text-xs font-semibold">
-                {selectedProduct.category || 'Numérique'}
+                {selectedProduct.category || t('echange_quaternaire.digital_fallback')}
               </span>
               {selectedProduct.condition && (
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -587,7 +592,7 @@ export default function EchangeQuaternaire() {
                   selectedProduct.condition === 'bon' ? 'bg-blue-100 text-blue-700' :
                   'bg-yellow-100 text-yellow-700'
                 }`}>
-                  {selectedProduct.condition === 'neuf' ? 'Neuf' : selectedProduct.condition === 'bon' ? 'Bon état' : selectedProduct.condition}
+                  {selectedProduct.condition === 'neuf' ? t('echange_quaternaire.condition_new_badge') : selectedProduct.condition === 'bon' ? t('echange_quaternaire.condition_good') : selectedProduct.condition}
                 </span>
               )}
             </div>
@@ -601,9 +606,9 @@ export default function EchangeQuaternaire() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">📍 {selectedProduct.location}</p>
             )}
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-              Pour contacter le vendeur, utilisez la messagerie interne ou les coordonnées de l'annonce.
+              {t('echange_tertiaire.contact_instructions')}
             </p>
-            <button onClick={() => setSelectedProduct(null)} className="w-full py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-medium">Fermer</button>
+            <button onClick={() => setSelectedProduct(null)} className="w-full py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 font-medium">{t('btn.close')}</button>
           </div>
         </div>
       )}
