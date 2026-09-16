@@ -2,6 +2,7 @@ import { lazy, Suspense, useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { isAdmin } from '../../utils/auth'
 import { AdCarousel } from '../../components/AdCarousel'
+import { useI18n } from '../../i18n/useI18n'
 import HeritageTab from './Arbre'
 
 const AmitieTab     = lazy(() => import('./MesAmours'))
@@ -10,16 +11,17 @@ const SolidariteTab = lazy(() => import('../Solidarite'))
 
 type TabId = 'heritage' | 'amitie' | 'recit' | 'solidarite'
 
-const MENU_ITEMS: { id: TabId; emoji: string; label: string }[] = [
-  { id: 'heritage',   emoji: '🌳', label: 'Héritage'   },
-  { id: 'amitie',     emoji: '💕', label: 'Amitié'     },
-  { id: 'recit',      emoji: '📜', label: 'Récit'      },
-  { id: 'solidarite', emoji: '🤝', label: 'Solidarité' },
+const MENU_ITEMS: { id: TabId; emoji: string; labelKey: string }[] = [
+  { id: 'heritage',   emoji: '🌳', labelKey: 'famille.menu.heritage'   },
+  { id: 'amitie',     emoji: '💕', labelKey: 'famille.menu.amitie'     },
+  { id: 'recit',      emoji: '📜', labelKey: 'famille.menu.recit'      },
+  { id: 'solidarite', emoji: '🤝', labelKey: 'famille.menu.solidarite' },
 ]
 
 const VALID_TAB_IDS = MENU_ITEMS.map(m => m.id)
 
 export default function Famille() {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
   const initialTab = (location.state as { tab?: string } | null)?.tab
@@ -67,15 +69,15 @@ export default function Famille() {
             </button>
             {activeTab && activeTab !== 'heritage' && current ? (
               <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>
-                {current.emoji} {current.label}
+                {current.emoji} {t(current.labelKey)}
               </h1>
             ) : (
               <>
-                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>👨‍👩‍👧‍👦 Famille</h1>
+                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 16, letterSpacing: '-0.2px', margin: 0 }}>👨‍👩‍👧‍👦 {t('nav.famille')}</h1>
                 {current && (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#6ee7b7', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '4px 10px' }}>
                     <span>{current.emoji}</span>
-                    <span>{current.label}</span>
+                    <span>{t(current.labelKey)}</span>
                   </span>
                 )}
               </>
@@ -88,7 +90,7 @@ export default function Famille() {
                 to="/famille/admin"
                 className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-400 px-3 py-1.5 text-xs font-bold text-white transition flex-shrink-0"
               >
-                👑 Admin
+                👑 {t('famille.admin')}
               </Link>
             )}
           </div>
@@ -107,7 +109,7 @@ export default function Famille() {
                 className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
               >
                 <span className="text-3xl leading-none">{item.emoji}</span>
-                <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
+                <span className="text-sm font-bold text-gray-900 text-center">{t(item.labelKey)}</span>
               </button>
             ))}
           </div>

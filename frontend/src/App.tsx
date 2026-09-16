@@ -506,18 +506,18 @@ function App() {
                 <div className="bg-white">
                   <div className="grid grid-cols-2 gap-3 p-4 pt-3 max-w-md mx-auto">
                     {([
-                      { id: "heritage",   emoji: "🌳", label: "Héritage"   },
-                      { id: "amitie",     emoji: "💕", label: "Amitié"     },
-                      { id: "recit",      emoji: "📜", label: "Récit"      },
-                      { id: "solidarite", emoji: "🤝", label: "Solidarité" },
-                    ] as { id: string; emoji: string; label: string }[]).map((item) => (
+                      { id: "heritage",   emoji: "🌳", labelKey: "famille.menu.heritage"   },
+                      { id: "amitie",     emoji: "💕", labelKey: "famille.menu.amitie"     },
+                      { id: "recit",      emoji: "📜", labelKey: "famille.menu.recit"      },
+                      { id: "solidarite", emoji: "🤝", labelKey: "famille.menu.solidarite" },
+                    ] as { id: string; emoji: string; labelKey: string }[]).map((item) => (
                       <button
                         key={item.id}
                         onClick={() => { setFamilyMenuOpen(false); navigate("/famille", { state: { tab: item.id } }); }}
                         className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-6 hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm"
                       >
                         <span className="text-3xl leading-none">{item.emoji}</span>
-                        <span className="text-sm font-bold text-gray-900 text-center">{item.label}</span>
+                        <span className="text-sm font-bold text-gray-900 text-center">{t(item.labelKey)}</span>
                       </button>
                     ))}
                   </div>
