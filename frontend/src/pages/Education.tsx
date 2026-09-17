@@ -1014,12 +1014,6 @@ export default function Education() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => navigate('/professeur-ia')}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-2"
-              >
-                <span>🤖</span> {t('education.my_ai_btn')}
-              </button>
-              <button
                 onClick={() => navigate('/famille/inspir')}
                 className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-2"
               >
@@ -1030,6 +1024,12 @@ export default function Education() {
                 className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
               >
                 {t('btn.back_arrow')}
+              </button>
+              <button
+                onClick={() => navigate('/professeur-ia')}
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-2.5 py-1.5 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-1 text-[10px] leading-none"
+              >
+                <span className="text-xs">🤖</span> {t('education.my_ai_btn')}
               </button>
             </div>
           </div>
@@ -1163,21 +1163,6 @@ export default function Education() {
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Lien vers la page Écoles */}
-            <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-violet-200 p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="text-4xl">🏫</div>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">{t('education.schools_professors_title')}</h3>
-                <p className="text-gray-600 text-sm">{t('education.schools_professors_desc')}</p>
-              </div>
-              <button
-                onClick={() => navigate('/ecoles')}
-                className="flex-shrink-0 px-5 py-3 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-xl transition-colors shadow-md"
-              >
-                {t('education.see_schools_btn')}
-              </button>
             </div>
           </div>
         )}

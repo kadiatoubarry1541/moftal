@@ -526,7 +526,7 @@ const pul: Record<string, string> = {
   'education.inspire_btn': 'Waɗdit',
   'education.tab_inscription_suivi': 'Winndugol & topdol',
   'education.tab_cours_inscription': 'Jaŋdeeji & Winndugol',
-  'education.my_ai_btn': 'IA am',
+  'education.my_ai_btn': 'IA Jaŋde',
   'education.tab_formation_scientifique': 'Jaŋde ganndal',
   'education.tab_mes_cours': 'Dersuuji am',
   'education.tab_defi_educatif': 'Fitina jannde',

@@ -526,7 +526,7 @@ const man: Record<string, string> = {
   'education.inspire_btn': 'Dusukunnata',
   'education.tab_inscription_suivi': 'Tɔgɔsɛbɛn & lakanani',
   'education.tab_cours_inscription': 'Kalanw & Tɔgɔsɛbɛn',
-  'education.my_ai_btn': 'N ka IA',
+  'education.my_ai_btn': 'Kalan IA',
   'education.tab_formation_scientifique': 'Dɔnniya kalan',
   'education.tab_mes_cours': 'N ka Wagatiw',
   'education.tab_defi_educatif': 'Kalan gɛlɛya',
