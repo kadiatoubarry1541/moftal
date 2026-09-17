@@ -161,7 +161,7 @@ export default function Education() {
   const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'defi-educatif'>('inscription-suivi');
+  const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'profs-disponibles' | 'defi-educatif'>('inscription-suivi');
   const [rawFormations, setRawFormations] = useState<Formation[]>([]);
   const [rawProfessors, setRawProfessors] = useState<Professor[]>([]);
   const [rawSchoolsList, setRawSchoolsList] = useState<School[]>([]);
@@ -1051,9 +1051,10 @@ export default function Education() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b mt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1 py-2">
+          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
             {[
               { id: 'inscription-suivi', label: t('education.tab_cours_inscription'), icon: '📚' },
+              { id: 'profs-disponibles', label: t('education.available_professors_title'), icon: '👨‍🏫' },
               { id: 'defi-educatif', label: t('education.tab_defi_educatif'), icon: '🏆' }
             ].map((tab) => (
             <button
@@ -1169,6 +1170,76 @@ export default function Education() {
 
         {activeTab === 'inscription-suivi' && (
           <div className="space-y-8">
+            {/* Section 2: Mes Inscriptions */}
+            {myRegistrations.length > 0 && (
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg p-6 border-2 border-green-200">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-2xl">
+                    ✅
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">{t('education.my_registrations_title')}</h3>
+                </div>
+                <div className="space-y-4">
+                  {myRegistrations.map((registration) => (
+                    <div key={registration.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{registration.formationTitle}</h4>
+                          <p className="text-sm text-gray-600">{t('education.registered_on')} {new Date(registration.registeredAt).toLocaleDateString()}</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          registration.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          registration.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {registration.status === 'approved' ? t('education.status_approved') :
+                           registration.status === 'pending' ? t('education.status_pending') : t('education.status_rejected')}
+                        </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+            {/* Section 4: Mes Demandes */}
+            {myRequests.length > 0 && (
+              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-lg p-6 border-2 border-yellow-200">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center text-2xl">
+                    📝
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">{t('education.my_requests_title')}</h3>
+                </div>
+                <div className="space-y-4">
+                  {myRequests.map((request) => (
+                    <div key={request.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{request.professorName}</h4>
+                          <p className="text-sm text-gray-600">{t('education.subject_colon')} {request.subject}</p>
+                          <p className="text-sm text-gray-600">{t('education.requested_on')} {new Date(request.requestedAt).toLocaleDateString()}</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {request.status === 'approved' ? t('education.status_approved') :
+                           request.status === 'pending' ? t('education.status_pending') : t('education.status_rejected')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  </div>
+                  </div>
+            )}
+
+          </div>
+        )}
+
+        {activeTab === 'profs-disponibles' && (
+          <div className="space-y-8">
             {/* Section 1: Formations Disponibles */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border-2 border-blue-200">
               <div className="flex items-center gap-3 mb-6">
@@ -1214,38 +1285,6 @@ export default function Education() {
               </div>
             )}
             </div>
-
-            {/* Section 2: Mes Inscriptions */}
-            {myRegistrations.length > 0 && (
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg p-6 border-2 border-green-200">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-2xl">
-                    ✅
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900">{t('education.my_registrations_title')}</h3>
-                </div>
-                <div className="space-y-4">
-                  {myRegistrations.map((registration) => (
-                    <div key={registration.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{registration.formationTitle}</h4>
-                          <p className="text-sm text-gray-600">{t('education.registered_on')} {new Date(registration.registeredAt).toLocaleDateString()}</p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          registration.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          registration.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {registration.status === 'approved' ? t('education.status_approved') :
-                           registration.status === 'pending' ? t('education.status_pending') : t('education.status_rejected')}
-                        </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
             {/* Section 3: Professeurs Disponibles */}
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg p-6 border-2 border-purple-200">
@@ -1300,40 +1339,6 @@ export default function Education() {
                     </div>
             )}
                   </div>
-
-            {/* Section 4: Mes Demandes */}
-            {myRequests.length > 0 && (
-              <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-lg p-6 border-2 border-yellow-200">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center text-2xl">
-                    📝
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900">{t('education.my_requests_title')}</h3>
-                </div>
-                <div className="space-y-4">
-                  {myRequests.map((request) => (
-                    <div key={request.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{request.professorName}</h4>
-                          <p className="text-sm text-gray-600">{t('education.subject_colon')} {request.subject}</p>
-                          <p className="text-sm text-gray-600">{t('education.requested_on')} {new Date(request.requestedAt).toLocaleDateString()}</p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {request.status === 'approved' ? t('education.status_approved') :
-                           request.status === 'pending' ? t('education.status_pending') : t('education.status_rejected')}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  </div>
-                  </div>
-            )}
-
           </div>
         )}
 
