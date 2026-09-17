@@ -2,6 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSessionUser, isMasterAdmin } from '../utils/auth'
 import PaymentModal from '../components/PaymentModal'
+import ImageCropper from '../components/ImageCropper'
+
+// Même format que la bannière affichée dans AdCarousel.tsx (aspectRatio: '4 / 1')
+// — recadrer à ce format exact avant l'envoi permet de savoir précisément ce
+// que la publicité affichera, avant même sa publication.
+const PUB_ASPECT = 4
+const PUB_OUTPUT_WIDTH = 1200
+const PUB_OUTPUT_HEIGHT = 300
 
 const API = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '')
 
@@ -24,6 +32,7 @@ export default function Publicite() {
   const [showPayment, setShowPayment] = useState(false)
   const [payingId, setPayingId] = useState('')
   const [image, setImage] = useState<File | null>(null)
+  const [pendingCropFile, setPendingCropFile] = useState<File | null>(null)
   const [lien, setLien] = useState('')
   const [titre, setTitre] = useState('')
   const [description, setDescription] = useState('')
@@ -172,11 +181,21 @@ export default function Publicite() {
                   Image de la publicité <span className="font-normal text-gray-400">(optionnel)</span>
                 </label>
                 <input ref={fileRef} type="file" accept="image/*"
-                  onChange={e => setImage(e.target.files?.[0] || null)}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) setPendingCropFile(f); }}
                   className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-emerald-600 file:text-white file:font-semibold file:text-sm" />
                 {image && (
-                  <img src={URL.createObjectURL(image)} alt="Aperçu" className="mt-3 w-full max-h-48 object-cover rounded-xl border border-gray-200" />
+                  <div className="mt-3 relative rounded-xl overflow-hidden border border-gray-200" style={{ aspectRatio: '4 / 1' }}>
+                    <img src={URL.createObjectURL(image)} alt="Aperçu" className="absolute inset-0 w-full h-full object-cover" />
+                  </div>
                 )}
+                {image && (
+                  <button type="button" onClick={() => setPendingCropFile(image)} className="mt-2 text-xs text-emerald-700 font-semibold hover:underline">
+                    ✂️ Réajuster le cadrage
+                  </button>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  Format 4:1 (large et bas) — exactement celui utilisé par votre publicité une fois publiée.
+                </p>
               </div>
 
               <div>
@@ -295,6 +314,18 @@ export default function Publicite() {
           </div>
         )}
       </div>
+
+      {pendingCropFile && (
+        <ImageCropper
+          file={pendingCropFile}
+          aspect={PUB_ASPECT}
+          outputWidth={PUB_OUTPUT_WIDTH}
+          outputHeight={PUB_OUTPUT_HEIGHT}
+          title="Ajuster votre publicité (format 4:1)"
+          onCancel={() => { setPendingCropFile(null); if (!image && fileRef.current) fileRef.current.value = '' }}
+          onConfirm={(cropped) => { setImage(cropped); setPendingCropFile(null) }}
+        />
+      )}
 
       {showPayment && prix && payingId && (
         <PaymentModal
