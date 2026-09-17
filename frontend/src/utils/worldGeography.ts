@@ -1659,38 +1659,34 @@ export function getLocationGroupTitle(code: string): string {
   return levelLabel ? `${levelLabel} ${last.name}` : last.name;
 }
 
-/** Liste plate de tous les lieux (quartiers, sous-préfectures, préfectures…) avec code pour sélection. */
-export function getAllLocationsForGroups(): { code: string; name: string; title: string }[] {
+export type LocationLevel = 'region' | 'prefecture' | 'sous_prefecture' | 'quartier';
+
+/**
+ * Liste plate de lieux avec code pour sélection. Sans argument, renvoie tous
+ * les niveaux mélangés (région, préfecture, sous-préfecture, quartier) —
+ * à réserver aux cas où le niveau n'a pas d'importance. Pour un champ dédié
+ * à un niveau précis (ex. "Sous-préfecture"), passer ce niveau pour ne pas
+ * mélanger des préfectures ou des quartiers dans la liste.
+ */
+export function getAllLocationsForGroups(level?: LocationLevel): { code: string; name: string; title: string }[] {
   const out: { code: string; name: string; title: string }[] = [];
+  const push = (node: { code: string; name: string }, nodeLevel: LocationLevel) => {
+    if (level && level !== nodeLevel) return;
+    out.push({ code: node.code, name: node.name, title: getLocationGroupTitle(node.code) });
+  };
   for (const continent of WORLD_GEOGRAPHY) {
     for (const country of continent.children || []) {
       for (const region of country.children || []) {
+        push(region, 'region');
         for (const prefecture of region.children || []) {
+          push(prefecture, 'prefecture');
           for (const sousPrefecture of prefecture.children || []) {
+            push(sousPrefecture, 'sous_prefecture');
             for (const quartier of sousPrefecture.children || []) {
-              out.push({
-                code: quartier.code,
-                name: quartier.name,
-                title: getLocationGroupTitle(quartier.code)
-              });
+              push(quartier, 'quartier');
             }
-            out.push({
-              code: sousPrefecture.code,
-              name: sousPrefecture.name,
-              title: getLocationGroupTitle(sousPrefecture.code)
-            });
           }
-          out.push({
-            code: prefecture.code,
-            name: prefecture.name,
-            title: getLocationGroupTitle(prefecture.code)
-          });
         }
-        out.push({
-          code: region.code,
-          name: region.name,
-          title: getLocationGroupTitle(region.code)
-        });
       }
     }
   }
