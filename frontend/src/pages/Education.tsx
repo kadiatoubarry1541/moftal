@@ -161,7 +161,7 @@ export default function Education() {
   const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'formation-scientifique' | 'mes-cours' | 'defi-educatif'>('formation-scientifique');
+  const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'defi-educatif'>('inscription-suivi');
   const [rawFormations, setRawFormations] = useState<Formation[]>([]);
   const [rawProfessors, setRawProfessors] = useState<Professor[]>([]);
   const [rawSchoolsList, setRawSchoolsList] = useState<School[]>([]);
@@ -282,7 +282,7 @@ export default function Education() {
   };
 
   useEffect(() => {
-    if (activeTab === 'mes-cours') {
+    if (activeTab === 'inscription-suivi') {
       loadCourses();
       loadLinkedCourses();
       loadLinkedStudents();
@@ -1014,6 +1014,12 @@ export default function Education() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
+                onClick={() => navigate('/professeur-ia')}
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-2"
+              >
+                <span>🤖</span> {t('education.my_ai_btn')}
+              </button>
+              <button
                 onClick={() => navigate('/famille/inspir')}
                 className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-2"
               >
@@ -1030,14 +1036,24 @@ export default function Education() {
         </div>
       </div>
 
+      {/* Écoles & Professeurs — remonté en haut pour leur donner la visibilité
+          en priorité (comme les professionnels sur la page Santé), avec leur
+          barre de recherche intégrée (ProSection) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <ProSection
+          type="school"
+          title={t('education.schools_professors_title')}
+          icon="🎓"
+          description=""
+        />
+      </div>
+
       {/* Navigation Tabs */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b mt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
+          <nav className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1 py-2">
             {[
-              { id: 'inscription-suivi', label: t('education.tab_inscription_suivi'), icon: '👥' },
-              { id: 'formation-scientifique', label: t('education.tab_formation_scientifique'), icon: '📚' },
-              { id: 'mes-cours', label: t('education.tab_mes_cours'), icon: '🎯' },
+              { id: 'inscription-suivi', label: t('education.tab_cours_inscription'), icon: '📚' },
               { id: 'defi-educatif', label: t('education.tab_defi_educatif'), icon: '🏆' }
             ].map((tab) => (
             <button
@@ -1166,35 +1182,8 @@ export default function Education() {
           </div>
         )}
 
-        {activeTab === 'formation-scientifique' && (
+        {activeTab === 'inscription-suivi' && (
           <div className="space-y-8">
-            {/* Section 0: Assistant IA - Français et Mathématiques */}
-            <div className="bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-50 rounded-xl shadow-xl p-8 border-4 border-cyan-400 relative overflow-hidden">
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center text-4xl shadow-lg">
-                    🤖
-                  </div>
-                  <div>
-                    <h2 className="text-4xl font-bold text-gray-900 mb-2">
-                      {t('education.ai_assistant_title')}
-                    </h2>
-                    <p className="text-lg text-gray-600">
-                      {t('education.ai_assistant_desc')}
-                    </p>
-                  </div>
-                  <div className="ml-auto">
-                    <button
-                      onClick={() => navigate('/professeur-ia')}
-                      className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white py-3 px-6 rounded-lg font-bold text-lg transition-all shadow-lg"
-                    >
-                      {t('education.ai_start_btn')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Section 1: Formations Disponibles */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border-2 border-blue-200">
               <div className="flex items-center gap-3 mb-6">
@@ -1363,7 +1352,7 @@ export default function Education() {
           </div>
         )}
 
-        {activeTab === 'mes-cours' && (
+        {activeTab === 'inscription-suivi' && (
           <div className="space-y-8">
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl shadow-lg p-6 border-2 border-indigo-200">
               <div className="flex items-center gap-3 mb-2">
@@ -2017,16 +2006,6 @@ export default function Education() {
             </div>
           </div>
         )}
-
-      {/* Section Écoles & Professeurs (approuvés par l'admin) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <ProSection
-          type="school"
-          title={t('education.schools_professors_title')}
-          icon="🎓"
-          description=""
-        />
-      </div>
     </div>
   );
 }
