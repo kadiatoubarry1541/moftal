@@ -523,6 +523,8 @@ const ar: Record<string, string> = {
   'education.subtitle': 'تكوينات، أساتذة ودروس',
   'education.inspire_btn': 'إلهام',
   'education.tab_inscription_suivi': 'التسجيل والمتابعة',
+  'education.tab_cours_inscription': 'الدروس والتسجيل',
+  'education.my_ai_btn': 'ذكائي الاصطناعي',
   'education.tab_formation_scientifique': 'تكوين علمي',
   'education.tab_mes_cours': 'دروسي',
   'education.tab_defi_educatif': 'تحدٍ تعليمي',
