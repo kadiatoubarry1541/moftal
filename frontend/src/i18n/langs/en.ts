@@ -524,7 +524,7 @@ const en: Record<string, string> = {
   'education.inspire_btn': 'Inspire',
   'education.tab_inscription_suivi': 'Registration & tracking',
   'education.tab_cours_inscription': 'Courses & Registration',
-  'education.my_ai_btn': 'My AI',
+  'education.my_ai_btn': 'Education AI',
   'education.tab_formation_scientifique': 'Scientific training',
   'education.tab_mes_cours': 'My Courses',
   'education.tab_defi_educatif': 'Educational challenge',
