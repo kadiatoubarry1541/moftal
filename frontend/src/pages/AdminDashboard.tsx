@@ -778,14 +778,8 @@ export default function AdminDashboard() {
               </div>
 
               {/* Aperçu rapide */}
+              {!isSubAdmin0(userData) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {isSubAdmin0(userData) ? (
-                  <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 flex flex-col items-center justify-center text-center gap-2">
-                    <span className="text-3xl">🔒</span>
-                    <p className="text-sm font-semibold text-gray-700">Statistiques réservées</p>
-                    <p className="text-xs text-gray-500">Les données chiffrées (abonnés, familles, vivants…) sont réservées à l'administration principale.</p>
-                  </div>
-                ) : (
                 <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                   <h3 className="font-semibold text-gray-800 mb-3">📊 Statistiques</h3>
                   {statsLoading ? <p className="text-sm text-gray-500">Chargement...</p> : stats ? (
@@ -798,14 +792,6 @@ export default function AdminDashboard() {
                   ) : <p className="text-sm text-gray-500">Aucune donnée</p>}
                   <button onClick={loadStats} className="mt-3 w-full px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs transition-colors">Actualiser</button>
                 </div>
-                )}
-                {isSubAdmin0(userData) ? (
-                  <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 flex flex-col items-center justify-center text-center gap-2">
-                    <span className="text-3xl">🔒</span>
-                    <p className="text-sm font-semibold text-gray-700">Utilisateurs réservés</p>
-                    <p className="text-xs text-gray-500">La liste des comptes est réservée à l'administration principale.</p>
-                  </div>
-                ) : (
                 <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
                   <h3 className="font-semibold text-gray-800 mb-3">👥 Utilisateurs récents</h3>
                   {recentUsers.length > 0 ? (
@@ -824,8 +810,8 @@ export default function AdminDashboard() {
                     </div>
                   ) : <p className="text-sm text-gray-500">Aucun utilisateur récent</p>}
                 </div>
-                )}
               </div>
+              )}
             </div>
           )}
 
