@@ -747,6 +747,8 @@ export default function AdminDashboard() {
                         Lancer le contrôle
                       </button>
                     </div>
+                    {!isSubAdmin0(userData) && (
+                    <>
                     <div className="bg-gradient-to-br from-pink-50 to-rose-100 rounded-xl p-5 border border-pink-200">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-3xl">💕</span>
@@ -771,6 +773,8 @@ export default function AdminDashboard() {
                         Ouvrir
                       </button>
                     </div>
+                    </>
+                    )}
               </div>
 
               {/* Aperçu rapide */}
@@ -2032,6 +2036,8 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-red-900">Contrôle IA</div>
                   <div className="text-xs text-red-700">Détecter et supprimer les images inappropriées (nudité)</div>
                 </button>
+                {!isSubAdmin0(userData) && (
+                <>
                 <button onClick={() => navigate("/admin/publicites")} className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-5 text-left transition-colors">
                   <div className="text-2xl mb-2">📣</div>
                   <div className="font-semibold text-emerald-900">Publicités</div>
@@ -2077,6 +2083,8 @@ export default function AdminDashboard() {
                   <div className="font-semibold text-orange-900">Comptes Pro</div>
                   <div className="text-xs text-orange-700">Approuver et gérer les professionnels</div>
                 </button>
+                </>
+                )}
               </div>
             </div>
           )}
