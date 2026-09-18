@@ -564,8 +564,8 @@ export default function AdminDashboard() {
       { id: "moftal-pay",        label: "Moftal Pay",       icon: "💰" },
     ] : []),
   ];
-  // G0 voit tous les services (pros, outils, familles...) mais PAS les données financières (points, moftal-pay)
-  const G0_TABS = ["overview", "families", "couples", "parent-child", "pros", "annonces", "echange-produits", "users", "tools"];
+  // G0 ne voit que la vue d'ensemble et les outils — seul G7 (le chef) voit tout le reste
+  const G0_TABS = ["overview", "tools"];
   const adminTabs = sectorAdminOnly
     ? allAdminTabs.filter((t) => t.id === "pros")
     : isSubAdmin0(userData)
