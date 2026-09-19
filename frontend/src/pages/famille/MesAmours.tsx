@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay, isAdmin } from '../../utils/auth';
+import { isContactPickerSupported, pickContactPhone } from '../../utils/contactPicker';
 import { FriendChat } from '../../components/FriendChat';
 import ProfileBadge from '../../components/ProfileBadge';
 import { useI18n } from '../../i18n/useI18n';
@@ -561,6 +562,11 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     // On affiche le numeroH scanné et laisse send-request valider l'existence
     setQrScannedUser({ numeroH, prenom: '', nomFamille: '' });
     setAddFriendForm(f => ({ ...f, numeroH }));
+  };
+
+  const importFromContacts = async () => {
+    const tel = await pickContactPhone();
+    if (tel) { setPhoneInput(tel); setPhoneResult(null); setPhoneSearchError(''); }
   };
 
   const searchByPhone = async () => {
@@ -1207,6 +1213,12 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               {addMode === 'phone' && (
                 <>
                   <p className="text-sm text-gray-500">{t('amitie.add_friend.phone_desc')}</p>
+                  {isContactPickerSupported() && (
+                    <button onClick={importFromContacts}
+                      className="w-full py-2.5 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2">
+                      📱 {t('amitie.add_friend.import_contacts_btn')}
+                    </button>
+                  )}
                   <div className="flex gap-2">
                     <input
                       type="tel"

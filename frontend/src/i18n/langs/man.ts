@@ -177,6 +177,7 @@ const man: Record<string, string> = {
   'amitie.add_friend.message_label': 'Bataki (te wajibi)',
   'amitie.add_friend.message_placeholder': 'Inivitasiyon bataki...',
   'amitie.add_friend.phone_desc': 'Sɛbɛn a ka sɔni nimɔrɔ walasa ka a sɔrɔ.',
+  'amitie.add_friend.import_contacts_btn': 'Ka bɔ n ka kontaktiw kɔnɔ',
   'amitie.add_friend.email_desc': 'Sɛbɛn a ka email walasa ka a sɔrɔ.',
   'amitie.add_friend.search_btn': 'Ɲini',
   'amitie.add_friend.send_invitation': 'Inivitasiyon ci',
