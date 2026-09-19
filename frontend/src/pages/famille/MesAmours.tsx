@@ -4,7 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay, isAdmin } from '../../utils/auth';
-import { isContactPickerSupported, pickContactPhone } from '../../utils/contactPicker';
+import { isContactPickerSupported, pickContactPhones } from '../../utils/contactPicker';
 import { FloatingMessenger } from '../../components/FloatingMessenger';
 import { FriendChat } from '../../components/FriendChat';
 import ProfileBadge from '../../components/ProfileBadge';
@@ -123,6 +123,9 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
 
   // Modes d'ajout d'ami
   const [addMode, setAddMode] = useState<'numeroh' | 'phone' | 'email' | 'qr'>('numeroh');
+  // Contacts du téléphone déjà sur Moftal, proposés en ajout direct
+  const [contactMatches, setContactMatches] = useState<{ numeroH: string; prenom: string; nomFamille: string; photo?: string }[] | null>(null);
+  const [contactMatchesLoading, setContactMatchesLoading] = useState(false);
   const [phoneInput, setPhoneInput] = useState('');
   const [phoneResult, setPhoneResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
   const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
@@ -555,11 +558,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     setAddFriendForm(f => ({ ...f, numeroH }));
   };
 
-  const importFromContacts = async () => {
-    const tel = await pickContactPhone();
-    if (tel) { setPhoneInput(tel); setPhoneResult(null); setPhoneSearchError(''); }
-  };
-
   const searchByPhone = async () => {
     if (!phoneInput.trim()) return;
     setPhoneSearchLoading(true);
@@ -695,9 +693,31 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     } catch { alert('Erreur de connexion'); }
   };
 
+  const importContactMatches = async () => {
+    const phones = await pickContactPhones();
+    if (phones.length === 0) return;
+    setContactMatchesLoading(true);
+    setContactMatches(null);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/api/friends/match-phones`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phones }),
+      });
+      const data = await res.json();
+      setContactMatches(data.success ? (data.matches || []) : []);
+    } catch {
+      setContactMatches([]);
+    } finally {
+      setContactMatchesLoading(false);
+    }
+  };
+
   const handleAddFriend = () => {
     setAddFriendForm({ numeroH: '', message: '' });
     setAddMode('numeroh');
+    setContactMatches(null);
     setPhoneInput('');
     setPhoneResult(null);
     setPhoneSearchError('');
@@ -1139,13 +1159,42 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               ))}
             </div>
 
+            {/* Contacts du téléphone déjà sur Moftal — ajout direct en un clic */}
+            {isContactPickerSupported() && (
+              <div className="px-6 pb-4">
+                <button onClick={importContactMatches} disabled={contactMatchesLoading}
+                  className="w-full py-2.5 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2 disabled:opacity-50">
+                  📱 {contactMatchesLoading ? '...' : 'Voir mes contacts'}
+                </button>
+                {contactMatches && (
+                  contactMatches.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center mt-2">Aucun de vos contacts n'est encore sur Moftal.</p>
+                  ) : (
+                    <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                      {contactMatches.map(c => (
+                        <div key={c.numeroH} className="flex items-center gap-2 border border-gray-200 rounded-lg p-2">
+                          <div className="w-8 h-8 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center text-emerald-700 font-bold text-sm shrink-0">
+                            {c.photo ? <img src={c.photo} alt="" className="w-full h-full object-cover" /> : (c.prenom?.[0] || '?')}
+                          </div>
+                          <p className="flex-1 min-w-0 text-sm font-medium text-gray-900 truncate">{c.prenom} {c.nomFamille}</p>
+                          <button onClick={() => sendFriendRequestTo(c.numeroH)}
+                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shrink-0">
+                            Ajouter
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+
             <div className="px-6 pb-6 space-y-4">
 
               {/* ── Mode NumeroH ── */}
               {addMode === 'numeroh' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('amitie.add_friend.numeroh_label')}</label>
                     <input
                       type="text"
                       value={addFriendForm.numeroH}
@@ -1155,14 +1204,15 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('amitie.add_friend.message_label')}</label>
                     <textarea
                       value={addFriendForm.message}
-                      onChange={(e) => setAddFriendForm({...addFriendForm, message: e.target.value})}
+                      onChange={(e) => setAddFriendForm({...addFriendForm, message: e.target.value.slice(0, 30)})}
+                      maxLength={30}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       rows={2}
                       placeholder={t('amitie.add_friend.message_placeholder')}
                     />
+                    <p className="text-xs text-gray-400 text-right mt-0.5">{addFriendForm.message.length}/30</p>
                   </div>
                   <div className="flex space-x-3 pt-2">
                     <button onClick={() => setShowAddFriend(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg transition-colors">{t('btn.cancel')}</button>
@@ -1174,13 +1224,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               {/* ── Mode Téléphone ── */}
               {addMode === 'phone' && (
                 <>
-                  <p className="text-sm text-gray-500">{t('amitie.add_friend.phone_desc')}</p>
-                  {isContactPickerSupported() && (
-                    <button onClick={importFromContacts}
-                      className="w-full py-2.5 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2">
-                      📱 {t('amitie.add_friend.import_contacts_btn')}
-                    </button>
-                  )}
                   <div className="flex gap-2">
                     <input
                       type="tel"
@@ -1215,14 +1258,15 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">{t('amitie.add_friend.message_label')}</label>
                         <textarea
                           value={addFriendForm.message}
-                          onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value }))}
+                          onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value.slice(0, 30) }))}
+                          maxLength={30}
                           className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           rows={2}
                           placeholder={t('amitie.add_friend.message_placeholder')}
                         />
+                        <p className="text-xs text-gray-400 text-right mt-0.5">{addFriendForm.message.length}/30</p>
                       </div>
                       <button
                         onClick={sendFriendFromPhoneResult}
@@ -1244,7 +1288,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               {/* ── Mode Email ── */}
               {addMode === 'email' && (
                 <>
-                  <p className="text-sm text-gray-500">{t('amitie.add_friend.email_desc')}</p>
                   <div className="flex gap-2">
                     <input
                       type="email"
@@ -1279,14 +1322,15 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">{t('amitie.add_friend.message_label')}</label>
                         <textarea
                           value={addFriendForm.message}
-                          onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value }))}
+                          onChange={(e) => setAddFriendForm(f => ({ ...f, message: e.target.value.slice(0, 30) }))}
+                          maxLength={30}
                           className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           rows={2}
                           placeholder={t('amitie.add_friend.message_placeholder')}
                         />
+                        <p className="text-xs text-gray-400 text-right mt-0.5">{addFriendForm.message.length}/30</p>
                       </div>
                       <button
                         onClick={sendFriendFromEmailResult}
