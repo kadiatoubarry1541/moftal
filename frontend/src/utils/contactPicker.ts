@@ -23,3 +23,24 @@ export async function pickContactPhone(): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * Ouvre le sélecteur de contacts natif en mode multi-sélection et retourne
+ * tous les numéros de téléphone trouvés (un contact peut en avoir plusieurs),
+ * ou [] si annulé / non supporté.
+ */
+export async function pickContactPhones(): Promise<string[]> {
+  if (!isContactPickerSupported()) return []
+  try {
+    const contacts = await (navigator as any).contacts.select(['tel'], { multiple: true })
+    const phones: string[] = []
+    for (const c of contacts || []) {
+      for (const tel of c?.tel || []) {
+        if (typeof tel === 'string' && tel.trim()) phones.push(tel.trim())
+      }
+    }
+    return phones
+  } catch {
+    return []
+  }
+}

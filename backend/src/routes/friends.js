@@ -371,6 +371,48 @@ router.get('/search-by-phone', async (req, res) => {
   }
 });
 
+// POST /api/friends/match-phones — { phones: string[] } → comptes Moftal déjà présents
+// dans les contacts du téléphone, pour les proposer en ajout direct (pas déjà amis).
+router.post('/match-phones', async (req, res) => {
+  try {
+    const numeroH = req.user.numeroH;
+    const phones = Array.isArray(req.body?.phones) ? req.body.phones : [];
+    const cleaned = [...new Set(
+      phones.map(p => String(p || '').trim().replace(/\s+/g, '')).filter(p => p.length >= 6)
+    )].slice(0, 200);
+    if (cleaned.length === 0) return res.json({ success: true, matches: [] });
+
+    const orConditions = cleaned.flatMap(p => [
+      { tel1: { [Op.like]: '%' + p + '%' } },
+      { tel2: { [Op.like]: '%' + p + '%' } }
+    ]);
+    const users = await User.findAll({
+      where: { [Op.or]: orConditions, isActive: true, numeroH: { [Op.ne]: numeroH } },
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo'],
+      limit: 200
+    });
+
+    // Exclut ceux déjà amis ou avec une demande en attente (rien à "ajouter" pour eux)
+    const [existingFriends, pendingRequests] = await Promise.all([
+      Friend.findAll({ where: { [Op.or]: [{ userNumeroH: numeroH }, { friendNumeroH: numeroH }] } }),
+      FriendRequest.findAll({ where: { [Op.or]: [{ fromUser: numeroH }, { toUser: numeroH }], status: 'pending' } })
+    ]);
+    const excluded = new Set();
+    existingFriends.forEach(f => excluded.add(f.userNumeroH === numeroH ? f.friendNumeroH : f.userNumeroH));
+    pendingRequests.forEach(r => excluded.add(r.fromUser === numeroH ? r.toUser : r.fromUser));
+
+    res.json({
+      success: true,
+      matches: users.filter(u => !excluded.has(u.numeroH)).map(u => ({
+        numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo
+      }))
+    });
+  } catch (error) {
+    console.error('Erreur /friends/match-phones:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // search-by-email
 router.get('/search-by-email', async (req, res) => {
   try {
