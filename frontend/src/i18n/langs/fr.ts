@@ -177,6 +177,7 @@ const fr: Record<string, string> = {
   'amitie.add_friend.message_label': 'Message (optionnel)',
   'amitie.add_friend.message_placeholder': "Message d'invitation...",
   'amitie.add_friend.phone_desc': 'Saisissez le numéro de téléphone de la personne pour la trouver.',
+  'amitie.add_friend.import_contacts_btn': 'Importer depuis mes contacts',
   'amitie.add_friend.email_desc': "Saisissez l'email de la personne pour la trouver.",
   'amitie.add_friend.search_btn': 'Chercher',
   'amitie.add_friend.send_invitation': "Envoyer l'invitation",

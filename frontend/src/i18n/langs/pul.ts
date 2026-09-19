@@ -177,6 +177,7 @@ const pul: Record<string, string> = {
   'amitie.add_friend.message_label': 'Ɓataake (alaa waɗɗagol)',
   'amitie.add_friend.message_placeholder': 'Ɓataake jokkondiral...',
   'amitie.add_friend.phone_desc': 'Winndu limngo mobiil on ngam yiytude mo.',
+  'amitie.add_friend.import_contacts_btn': 'Naatnu immorde e kontak am',
   'amitie.add_friend.email_desc': 'Winndu imeel makko ngam yiytude mo.',
   'amitie.add_friend.search_btn': 'Yiylo',
   'amitie.add_friend.send_invitation': 'Neldu jokkondiral',

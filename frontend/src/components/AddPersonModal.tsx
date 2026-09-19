@@ -6,6 +6,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
+import { isContactPickerSupported, pickContactPhone } from '../utils/contactPicker';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -200,6 +201,11 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     img.src = url;
   }, []);
 
+  const importFromContacts = async () => {
+    const tel = await pickContactPhone();
+    if (tel) { setPhoneInput(tel); setPhoneResult(null); setPhoneError(''); }
+  };
+
   const searchByPhone = async () => {
     if (!phoneInput.trim()) return;
     setPhoneLoading(true); setPhoneError(''); setPhoneResult(null);
@@ -384,6 +390,12 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
           {mode === 'phone' && (
             <>
               <p className="text-sm text-gray-500">Entrez le numéro de téléphone pour trouver la personne.</p>
+              {isContactPickerSupported() && (
+                <button onClick={importFromContacts}
+                  className="w-full py-2.5 border-2 border-dashed border-emerald-300 rounded-xl text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2">
+                  📱 Importer depuis mes contacts
+                </button>
+              )}
               <div className="flex gap-2">
                 <input type="tel" value={phoneInput}
                   onChange={e => { setPhoneInput(e.target.value); setPhoneResult(null); setPhoneError(''); }}
