@@ -10,7 +10,7 @@ import { isContactPickerSupported, pickContactPhone } from '../utils/contactPick
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
-type Mode = 'numeroh' | 'phone' | 'email' | 'qr' | 'ecrit' | 'video';
+type Mode = 'numeroh' | 'phone' | 'email' | 'qr';
 type QrSub = 'show' | 'scan';
 type PermState = 'unknown' | 'checking' | 'granted' | 'denied' | 'prompt';
 
@@ -58,16 +58,6 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
   const permWatcherRef = useRef<PermissionStatus | null>(null);
   const qrCameraRef = useRef<HTMLInputElement>(null);
   const qrGalleryRef = useRef<HTMLInputElement>(null);
-
-  const [ecritPrenom, setEcritPrenom] = useState('');
-  const [ecritNom, setEcritNom] = useState('');
-  const [ecritLoading, setEcritLoading] = useState(false);
-  const [ecritError, setEcritError] = useState('');
-  const [ecritResults, setEcritResults] = useState<FoundUser[]>([]);
-
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoNumeroH, setVideoNumeroH] = useState('');
-  const videoFileRef = useRef<HTMLInputElement>(null);
 
   // ── Stop scanner ──
   const stopLiveScanner = useCallback(() => {
@@ -234,31 +224,12 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     finally { setEmailLoading(false); }
   };
 
-  const searchByName = async () => {
-    if (!ecritPrenom.trim() && !ecritNom.trim()) return;
-    setEcritLoading(true); setEcritError(''); setEcritResults([]);
-    try {
-      const params = new URLSearchParams();
-      if (ecritPrenom.trim()) params.append('prenom', ecritPrenom.trim());
-      if (ecritNom.trim()) params.append('nom', ecritNom.trim());
-      const res = await fetch(`${API_BASE}/api/friends/search-by-name?${params}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      });
-      const data = await res.json();
-      if (data.success && data.users?.length) setEcritResults(data.users.map((u: any) => ({ numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille })));
-      else setEcritError(data.message || 'Aucun résultat trouvé.');
-    } catch { setEcritError('Erreur réseau.'); }
-    finally { setEcritLoading(false); }
-  };
-
   const switchMode = (m: Mode) => {
     stopLiveScanner();
     setMode(m);
     setPhoneResult(null); setPhoneError('');
     setEmailResult(null); setEmailError('');
     setQrFound(null); setQrError(''); setQrScanning(false);
-    setEcritResults([]); setEcritError('');
-    setVideoFile(null); setVideoNumeroH('');
   };
 
   const handleClose = () => { stopLiveScanner(); onClose(); };
@@ -350,8 +321,6 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
             { key: 'phone',   label: '📞 Tél.' },
             { key: 'email',   label: '✉️ Email' },
             { key: 'qr',      label: '📷 QR' },
-            { key: 'ecrit',   label: '✍️ Écrit' },
-            { key: 'video',   label: '🎬 Vidéo' },
           ] as { key: Mode; label: string }[]).map(tab => (
             <button key={tab.key} onClick={() => switchMode(tab.key)}
               className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
@@ -457,77 +426,6 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
                   </button>
                 </div>
               )}
-            </>
-          )}
-
-          {/* ── Écrit ── */}
-          {mode === 'ecrit' && (
-            <>
-              <p className="text-sm text-gray-500">Recherchez par prénom ou nom de famille.</p>
-              <div className="flex gap-2">
-                <input type="text" value={ecritPrenom}
-                  onChange={e => { setEcritPrenom(e.target.value); setEcritResults([]); setEcritError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && searchByName()}
-                  className="flex-1 border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="Prénom" autoFocus />
-                <input type="text" value={ecritNom}
-                  onChange={e => { setEcritNom(e.target.value); setEcritResults([]); setEcritError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && searchByName()}
-                  className="flex-1 border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                  placeholder="Nom" />
-              </div>
-              <button onClick={searchByName} disabled={ecritLoading || (!ecritPrenom.trim() && !ecritNom.trim())}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl font-semibold text-sm">
-                {ecritLoading ? 'Recherche...' : '🔍 Chercher'}
-              </button>
-              {ecritError && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{ecritError}</p>}
-              {ecritResults.map(u => (
-                <div key={u.numeroH} className="border border-emerald-200 bg-emerald-50 rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold shrink-0">{u.prenom?.[0] || '?'}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm truncate">{u.prenom} {u.nomFamille}</p>
-                    <p className="text-xs text-gray-500 truncate">{u.numeroH}</p>
-                  </div>
-                  <button onClick={() => handleSelect(u.numeroH)}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shrink-0">
-                    Choisir
-                  </button>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* ── Vidéo ── */}
-          {mode === 'video' && (
-            <>
-              <p className="text-sm text-gray-500">Enregistrez ou choisissez une vidéo, puis entrez le NumeroH.</p>
-              <input ref={videoFileRef} type="file" accept="video/*" className="hidden"
-                onChange={e => setVideoFile(e.target.files?.[0] || null)} />
-              {!videoFile ? (
-                <div className="flex gap-2">
-                  <button onClick={() => { videoFileRef.current?.setAttribute('capture', 'user'); videoFileRef.current?.click(); }}
-                    className="flex-1 py-3 border-2 border-dashed border-emerald-300 rounded-xl text-emerald-600 text-sm font-semibold hover:bg-emerald-50">📹 Filmer</button>
-                  <button onClick={() => { videoFileRef.current?.removeAttribute('capture'); videoFileRef.current?.click(); }}
-                    className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 text-sm font-semibold hover:bg-gray-50">🎞️ Galerie</button>
-                </div>
-              ) : (
-                <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-3 flex items-center gap-2">
-                  <span className="text-2xl">🎬</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{videoFile.name}</p>
-                    <p className="text-xs text-gray-500">{(videoFile.size / 1024 / 1024).toFixed(1)} MB</p>
-                  </div>
-                  <button onClick={() => setVideoFile(null)} className="text-red-400 text-lg">✕</button>
-                </div>
-              )}
-              <input type="text" value={videoNumeroH} onChange={e => setVideoNumeroH(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-                placeholder="NumeroH de la personne" />
-              <button onClick={() => videoFile && videoNumeroH.trim() && handleSelect(videoNumeroH.trim())}
-                disabled={!videoFile || !videoNumeroH.trim()}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl font-semibold text-sm">
-                Confirmer →
-              </button>
             </>
           )}
 

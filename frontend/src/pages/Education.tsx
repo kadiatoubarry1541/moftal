@@ -940,8 +940,8 @@ export default function Education() {
           <nav className="grid grid-cols-4 gap-1 py-2">
             {[
               { id: 'ecoles', label: t('education.tab_ecoles'), icon: '🎓' },
-              { id: 'inscription-suivi', label: t('education.tab_cours_inscription'), icon: '📚' },
               { id: 'profs-disponibles', label: t('education.available_professors_title'), icon: '👨‍🏫' },
+              { id: 'inscription-suivi', label: t('education.tab_cours_inscription'), icon: '📚' },
               { id: 'defi-educatif', label: t('education.tab_defi_educatif'), icon: '🏆' }
             ].map((tab) => (
             <button
