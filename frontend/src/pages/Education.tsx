@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DefiEducatifContent from '../components/DefiEducatifContent';
 import { config } from '../config/api';
+import ProSection from '../components/ProSection';
 import { sortByProximity, sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { useI18n } from '../i18n/useI18n';
 
@@ -160,7 +161,7 @@ export default function Education() {
   const { t } = useI18n();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [activeTab, setActiveTab] = useState<'inscription-suivi' | 'profs-disponibles' | 'defi-educatif'>('inscription-suivi');
+  const [activeTab, setActiveTab] = useState<'ecoles' | 'inscription-suivi' | 'profs-disponibles' | 'defi-educatif'>('ecoles');
   const [rawFormations, setRawFormations] = useState<Formation[]>([]);
   const [rawProfessors, setRawProfessors] = useState<Professor[]>([]);
   const [rawSchoolsList, setRawSchoolsList] = useState<School[]>([]);
@@ -1006,10 +1007,18 @@ export default function Education() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">🎓 {t('education.title')}</h1>
-              <p className="mt-2 text-gray-600">{t('education.subtitle')}</p>
+          <div className="flex justify-between items-center py-6 gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/moi')}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex-shrink-0"
+              >
+                {t('btn.back_arrow')}
+              </button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">🎓 {t('education.title')}</h1>
+                <p className="mt-2 text-gray-600">{t('education.subtitle')}</p>
+              </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button
@@ -1019,22 +1028,10 @@ export default function Education() {
                 <span>💡</span> {t('education.inspire_btn')}
               </button>
               <button
-                onClick={() => navigate('/moi')}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-              >
-                {t('btn.back_arrow')}
-              </button>
-              <button
                 onClick={() => navigate('/professeur-ia')}
                 className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-2.5 py-1.5 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-1 text-[10px] leading-none"
               >
                 <span className="text-xs">🤖</span> {t('education.my_ai_btn')}
-              </button>
-              <button
-                onClick={() => navigate('/liste-professionnels?type=school')}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-2"
-              >
-                <span>🔍</span> {t('education.find_school_btn')}
               </button>
             </div>
           </div>
@@ -1044,8 +1041,9 @@ export default function Education() {
       {/* Navigation Tabs */}
       <div className="bg-white border-b mt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1 py-2">
+          <nav className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1 py-2">
             {[
+              { id: 'ecoles', label: t('education.tab_ecoles'), icon: '🎓' },
               { id: 'inscription-suivi', label: t('education.tab_cours_inscription'), icon: '📚' },
               { id: 'profs-disponibles', label: t('education.available_professors_title'), icon: '👨‍🏫' },
               { id: 'defi-educatif', label: t('education.tab_defi_educatif'), icon: '🏆' }
@@ -1076,6 +1074,15 @@ export default function Education() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'ecoles' && (
+          <ProSection
+            type="school"
+            title={t('education.schools_professors_title')}
+            icon="🎓"
+            description=""
+          />
+        )}
+
         {activeTab === 'inscription-suivi' && (
           <div className="space-y-6">
             {/* Bannière : inscriptions dans Mon Profil */}
