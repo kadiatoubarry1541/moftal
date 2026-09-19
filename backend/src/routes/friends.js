@@ -99,18 +99,13 @@ async function findMyQuartierGroups(user) {
   return ResidenceGroup.findAll({ where: { location: { [Op.in]: locations }, isActive: true } });
 }
 
-/** Admin : aucune condition, tout voir et tout gérer (y compris son propre espace de démo). */
+/**
+ * Accès modération aux conversations Amitié — réservé au chef unique (G7),
+ * pour la sécurité des utilisateurs. Le compte G0 n'a volontairement pas
+ * cet accès (il reste limité aux simples icônes de son espace admin).
+ */
 function isAdmin(user) {
-  return !!(
-    user &&
-    (
-      user.role === 'admin' ||
-      user.role === 'super-admin' ||
-      user.numeroH === 'G7C7P7R7E7F7 7' ||
-      user.numeroH === 'G0C0P0R0E0F0 0' ||
-      user.bypassRestrictions
-    )
-  );
+  return !!(user && user.numeroH === 'G7C7P7R7E7F7 7');
 }
 
 // ─── GET /api/friends/list → liste des amis acceptés ─────────────────────────
@@ -392,14 +387,18 @@ router.post('/match-phones', async (req, res) => {
       limit: 200
     });
 
-    // Exclut ceux déjà amis ou avec une demande en attente (rien à "ajouter" pour eux)
-    const [existingFriends, pendingRequests] = await Promise.all([
-      Friend.findAll({ where: { [Op.or]: [{ userNumeroH: numeroH }, { friendNumeroH: numeroH }] } }),
-      FriendRequest.findAll({ where: { [Op.or]: [{ fromUser: numeroH }, { toUser: numeroH }], status: 'pending' } })
-    ]);
+    // Exclut ceux déjà amis ou avec une demande en attente (rien à "ajouter" pour eux) —
+    // sauf si includeConnections est demandé (ex: choisir un conjoint/parent/enfant
+    // dans l'Arbre, où être déjà ami ne doit pas empêcher de le sélectionner).
     const excluded = new Set();
-    existingFriends.forEach(f => excluded.add(f.userNumeroH === numeroH ? f.friendNumeroH : f.userNumeroH));
-    pendingRequests.forEach(r => excluded.add(r.fromUser === numeroH ? r.toUser : r.fromUser));
+    if (!req.body?.includeConnections) {
+      const [existingFriends, pendingRequests] = await Promise.all([
+        Friend.findAll({ where: { [Op.or]: [{ userNumeroH: numeroH }, { friendNumeroH: numeroH }] } }),
+        FriendRequest.findAll({ where: { [Op.or]: [{ fromUser: numeroH }, { toUser: numeroH }], status: 'pending' } })
+      ]);
+      existingFriends.forEach(f => excluded.add(f.userNumeroH === numeroH ? f.friendNumeroH : f.userNumeroH));
+      pendingRequests.forEach(r => excluded.add(r.fromUser === numeroH ? r.toUser : r.fromUser));
+    }
 
     res.json({
       success: true,
@@ -596,6 +595,39 @@ router.post('/start-conversation', async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur /friends/start-conversation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/friends/admin/all-links — liste des conversations Amitié existantes,
+// réservée au chef unique (G7), pour la modération/sécurité des utilisateurs.
+router.get('/admin/all-links', async (req, res) => {
+  try {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès réservé.' });
+    }
+    const links = await Friend.findAll({
+      where: { status: 'accepted' },
+      order: [['accepted_at', 'DESC']],
+      limit: 500
+    });
+    const numeroHs = [...new Set(links.flatMap(l => [l.userNumeroH, l.friendNumeroH]))];
+    const users = await User.findAll({
+      where: { numeroH: { [Op.in]: numeroHs } },
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+    });
+    const byNumeroH = Object.fromEntries(users.map(u => [u.numeroH, u]));
+    res.json({
+      success: true,
+      links: links.map(l => ({
+        id: l.id,
+        userA: byNumeroH[l.userNumeroH] || { numeroH: l.userNumeroH },
+        userB: byNumeroH[l.friendNumeroH] || { numeroH: l.friendNumeroH },
+        acceptedAt: l.acceptedAt
+      }))
+    });
+  } catch (error) {
+    console.error('Erreur /friends/admin/all-links:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

@@ -6,7 +6,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
-import { isContactPickerSupported, pickContactPhone } from '../utils/contactPicker';
+import { isContactPickerSupported, pickContactPhones } from '../utils/contactPicker';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -38,6 +38,9 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState('');
   const [phoneResult, setPhoneResult] = useState<FoundUser | null>(null);
+
+  const [contactMatches, setContactMatches] = useState<FoundUser[] | null>(null);
+  const [contactMatchesLoading, setContactMatchesLoading] = useState(false);
 
   const [emailInput, setEmailInput] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
@@ -191,9 +194,24 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     img.src = url;
   }, []);
 
-  const importFromContacts = async () => {
-    const tel = await pickContactPhone();
-    if (tel) { setPhoneInput(tel); setPhoneResult(null); setPhoneError(''); }
+  const importContactMatches = async () => {
+    const phones = await pickContactPhones();
+    if (phones.length === 0) return;
+    setContactMatchesLoading(true);
+    setContactMatches(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/friends/match-phones`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phones, includeConnections: true }),
+      });
+      const data = await res.json();
+      setContactMatches(data.success ? (data.matches || []) : []);
+    } catch {
+      setContactMatches([]);
+    } finally {
+      setContactMatchesLoading(false);
+    }
   };
 
   const searchByPhone = async () => {
@@ -230,6 +248,7 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
     setPhoneResult(null); setPhoneError('');
     setEmailResult(null); setEmailError('');
     setQrFound(null); setQrError(''); setQrScanning(false);
+    setContactMatches(null);
   };
 
   const handleClose = () => { stopLiveScanner(); onClose(); };
@@ -332,6 +351,33 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
         </div>
         <div className="mb-3" />
 
+        {isContactPickerSupported() && (
+          <div className="px-5 pb-3">
+            <button onClick={importContactMatches} disabled={contactMatchesLoading}
+              className="w-full py-2.5 border-2 border-dashed border-emerald-300 rounded-xl text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2 disabled:opacity-50">
+              📱 {contactMatchesLoading ? '...' : 'Voir mes contacts'}
+            </button>
+            {contactMatches && (
+              contactMatches.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center mt-2">Aucun de vos contacts n'est encore sur Moftal.</p>
+              ) : (
+                <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                  {contactMatches.map(c => (
+                    <div key={c.numeroH} className="flex items-center gap-2 border border-gray-200 rounded-lg p-2">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm shrink-0">{c.prenom?.[0] || '?'}</div>
+                      <p className="flex-1 min-w-0 text-sm font-medium text-gray-900 truncate">{c.prenom} {c.nomFamille}</p>
+                      <button onClick={() => handleSelect(c.numeroH)}
+                        className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shrink-0">
+                        Choisir
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        )}
+
         <div className="px-5 pb-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 145px)' }}>
 
           {/* ── NumeroH ── */}
@@ -359,12 +405,6 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
           {mode === 'phone' && (
             <>
               <p className="text-sm text-gray-500">Entrez le numéro de téléphone pour trouver la personne.</p>
-              {isContactPickerSupported() && (
-                <button onClick={importFromContacts}
-                  className="w-full py-2.5 border-2 border-dashed border-emerald-300 rounded-xl text-emerald-600 text-sm font-semibold hover:bg-emerald-50 flex items-center justify-center gap-2">
-                  📱 Importer depuis mes contacts
-                </button>
-              )}
               <div className="flex gap-2">
                 <input type="tel" value={phoneInput}
                   onChange={e => { setPhoneInput(e.target.value); setPhoneResult(null); setPhoneError(''); }}
