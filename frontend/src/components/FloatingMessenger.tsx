@@ -88,12 +88,13 @@ export function FloatingMessenger() {
 
   return (
     <>
-      {/* Bouton flottant - position safe-area pour mobiles */}
+      {/* Bouton flottant - en bas à droite (comme WhatsApp), safe-area pour mobiles —
+          ne chevauche jamais l'en-tête, les onglets ou la barre des stories */}
       <button
         aria-label="Ouvrir la messagerie"
         onClick={openPicker}
         className="fixed z-50 rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 text-white shadow-lg hover:shadow-xl active:scale-95 transition-transform min-w-[56px] min-h-[56px] w-14 h-14 flex items-center justify-center text-2xl"
-        style={{ top: '6rem', right: 'max(1rem, env(safe-area-inset-right, 0px))' }}
+        style={{ bottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))', right: 'max(1rem, env(safe-area-inset-right, 0px))' }}
       >
         💬
       </button>
