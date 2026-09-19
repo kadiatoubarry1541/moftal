@@ -121,17 +121,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
   });
 
   // Modes d'ajout d'ami
-  const [addMode, setAddMode] = useState<'numeroh' | 'phone' | 'email' | 'qr' | 'ecrit' | 'video'>('numeroh');
-  // Écrit
-  const [ecritPrenom, setEcritPrenom] = useState('');
-  const [ecritNom, setEcritNom] = useState('');
-  const [ecritLoading, setEcritLoading] = useState(false);
-  const [ecritError, setEcritError] = useState('');
-  const [ecritResults, setEcritResults] = useState<{ numeroH: string; prenom: string; nomFamille: string }[]>([]);
-  // Vidéo ajout ami
-  const [friendVideoFile, setFriendVideoFile] = useState<File | null>(null);
-  const [friendVideoNumeroH, setFriendVideoNumeroH] = useState('');
-  const friendVideoInputRef = useRef<HTMLInputElement>(null);
+  const [addMode, setAddMode] = useState<'numeroh' | 'phone' | 'email' | 'qr'>('numeroh');
   const [phoneInput, setPhoneInput] = useState('');
   const [phoneResult, setPhoneResult] = useState<{ numeroH: string; prenom: string; nomFamille: string } | null>(null);
   const [phoneSearchLoading, setPhoneSearchLoading] = useState(false);
@@ -685,29 +675,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     }
   };
 
-  const searchFriendByName = async () => {
-    if (!ecritPrenom.trim() && !ecritNom.trim()) return;
-    const token = localStorage.getItem('token');
-    setEcritLoading(true);
-    setEcritError('');
-    setEcritResults([]);
-    try {
-      const params = new URLSearchParams();
-      if (ecritPrenom.trim()) params.append('prenom', ecritPrenom.trim());
-      if (ecritNom.trim()) params.append('nom', ecritNom.trim());
-      const res = await fetch(`${API_BASE}/api/friends/search-by-name?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const d = await res.json();
-      if (d.success && d.users?.length) {
-        setEcritResults(d.users);
-      } else {
-        setEcritError(d.message || 'Aucun résultat trouvé.');
-      }
-    } catch { setEcritError('Erreur réseau.'); }
-    finally { setEcritLoading(false); }
-  };
-
   const sendFriendRequestTo = async (targetNumeroH: string) => {
     const token = localStorage.getItem('token');
     try {
@@ -1156,8 +1123,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                 { key: 'phone',   label: t('amitie.add_friend.tab_phone') },
                 { key: 'email',   label: t('amitie.add_friend.tab_email') },
                 { key: 'qr',      label: t('amitie.add_friend.tab_qr') },
-                { key: 'ecrit',   label: t('amitie.add_friend.tab_ecrit') },
-                { key: 'video',   label: t('amitie.add_friend.tab_video') },
               ] as const).map(tab => (
                 <button
                   key={tab.key}
@@ -1167,8 +1132,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                     setPhoneResult(null); setPhoneSearchError('');
                     setEmailResult(null); setEmailSearchError('');
                     setQrScannedUser(null); setQrScanError('');
-                    setEcritResults([]); setEcritError('');
-                    setFriendVideoFile(null); setFriendVideoNumeroH('');
                   }}
                   className={`flex-1 py-2 text-xs font-medium border-b-2 transition-colors ${addMode === tab.key ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                 >
@@ -1497,74 +1460,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                   <div className="flex justify-end pt-1">
                     <button onClick={() => { stopQRScanner(); setShowAddFriend(false); }} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors text-sm">{t('btn.close')}</button>
                   </div>
-                </>
-              )}
-
-              {/* ── Mode Écrit ── */}
-              {addMode === 'ecrit' && (
-                <>
-                  <p className="text-sm text-gray-500">{t('amitie.add_friend.ecrit_desc')}</p>
-                  <div className="flex gap-2">
-                    <input type="text" value={ecritPrenom} onChange={e => { setEcritPrenom(e.target.value); setEcritResults([]); setEcritError(''); }}
-                      onKeyDown={e => e.key === 'Enter' && searchFriendByName()}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder={t('amitie.add_friend.firstname_placeholder')} autoFocus />
-                    <input type="text" value={ecritNom} onChange={e => { setEcritNom(e.target.value); setEcritResults([]); setEcritError(''); }}
-                      onKeyDown={e => e.key === 'Enter' && searchFriendByName()}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder={t('amitie.add_friend.lastname_placeholder')} />
-                  </div>
-                  <button onClick={searchFriendByName} disabled={ecritLoading || (!ecritPrenom.trim() && !ecritNom.trim())}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-medium text-sm transition-colors">
-                    {ecritLoading ? t('amitie.add_friend.searching_text') : `🔍 ${t('amitie.add_friend.search_btn')}`}
-                  </button>
-                  {ecritError && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{ecritError}</p>}
-                  {ecritResults.map(u => (
-                    <div key={u.numeroH} className="border border-emerald-200 bg-emerald-50 rounded-lg p-3 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-emerald-200 flex items-center justify-center text-emerald-700 font-bold shrink-0">{u.prenom?.[0] || '?'}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm truncate">{u.prenom} {u.nomFamille}</p>
-                        <p className="text-xs text-gray-500 truncate">{u.numeroH}</p>
-                      </div>
-                      <button onClick={() => sendFriendRequestTo(u.numeroH)}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shrink-0">{t('amitie.add_friend.invite_btn')}</button>
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {/* ── Mode Vidéo ── */}
-              {addMode === 'video' && (
-                <>
-                  <p className="text-sm text-gray-500">{t('amitie.add_friend.video_desc')}</p>
-                  <input ref={friendVideoInputRef} type="file" accept="video/*" className="hidden"
-                    onChange={e => setFriendVideoFile(e.target.files?.[0] || null)} />
-                  {!friendVideoFile ? (
-                    <div className="flex gap-2">
-                      <button onClick={() => { if (friendVideoInputRef.current) { friendVideoInputRef.current.setAttribute('capture', 'user'); friendVideoInputRef.current.click(); } }}
-                        className="flex-1 py-3 border-2 border-dashed border-emerald-300 rounded-lg text-emerald-600 text-sm font-medium hover:bg-emerald-50">{t('amitie.add_friend.film')}</button>
-                      <button onClick={() => { if (friendVideoInputRef.current) { friendVideoInputRef.current.removeAttribute('capture'); friendVideoInputRef.current.click(); } }}
-                        className="flex-1 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-50">{t('amitie.add_friend.gallery')}</button>
-                    </div>
-                  ) : (
-                    <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-3 flex items-center gap-2">
-                      <span className="text-2xl">🎬</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{friendVideoFile.name}</p>
-                        <p className="text-xs text-gray-500">{(friendVideoFile.size / 1024 / 1024).toFixed(1)} MB</p>
-                      </div>
-                      <button onClick={() => setFriendVideoFile(null)} className="text-red-400 hover:text-red-600 text-lg">✕</button>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('amitie.add_friend.numeroh_person_label')}</label>
-                    <input type="text" value={friendVideoNumeroH} onChange={e => setFriendVideoNumeroH(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && friendVideoFile && friendVideoNumeroH.trim()) sendFriendRequestTo(friendVideoNumeroH.trim()); }}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Ex: G1C1P2R1E1F1 1" />
-                  </div>
-                  <button onClick={() => friendVideoFile && friendVideoNumeroH.trim() && sendFriendRequestTo(friendVideoNumeroH.trim())}
-                    disabled={!friendVideoFile || !friendVideoNumeroH.trim()}
-                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg font-medium text-sm transition-colors">
-                    {t('amitie.add_friend.send_invitation_arrow')}
-                  </button>
                 </>
               )}
 
