@@ -12,6 +12,10 @@ import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
+import { FamilyTree } from '../models/additional.js';
+import CoupleLink from '../models/CoupleLink.js';
+import ParentChildLink from '../models/ParentChildLink.js';
+import ResidenceGroup from '../models/ResidenceGroup.js';
 
 // Upload en mémoire — jamais sur le disque du serveur — puis envoyé vers le stockage cloud.
 const uploadFriendMedia = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -46,6 +50,53 @@ async function ensureFriendMessagesTable() {
 /** Vérifie que l'utilisateur fait bien partie de cette amitié. */
 function estDansLAmitie(friend, numeroH) {
   return !!friend && (friend.userNumeroH === numeroH || friend.friendNumeroH === numeroH);
+}
+
+// Normalise un nom de lieu : minuscule + sans accents (même règle que résidences)
+function normalizeLoc(str) {
+  if (!str) return '';
+  return str.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/** NumeroH exclus de "famille élargie" : soi-même, parents, conjoint(s), enfants — ils ont déjà leur propre messagerie dédiée. */
+async function getImmediateFamilyNumeroHs(numeroH) {
+  const excluded = new Set([numeroH]);
+  const [parentLinks, childLinks, coupleLinks] = await Promise.all([
+    ParentChildLink.getMyParents(numeroH),
+    ParentChildLink.getMyChildren(numeroH),
+    CoupleLink.findAll({
+      where: {
+        [Op.or]: [{ husbandNumeroH: numeroH }, { wifeNumeroH: numeroH }],
+        status: 'active', isActive: true, isArchived: false
+      }
+    })
+  ]);
+  parentLinks.forEach(l => excluded.add(l.parentNumeroH));
+  childLinks.forEach(l => excluded.add(l.childNumeroH));
+  coupleLinks.forEach(l => excluded.add(l.husbandNumeroH === numeroH ? l.wifeNumeroH : l.husbandNumeroH));
+  return excluded;
+}
+
+/** Arbre familial (élargi) de l'utilisateur, ou null. */
+async function findMyFamilyTree(numeroH) {
+  return FamilyTree.findOne({
+    where: {
+      [Op.or]: [
+        { rootMember: numeroH },
+        { members: { [Op.contains]: [numeroH] } },
+        { chefFamille1: numeroH },
+        { chefFamille2: numeroH }
+      ],
+      isActive: true
+    }
+  });
+}
+
+/** Groupes de quartier (Terre ADAM) de l'utilisateur, d'après ses lieux de résidence enregistrés. */
+async function findMyQuartierGroups(user) {
+  const locations = [user?.lieu1, user?.lieu2, user?.lieu3].map(normalizeLoc).filter(Boolean);
+  if (locations.length === 0) return [];
+  return ResidenceGroup.findAll({ where: { location: { [Op.in]: locations }, isActive: true } });
 }
 
 /** Admin : aucune condition, tout voir et tout gérer (y compris son propre espace de démo). */
@@ -369,6 +420,141 @@ router.get('/search-by-name', async (req, res) => {
   } catch (error) {
     console.error('Erreur /friends/search-by-name:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
+  }
+});
+
+// ─── CONVERSATION PRIVÉE (bouton messagerie flottant : Arbre, Quartier, Amitié) —
+// déclarées avant "/:numeroH" ci-dessous, sinon cette route générique les capterait. ───
+
+// GET /api/friends/family-contacts — famille élargie, hors parents/conjoint(s)/enfants
+router.get('/family-contacts', async (req, res) => {
+  try {
+    const numeroH = req.user.numeroH;
+    const tree = await findMyFamilyTree(numeroH);
+    if (!tree) return res.json({ success: true, contacts: [] });
+
+    const excluded = await getImmediateFamilyNumeroHs(numeroH);
+    const memberNumeroHs = (tree.members || []).filter(nh => !excluded.has(nh));
+    if (memberNumeroHs.length === 0) return res.json({ success: true, contacts: [] });
+
+    const users = await User.findAll({
+      where: { numeroH: { [Op.in]: memberNumeroHs } },
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+    });
+    res.json({ success: true, contacts: users });
+  } catch (error) {
+    console.error('Erreur /friends/family-contacts:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/friends/quartier-contacts — membres du/des même(s) quartier(s)
+router.get('/quartier-contacts', async (req, res) => {
+  try {
+    const numeroH = req.user.numeroH;
+    const user = await User.findOne({ where: { numeroH } });
+    const groups = await findMyQuartierGroups(user);
+    const memberNumeroHs = [...new Set(groups.flatMap(g => g.members || []))].filter(nh => nh !== numeroH);
+    if (memberNumeroHs.length === 0) return res.json({ success: true, contacts: [] });
+
+    const users = await User.findAll({
+      where: { numeroH: { [Op.in]: memberNumeroHs } },
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
+    });
+    res.json({ success: true, contacts: users });
+  } catch (error) {
+    console.error('Erreur /friends/quartier-contacts:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// GET /api/friends/activity-contacts — utilisateurs de la même activité
+router.get('/activity-contacts', async (req, res) => {
+  try {
+    const numeroH = req.user.numeroH;
+    const user = await User.findOne({ where: { numeroH } });
+    const activite1 = (user?.activite1 || '').trim();
+    if (!activite1) return res.json({ success: true, contacts: [] });
+
+    const users = await User.findAll({
+      where: { activite1, numeroH: { [Op.ne]: numeroH } },
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'activite1'],
+      limit: 100
+    });
+    res.json({ success: true, contacts: users });
+  } catch (error) {
+    console.error('Erreur /friends/activity-contacts:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// POST /api/friends/start-conversation — { toUser } → crée/réutilise un lien de
+// discussion privée si le destinataire fait partie d'une des 3 catégories
+// autorisées (famille élargie hors immédiate, quartier, même activité).
+router.post('/start-conversation', async (req, res) => {
+  try {
+    const numeroH = req.user.numeroH;
+    const { toUser } = req.body;
+    if (!toUser || toUser === numeroH) {
+      return res.status(400).json({ success: false, message: 'Destinataire invalide' });
+    }
+    const [me, target] = await Promise.all([
+      User.findOne({ where: { numeroH } }),
+      User.findOne({ where: { numeroH: toUser } })
+    ]);
+    if (!target) return res.status(404).json({ success: false, message: 'Utilisateur introuvable' });
+
+    let eligible = false;
+
+    // 1) Même activité
+    if (me?.activite1 && target.activite1 && me.activite1.trim() === target.activite1.trim()) {
+      eligible = true;
+    }
+
+    // 2) Même quartier
+    if (!eligible) {
+      const groups = await findMyQuartierGroups(me);
+      if (groups.some(g => (g.members || []).includes(toUser))) eligible = true;
+    }
+
+    // 3) Famille élargie, hors parents/conjoint(s)/enfants (déjà leur propre messagerie)
+    if (!eligible) {
+      const tree = await findMyFamilyTree(numeroH);
+      if (tree && (tree.members || []).includes(toUser)) {
+        const excluded = await getImmediateFamilyNumeroHs(numeroH);
+        if (!excluded.has(toUser)) eligible = true;
+      }
+    }
+
+    if (!eligible) {
+      return res.status(403).json({ success: false, message: 'Vous ne pouvez pas encore discuter avec cette personne.' });
+    }
+
+    let friend = await Friend.findOne({
+      where: {
+        [Op.or]: [
+          { userNumeroH: numeroH, friendNumeroH: toUser },
+          { userNumeroH: toUser, friendNumeroH: numeroH }
+        ]
+      }
+    });
+    if (!friend) {
+      friend = await Friend.create({
+        userNumeroH: numeroH,
+        friendNumeroH: toUser,
+        status: 'accepted',
+        acceptedAt: new Date()
+      });
+    }
+
+    res.json({
+      success: true,
+      linkId: friend.id,
+      partner: { numeroH: target.numeroH, prenom: target.prenom, nomFamille: target.nomFamille }
+    });
+  } catch (error) {
+    console.error('Erreur /friends/start-conversation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

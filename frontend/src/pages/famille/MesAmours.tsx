@@ -5,6 +5,7 @@ import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay, isAdmin } from '../../utils/auth';
 import { isContactPickerSupported, pickContactPhone } from '../../utils/contactPicker';
+import { FloatingMessenger } from '../../components/FloatingMessenger';
 import { FriendChat } from '../../components/FriendChat';
 import ProfileBadge from '../../components/ProfileBadge';
 import { useI18n } from '../../i18n/useI18n';
@@ -1724,6 +1725,8 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
           </div>
         </div>
       )}
+
+      <FloatingMessenger />
     </div>
   );
 });

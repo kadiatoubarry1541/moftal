@@ -15,6 +15,7 @@ import ReglesLocalite, { type ReglesLocaliteHandle } from '../components/ReglesL
 import ResidenceProofs, { type ResidenceProofsHandle } from '../components/ResidenceProofs';
 import ProfileBadge from '../components/ProfileBadge';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
+import { FloatingMessenger } from '../components/FloatingMessenger';
 import { useI18n } from '../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -1691,6 +1692,8 @@ export default function TerreAdam() {
           </div>
         </div>
       )}
+
+      <FloatingMessenger />
     </div>
   );
 }
