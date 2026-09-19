@@ -704,8 +704,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     setQrSubMode('show');
     setQrScannedUser(null);
     setQrScanError('');
-    setEcritPrenom(''); setEcritNom(''); setEcritResults([]); setEcritError('');
-    setFriendVideoFile(null); setFriendVideoNumeroH('');
     setShowAddFriend(true);
   };
 
