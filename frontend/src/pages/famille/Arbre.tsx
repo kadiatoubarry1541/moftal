@@ -8,6 +8,7 @@ import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/Famil
 import { useI18n } from '../../i18n/useI18n'
 import { getSocket, disconnectSocket } from '../../services/socket'
 import CallModal from '../../components/CallModal'
+import { FloatingMessenger } from '../../components/FloatingMessenger'
 
 const ParentsInline    = lazy(() => import('./Parents'))
 const EnfantsInline    = lazy(() => import('./Enfants'))
@@ -1941,6 +1942,8 @@ const enhancedUser: UserData = useMemo(() => {
           )}
         </div>
       )}
+
+      <FloatingMessenger />
     </div>
   )
 }
