@@ -293,7 +293,7 @@ export default function ListeProfessionnels() {
 
                     {/* Nom */}
                     <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 mb-2 leading-snug">
-                      {pro.name}
+                      {pro.name || "Nom non renseigné"}
                     </h3>
 
                     {/* Services */}
@@ -313,12 +313,10 @@ export default function ListeProfessionnels() {
                     )}
 
                     {/* Adresse */}
-                    {location && (
-                      <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        <span className="mt-0.5 flex-shrink-0">📍</span>
-                        <span>{location}</span>
-                      </div>
-                    )}
+                    <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      <span className="mt-0.5 flex-shrink-0">📍</span>
+                      <span>{location || "Localisation non renseignée"}</span>
+                    </div>
 
                     {/* Téléphone */}
                     {pro.phone && (
@@ -446,14 +444,14 @@ export default function ListeProfessionnels() {
                           {prox && <span className="absolute top-2 right-2 px-2 py-0.5 text-white text-xs font-semibold rounded-full shadow-sm" style={{ backgroundColor: prox.color }}>{prox.text}</span>}
                         </div>
                         <div className="p-4 flex flex-col flex-1">
-                          <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 mb-2 leading-snug">{pro.name}</h3>
+                          <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 mb-2 leading-snug">{pro.name || "Nom non renseigné"}</h3>
                           {pro.services?.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mb-3">
                               {pro.services.slice(0, 4).map((s, i) => <span key={i} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full border border-blue-100 dark:border-blue-800">{s}</span>)}
                               {pro.services.length > 4 && <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 text-xs rounded-full">+{pro.services.length - 4}</span>}
                             </div>
                           )}
-                          {location && <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2"><span className="mt-0.5 flex-shrink-0">📍</span><span>{location}</span></div>}
+                          <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2"><span className="mt-0.5 flex-shrink-0">📍</span><span>{location || "Localisation non renseignée"}</span></div>
                           {pro.phone && <div className="flex items-center gap-1.5 mb-3"><span className="text-sm flex-shrink-0">📞</span><a href={`tel:${pro.phone}`} className="text-sm font-semibold text-green-600 dark:text-green-400 hover:underline">{pro.phone}</a></div>}
                           <div className="flex-1" />
                           <div className="flex gap-2 mt-2">
@@ -491,9 +489,9 @@ export default function ListeProfessionnels() {
                     {prox && <span className="absolute top-2 right-2 px-2 py-0.5 text-white text-xs font-semibold rounded-full shadow-sm" style={{ backgroundColor: prox.color }}>{prox.text}</span>}
                   </div>
                   <div className="p-4 flex flex-col flex-1">
-                    <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 mb-2 leading-snug">{pro.name}</h3>
+                    <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 mb-2 leading-snug">{pro.name || "Nom non renseigné"}</h3>
                     {pro.services?.length > 0 && <div className="flex flex-wrap gap-1.5 mb-3">{pro.services.slice(0, 4).map((s, i) => <span key={i} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full border border-blue-100 dark:border-blue-800">{s}</span>)}{pro.services.length > 4 && <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 text-xs rounded-full">+{pro.services.length - 4}</span>}</div>}
-                    {location && <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2"><span className="mt-0.5 flex-shrink-0">📍</span><span>{location}</span></div>}
+                    <div className="flex items-start gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2"><span className="mt-0.5 flex-shrink-0">📍</span><span>{location || "Localisation non renseignée"}</span></div>
                     {pro.phone && <div className="flex items-center gap-1.5 mb-3"><span className="text-sm flex-shrink-0">📞</span><a href={`tel:${pro.phone}`} className="text-sm font-semibold text-green-600 dark:text-green-400 hover:underline">{pro.phone}</a></div>}
                     <div className="flex-1" />
                     <div className="flex gap-2 mt-2">

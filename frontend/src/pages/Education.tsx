@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DefiEducatifContent from '../components/DefiEducatifContent';
 import { config } from '../config/api';
-import ProSection from '../components/ProSection';
 import { sortByProximity, sortAnyByProximity, getUserGeoContext, requestGPS, type UserGeoContext } from '../utils/proximity';
 import { useI18n } from '../i18n/useI18n';
 
@@ -1031,21 +1030,15 @@ export default function Education() {
               >
                 <span className="text-xs">🤖</span> {t('education.my_ai_btn')}
               </button>
+              <button
+                onClick={() => navigate('/liste-professionnels?type=school')}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors font-semibold shadow-sm flex items-center gap-2"
+              >
+                <span>🔍</span> {t('education.find_school_btn')}
+              </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Écoles & Professeurs — remonté en haut pour leur donner la visibilité
-          en priorité (comme les professionnels sur la page Santé), avec leur
-          barre de recherche intégrée (ProSection) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <ProSection
-          type="school"
-          title={t('education.schools_professors_title')}
-          icon="🎓"
-          description=""
-        />
       </div>
 
       {/* Navigation Tabs */}
@@ -1086,18 +1079,12 @@ export default function Education() {
         {activeTab === 'inscription-suivi' && (
           <div className="space-y-6">
             {/* Bannière : inscriptions dans Mon Profil */}
-            <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-6 flex items-start sm:items-center gap-4">
               <div className="text-4xl">🚀</div>
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-gray-900 mb-1">{t('education.want_to_register_title')}</h2>
                 <p className="text-gray-600 text-sm">{t('education.want_to_register_desc')} <strong>{t('education.mon_profil_actions')}</strong>.</p>
               </div>
-              <button
-                onClick={() => navigate('/moi')}
-                className="flex-shrink-0 px-5 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-colors shadow-md"
-              >
-                {t('education.go_to_profile_btn')}
-              </button>
             </div>
 
             {/* Statut professeur si déjà inscrit */}
@@ -1288,11 +1275,19 @@ export default function Education() {
 
             {/* Section 3: Professeurs Disponibles */}
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg p-6 border-2 border-purple-200">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-2xl">
-                  👨‍🏫
+              <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-2xl">
+                    👨‍🏫
+                  </div>
+                  <h2 className="text-3xl font-bold text-gray-900">{t('education.available_professors_title')}</h2>
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900">{t('education.available_professors_title')}</h2>
+                <button
+                  onClick={() => navigate('/trouver-professeur')}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold shadow-sm flex items-center gap-2"
+                >
+                  <span>🔍</span> {t('education.find_professor_btn')}
+                </button>
               </div>
             {professors.length === 0 ? (
               <p className="text-gray-500 italic text-center py-4">{t('education.no_professor_available')}</p>

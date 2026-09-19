@@ -527,6 +527,8 @@ const pul: Record<string, string> = {
   'education.tab_inscription_suivi': 'Winndugol & topdol',
   'education.tab_cours_inscription': 'Jaŋdeeji & Winndugol',
   'education.my_ai_btn': 'IA Jaŋde',
+  'education.find_school_btn': 'Yiylo lekkol',
+  'education.find_professor_btn': 'Yiylo karamoko',
   'education.tab_formation_scientifique': 'Jaŋde ganndal',
   'education.tab_mes_cours': 'Dersuuji am',
   'education.tab_defi_educatif': 'Fitina jannde',
