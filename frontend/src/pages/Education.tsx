@@ -903,9 +903,9 @@ export default function Education() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between py-3">
             <button
               onClick={() => navigate('/moi')}
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex-shrink-0"
@@ -935,7 +935,7 @@ export default function Education() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="bg-white border-b mt-6">
+      <div className="bg-white mt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="grid grid-cols-4 gap-1 py-2">
             {[
