@@ -3,7 +3,7 @@ import { FriendChat } from './FriendChat'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
-type Category = 'famille' | 'quartier' | 'activite'
+const CONTACT_ENDPOINTS = ['family-contacts', 'quartier-contacts', 'activity-contacts']
 
 interface Contact {
   numeroH: string
@@ -12,16 +12,9 @@ interface Contact {
   photo?: string
 }
 
-const CATEGORIES: { id: Category; label: string; icon: string; endpoint: string }[] = [
-  { id: 'famille',  label: 'Famille',  icon: '🌳', endpoint: 'family-contacts' },
-  { id: 'quartier', label: 'Quartier', icon: '🏘️', endpoint: 'quartier-contacts' },
-  { id: 'activite', label: 'Activité', icon: '💼', endpoint: 'activity-contacts' },
-]
-
 export function FloatingMessenger() {
   const [open, setOpen] = useState(false)
   const [userData, setUserData] = useState<any>(null)
-  const [category, setCategory] = useState<Category>('famille')
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(false)
   const [starting, setStarting] = useState<string | null>(null)
@@ -39,17 +32,25 @@ export function FloatingMessenger() {
     }
   }, [])
 
-  const loadContacts = async (cat: Category) => {
+  const loadContacts = async () => {
     setLoading(true)
     setContacts([])
     try {
-      const endpoint = CATEGORIES.find(c => c.id === cat)!.endpoint
       const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE}/api/friends/${endpoint}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const results = await Promise.all(
+        CONTACT_ENDPOINTS.map(endpoint =>
+          fetch(`${API_BASE}/api/friends/${endpoint}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then(res => res.json()).catch(() => null)
+        )
+      )
+      const byNumeroH = new Map<string, Contact>()
+      results.forEach(data => {
+        if (data?.success) {
+          (data.contacts || []).forEach((c: Contact) => byNumeroH.set(c.numeroH, c))
+        }
       })
-      const data = await res.json()
-      if (data.success) setContacts(data.contacts || [])
+      setContacts([...byNumeroH.values()])
     } catch {
       // non bloquant
     } finally {
@@ -59,12 +60,7 @@ export function FloatingMessenger() {
 
   const openPicker = () => {
     setOpen(true)
-    loadContacts(category)
-  }
-
-  const switchCategory = (cat: Category) => {
-    setCategory(cat)
-    loadContacts(cat)
+    loadContacts()
   }
 
   const startConversation = async (contact: Contact) => {
@@ -112,29 +108,11 @@ export function FloatingMessenger() {
               <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100" onClick={() => setOpen(false)} aria-label="Fermer">✕</button>
             </div>
 
-            <div className="flex border-b border-gray-200 px-2">
-              {CATEGORIES.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => switchCategory(c.id)}
-                  className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
-                    category === c.id ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  {c.icon} {c.label}
-                </button>
-              ))}
-            </div>
-
             <div className="p-3 overflow-y-auto flex-1 min-h-0 space-y-2">
               {loading ? (
                 <div className="text-center py-8 text-sm text-gray-500">Chargement...</div>
               ) : contacts.length === 0 ? (
-                <div className="text-center py-8 text-sm text-gray-500">
-                  {category === 'famille' && 'Aucun membre de famille élargie disponible pour le moment.'}
-                  {category === 'quartier' && 'Aucun membre de votre quartier pour le moment.'}
-                  {category === 'activite' && "Aucun contact avec la même activité pour le moment."}
-                </div>
+                <div className="text-center py-8 text-sm text-gray-500">Personne à écrire pour le moment.</div>
               ) : (
                 contacts.map(c => (
                   <div key={c.numeroH} className="flex items-center gap-3 border border-gray-200 rounded-xl p-2.5">
