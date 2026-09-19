@@ -982,7 +982,7 @@ export default function TerreAdam() {
 
                           {/* En-tête : nom du quartier + membres + sélecteur admin */}
                           <div className="bg-gray-800 text-white flex-shrink-0">
-                            <div className="px-4 py-3 flex items-center gap-3 relative">
+                            <div className="px-4 py-[4px] flex items-center gap-3 relative">
                               {(() => {
                                 const canEditLogo = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
                                 const logoSrc = selectedGroup.logoUrl
