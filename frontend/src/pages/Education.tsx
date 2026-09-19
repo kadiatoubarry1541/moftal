@@ -162,11 +162,9 @@ export default function Education() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [activeTab, setActiveTab] = useState<'ecoles' | 'inscription-suivi' | 'profs-disponibles' | 'defi-educatif'>('ecoles');
-  const [rawFormations, setRawFormations] = useState<Formation[]>([]);
   const [rawProfessors, setRawProfessors] = useState<Professor[]>([]);
   const [rawSchoolsList, setRawSchoolsList] = useState<School[]>([]);
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
-  const formations = useMemo(() => sortByProximity(rawFormations, userGeo), [rawFormations, userGeo]);
   const professors = useMemo(() => sortByProximity(rawProfessors, userGeo), [rawProfessors, userGeo]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -179,10 +177,8 @@ export default function Education() {
   const [myProgress, setMyProgress] = useState<Progress[]>([]);
   const [myCertificates, setMyCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   const [showProfessorRequestForm, setShowProfessorRequestForm] = useState(false);
   const [showStageRequestForm, setShowStageRequestForm] = useState(false);
-  const [selectedFormation, setSelectedFormation] = useState<Formation | null>(null);
   const [selectedProfessor, setSelectedProfessor] = useState<Professor | null>(null);
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [activeCourseTab, setActiveCourseTab] = useState<'audio' | 'video' | 'written' | 'exercice' | 'library' | 'progress' | 'certificates' | 'publier'>('audio');
@@ -217,11 +213,6 @@ export default function Education() {
     mediaFile: null as File | null
   });
   const navigate = useNavigate();
-
-  const [registrationForm, setRegistrationForm] = useState({
-    numeroH: '',
-    motivation: ''
-  });
 
   const [professorRequestForm, setProfessorRequestForm] = useState({
     numeroH: '',
@@ -266,8 +257,8 @@ export default function Education() {
 
   const loadData = async () => {
     setLoading(true);
-    // Charger formations et professeurs en priorité → affiche la page rapidement
-    await Promise.allSettled([loadFormations(), loadProfessors()]);
+    // Charger les professeurs en priorité → affiche la page rapidement
+    await loadProfessors();
     setLoading(false);
     // Charger le reste en arrière-plan sans bloquer l'affichage
     Promise.allSettled([
@@ -490,23 +481,6 @@ export default function Education() {
     return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
   };
 
-  const loadFormations = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetchWithTimeout(`${config.API_BASE_URL}/education/formations`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setRawFormations(data.formations || []);
-      } else {
-        setRawFormations([]);
-      }
-    } catch {
-      setRawFormations([]);
-    }
-  };
-
   const loadProfessors = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -714,47 +688,6 @@ export default function Education() {
     }
   };
 
-  const handleFormationRegistration = async (formation: Formation) => {
-    setSelectedFormation(formation);
-    setRegistrationForm({
-      numeroH: userData?.numeroH || '',
-      motivation: ''
-    });
-    setShowRegistrationForm(true);
-  };
-
-  const submitFormationRegistration = async () => {
-    const numeroH = userData?.numeroH || registrationForm.numeroH;
-    if (!selectedFormation || !numeroH) return;
-
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${config.API_BASE_URL}/education/register-formation`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          formationId: selectedFormation.id,
-          studentNumeroH: userData?.numeroH || registrationForm.numeroH,
-          motivation: registrationForm.motivation
-        })
-      });
-      
-      if (response.ok) {
-        alert('Demande d\'inscription envoyée avec succès !');
-        setShowRegistrationForm(false);
-        loadMyRegistrations();
-      } else {
-        alert('Erreur lors de l\'envoi de la demande');
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'inscription:', error);
-      alert('Erreur lors de l\'envoi de la demande');
-    }
-  };
-
   const handleProfessorRequest = async (professor: Professor) => {
     setSelectedProfessor(professor);
     setProfessorRequestForm({
@@ -840,41 +773,6 @@ export default function Education() {
       alert('Erreur lors de l\'envoi de la demande');
     }
   };
-
-  const getDefaultFormations = (): Formation[] => [
-    {
-      id: '1',
-      title: 'Formation en Informatique',
-      description: 'Apprenez les bases de l\'informatique et de la programmation',
-      category: 'Technologie',
-      duration: 6,
-      level: 'Débutant',
-      requirements: ['Aucun prérequis'],
-      curriculum: ['Introduction', 'Bases de données', 'Programmation'],
-      isActive: true,
-      createdBy: 'admin',
-      maxStudents: 30,
-      price: 50000,
-      startDate: '2024-01-15',
-      endDate: '2024-07-15'
-    },
-    {
-      id: '2',
-      title: 'Formation en Langues',
-      description: 'Apprenez l\'anglais et le français',
-      category: 'Langues',
-      duration: 4,
-      level: 'Intermédiaire',
-      requirements: ['Niveau scolaire'],
-      curriculum: ['Grammaire', 'Vocabulaire', 'Conversation'],
-      isActive: true,
-      createdBy: 'admin',
-      maxStudents: 25,
-      price: 30000,
-      startDate: '2024-02-01',
-      endDate: '2024-06-01'
-    }
-  ];
 
   const getDefaultProfessors = (): Professor[] => [
     {
@@ -1007,19 +905,13 @@ export default function Education() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6 gap-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/moi')}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex-shrink-0"
-              >
-                {t('btn.back_arrow')}
-              </button>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">🎓 {t('education.title')}</h1>
-                <p className="mt-2 text-gray-600">{t('education.subtitle')}</p>
-              </div>
-            </div>
+          <div className="flex items-center justify-between py-3 border-b border-gray-100">
+            <button
+              onClick={() => navigate('/moi')}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex-shrink-0"
+            >
+              {t('btn.back_arrow')}
+            </button>
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => navigate('/famille/inspir')}
@@ -1035,13 +927,17 @@ export default function Education() {
               </button>
             </div>
           </div>
+          <div className="py-4">
+            <h1 className="text-3xl font-bold text-gray-900">🎓 {t('education.title')}</h1>
+            <p className="mt-1 text-gray-600">{t('education.subtitle')}</p>
+          </div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
       <div className="bg-white border-b mt-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1 py-2">
+          <nav className="grid grid-cols-4 gap-1 py-2">
             {[
               { id: 'ecoles', label: t('education.tab_ecoles'), icon: '🎓' },
               { id: 'inscription-suivi', label: t('education.tab_cours_inscription'), icon: '📚' },
@@ -1058,7 +954,7 @@ export default function Education() {
                   if (tab.id === 'inscription-suivi') setInscriptionStep('button');
                 }
               }}
-              className={`flex flex-col items-center justify-center gap-1 px-2 py-2 sm:px-4 sm:py-3 rounded-lg font-medium text-xs sm:text-sm transition-all ${
+              className={`flex flex-col items-center justify-center gap-1 px-1 py-1.5 sm:px-4 sm:py-3 rounded-lg font-medium text-[9px] sm:text-sm transition-all ${
                 activeTab === tab.id
                   ? 'bg-blue-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -1234,67 +1130,15 @@ export default function Education() {
 
         {activeTab === 'profs-disponibles' && (
           <div className="space-y-8">
-            {/* Section 1: Formations Disponibles */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border-2 border-blue-200">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-2xl">
-                  📚
-                </div>
-                <h2 className="text-3xl font-bold text-gray-900">{t('education.available_formations_title')}</h2>
-              </div>
-            {formations.length === 0 ? (
-              <p className="text-gray-500 italic text-center py-4">{t('education.no_formation_available')}</p>
-            ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {formations.map((formation) => (
-                  <div key={formation.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{formation.title}</h3>
-                    <p className="text-gray-600 mb-4">{formation.description}</p>
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">{t('education.category_label')}</span>
-                        <span className="text-sm font-medium">{formation.category}</span>
-                    </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">{t('education.duration_label')}</span>
-                        <span className="text-sm font-medium">{formation.duration} {t('education.duration_months')}</span>
-                    </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">{t('education.level_label')}</span>
-                        <span className="text-sm font-medium">{formation.level}</span>
-                  </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">{t('education.price_label')}</span>
-                        <span className="text-sm font-medium">{formation.price.toLocaleString()} FG</span>
-                  </div>
-                    </div>
-                    <button
-                      onClick={() => handleFormationRegistration(formation)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
-                    >
-                      {t('education.register_btn')}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            </div>
-
-            {/* Section 3: Professeurs Disponibles */}
+            {/* Professeurs Disponibles — chaque professeur avec les matières qu'il
+                est capable d'enseigner et sa localisation, comme les médecins sur
+                la page Santé (un seul professeur = une seule carte, une seule liste) */}
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg p-6 border-2 border-purple-200">
-              <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-2xl">
-                    👨‍🏫
-                  </div>
-                  <h2 className="text-3xl font-bold text-gray-900">{t('education.available_professors_title')}</h2>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-2xl">
+                  👨‍🏫
                 </div>
-                <button
-                  onClick={() => navigate('/trouver-professeur')}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold shadow-sm flex items-center gap-2"
-                >
-                  <span>🔍</span> {t('education.find_professor_btn')}
-                </button>
+                <h2 className="text-3xl font-bold text-gray-900">{t('education.available_professors_title')}</h2>
               </div>
             {professors.length === 0 ? (
               <p className="text-gray-500 italic text-center py-4">{t('education.no_professor_available')}</p>
@@ -1305,7 +1149,7 @@ export default function Education() {
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">{professor.name}</h3>
                     <div className="space-y-2 mb-4">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-500">{t('sante.specialties_label')}</span>
+                        <span className="text-sm text-gray-500">{t('education.formations_taught_label')}</span>
                         <span className="text-sm font-medium">{professor.specialties.join(', ')}</span>
                     </div>
                       <div className="flex justify-between">
@@ -1824,56 +1668,6 @@ export default function Education() {
           </div>
         );
       })()}
-
-      {/* Modal d'inscription à une formation */}
-        {showRegistrationForm && selectedFormation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              {t('education.register_for')} {selectedFormation.title}
-              </h3>
-              <div className="space-y-4">
-                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('education.numeroh_connected_label')}
-                </label>
-                  <input
-                    type="text"
-                  value={userData?.numeroH ?? registrationForm.numeroH}
-                  readOnly
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-700"
-                  />
-                </div>
-                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('education.motivation_label')}
-                </label>
-                  <textarea
-                  value={registrationForm.motivation}
-                  onChange={(e) => setRegistrationForm({...registrationForm, motivation: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                  placeholder={t('education.motivation_placeholder')}
-                  />
-                </div>
-              </div>
-            <div className="flex space-x-3 mt-6">
-                <button
-                onClick={() => setShowRegistrationForm(false)}
-                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
-                >
-                {t('btn.cancel')}
-                </button>
-                <button
-                onClick={submitFormationRegistration}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
-                >
-                {t('education.send_request_btn')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       {/* Modal de demande de professeur */}
       {showProfessorRequestForm && selectedProfessor && (
