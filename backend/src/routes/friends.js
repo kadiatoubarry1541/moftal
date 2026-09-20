@@ -100,9 +100,10 @@ async function findMyQuartierGroups(user) {
 }
 
 /**
- * Accès modération aux conversations Amitié — réservé au chef unique (G7),
- * pour la sécurité des utilisateurs. Le compte G0 n'a volontairement pas
- * cet accès (il reste limité aux simples icônes de son espace admin).
+ * Accès modération Amitié — réservé au chef unique (G7), pour voir qui est
+ * en lien avec qui (sécurité des utilisateurs). Ne donne accès qu'à la liste
+ * des relations (/admin/all-links) — jamais au contenu des messages privés,
+ * qui reste strictement réservé aux deux personnes concernées.
  */
 function isAdmin(user) {
   return !!(user && user.numeroH === 'G7C7P7R7E7F7 7');
@@ -642,7 +643,7 @@ router.get('/messages', async (req, res) => {
     const { linkId } = req.query;
     if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
     const friend = await Friend.findByPk(linkId);
-    if (!estDansLAmitie(friend, req.user.numeroH) && !isAdmin(req.user)) {
+    if (!estDansLAmitie(friend, req.user.numeroH)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
     const messages = await FriendMessage.getMessages(linkId);
@@ -670,7 +671,7 @@ router.post('/messages', async (req, res) => {
       return res.status(400).json({ success: false, message: 'linkId et content requis.' });
     }
     const friend = await Friend.findByPk(linkId);
-    if (!estDansLAmitie(friend, user.numeroH) && !isAdmin(user)) {
+    if (!estDansLAmitie(friend, user.numeroH)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
     const msg = await FriendMessage.create({
@@ -698,7 +699,7 @@ router.post('/messages/upload', uploadFriendMedia.single('media'), async (req, r
     const { linkId, category = 'information' } = req.body;
     if (!linkId) return res.status(400).json({ success: false, message: 'linkId requis.' });
     const friend = await Friend.findByPk(linkId);
-    if (!estDansLAmitie(friend, user.numeroH) && !isAdmin(user)) {
+    if (!estDansLAmitie(friend, user.numeroH)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
