@@ -2778,16 +2778,13 @@ app.use('/api', additionalRoutes);
 
 // Route de test
 app.get('/api/health', async (req, res) => {
-  // Requête triviale à la base pour empêcher Neon (plan gratuit) de suspendre
-  // son compute par inactivité — sans ça, le ping de garde ne réveillait que
-  // le serveur Node, jamais la base, qui restait la vraie source de lenteur.
-  let dbConnected = false;
-  try {
-    await sequelize.query('SELECT 1');
-    dbConnected = true;
-  } catch (e) {
-    console.warn('Health check DB:', e.message);
-  }
+  // On ne force plus de requête vers la base ici : sur le plan gratuit Neon,
+  // ça empêchait la base de se mettre en veille (elle restait active 24h/24)
+  // et ça épuisait le quota d'heures de calcul mensuel en quelques jours.
+  // La base se réveille naturellement sur une vraie requête utilisateur.
+  const dbConnected = sequelize.connectionManager.pool
+    ? sequelize.connectionManager.pool.size > 0
+    : false;
   res.json({
     success: true,
     message: 'Serveur fonctionnel',
