@@ -16,6 +16,20 @@ interface Contact {
 
 type ChatType = 'friend' | 'couple' | 'parent' | 'child'
 
+const MESSAGES_PATH: Record<ChatType, string> = {
+  friend: '/api/friends/messages',
+  couple: '/api/couple/messages',
+  parent: '/api/parent-child/messages',
+  child: '/api/parent-child/messages',
+}
+
+const ICONS: Record<ChatType, string> = {
+  friend: '👥',
+  couple: '💑',
+  parent: '🧓',
+  child: '👶',
+}
+
 interface Conversation {
   key: string
   type: ChatType
@@ -24,13 +38,31 @@ interface Conversation {
   label: string
   photo?: string | null
   icon: string
+  lastMessage: string
+  lastMessageAt: string | null
+  lastMessageMine: boolean
 }
 
-const ICONS: Record<ChatType, string> = {
-  friend: '👥',
-  couple: '💑',
-  parent: '🧓',
-  child: '👶',
+function previewForMessage(m: any): string {
+  if (m.messageType === 'image') return '📷 Photo'
+  if (m.messageType === 'video') return '🎥 Vidéo'
+  if (m.messageType === 'audio') return '🎤 Message vocal'
+  return m.content || ''
+}
+
+function formatConvTime(iso: string | null): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const now = new Date()
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  }
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (d.toDateString() === yesterday.toDateString()) return 'Hier'
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
+  if (diffDays < 7) return d.toLocaleDateString('fr-FR', { weekday: 'short' })
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
 }
 
 export function FloatingMessenger() {
@@ -54,7 +86,26 @@ export function FloatingMessenger() {
     }
   }, [])
 
-  const loadConversations = async () => {
+  const fetchLastMessage = async (type: ChatType, linkId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_BASE}${MESSAGES_PATH[type]}?linkId=${encodeURIComponent(linkId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!data?.success || !data.messages?.length) return null
+      const last = data.messages[data.messages.length - 1]
+      return {
+        content: previewForMessage(last),
+        at: last.created_at || last.createdAt || null,
+        numeroH: last.numeroH,
+      }
+    } catch {
+      return null
+    }
+  }
+
+  const loadConversations = async (myNumeroH?: string) => {
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Bearer ${token}` }
@@ -66,19 +117,11 @@ export function FloatingMessenger() {
         fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then(r => r.json()).catch(() => null),
       ])
 
-      const list: Conversation[] = []
+      const base: Omit<Conversation, 'lastMessage' | 'lastMessageAt' | 'lastMessageMine'>[] = []
 
       if (friendsRes?.success) {
         (friendsRes.friends || []).forEach((f: any) => {
-          list.push({
-            key: `friend-${f.id}`,
-            type: 'friend',
-            linkId: f.id,
-            numeroH: f.numeroH,
-            label: `${f.prenom || ''} ${f.nomFamille || ''}`.trim(),
-            photo: f.profilePicture,
-            icon: ICONS.friend,
-          })
+          base.push({ key: `friend-${f.id}`, type: 'friend', linkId: f.id, numeroH: f.numeroH, label: `${f.prenom || ''} ${f.nomFamille || ''}`.trim(), photo: f.profilePicture, icon: ICONS.friend })
         })
       }
 
@@ -88,59 +131,48 @@ export function FloatingMessenger() {
       if (wives.length > 0) {
         wives.forEach((w: any) => {
           if (!w.wife) return
-          list.push({
-            key: `couple-${w.link.id}`,
-            type: 'couple',
-            linkId: w.link.id,
-            numeroH: w.wife.numeroH,
-            label: `${w.wife.prenom || ''} ${w.wife.nomFamille || ''}`.trim(),
-            photo: w.wife.photo,
-            icon: ICONS.couple,
-          })
+          base.push({ key: `couple-${w.link.id}`, type: 'couple', linkId: w.link.id, numeroH: w.wife.numeroH, label: `${w.wife.prenom || ''} ${w.wife.nomFamille || ''}`.trim(), photo: w.wife.photo, icon: ICONS.couple })
         })
       } else if (partnerRes?.success && partnerRes.partner && partnerRes.link) {
-        list.push({
-          key: `couple-${partnerRes.link.id}`,
-          type: 'couple',
-          linkId: partnerRes.link.id,
-          numeroH: partnerRes.partner.numeroH,
-          label: `${partnerRes.partner.prenom || ''} ${partnerRes.partner.nomFamille || ''}`.trim(),
-          photo: partnerRes.partner.photo,
-          icon: ICONS.couple,
-        })
+        base.push({ key: `couple-${partnerRes.link.id}`, type: 'couple', linkId: partnerRes.link.id, numeroH: partnerRes.partner.numeroH, label: `${partnerRes.partner.prenom || ''} ${partnerRes.partner.nomFamille || ''}`.trim(), photo: partnerRes.partner.photo, icon: ICONS.couple })
       }
 
       if (childrenRes?.success) {
         (childrenRes.children || []).forEach((c: any) => {
           if (!c.child) return
-          list.push({
-            key: `child-${c.id}`,
-            type: 'child',
-            linkId: c.id,
-            numeroH: c.child.numeroH,
-            label: `${c.child.prenom || ''} ${c.child.nomFamille || ''}`.trim(),
-            photo: c.child.photo,
-            icon: ICONS.child,
-          })
+          base.push({ key: `child-${c.id}`, type: 'child', linkId: c.id, numeroH: c.child.numeroH, label: `${c.child.prenom || ''} ${c.child.nomFamille || ''}`.trim(), photo: c.child.photo, icon: ICONS.child })
         })
       }
 
       if (parentsRes?.success) {
         (parentsRes.parents || []).forEach((p: any) => {
           if (!p.parent) return
-          list.push({
-            key: `parent-${p.id}`,
-            type: 'parent',
-            linkId: p.id,
-            numeroH: p.parent.numeroH,
-            label: `${p.parent.prenom || ''} ${p.parent.nomFamille || ''}`.trim(),
-            photo: p.parent.photo,
-            icon: ICONS.parent,
-          })
+          base.push({ key: `parent-${p.id}`, type: 'parent', linkId: p.id, numeroH: p.parent.numeroH, label: `${p.parent.prenom || ''} ${p.parent.nomFamille || ''}`.trim(), photo: p.parent.photo, icon: ICONS.parent })
         })
       }
 
-      setConversations(list)
+      // Dernier message de chaque conversation — pour trier et afficher un
+      // aperçu, exactement comme l'écran d'accueil de WhatsApp.
+      const withLast: Conversation[] = await Promise.all(
+        base.map(async conv => {
+          const last = await fetchLastMessage(conv.type, conv.linkId)
+          return {
+            ...conv,
+            lastMessage: last?.content || '',
+            lastMessageAt: last?.at || null,
+            lastMessageMine: !!(last && myNumeroH && last.numeroH === myNumeroH),
+          }
+        })
+      )
+
+      withLast.sort((a, b) => {
+        if (!a.lastMessageAt && !b.lastMessageAt) return a.label.localeCompare(b.label)
+        if (!a.lastMessageAt) return 1
+        if (!b.lastMessageAt) return -1
+        return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+      })
+
+      setConversations(withLast)
     } catch {
       // non bloquant
     }
@@ -172,7 +204,7 @@ export function FloatingMessenger() {
   const openPicker = async () => {
     setOpen(true)
     setLoading(true)
-    await Promise.all([loadConversations(), loadContacts()])
+    await Promise.all([loadConversations(userData?.numeroH), loadContacts()])
     setLoading(false)
   }
 
@@ -240,33 +272,35 @@ export function FloatingMessenger() {
               <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100" onClick={() => setOpen(false)} aria-label="Fermer">✕</button>
             </div>
 
-            <div className="p-3 overflow-y-auto flex-1 min-h-0 space-y-4">
+            <div className="overflow-y-auto flex-1 min-h-0">
               {loading ? (
                 <div className="text-center py-8 text-sm text-gray-500">Chargement...</div>
               ) : (
                 <>
-                  {conversations.length > 0 && (
-                    <div className="space-y-2">
-                      {conversations.map(conv => (
-                        <button
-                          key={conv.key}
-                          onClick={() => openConversation(conv)}
-                          className="w-full flex items-center gap-3 border border-gray-200 rounded-xl p-2.5 text-left hover:bg-gray-50"
-                        >
-                          <div className="relative w-9 h-9 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center text-emerald-700 font-bold shrink-0">
-                            {conv.photo ? <img src={conv.photo} alt="" className="w-full h-full object-cover" /> : (conv.label?.[0] || '?')}
-                            <span className="absolute -bottom-0.5 -right-0.5 text-[10px] leading-none">{conv.icon}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate">{conv.label}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {conversations.map(conv => (
+                    <button
+                      key={conv.key}
+                      onClick={() => openConversation(conv)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100"
+                    >
+                      <div className="relative w-11 h-11 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center text-emerald-700 font-bold shrink-0">
+                        {conv.photo ? <img src={conv.photo} alt="" className="w-full h-full object-cover" /> : (conv.label?.[0] || '?')}
+                        <span className="absolute -bottom-0.5 -right-0.5 text-[11px] leading-none">{conv.icon}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{conv.label}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {conv.lastMessage ? (conv.lastMessageMine ? `Vous : ${conv.lastMessage}` : conv.lastMessage) : 'Dites bonjour 👋'}
+                        </p>
+                      </div>
+                      {conv.lastMessageAt && (
+                        <span className="text-[11px] text-gray-400 shrink-0 self-start pt-0.5">{formatConvTime(conv.lastMessageAt)}</span>
+                      )}
+                    </button>
+                  ))}
 
                   {newContacts.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="p-3 space-y-2">
                       <p className="text-xs font-semibold text-gray-400 uppercase px-0.5">Nouvelle conversation</p>
                       {newContacts.map(c => (
                         <div key={c.numeroH} className="flex items-center gap-3 border border-gray-200 rounded-xl p-2.5">
