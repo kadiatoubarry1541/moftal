@@ -511,7 +511,6 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   }, [selectedGroup?.id]);
 
   useEffect(() => {
-    setFeedFilter('all');
     setSelectedGroup(null);
     loadActivityGroups();
   }, [activeTab, selectedPays, loadActivityGroups]);
