@@ -4,7 +4,10 @@ import { CoupleChat } from './CoupleChat'
 import { ParentChildChat } from './ParentChildChat'
 import { FamilyGroupChat } from './FamilyGroupChat'
 import { ResidenceGroupChat, type ResidenceGroupInfo } from './ResidenceGroupChat'
+import { ActivityGroupChat, type ActivityGroupInfo } from './ActivityGroupChat'
 import { findLocationByCode, getLocationGroupTitle } from '../utils/worldGeography'
+import { isActivityBlocked } from '../utils/activityIcons'
+import { ActivityIcon } from './ActivityIconBadge'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -22,10 +25,10 @@ interface Contact {
   photo?: string
 }
 
-type ChatType = 'friend' | 'couple' | 'parent' | 'child' | 'family' | 'residence'
+type ChatType = 'friend' | 'couple' | 'parent' | 'child' | 'family' | 'residence' | 'activity'
 
 // La messagerie "Famille principal" (family_tree_messages) et les groupes de
-// quartier n'ont pas de `?linkId=` : le premier est lié à l'arbre côté
+// quartier/activité n'ont pas de `?linkId=` : le premier est lié à l'arbre côté
 // serveur, les seconds ont leur propre id dans l'URL (/groups/:id/messages).
 const MESSAGES_PATH: Record<ChatType, string> = {
   friend: '/api/friends/messages',
@@ -34,6 +37,7 @@ const MESSAGES_PATH: Record<ChatType, string> = {
   child: '/api/parent-child/messages',
   family: '/api/family-tree/messages',
   residence: '/api/residences/groups',
+  activity: '/api/activities/groups',
 }
 
 const ICONS: Record<ChatType, string> = {
@@ -43,6 +47,7 @@ const ICONS: Record<ChatType, string> = {
   child: '👶',
   family: '👨‍👩‍👧‍👦',
   residence: '🏘️',
+  activity: '💼',
 }
 
 interface Conversation {
@@ -53,6 +58,7 @@ interface Conversation {
   label: string
   photo?: string | null
   icon: string
+  activityName?: string
   lastMessage: string
   lastMessageAt: string | null
   lastMessageMine: boolean
@@ -91,6 +97,13 @@ interface RawResidenceGroup {
   name?: string
   logoUrl?: string | null
   members?: unknown[]
+}
+
+interface RawActivityGroup {
+  id: string
+  name?: string
+  activity: string
+  pays?: string
 }
 
 interface RawMessage {
@@ -140,6 +153,10 @@ interface SessionUser {
   lieuResidence3?: string
   sousPrefectureCode?: string
   sousPrefecture?: string
+  pays?: string
+  activite1?: string
+  activite2?: string
+  activite3?: string
 }
 
 export function FloatingMessenger() {
@@ -147,6 +164,7 @@ export function FloatingMessenger() {
   const [userData, setUserData] = useState<SessionUser | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [residenceGroups, setResidenceGroups] = useState<Record<string, ResidenceGroupInfo>>({})
+  const [activityGroups, setActivityGroups] = useState<Record<string, ActivityGroupInfo>>({})
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(false)
   const [starting, setStarting] = useState<string | null>(null)
@@ -169,7 +187,7 @@ export function FloatingMessenger() {
       const token = localStorage.getItem('token')
       const url = type === 'family'
         ? `${API_BASE}${MESSAGES_PATH[type]}`
-        : type === 'residence'
+        : type === 'residence' || type === 'activity'
         ? `${API_BASE}${MESSAGES_PATH[type]}/${encodeURIComponent(linkId)}/messages`
         : `${API_BASE}${MESSAGES_PATH[type]}?linkId=${encodeURIComponent(linkId)}`
       const res = await fetch(url, {
@@ -201,6 +219,12 @@ export function FloatingMessenger() {
         me?.quartierCode3 || me?.lieu3 || me?.lieuResidence3 || null,
       ].filter((c): c is string => !!c)
 
+      // Mes activités professionnelles (Activité 1, 2, 3) — un groupe par
+      // activité réelle, avec le logo Lucide propre à cette activité.
+      const activityNames = [me?.activite1 || null, me?.activite2 || null, me?.activite3 || null]
+        .filter((a): a is string => !!a && !isActivityBlocked(a))
+      const userPays = me?.pays || me?.lieuResidence1 || ''
+
       const [friendsRes, wivesRes, partnerRes, childrenRes, parentsRes, ...residenceResList] = await Promise.all([
         fetch(`${API_BASE}/api/friends/list`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/couple/my-wives`, { headers }).then(r => r.json()).catch(() => null),
@@ -211,6 +235,23 @@ export function FloatingMessenger() {
           fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(normalizeLoc(loc))}`, { headers }).then(r => r.json()).catch(() => null)
         ),
       ])
+
+      // Groupes d'activité — récupérés séparément (et créés au besoin) car
+      // ils dépendent du nom réel de l'activité + du pays de l'utilisateur.
+      const activityResList = await Promise.all(activityNames.map(async (name) => {
+        const paysParam = userPays ? `&pays=${encodeURIComponent(userPays)}` : ''
+        const data = await fetch(`${API_BASE}/api/activities/groups?activity=${encodeURIComponent(name)}${paysParam}`, { headers })
+          .then(r => r.json()).catch(() => null)
+        let group: RawActivityGroup | null = data?.success ? ((data.groups || []).find((g: RawActivityGroup) => (g.pays || '') === userPays) || data.groups?.[0] || null) : null
+        if (!group) {
+          group = await fetch(`${API_BASE}/api/activities/groups`, {
+            method: 'POST',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: `${name}${userPays ? ` — ${userPays}` : ''}`, activity: name, pays: userPays, createdBy: myNumeroH }),
+          }).then(r => r.json()).then(d => d?.group || null).catch(() => null)
+        }
+        return group ? { name, group } : null
+      }))
 
       const base: Omit<Conversation, 'lastMessage' | 'lastMessageAt' | 'lastMessageMine'>[] = []
 
@@ -265,6 +306,18 @@ export function FloatingMessenger() {
         base.push({ key: `residence-${g.id}`, type: 'residence', linkId: g.id, numeroH: '', label: displayName, photo: logoSrc, icon: ICONS.residence })
       })
       setResidenceGroups(groupsByKey)
+
+      // Groupes d'activité — chacun garde le logo Lucide propre à son activité.
+      const activityGroupsByKey: Record<string, ActivityGroupInfo> = {}
+      const seenActivityIds = new Set<string>()
+      activityResList.forEach(entry => {
+        if (!entry || seenActivityIds.has(entry.group.id)) return
+        seenActivityIds.add(entry.group.id)
+        const info: ActivityGroupInfo = { id: entry.group.id, name: entry.group.name || entry.name, activity: entry.name }
+        activityGroupsByKey[entry.group.id] = info
+        base.push({ key: `activity-${entry.group.id}`, type: 'activity', linkId: entry.group.id, numeroH: '', label: entry.name, photo: null, icon: ICONS.activity, activityName: entry.name })
+      })
+      setActivityGroups(activityGroupsByKey)
 
       // Dernier message de chaque conversation — pour trier et afficher un
       // aperçu, exactement comme l'écran d'accueil de WhatsApp.
@@ -399,7 +452,9 @@ export function FloatingMessenger() {
                       className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100"
                     >
                       <div className="relative w-11 h-11 rounded-full bg-emerald-100 overflow-hidden flex items-center justify-center text-emerald-700 font-bold shrink-0">
-                        {conv.photo ? <img src={conv.photo} alt="" className="w-full h-full object-cover" /> : (conv.label?.[0] || '?')}
+                        {conv.type === 'activity' && conv.activityName
+                          ? <ActivityIcon name={conv.activityName} size={22} />
+                          : conv.photo ? <img src={conv.photo} alt="" className="w-full h-full object-cover" /> : (conv.label?.[0] || '?')}
                         <span className="absolute -bottom-0.5 -right-0.5 text-[11px] leading-none">{conv.icon}</span>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -462,6 +517,9 @@ export function FloatingMessenger() {
               {chat.type === 'family' && <FamilyGroupChat myNumeroH={userData.numeroH} prenom={userData.prenom} nomFamille={userData.nomFamille} />}
               {chat.type === 'residence' && residenceGroups[chat.linkId] && (
                 <ResidenceGroupChat group={residenceGroups[chat.linkId]} myNumeroH={userData.numeroH} userData={userData} />
+              )}
+              {chat.type === 'activity' && activityGroups[chat.linkId] && (
+                <ActivityGroupChat group={activityGroups[chat.linkId]} myNumeroH={userData.numeroH} userData={userData} />
               )}
             </div>
           </div>

@@ -1,124 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import {
-  Sprout, Beef, Fish, ShoppingBag, Hammer, Car, GraduationCap,
-  Stethoscope, Building2, HardHat, Wrench, UtensilsCrossed,
-  Scissors, Zap, Droplets, Shield, Banknote, Radio, Newspaper,
-  BookOpen, Home, Sunset, Globe, LucideIcon,
-  // Nouvelles icônes
-  Pill, Baby, Brain, Microscope, Scale, Calculator, Camera, Dumbbell,
-  ChefHat, Leaf, Package, TrendingUp, ArrowLeftRight,
-  Palette, Hotel, Languages, School, Flame, Snowflake, PaintBucket,
-  Layers, HeartHandshake, Syringe, Building,
-  // Icônes distinctes par activité — chaque activité a son propre logo, aucun partage
-  HeartPulse, Cross, Dog, Eye, Presentation, Landmark, Umbrella, Gavel,
-  Cpu, Code, PencilRuler, Megaphone, Siren, Wheat, Brush, Trophy, Cog,
-  Trees, Moon, Drill
-} from 'lucide-react';
 import { config } from '../config/api';
 import ProSection from '../components/ProSection';
-import { AudioRecorder } from '../components/AudioRecorder';
 import PaymentModal from '../components/PaymentModal';
-import { hideIncrement } from '../utils/formatNumeroH';
-import { getUserGeoContext } from '../utils/proximity';
 import { isAdmin } from '../utils/auth';
-
-// Noms interdits — aucun groupe ne peut être créé avec ces termes
-const BLOCKED_ACTIVITY_TERMS = [
-  'musique', 'chanteur', 'chanteuse', 'danseur', 'danseuse',
-  'artiste', 'prostitué', 'prostituée', 'escort',
-];
-
-function isActivityBlocked(name: string): boolean {
-  const lower = name.toLowerCase();
-  return BLOCKED_ACTIVITY_TERMS.some(term => lower.includes(term));
-}
-
-// Mapping activité → icône Lucide — chaque activité a son propre logo distinct,
-// jamais partagé avec une autre, pour qu'on les reconnaisse au premier coup d'œil.
-const ACTIVITY_ICONS: Record<string, LucideIcon> = {
-  // Santé & Médecine
-  'Santé':                    Stethoscope,
-  'Médecin':                  HeartPulse,
-  'Infirmier/Infirmière':     Syringe,
-  'Pharmacien':               Pill,
-  'Sage-femme':               Baby,
-  'Dentiste':                 Cross,
-  'Psychologue/Thérapeute':   Brain,
-  'Kiné/Physiothérapeute':    Dumbbell,
-  'Vétérinaire':              Dog,
-  'Opticien':                 Eye,
-  // Éducation
-  'Élève':                    School,
-  'Étudiant':                 BookOpen,
-  'Enseignement':             GraduationCap,
-  'Professeur/Formateur':     Presentation,
-  'Chercheur/Scientifique':   Microscope,
-  // Droit, Finance & Admin
-  'Administration':           Landmark,
-  'Avocat/Juriste':           Scale,
-  'Comptable/Auditeur':       Calculator,
-  'Économiste':               TrendingUp,
-  'Banque/Finance':           Banknote,
-  'Assurance':                Umbrella,
-  'Agent immobilier':         Building,
-  'Notaire/Huissier':         Gavel,
-  // Numérique & Tech
-  'Informatique':             Cpu,
-  'Développeur/Programmeur':  Code,
-  'Graphiste/Designer':       Palette,
-  'Cybersécurité':            Shield,
-  'Télécommunications':       Radio,
-  // BTP & Artisanat
-  'Construction':             HardHat,
-  'Maçonnerie':               Drill,
-  'Menuiserie':               Hammer,
-  'Électricité':              Zap,
-  'Plomberie':                Droplets,
-  'Soudure/Métallurgie':      Flame,
-  'Climatisation/Froid':      Snowflake,
-  'Peinture en bâtiment':     PaintBucket,
-  'Carrelage':                Layers,
-  'Mécanique':                Wrench,
-  'Artisanat':                PencilRuler,
-  'Couture':                  Scissors,
-  // Commerce & Échanges
-  'Commerce':                 ShoppingBag,
-  'Import/Export':            ArrowLeftRight,
-  'Marketing/Communication':  Megaphone,
-  'Transport':                Car,
-  'Logistique':               Package,
-  'Journalisme':              Newspaper,
-  'Sécurité':                 Siren,
-  // Alimentation
-  'Agriculture':              Sprout,
-  'Maraîchage':               Leaf,
-  'Élevage':                  Beef,
-  'Pêche':                    Fish,
-  'Boulangerie/Pâtisserie':   ChefHat,
-  'Restauration':             UtensilsCrossed,
-  'Agroalimentaire':          Wheat,
-  // Services
-  'Coiffure':                 Brush,
-  'Hôtellerie/Tourisme':      Hotel,
-  'Photographie/Vidéo':       Camera,
-  'Sport/Coach sportif':      Trophy,
-  'Ingénierie':               Cog,
-  'Architecture':             Building2,
-  'Environnement/Écologie':   Trees,
-  'Travail social':           HeartHandshake,
-  'Imam/Prédicateur':         Moon,
-  'Traducteur/Interprète':    Languages,
-  // Statut
-  'Sans emploi':              Home,
-  'Retraité':                 Sunset,
-  'Autre':                    Globe,
-};
-
-function ActivityIcon({ name, size = 22 }: { name: string; size?: number }) {
-  const Icon = ACTIVITY_ICONS[name] || Globe;
-  return <Icon size={size} strokeWidth={1.8} />;
-}
+import { isActivityBlocked } from '../utils/activityIcons';
+import { ActivityIcon } from '../components/ActivityIconBadge';
+import { hideIncrement } from '../utils/formatNumeroH';
 
 const API_BASE_URL = config.API_BASE_URL || 'http://localhost:5002/api';
 
@@ -200,77 +88,6 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
   const [activityMessages, setActivityMessages] = useState<any[]>([]);
   const messagesEndRefActivity = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-
-  const [newActivityPost, setNewActivityPost] = useState({
-    content: '',
-    type: 'text' as 'text' | 'image' | 'video' | 'audio',
-    category: 'information' as 'information' | 'rencontre' | 'opportunite' | 'outil' | 'reunion' | 'sante' | 'deces',
-    mediaFile: null as File | null
-  });
-
-  // Filtre du fil : tout, opportunités ou outils de travail
-  const [feedFilter, setFeedFilter] = useState<'all' | 'opportunite' | 'outil'>('all');
-  const [showCategoryGrid, setShowCategoryGrid] = useState(false);
-
-  // Transforme un texte en JSX avec les URLs rendues cliquables
-  const renderTextWithLinks = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
-    return parts.map((part, i) =>
-      urlRegex.test(part)
-        ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline break-all opacity-90 hover:opacity-100">{part}</a>
-        : <span key={i}>{part}</span>
-    );
-  };
-
-  // Bulle de message avec profil (style WhatsApp)
-  const renderMessage = (msg: any, bgColor: string, avatarBg: string) => {
-    const isMyMessage = msg.numeroH === userData?.numeroH;
-    const displayName = isMyMessage
-      ? `${userData?.prenom || ''} ${userData?.nomFamille || ''}`.trim()
-      : (msg.authorName || '');
-    const displayNumero = isMyMessage ? (userData?.numeroH || '') : (msg.numeroH || '');
-    const initials = displayName ? displayName.substring(0, 2).toUpperCase() : '?';
-
-    return (
-      <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'} items-end`}>
-        {!isMyMessage && (
-          <div className={`w-9 h-9 rounded-full ${avatarBg} text-white flex items-center justify-center text-xs font-bold mr-2 flex-shrink-0`}>
-            {initials}
-          </div>
-        )}
-        <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMyMessage ? bgColor + ' text-white' : 'bg-white text-gray-900'} shadow-sm`}>
-          {/* Profil en haut du message */}
-          <div className={`mb-1 ${isMyMessage ? 'text-right' : 'text-left'}`}>
-            <p className="text-xs font-semibold opacity-90">{displayName}</p>
-            <p className="text-xs opacity-60">{hideIncrement(displayNumero)}</p>
-          </div>
-          {msg.messageType === 'text' && msg.content && (
-            <p className="text-sm">
-              {msg.category && msg.category !== 'information' && (
-                <span className="mr-1">{ACTIVITE_CATEGORIES.find(c => c.id === msg.category)?.icon}</span>
-              )}
-              {renderTextWithLinks(msg.content)}
-            </p>
-          )}
-          {msg.messageType === 'image' && msg.mediaUrl && (
-            <img src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} alt="Image" className="max-w-full h-auto rounded-lg mb-1" />
-          )}
-          {msg.messageType === 'video' && msg.mediaUrl && (
-            <video src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="max-w-full h-auto rounded-lg mb-1" />
-          )}
-          {msg.messageType === 'audio' && msg.mediaUrl && (
-            <audio src={`${API_BASE_URL.replace('/api', '')}${msg.mediaUrl}`} controls className="w-full mb-1" />
-          )}
-        </div>
-        {isMyMessage && (
-          <div className={`w-9 h-9 rounded-full ${avatarBg} text-white flex items-center justify-center text-xs font-bold ml-2 flex-shrink-0`}>
-            {initials}
-          </div>
-        )}
-      </div>
-    );
-  };
 
   // Formulaire dédié aux outils
   const [toolForm, setToolForm] = useState({ nom: '', description: '' });
@@ -408,18 +225,6 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
       console.error('Erreur lors du chargement des données:', error);
     }
   };
-
-  // Catégories des publications d'Activité — les 4 d'origine (information,
-  // réunion, rencontre, opportunité) + santé et décès, pertinentes dans la vie
-  // professionnelle (mariage/baptême restent réservés à Info Wallou/Terre ADAM).
-  const ACTIVITE_CATEGORIES = [
-    { id: 'information', label: 'Information', icon: 'ℹ️' },
-    { id: 'reunion',      label: 'Réunion',      icon: '👥' },
-    { id: 'rencontre',    label: 'Rencontre',    icon: '🤝' },
-    { id: 'opportunite',  label: 'Opportunité',  icon: '🌟' },
-    { id: 'sante',        label: 'Santé',        icon: '🏥' },
-    { id: 'deces',        label: 'Décès',        icon: '🕯️' },
-  ] as const;
 
   // Le groupe est déterminé par le NOM réel de l'activité (ex: "Santé") + le pays —
   // pas par le slot (Activité1/2/3) : tout le monde qui exerce "Santé" dans un même
@@ -634,67 +439,6 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
     }
   };
 
-  const sendActivityMessage = async () => {
-    if (!selectedGroup) {
-      alert('Veuillez sélectionner un groupe');
-      return;
-    }
-    
-    if (newActivityPost.type === 'text' && !newActivityPost.content.trim()) {
-      alert('Veuillez entrer un message ou un lien');
-      return;
-    }
-
-    if (newActivityPost.type !== 'text' && !newActivityPost.mediaFile) {
-      alert('Veuillez sélectionner un fichier (image, vidéo ou audio)');
-      return;
-    }
-    
-    try {
-      const formData = new FormData();
-      formData.append('content', newActivityPost.content);
-      formData.append('messageType', newActivityPost.type);
-      formData.append('category', newActivityPost.category);
-      
-      if (newActivityPost.mediaFile) {
-        formData.append('media', newActivityPost.mediaFile);
-      }
-      
-      const token = getToken();
-
-      const response = await fetch(`${API_BASE_URL}/activities/groups/${selectedGroup.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.message) {
-          setNewActivityPost({ content: '', type: 'text', category: 'information', mediaFile: null });
-          await loadActivityMessages();
-          setTimeout(() => {
-            messagesEndRefActivity.current?.scrollIntoView({ behavior: 'smooth' });
-          }, 100);
-      } else {
-          alert('Erreur lors de l\'envoi du message');
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de l\'envoi du message' }));
-        alert(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
-      }
-    } catch (error: any) {
-      console.error('Erreur lors de l\'envoi du message:', error);
-      if (error.message === 'Failed to fetch' || error.name === 'TypeError' || error.message?.includes('fetch')) {
-        alert(`❌ Erreur de connexion: Impossible de se connecter au serveur.\n\nVérifiez que:\n1. Le backend est démarré sur le port 5002\n2. L'URL ${API_BASE_URL} est correcte\n3. Votre connexion internet fonctionne\n\nPour démarrer le backend:\ncd backend\nnpm run dev`);
-      } else {
-        alert(`Erreur: ${error.message || 'Impossible d\'envoyer le message. Vérifiez votre connexion.'}`);
-      }
-    }
-  };
-
   const payerOutils = (periode: 'mois' | 'an') => {
     setPeriodeOutils(periode);
     setShowPaymentOutils(true);
@@ -883,20 +627,9 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
           <div className="space-y-6">
             {/* Interface TOUJOURS visible — le contenu s'affiche dès l'ouverture */}
             <div className="space-y-4">
-              {/* Filtres */}
-              <div className="flex gap-2 w-full">
-                <button type="button" onClick={() => setFeedFilter('all')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium text-center whitespace-nowrap ${feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                  💬 Messages
-                </button>
-                <button type="button" onClick={() => setFeedFilter('opportunite')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium text-center whitespace-nowrap ${feedFilter === 'opportunite' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}>
-                  🌟 Opportunités
-                </button>
-                <button type="button" onClick={() => setFeedFilter('outil')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium text-center whitespace-nowrap ${feedFilter === 'outil' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-800 hover:bg-blue-100'}`}>
-                  🛠️ Outils
-                </button>
+              {/* Les messages du groupe se trouvent désormais dans la messagerie 💬 flottante */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center text-sm text-emerald-800">
+                💬 Les discussions de ce groupe sont maintenant dans la messagerie flottante, en bas de l'écran.
               </div>
 
               {/* Message de rejet activité interdite */}
@@ -915,7 +648,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
               )}
 
               {!blockedActivity && <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ minHeight: '500px', maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
-                {/* Zone de messages */}
+                {/* Zone des outils partagés — fonctionnalité payante (Pass Info Moftal), distincte de la messagerie */}
                 <div className="flex-1 overflow-y-auto bg-gray-100 p-4" style={{ minHeight: '300px', maxHeight: 'calc(70vh - 200px)' }}>
                   {isLoadingGroup ? (
                     <div className="text-center py-12">
@@ -923,171 +656,55 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                       <p className="text-gray-400 text-sm">Connexion au groupe…</p>
                     </div>
                   ) : (() => {
-                    const filtered = feedFilter === 'all'
-                      ? activityMessages.filter((m: any) => !['opportunite', 'outil'].includes(m.category || 'information'))
-                      : activityMessages.filter((m: any) => (m.category || 'information') === feedFilter);
-
-                    if (feedFilter === 'outil') {
-                      return (
-                        <>
-                          <div className="mb-4 flex justify-center">
-                            <Link to="/info-wallou" className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-700 to-slate-800 rounded-xl shadow-md border border-blue-500 max-w-xl w-full hover:brightness-110 transition-all group">
-                              <span className="text-4xl group-hover:scale-110 transition-transform">📋</span>
-                              <div className="flex-1">
-                                <h3 className="font-bold text-white text-base">Info Moftal</h3>
-                                <p className="text-sm text-blue-200">Créez des carreaux d'information avec photo, vidéo et audio</p>
-                                <p className="text-xs text-blue-300 mt-1">Mariage · Baptême · Réunion · Santé · Décès</p>
-                              </div>
-                              <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
-                            </Link>
-                          </div>
-                          <div className="mb-4 flex justify-center">
-                            <Link to="/professeur-ia" className="flex items-center gap-4 p-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl shadow-md border border-cyan-400 max-w-xl w-full hover:brightness-110 transition-all group">
-                              <span className="text-4xl group-hover:scale-110 transition-transform">🤖</span>
-                              <div className="flex-1">
-                                <h3 className="font-bold text-white text-base">IA Education Moftal</h3>
-                                <p className="text-sm text-cyan-100">Posez vos questions en français, math et biologie, l'IA vous aide pas à pas.</p>
-                              </div>
-                              <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
-                            </Link>
-                          </div>
-                          {filtered.length === 0
-                            ? <div className="text-center text-gray-500 py-6"><p>Aucun outil partagé. Proposez une ressource !</p></div>
-                            : filtered.map((msg: any) => renderToolCard(msg))}
-                        </>
-                      );
-                    }
-
-                    if (feedFilter === 'opportunite') {
-                      return (
-                        <>
-                          <div className="mb-4 flex justify-center">
-                            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-xl p-4 max-w-xl w-full">
-                              <div className="flex items-start gap-3">
-                                <span className="text-3xl">🌟</span>
-                                <div>
-                                  <h3 className="font-bold text-amber-800 text-base mb-1">Opportunités professionnelles</h3>
-                                  <p className="text-sm text-amber-700">Partagez des offres d'emploi, collaborations, projets ou appels d'offres avec votre réseau.</p>
-                                  <p className="text-xs text-amber-600 mt-1">Publiez en sélectionnant la catégorie <strong>🌟 Opportunité</strong> ci-dessous.</p>
-                                </div>
-                              </div>
+                    const filtered = activityMessages.filter((m: any) => (m.category || 'information') === 'outil');
+                    return (
+                      <>
+                        <div className="mb-4 flex justify-center">
+                          <Link to="/info-wallou" className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-700 to-slate-800 rounded-xl shadow-md border border-blue-500 max-w-xl w-full hover:brightness-110 transition-all group">
+                            <span className="text-4xl group-hover:scale-110 transition-transform">📋</span>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-white text-base">Info Moftal</h3>
+                              <p className="text-sm text-blue-200">Créez des carreaux d'information avec photo, vidéo et audio</p>
+                              <p className="text-xs text-blue-300 mt-1">Mariage · Baptême · Réunion · Santé · Décès</p>
                             </div>
-                          </div>
-                          {filtered.length === 0
-                            ? <div className="text-center text-gray-500 py-6"><p className="text-lg mb-1">Aucune opportunité pour le moment.</p><p className="text-sm">Soyez le premier à en partager une !</p></div>
-                            : filtered.map((msg: any) => renderMessage(msg, 'bg-amber-500', 'bg-amber-500'))}
-                        </>
-                      );
-                    }
-
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="text-center text-gray-500 py-8">
-                          <p>Aucun message pour le moment.</p>
-                          <p className="text-sm mt-1">Soyez le premier à écrire dans ce groupe !</p>
+                            <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
+                          </Link>
                         </div>
-                      );
-                    }
-                    return filtered.map((msg: any) => renderMessage(msg, 'bg-green-500', 'bg-indigo-600'));
+                        <div className="mb-4 flex justify-center">
+                          <Link to="/professeur-ia" className="flex items-center gap-4 p-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl shadow-md border border-cyan-400 max-w-xl w-full hover:brightness-110 transition-all group">
+                            <span className="text-4xl group-hover:scale-110 transition-transform">🤖</span>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-white text-base">IA Education Moftal</h3>
+                              <p className="text-sm text-cyan-100">Posez vos questions en français, math et biologie, l'IA vous aide pas à pas.</p>
+                            </div>
+                            <span className="text-white text-xl opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all">→</span>
+                          </Link>
+                        </div>
+                        {filtered.length === 0
+                          ? <div className="text-center text-gray-500 py-6"><p>Aucun outil partagé. Proposez une ressource !</p></div>
+                          : filtered.map((msg: any) => renderToolCard(msg))}
+                      </>
+                    );
                   })()}
                   <div ref={messagesEndRefActivity} />
                 </div>
 
                 {/* Zone de saisie — disponible dès que le groupe est prêt */}
-                {!isLoadingGroup && (
+                {!isLoadingGroup && selectedGroup && (
                   <div className="bg-gray-200 px-4 py-2 border-t">
-                    {feedFilter === 'outil' && (
-                      <div className="mb-3 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
-                        <p className="text-xs font-bold text-blue-800">🛠️ Partager un outil</p>
-                        <input type="text" value={toolForm.nom} onChange={(e) => setToolForm({ ...toolForm, nom: e.target.value })}
-                          placeholder="Lien (https://...) ou nom d'application (ex: WhatsApp, Canva...)"
-                          className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                        <input type="text" value={toolForm.description} onChange={(e) => setToolForm({ ...toolForm, description: e.target.value })}
-                          placeholder="Description (facultatif)"
-                          className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                        <button onClick={sendTool} disabled={!toolForm.nom.trim() || !selectedGroup}
-                          className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                          ✅ Partager l'outil
-                        </button>
-                      </div>
-                    )}
-                    {feedFilter !== 'outil' && selectedGroup && (
-                      <div className="flex items-center gap-2">
-                        {/* Pièce jointe (photo ou vidéo) — externe, type détecté automatiquement */}
-                        <label
-                          className="flex-shrink-0 w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-lg text-gray-500 hover:bg-gray-100 cursor-pointer transition-colors"
-                          title="Envoyer une photo ou une vidéo"
-                        >
-                          📷
-                          <input type="file" accept="image/*,video/*" className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0] || null;
-                              e.target.value = '';
-                              if (!file) return;
-                              const detectedType = file.type.startsWith('video/') ? 'video' : 'image';
-                              setNewActivityPost(prev => ({ ...prev, type: detectedType, mediaFile: file }));
-                            }} />
-                        </label>
-
-                        <div className="flex-1 min-w-0 relative">
-                          {newActivityPost.type === 'audio' && !newActivityPost.mediaFile ? (
-                            <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
-                              const file = new File([blob], 'vocal.webm', { type: blob.type });
-                              setNewActivityPost(prev => ({ ...prev, mediaFile: file }));
-                            }} />
-                          ) : newActivityPost.mediaFile ? (
-                            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
-                              <span className="text-sm text-green-700 flex-1 truncate">
-                                {newActivityPost.type === 'audio' ? '🎙️ Audio prêt' : newActivityPost.type === 'video' ? '🎥 Vidéo prête' : '📷 Photo prête'}
-                              </span>
-                              <button type="button" onClick={() => setNewActivityPost(prev => ({ ...prev, type: 'text', mediaFile: null }))} className="text-red-500 hover:text-red-700 text-xs font-medium flex-shrink-0">✕</button>
-                            </div>
-                          ) : (
-                            <>
-                              {/* Catégorie — icône choisie, ouvre/ferme la grille, intégrée dans le champ */}
-                              <button type="button" onClick={() => setShowCategoryGrid(v => !v)} title="Choisir le type de publication"
-                                className={`absolute left-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-green-100' : 'hover:bg-gray-200'}`}>
-                                <span className="text-base leading-none">{ACTIVITE_CATEGORIES.find(c => c.id === newActivityPost.category)?.icon}</span>
-                              </button>
-                              <input type="text" value={newActivityPost.content}
-                                onChange={(e) => setNewActivityPost({ ...newActivityPost, content: e.target.value })}
-                                onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendActivityMessage(); setShowCategoryGrid(false); } }}
-                                placeholder={`${ACTIVITE_CATEGORIES.find(c => c.id === newActivityPost.category)?.label || 'Information'}...`}
-                                className="w-full min-w-0 pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm" />
-                              {showCategoryGrid && (
-                                <div className="absolute bottom-11 left-0 z-20 bg-white rounded-xl shadow-lg border border-gray-200 p-2 grid grid-cols-3 gap-1 w-48">
-                                  {ACTIVITE_CATEGORIES.map(cat => (
-                                    <button key={cat.id} type="button"
-                                      onClick={() => { setNewActivityPost({ ...newActivityPost, category: cat.id }); setShowCategoryGrid(false); }}
-                                      className={`flex flex-col items-center gap-0.5 py-2 rounded-lg ${newActivityPost.category === cat.id ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-                                      title={cat.label}>
-                                      <span className="text-lg leading-none">{cat.icon}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-
-                        {/* Message vocal */}
-                        {newActivityPost.type !== 'audio' && !newActivityPost.mediaFile && (
-                          <button type="button" onClick={() => setNewActivityPost(prev => ({ ...prev, type: 'audio', mediaFile: null }))}
-                            className="flex-shrink-0 w-9 h-9 rounded-full bg-white border border-gray-300 flex items-center justify-center text-lg text-gray-500 hover:bg-gray-100 transition-colors"
-                            title="Message vocal">
-                            🎤
-                          </button>
-                        )}
-
-                        {(newActivityPost.content.trim() || newActivityPost.mediaFile) && (
-                          <button onClick={() => { sendActivityMessage(); setShowCategoryGrid(false); }}
-                            className="flex-shrink-0 w-9 h-9 rounded-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center text-sm font-bold transition-colors"
-                            title="Envoyer">
-                            ✓
-                          </button>
-                        )}
-                      </div>
-                    )}
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
+                      <p className="text-xs font-bold text-blue-800">🛠️ Partager un outil</p>
+                      <input type="text" value={toolForm.nom} onChange={(e) => setToolForm({ ...toolForm, nom: e.target.value })}
+                        placeholder="Lien (https://...) ou nom d'application (ex: WhatsApp, Canva...)"
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                      <input type="text" value={toolForm.description} onChange={(e) => setToolForm({ ...toolForm, description: e.target.value })}
+                        placeholder="Description (facultatif)"
+                        className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                      <button onClick={sendTool} disabled={!toolForm.nom.trim() || !selectedGroup}
+                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        ✅ Partager l'outil
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>}
