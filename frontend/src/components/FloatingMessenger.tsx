@@ -3,10 +3,17 @@ import { FriendChat } from './FriendChat'
 import { CoupleChat } from './CoupleChat'
 import { ParentChildChat } from './ParentChildChat'
 import { FamilyGroupChat } from './FamilyGroupChat'
+import { ResidenceGroupChat, type ResidenceGroupInfo } from './ResidenceGroupChat'
+import { findLocationByCode, getLocationGroupTitle } from '../utils/worldGeography'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
 const CONTACT_ENDPOINTS = ['family-contacts', 'quartier-contacts', 'activity-contacts']
+
+// Normalise un nom de lieu comme dans Terre ADAM : "TÉLIKO" = "teliko" = "Téliko"
+function normalizeLoc(str: string): string {
+  return str.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
 
 interface Contact {
   numeroH: string
@@ -15,16 +22,18 @@ interface Contact {
   photo?: string
 }
 
-type ChatType = 'friend' | 'couple' | 'parent' | 'child' | 'family'
+type ChatType = 'friend' | 'couple' | 'parent' | 'child' | 'family' | 'residence'
 
-// La messagerie "Famille principal" (family_tree_messages) n'a pas de linkId :
-// elle est automatiquement liée à l'arbre de l'utilisateur connecté côté serveur.
+// La messagerie "Famille principal" (family_tree_messages) et les groupes de
+// quartier n'ont pas de `?linkId=` : le premier est lié à l'arbre côté
+// serveur, les seconds ont leur propre id dans l'URL (/groups/:id/messages).
 const MESSAGES_PATH: Record<ChatType, string> = {
   friend: '/api/friends/messages',
   couple: '/api/couple/messages',
   parent: '/api/parent-child/messages',
   child: '/api/parent-child/messages',
   family: '/api/family-tree/messages',
+  residence: '/api/residences/groups',
 }
 
 const ICONS: Record<ChatType, string> = {
@@ -33,6 +42,7 @@ const ICONS: Record<ChatType, string> = {
   parent: '🧓',
   child: '👶',
   family: '👨‍👩‍👧‍👦',
+  residence: '🏘️',
 }
 
 interface Conversation {
@@ -74,8 +84,18 @@ interface RelativeItem {
   parent?: Person | null
 }
 
+interface RawResidenceGroup {
+  id: string
+  location?: string
+  title?: string
+  name?: string
+  logoUrl?: string | null
+  members?: unknown[]
+}
+
 interface RawMessage {
   messageType?: 'text' | 'image' | 'video' | 'audio'
+  type?: 'text' | 'image' | 'video' | 'audio'
   content?: string
   numeroH: string
   created_at?: string
@@ -83,9 +103,10 @@ interface RawMessage {
 }
 
 function previewForMessage(m: RawMessage): string {
-  if (m.messageType === 'image') return '📷 Photo'
-  if (m.messageType === 'video') return '🎥 Vidéo'
-  if (m.messageType === 'audio') return '🎤 Message vocal'
+  const kind = m.messageType || m.type
+  if (kind === 'image') return '📷 Photo'
+  if (kind === 'video') return '🎥 Vidéo'
+  if (kind === 'audio') return '🎤 Message vocal'
   return m.content || ''
 }
 
@@ -108,12 +129,24 @@ interface SessionUser {
   numeroH: string
   prenom?: string
   nomFamille?: string
+  quartierCode?: string
+  lieu1?: string
+  lieuResidence1?: string
+  quartierCode2?: string
+  lieu2?: string
+  lieuResidence2?: string
+  quartierCode3?: string
+  lieu3?: string
+  lieuResidence3?: string
+  sousPrefectureCode?: string
+  sousPrefecture?: string
 }
 
 export function FloatingMessenger() {
   const [open, setOpen] = useState(false)
   const [userData, setUserData] = useState<SessionUser | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [residenceGroups, setResidenceGroups] = useState<Record<string, ResidenceGroupInfo>>({})
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(false)
   const [starting, setStarting] = useState<string | null>(null)
@@ -136,6 +169,8 @@ export function FloatingMessenger() {
       const token = localStorage.getItem('token')
       const url = type === 'family'
         ? `${API_BASE}${MESSAGES_PATH[type]}`
+        : type === 'residence'
+        ? `${API_BASE}${MESSAGES_PATH[type]}/${encodeURIComponent(linkId)}/messages`
         : `${API_BASE}${MESSAGES_PATH[type]}?linkId=${encodeURIComponent(linkId)}`
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -153,16 +188,28 @@ export function FloatingMessenger() {
     }
   }
 
-  const loadConversations = async (myNumeroH?: string) => {
+  const loadConversations = async (me?: SessionUser | null) => {
+    const myNumeroH = me?.numeroH
     try {
       const token = localStorage.getItem('token')
       const headers = { Authorization: `Bearer ${token}` }
-      const [friendsRes, wivesRes, partnerRes, childrenRes, parentsRes] = await Promise.all([
+
+      // Mes quartiers (résidence 1, 2, 3) — jusqu'à 3 groupes possibles
+      const quartierCodes = [
+        me?.quartierCode || me?.lieu1 || me?.lieuResidence1 || null,
+        me?.quartierCode2 || me?.lieu2 || me?.lieuResidence2 || null,
+        me?.quartierCode3 || me?.lieu3 || me?.lieuResidence3 || null,
+      ].filter((c): c is string => !!c)
+
+      const [friendsRes, wivesRes, partnerRes, childrenRes, parentsRes, ...residenceResList] = await Promise.all([
         fetch(`${API_BASE}/api/friends/list`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/couple/my-wives`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/couple/my-partner`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/parent-child/my-children`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then(r => r.json()).catch(() => null),
+        ...quartierCodes.map(loc =>
+          fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(normalizeLoc(loc))}`, { headers }).then(r => r.json()).catch(() => null)
+        ),
       ])
 
       const base: Omit<Conversation, 'lastMessage' | 'lastMessageAt' | 'lastMessageMine'>[] = []
@@ -202,6 +249,22 @@ export function FloatingMessenger() {
           base.push({ key: `parent-${p.id}`, type: 'parent', linkId: p.id, numeroH: p.parent.numeroH, label: `${p.parent.prenom || ''} ${p.parent.nomFamille || ''}`.trim(), photo: p.parent.photo, icon: ICONS.parent })
         })
       }
+
+      // Groupes de quartier (Résidence 1/2/3) — un groupe par quartier réel,
+      // avec son propre logo, comme dans Terre ADAM.
+      const seenGroupIds = new Set<string>()
+      const groupsByKey: Record<string, ResidenceGroupInfo> = {}
+      residenceResList.forEach((data: { success?: boolean; groups?: RawResidenceGroup[] } | null) => {
+        const g = data?.success ? (data.groups || [])[0] : null
+        if (!g || seenGroupIds.has(g.id)) return
+        seenGroupIds.add(g.id)
+        const displayName = findLocationByCode(g.location) ? getLocationGroupTitle(g.location) : (g.title || g.name)
+        const logoSrc = g.logoUrl ? (String(g.logoUrl).startsWith('http') ? g.logoUrl : `${API_BASE}${g.logoUrl}`) : null
+        const info: ResidenceGroupInfo = { id: g.id, name: displayName, title: displayName, logoUrl: g.logoUrl, location: g.location, members: g.members || [] }
+        groupsByKey[g.id] = info
+        base.push({ key: `residence-${g.id}`, type: 'residence', linkId: g.id, numeroH: '', label: displayName, photo: logoSrc, icon: ICONS.residence })
+      })
+      setResidenceGroups(groupsByKey)
 
       // Dernier message de chaque conversation — pour trier et afficher un
       // aperçu, exactement comme l'écran d'accueil de WhatsApp.
@@ -256,7 +319,7 @@ export function FloatingMessenger() {
   const openPicker = async () => {
     setOpen(true)
     setLoading(true)
-    await Promise.all([loadConversations(userData?.numeroH), loadContacts()])
+    await Promise.all([loadConversations(userData), loadContacts()])
     setLoading(false)
   }
 
@@ -397,6 +460,9 @@ export function FloatingMessenger() {
               {chat.type === 'couple' && <CoupleChat linkId={chat.linkId} myNumeroH={userData.numeroH} partnerLabel={chat.label} />}
               {(chat.type === 'parent' || chat.type === 'child') && <ParentChildChat linkId={chat.linkId} myNumeroH={userData.numeroH} partnerLabel={chat.label} />}
               {chat.type === 'family' && <FamilyGroupChat myNumeroH={userData.numeroH} prenom={userData.prenom} nomFamille={userData.nomFamille} />}
+              {chat.type === 'residence' && residenceGroups[chat.linkId] && (
+                <ResidenceGroupChat group={residenceGroups[chat.linkId]} myNumeroH={userData.numeroH} userData={userData} />
+              )}
             </div>
           </div>
         </div>
