@@ -278,21 +278,12 @@ export default function TerreAdam() {
     if (activeTab === 'lieux' && (activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3')) {
       // Réinitialisation complète à chaque changement de résidence — elles sont indépendantes
       setSelectedGroup(null);
-      setActiveCanal(null);
-      setMessages([]);
       setGroups([]);
       loadGroups();
     } else {
       setLoading(false);
     }
   }, [activeTab, activeLieuTab, userData, filterScope]);
-
-  useEffect(() => {
-    if (selectedGroup) {
-      loadMessages();
-      setActiveCanal(null);
-    }
-  }, [selectedGroup]);
 
   // Charge le logo du groupe principal de chaque résidence réelle de
   // l'utilisateur, pour l'afficher directement dans l'onglet Résidence 1/2/3.
@@ -709,7 +700,7 @@ export default function TerreAdam() {
                                   return (
                                     <button
                                       key={g.id}
-                                      onClick={() => { setSelectedGroup(g); setActiveCanal(null); setMessages([]); }}
+                                      onClick={() => setSelectedGroup(g)}
                                       className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
                                         selectedGroup?.id === g.id ? 'bg-white text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                       }`}
