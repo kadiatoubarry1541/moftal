@@ -6,7 +6,6 @@ import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
 import { disconnectSocket } from '../../services/socket'
-import { FloatingMessenger } from '../../components/FloatingMessenger'
 
 interface UserData {
   numeroH: string
@@ -1277,8 +1276,6 @@ const enhancedUser: UserData = useMemo(() => {
           )}
         </div>
       )}
-
-      <FloatingMessenger />
     </div>
   )
 }
