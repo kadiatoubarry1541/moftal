@@ -1,17 +1,12 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import PaymentModal from '../../components/PaymentModal'
 import { hideIncrement } from '../../utils/formatNumeroH'
-import { isAdmin } from '../../utils/auth'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
 import { disconnectSocket } from '../../services/socket'
 import { FloatingMessenger } from '../../components/FloatingMessenger'
-
-const ParentsInline    = lazy(() => import('./Parents'))
-const EnfantsInline    = lazy(() => import('./Enfants'))
-const PartenaireInline = lazy(() => import('./Partenaire'))
 
 interface UserData {
   numeroH: string
@@ -182,12 +177,10 @@ function ActivationArbreCard({ treeId, apiBase }: { treeId: string; apiBase: str
 
 
 export default function Arbre() {
-  const navigate = useNavigate()
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'foyer'>('arbre')
-  const [foyerSection, setFoyerSection] = useState<'parents' | 'enfants' | 'femme' | 'homme' | null>('parents')
+  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint'>('arbre')
   const { t } = useI18n()
 
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -447,15 +440,6 @@ const enhancedUser: UserData = useMemo(() => {
     loadSharedGallery()
   }
 
-  const goToMairie = () => {
-    const session = JSON.parse(localStorage.getItem('session_user') || '{}')
-    const u = session.userData || session
-    const ville = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || ''
-    const params = new URLSearchParams({ type: 'mairie' })
-    if (ville) params.set('city', ville)
-    navigate(`/liste-professionnels?${params.toString()}`)
-  }
-
   const uploadToSharedGallery = async (file: File) => {
     try {
       setUploading(true)
@@ -651,46 +635,6 @@ const enhancedUser: UserData = useMemo(() => {
   return (
     <div className="max-w-6xl mx-auto px-4 pb-6 pt-2">
 
-      {/* Navigation — une seule ligne compacte, 4 boutons. Galerie et
-          Problèmes ont été déplacés dans l'onglet Arbre lui-même. */}
-      <div className="bg-white border-b border-gray-200 mb-4">
-        <nav className="flex" role="tablist">
-
-          <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
-            onClick={() => setActiveTab('arbre')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'arbre'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <span className="text-lg leading-none">🌳</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_arbre')}</span>
-          </button>
-
-          <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
-            onClick={() => setActiveTab('foyer')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'foyer'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <span className="text-lg leading-none">🏠</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_foyer')}</span>
-          </button>
-
-          <button type="button"
-            onClick={goToMairie}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-lg leading-none">🏛️</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_mairie')}</span>
-          </button>
-
-        </nav>
-      </div>
-
         {activeTab === 'arbre-conjoint' && partner && (
           <>
             <div className="flex items-center gap-3 mb-4">
@@ -699,9 +643,7 @@ const enhancedUser: UserData = useMemo(() => {
               )}
               <h2 className="text-2xl font-bold">💑 Arbre de {partner.prenom} {partner.nomFamille}</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-4">
-              Vous consultez l'arbre généalogique de votre conjoint(e). Votre lien apparaît dans cet arbre.
-            </p>
+            <p className="text-sm text-gray-500 mb-4">Arbre généalogique de votre conjoint(e), avec votre lien.</p>
             <ArbreGenealogique
               userData={{
                 ...partner,
@@ -928,44 +870,6 @@ const enhancedUser: UserData = useMemo(() => {
               }}
             />
           </>
-        )}
-
-        {activeTab === 'foyer' && (
-          <div>
-            {/* Nav 4 boutons Foyer */}
-            <div className="bg-white border-b border-gray-200 shadow-sm rounded-xl overflow-hidden mt-2">
-              <nav className="flex">
-                {([
-                  { id: 'parents', emoji: '👨‍👩‍👦', label: 'Parents'   },
-                  { id: 'enfants', emoji: '🧍',    label: 'Enfants'   },
-                  ...(isAdmin(user) || user?.genre === 'HOMME' ? [{ id: 'femme' as const,  emoji: '👰', label: 'Ma femme'  }] : []),
-                  ...(isAdmin(user) || user?.genre === 'FEMME' ? [{ id: 'homme' as const, emoji: '🤵', label: 'Mon homme' }] : []),
-                ] as const).map(item => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setFoyerSection(foyerSection === item.id ? null : item.id)}
-                    className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
-                      foyerSection === item.id
-                        ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
-                        : 'border-transparent text-gray-500 hover:text-emerald-700 hover:bg-emerald-50'
-                    }`}
-                  >
-                    <span className="text-2xl leading-none">{item.emoji}</span>
-                    <span className="text-[9px] font-medium leading-tight truncate w-full text-center">{item.label}</span>
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* Contenu inline — s'ouvre sans navigation */}
-            <Suspense fallback={<div className="flex justify-center py-10"><div className="h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>}>
-              {foyerSection === 'parents' && <ParentsInline inline />}
-              {foyerSection === 'enfants' && <EnfantsInline inline />}
-              {foyerSection === 'femme'   && <PartenaireInline inline />}
-              {foyerSection === 'homme'   && <PartenaireInline inline />}
-            </Suspense>
-          </div>
         )}
 
       {/* ── MODAL DÉTAIL DÉFUNT ── */}
