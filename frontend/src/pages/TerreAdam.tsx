@@ -729,6 +729,9 @@ export default function TerreAdam() {
                             </span>
                             <span className="text-gray-400">›</span>
                           </button>
+                          <div className="bg-emerald-50 border-t border-emerald-200 px-4 py-3 text-center text-sm text-emerald-800">
+                            💬 Les discussions de ce quartier sont maintenant dans la messagerie flottante, en bas de l'écran.
+                          </div>
                         </div>
                       )}
                       </div>
