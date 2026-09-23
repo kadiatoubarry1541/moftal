@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { FriendChat } from './FriendChat'
 import { CoupleChat } from './CoupleChat'
 import { ParentChildChat } from './ParentChildChat'
+import { FamilyGroupChat } from './FamilyGroupChat'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -14,13 +15,16 @@ interface Contact {
   photo?: string
 }
 
-type ChatType = 'friend' | 'couple' | 'parent' | 'child'
+type ChatType = 'friend' | 'couple' | 'parent' | 'child' | 'family'
 
+// La messagerie "Famille principal" (family_tree_messages) n'a pas de linkId :
+// elle est automatiquement liée à l'arbre de l'utilisateur connecté côté serveur.
 const MESSAGES_PATH: Record<ChatType, string> = {
   friend: '/api/friends/messages',
   couple: '/api/couple/messages',
   parent: '/api/parent-child/messages',
   child: '/api/parent-child/messages',
+  family: '/api/family-tree/messages',
 }
 
 const ICONS: Record<ChatType, string> = {
@@ -28,6 +32,7 @@ const ICONS: Record<ChatType, string> = {
   couple: '💑',
   parent: '🧓',
   child: '👶',
+  family: '👨‍👩‍👧‍👦',
 }
 
 interface Conversation {
@@ -43,7 +48,41 @@ interface Conversation {
   lastMessageMine: boolean
 }
 
-function previewForMessage(m: any): string {
+interface Person {
+  numeroH: string
+  prenom?: string
+  nomFamille?: string
+  photo?: string | null
+}
+
+interface FriendItem {
+  id: string
+  numeroH: string
+  prenom?: string
+  nomFamille?: string
+  profilePicture?: string | null
+}
+
+interface WifeItem {
+  link: { id: string }
+  wife: Person | null
+}
+
+interface RelativeItem {
+  id: string
+  child?: Person | null
+  parent?: Person | null
+}
+
+interface RawMessage {
+  messageType?: 'text' | 'image' | 'video' | 'audio'
+  content?: string
+  numeroH: string
+  created_at?: string
+  createdAt?: string
+}
+
+function previewForMessage(m: RawMessage): string {
   if (m.messageType === 'image') return '📷 Photo'
   if (m.messageType === 'video') return '🎥 Vidéo'
   if (m.messageType === 'audio') return '🎤 Message vocal'
@@ -65,9 +104,15 @@ function formatConvTime(iso: string | null): string {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
 }
 
+interface SessionUser {
+  numeroH: string
+  prenom?: string
+  nomFamille?: string
+}
+
 export function FloatingMessenger() {
   const [open, setOpen] = useState(false)
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState<SessionUser | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(false)
@@ -89,12 +134,15 @@ export function FloatingMessenger() {
   const fetchLastMessage = async (type: ChatType, linkId: string) => {
     try {
       const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE}${MESSAGES_PATH[type]}?linkId=${encodeURIComponent(linkId)}`, {
+      const url = type === 'family'
+        ? `${API_BASE}${MESSAGES_PATH[type]}`
+        : `${API_BASE}${MESSAGES_PATH[type]}?linkId=${encodeURIComponent(linkId)}`
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
       if (!data?.success || !data.messages?.length) return null
-      const last = data.messages[data.messages.length - 1]
+      const last: RawMessage = data.messages[data.messages.length - 1]
       return {
         content: previewForMessage(last),
         at: last.created_at || last.createdAt || null,
@@ -119,17 +167,21 @@ export function FloatingMessenger() {
 
       const base: Omit<Conversation, 'lastMessage' | 'lastMessageAt' | 'lastMessageMine'>[] = []
 
+      // Famille principal — le groupe familial entier (family_tree_messages),
+      // triée comme les autres selon l'activité la plus récente.
+      base.push({ key: 'family', type: 'family', linkId: '', numeroH: '', label: 'Famille principal', photo: null, icon: ICONS.family })
+
       if (friendsRes?.success) {
-        (friendsRes.friends || []).forEach((f: any) => {
+        (friendsRes.friends || []).forEach((f: FriendItem) => {
           base.push({ key: `friend-${f.id}`, type: 'friend', linkId: f.id, numeroH: f.numeroH, label: `${f.prenom || ''} ${f.nomFamille || ''}`.trim(), photo: f.profilePicture, icon: ICONS.friend })
         })
       }
 
       // Épouse(s) — si aucune trouvée via my-wives (cas femme, ou pas encore
       // synchronisé côté homme), on retombe sur my-partner.
-      const wives = wivesRes?.success ? (wivesRes.wives || []) : []
+      const wives: WifeItem[] = wivesRes?.success ? (wivesRes.wives || []) : []
       if (wives.length > 0) {
-        wives.forEach((w: any) => {
+        wives.forEach((w) => {
           if (!w.wife) return
           base.push({ key: `couple-${w.link.id}`, type: 'couple', linkId: w.link.id, numeroH: w.wife.numeroH, label: `${w.wife.prenom || ''} ${w.wife.nomFamille || ''}`.trim(), photo: w.wife.photo, icon: ICONS.couple })
         })
@@ -138,14 +190,14 @@ export function FloatingMessenger() {
       }
 
       if (childrenRes?.success) {
-        (childrenRes.children || []).forEach((c: any) => {
+        (childrenRes.children || []).forEach((c: RelativeItem) => {
           if (!c.child) return
           base.push({ key: `child-${c.id}`, type: 'child', linkId: c.id, numeroH: c.child.numeroH, label: `${c.child.prenom || ''} ${c.child.nomFamille || ''}`.trim(), photo: c.child.photo, icon: ICONS.child })
         })
       }
 
       if (parentsRes?.success) {
-        (parentsRes.parents || []).forEach((p: any) => {
+        (parentsRes.parents || []).forEach((p: RelativeItem) => {
           if (!p.parent) return
           base.push({ key: `parent-${p.id}`, type: 'parent', linkId: p.id, numeroH: p.parent.numeroH, label: `${p.parent.prenom || ''} ${p.parent.nomFamille || ''}`.trim(), photo: p.parent.photo, icon: ICONS.parent })
         })
@@ -344,6 +396,7 @@ export function FloatingMessenger() {
               {chat.type === 'friend' && <FriendChat linkId={chat.linkId} myNumeroH={userData.numeroH} partnerLabel={chat.label} />}
               {chat.type === 'couple' && <CoupleChat linkId={chat.linkId} myNumeroH={userData.numeroH} partnerLabel={chat.label} />}
               {(chat.type === 'parent' || chat.type === 'child') && <ParentChildChat linkId={chat.linkId} myNumeroH={userData.numeroH} partnerLabel={chat.label} />}
+              {chat.type === 'family' && <FamilyGroupChat myNumeroH={userData.numeroH} prenom={userData.prenom} nomFamille={userData.nomFamille} />}
             </div>
           </div>
         </div>
