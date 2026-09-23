@@ -157,6 +157,19 @@ interface SessionUser {
   activite1?: string
   activite2?: string
   activite3?: string
+  role?: string
+  isAdmin?: boolean
+}
+
+// Réplique minimale de utils/auth.ts isAdmin() — évitée ici pour ne pas
+// forcer prenom/nomFamille en champs requis sur SessionUser.
+function isAdminUser(u: SessionUser | null): boolean {
+  if (!u) return false
+  const role = u.role?.toLowerCase() || ''
+  return (
+    role === 'admin' || role === 'super-admin' || role === 'administrator' ||
+    u.isAdmin === true || u.numeroH === 'G0C0P0R0E0F0 0' || u.numeroH === 'G7C7P7R7E7F7 7'
+  )
 }
 
 export function FloatingMessenger() {
@@ -218,12 +231,22 @@ export function FloatingMessenger() {
         me?.quartierCode2 || me?.lieu2 || me?.lieuResidence2 || null,
         me?.quartierCode3 || me?.lieu3 || me?.lieuResidence3 || null,
       ].filter((c): c is string => !!c)
+      const admin = isAdminUser(me)
 
       // Mes activités professionnelles (Activité 1, 2, 3) — un groupe par
-      // activité réelle, avec le logo Lucide propre à cette activité.
-      const activityNames = [me?.activite1 || null, me?.activite2 || null, me?.activite3 || null]
-        .filter((a): a is string => !!a && !isActivityBlocked(a))
+      // activité réelle, avec le logo Lucide propre à cette activité. Un
+      // admin sans activité renseignée voit quand même ses 3 groupes
+      // (mêmes noms par défaut que la page Activité : "Activité 1/2/3").
+      const activityNames = admin
+        ? [me?.activite1 || 'Activité 1', me?.activite2 || 'Activité 2', me?.activite3 || 'Activité 3']
+          .filter(a => !isActivityBlocked(a))
+        : [me?.activite1 || null, me?.activite2 || null, me?.activite3 || null]
+          .filter((a): a is string => !!a && !isActivityBlocked(a))
       const userPays = me?.pays || me?.lieuResidence1 || ''
+
+      // Un admin sans quartier renseigné voit quand même un groupe de
+      // quartier (même repli que Terre ADAM : liste sans filtre de lieu).
+      const residenceLocs = quartierCodes.length > 0 ? quartierCodes.map(normalizeLoc) : (admin ? [''] : [])
 
       const [friendsRes, wivesRes, partnerRes, childrenRes, parentsRes, ...residenceResList] = await Promise.all([
         fetch(`${API_BASE}/api/friends/list`, { headers }).then(r => r.json()).catch(() => null),
@@ -231,8 +254,8 @@ export function FloatingMessenger() {
         fetch(`${API_BASE}/api/couple/my-partner`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/parent-child/my-children`, { headers }).then(r => r.json()).catch(() => null),
         fetch(`${API_BASE}/api/parent-child/my-parents`, { headers }).then(r => r.json()).catch(() => null),
-        ...quartierCodes.map(loc =>
-          fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(normalizeLoc(loc))}`, { headers }).then(r => r.json()).catch(() => null)
+        ...residenceLocs.map(loc =>
+          fetch(`${API_BASE}/api/residences/groups?location=${encodeURIComponent(loc)}`, { headers }).then(r => r.json()).catch(() => null)
         ),
       ])
 
