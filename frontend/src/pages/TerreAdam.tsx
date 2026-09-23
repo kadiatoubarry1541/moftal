@@ -8,18 +8,15 @@ import {
 } from '../utils/worldGeography';
 import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countryFlags';
 import { getCountryGeoLabels } from '../utils/countryGeoStructure';
-import { AudioRecorder } from '../components/AudioRecorder';
 import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
 import LivreQuartier, { type LivreQuartierHandle } from '../components/LivreQuartier';
 import ReglesLocalite, { type ReglesLocaliteHandle } from '../components/ReglesLocalite';
 import ResidenceProofs, { type ResidenceProofsHandle } from '../components/ResidenceProofs';
 import ProfileBadge from '../components/ProfileBadge';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
-import { FloatingMessenger } from '../components/FloatingMessenger';
 import { useI18n } from '../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
-const MAX_VIDEO_SECONDS = 5;
 
 interface UserData {
   numeroH: string;
@@ -44,102 +41,14 @@ interface ResidenceGroup {
   createdAt?: string;
 }
 
-interface ResidenceMessage {
-  id: string;
-  author: string;
-  authorName: string;
-  content: string;
-  type?: 'text' | 'image' | 'video' | 'audio';
-  messageType?: 'text' | 'image' | 'video' | 'audio';
-  mediaUrl?: string;
-  category?: string;
-  likes: string[];
-  comments: any[];
-  createdAt: string;
-  numeroH: string;
-}
-
-interface CanalItem {
-  id: string;
-  label: string;
-  icon: string;
-  color: string;
-  description: string;
-}
-
-function getCanalSections(t: (key: string) => string): { id: string; label: string; icon: string; canaux: CanalItem[] }[] {
-  return [
-    {
-      id: 'alerte',
-      label: t('terre_adam.canal.alerte_section'),
-      icon: '📌',
-      canaux: [
-        { id: 'securite',    label: t('terre_adam.canal.securite.label'),    icon: '🚨', color: 'red',    description: t('terre_adam.canal.securite.desc') },
-        { id: 'annonce',     label: t('terre_adam.canal.annonce.label'),     icon: '📢', color: 'orange', description: t('terre_adam.canal.annonce.desc') },
-        { id: 'information', label: t('terre_adam.canal.information.label'), icon: 'ℹ️', color: 'blue',   description: t('terre_adam.canal.information.desc') },
-      ]
-    },
-    {
-      id: 'famille',
-      label: t('terre_adam.canal.famille_section'),
-      icon: '👨‍👩‍👧',
-      canaux: [
-        { id: 'deces',     label: t('terre_adam.canal.deces.label'),     icon: '🕯️', color: 'stone',  description: t('terre_adam.canal.deces.desc') },
-        { id: 'mariage',   label: t('terre_adam.canal.mariage.label'),   icon: '💒', color: 'pink',   description: t('terre_adam.canal.mariage.desc') },
-        { id: 'bapteme',   label: t('terre_adam.canal.bapteme.label'),   icon: '⛪', color: 'purple', description: t('terre_adam.canal.bapteme.desc') },
-        { id: 'naissance', label: t('terre_adam.canal.naissance.label'), icon: '👶', color: 'yellow', description: t('terre_adam.canal.naissance.desc') },
-      ]
-    },
-    {
-      id: 'communaute',
-      label: t('terre_adam.canal.communaute_section'),
-      icon: '🤝',
-      canaux: [
-        { id: 'solidarite', label: t('terre_adam.canal.solidarite.label'), icon: '🤲', color: 'green',  description: t('terre_adam.canal.solidarite.desc') },
-        { id: 'fete',       label: t('terre_adam.canal.fete.label'),       icon: '🎉', color: 'amber',  description: t('terre_adam.canal.fete.desc') },
-        { id: 'reunion',    label: t('terre_adam.canal.reunion.label'),    icon: '👥', color: 'indigo', description: t('terre_adam.canal.reunion.desc') },
-        { id: 'rencontre',  label: t('terre_adam.canal.rencontre.label'), icon: '🤝', color: 'teal',   description: t('terre_adam.canal.rencontre.desc') },
-      ]
-    }
-  ];
-}
-
-function getCanalColors(color: string) {
-  const map: Record<string, { bg: string; border: string; text: string; header: string; ring: string }> = {
-    red:    { bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-700',    header: 'bg-red-600',    ring: 'focus:ring-red-300' },
-    orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', header: 'bg-orange-500', ring: 'focus:ring-orange-300' },
-    blue:   { bg: 'bg-blue-50',   border: 'border-blue-200',   text: 'text-blue-700',   header: 'bg-blue-600',   ring: 'focus:ring-blue-300' },
-    stone:  { bg: 'bg-stone-50',  border: 'border-stone-300',  text: 'text-stone-700',  header: 'bg-stone-600',  ring: 'focus:ring-stone-300' },
-    pink:   { bg: 'bg-pink-50',   border: 'border-pink-200',   text: 'text-pink-700',   header: 'bg-pink-500',   ring: 'focus:ring-pink-300' },
-    purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', header: 'bg-purple-600', ring: 'focus:ring-purple-300' },
-    yellow: { bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', header: 'bg-yellow-500', ring: 'focus:ring-yellow-300' },
-    green:  { bg: 'bg-green-50',  border: 'border-green-200',  text: 'text-green-700',  header: 'bg-green-600',  ring: 'focus:ring-green-300' },
-    amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  text: 'text-amber-700',  header: 'bg-amber-500',  ring: 'focus:ring-amber-300' },
-    indigo: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', header: 'bg-indigo-600', ring: 'focus:ring-indigo-300' },
-    teal:   { bg: 'bg-teal-50',   border: 'border-teal-200',   text: 'text-teal-700',   header: 'bg-teal-600',   ring: 'focus:ring-teal-300' },
-  };
-  return map[color] || map.blue;
-}
-
-
 // Normalise un nom de lieu : minuscule + sans accents → "TÉLIKO" = "teliko" = "Téliko"
 function normalizeLoc(str: string): string {
   return str.trim().toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-// Affiche seulement la partie "GxCxPxRxExF" du NumeroH (sans le suffixe après l'espace)
-function formatShortNumeroH(numeroH?: string | null): string | null {
-  if (!numeroH) return null;
-  const trimmed = String(numeroH).trim();
-  if (!trimmed) return null;
-  const parts = trimmed.split(' ');
-  return parts[0] || trimmed;
-}
-
 export default function TerreAdam() {
   const { t } = useI18n();
-  const CANAL_SECTIONS = getCanalSections(t);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'lieux' | 'sous-prefecture' | 'prefecture' | 'region' | 'pays' | 'continent' | 'mondial'>('lieux');
   type LieuTabId = 'quartier-1' | 'quartier-2' | 'quartier-3';
@@ -149,26 +58,15 @@ export default function TerreAdam() {
   // ✅ Étiquettes dynamiques pour afficher les véritables noms des lieux
   const [tabLabels, setTabLabels] = useState<string>(t('terre_adam.default_quartier'));
   
-  // États pour le système de messagerie
+  // États pour les groupes de quartier (infos + outils — la messagerie
+  // elle-même vit désormais dans le bouton flottant).
   const [groups, setGroups] = useState<ResidenceGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<ResidenceGroup | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [messages, setMessages] = useState<ResidenceMessage[]>([]);
-  const [newMessage, setNewMessage] = useState({
-    content: '',
-    messageType: 'text' as 'text' | 'image' | 'video' | 'audio',
-    category: 'information' as string,
-    mediaFile: null as File | null
-  });
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   // ✅ Vérifier si l'utilisateur est journaliste
   const [isJournalist, setIsJournalist] = useState(false);
   const [filterScope, setFilterScope] = useState<'all' | 'quartier'>('quartier');
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [feedFilter, setFeedFilter] = useState<string>('all');
-  const [activeCanal, setActiveCanal] = useState<CanalItem | null>(null);
-  const [showCategoryGrid, setShowCategoryGrid] = useState(false);
   const [showMembersList, setShowMembersList] = useState(false);
   // Clic sur la photo du quartier (comme la photo de profil) : ouvre le
   // menu Liste/Caisse au lieu d'avoir des boutons séparés en permanence.
@@ -186,21 +84,6 @@ export default function TerreAdam() {
   const reglesQuartierRef = useRef<ReglesLocaliteHandle>(null);
   const residenceProofsRef = useRef<ResidenceProofsHandle>(null);
 
-  // Partage d'un message du chat vers un niveau supérieur (sous-préfecture,
-  // préfecture...), comme sur WhatsApp — sans avoir à retaper l'information.
-  const [shareMsg, setShareMsg] = useState<ResidenceMessage | null>(null);
-  const [shareLevels, setShareLevels] = useState<{ scope: string; location: string; label: string }[]>([]);
-  const [shareSelected, setShareSelected] = useState<Set<string>>(new Set());
-  const [shareChecking, setShareChecking] = useState(false);
-  const [shareSending, setShareSending] = useState(false);
-
-  // Niveau actuel : quartier (Résidence 1/2/3) ou plus large (sous-préfecture, région, pays, continent)
-  const isQuartierLevel =
-    activeLieuTab === 'quartier-1' ||
-    activeLieuTab === 'quartier-2' ||
-    activeLieuTab === 'quartier-3';
-  // Seuls les journalistes/admin peuvent publier au-delà du quartier
-  const canPublishHere = isQuartierLevel || isJournalist || isAdmin;
 
   // Récupérer les informations géographiques de l'utilisateur depuis la session
   const userContinent = userData?.continentCode ? findLocationByCode(userData.continentCode) : null;
@@ -521,239 +404,6 @@ export default function TerreAdam() {
     }
   };
 
-  const loadMessages = async () => {
-    if (!selectedGroup) return;
-
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/messages`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const data = await response.json();
-      setMessages((data.messages || []).reverse());
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    } catch (error) {
-      console.error('Erreur lors du chargement des messages:', error);
-    }
-  };
-
-  // Catégories quartier : besoins du quartier (décès, mariage, baptême, etc.)
-  const QUARTIER_CATEGORIES = [
-    { id: 'information', label: t('terre_adam.qcat.information'), icon: '📰' },
-    { id: 'rencontre', label: t('terre_adam.qcat.rencontre'), icon: '🤝' },
-    { id: 'deces', label: t('terre_adam.qcat.deces'), icon: '🕯️' },
-    { id: 'mariage', label: t('terre_adam.qcat.mariage'), icon: '💒' },
-    { id: 'bapteme', label: t('terre_adam.qcat.bapteme'), icon: '⛪' },
-    { id: 'naissance', label: t('terre_adam.qcat.naissance'), icon: '👶' },
-    { id: 'solidarite', label: t('terre_adam.canal.solidarite.label'), icon: '🤲' },
-    { id: 'fete', label: t('terre_adam.qcat.fete'), icon: '🎉' },
-    { id: 'annonce', label: t('terre_adam.qcat.annonce'), icon: '📢' },
-    { id: 'opportunite', label: t('terre_adam.qcat.opportunite'), icon: '🌟' },
-    { id: 'securite', label: t('terre_adam.qcat.securite'), icon: '🚨' },
-    { id: 'reunion', label: t('terre_adam.qcat.reunion'), icon: '👥' }
-  ] as const;
-
-  const getCategoryLogo = (category: string) => {
-    const c = QUARTIER_CATEGORIES.find((x) => x.id === category);
-    return c ? c.icon : 'ℹ️';
-  };
-
-  const getCategoryName = (category: string) => {
-    const c = QUARTIER_CATEGORIES.find((x) => x.id === category);
-    return c ? c.label : t('terre_adam.qcat.information');
-  };
-
-  const sendMessage = async () => {
-    if (!selectedGroup) return;
-    
-    // ✅ PERMISSIONS JOURNALISTES - Vérifier les droits selon le niveau
-    // - Niveau "Quartier" (Résidence 1, 2 ou 3) : Tous les utilisateurs peuvent publier dans leur quartier
-    // - Niveau "Sous-préfecture/Préfecture/..." : Seuls les journalistes et admins
-    const isQuartierTab = activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3';
-    if (!isQuartierTab && !isJournalist) {
-      alert('❌ Vous n\'avez pas les droits pour publier à ce niveau.\n\nSeuls les journalistes approuvés peuvent publier des informations au niveau Sous-préfecture, Préfecture, Région, Pays ou Continent.\n\nVous pouvez publier librement dans votre Quartier.');
-      return;
-    }
-
-    // Vérifier si l'utilisateur est admin ou si le groupe correspond au quartier de l'onglet actif
-    const normalizedGroupLocation = selectedGroup.location ? normalizeLoc(selectedGroup.location) : '';
-    const normalizedUserCodes = userQuartierCodes.map(c => c ? normalizeLoc(c) : null);
-    const canPublishInGroup = isAdmin || (isQuartierTab && normalizedUserCodes.length > 0 && normalizedUserCodes.includes(normalizedGroupLocation));
-    if (!canPublishInGroup) {
-      alert('Vous ne pouvez publier que dans l\'un de vos quartiers (résidence 1, 2 ou 3). Contactez un administrateur pour obtenir des droits dans d\'autres quartiers.');
-      return;
-    }
-    
-    if (newMessage.messageType === 'text' && !newMessage.content.trim()) {
-      alert('Veuillez entrer un message');
-      return;
-    }
-    
-    if (newMessage.messageType !== 'text' && !newMessage.mediaFile) {
-      alert('Veuillez sélectionner un fichier média');
-      return;
-    }
-    
-    try {
-      const formData = new FormData();
-      formData.append('content', newMessage.content);
-      formData.append('messageType', newMessage.messageType);
-      formData.append('category', newMessage.category);
-      
-      if (newMessage.mediaFile) {
-        formData.append('media', newMessage.mediaFile);
-      }
-      
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setMessages([...messages, data.message]);
-        setNewMessage({ content: '', messageType: 'text', category: 'information', mediaFile: null });
-        await loadMessages();
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      } else {
-        const error = await response.json().catch(() => ({ message: 'Erreur lors de l\'envoi du message' }));
-        alert(error.message || 'Erreur lors de l\'envoi du message');
-      }
-    } catch (error: any) {
-      console.error('Erreur lors de l\'envoi du message:', error);
-      alert(error.message || 'Erreur lors de l\'envoi du message');
-    }
-  };
-
-  // Partager un message du quartier vers un ou plusieurs niveaux au-dessus
-  // (sous-préfecture, préfecture...) — comme "transférer" sur WhatsApp.
-  const openShare = async (msg: ResidenceMessage) => {
-    setShareMsg(msg);
-    setShareSelected(new Set());
-    setShareLevels([]);
-    setShareChecking(true);
-    // Un quartier ne peut partager que vers la sous-préfecture juste
-    // au-dessus — jamais sauter directement à un niveau plus loin. C'est
-    // depuis la sous-préfecture (une fois l'info arrivée là) qu'on peut
-    // continuer à la faire remonter plus haut.
-    const candidats = higherLevelsFrom('quartier').slice(0, 1);
-    const token = localStorage.getItem('token');
-    try {
-      const resultats = await Promise.all(candidats.map(async (lvl) => {
-        try {
-          const res = await fetch(
-            `${API_BASE}/api/developpement/actualites/can-publish?scope=${encodeURIComponent(lvl.scope)}&location=${encodeURIComponent(lvl.location)}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          if (!res.ok) return null;
-          const d = await res.json();
-          return d.canPublish ? lvl : null;
-        } catch { return null; }
-      }));
-      setShareLevels(resultats.filter((l): l is { scope: string; location: string; label: string } => !!l));
-    } finally {
-      setShareChecking(false);
-    }
-  };
-
-  const toggleShareLevel = (key: string) => {
-    setShareSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  };
-
-  const confirmShare = async () => {
-    if (!shareMsg || shareSelected.size === 0) return;
-    setShareSending(true);
-    try {
-      const cibles = shareLevels.filter(l => shareSelected.has(`${l.scope}:${l.location}`));
-      const [premiere, ...reste] = cibles;
-      const categoryLabel = QUARTIER_CATEGORIES.find(c => c.id === (shareMsg.category || 'information'))?.label || t('terre_adam.qcat.information');
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('titre', `${categoryLabel} — ${selectedGroup?.title || selectedGroup?.name || ''}`);
-      formData.append('content', shareMsg.content || '');
-      formData.append('scope', premiere.scope);
-      formData.append('location', premiere.location);
-      if (reste.length) formData.append('partages', JSON.stringify(reste.map(l => ({ scope: l.scope, location: l.location }))));
-      const res = await fetch(`${API_BASE}/api/developpement/actualites`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
-      });
-      const d = await res.json();
-      if (d.success) {
-        setShareMsg(null);
-      } else {
-        alert(d.message || 'Erreur lors du partage.');
-      }
-    } catch {
-      alert('Impossible de contacter le serveur.');
-    } finally {
-      setShareSending(false);
-    }
-  };
-
-  const sendMessageInCanal = async () => {
-    if (!selectedGroup || !activeCanal) return;
-
-    const isQuartierTab = activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3';
-    if (!isQuartierTab && !isJournalist) {
-      alert('❌ Seuls les journalistes approuvés peuvent publier à ce niveau.');
-      return;
-    }
-
-    const normalizedGroupLocation = selectedGroup.location ? normalizeLoc(selectedGroup.location) : '';
-    const normalizedUserCodes = userQuartierCodes.map(c => c ? normalizeLoc(c) : null);
-    const canPublishInGroup = isAdmin || (isQuartierTab && normalizedUserCodes.includes(normalizedGroupLocation));
-    if (!canPublishInGroup) {
-      alert('Vous ne pouvez publier que dans l\'un de vos quartiers.');
-      return;
-    }
-
-    if (newMessage.messageType === 'text' && !newMessage.content.trim()) return;
-    if (newMessage.messageType !== 'text' && !newMessage.mediaFile) return;
-
-    try {
-      const formData = new FormData();
-      formData.append('content', newMessage.content);
-      formData.append('messageType', newMessage.messageType);
-      formData.append('category', activeCanal.id);
-      if (newMessage.mediaFile) formData.append('media', newMessage.mediaFile);
-
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/residences/groups/${selectedGroup.id}/messages`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      if (response.ok) {
-        setNewMessage({ content: '', messageType: 'text', category: activeCanal.id, mediaFile: null });
-        await loadMessages();
-        setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 100);
-      } else {
-        const error = await response.json().catch(() => ({ message: 'Erreur lors de l\'envoi' }));
-        alert(error.message || 'Erreur lors de l\'envoi du message');
-      }
-    } catch (error: any) {
-      alert(error.message || 'Erreur lors de l\'envoi du message');
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -978,8 +628,9 @@ export default function TerreAdam() {
                             )}
                           </div>
                         ) : (
-                        /* ── Feed unique avec filtres (une seule page, tout visible) ── */
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col" style={{ minHeight: '600px', maxHeight: '92vh' }}>
+                        /* ── Infos du groupe + accès aux outils du quartier.
+                             La messagerie elle-même vit dans le bouton flottant. ── */
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
 
                           {/* En-tête : nom du quartier + membres + sélecteur admin */}
                           <div className="bg-gray-800 text-white flex-shrink-0">
@@ -1074,272 +725,19 @@ export default function TerreAdam() {
                             )}
                           </div>
 
-                          {/* Filtres par catégorie — barre scrollable horizontale */}
-                          <div className="border-b border-gray-100 bg-white px-3 py-2 overflow-x-auto flex-shrink-0">
-                            <div className="flex gap-1.5 min-w-max">
-                              <button
-                                type="button"
-                                onClick={() => setFeedFilter('all')}
-                                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                              >
-                                💬 Tout ({messages.length})
-                              </button>
-                              {CANAL_SECTIONS.map(section =>
-                                section.canaux.map(canal => {
-                                  const count = messages.filter((m: ResidenceMessage) => (m.category || 'information') === canal.id).length;
-                                  const isActive = feedFilter === canal.id;
-                                  const colors = getCanalColors(canal.color);
-                                  return (
-                                    <button
-                                      key={canal.id}
-                                      type="button"
-                                      onClick={() => setFeedFilter(isActive ? 'all' : canal.id)}
-                                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${isActive ? colors.header + ' text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                    >
-                                      {canal.icon} {canal.label}
-                                      {count > 0 && (
-                                        <span className={`flex items-center gap-0.5 ${isActive ? 'text-white' : 'text-red-600'}`}>
-                                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'bg-white' : 'bg-red-500'}`} />
-                                          <span className="text-[9px] font-bold">{count}</span>
-                                        </span>
-                                      )}
-                                    </button>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Zone des messages */}
-                          <div className="flex-1 overflow-y-auto p-3 bg-gray-50" style={{ minHeight: '220px' }}>
-                            {(() => {
-                              const filtered = feedFilter === 'all'
-                                ? messages
-                                : messages.filter((m: ResidenceMessage) => (m.category || 'information') === feedFilter);
-                              if (filtered.length === 0) {
-                                return (
-                                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                                    <span className="text-5xl mb-3">
-                                      {feedFilter === 'all' ? '💬' : (CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === feedFilter)?.icon || '💬')}
-                                    </span>
-                                    <p className="text-sm font-medium text-gray-500">
-                                      {feedFilter === 'all' ? 'Aucun message pour le moment.' : 'Aucun message dans cette catégorie.'}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1 italic">{t('terre_adam.be_first_to_post')}</p>
-                                  </div>
-                                );
-                              }
-                              return filtered.map((msg: ResidenceMessage) => {
-                                const isMyMessage = msg.numeroH === userData?.numeroH;
-                                const canalData = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === (msg.category || 'information'));
-                                const categoryData = QUARTIER_CATEGORIES.find(c => c.id === (msg.category || 'information'));
-                                const colors = getCanalColors(canalData?.color || 'blue');
-                                const toMediaUrl = (url: string) => url.startsWith('http') ? url : `${API_BASE}${url.startsWith('/') ? url : '/' + url}`;
-                                return (
-                                  <div key={msg.id} className={`mb-4 flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[82%] rounded-2xl shadow-sm overflow-hidden border-2 bg-white ${
-                                      isMyMessage ? 'border-emerald-300' : 'border-gray-100'
-                                    }`}>
-                                      {/* Bannière colorée — grande icône + nom de catégorie visible sans lire */}
-                                      <div className={`${colors.header} px-4 py-2.5 flex items-center gap-3`}>
-                                        <span className="text-3xl leading-none">{canalData?.icon || categoryData?.icon || 'ℹ️'}</span>
-                                        <span className="text-white font-bold text-sm tracking-wide uppercase">
-                                          {canalData?.label || categoryData?.label || t('terre_adam.qcat.information')}
-                                        </span>
-                                      </div>
-                                      {/* Contenu */}
-                                      <div className="px-4 py-3">
-                                        <p className={`text-[11px] font-bold mb-1.5 ${isMyMessage ? 'text-right text-emerald-600' : 'text-emerald-600'}`}>
-                                          {isMyMessage ? 'Moi' : msg.authorName}
-                                        </p>
-                                        {(msg.type === 'text' || msg.messageType === 'text') && msg.content && (
-                                          <p className="text-sm leading-relaxed text-gray-800">{msg.content}</p>
-                                        )}
-                                        {(msg.type === 'image' || msg.messageType === 'image') && msg.mediaUrl && (
-                                          <img src={toMediaUrl(msg.mediaUrl)} alt="Image" className="max-w-full h-auto rounded-lg" />
-                                        )}
-                                        {(msg.type === 'video' || msg.messageType === 'video') && msg.mediaUrl && (
-                                          <video src={toMediaUrl(msg.mediaUrl)} controls className="max-w-full h-auto rounded-lg" />
-                                        )}
-                                        {(msg.type === 'audio' || msg.messageType === 'audio') && msg.mediaUrl && (
-                                          <audio src={toMediaUrl(msg.mediaUrl)} controls className="w-full" />
-                                        )}
-                                        <div className="flex items-center justify-end gap-2 mt-2">
-                                          {(msg.type === 'text' || msg.messageType === 'text') && msg.content && (
-                                            <button
-                                              onClick={() => openShare(msg)}
-                                              className="text-[10px] text-gray-400 hover:text-emerald-600 font-semibold"
-                                              title={t('terre_adam.share_to_level')}
-                                            >
-                                              ↗️ Partager
-                                            </button>
-                                          )}
-                                          <p className={`text-[10px] ${isMyMessage ? 'text-emerald-500' : 'text-gray-400'}`}>
-                                            {new Date(msg.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              });
-                            })()}
-                            <div ref={messagesEndRef} />
-                          </div>
-
-                          {/* Zone de publication */}
-                          {canPublishHere ? (
-                            <div className="border-t border-gray-200 bg-white flex-shrink-0">
-                              {/* Grille de catégories — s'ouvre uniquement quand on appuie sur l'icône */}
-                              {showCategoryGrid && (
-                                <div className="px-3 pt-3 pb-2 border-b border-gray-100">
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {QUARTIER_CATEGORIES.map(cat => {
-                                      const cd = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === cat.id);
-                                      const cl = getCanalColors(cd?.color || 'blue');
-                                      const selected = newMessage.category === cat.id;
-                                      return (
-                                        <button
-                                          key={cat.id}
-                                          type="button"
-                                          onClick={() => {
-                                            setNewMessage({...newMessage, category: cat.id});
-                                            setShowCategoryGrid(false);
-                                          }}
-                                          className={`flex flex-col items-center gap-1 py-3 px-1 rounded-xl border-2 transition-all ${
-                                            selected ? `${cl.bg} ${cl.border} ${cl.text}` : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                                          }`}
-                                        >
-                                          <span className="text-2xl leading-none">{cat.icon}</span>
-                                          <span className="text-[10px] font-semibold text-center leading-tight">{cat.label}</span>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-                              {/* Barre de saisie compacte */}
-                              <div className="flex gap-2 items-center px-3 py-3">
-                                {/* Zone centrale : texte (avec la catégorie et la pièce jointe intégrées
-                                    dedans, à gauche et à droite), média prêt à envoyer, ou enregistrement
-                                    vocal en cours */}
-                                {newMessage.messageType === 'audio' && !newMessage.mediaFile ? (
-                                  <div className="flex-1 min-w-0">
-                                    <AudioRecorder compact maxDuration={10} onAudioRecorded={(blob) => {
-                                      const file = new File([blob], 'vocal.webm', { type: blob.type });
-                                      setNewMessage({...newMessage, messageType: 'audio', mediaFile: file});
-                                    }} />
-                                  </div>
-                                ) : newMessage.mediaFile ? (
-                                  <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-full">
-                                    <span className="text-sm text-green-700 flex-1 truncate">
-                                      {newMessage.messageType === 'audio' ? '🎙️ Audio prêt' : newMessage.messageType === 'video' ? '🎥 Vidéo prête' : '📷 Photo prête'}
-                                    </span>
-                                    <button type="button" onClick={() => setNewMessage({...newMessage, messageType: 'text', mediaFile: null})} className="text-red-500 text-xs font-medium flex-shrink-0">✕</button>
-                                    <button
-                                      type="button"
-                                      onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
-                                      className="w-7 h-7 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-xs font-bold flex-shrink-0"
-                                      title={t('btn.send')}
-                                    >
-                                      ✓
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="flex-1 min-w-0 relative">
-                                    {/* Catégorie — affiche l'icône choisie, ouvre/ferme la grille, intégrée dans le champ */}
-                                    {(() => {
-                                      const cd = CANAL_SECTIONS.flatMap(s => s.canaux).find(c => c.id === newMessage.category);
-                                      const cl = getCanalColors(cd?.color || 'blue');
-                                      const cat = QUARTIER_CATEGORIES.find(c => c.id === newMessage.category);
-                                      return (
-                                        <button
-                                          type="button"
-                                          onClick={() => setShowCategoryGrid(!showCategoryGrid)}
-                                          title={t('terre_adam.choose_publish_type')}
-                                          className={`absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-colors ${
-                                            showCategoryGrid ? `${cl.bg}` : 'hover:bg-gray-200'
-                                          }`}
-                                        >
-                                          <span className="text-lg leading-none">{cat?.icon || '📰'}</span>
-                                        </button>
-                                      );
-                                    })()}
-                                    <input
-                                      type="text"
-                                      value={newMessage.content}
-                                      onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
-                                      onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); setShowCategoryGrid(false); } }}
-                                      placeholder={`${QUARTIER_CATEGORIES.find(c => c.id === newMessage.category)?.label || t('terre_adam.qcat.information')}...`}
-                                      className="w-full min-w-0 pl-12 pr-20 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-300 text-sm bg-gray-50"
-                                    />
-                                    {/* Pièce jointe (photo ou vidéo) — intégrée dans le champ, type détecté automatiquement */}
-                                    <label
-                                      className="absolute right-10 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-lg leading-none text-gray-500 hover:text-gray-700 cursor-pointer"
-                                      title={t('heritage.send_photo_video')}
-                                    >
-                                      📷
-                                      <input
-                                        type="file"
-                                        accept="image/*,video/*"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                          const file = e.target.files?.[0] || null;
-                                          e.target.value = '';
-                                          if (!file) return;
-                                          if (file.type.startsWith('video/')) {
-                                            const url = URL.createObjectURL(file);
-                                            const videoEl = document.createElement('video');
-                                            videoEl.preload = 'metadata';
-                                            videoEl.onloadedmetadata = () => {
-                                              URL.revokeObjectURL(url);
-                                              if (videoEl.duration > MAX_VIDEO_SECONDS + 0.5) {
-                                                alert(`Vidéo trop longue : ${Math.round(videoEl.duration)} secondes.\nMaximum autorisé : ${MAX_VIDEO_SECONDS} secondes.`);
-                                                return;
-                                              }
-                                              setNewMessage(prev => ({...prev, messageType: 'video', mediaFile: file}));
-                                            };
-                                            videoEl.onerror = () => { URL.revokeObjectURL(url); alert('Impossible de lire cette vidéo.'); };
-                                            videoEl.src = url;
-                                          } else {
-                                            setNewMessage(prev => ({...prev, messageType: 'image', mediaFile: file}));
-                                          }
-                                        }}
-                                      />
-                                    </label>
-                                    {/* Envoyer — intégré dans le champ */}
-                                    <button
-                                      type="button"
-                                      onClick={() => { sendMessage(); setShowCategoryGrid(false); }}
-                                      disabled={!newMessage.content.trim()}
-                                      title={t('btn.send')}
-                                      className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold transition-colors"
-                                    >
-                                      ✓
-                                    </button>
-                                  </div>
-                                )}
-
-                                {/* Message vocal */}
-                                {newMessage.messageType !== 'audio' && !newMessage.mediaFile && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setNewMessage({...newMessage, messageType: 'audio', mediaFile: null})}
-                                    className="flex-shrink-0 w-11 h-11 rounded-full overflow-hidden bg-gray-200 hover:bg-emerald-100 text-gray-600 hover:text-emerald-700 flex items-center justify-center text-xl leading-none transition-colors"
-                                    title={t('terre_adam.send_voice')}
-                                  >
-                                    🎤
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="border-t border-gray-200 px-4 py-3 bg-gray-50 flex-shrink-0 text-center">
-                              <p className="text-xs text-gray-500">
-                                Seuls les <strong>{t('terre_adam.approved_journalists')}</strong> peuvent publier ici.
-                              </p>
-                            </div>
-                          )}
+                          {/* Accès aux outils du quartier (Projets/Caisse, Livre, Règles,
+                              Preuves de résidence, liste des membres) — la messagerie
+                              elle-même se trouve désormais dans le bouton flottant. */}
+                          <button
+                            type="button"
+                            onClick={() => setShowQuartierMenu(true)}
+                            className="flex items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 hover:bg-gray-50 transition-colors"
+                          >
+                            <span className="flex items-center gap-2 font-semibold text-gray-700 text-sm">
+                              🧰 {t('terre_adam.view_group_info')}
+                            </span>
+                            <span className="text-gray-400">›</span>
+                          </button>
                         </div>
                       )}
                       </div>
@@ -1582,49 +980,6 @@ export default function TerreAdam() {
       <ReglesLocalite ref={reglesQuartierRef} title={t('terre_adam.rules_title')} />
 
       {/* Modal — Partager un message vers un niveau au-dessus */}
-      {shareMsg && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShareMsg(null)}>
-          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-emerald-700 px-4 py-3 flex items-center justify-between">
-              <h2 className="text-white font-bold text-base">{t('terre_adam.share')}</h2>
-              <button onClick={() => setShareMsg(null)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
-            </div>
-            <div className="p-4 space-y-3">
-              <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-2.5 line-clamp-3">{shareMsg.content}</p>
-              {shareChecking ? (
-                <div className="text-center text-sm text-gray-400 py-4">{t('terre_adam.verifying_rights')}</div>
-              ) : shareLevels.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">{t('terre_adam.no_publish_rights')}</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {shareLevels.map(lvl => {
-                    const key = `${lvl.scope}:${lvl.location}`;
-                    return (
-                      <label key={key} className="flex items-center gap-2 text-sm text-gray-700 py-1">
-                        <input
-                          type="checkbox"
-                          checked={shareSelected.has(key)}
-                          onChange={() => toggleShareLevel(key)}
-                          className="w-4 h-4 accent-emerald-600"
-                        />
-                        {lvl.label}
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-              <button
-                onClick={confirmShare}
-                disabled={shareSending || shareSelected.size === 0}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold rounded-xl text-sm transition-colors"
-              >
-                {shareSending ? 'Partage...' : 'Partager'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal — Liste des membres du quartier */}
       {showMembersList && selectedGroup && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowMembersList(false)}>
@@ -1692,8 +1047,6 @@ export default function TerreAdam() {
           </div>
         </div>
       )}
-
-      <FloatingMessenger />
     </div>
   );
 }

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
-import { ParentChildChat } from '../../components/ParentChildChat'
 import { AddPersonModal } from '../../components/AddPersonModal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -79,7 +78,7 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
   const [noteAnnee, setNoteAnnee] = useState(() => new Date().getFullYear())
   const [noteRating, setNoteRating] = useState(0)
   const [childRatings, setChildRatings] = useState<Array<{ id: string; annee: number; note: number }>>([])
-  const [activeTab, setActiveTab] = useState<'souvenir' | 'message'>('message')
+  const activeTab = 'souvenir' as const
   const [openSection, setOpenSection] = useState<SessionKey | 'notes'>('avant')
   const [mediaByChapter, setMediaByChapter] = useState<Record<SessionKey, Array<{ id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }>>>({
     avant: [],
@@ -665,30 +664,8 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
                         <span className="font-bold text-base">{childName}</span>
                       </div>
 
-                      {/* Carte principale avec onglets */}
+                      {/* Carte principale */}
                       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        {/* Onglets Souvenir / Message */}
-                        <div className="flex border-b border-slate-200">
-                          {([
-                            { key: 'message' as const, icon: '💬', label: 'Message' },
-                            { key: 'souvenir' as const, icon: '📸', label: 'Souvenir' }
-                          ] as const).map((tab) => (
-                            <button
-                              key={tab.key}
-                              type="button"
-                              onClick={() => setActiveTab(tab.key)}
-                              className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-semibold transition-all border-b-2 ${
-                                activeTab === tab.key
-                                  ? 'border-green-600 text-green-700 bg-green-50/50'
-                                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                              }`}
-                            >
-                              <span className="text-lg">{tab.icon}</span>
-                              {tab.label}
-                            </button>
-                          ))}
-                        </div>
-
                         {/* Contenu : Souvenir (4 tuiles) */}
                         {activeTab === 'souvenir' && (() => {
                           type TileKey = SessionKey | 'notes'
@@ -896,20 +873,6 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
                           )
                         })()}
 
-                        {/* Contenu : Message */}
-                        {activeTab === 'message' && (
-                          <div className="p-6">
-                            <div className="mb-4">
-                              <h3 className="text-lg font-bold text-slate-800">Messagerie avec {childName}</h3>
-                              <p className="text-slate-600 text-sm mt-1">Espace privé entre vous deux uniquement.</p>
-                            </div>
-                            {user && selectedChild?.id ? (
-                              <ParentChildChat linkId={selectedChild.id} myNumeroH={user.numeroH} partnerLabel={childName} />
-                            ) : (
-                              <p className="text-slate-500 text-sm">Sélectionnez un enfant pour accéder à la messagerie.</p>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </>
                   )

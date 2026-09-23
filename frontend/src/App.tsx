@@ -21,6 +21,7 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword").then(m => ({ 
 const Account = lazy(() => import("./pages/Account").then(m => ({ default: m.Account })));
 const RegistrationChoice = lazy(() => import("./pages/RegistrationChoice").then(m => ({ default: m.RegistrationChoice })));
 const FloatingGuideIA = lazy(() => import("./components/FloatingGuideIA").then(m => ({ default: m.FloatingGuideIA })));
+const FloatingMessenger = lazy(() => import("./components/FloatingMessenger").then(m => ({ default: m.FloatingMessenger })));
 
 // Pages secondaires — lazy loaded (chargées à la demande)
 const LivingWizard = lazy(() => import("./pages/living/LivingWizard").then(m => ({ default: m.LivingWizard })));
@@ -785,6 +786,15 @@ function App() {
         </Routes>
         </Suspense>
       </main>
+
+      {/* Bouton messagerie flottant — global, sur tout le site, dès qu'on est
+          connecté (toutes les conversations : famille, couple, parents,
+          enfants, amis... y sont centralisées, une seule fois ici). */}
+      {isLoggedIn && !isGestionMode && !isStandaloneAppPage && (
+        <Suspense fallback={null}>
+          <FloatingMessenger />
+        </Suspense>
+      )}
 
       {/* Footer minimal Espace Gestion */}
       {isGestionMode && (

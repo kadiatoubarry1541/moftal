@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
-import { ParentChildChat } from '../../components/ParentChildChat'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -80,7 +79,7 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
   const [submitting, setSubmitting] = useState(false)
   type ChapterKey = 'enfance' | 'paradis' | 'objectif'
   type MediaItem = { id: string; type: 'photo' | 'video' | 'audio'; url: string; caption?: string; date: string }
-  const [activeTab, setActiveTab] = useState<'souvenir' | 'message'>('message')
+  const activeTab = 'souvenir' as const
   const [openSection, setOpenSection] = useState<ChapterKey | 'notes'>('enfance')
   const [mediaByChapter, setMediaByChapter] = useState<Record<ChapterKey, MediaItem[]>>({ enfance: [], paradis: [], objectif: [] })
   const [uploaderChapter, setUploaderChapter] = useState<ChapterKey | null>(null)
@@ -521,32 +520,6 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
                 {/* ═══ CARTE PRINCIPALE ═══ */}
                 <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden">
 
-                  {/* Deux onglets principaux */}
-                  <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('message')}
-                      className={`flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-sm transition-all ${
-                        activeTab === 'message'
-                          ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md shadow-green-200'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50'
-                      }`}
-                    >
-                      💬 Message
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('souvenir')}
-                      className={`flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-sm transition-all ${
-                        activeTab === 'souvenir'
-                          ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md shadow-green-200'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50'
-                      }`}
-                    >
-                      📸 Souvenir
-                    </button>
-                  </div>
-
                   {/* ═══ PANNEAU SOUVENIR ═══ */}
                   {activeTab === 'souvenir' && (() => {
                     const tiles: Array<{
@@ -746,22 +719,6 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
                     )
                   })()}
 
-                  {/* ═══ PANNEAU MESSAGE ═══ */}
-                  {activeTab === 'message' && (
-                    <div className="p-5">
-                      {user && selectedParent?.id ? (
-                        <ParentChildChat
-                          linkId={selectedParent.id}
-                          myNumeroH={user.numeroH}
-                          partnerLabel={selectedParent.parent ? `${selectedParent.parent.prenom} ${selectedParent.parent.nomFamille}` : (selectedParent.parentType === 'mere' ? 'votre mère' : 'votre père')}
-                        />
-                      ) : (
-                        <p className="text-slate-500 text-sm text-center py-8">
-                          Sélectionnez un parent pour accéder à la messagerie.
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             ) : (

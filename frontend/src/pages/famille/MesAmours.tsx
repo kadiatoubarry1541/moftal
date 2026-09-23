@@ -3,10 +3,8 @@ import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
-import { getNumeroHForDisplay, isAdmin } from '../../utils/auth';
+import { getNumeroHForDisplay } from '../../utils/auth';
 import { isContactPickerSupported, pickContactPhones } from '../../utils/contactPicker';
-import { FloatingMessenger } from '../../components/FloatingMessenger';
-import { FriendChat } from '../../components/FriendChat';
 import ProfileBadge from '../../components/ProfileBadge';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -98,23 +96,8 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
   const [loading, setLoading] = useState(true);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [chatFriend, setChatFriend] = useState<Friend | null>(null);
   const [showEditInfo, setShowEditInfo] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-
-  const userIsAdmin = isAdmin(userData);
-  // Espace de test admin : permet de vérifier que la messagerie entre amis fonctionne
-  // correctement même sans amitié réelle (l'admin doit pouvoir contrôler ses produits).
-  const adminDemoFriend: Friend = {
-    id: '00000000-0000-0000-0000-000000000001',
-    numeroH: 'DEMO-ADMIN',
-    prenom: 'Aperçu',
-    nomFamille: '(test admin)',
-    status: 'accepted',
-    requestedAt: new Date().toISOString(),
-    mutualFriends: 0,
-    commonInterests: []
-  };
 
   const [addFriendForm, setAddFriendForm] = useState({
     numeroH: '',
@@ -994,21 +977,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
             </button>
           </div>
 
-          {userIsAdmin && friends.length === 0 && (
-            <div className="border-2 border-dashed border-emerald-300 bg-emerald-50 rounded-lg p-4 mb-4 flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <p className="font-semibold text-gray-900 text-sm">{t('amitie.admin_test_title')}</p>
-                <p className="text-xs text-gray-600">{t('amitie.admin_test_desc')}</p>
-              </div>
-              <button
-                onClick={() => setChatFriend(adminDemoFriend)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm whitespace-nowrap"
-              >
-                {t('amitie.admin_test_btn')}
-              </button>
-            </div>
-          )}
-
           <div className="space-y-3">
             {friendRequests.map((request) => (
               <div key={request.id} className="border border-emerald-100 bg-emerald-50 rounded-xl p-3 sm:p-4 flex items-center gap-3">
@@ -1043,10 +1011,10 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
             {friends.map((friend) => (
               <div
                 key={friend.id}
-                onClick={() => setChatFriend(friend)}
+                onClick={() => handleViewFriendInfo(friend)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setChatFriend(friend); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleViewFriendInfo(friend); }}
                 className="border border-gray-100 rounded-xl p-3 sm:p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors"
               >
                 <div className="relative shrink-0">
@@ -1511,27 +1479,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
         </div>
       )}
 
-      {/* Modal de messagerie privée avec un ami */}
-      {chatFriend && userData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setChatFriend(null)}>
-          <div className="bg-white rounded-lg w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-violet-600 px-4 py-3 flex items-center justify-between">
-              <h3 className="text-white font-bold text-base">
-                💬 {chatFriend.prenom} {chatFriend.nomFamille}
-              </h3>
-              <button onClick={() => setChatFriend(null)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
-            </div>
-            <div className="p-3">
-              <FriendChat
-                linkId={chatFriend.id}
-                myNumeroH={userData.numeroH}
-                partnerLabel={`${chatFriend.prenom} ${chatFriend.nomFamille}`}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal d'informations d'ami — autres membres : nom, NumeroH et photo uniquement */}
       {showInfoModal && selectedFriend && (() => {
         const isCurrentUser = userData?.numeroH && String(selectedFriend.numeroH).trim() === String(userData.numeroH).trim();
@@ -1620,12 +1567,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors"
               >
                 Fermer
-              </button>
-              <button
-                onClick={() => { setShowInfoModal(false); setChatFriend(selectedFriend); }}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
-              >
-                Envoyer un message
               </button>
             </div>
           </div>
@@ -1767,8 +1708,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
           </div>
         </div>
       )}
-
-      <FloatingMessenger />
     </div>
   );
 });
