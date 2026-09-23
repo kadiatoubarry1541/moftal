@@ -1,18 +1,12 @@
-import { useEffect, useMemo, useRef, useState, useCallback, lazy, Suspense } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import PaymentModal from '../../components/PaymentModal'
 import { hideIncrement } from '../../utils/formatNumeroH'
-import { isAdmin } from '../../utils/auth'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
-import { getSocket, disconnectSocket } from '../../services/socket'
-import CallModal from '../../components/CallModal'
+import { disconnectSocket } from '../../services/socket'
 import { FloatingMessenger } from '../../components/FloatingMessenger'
-
-const ParentsInline    = lazy(() => import('./Parents'))
-const EnfantsInline    = lazy(() => import('./Enfants'))
-const PartenaireInline = lazy(() => import('./Partenaire'))
 
 interface UserData {
   numeroH: string
@@ -43,50 +37,6 @@ interface ParentLinkInfo {
     genre?: 'HOMME' | 'FEMME' | 'AUTRE'
   }
 }
-
-interface FamilyMessage {
-  id: string
-  numeroH: string
-  authorName?: string
-  content: string
-  messageType?: 'text' | 'image' | 'video' | 'audio'
-  mediaUrl?: string | null
-  category?: string
-  created_at?: string
-  createdAt?: string
-  familyName?: string
-}
-
-const FAMILLE_CATEGORIES = [
-  { id: 'information', label: 'Information', icon: '📰', color: 'blue' },
-  { id: 'rencontre',   label: 'Rencontre',   icon: '🤝', color: 'teal' },
-  { id: 'deces',       label: 'Décès',       icon: '🕯️', color: 'stone' },
-  { id: 'mariage',     label: 'Mariage',     icon: '💒', color: 'pink' },
-  { id: 'bapteme',     label: 'Baptême',     icon: '⛪', color: 'purple' },
-  { id: 'naissance',   label: 'Naissance',   icon: '👶', color: 'yellow' },
-  { id: 'solidarite',  label: 'Solidarité / Entraide', icon: '🤲', color: 'green' },
-  { id: 'fete',        label: 'Fête / Événement', icon: '🎉', color: 'amber' },
-  { id: 'annonce',     label: 'Annonce',     icon: '📢', color: 'orange' },
-  { id: 'opportunite', label: 'Opportunité', icon: '🌟', color: 'amber' },
-  { id: 'urgence',     label: 'Urgence',     icon: '🚨', color: 'red' },
-  { id: 'reunion',     label: 'Réunion',     icon: '👥', color: 'indigo' },
-] as const;
-
-// Même palette que la page Quartier (Terre ADAM) — pour que les messages de la
-// messagerie familiale aient le même style de bannière colorée par catégorie.
-const FAMILLE_COLORS: Record<string, { header: string }> = {
-  red:    { header: 'bg-red-600' },
-  orange: { header: 'bg-orange-500' },
-  blue:   { header: 'bg-blue-600' },
-  stone:  { header: 'bg-stone-600' },
-  pink:   { header: 'bg-pink-500' },
-  purple: { header: 'bg-purple-600' },
-  yellow: { header: 'bg-yellow-500' },
-  green:  { header: 'bg-green-600' },
-  amber:  { header: 'bg-amber-500' },
-  indigo: { header: 'bg-indigo-600' },
-  teal:   { header: 'bg-teal-600' },
-};
 
 interface GalleryItem {
   id: string
@@ -227,38 +177,13 @@ function ActivationArbreCard({ treeId, apiBase }: { treeId: string; apiBase: str
 
 
 export default function Arbre() {
-  const navigate = useNavigate()
   const [user, setUser] = useState<UserData | null>(null)
   const [partner, setPartner] = useState<PartnerInfo | null>(null)
   const [parentsLinks, setParentsLinks] = useState<ParentLinkInfo[]>([])
-  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint' | 'echanges' | 'foyer'>('echanges')
-  const [foyerSection, setFoyerSection] = useState<'parents' | 'enfants' | 'femme' | 'homme' | null>('parents')
+  const [activeTab, setActiveTab] = useState<'arbre' | 'arbre-conjoint'>('arbre')
   const { t } = useI18n()
 
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
-
-  // Messagerie familiale (style WhatsApp)
-  const [familyMessages, setFamilyMessages] = useState<FamilyMessage[]>([])
-  const [newMessage, setNewMessage] = useState('')
-  const [newMessageCategory, setNewMessageCategory] = useState('information')
-  const [showCategoryGrid, setShowCategoryGrid] = useState(false)
-  const [feedFilter, setFeedFilter] = useState<string>('all')
-  const [isSending, setIsSending] = useState(false)
-  const [loadingMessages, setLoadingMessages] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
-
-  // Médias, audio, appels
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordingSeconds, setRecordingSeconds] = useState(0)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-
-  // Appels (WebRTC)
-  const [outgoingCall, setOutgoingCall] = useState<{ to: string; toName: string; callType: 'audio' | 'video' } | null>(null)
-  const [incomingCall, setIncomingCall] = useState<{ from: string; callerName: string; offer: RTCSessionDescriptionInit; callType: 'audio' | 'video' } | null>(null)
-  const [showCall, setShowCall] = useState(false)
 
   // Galerie famille partagée
   const [showGallery, setShowGallery] = useState(false)
@@ -306,8 +231,7 @@ export default function Arbre() {
 
   // Onglet ou galerie auto-sélectionné depuis le hub Famille (navigation state)
   useEffect(() => {
-    const st = location.state as { tab?: string; openGallery?: boolean } | null
-    if (st?.tab === 'echanges') setActiveTab('echanges')
+    const st = location.state as { openGallery?: boolean } | null
     if (st?.openGallery) setShowGallery(true)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -488,225 +412,10 @@ const enhancedUser: UserData = useMemo(() => {
 }, [effectiveUser, partner, parentsLinks])
 
   const familyMembers = useMemo(() => buildFamilyTree(enhancedUser), [enhancedUser])
-  // +1 pour compter l'utilisateur lui-même, en plus des membres réels (confirmés, pas des placeholders)
-  const realMembersCount = useMemo(
-    () => 1 + familyMembers.filter(m => m.numeroH && m.numeroH !== 'N/A').length,
-    [familyMembers]
-  )
   const cercleCounts = useMemo(
     () => getCercleDesRacinesCounts(enhancedUser, familyMembers),
     [enhancedUser, familyMembers]
   )
-
-  const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
-
-  const loadFamilyMessages = async () => {
-    try {
-      setLoadingMessages(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE}/api/family-tree/messages`, {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
-        }
-      })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        // On affiche du plus ancien au plus récent
-        const messages: FamilyMessage[] = (data.messages || []).slice().reverse()
-        setFamilyMessages(messages)
-        setTimeout(scrollToBottom, 150)
-      } else {
-        console.error('Erreur chargement messages familiaux:', data.message || data.error)
-      }
-    } catch (error) {
-      console.error('Erreur chargement messages familiaux:', error)
-    } finally {
-      setLoadingMessages(false)
-    }
-  }
-
-  // Chargement initial des messages quand l'onglet échanges est actif
-  useEffect(() => {
-    if (activeTab === 'echanges') {
-      loadFamilyMessages()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
-
-  const sendFamilyMessage = async () => {
-    if (!newMessage.trim() || isSending) return
-
-    try {
-      setIsSending(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${API_BASE}/api/family-tree/messages`, {
-        method: 'POST',
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ content: newMessage.trim(), messageType: 'text', category: newMessageCategory })
-      })
-
-      const data = await response.json()
-      if (response.ok && data.success && data.message) {
-        // Le socket diffuse aux autres membres ; on l'ajoute localement immédiatement
-        setFamilyMessages((prev) => {
-          if (prev.find(m => m.id === data.message.id)) return prev
-          return [...prev, data.message]
-        })
-        setNewMessage('')
-        setTimeout(scrollToBottom, 100)
-      } else {
-        alert(data.message || 'Erreur lors de l\'envoi du message')
-      }
-    } catch (error: any) {
-      console.error('Erreur envoi message familial:', error)
-      alert(error?.message || 'Erreur lors de l\'envoi du message')
-    } finally {
-      setIsSending(false)
-    }
-  }
-
-  // Vérifie la durée d'un fichier vidéo ou audio avant envoi
-  const checkMediaDuration = (file: File): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const isVideo = file.type.startsWith('video/')
-      const isAudio = file.type.startsWith('audio/')
-      if (!isVideo && !isAudio) { resolve(true); return }
-
-      const el = isVideo
-        ? document.createElement('video')
-        : document.createElement('audio')
-      const url = URL.createObjectURL(file)
-      el.src = url
-      el.onloadedmetadata = () => {
-        URL.revokeObjectURL(url)
-        if (el.duration > 30) {
-          alert(`⏱️ Durée maximale : 30 secondes.\nVotre fichier dure ${Math.round(el.duration)}s.`)
-          resolve(false)
-        } else {
-          resolve(true)
-        }
-      }
-      el.onerror = () => { URL.revokeObjectURL(url); resolve(true) }
-    })
-  }
-
-  // Envoi d'un fichier (photo / vidéo max 30s / audio max 30s)
-  const sendFamilyMediaMessage = useCallback(async (file: File) => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
-    const ok = await checkMediaDuration(file)
-    if (!ok) return
-
-    setIsSending(true)
-    try {
-      const formData = new FormData()
-      formData.append('media', file)
-      formData.append('category', newMessageCategory)
-      const res = await fetch(`${API_BASE}/api/family-tree/messages/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
-      const data = await res.json()
-      if (res.ok && data.success && data.message) {
-        setFamilyMessages(prev => {
-          if (prev.find(m => m.id === data.message.id)) return prev
-          return [...prev, data.message]
-        })
-        setTimeout(scrollToBottom, 100)
-      } else {
-        alert(data.message || 'Erreur envoi média')
-      }
-    } catch {
-      alert('Erreur de connexion au serveur')
-    } finally {
-      setIsSending(false)
-    }
-  }, [API_BASE, newMessageCategory])
-
-  // Enregistrement vocal : appui = démarre, relâche = envoie
-  const startRecording = useCallback(async () => {
-    if (isRecording) return
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' })
-      audioChunksRef.current = []
-      mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop())
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        const file = new File([blob], `vocal-${Date.now()}.webm`, { type: 'audio/webm' })
-        await sendFamilyMediaMessage(file)
-        setRecordingSeconds(0)
-      }
-      mr.start(200)
-      mediaRecorderRef.current = mr
-      setIsRecording(true)
-      let secs = 0
-      recordingTimerRef.current = setInterval(() => {
-        secs++
-        setRecordingSeconds(secs)
-        if (secs >= 30) stopRecording()
-      }, 1000)
-    } catch {
-      alert('Impossible d\'accéder au microphone')
-    }
-  }, [isRecording, sendFamilyMediaMessage])
-
-  const stopRecording = useCallback(() => {
-    if (!isRecording) return
-    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null }
-    mediaRecorderRef.current?.stop()
-    setIsRecording(false)
-  }, [isRecording])
-
-  // Lancer un appel vers un membre de la famille
-  const startCall = useCallback((to: string, toName: string, callType: 'audio' | 'video') => {
-    setOutgoingCall({ to, toName, callType })
-    setShowCall(true)
-  }, [])
-
-  // Socket.io : connexion uniquement quand l'onglet messages est ouvert
-  useEffect(() => {
-    const familyName = effectiveUser.nomFamille
-    if (!familyName || !effectiveUser.numeroH) return
-    if (activeTab !== 'echanges') return
-
-    const socket = getSocket()
-    socket.emit('join-family', familyName)
-
-    const onFamilyMsg = (msg: FamilyMessage) => {
-      setFamilyMessages(prev => {
-        if (prev.find(m => m.id === msg.id)) return prev
-        return [...prev, msg]
-      })
-      setTimeout(scrollToBottom, 100)
-    }
-
-    const onIncomingCall = (data: { from: string; callerName: string; offer: RTCSessionDescriptionInit; callType: 'audio' | 'video' }) => {
-      setIncomingCall(data)
-      setShowCall(true)
-    }
-
-    socket.on('family-message', onFamilyMsg)
-    socket.on('incoming-call', onIncomingCall)
-
-    return () => {
-      socket.off('family-message', onFamilyMsg)
-      socket.off('incoming-call', onIncomingCall)
-    }
-  }, [effectiveUser.nomFamille, effectiveUser.numeroH, activeTab])
 
   const loadSharedGallery = async () => {
     try {
@@ -729,15 +438,6 @@ const enhancedUser: UserData = useMemo(() => {
   const openGallery = () => {
     setShowGallery(true)
     loadSharedGallery()
-  }
-
-  const goToMairie = () => {
-    const session = JSON.parse(localStorage.getItem('session_user') || '{}')
-    const u = session.userData || session
-    const ville = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || ''
-    const params = new URLSearchParams({ type: 'mairie' })
-    if (ville) params.set('city', ville)
-    navigate(`/liste-professionnels?${params.toString()}`)
   }
 
   const uploadToSharedGallery = async (file: File) => {
@@ -935,58 +635,6 @@ const enhancedUser: UserData = useMemo(() => {
   return (
     <div className="max-w-6xl mx-auto px-4 pb-6 pt-2">
 
-      {/* Navigation — une seule ligne compacte, 4 boutons. Galerie et
-          Problèmes ont été déplacés dans l'onglet Arbre lui-même. */}
-      <div className="bg-white border-b border-gray-200 mb-4">
-        <nav className="flex" role="tablist">
-
-          <button type="button" role="tab" aria-selected={activeTab === 'echanges'}
-            onClick={() => setActiveTab('echanges')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'echanges'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <span className="text-lg leading-none">💬</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_messages')}</span>
-          </button>
-
-          <button type="button" role="tab" aria-selected={activeTab === 'arbre'}
-            onClick={() => setActiveTab('arbre')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'arbre'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <span className="text-lg leading-none">🌳</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_arbre')}</span>
-          </button>
-
-          <button type="button" role="tab" aria-selected={activeTab === 'foyer'}
-            onClick={() => setActiveTab('foyer')}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] transition-colors ${
-              activeTab === 'foyer'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <span className="text-lg leading-none">🏠</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_foyer')}</span>
-          </button>
-
-          <button type="button"
-            onClick={goToMairie}
-            className="flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-[3px] border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-lg leading-none">🏛️</span>
-            <span className="text-[9px] font-semibold leading-tight truncate w-full text-center">{t('heritage.tab_mairie')}</span>
-          </button>
-
-        </nav>
-      </div>
-
         {activeTab === 'arbre-conjoint' && partner && (
           <>
             <div className="flex items-center gap-3 mb-4">
@@ -995,9 +643,7 @@ const enhancedUser: UserData = useMemo(() => {
               )}
               <h2 className="text-2xl font-bold">💑 Arbre de {partner.prenom} {partner.nomFamille}</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-4">
-              Vous consultez l'arbre généalogique de votre conjoint(e). Votre lien apparaît dans cet arbre.
-            </p>
+            <p className="text-sm text-gray-500 mb-4">Arbre généalogique de votre conjoint(e), avec votre lien.</p>
             <ArbreGenealogique
               userData={{
                 ...partner,
@@ -1224,299 +870,6 @@ const enhancedUser: UserData = useMemo(() => {
               }}
             />
           </>
-        )}
-
-        {activeTab === 'echanges' && (
-          <div>
-            <div>
-              <div className="rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-[75vh] bg-white">
-                {/* En-tête — même style que les groupes Terre ADAM (Quartier). Pas de
-                    logo : une famille n'a pas besoin d'un logo comme un quartier. */}
-                <div className="bg-gray-800 text-white px-4 py-[4px] flex items-center justify-between">
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-sm truncate">
-                      Famille {effectiveUser.nomFamille || 'ADAM'}
-                    </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {realMembersCount} membre{realMembersCount > 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  {/* Boutons appel (visible si conjoint lié) */}
-                  {partner && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => startCall(partner.numeroH, `${partner.prenom} ${partner.nomFamille}`, 'audio')}
-                        className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-lg transition-colors"
-                        title={t('heritage.call_audio')}
-                      >
-                        📞
-                      </button>
-                      <button
-                        onClick={() => startCall(partner.numeroH, `${partner.prenom} ${partner.nomFamille}`, 'video')}
-                        className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-lg transition-colors"
-                        title={t('heritage.call_video')}
-                      >
-                        📹
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Filtre par catégorie — toujours visible, comme dans Quartier */}
-                <div className="flex gap-1.5 overflow-x-auto px-3 py-2 bg-white border-b border-gray-100">
-                  <button
-                    onClick={() => setFeedFilter('all')}
-                    className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${feedFilter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'}`}
-                  >
-                    💬 Tout ({familyMessages.length})
-                  </button>
-                  {FAMILLE_CATEGORIES.map(cat => {
-                    const count = familyMessages.filter(m => (m.category || 'information') === cat.id).length
-                    const colors = FAMILLE_COLORS[cat.color]
-                    return (
-                      <button
-                        key={cat.id}
-                        onClick={() => setFeedFilter(feedFilter === cat.id ? 'all' : cat.id)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${feedFilter === cat.id ? colors.header + ' text-white' : 'bg-gray-100 text-gray-600'}`}
-                      >
-                        {cat.icon} {cat.label}
-                        {count > 0 && (
-                          <span className={`flex items-center gap-0.5 ${feedFilter === cat.id ? 'text-white' : 'text-red-600'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${feedFilter === cat.id ? 'bg-white' : 'bg-red-500'}`} />
-                            <span className="text-[9px] font-bold">{count}</span>
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {/* Zone de messages */}
-                <div className="flex-1 bg-gray-100 px-3 py-3 overflow-y-auto">
-                  {loadingMessages ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="flex flex-col items-center gap-2 text-gray-500">
-                        <div className="h-8 w-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-                        <span className="text-sm">Chargement des messages...</span>
-                      </div>
-                    </div>
-                  ) : familyMessages.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center text-gray-500 text-sm space-y-2">
-                        <p>Aucun message pour le moment.</p>
-                        <p>Soyez le premier à écrire à votre famille.</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {familyMessages
-                        .filter(msg => feedFilter === 'all' || (msg.category || 'information') === feedFilter)
-                        .map((msg) => {
-                        const isMe = msg.numeroH === effectiveUser.numeroH
-                        const createdAt =
-                          msg.createdAt || msg.created_at || new Date().toISOString()
-                        const cat = FAMILLE_CATEGORIES.find(c => c.id === (msg.category || 'information'))
-                        const colors = FAMILLE_COLORS[cat?.color || 'blue']
-
-                        return (
-                          <div
-                            key={msg.id}
-                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div className={`max-w-[82%] rounded-2xl shadow-sm overflow-hidden border-2 bg-white ${
-                              isMe ? 'border-green-300' : 'border-gray-100'
-                            }`}>
-                              {/* Bannière colorée — même style que la page Quartier */}
-                              <div className={`${colors.header} px-4 py-2.5 flex items-center gap-3`}>
-                                <span className="text-3xl leading-none">{cat?.icon || '📰'}</span>
-                                <span className="text-white font-bold text-sm tracking-wide uppercase">
-                                  {cat?.label || 'Information'}
-                                </span>
-                              </div>
-                              <div className="px-4 py-3">
-                                <p className={`text-[11px] font-bold mb-1.5 ${isMe ? 'text-right text-green-600' : 'text-green-600'}`}>
-                                  {isMe ? 'Moi' : (msg.authorName || 'Membre de la famille')}
-                                </p>
-                                {(msg.messageType === 'text' || !msg.messageType) && msg.content && (
-                                  <p className="text-sm leading-relaxed text-gray-800 whitespace-pre-line">{msg.content}</p>
-                                )}
-                                {msg.mediaUrl && msg.messageType === 'image' && (
-                                  <img
-                                    src={msg.mediaUrl}
-                                    alt="Pièce jointe"
-                                    className="rounded-lg max-h-60 object-cover w-full"
-                                  />
-                                )}
-                                {msg.mediaUrl && msg.messageType === 'video' && (
-                                  <video
-                                    src={msg.mediaUrl}
-                                    controls
-                                    className="rounded-lg max-h-60 w-full"
-                                  />
-                                )}
-                                {msg.mediaUrl && msg.messageType === 'audio' && (
-                                  <audio
-                                    src={msg.mediaUrl}
-                                    controls
-                                    className="w-full"
-                                  />
-                                )}
-                                <p className="text-[10px] text-gray-400 mt-2 text-right">
-                                  {new Date(createdAt).toLocaleTimeString('fr-FR', {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Zone de saisie */}
-                <div className="border-t border-gray-200 bg-gray-50 px-3 py-2">
-                  {/* Indicateur d'enregistrement */}
-                  {isRecording && (
-                    <div className="flex items-center gap-2 mb-2 px-2 py-1 bg-red-50 rounded-full border border-red-200">
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                      <span className="text-xs text-red-600 font-medium">
-                        🎤 {recordingSeconds}s / 30s — relâchez pour envoyer
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 min-w-0 relative">
-                      {/* Catégorie — intégrée dans le champ, à gauche */}
-                      <button
-                        type="button"
-                        onClick={() => setShowCategoryGrid(v => !v)}
-                        title={t('heritage.choose_info_type')}
-                        className={`absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center transition-colors ${showCategoryGrid ? 'bg-green-100' : 'hover:bg-gray-200'}`}
-                      >
-                        <span className="text-lg leading-none">{FAMILLE_CATEGORIES.find(c => c.id === newMessageCategory)?.icon}</span>
-                      </button>
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault()
-                            sendFamilyMessage()
-                          }
-                        }}
-                        placeholder={`${FAMILLE_CATEGORIES.find(c => c.id === newMessageCategory)?.label || 'Information'}...`}
-                        className="w-full min-w-0 pl-12 pr-20 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-300 bg-gray-50 text-sm"
-                      />
-                      {/* Photo / vidéo — intégrée dans le champ, à droite */}
-                      <label
-                        className={`absolute right-10 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-lg leading-none text-gray-500 hover:text-gray-700 cursor-pointer ${isSending ? 'opacity-50 pointer-events-none' : ''}`}
-                        title={t('heritage.send_photo_video')}
-                      >
-                        📷
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*,video/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) sendFamilyMediaMessage(file)
-                            e.target.value = ''
-                          }}
-                        />
-                      </label>
-                      {/* Envoyer — intégré dans le champ */}
-                      <button
-                        type="button"
-                        onClick={sendFamilyMessage}
-                        disabled={isSending || !newMessage.trim()}
-                        title={t('btn.send')}
-                        className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white flex items-center justify-center text-sm font-bold transition-colors"
-                      >
-                        ✓
-                      </button>
-                      {showCategoryGrid && (
-                        <div className="absolute bottom-11 left-0 z-20 bg-white rounded-xl shadow-lg border border-gray-200 p-2 grid grid-cols-4 gap-1 w-64">
-                          {FAMILLE_CATEGORIES.map(cat => (
-                            <button
-                              key={cat.id}
-                              type="button"
-                              onClick={() => { setNewMessageCategory(cat.id); setShowCategoryGrid(false) }}
-                              className={`flex flex-col items-center gap-0.5 py-2 rounded-lg ${newMessageCategory === cat.id ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-                              title={cat.label}
-                            >
-                              <span className="text-lg leading-none">{cat.icon}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Micro vocal : appui = enregistre, relâche = envoie */}
-                    <button
-                      type="button"
-                      onMouseDown={startRecording}
-                      onMouseUp={stopRecording}
-                      onTouchStart={(e) => { e.preventDefault(); startRecording() }}
-                      onTouchEnd={(e) => { e.preventDefault(); stopRecording() }}
-                      disabled={isSending}
-                      className={`flex-shrink-0 w-11 h-11 rounded-full overflow-hidden flex items-center justify-center text-xl leading-none transition-all ${
-                        isRecording
-                          ? 'bg-red-500 scale-110 shadow-lg text-white'
-                          : 'bg-gray-200 hover:bg-green-100 text-gray-600 hover:text-green-700'
-                      }`}
-                      title={t('heritage.hold_voice_message')}
-                    >
-                      🎤
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'foyer' && (
-          <div>
-            {/* Nav 4 boutons Foyer */}
-            <div className="bg-white border-b border-gray-200 shadow-sm rounded-xl overflow-hidden mt-2">
-              <nav className="flex">
-                {([
-                  { id: 'parents', emoji: '👨‍👩‍👦', label: 'Parents'   },
-                  { id: 'enfants', emoji: '🧍',    label: 'Enfants'   },
-                  ...(isAdmin(user) || user?.genre === 'HOMME' ? [{ id: 'femme' as const,  emoji: '👰', label: 'Ma femme'  }] : []),
-                  ...(isAdmin(user) || user?.genre === 'FEMME' ? [{ id: 'homme' as const, emoji: '🤵', label: 'Mon homme' }] : []),
-                ] as const).map(item => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setFoyerSection(foyerSection === item.id ? null : item.id)}
-                    className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 border-b-2 transition-colors ${
-                      foyerSection === item.id
-                        ? 'border-emerald-600 text-emerald-700 bg-emerald-50'
-                        : 'border-transparent text-gray-500 hover:text-emerald-700 hover:bg-emerald-50'
-                    }`}
-                  >
-                    <span className="text-2xl leading-none">{item.emoji}</span>
-                    <span className="text-[9px] font-medium leading-tight truncate w-full text-center">{item.label}</span>
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* Contenu inline — s'ouvre sans navigation */}
-            <Suspense fallback={<div className="flex justify-center py-10"><div className="h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" /></div>}>
-              {foyerSection === 'parents' && <ParentsInline inline />}
-              {foyerSection === 'enfants' && <EnfantsInline inline />}
-              {foyerSection === 'femme'   && <PartenaireInline inline />}
-              {foyerSection === 'homme'   && <PartenaireInline inline />}
-            </Suspense>
-          </div>
         )}
 
       {/* ── MODAL DÉTAIL DÉFUNT ── */}
@@ -1899,24 +1252,6 @@ const enhancedUser: UserData = useMemo(() => {
       )}
 
       {/* ── MODAL APPEL WebRTC ─────────────────────────────────────────────── */}
-      {showCall && effectiveUser.numeroH && (
-        <CallModal
-          socket={getSocket()}
-          currentUser={{
-            numeroH: effectiveUser.numeroH,
-            prenom: effectiveUser.prenom,
-            nomFamille: effectiveUser.nomFamille,
-          }}
-          outgoingCall={outgoingCall ?? undefined}
-          incomingCall={incomingCall ?? undefined}
-          onClose={() => {
-            setShowCall(false)
-            setOutgoingCall(null)
-            setIncomingCall(null)
-          }}
-        />
-      )}
-
       {/* ── VISIONNEUSE PLEIN ÉCRAN ── */}
       {viewerMedia && (
         <div

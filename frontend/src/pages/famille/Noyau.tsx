@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { getPhotoUrl, getSessionUser, isAdmin } from '../../utils/auth'
 import { AudioRecorder } from '../../components/AudioRecorder'
 import { VideoRecorder } from '../../components/VideoRecorder'
@@ -359,6 +359,7 @@ function AddEntryModal({ onClose, onSave }: {
 }
 
 export default function Noyau() {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<Record<TabKey, NoyauData>>({ mine: EMPTY, pere: EMPTY, mere: EMPTY })
   const [activeTab, setActiveTab] = useState<TabKey | null>(null)
@@ -462,11 +463,20 @@ export default function Noyau() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-900">
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-6 sm:px-6">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl font-bold mt-1 flex items-center gap-2">🏠 Noyau Familial</h1>
-          <p className="text-emerald-50 mt-1 text-sm">
-            La famille restreinte : un fondateur, ses épouses, ses enfants — et le Livre qu'il laisse aux siens.
-          </p>
+        <div className="max-w-3xl mx-auto flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold mt-1 flex items-center gap-2">🏠 Noyau Familial</h1>
+            <p className="text-emerald-50 mt-1 text-sm">
+              La famille restreinte : un fondateur, ses épouses, ses enfants — et le Livre qu'il laisse aux siens.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/famille/foyer')}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-sm font-semibold transition-colors"
+          >
+            🏡 Foyer
+          </button>
         </div>
       </div>
 

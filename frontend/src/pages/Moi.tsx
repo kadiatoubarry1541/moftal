@@ -5,10 +5,21 @@ export function Moi() {
   const navigate = useNavigate();
   const { t } = useI18n();
 
+  // La mairie (mariages) est remontée ici, dans l'en-tête, plutôt que
+  // d'être un onglet séparé de la page Arbre.
+  const goToMairie = () => {
+    const session = JSON.parse(localStorage.getItem('session_user') || '{}');
+    const u = session.userData || session;
+    const ville = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || '';
+    const params = new URLSearchParams({ type: 'mairie' });
+    if (ville) params.set('city', ville);
+    navigate(`/liste-professionnels?${params.toString()}`);
+  };
+
   return (
     <div className="moi-layout min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-4">
-        <div className="mb-4">
+        <div className="mb-4 flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => navigate("/famille")}
@@ -16,6 +27,15 @@ export function Moi() {
           >
             <span aria-hidden>←</span>
             <span>{t('nav.famille')}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={goToMairie}
+            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-xl font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
+          >
+            <span aria-hidden>🏛️</span>
+            <span>{t('heritage.tab_mairie')}</span>
           </button>
         </div>
 
