@@ -83,6 +83,9 @@ export default function TerreAdam() {
   const livreQuartierRef = useRef<LivreQuartierHandle>(null);
   const reglesQuartierRef = useRef<ReglesLocaliteHandle>(null);
   const residenceProofsRef = useRef<ResidenceProofsHandle>(null);
+  // Solde de la Caisse du quartier — affiché directement sous le logo,
+  // motivant et visible sans avoir à ouvrir le menu Outils.
+  const [caisseTotal, setCaisseTotal] = useState<number | null>(null);
 
 
   // Récupérer les informations géographiques de l'utilisateur depuis la session
@@ -306,6 +309,28 @@ export default function TerreAdam() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData]);
+
+  // Solde de la Caisse du quartier actif — juste pour l'affichage motivant
+  // sous le logo, pas besoin d'ouvrir la modale complète pour le voir.
+  useEffect(() => {
+    if (!(activeLieuTab === 'quartier-1' || activeLieuTab === 'quartier-2' || activeLieuTab === 'quartier-3')) return;
+    const slotNum = activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3;
+    const code = userQuartierCodes[slotNum - 1];
+    if (!code && !isAdmin) { setCaisseTotal(null); return; }
+    const loc = code ? findLocationByCode(code) : null;
+    const name = loc?.name || (isRealLieu(code) ? code : null);
+    const location = code || `quartier-${slotNum}`;
+    const locationName = name || `Résidence ${slotNum}`;
+    const token = localStorage.getItem('token');
+    setCaisseTotal(null);
+    fetch(`${API_BASE}/api/quartier-fund/mon-compte?scope=quartier&location=${encodeURIComponent(location)}&locationName=${encodeURIComponent(locationName)}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setCaisseTotal(d?.success && d.existe ? (d.compte?.soldes?.total ?? 0) : null))
+      .catch(() => setCaisseTotal(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLieuTab, userQuartierCodes[0], userQuartierCodes[1], userQuartierCodes[2], isAdmin]);
 
   const loadGroups = async () => {
     if (!userData) {
@@ -716,7 +741,22 @@ export default function TerreAdam() {
                             )}
                           </div>
 
-                          {/* Accès aux outils du quartier (Projets/Caisse, Livre, Règles,
+                          {/* Caisse du quartier — juste sous le logo, toujours visible :
+                              un chiffre positif et motivant plutôt qu'enfoui dans un menu. */}
+                          {caisseTotal !== null && (
+                            <button
+                              type="button"
+                              onClick={() => quartierDevRef.current?.openCaisse()}
+                              className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 transition-colors"
+                            >
+                              <span className="flex items-center gap-2 font-bold text-white text-sm">
+                                💰 {t('terre_adam.caisse')} · {caisseTotal.toLocaleString('fr-FR')} GNF
+                              </span>
+                              <span className="text-emerald-100">›</span>
+                            </button>
+                          )}
+
+                          {/* Accès aux outils du quartier (Caisse, Livre, Règles,
                               Preuves de résidence, liste des membres) — la messagerie
                               elle-même se trouve désormais dans le bouton flottant. */}
                           <button
@@ -729,9 +769,6 @@ export default function TerreAdam() {
                             </span>
                             <span className="text-gray-400">›</span>
                           </button>
-                          <div className="bg-emerald-50 border-t border-emerald-200 px-4 py-3 text-center text-sm text-emerald-800">
-                            💬 Les discussions de ce quartier sont maintenant dans la messagerie flottante, en bas de l'écran.
-                          </div>
                         </div>
                       )}
                       </div>
