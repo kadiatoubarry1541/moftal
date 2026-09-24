@@ -624,13 +624,11 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-6">
-            {/* Interface TOUJOURS visible — le contenu s'affiche dès l'ouverture */}
+            {/* Interface TOUJOURS visible — le contenu s'affiche dès l'ouverture.
+                Les messages du groupe sont désormais dans la messagerie 💬
+                flottante (visible automatiquement en l'ouvrant, pas besoin
+                de bandeau explicatif ici). */}
             <div className="space-y-4">
-              {/* Les messages du groupe se trouvent désormais dans la messagerie 💬 flottante */}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center text-sm text-emerald-800">
-                💬 Les discussions de ce groupe sont maintenant dans la messagerie flottante, en bas de l'écran.
-              </div>
-
               {/* Message de rejet activité interdite */}
               {blockedActivity && (
                 <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6 text-center">
