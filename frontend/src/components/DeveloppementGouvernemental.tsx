@@ -39,13 +39,6 @@ const DOMAINES_OPTIONS = [
   { id: 'gouvernance',    label: 'Gouvernance',           emoji: '🏛️' },
 ];
 
-const TYPE_SIGNALEMENT = [
-  { id: 'infrastructure',    label: 'Infrastructure endommagée', emoji: '🛣️' },
-  { id: 'projet_abandonne',  label: 'Projet abandonné',          emoji: '⚠️' },
-  { id: 'manque_service',    label: 'Service manquant',          emoji: '🏥' },
-  { id: 'autre',             label: 'Autre problème',            emoji: '📌' },
-];
-
 interface HigherLevel {
   scope: string;
   location: string;
@@ -87,7 +80,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const [showPublishers, setShowPublishers] = useState(false);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [newPublisher, setNewPublisher] = useState({ numeroH: '', name: '', role: 'chef' });
-  const [activeTab, setActiveTab] = useState<'actualites' | 'signaler'>('actualites');
 
   // Actualités
   const [actualites, setActualites] = useState<any[]>([]);
@@ -101,12 +93,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const actuMediaInputRef = useRef<HTMLInputElement>(null);
   const [allowedHigherLevels, setAllowedHigherLevels] = useState<HigherLevel[]>([]);
   const [selectedPartages, setSelectedPartages] = useState<Set<string>>(new Set());
-
-  // Signalements
-  const [signalements, setSignalements] = useState<any[]>([]);
-  const [sigForm, setSigForm] = useState({ type: 'infrastructure', description: '', lieu: '' });
-  const [sigLoading, setSigLoading] = useState(false);
-  const [sigEnvoye, setSigEnvoye] = useState(false);
 
   // Logo du lieu (pas d'admin local à ces niveaux → réservé aux journalistes/admins)
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -133,7 +119,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     loadActualites();
     loadLogo();
     checkCanPublishActu();
-    if (canPublish) loadSignalements();
   }, [scope, location]);
 
   // Vérifie, uniquement à l'ouverture du formulaire, sur quels niveaux
@@ -253,13 +238,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     } catch {} finally { setLoadingActu(false); }
   };
 
-  const loadSignalements = async () => {
-    try {
-      const res = await fetch(api(`/signalements?${qs}`), { headers: { Authorization: `Bearer ${token()}` } });
-      if (res.ok) { const d = await res.json(); setSignalements(d.signalements || []); }
-    } catch {}
-  };
-
   const removeActuMedia = () => {
     if (actuMediaPreview) URL.revokeObjectURL(actuMediaPreview);
     setActuMediaFile(null);
@@ -342,33 +320,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     loadActualites();
   };
 
-  const envoyerSignalement = async () => {
-    if (!sigForm.description.trim()) return;
-    setSigLoading(true);
-    try {
-      const res = await fetch(api('/signalements'), {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...sigForm, scope, location })
-      });
-      if (res.ok) {
-        setSigEnvoye(true);
-        setSigForm({ type: 'infrastructure', description: '', lieu: '' });
-      } else {
-        alert('Erreur lors de l\'envoi');
-      }
-    } catch { alert('Erreur réseau'); } finally { setSigLoading(false); }
-  };
-
-  const validerSignalement = async (id: string, statut: string) => {
-    await fetch(api(`/signalements/${id}/statut`), {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ statut })
-    });
-    loadSignalements();
-  };
-
   return (
     <div className="space-y-3">
 
@@ -397,31 +348,9 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
         </>
       )}
 
-      {/* Tabs */}
-      <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
-        {[
-          { id: 'actualites', icon: '📰', label: 'Actualités' },
-          { id: 'signaler',   icon: '📍', label: 'Signaler' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === tab.id ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <span>{tab.icon}</span>
-            <span>{tab.label}</span>
-            {tab.id === 'signaler' && canPublish && signalements.filter(s => s.statut === 'recu').length > 0 && (
-              <span className="ml-0.5 bg-red-100 text-red-700 text-[10px] font-bold px-1.5 rounded-full">{signalements.filter(s => s.statut === 'recu').length}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ── TAB ACTUALITÉS ───────────────────────────────────────────────── */}
-      {activeTab === 'actualites' && (
-        <div className="space-y-3">
+      {/* Actualités — annonces, alerte sécurité et sensibilisation, toujours
+          visibles directement, sans onglet ni bouton supplémentaire. */}
+      <div className="space-y-3">
           <div className="flex items-center gap-2">
             {canPublishActu && (
               <button
@@ -490,139 +419,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
             </div>
           )}
         </div>
-      )}
-
-      {/* ── TAB SIGNALER ─────────────────────────────────────────────────── */}
-      {activeTab === 'signaler' && (
-        <div className="space-y-4">
-
-          {/* Formulaire citoyen */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="font-bold text-gray-800 text-sm mb-1">📍 Signaler un problème de développement</h3>
-            <p className="text-gray-400 text-xs mb-4">Signalez une infrastructure endommagée, un projet abandonné ou un service manquant. Votre signalement sera traité par les journalistes et les autorités.</p>
-
-            {sigEnvoye ? (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                <div className="text-3xl mb-2">✅</div>
-                <p className="text-green-700 font-semibold text-sm">Signalement envoyé !</p>
-                <p className="text-green-600 text-xs mt-1">Merci. Votre signalement a été transmis aux journalistes et aux autorités locales.</p>
-                <button onClick={() => setSigEnvoye(false)} className="mt-3 text-xs text-green-600 underline">Faire un autre signalement</button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Type de problème</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {TYPE_SIGNALEMENT.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => setSigForm({ ...sigForm, type: t.id })}
-                        className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-left transition-all ${
-                          sigForm.type === t.id ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <span className="text-lg">{t.emoji}</span>
-                        <span className="text-xs font-semibold text-gray-700 leading-tight">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Lieu précis (optionnel)</label>
-                  <input
-                    type="text"
-                    value={sigForm.lieu}
-                    onChange={e => setSigForm({ ...sigForm, lieu: e.target.value })}
-                    placeholder="Ex: Route nationale entre Kindia et Coyah..."
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description du problème *</label>
-                  <textarea
-                    value={sigForm.description}
-                    onChange={e => setSigForm({ ...sigForm, description: e.target.value })}
-                    rows={3}
-                    placeholder="Décrivez précisément le problème que vous constatez..."
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
-                  />
-                </div>
-                <button
-                  onClick={envoyerSignalement}
-                  disabled={sigLoading || !sigForm.description.trim()}
-                  className="w-full py-2.5 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition-colors"
-                >
-                  {sigLoading ? 'Envoi...' : '📍 Envoyer le signalement'}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Signalements validés (visibles par tous) */}
-          {signalements.filter(s => s.statut === 'publie').length > 0 && (
-            <div>
-              <h4 className="text-xs font-bold text-gray-600 mb-2">📢 Signalements confirmés</h4>
-              <div className="space-y-2">
-                {signalements.filter(s => s.statut === 'publie').map(s => {
-                  const t = TYPE_SIGNALEMENT.find(x => x.id === s.type);
-                  return (
-                    <div key={s.id} className="bg-orange-50 border border-orange-200 rounded-xl p-3">
-                      <div className="flex items-start gap-2">
-                        <span className="text-lg flex-shrink-0">{t?.emoji || '📌'}</span>
-                        <div>
-                          <p className="text-xs font-semibold text-orange-800">{t?.label}</p>
-                          {s.lieu && <p className="text-xs text-orange-600">📍 {s.lieu}</p>}
-                          <p className="text-xs text-gray-600 mt-1">{s.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* File d'attente journaliste/admin */}
-          {canPublish && signalements.filter(s => s.statut === 'recu').length > 0 && (
-            <div>
-              <h4 className="text-xs font-bold text-gray-600 mb-2">⏳ En attente de vérification ({signalements.filter(s => s.statut === 'recu').length})</h4>
-              <div className="space-y-2">
-                {signalements.filter(s => s.statut === 'recu').map(s => {
-                  const t = TYPE_SIGNALEMENT.find(x => x.id === s.type);
-                  return (
-                    <div key={s.id} className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2 flex-1">
-                          <span className="text-base flex-shrink-0">{t?.emoji || '📌'}</span>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-800">{t?.label}</p>
-                            {s.lieu && <p className="text-xs text-gray-500">📍 {s.lieu}</p>}
-                            <p className="text-xs text-gray-600 mt-0.5">{s.description}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-1 flex-shrink-0">
-                          <button
-                            onClick={() => validerSignalement(s.id, 'publie')}
-                            className="px-2 py-1 bg-green-500 text-white text-[10px] font-bold rounded-lg hover:bg-green-600"
-                          >
-                            ✓ Publier
-                          </button>
-                          <button
-                            onClick={() => validerSignalement(s.id, 'verifie')}
-                            className="px-2 py-1 bg-gray-200 text-gray-700 text-[10px] font-semibold rounded-lg hover:bg-gray-300"
-                          >
-                            Archiver
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── MODAL : Gérer les autorisations (admin uniquement) ───────────── */}
       {showPublishers && (
