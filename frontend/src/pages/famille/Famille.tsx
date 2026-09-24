@@ -45,6 +45,17 @@ export default function Famille() {
     contentRef.current?.scrollTo({ top: 0 })
   }
 
+  // La mairie (mariages) est accessible depuis l'en-tête de l'onglet Héritage —
+  // même logique que dans Moi.tsx (qui enveloppe /famille/moi/arbre).
+  const goToMairie = () => {
+    const session = JSON.parse(localStorage.getItem('session_user') || '{}')
+    const u = session.userData || session
+    const ville = u?.lieuResidence2 || u?.lieuResidence3 || u?.ville || ''
+    const params = new URLSearchParams({ type: 'mairie' })
+    if (ville) params.set('city', ville)
+    navigate(`/liste-professionnels?${params.toString()}`)
+  }
+
   const current = MENU_ITEMS.find(m => m.id === activeTab)
 
   return (
@@ -79,6 +90,15 @@ export default function Famille() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {activeTab === 'heritage' && (
+              <button
+                type="button"
+                onClick={goToMairie}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors flex-shrink-0"
+              >
+                🏛️ {t('heritage.tab_mairie')}
+              </button>
+            )}
             {activeTab === 'amitie' && (
               <>
                 <Link
