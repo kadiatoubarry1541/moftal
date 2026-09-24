@@ -37,13 +37,6 @@ const DOMAINES_OPTIONS = [
   { id: 'gouvernance',    label: 'Gouvernance',           emoji: '🏛️' },
 ];
 
-const STATUT_CONFIG = {
-  annonce:   { label: 'Annoncé',    bg: 'bg-blue-100',   text: 'text-blue-700',   dot: 'bg-blue-500' },
-  en_cours:  { label: 'En cours',   bg: 'bg-amber-100',  text: 'text-amber-700',  dot: 'bg-amber-500' },
-  termine:   { label: 'Terminé',    bg: 'bg-green-100',  text: 'text-green-700',  dot: 'bg-green-500' },
-  abandonne: { label: 'Abandonné',  bg: 'bg-red-100',    text: 'text-red-700',    dot: 'bg-red-500' },
-};
-
 const TYPE_SIGNALEMENT = [
   { id: 'infrastructure',    label: 'Infrastructure endommagée', emoji: '🛣️' },
   { id: 'projet_abandonne',  label: 'Projet abandonné',          emoji: '⚠️' },
@@ -92,7 +85,7 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const [showPublishers, setShowPublishers] = useState(false);
   const [publishers, setPublishers] = useState<any[]>([]);
   const [newPublisher, setNewPublisher] = useState({ numeroH: '', name: '', role: 'chef' });
-  const [activeTab, setActiveTab] = useState<'actualites' | 'projets' | 'signaler'>('actualites');
+  const [activeTab, setActiveTab] = useState<'actualites' | 'signaler'>('actualites');
 
   // Actualités
   const [actualites, setActualites] = useState<any[]>([]);
@@ -106,18 +99,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
   const actuMediaInputRef = useRef<HTMLInputElement>(null);
   const [allowedHigherLevels, setAllowedHigherLevels] = useState<HigherLevel[]>([]);
   const [selectedPartages, setSelectedPartages] = useState<Set<string>>(new Set());
-
-  // Projets
-  const [projets, setProjets] = useState<any[]>([]);
-  const [loadingProjets, setLoadingProjets] = useState(true);
-  const [showProjetForm, setShowProjetForm] = useState(false);
-  const [projetForm, setProjetForm] = useState({
-    titre: '', description: '', domaine: '', statut: 'annonce',
-    budget: '', source: '', dateDebut: '', dateFin: ''
-  });
-  const [projetLoading, setProjetLoading] = useState(false);
-  const [filtreStatut, setFiltreStatut] = useState('');
-  const [filtreDomaine, setFiltreDomaine] = useState('');
 
   // Signalements
   const [signalements, setSignalements] = useState<any[]>([]);
@@ -148,7 +129,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
 
   useEffect(() => {
     loadActualites();
-    loadProjets();
     loadLogo();
     checkCanPublishActu();
     if (canPublish) loadSignalements();
@@ -262,14 +242,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     } catch {} finally { setLoadingActu(false); }
   };
 
-  const loadProjets = async () => {
-    setLoadingProjets(true);
-    try {
-      const res = await fetch(api(`/projets?${qs}`), { headers: { Authorization: `Bearer ${token()}` } });
-      if (res.ok) { const d = await res.json(); setProjets(d.projets || []); }
-    } catch {} finally { setLoadingProjets(false); }
-  };
-
   const loadSignalements = async () => {
     try {
       const res = await fetch(api(`/signalements?${qs}`), { headers: { Authorization: `Bearer ${token()}` } });
@@ -359,41 +331,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     loadActualites();
   };
 
-  const ajouterProjet = async () => {
-    if (!projetForm.titre.trim()) return;
-    setProjetLoading(true);
-    try {
-      const res = await fetch(api('/projets'), {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...projetForm, scope, location })
-      });
-      if (res.ok) {
-        setShowProjetForm(false);
-        setProjetForm({ titre: '', description: '', domaine: '', statut: 'annonce', budget: '', source: '', dateDebut: '', dateFin: '' });
-        loadProjets();
-      } else {
-        const e = await res.json().catch(() => ({}));
-        alert(e.message || 'Erreur');
-      }
-    } catch { alert('Erreur réseau'); } finally { setProjetLoading(false); }
-  };
-
-  const changerStatutProjet = async (id: string, statut: string) => {
-    await fetch(api(`/projets/${id}`), {
-      method: 'PATCH',
-      headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ statut })
-    });
-    loadProjets();
-  };
-
-  const supprimerProjet = async (id: string) => {
-    if (!confirm('Supprimer ce projet ?')) return;
-    await fetch(api(`/projets/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${token()}` } });
-    loadProjets();
-  };
-
   const envoyerSignalement = async () => {
     if (!sigForm.description.trim()) return;
     setSigLoading(true);
@@ -420,12 +357,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     });
     loadSignalements();
   };
-
-  const projetsFiltres = projets.filter(p => {
-    if (filtreStatut && p.statut !== filtreStatut) return false;
-    if (filtreDomaine && p.domaine !== filtreDomaine) return false;
-    return true;
-  });
 
   return (
     <div className="space-y-3">
@@ -459,7 +390,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
       <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
         {[
           { id: 'actualites', icon: '📰', label: 'Actualités' },
-          { id: 'projets',    icon: '🏗️', label: 'Projets' },
           { id: 'signaler',   icon: '📍', label: 'Signaler' },
         ].map(tab => (
           <button
@@ -471,9 +401,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
           >
             <span>{tab.icon}</span>
             <span>{tab.label}</span>
-            {tab.id === 'projets' && projets.length > 0 && (
-              <span className="ml-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 rounded-full">{projets.length}</span>
-            )}
             {tab.id === 'signaler' && canPublish && signalements.filter(s => s.statut === 'recu').length > 0 && (
               <span className="ml-0.5 bg-red-100 text-red-700 text-[10px] font-bold px-1.5 rounded-full">{signalements.filter(s => s.statut === 'recu').length}</span>
             )}
@@ -544,108 +471,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
                         <span className="text-xs text-gray-400">✍️ {actu.authorName}</span>
                         <span className="text-xs text-gray-400">{new Date(actu.createdAt || actu.created_at).toLocaleDateString('fr-FR')}</span>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── TAB PROJETS ──────────────────────────────────────────────────── */}
-      {activeTab === 'projets' && (
-        <div className="space-y-3">
-          {canPublish && (
-            <button
-              onClick={() => setShowProjetForm(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-500 text-white font-semibold rounded-xl text-sm hover:bg-amber-600 transition-colors"
-            >
-              ✚ Ajouter un projet
-            </button>
-          )}
-
-          {/* Filtres */}
-          <div className="flex gap-2 flex-wrap">
-            <select
-              value={filtreStatut}
-              onChange={e => setFiltreStatut(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none"
-            >
-              <option value="">Tous les statuts</option>
-              {Object.entries(STATUT_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-            <select
-              value={filtreDomaine}
-              onChange={e => setFiltreDomaine(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none"
-            >
-              <option value="">Tous les domaines</option>
-              {DOMAINES_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.emoji} {d.label}</option>)}
-            </select>
-          </div>
-
-          {/* Légende statuts */}
-          <div className="flex gap-2 flex-wrap">
-            {Object.entries(STATUT_CONFIG).map(([k, v]) => (
-              <span key={k} className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${v.bg} ${v.text}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${v.dot}`} />{v.label}
-              </span>
-            ))}
-          </div>
-
-          {loadingProjets ? (
-            <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-amber-200 border-t-amber-500 rounded-full animate-spin" /></div>
-          ) : projetsFiltres.length === 0 ? (
-            <div className="bg-gray-50 rounded-xl p-8 text-center">
-              <div className="text-4xl mb-2">🏗️</div>
-              <p className="text-gray-500 text-sm font-medium">Aucun projet enregistré</p>
-              {canPublish && <p className="text-gray-400 text-xs mt-1">Ajoutez les projets de développement de {locationName}</p>}
-              {!canPublish && <p className="text-gray-400 text-xs mt-1">Les journalistes enregistrent ici les projets gouvernementaux</p>}
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {projetsFiltres.map(projet => {
-                const statut = STATUT_CONFIG[projet.statut as keyof typeof STATUT_CONFIG] || STATUT_CONFIG.annonce;
-                const dom = DOMAINES_MAP[projet.domaine] || null;
-                return (
-                  <div key={projet.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${statut.bg} ${statut.text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${statut.dot}`} />{statut.label}
-                          </span>
-                          {dom && (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: dom.color + '20', color: dom.color }}>
-                              {dom.emoji}
-                            </span>
-                          )}
-                        </div>
-                        <h4 className="font-bold text-gray-900 text-sm">{projet.titre}</h4>
-                        {projet.description && <p className="text-gray-500 text-xs mt-1">{projet.description}</p>}
-                        <div className="flex gap-3 mt-2 flex-wrap">
-                          {projet.budget && <span className="text-xs text-green-700 font-semibold">💰 {projet.budget}</span>}
-                          {projet.source && <span className="text-xs text-blue-600">🏛️ {projet.source}</span>}
-                          {projet.dateDebut && <span className="text-xs text-gray-400">📅 {new Date(projet.dateDebut).toLocaleDateString('fr-FR')}</span>}
-                        </div>
-                      </div>
-                      {canPublish && (
-                        <div className="flex flex-col gap-1 flex-shrink-0">
-                          <select
-                            value={projet.statut}
-                            onChange={e => changerStatutProjet(projet.id, e.target.value)}
-                            className="text-[10px] border border-gray-200 rounded-lg px-1.5 py-1 bg-white focus:outline-none"
-                          >
-                            {Object.entries(STATUT_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                          </select>
-                          <button onClick={() => supprimerProjet(projet.id)} className="text-red-400 hover:text-red-600 text-[10px] text-center">Supprimer</button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-2 pt-2 border-t border-gray-50 flex justify-between">
-                      <span className="text-[10px] text-gray-400">Par {projet.authorName}</span>
-                      <span className="text-[10px] text-gray-400">{new Date(projet.createdAt || projet.created_at).toLocaleDateString('fr-FR')}</span>
                     </div>
                   </div>
                 );
@@ -951,102 +776,6 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
         </div>
       )}
 
-      {/* ── MODAL : Ajouter projet ───────────────────────────────────────── */}
-      {showProjetForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="bg-gradient-to-r from-amber-600 to-amber-400 p-5 flex-shrink-0">
-              <h2 className="text-lg font-bold text-white">🏗️ Ajouter un projet</h2>
-              <p className="text-amber-100 text-xs mt-1">{locationName}</p>
-            </div>
-            <div className="overflow-y-auto flex-1 p-5 space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Titre du projet *</label>
-                <input
-                  type="text"
-                  value={projetForm.titre}
-                  onChange={e => setProjetForm({ ...projetForm, titre: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  placeholder="Ex: Construction du pont de Kindia..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={projetForm.description}
-                  onChange={e => setProjetForm({ ...projetForm, description: e.target.value })}
-                  rows={3}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
-                  placeholder="Décrivez le projet..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Domaine</label>
-                  <select
-                    value={projetForm.domaine}
-                    onChange={e => setProjetForm({ ...projetForm, domaine: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-2 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  >
-                    <option value="">— Domaine —</option>
-                    {DOMAINES_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.emoji} {d.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Statut</label>
-                  <select
-                    value={projetForm.statut}
-                    onChange={e => setProjetForm({ ...projetForm, statut: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-2 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  >
-                    {Object.entries(STATUT_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Budget (optionnel)</label>
-                <input
-                  type="text"
-                  value={projetForm.budget}
-                  onChange={e => setProjetForm({ ...projetForm, budget: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  placeholder="Ex: 5 milliards GNF, 2M USD..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Source / Bailleur (optionnel)</label>
-                <input
-                  type="text"
-                  value={projetForm.source}
-                  onChange={e => setProjetForm({ ...projetForm, source: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  placeholder="Ex: Banque Mondiale, Gouvernement, USAID..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Date début</label>
-                  <input type="date" value={projetForm.dateDebut} onChange={e => setProjetForm({ ...projetForm, dateDebut: e.target.value })} className="w-full border border-gray-200 rounded-xl px-2 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">Date fin prévue</label>
-                  <input type="date" value={projetForm.dateFin} onChange={e => setProjetForm({ ...projetForm, dateFin: e.target.value })} className="w-full border border-gray-200 rounded-xl px-2 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                </div>
-              </div>
-            </div>
-            <div className="px-5 pb-5 flex gap-3 flex-shrink-0 border-t pt-4">
-              <button onClick={() => setShowProjetForm(false)} className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm transition-colors">Annuler</button>
-              <button
-                onClick={ajouterProjet}
-                disabled={projetLoading || !projetForm.titre.trim()}
-                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition-colors"
-              >
-                {projetLoading ? 'Ajout...' : '🏗️ Ajouter'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Page entière "Infos" du lieu — même principe que pour le quartier :
           logo, nom, puis un menu (Liste des lieux qu'il regroupe, Photo de
