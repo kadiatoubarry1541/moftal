@@ -8,6 +8,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 const MAX_VIDEO_SECONDS = 5;
 
 const DOMAINES_MAP: Record<string, { emoji: string; color: string }> = {
+  securite:       { emoji: '🚨', color: '#dc2626' },
   agriculture:    { emoji: '🌾', color: '#156315' },
   habitat:        { emoji: '🏗️', color: '#0891b2' },
   energie:        { emoji: '⚡', color: '#d97706' },
@@ -23,6 +24,7 @@ const DOMAINES_MAP: Record<string, { emoji: string; color: string }> = {
 };
 
 const DOMAINES_OPTIONS = [
+  { id: 'securite',       label: 'Alerte sécurité',       emoji: '🚨' },
   { id: 'agriculture',    label: 'Agriculture',           emoji: '🌾' },
   { id: 'habitat',        label: 'Habitat & Logement',    emoji: '🏗️' },
   { id: 'energie',        label: 'Énergie',               emoji: '⚡' },
@@ -238,7 +240,16 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
     setLoadingActu(true);
     try {
       const res = await fetch(api(`/actualites?${qs}`), { headers: { Authorization: `Bearer ${token()}` } });
-      if (res.ok) { const d = await res.json(); setActualites(d.actualites || []); }
+      if (res.ok) {
+        const d = await res.json();
+        // Les alertes sécurité remontent toujours en premier.
+        const list = (d.actualites || []).sort((a: any, b: any) => {
+          const aSec = a.domaine === 'securite' ? 1 : 0;
+          const bSec = b.domaine === 'securite' ? 1 : 0;
+          return bSec - aSec;
+        });
+        setActualites(list);
+      }
     } catch {} finally { setLoadingActu(false); }
   };
 
@@ -443,8 +454,9 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
             <div className="space-y-3">
               {actualites.map(actu => {
                 const dom = DOMAINES_MAP[actu.domaine] || null;
+                const isSecurite = actu.domaine === 'securite';
                 return (
-                  <div key={actu.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                  <div key={actu.id} className={`bg-white rounded-xl border overflow-hidden shadow-sm ${isSecurite ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'}`}>
                     {actu.mediaUrl && (
                       actu.mediaType === 'video' ? (
                         <video src={actu.mediaUrl} controls className="w-full h-40 object-cover bg-black" />

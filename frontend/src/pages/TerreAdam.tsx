@@ -9,6 +9,7 @@ import {
 import { getCountryFlag, getContinentIcon, getRegionIcon } from '../utils/countryFlags';
 import { getCountryGeoLabels } from '../utils/countryGeoStructure';
 import DeveloppementSection, { type DeveloppementSectionHandle } from '../components/DeveloppementSection';
+import { QuartierActualites } from '../components/QuartierActualites';
 import LivreQuartier, { type LivreQuartierHandle } from '../components/LivreQuartier';
 import ReglesLocalite, { type ReglesLocaliteHandle } from '../components/ReglesLocalite';
 import ResidenceProofs, { type ResidenceProofsHandle } from '../components/ResidenceProofs';
@@ -603,6 +604,26 @@ export default function TerreAdam() {
                             isAdmin={isAdmin}
                             higherLevels={higherLevelsFrom('quartier')}
                             hideProjetsButton
+                          />
+                        );
+                      })()}
+
+                      {/* Actualités du quartier — annonces, sensibilisation et
+                          alertes sécurité (mises en avant automatiquement). */}
+                      {(() => {
+                        const slotNum = activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3;
+                        const code = userQuartierCodes[slotNum - 1];
+                        const loc = code ? findLocationByCode(code) : null;
+                        const name = loc?.name || (isRealLieu(code) ? code : null);
+
+                        if (!code && !isAdmin) return null;
+                        return (
+                          <QuartierActualites
+                            scope="quartier"
+                            location={code || `quartier-${slotNum}`}
+                            locationName={name || `Résidence ${slotNum}`}
+                            isJournalist={isJournalist}
+                            isAdmin={isAdmin}
                           />
                         );
                       })()}
