@@ -72,6 +72,7 @@ export default function TerreAdam() {
   // Clic sur la photo du quartier (comme la photo de profil) : ouvre le
   // menu Liste/Caisse au lieu d'avoir des boutons séparés en permanence.
   const [showQuartierMenu, setShowQuartierMenu] = useState(false);
+  const [showQuartierActualites, setShowQuartierActualites] = useState(false);
   const quartierLogoInputRef = useRef<HTMLInputElement>(null);
   // Logo de chaque résidence (1, 2, 3) pour l'afficher directement dans
   // l'onglet — même les personnes qui ne savent pas lire reconnaissent
@@ -432,6 +433,14 @@ export default function TerreAdam() {
     );
   }
 
+  // Lieu du quartier actif (Résidence 1/2/3) — partagé entre la Caisse,
+  // les Actualités et le bouton du même nom, pour ne pas recalculer
+  // trois fois la même chose.
+  const activeQuartierSlotNum = activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : activeLieuTab === 'quartier-3' ? 3 : 0;
+  const activeQuartierCode = activeQuartierSlotNum > 0 ? userQuartierCodes[activeQuartierSlotNum - 1] : null;
+  const activeQuartierLoc = activeQuartierCode ? findLocationByCode(activeQuartierCode) : null;
+  const activeQuartierName = activeQuartierLoc?.name || (isRealLieu(activeQuartierCode) ? activeQuartierCode : null);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header + Menu 3 points */}
@@ -608,26 +617,6 @@ export default function TerreAdam() {
                         );
                       })()}
 
-                      {/* Actualités du quartier — annonces, sensibilisation et
-                          alertes sécurité (mises en avant automatiquement). */}
-                      {(() => {
-                        const slotNum = activeLieuTab === 'quartier-1' ? 1 : activeLieuTab === 'quartier-2' ? 2 : 3;
-                        const code = userQuartierCodes[slotNum - 1];
-                        const loc = code ? findLocationByCode(code) : null;
-                        const name = loc?.name || (isRealLieu(code) ? code : null);
-
-                        if (!code && !isAdmin) return null;
-                        return (
-                          <QuartierActualites
-                            scope="quartier"
-                            location={code || `quartier-${slotNum}`}
-                            locationName={name || `Résidence ${slotNum}`}
-                            isJournalist={isJournalist}
-                            isAdmin={isAdmin}
-                          />
-                        );
-                      })()}
-
                       {/* Messagerie */}
                       <div className="space-y-3">
                         {/* Filtre admin en chips */}
@@ -777,6 +766,19 @@ export default function TerreAdam() {
                             </button>
                           )}
 
+                          {/* Actualités du quartier — annonces, sensibilisation et
+                              alertes sécurité (mises en avant automatiquement dedans). */}
+                          <button
+                            type="button"
+                            onClick={() => setShowQuartierActualites(true)}
+                            className="w-full flex items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 hover:bg-gray-50 transition-colors"
+                          >
+                            <span className="flex items-center gap-2 font-semibold text-gray-700 text-sm">
+                              📰 Actualités du quartier
+                            </span>
+                            <span className="text-gray-400">›</span>
+                          </button>
+
                           {/* Accès aux outils du quartier (Caisse, Livre, Règles,
                               Preuves de résidence, liste des membres) — la messagerie
                               elle-même se trouve désormais dans le bouton flottant. */}
@@ -923,6 +925,26 @@ export default function TerreAdam() {
 
       {/* Page entière — Infos du quartier (ouverte en cliquant sur sa photo,
           comme la photo de profil, pour ne pas mélanger ça avec le chat) */}
+      {/* Page entière — Actualités du quartier (alertes sécurité en premier,
+          sensibilisation via photo/vidéo, annonces) */}
+      {showQuartierActualites && (activeQuartierCode || isAdmin) && (
+        <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col">
+          <div className="bg-gray-800 text-white px-4 py-3 flex items-center gap-3 flex-shrink-0">
+            <button onClick={() => setShowQuartierActualites(false)} aria-label={t('btn.back')} className="text-3xl leading-none">‹</button>
+            <h2 className="font-bold text-base truncate">📰 Actualités — {activeQuartierName || `Résidence ${activeQuartierSlotNum}`}</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            <QuartierActualites
+              scope="quartier"
+              location={activeQuartierCode || `quartier-${activeQuartierSlotNum}`}
+              locationName={activeQuartierName || `Résidence ${activeQuartierSlotNum}`}
+              isJournalist={isJournalist}
+              isAdmin={isAdmin}
+            />
+          </div>
+        </div>
+      )}
+
       {showQuartierMenu && selectedGroup && (() => {
         const canEditLogo = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
         const logoSrc = selectedGroup.logoUrl
