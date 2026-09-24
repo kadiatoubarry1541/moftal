@@ -185,14 +185,31 @@ export function FloatingMessenger() {
 
   useEffect(() => {
     const session = localStorage.getItem('session_user')
-    if (session) {
-      try {
-        const parsed = JSON.parse(session)
-        setUserData(parsed.userData || parsed)
-      } catch {
-        // ignore
-      }
+    if (!session) return
+    let cached: SessionUser | null = null
+    try {
+      const parsed = JSON.parse(session)
+      cached = parsed.userData || parsed
+      setUserData(cached)
+    } catch {
+      return
     }
+
+    // La session locale peut être incomplète (quartier/activité non
+    // synchronisés) : on rafraîchit depuis le serveur, comme Terre ADAM
+    // et Activité le font déjà, pour que le bouton flottant voie les
+    // mêmes groupes que ces pages.
+    const token = localStorage.getItem('token')
+    if (!token || !cached) return
+    fetch(`${API_BASE}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (!d?.success || !d.user) return
+        setUserData(prev => ({ ...(prev || {}), ...d.user }))
+      })
+      .catch(() => {
+        // hors-ligne : on garde la session en cache
+      })
   }, [])
 
   const fetchLastMessage = async (type: ChatType, linkId: string) => {
