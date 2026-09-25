@@ -198,8 +198,11 @@ export default function InscriptionPro() {
   // Types Échanges qui nécessitent un sous-secteur
   const NEEDS_SUBSECTOR = ["vendor", "supplier", "producer"];
 
-  // Types qui nécessitent un justificatif obligatoire
-  const REQUIRES_JUSTIFICATIF = ["clinic", "health_worker", "school", "mairie", "security_agency", "ngo"];
+  // Inscription simple partout, sauf pour les domaines très suivis par l'État
+  // (santé, sécurité, éducation) qui gardent un justificatif obligatoire dès
+  // le départ. Pour tous les autres types, le compte se crée facilement et
+  // le profil peut être complété plus tard.
+  const REQUIRES_JUSTIFICATIF = ["clinic", "health_worker", "school", "madrasa", "security_agency"];
 
   // Champs spécifiques restaurant
   const [cuisineType, setCuisineType] = useState("");
@@ -232,10 +235,6 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
     }
     if (NEEDS_SUBSECTOR.includes(selectedType) && !subSector) {
       setError("Veuillez choisir votre niveau d'échanges (primaire, secondaire ou tertiaire).");
-      return;
-    }
-    if (selectedType === "restaurant" && !form.phone.trim()) {
-      setError("Le numéro de téléphone est obligatoire pour un restaurant.");
       return;
     }
     if (REQUIRES_JUSTIFICATIF.includes(selectedType) && !form.justificatifDocument) {
@@ -540,11 +539,10 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
             </div>
             <div>
               <label className={labelCls}>
-                Téléphone {selectedType === "restaurant" && <span className="text-red-500">* (visible par les clients)</span>}
+                Téléphone {selectedType === "restaurant" && <span className="text-gray-400 font-normal">(recommandé, visible par les clients)</span>}
               </label>
               <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={inputCls}
-                placeholder={selectedType === "restaurant" ? "Ex: 620 00 00 00" : ""}
-                required={selectedType === "restaurant"} />
+                placeholder={selectedType === "restaurant" ? "Ex: 620 00 00 00" : ""} />
             </div>
             <div>
               <label className={labelCls}>Email</label>
