@@ -53,6 +53,12 @@ function isSuperAdmin7(user) {
   return user?.numeroH === SUPER_ADMIN_7;
 }
 
+/** Tout compte admin (pas seulement le compte maître) doit pouvoir tester
+ * ses propres créations de comptes pro sans attendre d'approbation. */
+function isAnyAdmin(user) {
+  return !!(user?.isMasterAdmin || user?.role === 'admin' || user?.role === 'super-admin' || isSuperAdmin7(user));
+}
+
 function isSubAdmin0(user) {
   return user?.numeroH === SUB_ADMIN_0;
 }
@@ -205,15 +211,15 @@ router.post('/register', authenticate, async (req, res) => {
       status: 'pending'
     });
 
-    // Seul le compte maître (les 7) a tous les droits : personne ne l'approuve.
-    // Ses propres créations sont donc publiées immédiatement, sans attente.
-    if (isSuperAdmin7(req.user)) {
+    // Un admin n'a pas à attendre sa propre approbation : ses créations
+    // (y compris pour tester ses gestions internes) sont publiées immédiatement.
+    if (isAnyAdmin(req.user)) {
       await finalizeApproval(account, req.userId);
     }
 
     res.status(201).json({
       success: true,
-      message: isSuperAdmin7(req.user)
+      message: isAnyAdmin(req.user)
         ? 'Compte créé et publié.'
         : 'Inscription envoyée. En attente de validation par l\'administrateur.',
       account: sanitizeAccountForPublic(account)
