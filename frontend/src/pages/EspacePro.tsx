@@ -2624,9 +2624,11 @@ export default function EspacePro() {
                   </>
                 )}
 
-                {/* Bouton modifier */}
+                {/* Bouton modifier — envoie vers l'onglet Vitrine, qui publie
+                    réellement les modifications (InscriptionPro ne sait pas
+                    éditer un compte existant, il ne fait que créer). */}
                 <button
-                  onClick={() => navigate(`/inscription-pro?edit=${account.id}`)}
+                  onClick={() => setTab('vitrine')}
                   className={`w-full min-h-[48px] px-5 py-3 ${svc.btnPrimary} text-white font-semibold rounded-xl transition-colors text-sm flex items-center justify-center gap-2`}
                 >
                   ✏️ Modifier mes informations
