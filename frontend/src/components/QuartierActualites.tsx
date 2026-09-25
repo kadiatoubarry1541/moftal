@@ -6,15 +6,17 @@ const MAX_VIDEO_SECONDS = 5
 // "Sécurité" en premier et mis en avant en rouge — une alerte doit se voir
 // immédiatement, avant les autres catégories d'actualités.
 const DOMAINES_MAP: Record<string, { emoji: string; color: string }> = {
-  securite: { emoji: '🚨', color: '#dc2626' },
-  sante:    { emoji: '🏥', color: '#1a8f1a' },
-  autre:    { emoji: '📰', color: '#475569' },
+  securite:       { emoji: '🚨', color: '#dc2626' },
+  sensibilisation:{ emoji: '📢', color: '#2563eb' },
+  sante:          { emoji: '🏥', color: '#1a8f1a' },
+  autre:          { emoji: '📰', color: '#475569' },
 }
 
 const DOMAINES_OPTIONS = [
-  { id: 'securite', label: 'Alerte sécurité', emoji: '🚨' },
-  { id: 'sante',    label: 'Santé',           emoji: '🏥' },
-  { id: 'autre',    label: 'Autre',           emoji: '📰' },
+  { id: 'securite',        label: 'Alerte sécurité',   emoji: '🚨' },
+  { id: 'sensibilisation', label: 'Sensibilisation',   emoji: '📢' },
+  { id: 'sante',           label: 'Santé',             emoji: '🏥' },
+  { id: 'autre',           label: 'Autre',             emoji: '📰' },
 ]
 
 interface Actualite {
@@ -81,13 +83,9 @@ export function QuartierActualites({ scope, location, locationName, isJournalist
       if (res.ok) {
         const d = await res.json()
         const list: Actualite[] = d.actualites || []
-        // Les alertes sécurité remontent toujours en premier, quelle que soit leur date.
-        list.sort((a, b) => {
-          const aSec = a.domaine === 'securite' ? 1 : 0
-          const bSec = b.domaine === 'securite' ? 1 : 0
-          if (aSec !== bSec) return bSec - aSec
-          return 0
-        })
+        // Les alertes sécurité remontent toujours en premier, puis la sensibilisation, quelle que soit leur date.
+        const priorite = (dom?: string) => dom === 'securite' ? 2 : dom === 'sensibilisation' ? 1 : 0
+        list.sort((a, b) => priorite(b.domaine) - priorite(a.domaine))
         setActualites(list)
       }
     } catch {
@@ -267,8 +265,9 @@ export function QuartierActualites({ scope, location, locationName, isJournalist
           {actualites.map(actu => {
             const dom = DOMAINES_MAP[actu.domaine || ''] || null
             const isSecurite = actu.domaine === 'securite'
+            const isSensibilisation = actu.domaine === 'sensibilisation'
             return (
-              <div key={actu.id} className={`bg-white rounded-xl border overflow-hidden shadow-sm ${isSecurite ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'}`}>
+              <div key={actu.id} className={`bg-white rounded-xl border overflow-hidden shadow-sm ${isSecurite ? 'border-red-300 ring-1 ring-red-200' : isSensibilisation ? 'border-blue-300 ring-1 ring-blue-200' : 'border-gray-200'}`}>
                 {actu.mediaUrl && (
                   actu.mediaType === 'video' ? (
                     <video src={actu.mediaUrl} controls className="w-full h-40 object-cover bg-black" />

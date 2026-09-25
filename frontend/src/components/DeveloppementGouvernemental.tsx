@@ -9,6 +9,7 @@ const MAX_VIDEO_SECONDS = 5;
 
 const DOMAINES_MAP: Record<string, { emoji: string; color: string }> = {
   securite:       { emoji: '🚨', color: '#dc2626' },
+  sensibilisation:{ emoji: '📢', color: '#2563eb' },
   agriculture:    { emoji: '🌾', color: '#156315' },
   habitat:        { emoji: '🏗️', color: '#0891b2' },
   energie:        { emoji: '⚡', color: '#d97706' },
@@ -25,6 +26,7 @@ const DOMAINES_MAP: Record<string, { emoji: string; color: string }> = {
 
 const DOMAINES_OPTIONS = [
   { id: 'securite',       label: 'Alerte sécurité',       emoji: '🚨' },
+  { id: 'sensibilisation',label: 'Sensibilisation',       emoji: '📢' },
   { id: 'agriculture',    label: 'Agriculture',           emoji: '🌾' },
   { id: 'habitat',        label: 'Habitat & Logement',    emoji: '🏗️' },
   { id: 'energie',        label: 'Énergie',               emoji: '⚡' },
@@ -227,12 +229,9 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
       const res = await fetch(api(`/actualites?${qs}`), { headers: { Authorization: `Bearer ${token()}` } });
       if (res.ok) {
         const d = await res.json();
-        // Les alertes sécurité remontent toujours en premier.
-        const list = (d.actualites || []).sort((a: any, b: any) => {
-          const aSec = a.domaine === 'securite' ? 1 : 0;
-          const bSec = b.domaine === 'securite' ? 1 : 0;
-          return bSec - aSec;
-        });
+        // Les alertes sécurité remontent toujours en premier, puis la sensibilisation.
+        const priorite = (dom?: string) => dom === 'securite' ? 2 : dom === 'sensibilisation' ? 1 : 0;
+        const list = (d.actualites || []).sort((a: any, b: any) => priorite(b.domaine) - priorite(a.domaine));
         setActualites(list);
       }
     } catch {} finally { setLoadingActu(false); }
@@ -384,8 +383,9 @@ export default function DeveloppementGouvernemental({ scope, location, locationN
               {actualites.map(actu => {
                 const dom = DOMAINES_MAP[actu.domaine] || null;
                 const isSecurite = actu.domaine === 'securite';
+                const isSensibilisation = actu.domaine === 'sensibilisation';
                 return (
-                  <div key={actu.id} className={`bg-white rounded-xl border overflow-hidden shadow-sm ${isSecurite ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'}`}>
+                  <div key={actu.id} className={`bg-white rounded-xl border overflow-hidden shadow-sm ${isSecurite ? 'border-red-300 ring-1 ring-red-200' : isSensibilisation ? 'border-blue-300 ring-1 ring-blue-200' : 'border-gray-200'}`}>
                     {actu.mediaUrl && (
                       actu.mediaType === 'video' ? (
                         <video src={actu.mediaUrl} controls className="w-full h-40 object-cover bg-black" />
