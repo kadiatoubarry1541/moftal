@@ -253,36 +253,45 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
   };
 
   return (
-    <button
-      onClick={handleInstall}
-      disabled={loading}
-      title={loading ? "Installation…" : "Installer l'application"}
-      aria-label={loading ? "Installation…" : "Installer l'application"}
-      style={isBanner
-        ? { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "#f0fdf4", border: "none", borderBottom: "1px solid #f0f0f0", cursor: loading ? "default" : "pointer", textAlign: "left", opacity: loading ? 0.75 : 1 }
-        : {
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 44, height: 44, minWidth: 44, minHeight: 44,
-            background: "#1a8f1a", color: "white",
-            border: "none", borderRadius: "50%",
-            fontSize: 20, cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(26,143,26,0.35)",
-            opacity: loading ? 0.75 : 1,
-          }
-      }
-    >
-      {isBanner ? (
-        <>
-          <span style={{ fontSize: 22 }}>{loading ? "⏳" : "📲"}</span>
-          <span>
-            <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#166534" }}>
-              {loading ? "Installation…" : "Installer l'application"}
+    <>
+      <button
+        onClick={handleInstall}
+        disabled={loading}
+        title={loading ? "Installation…" : "Installer l'application"}
+        aria-label={loading ? "Installation…" : "Installer l'application"}
+        style={isBanner
+          ? { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "#f0fdf4", border: "none", borderBottom: "1px solid #f0f0f0", cursor: loading ? "default" : "pointer", textAlign: "left", opacity: loading ? 0.75 : 1 }
+          : {
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: 44, height: 44, minWidth: 44, minHeight: 44,
+              background: "#1a8f1a", color: "white",
+              border: "none", borderRadius: "50%",
+              fontSize: 20, cursor: "pointer",
+              boxShadow: "0 4px 14px rgba(26,143,26,0.35)",
+              opacity: loading ? 0.75 : 1,
+            }
+        }
+      >
+        {isBanner ? (
+          <>
+            <span style={{ fontSize: 22 }}>{loading ? "⏳" : "📲"}</span>
+            <span>
+              <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#166534" }}>
+                {loading ? "Installation…" : "Installer l'application"}
+              </span>
+              <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>Application mobile gratuite</span>
             </span>
-            <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>Application mobile gratuite</span>
-          </span>
-        </>
-      ) : (loading ? "⏳" : "📲")}
-    </button>
+          </>
+        ) : (loading ? "⏳" : "📲")}
+      </button>
+      {loading && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "#1e293b", color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 700, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", borderRadius: "50%", animation: "moftal-spin 0.8s linear infinite" }} />
+          ⏳ Installation en cours…
+        </div>
+      )}
+      <style>{`@keyframes moftal-spin { to { transform: rotate(360deg); } }`}</style>
+    </>
   );
 }
 
@@ -395,6 +404,13 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
           📲 Appuyez sur l'icône d'installation dans la barre du navigateur
         </div>
       )}
+      {installing && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "#1e293b", color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 700, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white", borderRadius: "50%", animation: "moftal-spin 0.8s linear infinite" }} />
+          ⏳ Installation en cours…
+        </div>
+      )}
+      <style>{`@keyframes moftal-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
