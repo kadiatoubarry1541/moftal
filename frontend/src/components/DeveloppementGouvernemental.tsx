@@ -10,35 +10,15 @@ const MAX_VIDEO_SECONDS = 5;
 const DOMAINES_MAP: Record<string, { emoji: string; color: string }> = {
   securite:       { emoji: '🚨', color: '#dc2626' },
   sensibilisation:{ emoji: '📢', color: '#2563eb' },
-  agriculture:    { emoji: '🌾', color: '#156315' },
-  habitat:        { emoji: '🏗️', color: '#0891b2' },
-  energie:        { emoji: '⚡', color: '#d97706' },
-  education:      { emoji: '📚', color: '#7c3aed' },
   sante:          { emoji: '🏥', color: '#1a8f1a' },
-  numerique:      { emoji: '💻', color: '#6366f1' },
-  commerce:       { emoji: '📈', color: '#1a8f1a' },
-  infrastructure: { emoji: '🛣️', color: '#64748b' },
-  environnement:  { emoji: '🌿', color: '#166534' },
-  femmes:         { emoji: '👩', color: '#db2777' },
-  jeunesse:       { emoji: '🎯', color: '#ea580c' },
-  gouvernance:    { emoji: '🏛️', color: '#1d4ed8' },
+  autre:          { emoji: '📰', color: '#475569' },
 };
 
 const DOMAINES_OPTIONS = [
-  { id: 'securite',       label: 'Alerte sécurité',       emoji: '🚨' },
-  { id: 'sensibilisation',label: 'Sensibilisation',       emoji: '📢' },
-  { id: 'agriculture',    label: 'Agriculture',           emoji: '🌾' },
-  { id: 'habitat',        label: 'Habitat & Logement',    emoji: '🏗️' },
-  { id: 'energie',        label: 'Énergie',               emoji: '⚡' },
-  { id: 'education',      label: 'Éducation',             emoji: '📚' },
-  { id: 'sante',          label: 'Santé',                 emoji: '🏥' },
-  { id: 'numerique',      label: 'Numérique',             emoji: '💻' },
-  { id: 'commerce',       label: 'Commerce & PME',        emoji: '📈' },
-  { id: 'infrastructure', label: 'Infrastructures',       emoji: '🛣️' },
-  { id: 'environnement',  label: 'Environnement',         emoji: '🌿' },
-  { id: 'femmes',         label: 'Femmes',                emoji: '👩' },
-  { id: 'jeunesse',       label: 'Jeunesse & Emploi',     emoji: '🎯' },
-  { id: 'gouvernance',    label: 'Gouvernance',           emoji: '🏛️' },
+  { id: 'securite',        label: 'Alerte sécurité', emoji: '🚨' },
+  { id: 'sensibilisation', label: 'Sensibilisation', emoji: '📢' },
+  { id: 'sante',           label: 'Santé',           emoji: '🏥' },
+  { id: 'autre',           label: 'Autre',           emoji: '📰' },
 ];
 
 interface HigherLevel {
