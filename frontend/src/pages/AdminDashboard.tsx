@@ -1600,12 +1600,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une clinique cliente (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-clinique/DEMO-REF-CLIN")}
-                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace clinique →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-clinique/DEMO-REF-CLIN")}
+                          className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/clinique/DEMO-REF-CLIN")}
+                          className="flex-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1623,12 +1631,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une école cliente (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-ecole/DEMO-REF-ECO")}
-                        className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace école →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-ecole/DEMO-REF-ECO")}
+                          className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/ecole/DEMO-REF-ECO")}
+                          className="flex-1 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1646,12 +1662,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une mosquée cliente (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-mosquee/DEMO-REF-MSQ")}
-                        className="w-full py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace mosquée →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-mosquee/DEMO-REF-MSQ")}
+                          className="flex-1 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/mosquee/DEMO-REF-MSQ")}
+                          className="flex-1 py-2.5 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1669,12 +1693,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une madrasa cliente (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-madrasa/DEMO-REF-MDS")}
-                        className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace madrasa →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-madrasa/DEMO-REF-MDS")}
+                          className="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/madrasa/DEMO-REF-MDS")}
+                          className="flex-1 py-2.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1692,12 +1724,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce qu'achète une boutique ou entreprise cliente (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-commerce/DEMO-REF-COM")}
-                        className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace commerce →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-commerce/DEMO-REF-COM")}
+                          className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/commerce/DEMO-REF-COM")}
+                          className="flex-1 py-2.5 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1715,12 +1755,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit une entreprise cliente (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-entreprise/DEMO-REF-ENT")}
-                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace entreprise →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-entreprise/DEMO-REF-ENT")}
+                          className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/entreprise/DEMO-REF-ENT")}
+                          className="flex-1 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1738,12 +1786,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit un réseau imam client (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-imam/DEMO-REF-IMAM")}
-                        className="w-full py-2.5 bg-violet-700 hover:bg-violet-800 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace imam →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-imam/DEMO-REF-IMAM")}
+                          className="flex-1 py-2.5 bg-violet-700 hover:bg-violet-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/imam/DEMO-REF-IMAM")}
+                          className="flex-1 py-2.5 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1761,12 +1817,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit une ONG cliente (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-ngo/DEMO-REF-NGO")}
-                        className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace ONG →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-ngo/DEMO-REF-NGO")}
+                          className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/ngo/DEMO-REF-NGO")}
+                          className="flex-1 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1784,12 +1848,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit un média client (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-journaliste/DEMO-REF-JOUR")}
-                        className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace journalistes →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-journaliste/DEMO-REF-JOUR")}
+                          className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/journaliste/DEMO-REF-JOUR")}
+                          className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1807,12 +1879,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit un laboratoire ou centre de recherche client (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-scientifique/DEMO-REF-SCIEN")}
-                        className="w-full py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace scientifiques →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-scientifique/DEMO-REF-SCIEN")}
+                          className="flex-1 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/scientifique/DEMO-REF-SCIEN")}
+                          className="flex-1 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1830,12 +1910,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit un grossiste ou fournisseur client (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-fournisseur/DEMO-REF-FOUR")}
-                        className="w-full py-2.5 bg-cyan-700 hover:bg-cyan-800 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace fournisseurs →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-fournisseur/DEMO-REF-FOUR")}
+                          className="flex-1 py-2.5 bg-cyan-700 hover:bg-cyan-800 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/fournisseur/DEMO-REF-FOUR")}
+                          className="flex-1 py-2.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1853,12 +1941,20 @@ export default function AdminDashboard() {
                     </div>
                     <div className="bg-white p-4">
                       <p className="text-xs text-gray-500 mb-3">Espace fonctionnel complet — identique à ce que voit une agence de sécurité cliente (3 000 000 GNF — paiement unique, à vie).</p>
-                      <button
-                        onClick={() => navigate("/gestion-securite/DEMO-REF-SECU")}
-                        className="w-full py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-semibold text-sm transition-colors"
-                      >
-                        Ouvrir l'espace sécurité →
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate("/gestion-securite/DEMO-REF-SECU")}
+                          className="flex-1 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Gestion interne →
+                        </button>
+                        <button
+                          onClick={() => navigate("/securite/DEMO-REF-SECU")}
+                          className="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-semibold text-sm transition-colors"
+                        >
+                          Vitrine publique →
+                        </button>
+                      </div>
                     </div>
                   </div>
               </div>
