@@ -680,7 +680,6 @@ export default function AdminDashboard() {
             <button
               key={tab.id}
               onClick={() => {
-                if (tab.id === "gestion-interne") { navigate("/gestion-interne"); return; }
                 setAdminSection(tab.id);
                 if (tab.id === "families" && families.length === 0) loadFamilies();
                 if (tab.id === "couples" && couples.length === 0) loadCouples();
@@ -1575,11 +1574,18 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
 
-              {/* Gestion Interne accessible via l'onglet dédié 🔧 */}
-              <div className="hidden">
+          {/* ========== GESTION INTERNE — exemples de chaque type (super-admin uniquement) ========== */}
+          {adminSection === "gestion-interne" && isSuperAdmin7(userData) && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">🔧 Exemples de Gestion Interne</h2>
+                <p className="text-sm text-gray-500 mt-1">Un espace fonctionnel complet par type d'établissement — identique à ce que voit un professionnel client, pour vérifier que chaque gestion marche.</p>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {/* Référence Clinique */}
                   <div className="border border-emerald-200 rounded-2xl overflow-hidden shadow-sm">
                     <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 flex items-center gap-3">
@@ -1855,8 +1861,6 @@ export default function AdminDashboard() {
                       </button>
                     </div>
                   </div>
-                </div>
-
               </div>
             </div>
           )}
