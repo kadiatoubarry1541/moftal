@@ -295,6 +295,128 @@ router.post('/:tenantCode/records', authenticate, verifyTenant, async (req, res)
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// ─── EXAMENS : LABORATOIRE & IMAGERIE MÉDICALE ─────────────────────────────
+
+async function ensureExamsTable() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS clinic_exams (
+      id SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      patient_id INTEGER,
+      staff_id INTEGER,
+      categorie VARCHAR(20) NOT NULL DEFAULT 'laboratoire',
+      type_examen VARCHAR(150),
+      resultat TEXT,
+      fichier TEXT,
+      statut VARCHAR(20) DEFAULT 'en_attente',
+      date_prescription DATE DEFAULT CURRENT_DATE,
+      date_resultat DATE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+router.get('/:tenantCode/exams', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureExamsTable();
+    const { categorie, patient_id } = req.query;
+    let q = `SELECT e.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom,s.prenom as s_prenom
+      FROM clinic_exams e LEFT JOIN clinic_patients p ON e.patient_id=p.id LEFT JOIN clinic_staff s ON e.staff_id=s.id
+      WHERE e.tenant_code=:code`;
+    if (categorie) q += ` AND e.categorie=:cat`;
+    if (patient_id) q += ` AND e.patient_id=:pid`;
+    q += ` ORDER BY e.created_at DESC`;
+    const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, cat: categorie, pid: patient_id }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, exams: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.post('/:tenantCode/exams', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureExamsTable();
+    const { patient_id, staff_id, categorie, type_examen, date_prescription } = req.body;
+    if (!patient_id || !type_examen) return res.status(400).json({ success: false, message: 'Patient et type d\'examen requis.' });
+    const [rows] = await sequelize.query(
+      `INSERT INTO clinic_exams (tenant_code,patient_id,staff_id,categorie,type_examen,date_prescription) VALUES(:code,:pid,:sid,:cat,:type,:date) RETURNING *`,
+      { replacements: { code: req.params.tenantCode, pid: patient_id, sid: staff_id || null, cat: categorie || 'laboratoire', type: type_examen, date: date_prescription || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, exam: rows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/:tenantCode/exams/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureExamsTable();
+    const { resultat, fichier, statut, date_resultat } = req.body;
+    if (fichier && fichier.length > 8 * 1024 * 1024) return res.status(400).json({ success: false, message: 'Fichier trop volumineux (max ~6 Mo).' });
+    await sequelize.query(
+      `UPDATE clinic_exams SET resultat=COALESCE(:resultat,resultat),fichier=COALESCE(:fichier,fichier),statut=COALESCE(:statut,statut),date_resultat=COALESCE(:date,date_resultat) WHERE id=:id AND tenant_code=:code`,
+      { replacements: { resultat: resultat ?? null, fichier: fichier ?? null, statut: statut || null, date: date_resultat || null, id: req.params.id, code: req.params.tenantCode } }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/exams/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`DELETE FROM clinic_exams WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── CARNET DE VACCINATION ──────────────────────────────────────────────────
+
+async function ensureVaccinationsTable() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS clinic_vaccinations (
+      id SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      patient_id INTEGER NOT NULL,
+      staff_id INTEGER,
+      vaccin VARCHAR(150) NOT NULL,
+      dose VARCHAR(50),
+      date_administration DATE DEFAULT CURRENT_DATE,
+      prochain_rappel DATE,
+      notes TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+router.get('/:tenantCode/vaccinations', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureVaccinationsTable();
+    const { patient_id } = req.query;
+    let q = `SELECT v.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom
+      FROM clinic_vaccinations v LEFT JOIN clinic_patients p ON v.patient_id=p.id LEFT JOIN clinic_staff s ON v.staff_id=s.id
+      WHERE v.tenant_code=:code`;
+    if (patient_id) q += ` AND v.patient_id=:pid`;
+    q += ` ORDER BY v.date_administration DESC`;
+    const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, pid: patient_id }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, vaccinations: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.post('/:tenantCode/vaccinations', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureVaccinationsTable();
+    const { patient_id, staff_id, vaccin, dose, date_administration, prochain_rappel, notes } = req.body;
+    if (!patient_id || !vaccin) return res.status(400).json({ success: false, message: 'Patient et vaccin requis.' });
+    const [rows] = await sequelize.query(
+      `INSERT INTO clinic_vaccinations (tenant_code,patient_id,staff_id,vaccin,dose,date_administration,prochain_rappel,notes) VALUES(:code,:pid,:sid,:vac,:dose,:date,:rappel,:notes) RETURNING *`,
+      { replacements: { code: req.params.tenantCode, pid: patient_id, sid: staff_id || null, vac: vaccin, dose: dose || null, date: date_administration || null, rappel: prochain_rappel || null, notes: notes || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, vaccination: rows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/vaccinations/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`DELETE FROM clinic_vaccinations WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // ─── PAIEMENTS ───────────────────────────────────────────────────────────────
 
 router.get('/:tenantCode/payments', authenticate, verifyTenant, async (req, res) => {

@@ -8,7 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "patients" | "staff" | "appointments" | "prescriptions" | "records" | "payments" | "factures" | "pharmacie" | "settings";
+type Section = "dashboard" | "patients" | "staff" | "appointments" | "prescriptions" | "records" | "exams" | "vaccinations" | "payments" | "factures" | "pharmacie" | "settings";
 
 const SERVICES = ["Médecine générale", "Chirurgie", "Maternité", "Pédiatrie", "Ophtalmologie", "Gynécologie", "Urgences", "Radiologie", "Autre"];
 const ROLES_CLINIC = ["Admin", "Médecin", "Spécialiste", "Infirmier(e)", "Sage-femme", "Laborantin", "Radiologue", "Secrétaire", "Comptable", "Autre"];
@@ -47,13 +47,13 @@ function calcTotal(lignes: any[], remise: number) {
 
 // Droits par rôle : sections visibles pour chaque poste du personnel (Admin = accès complet)
 const ROLE_PERMISSIONS: Record<string, Section[]> = {
-  "Admin":        ["dashboard","patients","staff","appointments","prescriptions","records","payments","factures","pharmacie","settings"],
-  "Médecin":      ["dashboard","patients","appointments","prescriptions","records"],
-  "Spécialiste":  ["dashboard","patients","appointments","prescriptions","records"],
-  "Infirmier(e)": ["dashboard","patients","appointments","records"],
-  "Sage-femme":   ["dashboard","patients","appointments","records"],
-  "Laborantin":   ["dashboard","patients","records"],
-  "Radiologue":   ["dashboard","patients","records"],
+  "Admin":        ["dashboard","patients","staff","appointments","prescriptions","records","exams","vaccinations","payments","factures","pharmacie","settings"],
+  "Médecin":      ["dashboard","patients","appointments","prescriptions","records","exams","vaccinations"],
+  "Spécialiste":  ["dashboard","patients","appointments","prescriptions","records","exams"],
+  "Infirmier(e)": ["dashboard","patients","appointments","records","vaccinations"],
+  "Sage-femme":   ["dashboard","patients","appointments","records","vaccinations"],
+  "Laborantin":   ["dashboard","patients","records","exams"],
+  "Radiologue":   ["dashboard","patients","records","exams"],
   "Secrétaire":   ["dashboard","patients","appointments","payments"],
   "Comptable":    ["dashboard","payments","factures"],
   "Autre":        ["dashboard"],
@@ -66,6 +66,8 @@ const NAV_ITEMS: { id: Section; label: string; icon: string }[] = [
   { id: "appointments",  label: "Rendez-vous",       icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" },
   { id: "prescriptions", label: "Ordonnances",       icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
   { id: "records",       label: "Dossiers médicaux", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" },
+  { id: "exams",         label: "Labo & Imagerie",   icon: "M9 3v4a1 1 0 01-1 1H4m5-5h6l4 4v10a2 2 0 01-2 2H7a2 2 0 01-2-2V8l4-5zM9 15h6m-6-4h1" },
+  { id: "vaccinations",  label: "Vaccination",       icon: "M19 9l1.5-1.5m0 0L22 6m-1.5 1.5L19 9m2.5-3L15 12.5 11.5 9 3 17.5V21h3.5L15 12.5" },
   { id: "payments",      label: "Paiements",         icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
   { id: "factures",      label: "Factures",          icon: "M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" },
   { id: "pharmacie",     label: "Pharmacie",         icon: "M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" },
@@ -136,6 +138,10 @@ export default function GestionClinique() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
+  const [examsCategory, setExamsCategory] = useState<"laboratoire"|"imagerie">("laboratoire");
+  const [resultModalExam, setResultModalExam] = useState<any>(null);
+  const [vaccinations, setVaccinations] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [pharmacyStock, setPharmacyStock] = useState<any[]>([]);
@@ -257,6 +263,16 @@ export default function GestionClinique() {
       get("/patients").then(d => d.success && setPatients(d.patients));
       get("/staff").then(d => d.success && setStaff(d.staff));
     }
+    if (s === "exams") {
+      get("/exams").then(d => d.success && setExams(d.exams));
+      get("/patients").then(d => d.success && setPatients(d.patients));
+      get("/staff").then(d => d.success && setStaff(d.staff));
+    }
+    if (s === "vaccinations") {
+      get("/vaccinations").then(d => d.success && setVaccinations(d.vaccinations));
+      get("/patients").then(d => d.success && setPatients(d.patients));
+      get("/staff").then(d => d.success && setStaff(d.staff));
+    }
     if (s === "payments") {
       get("/payments").then(d => d.success && setPayments(d.payments));
       get("/patients").then(d => d.success && setPatients(d.patients));
@@ -326,6 +342,16 @@ export default function GestionClinique() {
           setForm({});
           showToast("Consultation enregistrée");
         } else showToast(d.message || "Erreur", false);
+      } else if (modal === "add-exam") {
+        if (!form.patient_id || !form.type_examen) { showToast("Patient et type d'examen obligatoires", false); return; }
+        const d = await post("/exams", form);
+        if (d.success) { setExams(p => [d.exam, ...p]); setModal(null); setForm({}); showToast("Examen prescrit"); }
+        else showToast(d.message || "Erreur", false);
+      } else if (modal === "add-vaccination") {
+        if (!form.patient_id || !form.vaccin) { showToast("Patient et vaccin obligatoires", false); return; }
+        const d = await post("/vaccinations", form);
+        if (d.success) { setVaccinations(p => [d.vaccination, ...p]); setModal(null); setForm({}); showToast("Vaccination enregistrée"); }
+        else showToast(d.message || "Erreur", false);
       } else if (modal === "add-payment") {
         if (!form.montant) { showToast("Montant obligatoire", false); return; }
         const d = await post("/payments", form);
@@ -528,6 +554,8 @@ export default function GestionClinique() {
             {section === "appointments"  && <BtnAdd label="Nouveau RDV"        onClick={() => { setModal("add-appointment"); setForm({}); }} />}
             {section === "prescriptions" && <BtnAdd label="Créer ordonnance"   onClick={() => { setModal("add-prescription"); setForm({}); }} />}
             {section === "records"       && <BtnAdd label="Nouvelle consultation" onClick={() => { setModal("add-record"); setForm({}); }} />}
+            {section === "exams"         && <BtnAdd label="Prescrire un examen" onClick={() => { setModal("add-exam"); setForm({ categorie: examsCategory }); }} />}
+            {section === "vaccinations"  && <BtnAdd label="Enregistrer un vaccin" onClick={() => { setModal("add-vaccination"); setForm({}); }} />}
             {section === "payments"      && <BtnAdd label="Encaisser paiement" onClick={() => { setModal("add-payment"); setForm({}); }} />}
             {section === "factures"      && <BtnAdd label="Nouvelle facture"   onClick={() => { setModal("add-invoice"); setForm({ lignes: [{ description: "", quantite: 1, prix_unitaire: 0 }], statut: "impaye", mode_paiement: "especes" }); }} />}
             {section === "pharmacie" && pharmacyTab === "stock" && <BtnAdd label="Ajouter médicament" onClick={() => { setModal("add-stock"); setForm({ forme: "comprimé", quantite: 0, quantite_min: 5, prix_unitaire: 0 }); }} />}
@@ -939,6 +967,87 @@ export default function GestionClinique() {
                   {r.traitement && <p style={{ fontSize: 13, color: "#475569" }}><strong>Traitement :</strong> {r.traitement}</p>}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ── LABORATOIRE & IMAGERIE ── */}
+          {section === "exams" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", gap: 4, background: "white", borderRadius: 10, padding: 5, border: "1px solid #e2e8f0", maxWidth: 340 }}>
+                {([{ id: "laboratoire", label: "🧪 Laboratoire" }, { id: "imagerie", label: "📷 Imagerie" }] as { id: "laboratoire"|"imagerie"; label: string }[]).map(t => (
+                  <button key={t.id} onClick={() => setExamsCategory(t.id)}
+                    style={{ flex: 1, padding: "9px 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: examsCategory === t.id ? 700 : 500, background: examsCategory === t.id ? TEAL : "transparent", color: examsCategory === t.id ? "white" : "#64748b", transition: "all 0.15s" }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {exams.filter(e => e.categorie === examsCategory).length === 0 ? (
+                <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 13, color: "#94a3b8" }}>Aucun examen {examsCategory === "laboratoire" ? "de laboratoire" : "d'imagerie"} enregistré</div>
+                </div>
+              ) : exams.filter(e => e.categorie === examsCategory).map(e => {
+                const done = e.statut === "termine";
+                return (
+                  <div key={e.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", borderLeft: `3px solid ${done ? TEAL : "#f59e0b"}` }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 15 }}>{e.p_prenom} {e.p_nom}</div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{e.type_examen} · Prescrit le {fmtDate(e.date_prescription)} {e.s_nom ? `· Dr. ${e.s_nom}` : ""}</div>
+                      </div>
+                      <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: done ? "#f0fdf0" : "#fffbeb", color: done ? "#1a8f1a" : "#d97706" }}>{done ? "✓ Résultat disponible" : "⏳ En attente"}</span>
+                    </div>
+                    {done ? (
+                      <>
+                        {e.resultat && <p style={{ fontSize: 13, color: "#475569", marginBottom: 6 }}>{e.resultat}</p>}
+                        <p style={{ fontSize: 11, color: "#94a3b8" }}>Résultat rendu le {fmtDate(e.date_resultat)}</p>
+                      </>
+                    ) : (
+                      <button onClick={() => { setResultModalExam(e); setForm({ resultat: "", statut: "termine", date_resultat: new Date().toISOString().slice(0,10) }); }}
+                        style={{ padding: "6px 14px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                        Saisir le résultat
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── VACCINATION ── */}
+          {section === "vaccinations" && (
+            <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                    {["Patient", "Vaccin", "Dose", "Date d'administration", "Prochain rappel", "Actions"].map(h => (
+                      <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {vaccinations.length === 0 ? (
+                    <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucune vaccination enregistrée</td></tr>
+                  ) : vaccinations.map(v => {
+                    const rappelDue = v.prochain_rappel && new Date(v.prochain_rappel) <= new Date();
+                    return (
+                      <tr key={v.id} style={{ borderBottom: "1px solid #f8fafc", background: rappelDue ? "#fffbeb" : "transparent" }}>
+                        <td style={{ padding: "11px 16px", fontWeight: 600, color: "#0f172a" }}>{v.p_prenom} {v.p_nom}</td>
+                        <td style={{ padding: "11px 16px", color: "#475569" }}>{v.vaccin}</td>
+                        <td style={{ padding: "11px 16px", color: "#64748b" }}>{v.dose || "—"}</td>
+                        <td style={{ padding: "11px 16px", color: "#64748b" }}>{fmtDate(v.date_administration)}</td>
+                        <td style={{ padding: "11px 16px" }}>
+                          {v.prochain_rappel
+                            ? <span style={{ color: rappelDue ? "#d97706" : "#64748b", fontWeight: rappelDue ? 700 : 400 }}>{rappelDue && "⚠️ "}{fmtDate(v.prochain_rappel)}</span>
+                            : <span style={{ color: "#94a3b8" }}>—</span>}
+                        </td>
+                        <td style={{ padding: "11px 16px" }}>
+                          <button onClick={async () => { if (confirm("Supprimer cette entrée du carnet de vaccination ?")) { await del(`/vaccinations/${v.id}`); setVaccinations(vs => vs.filter(x => x.id !== v.id)); showToast("Entrée supprimée"); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
 
@@ -1433,6 +1542,8 @@ export default function GestionClinique() {
                 {modal === "add-appointment"  && "Créer un rendez-vous"}
                 {modal === "add-prescription" && "Rédiger une ordonnance"}
                 {modal === "add-record"       && "Nouvelle consultation"}
+                {modal === "add-exam"         && "Prescrire un examen"}
+                {modal === "add-vaccination"  && "Enregistrer une vaccination"}
                 {modal === "add-payment"      && "Encaisser un paiement"}
                 {modal === "add-invoice"      && "Créer une facture"}
                 {modal === "add-stock"        && "Ajouter un médicament au stock"}
@@ -1517,6 +1628,37 @@ export default function GestionClinique() {
                 <div><label style={labelStyle}>Traitement</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.traitement || ""} onChange={e => setForm((f: any) => ({ ...f, traitement: e.target.value }))} /></div>
               </>}
 
+              {modal === "add-exam" && <>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Médecin prescripteur</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Catégorie *</label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    {(["laboratoire","imagerie"] as const).map(c => (
+                      <button key={c} type="button" onClick={() => setForm((f: any) => ({ ...f, categorie: c }))}
+                        style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${(form.categorie || "laboratoire") === c ? TEAL : "#e2e8f0"}`, background: (form.categorie || "laboratoire") === c ? "#f0fdfa" : "white", color: (form.categorie || "laboratoire") === c ? TEAL_DARK : "#64748b", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                        {c === "laboratoire" ? "🧪 Laboratoire" : "📷 Imagerie"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div><label style={labelStyle}>Type d'examen *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder={form.categorie === "imagerie" ? "Ex: Radio thorax, Échographie abdominale..." : "Ex: NFS, Glycémie, Groupage sanguin..."} value={form.type_examen || ""} onChange={e => setForm((f: any) => ({ ...f, type_examen: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Date de prescription</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_prescription || new Date().toISOString().slice(0,10)} onChange={e => setForm((f: any) => ({ ...f, date_prescription: e.target.value }))} /></div>
+              </>}
+
+              {modal === "add-vaccination" && <>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Administré par</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div><label style={labelStyle}>Vaccin *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: BCG, Rougeole, Fièvre jaune..." value={form.vaccin || ""} onChange={e => setForm((f: any) => ({ ...f, vaccin: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Dose</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: 1ère dose, Rappel..." value={form.dose || ""} onChange={e => setForm((f: any) => ({ ...f, dose: e.target.value }))} /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div><label style={labelStyle}>Date d'administration</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_administration || new Date().toISOString().slice(0,10)} onChange={e => setForm((f: any) => ({ ...f, date_administration: e.target.value }))} /></div>
+                  <div><label style={labelStyle}>Prochain rappel</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.prochain_rappel || ""} onChange={e => setForm((f: any) => ({ ...f, prochain_rappel: e.target.value }))} /></div>
+                </div>
+                <div><label style={labelStyle}>Notes</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.notes || ""} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} /></div>
+              </>}
+
               {modal === "add-payment" && <>
                 <div><label style={labelStyle}>Patient</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">—</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
                 <div><label style={labelStyle}>Montant (GNF) *</label><input type="number" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.montant || ""} onChange={e => setForm((f: any) => ({ ...f, montant: e.target.value }))} /></div>
@@ -1588,6 +1730,50 @@ export default function GestionClinique() {
               <button onClick={() => setModal(null)} style={{ flex: 1, padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
               <button onClick={submit} disabled={saving} style={{ flex: 2, padding: "9px 16px", background: saving ? `${TEAL}88` : TEAL, color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
                 {saving ? "Enregistrement..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL : saisir le résultat d'un examen ── */}
+      {resultModalExam && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000, padding: 16, backdropFilter: "blur(2px)" }} onClick={e => { if (e.target === e.currentTarget) setResultModalExam(null); }}>
+          <div style={{ background: "white", borderRadius: 16, width: "100%", maxWidth: 520, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+            <div style={{ height: 3, background: `linear-gradient(90deg,${TEAL},${TEAL_LIGHT})` }} />
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9" }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Résultat — {resultModalExam.type_examen}</h3>
+              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>Patient : {resultModalExam.p_prenom} {resultModalExam.p_nom}</p>
+            </div>
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div><label style={labelStyle}>Résultat / Interprétation</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 90, resize: "none" as const }} placeholder="Résumé du résultat..." value={form.resultat || ""} onChange={e => setForm((f: any) => ({ ...f, resultat: e.target.value }))} /></div>
+              <div>
+                <label style={labelStyle}>Joindre un fichier (image, PDF)</label>
+                <input type="file" accept="image/*,.pdf" style={{ marginTop: 4 }} onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 6 * 1024 * 1024) { showToast("Fichier trop volumineux (max 6 Mo)", false); return; }
+                  const reader = new FileReader();
+                  reader.onload = () => setForm((f: any) => ({ ...f, fichier: reader.result as string }));
+                  reader.readAsDataURL(file);
+                }} />
+              </div>
+              <div><label style={labelStyle}>Date du résultat</label><input type="date" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.date_resultat || ""} onChange={e => setForm((f: any) => ({ ...f, date_resultat: e.target.value }))} /></div>
+            </div>
+            <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9", display: "flex", gap: 10 }}>
+              <button onClick={() => setResultModalExam(null)} style={{ flex: 1, padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+              <button onClick={async () => {
+                setSaving(true);
+                try {
+                  const d = await put(`/exams/${resultModalExam.id}`, { resultat: form.resultat, fichier: form.fichier, statut: "termine", date_resultat: form.date_resultat });
+                  if (d.success) {
+                    setExams(ex => ex.map(x => x.id === resultModalExam.id ? { ...x, resultat: form.resultat, statut: "termine", date_resultat: form.date_resultat } : x));
+                    setResultModalExam(null); setForm({});
+                    showToast("Résultat enregistré");
+                  } else showToast(d.message || "Erreur", false);
+                } finally { setSaving(false); }
+              }} disabled={saving} style={{ flex: 2, padding: "9px 16px", background: saving ? `${TEAL}88` : TEAL, color: "white", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                {saving ? "Enregistrement..." : "✓ Enregistrer le résultat"}
               </button>
             </div>
           </div>

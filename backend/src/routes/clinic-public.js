@@ -106,7 +106,7 @@ router.get('/:tenantCode/my-portal', authenticate, async (req, res) => {
     }
 
     // Charger les données patient en parallèle
-    const [appointments, prescriptions, records] = await Promise.all([
+    const [appointments, prescriptions, records, exams, vaccinations] = await Promise.all([
       sequelize.query(
         `SELECT a.*, s.nom as s_nom, s.prenom as s_prenom, s.role as s_role
          FROM clinic_appointments_mgmt a
@@ -131,9 +131,19 @@ router.get('/:tenantCode/my-portal', authenticate, async (req, res) => {
          ORDER BY r.created_at DESC LIMIT 20`,
         { replacements: { code: tenantCode, pid: patient.id }, type: sequelize.QueryTypes.SELECT }
       ).catch(() => []),
+      sequelize.query(
+        `SELECT id, categorie, type_examen, resultat, statut, date_prescription, date_resultat FROM clinic_exams
+         WHERE tenant_code = :code AND patient_id = :pid ORDER BY created_at DESC LIMIT 20`,
+        { replacements: { code: tenantCode, pid: patient.id }, type: sequelize.QueryTypes.SELECT }
+      ).catch(() => []),
+      sequelize.query(
+        `SELECT id, vaccin, dose, date_administration, prochain_rappel FROM clinic_vaccinations
+         WHERE tenant_code = :code AND patient_id = :pid ORDER BY date_administration DESC LIMIT 30`,
+        { replacements: { code: tenantCode, pid: patient.id }, type: sequelize.QueryTypes.SELECT }
+      ).catch(() => []),
     ]);
 
-    res.json({ success: true, clinic: tenant, patient, appointments, prescriptions, records });
+    res.json({ success: true, clinic: tenant, patient, appointments, prescriptions, records, exams, vaccinations });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
