@@ -687,8 +687,8 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
                           const active = tiles.find(t => t.key === openSection)!
                           return (
                             <div>
-                              {/* 4 tuiles navigation */}
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-slate-100">
+                              {/* 4 tuiles navigation — une seule ligne compacte, y compris sur mobile */}
+                              <div className="grid grid-cols-4 gap-0 border-b border-slate-100">
                                 {tiles.map((tile) => {
                                   const isActive = openSection === tile.key
                                   return (
@@ -696,24 +696,20 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
                                       key={tile.key}
                                       type="button"
                                       onClick={() => setOpenSection(tile.key)}
-                                      className={`relative flex flex-col items-center gap-2 py-5 px-3 transition-all duration-200 border-r last:border-r-0 border-slate-100 ${isActive ? 'bg-white' : 'bg-slate-50 hover:bg-white'}`}
+                                      className={`relative flex flex-col items-center gap-1 py-2.5 px-1 transition-all duration-200 border-r last:border-r-0 border-slate-100 ${isActive ? 'bg-white' : 'bg-slate-50 hover:bg-white'}`}
                                     >
                                       {isActive && (
                                         <span className={`absolute top-0 left-0 right-0 h-0.5 ${tile.dotColor} rounded-b`} />
                                       )}
-                                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all duration-200 ${isActive ? `${tile.activeBg} shadow-lg` : 'bg-slate-100'}`}>
+                                      <div className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-base sm:text-lg transition-all duration-200 ${isActive ? `${tile.activeBg} shadow` : 'bg-slate-100'}`}>
                                         {tile.icon}
+                                        {(tile.badgeCount ?? 0) > 0 && (
+                                          <span className={`absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center ${isActive ? `${tile.activeBg} text-white ring-2 ring-white` : 'bg-slate-300 text-slate-700 ring-2 ring-slate-50'}`}>
+                                            {tile.badgeCount}
+                                          </span>
+                                        )}
                                       </div>
-                                      <div className="text-center">
-                                        <p className={`text-xs font-extrabold leading-tight transition-colors ${isActive ? tile.activeText : 'text-slate-700'}`}>{tile.label}</p>
-                                        <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{tile.desc}</p>
-                                      </div>
-                                      {(tile.badgeCount ?? 0) > 0 && (
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? `${tile.activeBg} text-white` : 'bg-slate-200 text-slate-600'}`}>
-                                          {tile.badgeCount}
-                                        </span>
-                                      )}
-                                      {isActive && <span className={`w-1.5 h-1.5 rounded-full ${tile.dotColor}`} />}
+                                      <p className={`text-[9px] sm:text-[10px] font-extrabold leading-tight text-center truncate w-full transition-colors ${isActive ? tile.activeText : 'text-slate-700'}`}>{tile.label}</p>
                                     </button>
                                   )
                                 })}
