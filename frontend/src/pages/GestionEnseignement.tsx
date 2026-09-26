@@ -427,7 +427,7 @@ export default function GestionEnseignement({ mode }: Props) {
   ) : null;
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
+    <div className="gestion-page" style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion ${isMadrasa ? "madrasa" : "école"} — ${tenant?.name || ""}`}
@@ -499,7 +499,7 @@ export default function GestionEnseignement({ mode }: Props) {
             👁 Mode Administrateur · <span style={{ fontFamily: "monospace", fontSize: 11, background: "rgba(255,255,255,0.2)", padding: "1px 6px", borderRadius: 4 }}>{tenant.owner_numero_h}</span>
           </div>
         )}
-        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div className="gestion-pad" style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {collapsed && (
               <button onClick={() => setCollapsed(false)}
@@ -525,7 +525,7 @@ export default function GestionEnseignement({ mode }: Props) {
           </div>
         </div>
 
-        <div style={{ padding: 28, flex: 1 }}>
+        <div className="gestion-pad" style={{ padding: 28, flex: 1 }}>
 
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (

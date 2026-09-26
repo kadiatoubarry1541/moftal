@@ -170,14 +170,14 @@ export default function GestionReseau() {
   const inp = { width: "100%", border: "1px solid #bfdbfe", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" as const };
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
+    <div className="gestion-page gestion-pad" style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion réseau — ${tenant?.name || ""}`}
         startUrl={`/gestion-reseau/${tenantCode}`}
         themeColor={BLUE}
       />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}} @media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`}</style>
 
       {/* Admin banner */}
       {isAdminViewing && (

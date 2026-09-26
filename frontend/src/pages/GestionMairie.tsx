@@ -1073,7 +1073,7 @@ export default function GestionMairie() {
   );
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#f8fafc", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="gestion-page" style={{ display: "flex", minHeight: "100vh", background: "#f8fafc", fontFamily: "'Inter', system-ui, sans-serif" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion mairie — ${tenant?.name || ""}`}
@@ -1094,7 +1094,7 @@ export default function GestionMairie() {
       {/* Main content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* Top bar */}
-        <div style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 24px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 100 }}>
+        <div className="gestion-pad" style={{ background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "12px 24px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 100 }}>
           <button className="md:hidden" onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
@@ -1106,7 +1106,7 @@ export default function GestionMairie() {
         </div>
 
         {/* Page content */}
-        <main style={{ flex: 1, padding: "28px 24px", maxWidth: 960, width: "100%" }}>
+        <main className="gestion-pad" style={{ flex: 1, padding: "28px 24px", maxWidth: 960, width: "100%" }}>
           {section === "dashboard"      && renderDashboard()}
           {section === "mariages"       && renderMariages()}
           {section === "naissances"     && renderNaissances()}

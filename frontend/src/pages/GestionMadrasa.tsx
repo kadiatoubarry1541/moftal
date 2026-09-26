@@ -412,7 +412,7 @@ export default function GestionMadrasa() {
 
   // ── Render principal ─────────────────────────────────────────────────────────
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
+    <div className="gestion-page" style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion madrasa — ${tenant?.name || ""}`}
@@ -493,7 +493,7 @@ export default function GestionMadrasa() {
         )}
 
         {/* Page header */}
-        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div className="gestion-pad" style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {collapsed && (
               <button onClick={() => setCollapsed(false)}
@@ -520,7 +520,7 @@ export default function GestionMadrasa() {
         </div>
 
         {/* ── Content ── */}
-        <div style={{ padding: 28, flex: 1 }}>
+        <div className="gestion-pad" style={{ padding: 28, flex: 1 }}>
 
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (

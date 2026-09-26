@@ -207,7 +207,7 @@ export default function GestionIslamique({ mode }: Props) {
   const TABS = M.tabs.map(id => ({ id, label:(M.tabLabels as any)[id], icon:(M.tabIcons as any)[id] }));
 
   return (
-    <div style={{ maxWidth:960, margin:"0 auto", padding:"24px 16px", fontFamily:"system-ui,sans-serif" }}>
+    <div className="gestion-page gestion-pad" style={{ maxWidth:960, margin:"0 auto", padding:"24px 16px", fontFamily:"system-ui,sans-serif" }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}`}</style>
 
       {/* Header */}

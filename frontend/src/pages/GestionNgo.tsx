@@ -193,17 +193,17 @@ export default function GestionNgo() {
   const btnSecondary: React.CSSProperties = { padding: "9px 18px", background: "white", color: ROSE, border: `2px solid ${ROSE}`, borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 13 };
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 0 60px" }}>
+    <div className="gestion-page" style={{ maxWidth: 960, margin: "0 auto", padding: "0 0 60px" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion ONG — ${tenant?.name || ""}`}
         startUrl={`/gestion-ngo/${tenantCode}`}
         themeColor={ROSE}
       />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} @media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {/* ── Header ── */}
-      <div style={{ background: "linear-gradient(135deg,#be123c,#e11d48)", padding: "28px 28px 0" }}>
+      <div className="gestion-pad" style={{ background: "linear-gradient(135deg,#be123c,#e11d48)", padding: "28px 28px 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
           {tenant?.logo_url ? (
             <img src={tenant.logo_url} alt="" style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover", flexShrink: 0 }} />
@@ -229,7 +229,7 @@ export default function GestionNgo() {
         </div>
       </div>
 
-      <div style={{ padding: "24px 28px" }}>
+      <div className="gestion-pad" style={{ padding: "24px 28px" }}>
 
         {/* ── DASHBOARD ── */}
         {tab === "dashboard" && dash && (

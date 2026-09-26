@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import "./styles/globals.css";
+import "./styles/gestion-mobile.css";
 import App from "./App.tsx";
 import { I18nProvider } from "./i18n/I18nProvider";
 import { ThemeProvider } from "./contexts/ThemeContext";

@@ -1,0 +1,75 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   GESTIONS INTERNES — tous les boutons et toutes les infos doivent rester
+   visibles, avec 12px de marge à gauche et 12px à droite sur mobile.
+   S'applique aux pages dont la racine porte la classe .gestion-page.
+   (Les pages utilisent des styles inline : d'où les !important ciblés.)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Dans les mises en page avec barre latérale, la zone principale ne doit
+   jamais s'élargir au-delà de l'écran (sinon les boutons de droite sont
+   coupés par le overflow:hidden de la racine). */
+.gestion-page main,
+.gestion-page [style*="flex: 1 1"] {
+  min-width: 0;
+}
+
+/* Les tableaux défilent horizontalement au lieu d'être coupés. */
+.gestion-page div:has(> table) {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  .gestion-page,
+  .gestion-page * {
+    box-sizing: border-box;
+  }
+
+  /* Marges gauche / droite : 12px */
+  .gestion-page .gestion-pad {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Fenêtres modales : 12px de marge autour */
+  .gestion-page [style*="position: fixed"][style*="inset: 0"] {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Lignes « titre … boutons » : les boutons passent à la ligne au lieu
+     de sortir de l'écran. */
+  .gestion-page [style*="justify-content: space-between"] {
+    flex-wrap: wrap !important;
+    row-gap: 8px;
+  }
+
+  /* Groupes de boutons : ils peuvent rétrécir et passer à la ligne. */
+  .gestion-page [style*="display: flex"]:has(> * + button) {
+    flex-wrap: wrap !important;
+  }
+  .gestion-page [style*="flex-shrink: 0"]:has(> button) {
+    flex-shrink: 1 !important;
+    max-width: 100%;
+  }
+
+  .gestion-page button {
+    max-width: 100%;
+  }
+
+  /* Grilles à 3 colonnes ou plus → 2 colonnes sur mobile */
+  .gestion-page [style*="grid-template-columns: repeat(3"],
+  .gestion-page [style*="grid-template-columns: repeat(4"],
+  .gestion-page [style*="grid-template-columns: repeat(5"],
+  .gestion-page [style*="grid-template-columns: repeat(6"],
+  .gestion-page [style*="grid-template-columns: 1fr 1fr 1fr"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Cellules de tableau plus compactes */
+  .gestion-page th,
+  .gestion-page td {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}

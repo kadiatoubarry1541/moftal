@@ -1037,8 +1037,8 @@ export default function GestionInterne() {
   }
 
   return (
-    <div>
-      <div style={{ maxWidth:700, margin:"0 auto", padding:"4px 20px 0" }}>
+    <div className="gestion-page">
+      <div className="gestion-pad" style={{ maxWidth:700, margin:"0 auto", padding:"4px 20px 0" }}>
         <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
         <div style={{ borderTop:"1.5px solid #e2e8f0", marginBottom: tab === "activite" ? 6 : 16 }} />

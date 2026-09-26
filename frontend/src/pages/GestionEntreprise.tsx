@@ -138,14 +138,14 @@ export default function GestionEntreprise() {
   const card: React.CSSProperties = { background: "white", border: `1px solid ${INDIGO_BORDER}`, borderRadius: 12, padding: "16px 18px", marginBottom: 10 };
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui,sans-serif" }}>
+    <div className="gestion-page gestion-pad" style={{ maxWidth: 900, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui,sans-serif" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion entreprise — ${tenant?.name || ""}`}
         startUrl={`/gestion-entreprise/${tenantCode}`}
         themeColor={INDIGO}
       />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} @media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg,#4338ca,#7c3aed)`, borderRadius: 16, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>

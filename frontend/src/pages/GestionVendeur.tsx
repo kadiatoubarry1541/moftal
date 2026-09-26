@@ -177,14 +177,13 @@ export default function GestionVendeur() {
   const btn = (bg: string, color = "white"): React.CSSProperties => ({ padding: "8px 16px", background: bg, color, border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, fontSize: 14 });
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px", fontFamily: "system-ui,sans-serif" }}>
+    <div className="gestion-page gestion-pad" style={{ maxWidth: 1100, margin: "0 auto", padding: "16px", fontFamily: "system-ui,sans-serif" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion vendeur — ${tenant?.name || ""}`}
         startUrl={`/gestion-vendeur/${tenantCode}`}
         themeColor={COLOR}
       />
-      <style>{`@media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
 
       {/* HEADER */}
       <div style={{ background: GRADIENT, borderRadius: 16, padding: "24px 28px", marginBottom: 24, color: "white" }}>

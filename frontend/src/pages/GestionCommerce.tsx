@@ -179,14 +179,14 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   const labelStyle = { fontSize: 11, fontWeight: 600 as const, color: COLOR_DARK, marginBottom: 4, display: "block" as const };
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
+    <div className="gestion-page gestion-pad" style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion commerce — ${tenant?.name || ""}`}
         startUrl={`/gestion-commerce/${tenantCode}`}
         themeColor={COLOR}
       />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}} @media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`}</style>
 
       {/* Header */}
       <div style={{ background: GRADIENT, borderRadius: 14, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>

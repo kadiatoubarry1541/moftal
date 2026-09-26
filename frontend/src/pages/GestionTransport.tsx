@@ -155,7 +155,7 @@ export default function GestionTransport() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "system-ui, sans-serif" }}>
+    <div className="gestion-page" style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "system-ui, sans-serif" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion transport — ${tenant?.name || ""}`}
@@ -163,7 +163,7 @@ export default function GestionTransport() {
         themeColor={BLUE}
       />
       {/* Header */}
-      <div style={{ background: `linear-gradient(135deg, ${BLUE}, #1d4ed8)`, color: "white", padding: "20px 24px" }}>
+      <div className="gestion-pad" style={{ background: `linear-gradient(135deg, ${BLUE}, #1d4ed8)`, color: "white", padding: "20px 24px" }}>
         <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
             <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 4 }}>Gestion Interne · Transport & Livraison</div>
@@ -191,7 +191,7 @@ export default function GestionTransport() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "24px 16px" }}>
+      <div className="gestion-pad" style={{ maxWidth: 980, margin: "0 auto", padding: "24px 16px" }}>
         {loading && <div style={{ textAlign: "center", color: BLUE, padding: 40, fontSize: 16 }}>Chargement…</div>}
 
         {/* ── DASHBOARD ── */}

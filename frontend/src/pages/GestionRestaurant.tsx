@@ -132,14 +132,14 @@ export default function GestionRestaurant() {
   const CATEGORIES = ["Entrée", "Plat principal", "Accompagnement", "Dessert", "Boisson", "Menu spécial"];
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui,sans-serif" }}>
+    <div className="gestion-page gestion-pad" style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px", fontFamily: "system-ui,sans-serif" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion restaurant — ${tenant?.name || ""}`}
         startUrl={`/gestion-restaurant/${tenantCode}`}
         themeColor={ORANGE}
       />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}} @media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg,#c2410c,#ea580c)", borderRadius: 16, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>

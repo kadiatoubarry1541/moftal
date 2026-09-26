@@ -247,7 +247,7 @@ export default function GestionMosquee() {
   const NIVEAUX = ["Débutant", "Qa'idah", "Juz' Amma", "Hizb", "Mi-Coran", "Hafiz"];
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
+    <div className="gestion-page gestion-pad" style={{ maxWidth: 960, margin: "0 auto", padding: "24px 16px" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion mosquée — ${tenant?.name || ""}`}
@@ -256,7 +256,6 @@ export default function GestionMosquee() {
       />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}`}</style>
 
-      <style>{`@media(max-width:640px){.gestion-btn-secondary{display:none!important}}`}</style>
 
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg, #0f4b0f, #1a8f1a)", borderRadius: 14, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>

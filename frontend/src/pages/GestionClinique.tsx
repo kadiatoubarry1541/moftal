@@ -357,7 +357,7 @@ export default function GestionClinique() {
   );
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
+    <div className="gestion-page" style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
@@ -449,7 +449,7 @@ export default function GestionClinique() {
         />
 
         {/* Header */}
-        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, gap: 8 }}>
+        <div className="gestion-pad" style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             {/* Hamburger visible uniquement sur mobile quand sidebar fermée */}
             {collapsed && (
@@ -499,7 +499,7 @@ export default function GestionClinique() {
         </div>
 
         {/* Content */}
-        <div style={{ padding: 28, flex: 1 }}>
+        <div className="gestion-pad" style={{ padding: 28, flex: 1 }}>
 
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (
