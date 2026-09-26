@@ -85,6 +85,27 @@ router.get('/:tenantCode/info', authenticate, verifyTenant, async (req, res) => 
   res.json({ success: true, tenant: req.tenant });
 });
 
+// ── Paramètres : nom, logo, contact ────────────────────────────────────────────
+router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const { name, logo_url, address, phone, email, description } = req.body;
+    const code = req.params.tenantCode;
+    await sequelize.query(
+      `UPDATE management_tenants SET
+        name        = COALESCE(:name, name),
+        logo_url    = :logo,
+        address     = :address,
+        phone       = :phone,
+        email       = :email,
+        description = :desc
+       WHERE tenant_code = :code`,
+      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, code } }
+    );
+    const [rows] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`, { replacements: { code } });
+    res.json({ success: true, tenant: rows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // ── Profil du directeur (chef) ─────────────────────────────────────────────────
 router.get('/:tenantCode/director-profile', authenticate, verifyMember, async (req, res) => {
   const tc = req.params.tenantCode;

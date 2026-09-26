@@ -9,10 +9,39 @@ interface Props { mode: "school" | "madrasa"; }
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "notes" | "frais" | "bulletins";
+type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "notes" | "frais" | "bulletins" | "settings";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+
+function printFeeReceipt(f: any, orgName: string, color: string) {
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Reçu ${f.id}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.amount{font-size:28px;font-weight:800;color:${color};text-align:center;padding:20px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
+<div class="header"><div class="title">🎓 ${orgName}</div><div style="text-align:right;font-size:12px;color:#64748b">Le ${new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div></div>
+<h2 style="margin-bottom:16px">Reçu de paiement</h2>
+<div class="box"><strong>${f.student_prenom || ""} ${f.student_nom || ""}</strong><br><span style="color:#64748b;font-size:13px">${f.type_frais || ""}</span></div>
+<div class="amount">${(+f.montant || 0).toLocaleString("fr-FR")} GNF</div>
+${f.echeance ? `<p style="font-size:13px;color:#64748b">Échéance : ${new Date(f.echeance).toLocaleDateString("fr-FR")}</p>` : ""}
+<div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature & Cachet</div></div>
+<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Moftal · Plateforme éducative</div>
+</body></html>`;
+  const w = window.open("", "_blank", "width=800,height=900");
+  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+}
+
+function printBulletin(b: any, orgName: string, color: string) {
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bulletin ${b.student_nom}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.moy{font-size:36px;font-weight:800;color:${color};text-align:center;padding:24px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
+<div class="header"><div class="title">🎓 ${orgName}</div><div style="text-align:right;font-size:12px;color:#64748b">${b.periode} — ${b.annee_scolaire || ""}</div></div>
+<h2 style="margin-bottom:16px">Bulletin de progression</h2>
+<div class="box"><strong>${b.student_prenom || ""} ${b.student_nom || ""}</strong><br><span style="color:#64748b;font-size:13px">${b.niveau || b.classe || ""}</span></div>
+<div class="moy">${b.moyenne_generale}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${b.mention || ""}</div></div>
+<div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature & Cachet</div></div>
+<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Moftal · Plateforme éducative</div>
+</body></html>`;
+  const w = window.open("", "_blank", "width=800,height=900");
+  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+}
 
 const PERIODES = ["Trim 1", "Trim 2", "Trim 3", "Sem 1", "Sem 2", "Annuel"];
 
@@ -62,6 +91,7 @@ export default function GestionEnseignement({ mode }: Props) {
     { id: "notes",       label: "Notes / Progression",    icon: "M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" },
     { id: "frais",       label: "Frais",                  icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
     { id: "bulletins",   label: "Bulletins",              icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
+    { id: "settings",    label: "Paramètres",             icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
   ];
 
   const [section, setSection]     = useState<Section>("dashboard");
@@ -85,6 +115,8 @@ export default function GestionEnseignement({ mode }: Props) {
   const [modal, setModal]         = useState<string | null>(null);
   const [form, setForm]           = useState<any>({});
   const [toast, setToast]         = useState<{ msg: string; ok: boolean } | null>(null);
+  const [settingsForm, setSettingsForm] = useState<any>({});
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
@@ -115,6 +147,7 @@ export default function GestionEnseignement({ mode }: Props) {
       .then(([info, dash]) => {
         if (!info.tenant) { setError(info.message || "Accès refusé."); return; }
         setTenant(info.tenant);
+        setSettingsForm({ name: info.tenant.name, address: info.tenant.address || "", phone: info.tenant.phone || "", email: info.tenant.email || "", description: info.tenant.description || "" });
         setStats(dash);
       })
       .catch(e => setError("Impossible de joindre le serveur : " + (e?.message || e)))
@@ -131,8 +164,8 @@ export default function GestionEnseignement({ mode }: Props) {
     if (s === "presences")   { loadG(); get("/students").then(d => d.students && setStudents(d.students)); }
     if (s === "notes")       { get("/grades").then(d => d.grades && setGrades(d.grades)); get("/students").then(d => d.students && setStudents(d.students)); }
     if (s === "frais")       { get("/fees").then(d => d.fees && setFees(d.fees)); get("/students").then(d => d.students && setStudents(d.students)); }
-    if (s === "bulletins")   { if (isMadrasa) get("/bulletins").then(d => d.bulletins && setBulletins(d.bulletins)); }
-  }, [get, groupEP, isMadrasa]);
+    if (s === "bulletins")   { get("/bulletins").then(d => d.bulletins && setBulletins(d.bulletins)); }
+  }, [get, groupEP]);
 
   const loadAttendance = useCallback((date: string, groupId: string) => {
     if (!groupId) return;
@@ -149,32 +182,76 @@ export default function GestionEnseignement({ mode }: Props) {
     });
   }, [get, groupes, students]);
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { showToast("Logo trop volumineux (max 2 Mo)", false); return; }
+    const reader = new FileReader();
+    reader.onload = () => setSettingsForm((f: any) => ({ ...f, logo_url: reader.result as string }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleSettingsSave = async () => {
+    setSettingsSaving(true);
+    try {
+      const d = await put("/settings", settingsForm);
+      if (d.success) { setTenant(d.tenant); showToast("Paramètres enregistrés"); }
+      else showToast(d.message || "Erreur", false);
+    } catch { showToast("Erreur de connexion", false); }
+    finally { setSettingsSaving(false); }
+  };
+
   const submit = async () => {
     setSaving(true);
     try {
       if (modal === "add-apprenant") {
         if (!form.nom || !form.prenom) { showToast("Nom et prénom obligatoires", false); return; }
-        const d = await post("/students", { ...form, niveau: form.niveau || V.niveaux[0] });
-        if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(V.apprenant + " ajouté(e)"); }
-        else showToast(d.message || "Erreur", false);
+        if (form.id) {
+          const d = await put(`/students/${form.id}`, { ...form, niveau: form.niveau || V.niveaux[0] });
+          if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(V.apprenant + " modifié(e)"); }
+          else showToast(d.message || "Erreur", false);
+        } else {
+          const d = await post("/students", { ...form, niveau: form.niveau || V.niveaux[0] });
+          if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(V.apprenant + " ajouté(e)"); }
+          else showToast(d.message || "Erreur", false);
+        }
       } else if (modal === "add-staff") {
         if (!form.nom || !form.prenom) { showToast("Nom et prénom obligatoires", false); return; }
-        const d = await post("/staff", { ...form, role: form.role || V.roles[1] });
-        if (d.staff) { setStaff(p => [d.staff, ...p]); setModal(null); setForm({}); showToast(V.staffSingular + " ajouté(e)"); }
-        else showToast(d.message || "Erreur", false);
+        if (form.id) {
+          const d = await put(`/staff/${form.id}`, { ...form, role: form.role || V.roles[1] });
+          if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(V.staffSingular + " modifié(e)"); }
+          else showToast(d.message || "Erreur", false);
+        } else {
+          const d = await post("/staff", { ...form, role: form.role || V.roles[1] });
+          if (d.staff) { setStaff(p => [d.staff, ...p]); setModal(null); setForm({}); showToast(V.staffSingular + " ajouté(e)"); }
+          else showToast(d.message || "Erreur", false);
+        }
       } else if (modal === "add-groupe") {
         if (!form.nom) { showToast("Nom obligatoire", false); return; }
         const body: any = { nom: form.nom, niveau: form.niveau || V.niveaux[0], capacite: +(form.capacite || 20) };
         if (form.enseignant_id) body[teacherFld] = form.enseignant_id;
-        const d = await post(`/${groupEP}`, body);
-        const created = d[isMadrasa ? "halaqa" : "classroom"];
-        if (created) { setGroupes(p => [...p, created]); setModal(null); setForm({}); showToast(V.groupe + " créé(e)"); }
-        else showToast(d.message || "Erreur", false);
+        if (form.id) {
+          const d = await put(`/${groupEP}/${form.id}`, body);
+          if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, ...body } : x)); setModal(null); setForm({}); showToast(V.groupe + " modifiée"); }
+          else showToast(d.message || "Erreur", false);
+        } else {
+          const d = await post(`/${groupEP}`, body);
+          const created = d[isMadrasa ? "halaqa" : "classroom"];
+          if (created) { setGroupes(p => [...p, created]); setModal(null); setForm({}); showToast(V.groupe + " créé(e)"); }
+          else showToast(d.message || "Erreur", false);
+        }
       } else if (modal === "add-note") {
         if (!form.student_id || !form.matiere || form.note === "") { showToast("Apprenant, matière et note obligatoires", false); return; }
-        const d = await post("/grades", { ...form, note: parseFloat(form.note), note_max: parseFloat(form.note_max || 20) });
-        if (d.grade) { setGrades(p => [d.grade, ...p]); setModal(null); setForm({}); showToast("Note enregistrée"); }
-        else showToast(d.message || "Erreur", false);
+        const body = { ...form, note: parseFloat(form.note), note_max: parseFloat(form.note_max || 20) };
+        if (form.id) {
+          const d = await put(`/grades/${form.id}`, body);
+          if (d.success) { setGrades(p => p.map(x => x.id === form.id ? { ...x, ...body } : x)); setModal(null); setForm({}); showToast("Note modifiée"); }
+          else showToast(d.message || "Erreur", false);
+        } else {
+          const d = await post("/grades", body);
+          if (d.grade) { setGrades(p => [d.grade, ...p]); setModal(null); setForm({}); showToast("Note enregistrée"); }
+          else showToast(d.message || "Erreur", false);
+        }
       } else if (modal === "add-frais") {
         if (!form.student_id || !form.montant) { showToast("Apprenant et montant obligatoires", false); return; }
         const d = await post("/fees", { ...form, montant: parseInt(form.montant), type_frais: form.type_frais || V.fraisTypes[1] });
@@ -242,7 +319,7 @@ export default function GestionEnseignement({ mode }: Props) {
       <div style={{ background: "white", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 520, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
 
         {modal === "add-apprenant" && (<>
-          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>Nouvel {V.apprenant.toLowerCase()}</h3>
+          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? "Modifier" : "Nouvel"} {V.apprenant.toLowerCase()}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {(["Prénom *|prenom|text","Nom *|nom|text","Date de naissance|date_naissance|date","Sexe|sexe|sexe","Tél. parent|telephone_parent|text","Niveau|niveau|niveau","NuméroH|numero_h|text","NuméroH parent|parent_numero_h|text"] as string[]).map(raw => {
               const [label, key, type] = raw.split("|");
@@ -267,7 +344,7 @@ export default function GestionEnseignement({ mode }: Props) {
         </>)}
 
         {modal === "add-staff" && (<>
-          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>Nouveau {V.staffSingular.toLowerCase()}</h3>
+          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? "Modifier" : "Nouveau"} {V.staffSingular.toLowerCase()}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {(["Prénom *|prenom|text","Nom *|nom|text","Rôle|role|role","Spécialité / Matière|specialite|mat","Téléphone|telephone|text","NuméroH|numero_h|text"] as string[]).map(raw => {
               const [label, key, type] = raw.split("|");
@@ -292,7 +369,7 @@ export default function GestionEnseignement({ mode }: Props) {
         </>)}
 
         {modal === "add-groupe" && (<>
-          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>Nouvelle {V.groupe}</h3>
+          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? "Modifier" : "Nouvelle"} {V.groupe.toLowerCase()}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Nom *</label>
@@ -319,7 +396,7 @@ export default function GestionEnseignement({ mode }: Props) {
         </>)}
 
         {modal === "add-note" && (<>
-          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>Nouvelle note</h3>
+          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? "Modifier la" : "Nouvelle"} note</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{V.apprenant} *</label>
@@ -521,7 +598,7 @@ export default function GestionEnseignement({ mode }: Props) {
             {section === "groupes"     && <button onClick={()=>{setModal("add-groupe");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Créer {V.groupe.toLowerCase()}</button>}
             {section === "notes"       && <button onClick={()=>{setModal("add-note");setForm({matiere:V.matieres[0],periode:"Trim 1"});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter note</button>}
             {section === "frais"       && <button onClick={()=>{setModal("add-frais");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter frais</button>}
-            {section === "bulletins" && isMadrasa && <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>⚙ Générer bulletins</button>}
+            {section === "bulletins" && <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>⚙ Générer bulletins</button>}
           </div>
         </div>
 
@@ -629,7 +706,10 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 16px",color:"#64748b" }}>{s.date_naissance?fmtDate(s.date_naissance):"—"}</td>
                         <td style={{ padding:"11px 16px",color:"#475569" }}>{s.telephone_parent||"—"}</td>
                         <td style={{ padding:"11px 16px" }}>
-                          <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){await del(`/students/${s.id}`);setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
+                          <div style={{ display:"flex", gap:10 }}>
+                            <button onClick={()=>{ setForm({ ...s }); setModal("add-apprenant"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
+                            <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){await del(`/students/${s.id}`);setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -661,7 +741,10 @@ export default function GestionEnseignement({ mode }: Props) {
                         {s.telephone && <div>📞 {s.telephone}</div>}
                         {s.numero_h && <div style={{ fontFamily:"monospace",color:"#94a3b8",fontSize:11 }}>H: {s.numero_h}</div>}
                       </div>
-                      <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){await del(`/staff/${s.id}`);setStaff(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)"); }}} style={{ marginTop:12,color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
+                      <div style={{ display:"flex", gap:12, marginTop:12 }}>
+                        <button onClick={()=>{ setForm({ ...s }); setModal("add-staff"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
+                        <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){await del(`/staff/${s.id}`);setStaff(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -695,7 +778,10 @@ export default function GestionEnseignement({ mode }: Props) {
                           <div style={{ height:"100%",width:`${pct}%`,background:niveauColor(g.niveau),borderRadius:2,transition:"width 0.4s ease" }} />
                         </div>
                         {teacher && <div style={{ fontSize:12,color:"#475569",marginBottom:10 }}>👤 {isMadrasa?"Cheikh":"Prof."} {teacher.prenom} {teacher.nom}</div>}
-                        <button onClick={async()=>{ if(confirm(`Supprimer ${g.nom} ?`)){await del(`/${groupEP}/${g.id}`);setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(V.groupe+" supprimée"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Supprimer</button>
+                        <div style={{ display:"flex", gap:12 }}>
+                          <button onClick={()=>{ setForm({ ...g, enseignant_id: g.enseignant_id || g.professeur_id }); setModal("add-groupe"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
+                          <button onClick={async()=>{ if(confirm(`Supprimer ${g.nom} ?`)){await del(`/${groupEP}/${g.id}`);setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(V.groupe+" supprimée"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Supprimer</button>
+                        </div>
                       </div>
                     );
                   })}
@@ -778,7 +864,10 @@ export default function GestionEnseignement({ mode }: Props) {
                           <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:"#f1f5f9",color:"#475569",borderRadius:20,fontSize:11 }}>{g.periode||"—"}</span></td>
                           <td style={{ padding:"11px 16px",color:"#94a3b8",fontSize:12 }}>{g.commentaire||"—"}</td>
                           <td style={{ padding:"11px 16px" }}>
-                            <button onClick={async()=>{ if(confirm("Supprimer cette note ?")){await del(`/grades/${g.id}`);setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast("Note supprimée"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Suppr.</button>
+                            <div style={{ display:"flex", gap:10 }}>
+                              <button onClick={()=>{ setForm({ ...g }); setModal("add-note"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modif.</button>
+                              <button onClick={async()=>{ if(confirm("Supprimer cette note ?")){await del(`/grades/${g.id}`);setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast("Note supprimée"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Suppr.</button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -823,9 +912,14 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 14px",color:"#64748b" }}>{f.echeance?fmtDate(f.echeance):"—"}</td>
                         <td style={{ padding:"11px 14px" }}><span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:f.est_paye?"#f0fdf0":"#fef2f2",color:f.est_paye?"#1a8f1a":"#dc2626" }}>{f.est_paye?"✓ Payé":"Impayé"}</span></td>
                         <td style={{ padding:"11px 14px" }}>
-                          {!f.est_paye && (
-                            <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
-                          )}
+                          <div style={{ display:"flex", gap:6 }}>
+                            {!f.est_paye && (
+                              <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
+                            )}
+                            {f.est_paye && (
+                              <button onClick={() => printFeeReceipt(f, tenant?.name || "", V.color)} style={{ padding:"5px 10px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>🖨 Reçu</button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -838,17 +932,11 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── BULLETINS ── */}
           {section === "bulletins" && (
             <div style={{ animation:"fadeIn 0.2s ease" }}>
-              {!isMadrasa ? (
-                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center" }}>
-                  <div style={{ fontSize:48,marginBottom:12 }}>🚧</div>
-                  <div style={{ fontSize:14,fontWeight:600,color:"#0f172a",marginBottom:6 }}>Bulletins — Bientôt disponible</div>
-                  <div style={{ fontSize:13,color:"#94a3b8" }}>La génération de bulletins pour les écoles sera disponible prochainement.</div>
-                </div>
-              ) : bulletins.length===0 ? (
+              {bulletins.length===0 ? (
                 <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center" }}>
                   <div style={{ fontSize:48,marginBottom:12 }}>📋</div>
                   <div style={{ fontSize:14,fontWeight:600,color:"#0f172a",marginBottom:6 }}>Aucun bulletin généré</div>
-                  <div style={{ fontSize:13,color:"#94a3b8",marginBottom:20 }}>Saisissez des notes puis générez les bulletins de progression islamique.</div>
+                  <div style={{ fontSize:13,color:"#94a3b8",marginBottom:20 }}>Saisissez des notes puis générez les bulletins de progression {isMadrasa ? "islamique" : "scolaire"}.</div>
                   <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ padding:"9px 20px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>⚙ Générer maintenant</button>
                 </div>
               ) : (
@@ -874,14 +962,66 @@ export default function GestionEnseignement({ mode }: Props) {
                             <span style={{ fontSize:12,fontWeight:600,color:mc,background:"white",border:`1px solid ${mc}22`,padding:"4px 10px",borderRadius:6 }}>{mention}</span>
                           </div>
                         </div>
-                        {!b.is_published && (
-                          <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x:any)=>x.id===b.id?{...x,is_published:true}:x));showToast("Bulletin publié");} }} style={{ marginTop:12,width:"100%",padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>Publier & notifier</button>
-                        )}
+                        <div style={{ display:"flex", gap:8, marginTop:12 }}>
+                          {!b.is_published && (
+                            <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x:any)=>x.id===b.id?{...x,is_published:true}:x));showToast("Bulletin publié");} }} style={{ flex:1,padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>Publier & notifier</button>
+                          )}
+                          <button onClick={() => printBulletin(b, tenant?.name || "", V.color)} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>🖨</button>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── PARAMÈTRES ── */}
+          {section === "settings" && (
+            <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "24px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Logo</h3>
+                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 14, border: `2px solid ${V.color}44`, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                    {(settingsForm.logo_url || tenant?.logo_url)
+                      ? <img src={settingsForm.logo_url || tenant.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <span style={{ fontSize: 32 }}>{V.emoji}</span>}
+                  </div>
+                  <div>
+                    <label htmlFor="logo-upload-ens" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: V.color, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                      Choisir un logo
+                    </label>
+                    <input id="logo-upload-ens" type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} />
+                    <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG, SVG · Max 2 Mo</p>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "24px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Informations</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <label style={lbl}>Nom</label>
+                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.name || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Description</label>
+                    <textarea className={inp} style={{ ...inpSt, marginTop: 4, height: 80, resize: "none" as const }} value={settingsForm.description || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, description: e.target.value }))} />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div><label style={lbl}>Téléphone</label><input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone: e.target.value }))} /></div>
+                    <div><label style={lbl}>Email</label><input type="email" className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.email || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
+                  </div>
+                  <div>
+                    <label style={lbl}>Adresse</label>
+                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={handleSettingsSave} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${V.color}88` : V.color, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer" }}>
+                {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
+              </button>
             </div>
           )}
 
