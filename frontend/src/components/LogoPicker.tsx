@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { SECTOR_ICONS } from "./sectorIcons";
 import type { IconEntry } from "./iconLibrary";
+import { guessIconName } from "./logoKeywords";
 
 export type LogoTemplateId = "icon" | "icon_text" | "icon_side_text" | "banner" | "outline";
 
@@ -87,11 +88,13 @@ export function svgToDataUrl(svg: string): string {
 const MAX_SEARCH_RESULTS = 48;
 
 export default function LogoPicker({
-  typeId, color, defaultText, onCancel, onConfirm,
+  typeId, color, defaultText, matchText, onCancel, onConfirm,
 }: {
   typeId: string;
   color: string;
   defaultText: string;
+  /** Texte additionnel (ex: description) utilisé pour deviner une icône adaptée au métier */
+  matchText?: string;
   onCancel: () => void;
   onConfirm: (dataUrl: string) => void;
 }) {
@@ -99,20 +102,39 @@ export default function LogoPicker({
   const [text, setText] = useState(defaultText);
   const [scale, setScale] = useState(1);
   const [customIconName, setCustomIconName] = useState<string | null>(null);
+  const [autoMatched, setAutoMatched] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [search, setSearch] = useState("");
   const [library, setLibrary] = useState<Record<string, IconEntry> | null>(null);
-  const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [loadingLibrary, setLoadingLibrary] = useState(true);
+
+  // L'IA charge la bibliothèque et devine tout de suite une icône adaptée au métier
+  // (à partir du nom / de la description saisis), sans action de l'utilisateur.
+  useEffect(() => {
+    import("./iconLibrary").then(mod => {
+      setLibrary(mod.ICON_LIBRARY);
+      setLoadingLibrary(false);
+      const guess = guessIconName(`${defaultText} ${matchText || ""}`);
+      if (guess && mod.ICON_LIBRARY[guess]) {
+        setCustomIconName(guess);
+        setAutoMatched(true);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const suggestFromText = () => {
+    if (!library) return;
+    const guess = guessIconName(`${text} ${matchText || ""}`);
+    if (guess && library[guess]) {
+      setCustomIconName(guess);
+      setAutoMatched(true);
+    }
+  };
 
   const openBrowser = () => {
     setShowBrowser(true);
-    if (!library && !loadingLibrary) {
-      setLoadingLibrary(true);
-      import("./iconLibrary").then(mod => {
-        setLibrary(mod.ICON_LIBRARY);
-        setLoadingLibrary(false);
-      });
-    }
+    setAutoMatched(false);
   };
 
   const currentIcon: IconEntry | undefined = customIconName
@@ -136,7 +158,16 @@ export default function LogoPicker({
 
   return (
     <div className="mt-3 p-4 rounded-xl border-2 border-orange-200 bg-orange-50/50 dark:bg-orange-900/10 dark:border-orange-800">
-      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">🎨 Choisissez un modèle de logo</p>
+      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">🤖 Logos proposés automatiquement pour votre activité</p>
+      {autoMatched && (
+        <p className="text-xs text-green-700 dark:text-green-400 font-medium mb-2">
+          ✨ Icône choisie automatiquement d'après le nom saisi — modifiable ci-dessous.
+        </p>
+      )}
+      {loadingLibrary && (
+        <p className="text-xs text-gray-400 mb-2">Génération en cours...</p>
+      )}
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Choisissez le style qui vous plaît, ou laissez tel quel.</p>
 
       <div className="grid grid-cols-3 gap-3 mb-4">
         {TEMPLATES.map(t => {
@@ -161,7 +192,13 @@ export default function LogoPicker({
         </div>
         <div className="flex-1 space-y-2">
           <div>
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Texte sur le logo</label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Texte sur le logo</label>
+              <button type="button" onClick={suggestFromText} disabled={!library}
+                className="text-[11px] font-semibold text-orange-600 hover:text-orange-700 disabled:opacity-40 whitespace-nowrap">
+                🤖 Re-suggérer une icône
+              </button>
+            </div>
             <input
               type="text"
               value={text}

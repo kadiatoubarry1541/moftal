@@ -540,6 +540,7 @@ export default function InscriptionPro() {
                   typeId={selectedType}
                   color={LOGO_COLORS[selectedType] || "#f59e0b"}
                   defaultText={form.name.trim() || PRO_TYPES.find(pt => pt.id === selectedType)?.label || ""}
+                  matchText={form.description}
                   onCancel={() => setShowLogoPicker(false)}
                   onConfirm={dataUrl => { setForm(f => ({ ...f, mediaUrl: dataUrl })); setShowLogoPicker(false); }}
                 />
