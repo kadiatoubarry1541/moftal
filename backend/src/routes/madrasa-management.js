@@ -10,6 +10,7 @@ import express from 'express';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ensureTenantExtraColumns } from './clinic-management.js';
 
 const router = express.Router();
 
@@ -88,18 +89,21 @@ router.get('/:tenantCode/info', authenticate, verifyTenant, async (req, res) => 
 // ── Paramètres : nom, logo, contact ────────────────────────────────────────────
 router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { name, logo_url, address, phone, email, description } = req.body;
+    await ensureTenantExtraColumns();
+    const { name, logo_url, address, phone, email, description, horaires, phone_urgence } = req.body;
     const code = req.params.tenantCode;
     await sequelize.query(
       `UPDATE management_tenants SET
-        name        = COALESCE(:name, name),
-        logo_url    = :logo,
-        address     = :address,
-        phone       = :phone,
-        email       = :email,
-        description = :desc
+        name          = COALESCE(:name, name),
+        logo_url      = :logo,
+        address       = :address,
+        phone         = :phone,
+        email         = :email,
+        description   = :desc,
+        horaires      = :horaires,
+        phone_urgence = :phone_urgence
        WHERE tenant_code = :code`,
-      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, code } }
+      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, horaires: horaires || null, phone_urgence: phone_urgence || null, code } }
     );
     const [rows] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`, { replacements: { code } });
     res.json({ success: true, tenant: rows[0] });

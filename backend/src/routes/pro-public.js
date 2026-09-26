@@ -1,5 +1,8 @@
 import express from 'express';
 import { sequelize } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { ensureTenantExtraColumns } from './clinic-management.js';
+import { ensureEnrollRequestsTable, ensureSchoolReviewsTable } from './school-management.js';
 
 const router = express.Router();
 
@@ -37,8 +40,9 @@ router.get('/list/:type', async (req, res) => {
 router.get('/:type/:tenantCode', async (req, res) => {
   try {
     const { type, tenantCode } = req.params;
+    await ensureTenantExtraColumns();
     const [tenant] = await sequelize.query(
-      `SELECT tenant_code, type, name, logo_url, address, phone, email, description
+      `SELECT tenant_code, type, name, logo_url, address, phone, email, description, horaires, phone_urgence
        FROM management_tenants
        WHERE tenant_code = :code AND type = :type AND is_active = true
        LIMIT 1`,
@@ -59,13 +63,16 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
     switch (type) {
 
       case 'school': {
-        const [staffCnt, stuCnt, clsCnt, staff] = await Promise.all([
+        const [staffCnt, stuCnt, clsCnt, niveauxCnt, staff, classrooms, feeTypes] = await Promise.all([
           q1(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code AND statut='actif'`, { code }),
           q1(`SELECT COUNT(*) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
-          q(`SELECT nom,prenom,role,matiere FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY role,nom LIMIT 12`, { code }),
+          q1(`SELECT COUNT(DISTINCT niveau) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
+          q(`SELECT nom,prenom,role,matiere,photo_url FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY role,nom LIMIT 12`, { code }),
+          q(`SELECT nom,niveau,capacite FROM school_classrooms WHERE tenant_code=:code ORDER BY nom`, { code }),
+          q(`SELECT type_frais, MIN(montant) as min_montant, MAX(montant) as max_montant FROM school_fees WHERE tenant_code=:code GROUP BY type_frais`, { code }),
         ]);
-        return res.json({ success: true, stats: { staff: +(staffCnt.c||0), students: +(stuCnt.c||0), classes: +(clsCnt.c||0) }, staff });
+        return res.json({ success: true, stats: { staff: +(staffCnt.c||0), students: +(stuCnt.c||0), classes: +(clsCnt.c||0), niveaux: +(niveauxCnt.c||0) }, staff, classrooms, feeTypes });
       }
 
       case 'madrasa': {
@@ -205,6 +212,60 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
       default:
         return res.status(400).json({ success: false, message: `Type '${type}' non supporté.` });
     }
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─── ÉCOLE : pré-inscription en ligne (visiteur non encore élève) ──────────
+router.post('/school/:tenantCode/enroll-request', async (req, res) => {
+  try {
+    const { tenantCode } = req.params;
+    await ensureEnrollRequestsTable();
+    const { nom_enfant, date_naissance, niveau_souhaite, nom_parent, telephone_parent } = req.body;
+    if (!nom_enfant || !telephone_parent) return res.status(400).json({ success: false, message: 'Nom de l\'enfant et téléphone requis.' });
+    const [rows] = await sequelize.query(
+      `INSERT INTO school_enroll_requests (tenant_code, nom_enfant, date_naissance, niveau_souhaite, nom_parent, telephone_parent)
+       VALUES (:code, :nom, :dob, :niveau, :parent, :tel) RETURNING *`,
+      { replacements: { code: tenantCode, nom: nom_enfant, dob: date_naissance || null, niveau: niveau_souhaite || null, parent: nom_parent || null, tel: telephone_parent }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, request: rows[0] });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─── ÉCOLE : avis parents/élèves ────────────────────────────────────────────
+router.get('/school/:tenantCode/reviews', async (req, res) => {
+  try {
+    const { tenantCode } = req.params;
+    await ensureSchoolReviewsTable();
+    const reviews = await sequelize.query(
+      `SELECT nom_auteur, note, commentaire, created_at FROM school_reviews WHERE tenant_code=:code AND statut='approuve' ORDER BY created_at DESC LIMIT 30`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    const [avg] = await sequelize.query(
+      `SELECT AVG(note)::numeric(10,1) as moyenne, COUNT(*) as total FROM school_reviews WHERE tenant_code=:code AND statut='approuve'`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, reviews, moyenne: +(avg?.moyenne || 0), total: +(avg?.total || 0) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.post('/school/:tenantCode/reviews', authenticate, async (req, res) => {
+  try {
+    const { tenantCode } = req.params;
+    await ensureSchoolReviewsTable();
+    const { nom_auteur, note, commentaire } = req.body;
+    const n = +note;
+    if (!n || n < 1 || n > 5) return res.status(400).json({ success: false, message: 'Note invalide (1 à 5).' });
+    const [rows] = await sequelize.query(
+      `INSERT INTO school_reviews (tenant_code, nom_auteur, numero_h, note, commentaire) VALUES (:code, :nom, :nh, :note, :com) RETURNING *`,
+      { replacements: { code: tenantCode, nom: nom_auteur || null, nh: req.userId, note: n, com: commentaire || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, review: rows[0], message: 'Merci ! Votre avis sera visible après validation.' });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

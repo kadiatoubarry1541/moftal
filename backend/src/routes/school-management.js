@@ -2,8 +2,13 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ensureTenantExtraColumns } from './clinic-management.js';
 
 const router = express.Router();
+
+async function ensureStaffPhotoColumn() {
+  await sequelize.query(`ALTER TABLE school_staff ADD COLUMN IF NOT EXISTS photo_url TEXT;`);
+}
 
 async function verifyTenant(req, res, next) {
   const { tenantCode } = req.params;
@@ -30,18 +35,21 @@ router.get('/:tenantCode/info', authenticate, verifyTenant, async (req, res) => 
 // PUT /:tenantCode/settings — mise à jour nom, logo, contact
 router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { name, logo_url, address, phone, email, description } = req.body;
+    await ensureTenantExtraColumns();
+    const { name, logo_url, address, phone, email, description, horaires, phone_urgence } = req.body;
     const code = req.params.tenantCode;
     await sequelize.query(
       `UPDATE management_tenants SET
-        name        = COALESCE(:name, name),
-        logo_url    = :logo,
-        address     = :address,
-        phone       = :phone,
-        email       = :email,
-        description = :desc
+        name          = COALESCE(:name, name),
+        logo_url      = :logo,
+        address       = :address,
+        phone         = :phone,
+        email         = :email,
+        description   = :desc,
+        horaires      = :horaires,
+        phone_urgence = :phone_urgence
        WHERE tenant_code = :code`,
-      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, code } }
+      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, horaires: horaires || null, phone_urgence: phone_urgence || null, code } }
     );
     const [updated] = await sequelize.query(
       `SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
@@ -117,6 +125,7 @@ router.delete('/:tenantCode/students/:id', authenticate, verifyTenant, async (re
 
 router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   try {
+    await ensureStaffPhotoColumn();
     const rows = await sequelize.query(`SELECT * FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY nom`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
     res.json({ success: true, staff: rows });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -124,13 +133,14 @@ router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =>
 
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, role, matieres, telephone, email } = req.body;
+    await ensureStaffPhotoColumn();
+    const { nom, prenom, role, matieres, telephone, email, photo_url } = req.body;
     const code = req.params.tenantCode;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `PROF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const [rows] = await sequelize.query(
-      `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,telephone,email,matricule) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:tel,:email,:mat) RETURNING *`,
-      { replacements: { code, nom, prenom, role, mats: JSON.stringify(matieres || []), tel: telephone, email, mat }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,telephone,email,matricule,photo_url) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:tel,:email,:mat,:photo) RETURNING *`,
+      { replacements: { code, nom, prenom, role, mats: JSON.stringify(matieres || []), tel: telephone, email, mat, photo: photo_url || null }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, staff: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -138,10 +148,11 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
 
 router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, role, matieres, telephone, email } = req.body;
+    await ensureStaffPhotoColumn();
+    const { nom, prenom, role, matieres, telephone, email, photo_url } = req.body;
     await sequelize.query(
-      `UPDATE school_staff SET nom=:nom,prenom=:prenom,role=:role,matieres=:mats::jsonb,telephone=:tel,email=:email WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, role, mats: JSON.stringify(matieres || []), tel: telephone, email, id: req.params.id, code: req.params.tenantCode } }
+      `UPDATE school_staff SET nom=:nom,prenom=:prenom,role=:role,matieres=:mats::jsonb,telephone=:tel,email=:email,photo_url=COALESCE(:photo,photo_url) WHERE id=:id AND tenant_code=:code`,
+      { replacements: { nom, prenom, role, mats: JSON.stringify(matieres || []), tel: telephone, email, photo: photo_url || null, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -490,6 +501,99 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
         ).catch(() => {});
       }
     }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── DEMANDES DE PRÉ-INSCRIPTION (vitrine publique) ────────────────────────
+
+export async function ensureEnrollRequestsTable() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS school_enroll_requests (
+      id SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      nom_enfant VARCHAR(150) NOT NULL,
+      date_naissance DATE,
+      niveau_souhaite VARCHAR(50),
+      nom_parent VARCHAR(150),
+      telephone_parent VARCHAR(50) NOT NULL,
+      statut VARCHAR(20) DEFAULT 'nouvelle',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+router.get('/:tenantCode/enroll-requests', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureEnrollRequestsTable();
+    const rows = await sequelize.query(`SELECT * FROM school_enroll_requests WHERE tenant_code=:code ORDER BY created_at DESC`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, requests: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/:tenantCode/enroll-requests/:id/convert', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const code = req.params.tenantCode;
+    const [reqRow] = await sequelize.query(`SELECT * FROM school_enroll_requests WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
+    if (!reqRow) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
+    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
+    const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
+    const nameParts = (reqRow.nom_enfant || '').trim().split(/\s+/);
+    const prenom = nameParts.shift() || reqRow.nom_enfant;
+    const nom = nameParts.join(' ') || '—';
+    const [rows] = await sequelize.query(
+      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,telephone_parent,nom_parent,numero_matricule) VALUES(:code,:nom,:prenom,:dob,:tel,:parent,:mat) RETURNING *`,
+      { replacements: { code, nom, prenom, dob: reqRow.date_naissance || null, tel: reqRow.telephone_parent, parent: reqRow.nom_parent || null, mat }, type: sequelize.QueryTypes.INSERT }
+    );
+    await sequelize.query(`UPDATE school_enroll_requests SET statut='converti' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code } });
+    res.json({ success: true, student: rows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/:tenantCode/enroll-requests/:id/reject', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`UPDATE school_enroll_requests SET statut='rejetee' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── AVIS PARENTS / ÉLÈVES ──────────────────────────────────────────────────
+
+export async function ensureSchoolReviewsTable() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS school_reviews (
+      id SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      nom_auteur VARCHAR(150),
+      numero_h VARCHAR(50),
+      note INTEGER NOT NULL,
+      commentaire TEXT,
+      statut VARCHAR(20) DEFAULT 'en_attente',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+router.get('/:tenantCode/reviews', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureSchoolReviewsTable();
+    const rows = await sequelize.query(`SELECT * FROM school_reviews WHERE tenant_code=:code ORDER BY created_at DESC`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, reviews: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureSchoolReviewsTable();
+    const { statut } = req.body;
+    await sequelize.query(`UPDATE school_reviews SET statut=:statut WHERE id=:id AND tenant_code=:code`, { replacements: { statut, id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`DELETE FROM school_reviews WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });

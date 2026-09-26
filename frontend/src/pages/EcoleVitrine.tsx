@@ -25,19 +25,41 @@ export default function EcoleVitrine() {
   const [data, setData]     = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewStats, setReviewStats] = useState<{ moyenne: number; total: number }>({ moyenne: 0, total: 0 });
+  const [enrollForm, setEnrollForm] = useState({ nom_enfant: "", date_naissance: "", niveau_souhaite: "", nom_parent: "", telephone_parent: "" });
+  const [enrollSending, setEnrollSending] = useState(false);
+  const [enrollSent, setEnrollSent] = useState(false);
+  const [enrollError, setEnrollError] = useState("");
 
   useEffect(() => {
     const code = tenantCode!;
     Promise.all([
       fetch(`${API}/api/pro-public/school/${code}`).then(r => r.json()),
       fetch(`${API}/api/pro-public/school/${code}/data`).then(r => r.json()),
-    ]).then(([t, d]) => {
+      fetch(`${API}/api/pro-public/school/${code}/reviews`).then(r => r.json()),
+    ]).then(([t, d, rv]) => {
       if (t.success) setSchool(t.tenant);
       else setError(t.message || "École introuvable");
       if (d.success) setData(d);
+      if (rv.success) { setReviews(rv.reviews); setReviewStats({ moyenne: rv.moyenne, total: rv.total }); }
     }).catch(() => setError("Impossible de charger l'école."))
       .finally(() => setLoading(false));
   }, [tenantCode]);
+
+  const submitEnroll = async () => {
+    if (!enrollForm.nom_enfant.trim() || !enrollForm.telephone_parent.trim()) { setEnrollError("Nom de l'enfant et téléphone sont obligatoires."); return; }
+    setEnrollError(""); setEnrollSending(true);
+    try {
+      const r = await fetch(`${API}/api/pro-public/school/${tenantCode}/enroll-request`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(enrollForm)
+      });
+      const d = await r.json();
+      if (d.success) setEnrollSent(true);
+      else setEnrollError(d.message || "Erreur lors de l'envoi.");
+    } catch { setEnrollError("Impossible de joindre le serveur."); }
+    finally { setEnrollSending(false); }
+  };
 
   const isLoggedIn = !!localStorage.getItem("token");
 
@@ -64,6 +86,8 @@ export default function EcoleVitrine() {
 
   const stats = data?.stats || {};
   const staff = data?.staff || [];
+  const classrooms = data?.classrooms || [];
+  const feeTypes = data?.feeTypes || [];
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0f172a", minHeight: "100vh" }}>
@@ -85,8 +109,14 @@ export default function EcoleVitrine() {
             {school.phone   && <span>📞 {school.phone}</span>}
             {school.email   && <span>✉ {school.email}</span>}
             {school.address && <span>📍 {school.address}</span>}
+            {school.horaires && <span>🕐 {school.horaires}</span>}
           </div>
-          <span style={{ opacity: 0.5 }}>Moftal · Éducation numérique</span>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            {school.phone_urgence && (
+              <a href={`tel:${school.phone_urgence}`} style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "3px 12px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>🚨 Urgence</a>
+            )}
+            <span style={{ opacity: 0.5 }}>Moftal · Éducation numérique</span>
+          </div>
         </div>
       </div>
 
@@ -144,7 +174,9 @@ export default function EcoleVitrine() {
             { icon: "👨‍🏫", val: `${stats.staff || 0}`, label: "Enseignants qualifiés" },
             { icon: "👨‍🎓", val: `${stats.students || 0}`, label: "Élèves inscrits" },
             { icon: "🏫", val: `${stats.classes || 0}`, label: "Classes" },
-            { icon: "🏆", val: "Excellence", label: "Notre engagement" },
+            reviewStats.total > 0
+              ? { icon: "🌟", val: `${reviewStats.moyenne}/5`, label: `${reviewStats.total} avis parents` }
+              : { icon: "📚", val: `${stats.niveaux || 0}`, label: "Niveaux proposés" },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
@@ -167,12 +199,74 @@ export default function EcoleVitrine() {
             <div className="staff-g" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {staff.map((s: any, i: number) => (
                 <div key={i} className="staff-card" style={{ background: "white", borderRadius: 16, padding: "24px 20px", textAlign: "center", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg,${GREEN},${GREEN_LIGHT})`, margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 22, fontWeight: 700 }}>
-                    {(s.prenom || "?").charAt(0)}{(s.nom || "?").charAt(0)}
+                  <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg,${GREEN},${GREEN_LIGHT})`, margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 22, fontWeight: 700, overflow: "hidden" }}>
+                    {s.photo_url ? <img src={s.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <>{(s.prenom || "?").charAt(0)}{(s.nom || "?").charAt(0)}</>}
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 4 }}>{s.prenom} {s.nom}</div>
                   <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 4 }}>{s.role}</div>
                   {s.matiere && <div style={{ fontSize: 11, color: "#94a3b8" }}>{s.matiere}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* CLASSES / PROGRAMMES */}
+      {classrooms.length > 0 && (
+        <section style={{ background: "white", padding: "60px 20px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nos Classes</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>Les niveaux et classes proposés par notre école.</p>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
+              {classrooms.map((c: any, i: number) => (
+                <span key={i} style={{ padding: "10px 20px", background: GREEN_BG, color: GREEN_DARK, borderRadius: 20, fontSize: 14, fontWeight: 700, border: `1px solid ${GREEN}33` }}>
+                  {c.nom} <span style={{ fontWeight: 500, opacity: 0.8 }}>· {c.niveau}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* FRAIS DE SCOLARITÉ */}
+      {feeTypes.length > 0 && (
+        <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
+          <div style={{ maxWidth: 800, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Frais de scolarité</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>Indicatifs — contactez-nous pour le détail complet.</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16 }}>
+              {feeTypes.map((f: any, i: number) => (
+                <div key={i} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "18px 20px", textAlign: "center" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{f.type_frais}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: GREEN }}>
+                    {(+f.min_montant).toLocaleString("fr-FR")}{f.max_montant !== f.min_montant ? ` - ${(+f.max_montant).toLocaleString("fr-FR")}` : ""} GNF
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* AVIS PARENTS/ÉLÈVES */}
+      {reviews.length > 0 && (
+        <section style={{ background: "white", padding: "60px 20px" }}>
+          <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Avis de nos parents</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>Note moyenne : {reviewStats.moyenne}/5 sur {reviewStats.total} avis</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }} className="staff-g">
+              {reviews.slice(0, 6).map((r: any, i: number) => (
+                <div key={i} style={{ background: "#f8fafc", borderRadius: 16, padding: "22px 20px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ color: "#f59e0b", fontSize: 15, marginBottom: 8 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
+                  {r.commentaire && <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "0 0 10px" }}>{r.commentaire}</p>}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{r.nom_auteur || "Parent"}</div>
                 </div>
               ))}
             </div>
@@ -203,28 +297,48 @@ export default function EcoleVitrine() {
 
       {/* INSCRIPTION CTA */}
       <section id="enroll" style={{ background: GREEN_BG, padding: "60px 20px", textAlign: "center" }}>
-        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+        <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
           <h2 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>Inscrire votre enfant</h2>
-          <p style={{ color: "#475569", fontSize: 15, lineHeight: 1.7, marginBottom: 32 }}>
-            Rejoignez notre communauté éducative. Présentez-vous à l'accueil de l'école avec votre numéro Moftal pour démarrer l'inscription.
+          <p style={{ color: "#475569", fontSize: 15, lineHeight: 1.7, marginBottom: 28 }}>
+            Remplissez ce formulaire, l'école vous recontacte pour finaliser l'inscription — pas besoin de compte Moftal pour commencer.
           </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            {isLoggedIn ? (
-              <div style={{ background: "white", border: `2px solid ${GREEN}`, borderRadius: 12, padding: "16px 32px", fontSize: 14, color: GREEN_DARK, fontWeight: 600 }}>
-                ✅ Vous êtes connecté sur Moftal — présentez-vous à l'école avec votre numéro.
+          <div style={{ background: "white", borderRadius: 16, border: `1px solid ${GREEN}33`, padding: "28px 28px", textAlign: "left" }}>
+            {enrollSent ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+                <p style={{ fontSize: 14, color: GREEN_DARK, fontWeight: 700, margin: 0 }}>Demande envoyée !</p>
+                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>L'école vous contactera au {enrollForm.telephone_parent}.</p>
               </div>
             ) : (
-              <>
-                <button onClick={() => navigate("/login-membre")} style={{ background: GREEN, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                  Se connecter
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <input placeholder="Nom de l'enfant *" value={enrollForm.nom_enfant} onChange={e => setEnrollForm(f => ({ ...f, nom_enfant: e.target.value }))}
+                    style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                  <input type="date" placeholder="Date de naissance" value={enrollForm.date_naissance} onChange={e => setEnrollForm(f => ({ ...f, date_naissance: e.target.value }))}
+                    style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                </div>
+                <input placeholder="Niveau souhaité (ex: CP, 6ème...)" value={enrollForm.niveau_souhaite} onChange={e => setEnrollForm(f => ({ ...f, niveau_souhaite: e.target.value }))}
+                  style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <input placeholder="Nom du parent" value={enrollForm.nom_parent} onChange={e => setEnrollForm(f => ({ ...f, nom_parent: e.target.value }))}
+                    style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                  <input placeholder="Téléphone du parent *" value={enrollForm.telephone_parent} onChange={e => setEnrollForm(f => ({ ...f, telephone_parent: e.target.value }))}
+                    style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                </div>
+                {enrollError && <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>{enrollError}</p>}
+                <button onClick={submitEnroll} disabled={enrollSending}
+                  style={{ background: enrollSending ? `${GREEN}88` : GREEN, color: "white", border: "none", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: enrollSending ? "not-allowed" : "pointer" }}>
+                  {enrollSending ? "Envoi..." : "Envoyer la demande de pré-inscription"}
                 </button>
-                <button onClick={() => navigate("/vivant")} style={{ background: "white", color: GREEN, border: `2px solid ${GREEN}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                  Créer un compte Moftal
-                </button>
-              </>
+              </div>
             )}
           </div>
+          {!isLoggedIn && (
+            <p style={{ marginTop: 20, fontSize: 12, color: "#64748b" }}>
+              Vous avez déjà un compte Moftal ? <button onClick={() => navigate("/login-membre")} style={{ color: GREEN_DARK, background: "none", border: "none", textDecoration: "underline", cursor: "pointer", fontSize: 12, padding: 0 }}>Connectez-vous</button> pour suivre l'inscription en ligne.
+            </p>
+          )}
         </div>
       </section>
 

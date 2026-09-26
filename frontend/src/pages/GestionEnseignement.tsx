@@ -9,7 +9,7 @@ interface Props { mode: "school" | "madrasa"; }
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "notes" | "frais" | "bulletins" | "settings";
+type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "notes" | "frais" | "bulletins" | "inscriptions" | "avis" | "settings";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
@@ -91,6 +91,10 @@ export default function GestionEnseignement({ mode }: Props) {
     { id: "notes",       label: "Notes / Progression",    icon: "M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" },
     { id: "frais",       label: "Frais",                  icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
     { id: "bulletins",   label: "Bulletins",              icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
+    ...(!isMadrasa ? [
+      { id: "inscriptions" as Section, label: "Inscriptions",          icon: "M12 4v16m8-8H4" },
+      { id: "avis"         as Section, label: "Avis parents/élèves",   icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" },
+    ] : []),
     { id: "settings",    label: "Paramètres",             icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
   ];
 
@@ -105,6 +109,8 @@ export default function GestionEnseignement({ mode }: Props) {
   const [grades, setGrades]       = useState<any[]>([]);
   const [fees, setFees]           = useState<any[]>([]);
   const [bulletins, setBulletins] = useState<any[]>([]);
+  const [enrollRequests, setEnrollRequests] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [search, setSearch]       = useState("");
   const [niveauFilter, setNiveauFilter] = useState("");
   const [attendDate, setAttendDate] = useState(new Date().toISOString().split("T")[0]);
@@ -147,7 +153,7 @@ export default function GestionEnseignement({ mode }: Props) {
       .then(([info, dash]) => {
         if (!info.tenant) { setError(info.message || "Accès refusé."); return; }
         setTenant(info.tenant);
-        setSettingsForm({ name: info.tenant.name, address: info.tenant.address || "", phone: info.tenant.phone || "", email: info.tenant.email || "", description: info.tenant.description || "" });
+        setSettingsForm({ name: info.tenant.name, address: info.tenant.address || "", phone: info.tenant.phone || "", email: info.tenant.email || "", description: info.tenant.description || "", horaires: info.tenant.horaires || "", phone_urgence: info.tenant.phone_urgence || "" });
         setStats(dash);
       })
       .catch(e => setError("Impossible de joindre le serveur : " + (e?.message || e)))
@@ -165,6 +171,8 @@ export default function GestionEnseignement({ mode }: Props) {
     if (s === "notes")       { get("/grades").then(d => d.grades && setGrades(d.grades)); get("/students").then(d => d.students && setStudents(d.students)); }
     if (s === "frais")       { get("/fees").then(d => d.fees && setFees(d.fees)); get("/students").then(d => d.students && setStudents(d.students)); }
     if (s === "bulletins")   { get("/bulletins").then(d => d.bulletins && setBulletins(d.bulletins)); }
+    if (s === "inscriptions") { get("/enroll-requests").then(d => d.success && setEnrollRequests(d.requests)); }
+    if (s === "avis")        { get("/reviews").then(d => d.success && setReviews(d.reviews)); }
   }, [get, groupEP]);
 
   const loadAttendance = useCallback((date: string, groupId: string) => {
@@ -366,6 +374,22 @@ export default function GestionEnseignement({ mode }: Props) {
               );
             })}
           </div>
+          {!isMadrasa && (
+            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
+              {form.photo_url && <img src={form.photo_url} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }} />}
+              <div>
+                <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Photo (optionnel)</label>
+                <input type="file" accept="image/*" onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 1.5 * 1024 * 1024) { showToast("Photo trop volumineuse (max 1.5 Mo)", false); return; }
+                  const reader = new FileReader();
+                  reader.onload = () => setForm((f: any) => ({ ...f, photo_url: reader.result as string }));
+                  reader.readAsDataURL(file);
+                }} style={{ fontSize: 12 }} />
+              </div>
+            </div>
+          )}
         </>)}
 
         {modal === "add-groupe" && (<>
@@ -730,7 +754,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   {staff.map(s=>(
                     <div key={s.id} style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:20,boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                       <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:12 }}>
-                        <div style={{ width:42,height:42,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:700,fontSize:15 }}>{s.prenom?.charAt(0)}</div>
+                        <div style={{ width:42,height:42,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:700,fontSize:15,overflow:"hidden",flexShrink:0 }}>{s.photo_url ? <img src={s.photo_url} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : s.prenom?.charAt(0)}</div>
                         <div>
                           <div style={{ fontWeight:700,color:"#0f172a",fontSize:14 }}>{s.prenom} {s.nom}</div>
                           <span style={{ padding:"2px 8px",background:isMadrasa?"#ecfeff":"#f0fdf0",color:V.color,borderRadius:20,fontSize:11,fontWeight:600 }}>{s.role}</span>
@@ -976,6 +1000,63 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
           )}
 
+          {/* ── INSCRIPTIONS EN LIGNE ── */}
+          {section === "inscriptions" && (
+            <div style={{ display:"flex",flexDirection:"column",gap:12,animation:"fadeIn 0.2s ease" }}>
+              {enrollRequests.length===0 ? (
+                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center",color:"#94a3b8" }}>Aucune demande de pré-inscription reçue depuis la vitrine</div>
+              ) : enrollRequests.map((r:any) => (
+                <div key={r.id} style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 20px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",opacity:r.statut==="nouvelle"?1:0.6 }}>
+                  <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,flexWrap:"wrap" }}>
+                    <div>
+                      <div style={{ fontWeight:700,color:"#0f172a",fontSize:14 }}>{r.nom_enfant} {r.niveau_souhaite && <span style={{ fontWeight:500,color:"#64748b",fontSize:12 }}>· {r.niveau_souhaite}</span>}</div>
+                      <div style={{ fontSize:12,color:"#64748b",marginTop:4 }}>Parent : {r.nom_parent || "—"} · {r.telephone_parent} {r.date_naissance ? `· Né(e) le ${fmtDate(r.date_naissance)}` : ""}</div>
+                    </div>
+                    {r.statut==="nouvelle" ? (
+                      <div style={{ display:"flex",gap:6,flexShrink:0 }}>
+                        <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/convert`,{}); if(d.success){setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"converti"}:x));showToast(V.apprenant+" créé(e)");} }} style={{ padding:"6px 12px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:700 }}>Inscrire</button>
+                        <button onClick={async()=>{ await put(`/enroll-requests/${r.id}/reject`,{}); setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"rejetee"}:x)); }} style={{ padding:"6px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600 }}>Rejeter</button>
+                      </div>
+                    ) : (
+                      <span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:r.statut==="converti"?"#f0fdf0":"#fef2f2",color:r.statut==="converti"?"#1a8f1a":"#ef4444",flexShrink:0 }}>{r.statut==="converti"?"✓ Inscrit(e)":"Rejetée"}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── AVIS PARENTS / ÉLÈVES ── */}
+          {section === "avis" && (() => {
+            const approved = reviews.filter((r:any) => r.statut === "approuve");
+            const moyenne = approved.length ? (approved.reduce((s:number,r:any) => s + r.note, 0) / approved.length).toFixed(1) : "—";
+            return (
+              <div style={{ display:"flex",flexDirection:"column",gap:16,animation:"fadeIn 0.2s ease" }}>
+                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"16px 20px",display:"flex",alignItems:"center",gap:16 }}>
+                  <div style={{ fontSize:28,fontWeight:800,color:V.colorDark }}>{moyenne}<span style={{ fontSize:14,color:"#94a3b8",fontWeight:500 }}> / 5</span></div>
+                  <div style={{ fontSize:13,color:"#64748b" }}>{approved.length} avis publié{approved.length>1?"s":""} · {reviews.filter((r:any)=>r.statut==="en_attente").length} en attente</div>
+                </div>
+                {reviews.length===0 ? (
+                  <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center",color:"#94a3b8" }}>Aucun avis reçu</div>
+                ) : reviews.map((r:any) => (
+                  <div key={r.id} style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:18,boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+                    <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
+                      <div>
+                        <div style={{ color:"#f59e0b",fontSize:15,marginBottom:4 }}>{"★".repeat(r.note)}{"☆".repeat(5-r.note)}</div>
+                        <div style={{ fontWeight:700,color:"#0f172a",fontSize:14 }}>{r.nom_auteur || "Anonyme"}</div>
+                        {r.commentaire && <p style={{ fontSize:13,color:"#475569",marginTop:8 }}>{r.commentaire}</p>}
+                      </div>
+                      <div style={{ display:"flex",gap:6,flexShrink:0 }}>
+                        {r.statut==="en_attente" && <button onClick={async()=>{ await put(`/reviews/${r.id}`,{statut:"approuve"}); setReviews(rs=>rs.map((x:any)=>x.id===r.id?{...x,statut:"approuve"}:x)); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Approuver</button>}
+                        <button onClick={async()=>{ if(confirm("Supprimer cet avis ?")){await del(`/reviews/${r.id}`);setReviews(rs=>rs.filter((x:any)=>x.id!==r.id));} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Supprimer</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* ── PARAMÈTRES ── */}
           {section === "settings" && (
             <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1015,6 +1096,11 @@ export default function GestionEnseignement({ mode }: Props) {
                   <div>
                     <label style={lbl}>Adresse</label>
                     <input className={inp} style={{ ...inpSt, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Horaires</label>
+                    <input className={inp} style={{ ...inpSt, marginTop: 4 }} placeholder="Ex : Lun-Ven 7h30-17h" value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, horaires: e.target.value }))} />
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Affiché sur votre page vitrine publique.</p>
                   </div>
                 </div>
               </div>
