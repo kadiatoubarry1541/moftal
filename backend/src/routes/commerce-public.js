@@ -1,6 +1,7 @@
 import express from 'express';
 import { sequelize } from '../config/database.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
+import { ensureCommerceReviewsTable } from './commerce-management.js';
 
 const router = express.Router();
 
@@ -54,6 +55,42 @@ router.get('/:tenantCode/categories', async (req, res) => {
     );
     const categories = rows.map(r => r.categorie).filter(Boolean);
     res.json({ success: true, categories });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// GET /api/commerce-public/:tenantCode/reviews — avis approuvés + moyenne
+router.get('/:tenantCode/reviews', async (req, res) => {
+  try {
+    await ensureCommerceReviewsTable();
+    const { tenantCode } = req.params;
+    const reviews = await sequelize.query(
+      `SELECT id, nom_auteur, note, commentaire, created_at FROM commerce_reviews WHERE tenant_code=:code AND statut='approuve' ORDER BY created_at DESC LIMIT 50`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    const [avg] = await sequelize.query(
+      `SELECT COALESCE(AVG(note),0) as moyenne, COUNT(*) as total FROM commerce_reviews WHERE tenant_code=:code AND statut='approuve'`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, reviews, moyenne: +(avg?.moyenne || 0), total: +(avg?.total || 0) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// POST /api/commerce-public/:tenantCode/reviews — soumettre un avis (modéré avant publication)
+router.post('/:tenantCode/reviews', async (req, res) => {
+  try {
+    await ensureCommerceReviewsTable();
+    const { tenantCode } = req.params;
+    const { nom_auteur, note, commentaire } = req.body;
+    if (!note || note < 1 || note > 5) return res.status(400).json({ success: false, message: 'Note invalide (1 à 5).' });
+    await sequelize.query(
+      `INSERT INTO commerce_reviews (tenant_code, nom_auteur, note, commentaire) VALUES (:code,:nom,:note,:com)`,
+      { replacements: { code: tenantCode, nom: nom_auteur || 'Anonyme', note, com: commentaire || null } }
+    );
+    res.json({ success: true, message: 'Merci ! Votre avis sera visible après modération.' });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

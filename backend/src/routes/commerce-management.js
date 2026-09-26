@@ -6,6 +6,25 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 
 const router = express.Router();
 
+export async function ensureStaffTable() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS commerce_staff (
+      id           SERIAL PRIMARY KEY,
+      tenant_code  VARCHAR(50) NOT NULL,
+      nom          VARCHAR(255) NOT NULL,
+      telephone    VARCHAR(50),
+      role         VARCHAR(50) DEFAULT 'Caissier',
+      numero_h     VARCHAR(50),
+      photo_url    TEXT,
+      is_active    BOOLEAN DEFAULT true,
+      created_at   TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+
+// Vérifie que le tenant appartient à l'utilisateur connecté (propriétaire, membre du
+// personnel relié à son compte Moftal, ou admin plateforme). req.myRole indique le
+// rôle utilisé côté frontend pour limiter les sections visibles (droits par rôle).
 async function verifyTenant(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
@@ -14,11 +33,25 @@ async function verifyTenant(req, res, next) {
     if (isAdminUser) {
       const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code=:code LIMIT 1`, { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT });
       req.tenant = tenant || { tenant_code: tenantCode, name: 'Commerce Admin', type: 'commerce', owner_numero_h: 'ADMIN-G7', is_active: true };
+      req.myRole = 'Propriétaire';
       return next();
     }
     const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code=:code AND owner_numero_h=:n LIMIT 1`, { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT });
-    if (!tenant) return res.status(403).json({ success: false, message: 'Accès refusé à cet espace commerce.' });
-    req.tenant = tenant;
+    if (tenant) {
+      req.tenant = tenant;
+      req.myRole = 'Propriétaire';
+      return enforceGestionAccess(req, res, next);
+    }
+    // Pas le propriétaire : vérifier si connecté en tant que membre du personnel
+    await ensureStaffTable();
+    const [staffMember] = await sequelize.query(
+      `SELECT s.*, t.* FROM commerce_staff s JOIN management_tenants t ON t.tenant_code = s.tenant_code
+       WHERE s.tenant_code = :code AND s.numero_h = :n AND s.is_active = true LIMIT 1`,
+      { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!staffMember) return res.status(403).json({ success: false, message: 'Accès refusé à cet espace commerce.' });
+    req.tenant = staffMember;
+    req.myRole = staffMember.role || 'Caissier';
     return enforceGestionAccess(req, res, next);
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 }
@@ -48,7 +81,84 @@ async function logStockMovement(code, productId, delta, reason) {
 
 // ─── INFO ─────────────────────────────────────────────────────────────────────
 router.get('/:tenantCode/info', authenticate, verifyTenant, (req, res) => {
-  res.json({ success: true, tenant: req.tenant });
+  res.json({ success: true, tenant: req.tenant, myRole: req.myRole });
+});
+
+// ─── PERSONNEL / VENDEURS ───────────────────────────────────────────────────────
+router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureStaffTable();
+    const rows = await sequelize.query(`SELECT * FROM commerce_staff WHERE tenant_code=:code AND is_active=true ORDER BY nom`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, staff: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureStaffTable();
+    const { nom, telephone, role, numero_h, photo_url } = req.body;
+    const [rows] = await sequelize.query(
+      `INSERT INTO commerce_staff (tenant_code,nom,telephone,role,numero_h,photo_url) VALUES(:code,:nom,:tel,:role,:nh,:photo) RETURNING *`,
+      { replacements: { code: req.params.tenantCode, nom, tel: telephone || null, role: role || 'Caissier', nh: numero_h || null, photo: photo_url || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, member: rows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const { nom, telephone, role, numero_h, photo_url } = req.body;
+    await sequelize.query(
+      `UPDATE commerce_staff SET nom=:nom,telephone=:tel,role=:role,numero_h=:nh,photo_url=:photo WHERE id=:id AND tenant_code=:code`,
+      { replacements: { nom, tel: telephone || null, role: role || 'Caissier', nh: numero_h || null, photo: photo_url || null, id: req.params.id, code: req.params.tenantCode } }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`UPDATE commerce_staff SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── AVIS CLIENTS ────────────────────────────────────────────────────────────────
+export async function ensureCommerceReviewsTable() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS commerce_reviews (
+      id           SERIAL PRIMARY KEY,
+      tenant_code  VARCHAR(50) NOT NULL,
+      nom_auteur   VARCHAR(255),
+      note         INTEGER NOT NULL,
+      commentaire  TEXT,
+      statut       VARCHAR(20) DEFAULT 'en_attente',
+      created_at   TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+
+router.get('/:tenantCode/reviews', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureCommerceReviewsTable();
+    const rows = await sequelize.query(`SELECT * FROM commerce_reviews WHERE tenant_code=:code ORDER BY created_at DESC`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, reviews: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const { statut } = req.body;
+    await sequelize.query(`UPDATE commerce_reviews SET statut=:statut WHERE id=:id AND tenant_code=:code`, { replacements: { statut, id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`DELETE FROM commerce_reviews WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // ─── PARAMÈTRES (nom, logo, contact, horaires, urgence) ────────────────────────

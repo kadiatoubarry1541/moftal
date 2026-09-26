@@ -53,6 +53,10 @@ export default function CommerceVitrine() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartItems, setCartItems] = useState<{ product: any; qty: number }[]>([]);
   const [showCart, setShowCart]   = useState(false);
+  const [reviews, setReviews]     = useState<any[]>([]);
+  const [reviewStats, setReviewStats] = useState<{ moyenne: number; total: number }>({ moyenne: 0, total: 0 });
+  const [reviewForm, setReviewForm] = useState({ nom_auteur: "", note: 5, commentaire: "" });
+  const [reviewSent, setReviewSent] = useState(false);
 
   const isLoggedIn = !!localStorage.getItem("token");
 
@@ -62,14 +66,22 @@ export default function CommerceVitrine() {
       fetch(`${API}/api/commerce-public/${code}`).then(r => r.json()),
       fetch(`${API}/api/commerce-public/${code}/products`).then(r => r.json()),
       fetch(`${API}/api/commerce-public/${code}/categories`).then(r => r.json()),
-    ]).then(([s, p, c]) => {
+      fetch(`${API}/api/commerce-public/${code}/reviews`).then(r => r.json()),
+    ]).then(([s, p, c, rv]) => {
       if (s.success) setStore(s.store);
       else setError(s.message || "Boutique introuvable");
       if (p.success) setProducts(p.products || []);
       if (c.success) setCategories(c.categories || []);
+      if (rv.success) { setReviews(rv.reviews || []); setReviewStats({ moyenne: rv.moyenne || 0, total: rv.total || 0 }); }
     }).catch(() => setError("Impossible de charger la boutique."))
       .finally(() => setLoading(false));
   }, [tenantCode]);
+
+  async function submitReview() {
+    if (!reviewForm.note) return;
+    const r = await fetch(`${API}/api/commerce-public/${tenantCode}/reviews`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reviewForm) }).then(r => r.json());
+    if (r.success) { setReviewSent(true); setReviewForm({ nom_auteur: "", note: 5, commentaire: "" }); }
+  }
 
   const filteredProducts = useMemo(() => {
     let list = products;
@@ -206,7 +218,7 @@ export default function CommerceVitrine() {
 
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             <div style={{ display: "flex", gap: 18 }}>
-              {[["Accueil","hero"],["Produits","products"],["Contact","contact"]].map(([label, id]) => (
+              {[["Accueil","hero"],["Produits","products"],["Avis","avis"],["Contact","contact"]].map(([label, id]) => (
                 <button key={id} className="nav-link" onClick={() => scrollTo(id)}>{label}</button>
               ))}
             </div>
@@ -375,6 +387,55 @@ export default function CommerceVitrine() {
                 <p style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── AVIS CLIENTS ─────────────────────────────────────────────────────── */}
+      <section id="avis" style={{ background: "#fafaf9", padding: "60px 20px" }}>
+        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Avis clients</h2>
+            {reviewStats.total > 0 ? (
+              <p style={{ color: "#64748b", fontSize: 14 }}>
+                <span style={{ color: "#f59e0b" }}>{"★".repeat(Math.round(reviewStats.moyenne))}{"☆".repeat(5 - Math.round(reviewStats.moyenne))}</span>
+                {" "}{reviewStats.moyenne.toFixed(1)} / 5 · {reviewStats.total} avis
+              </p>
+            ) : (
+              <p style={{ color: "#64748b", fontSize: 14 }}>Soyez le premier à donner votre avis sur cette boutique.</p>
+            )}
+          </div>
+
+          {reviews.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 32 }}>
+              {reviews.map(r => (
+                <div key={r.id} style={{ background: "white", borderRadius: 14, border: "1px solid #e2e8f0", padding: 18 }}>
+                  <div style={{ color: "#f59e0b", fontSize: 14, marginBottom: 6 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: "#0f172a" }}>{r.nom_auteur || "Anonyme"}</div>
+                  {r.commentaire && <p style={{ fontSize: 13, color: "#475569", marginTop: 6 }}>{r.commentaire}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ background: "white", borderRadius: 16, border: "1px solid #e2e8f0", padding: 24, maxWidth: 480, margin: "0 auto" }}>
+            {reviewSent ? (
+              <p style={{ textAlign: "center", color: "#16a34a", fontWeight: 600, margin: 0 }}>Merci ! Votre avis sera visible après modération.</p>
+            ) : (
+              <>
+                <div style={{ fontWeight: 700, marginBottom: 12, textAlign: "center" }}>Laisser un avis</div>
+                <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 12 }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button key={n} onClick={() => setReviewForm(f => ({ ...f, note: n }))} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 26, color: n <= reviewForm.note ? "#f59e0b" : "#e2e8f0" }}>★</button>
+                  ))}
+                </div>
+                <input placeholder="Votre nom (optionnel)" value={reviewForm.nom_auteur} onChange={e => setReviewForm(f => ({ ...f, nom_auteur: e.target.value }))}
+                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", marginBottom: 10 }} />
+                <textarea placeholder="Votre commentaire (optionnel)" value={reviewForm.commentaire} onChange={e => setReviewForm(f => ({ ...f, commentaire: e.target.value }))}
+                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box", height: 70, resize: "none", marginBottom: 12 }} />
+                <button onClick={submitReview} style={{ width: "100%", padding: "10px", background: AMBER, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, fontSize: 13 }}>Envoyer mon avis</button>
+              </>
+            )}
           </div>
         </div>
       </section>

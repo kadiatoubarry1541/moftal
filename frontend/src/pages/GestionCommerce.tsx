@@ -8,10 +8,19 @@ import InstallAppButton from "../components/InstallAppButton";
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses" | "settings";
+type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses" | "staff" | "avis" | "settings";
 
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
+function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
 
 const COLOR      = "#d97706";
 const COLOR_BG   = "#fffbeb";
@@ -20,6 +29,12 @@ const COLOR_DARK = "#92400e";
 const GRADIENT   = "linear-gradient(135deg,#d97706,#f59e0b)";
 
 const CATS_EXP = ["Transport", "Loyer", "Électricité", "Eau", "Emballage", "Réparation", "Approvisionnement", "Autre"];
+const ROLES_STAFF = ["Propriétaire", "Gérant", "Caissier"];
+const ROLE_PERMISSIONS: Record<string, Tab[]> = {
+  "Propriétaire": ["dashboard", "products", "sales", "clients", "expenses", "staff", "avis", "settings"],
+  "Gérant":       ["dashboard", "products", "sales", "clients", "expenses", "staff", "avis"],
+  "Caissier":     ["dashboard", "products", "sales", "clients"],
+};
 
 interface Props { mode?: "commerce" | "vendeur" }
 
@@ -47,11 +62,18 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   const [editExpense, setEditExpense] = useState<any>(null);
   const [movementsFor, setMovementsFor] = useState<any>(null);
   const [movements, setMovements] = useState<any[]>([]);
+  const [myRole, setMyRole] = useState<string>("Propriétaire");
+  const [staff, setStaff] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [editStaff, setEditStaff] = useState<any>(null);
+  const [stockAlertDismissed, setStockAlertDismissed] = useState(false);
 
   const [pForm, setPForm] = useState({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce" });
   const [sForm, setSForm] = useState({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] });
   const [cForm, setCForm] = useState({ nom: "", telephone: "", adresse: "" });
   const [eForm, setEForm] = useState({ description: "", montant: "", categorie: "Transport" });
+  const [stForm, setStForm] = useState({ nom: "", telephone: "", role: "Caissier", numero_h: "" });
   const [saving, setSaving] = useState(false);
   const [settingsForm, setSettingsForm] = useState<any>({});
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -70,6 +92,8 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     if (tab === "sales") { loadSales(); loadProducts(); }
     if (tab === "clients") loadClients();
     if (tab === "expenses") loadExpenses();
+    if (tab === "staff") loadStaff();
+    if (tab === "avis") loadReviews();
   }, [tab, tenantCode]);
 
   async function loadAll() {
@@ -82,6 +106,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       const tData = await tenantRes.json();
       if (!tData.success) { setError(tData.message || "Accès refusé"); setLoading(false); return; }
       setTenant(tData.tenant);
+      setMyRole(tData.myRole || "Propriétaire");
       setSettingsForm({ name: tData.tenant.name || "", address: tData.tenant.address || "", phone: tData.tenant.phone || "", email: tData.tenant.email || "", description: tData.tenant.description || "", horaires: tData.tenant.horaires || "", phone_urgence: tData.tenant.phone_urgence || "" });
       const dData = await dashRes.json();
       if (dData.success) setDash(dData);
@@ -108,6 +133,40 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     const r = await fetch(`${b(tenantCode!)}/expenses`, { headers: auth() });
     const d = await r.json();
     if (d.success) setExpenses(d.expenses || []);
+  }
+  async function loadStaff() {
+    const r = await fetch(`${b(tenantCode!)}/staff`, { headers: auth() });
+    const d = await r.json();
+    if (d.success) setStaff(d.staff || []);
+  }
+  async function loadReviews() {
+    const r = await fetch(`${b(tenantCode!)}/reviews`, { headers: auth() });
+    const d = await r.json();
+    if (d.success) setReviews(d.reviews || []);
+  }
+  async function saveStaff() {
+    if (!stForm.nom) return;
+    setSaving(true);
+    const url = editStaff ? `${b(tenantCode!)}/staff/${editStaff.id}` : `${b(tenantCode!)}/staff`;
+    const method = editStaff ? "PUT" : "POST";
+    await fetch(url, { method, headers: auth(), body: JSON.stringify(stForm) });
+    setSaving(false); setShowAddStaff(false); setEditStaff(null);
+    setStForm({ nom: "", telephone: "", role: "Caissier", numero_h: "" });
+    loadStaff();
+  }
+  async function deleteStaff(id: number) {
+    if (!confirm("Retirer ce membre du personnel ?")) return;
+    await fetch(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() });
+    loadStaff();
+  }
+  async function approveReview(id: number) {
+    await fetch(`${b(tenantCode!)}/reviews/${id}`, { method: "PUT", headers: auth(), body: JSON.stringify({ statut: "approuve" }) });
+    setReviews(rs => rs.map(r => r.id === id ? { ...r, statut: "approuve" } : r));
+  }
+  async function deleteReview(id: number) {
+    if (!confirm("Supprimer cet avis ?")) return;
+    await fetch(`${b(tenantCode!)}/reviews/${id}`, { method: "DELETE", headers: auth() });
+    setReviews(rs => rs.filter(r => r.id !== id));
   }
 
   async function saveProduct() {
@@ -252,14 +311,18 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     </div>
   );
 
-  const TABS: { id: Tab; label: string; icon: string }[] = [
+  const ALL_TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard", label: "Tableau de bord", icon: "📊" },
     { id: "products",  label: "Articles / Produits", icon: "📦" },
     { id: "sales",     label: "Ventes", icon: "🧾" },
     { id: "clients",   label: "Clients", icon: "👥" },
     { id: "expenses",  label: "Dépenses", icon: "💸" },
+    { id: "staff",     label: "Personnel", icon: "🧑‍💼" },
+    { id: "avis",      label: "Avis", icon: "⭐" },
     { id: "settings",  label: "Paramètres", icon: "⚙️" },
   ];
+  const allowed = ROLE_PERMISSIONS[myRole] || ROLE_PERMISSIONS.Caissier;
+  const TABS = ALL_TABS.filter(t => allowed.includes(t.id));
 
   const inputStyle = { width: "100%", border: `1px solid ${COLOR_BDR}`, borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" as const };
   const formBg = { background: COLOR_BG, border: `1px solid ${COLOR_BDR}`, borderRadius: 12, padding: 20, marginBottom: 16 };
@@ -306,6 +369,17 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           </button>
         ))}
       </div>
+
+      {/* Alerte stock faible proactive, visible sur tous les onglets */}
+      {!stockAlertDismissed && dash?.alertesStock > 0 && tab !== "dashboard" && (
+        <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <span style={{ fontSize: 13, color: "#c2410c", fontWeight: 600 }}>⚠️ {dash.alertesStock} article{dash.alertesStock > 1 ? "s" : ""} en stock faible — réapprovisionnement conseillé.</span>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button onClick={() => setTab("dashboard")} style={{ padding: "5px 12px", background: "#f59e0b", color: "white", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Voir</button>
+            <button onClick={() => setStockAlertDismissed(true)} style={{ padding: "5px 10px", background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#c2410c" }}>×</button>
+          </div>
+        </div>
+      )}
 
       {/* ── DASHBOARD ── */}
       {tab === "dashboard" && dash && (
@@ -362,7 +436,10 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
         <div style={{ animation: "fadeIn 0.2s ease" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Articles / Produits ({products.length})</div>
-            <button onClick={() => setShowAddProduct(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => downloadCsv(`produits_${tenantCode}.csv`, [["Nom", "Catégorie", "Prix vente", "Prix achat", "Stock", "Stock min", "Unité"], ...products.map(p => [p.nom, p.categorie || "", p.prix_vente, p.prix_achat, p.stock, p.stock_min, p.unite])])} style={{ padding: "8px 14px", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>⬇️ CSV</button>
+              <button onClick={() => setShowAddProduct(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
+            </div>
           </div>
 
           {showAddProduct && (
@@ -420,7 +497,10 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
         <div style={{ animation: "fadeIn 0.2s ease" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Ventes ({sales.length})</div>
-            <button onClick={() => setShowNewSale(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Nouvelle vente</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => downloadCsv(`ventes_${tenantCode}.csv`, [["Date", "Client", "Total", "Reçu", "Paiement", "Crédit", "Annulée"], ...sales.map(s => [fmtDate(s.date_vente), s.client_nom || "", s.total, s.montant_recu, s.type_paiement, s.est_credit ? "Oui" : "Non", s.annulee ? "Oui" : "Non"])])} style={{ padding: "8px 14px", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>⬇️ CSV</button>
+              <button onClick={() => setShowNewSale(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Nouvelle vente</button>
+            </div>
           </div>
 
           {showNewSale && (
@@ -579,7 +659,10 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Dépenses ({expenses.length})</div>
-            <button onClick={() => setShowAddExpense(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => downloadCsv(`depenses_${tenantCode}.csv`, [["Date", "Description", "Catégorie", "Montant"], ...expenses.map(e => [fmtDate(e.date_depense), e.description, e.categorie, e.montant])])} style={{ padding: "8px 14px", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>⬇️ CSV</button>
+              <button onClick={() => setShowAddExpense(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
+            </div>
           </div>
 
           {showAddExpense && (
@@ -623,6 +706,89 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
               </div>
             ))}
             {expenses.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune dépense enregistrée.</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── PERSONNEL / VENDEURS ── */}
+      {tab === "staff" && (
+        <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>Personnel ({staff.length})</div>
+            <button onClick={() => setShowAddStaff(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
+          </div>
+
+          {showAddStaff && (
+            <div style={formBg}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{editStaff ? "Modifier" : "Nouveau"} membre du personnel</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={labelStyle}>Nom *</label>
+                  <input value={stForm.nom} onChange={e => setStForm(f => ({ ...f, nom: e.target.value }))} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Téléphone</label>
+                  <input value={stForm.telephone} onChange={e => setStForm(f => ({ ...f, telephone: e.target.value }))} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Rôle</label>
+                  <select value={stForm.role} onChange={e => setStForm(f => ({ ...f, role: e.target.value }))} style={{ ...inputStyle, width: "100%" }}>
+                    {ROLES_STAFF.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Numéro H (compte Moftal)</label>
+                  <input value={stForm.numero_h} onChange={e => setStForm(f => ({ ...f, numero_h: e.target.value }))} style={inputStyle} placeholder="Ex : H-123456" />
+                </div>
+              </div>
+              <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>Renseignez le numéro H pour permettre à cette personne de se connecter à la gestion de la boutique avec son propre compte Moftal.</p>
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button onClick={saveStaff} disabled={saving} style={{ padding: "8px 20px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer"}</button>
+                <button onClick={() => { setShowAddStaff(false); setEditStaff(null); setStForm({ nom: "", telephone: "", role: "Caissier", numero_h: "" }); }} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {staff.map(s => (
+              <div key={s.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{s.nom}</div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{s.role}{s.telephone ? ` · ${s.telephone}` : ""}{s.numero_h ? ` · ${s.numero_h}` : " · accès non lié"}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => { setEditStaff(s); setStForm({ nom: s.nom, telephone: s.telephone || "", role: s.role || "Caissier", numero_h: s.numero_h || "" }); setShowAddStaff(true); }} style={{ padding: "6px 8px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>✏️</button>
+                  <button onClick={() => deleteStaff(s.id)} style={{ padding: "6px 8px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>🗑️</button>
+                </div>
+              </div>
+            ))}
+            {staff.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucun membre du personnel enregistré. Vous êtes seul(e) à gérer la boutique.</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── AVIS CLIENTS ── */}
+      {tab === "avis" && (
+        <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Avis clients ({reviews.length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {reviews.map(r => (
+              <div key={r.id} style={{ background: "white", borderRadius: 12, border: "1px solid #f1f5f9", padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ color: "#f59e0b", fontSize: 14, marginBottom: 4 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{r.nom_auteur || "Anonyme"}</div>
+                    {r.commentaire && <p style={{ fontSize: 13, color: "#475569", marginTop: 6 }}>{r.commentaire}</p>}
+                    {r.statut === "en_attente" && <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>En attente de modération</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                    {r.statut === "en_attente" && <button onClick={() => approveReview(r.id)} style={{ padding: "5px 12px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approuver</button>}
+                    <button onClick={() => deleteReview(r.id)} style={{ padding: "5px 12px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {reviews.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucun avis pour le moment.</div>}
           </div>
         </div>
       )}
