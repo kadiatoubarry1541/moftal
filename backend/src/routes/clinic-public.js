@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
-import { ensurePharmacyTable } from './clinic-management.js';
+import { ensurePharmacyTable, ensureAppointmentRequestsTable, ensureTenantExtraColumns } from './clinic-management.js';
 
 const router = express.Router();
 
@@ -11,8 +11,9 @@ const router = express.Router();
 router.get('/:tenantCode', async (req, res) => {
   try {
     const { tenantCode } = req.params;
+    await ensureTenantExtraColumns();
     const [tenant] = await sequelize.query(
-      `SELECT tenant_code, type, name, logo_url, address, phone, email, description
+      `SELECT tenant_code, type, name, logo_url, address, phone, email, description, horaires, phone_urgence
        FROM management_tenants
        WHERE tenant_code = :code AND type = 'clinic' AND is_active = true
        LIMIT 1`,
@@ -160,6 +161,25 @@ router.post('/:tenantCode/request-appointment', authenticate, async (req, res) =
       { replacements: { code: tenantCode, pid: patient.id, svc: service || null, date: date_rdv, heure: heure || null, motif: motif || null }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, appointment: rows[0] });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// POST /api/clinic-public/:tenantCode/quick-request — demande de RDV pour un visiteur
+// qui n'est pas encore patient enregistré (pas d'authentification requise)
+router.post('/:tenantCode/quick-request', async (req, res) => {
+  try {
+    const { tenantCode } = req.params;
+    await ensureAppointmentRequestsTable();
+    const { nom, telephone, service, date_souhaitee, motif } = req.body;
+    if (!nom || !telephone) return res.status(400).json({ success: false, message: 'Nom et téléphone requis.' });
+    const [rows] = await sequelize.query(
+      `INSERT INTO clinic_appointment_requests (tenant_code, nom, telephone, service, date_souhaitee, motif)
+       VALUES (:code, :nom, :tel, :svc, :date, :motif) RETURNING *`,
+      { replacements: { code: tenantCode, nom, tel: telephone, svc: service || null, date: date_souhaitee || null, motif: motif || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, request: rows[0] });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

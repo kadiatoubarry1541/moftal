@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿import { Fragment, useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -119,6 +119,11 @@ export default function GestionClinique() {
   const [pharmacyHistory, setPharmacyHistory] = useState<any[]>([]);
   const [pharmacyStats, setPharmacyStats] = useState<any>(null);
   const [pharmacyTab, setPharmacyTab] = useState<"stock"|"pending"|"history">("pending");
+  const [appointmentsTab, setAppointmentsTab] = useState<"list"|"requests">("list");
+  const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
+  const [bloodFilter, setBloodFilter] = useState("");
+  const [payingInvoiceId, setPayingInvoiceId] = useState<number|null>(null);
+  const [partialAmount, setPartialAmount] = useState("");
   const [dispensingId, setDispensingId] = useState<number|null>(null);
   const [dispensingMed, setDispensingMed] = useState<any>(null);
   const [search, setSearch] = useState("");
@@ -174,7 +179,7 @@ export default function GestionClinique() {
       .then(d => {
         if (d.success) {
           setTenant(d.tenant);
-          setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "" });
+          setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", horaires: d.tenant.horaires || "", phone_urgence: d.tenant.phone_urgence || "" });
         } else if (d.success === false) setError(d.message || "Accès refusé.");
       })
       .catch(e => setError("Impossible de joindre le serveur : " + (e?.message || e)))
@@ -215,6 +220,7 @@ export default function GestionClinique() {
       get("/appointments").then(d => d.success && setAppointments(d.appointments));
       get("/patients").then(d => d.success && setPatients(d.patients));
       get("/staff").then(d => d.success && setStaff(d.staff));
+      get("/appointment-requests").then(d => d.success && setAppointmentRequests(d.requests));
     }
     if (s === "prescriptions") {
       get("/prescriptions").then(d => d.success && setPrescriptions(d.prescriptions));
@@ -346,7 +352,9 @@ export default function GestionClinique() {
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
   const isMobile = window.innerWidth < 768;
   const sideW = collapsed ? (isMobile ? 0 : 64) : 240;
-  const filteredPatients = patients.filter(p => !search || `${p.nom} ${p.prenom} ${p.numero_matricule}`.toLowerCase().includes(search.toLowerCase()));
+  const filteredPatients = patients
+    .filter(p => !search || `${p.nom} ${p.prenom} ${p.numero_matricule}`.toLowerCase().includes(search.toLowerCase()))
+    .filter(p => !bloodFilter || p.groupe_sanguin === bloodFilter);
   const currentNav = NAV_ITEMS.find(n => n.id === section)!;
 
   const BtnAdd = ({ label, onClick }: { label: string; onClick: () => void }) => (
@@ -620,22 +628,28 @@ export default function GestionClinique() {
           {/* ── PATIENTS ── */}
           {section === "patients" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ position: "relative" }}>
-                <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom, prénom, matricule..." style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px 8px 32px", fontSize: 13, color: "#0f172a", outline: "none", boxSizing: "border-box" }} />
+              <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ position: "relative", flex: 1 }}>
+                  <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} width="14" height="14" fill="none" stroke="#94a3b8" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom, prénom, matricule, téléphone..." style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px 8px 32px", fontSize: 13, color: "#0f172a", outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <select value={bloodFilter} onChange={e => setBloodFilter(e.target.value)} style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#0f172a", outline: "none" }}>
+                  <option value="">Tous groupes</option>
+                  {BLOOD_GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
               </div>
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                      {["Matricule", "Patient", "Sexe", "Né(e) le", "Gr. sanguin", "Téléphone", "Allergies", "Actions"].map(h => (
+                      {["Matricule", "Patient", "Sexe", "Né(e) le", "Gr. sanguin", "Téléphone", "Allergies", "Solde dû", "Actions"].map(h => (
                         <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredPatients.length === 0 ? (
-                      <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun patient trouvé</td></tr>
+                      <tr><td colSpan={9} style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun patient trouvé</td></tr>
                     ) : filteredPatients.map(p => (
                       <tr key={p.id} style={{ borderBottom: "1px solid #f8fafc" }}
                         onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#fafafa"}
@@ -654,6 +668,9 @@ export default function GestionClinique() {
                         </td>
                         <td style={{ padding: "11px 16px", color: "#475569" }}>{p.telephone || "—"}</td>
                         <td style={{ padding: "11px 16px", color: "#94a3b8", fontSize: 12, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.allergies || "—"}</td>
+                        <td style={{ padding: "11px 16px" }}>
+                          {+p.solde_du > 0 ? <span style={{ padding: "2px 8px", background: "#fef2f2", color: "#ef4444", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{fmtMoney(p.solde_du)}</span> : <span style={{ color: "#94a3b8" }}>—</span>}
+                        </td>
                         <td style={{ padding: "11px 16px" }}>
                           <button onClick={async () => { if (confirm(`Supprimer le dossier de ${p.prenom} ${p.nom} ?`)) { await del(`/patients/${p.id}`); setPatients(ps => ps.filter(x => x.id !== p.id)); showToast("Patient supprimé"); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
                         </td>
@@ -700,6 +717,62 @@ export default function GestionClinique() {
 
           {/* ── RENDEZ-VOUS ── */}
           {section === "appointments" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", gap: 4, background: "white", borderRadius: 10, padding: 5, border: "1px solid #e2e8f0", maxWidth: 420 }}>
+                {([
+                  { id: "list",     label: "Rendez-vous" },
+                  { id: "requests", label: "Demandes en ligne", badge: appointmentRequests.filter(r => r.statut === "nouvelle").length },
+                ] as { id: "list"|"requests"; label: string; badge?: number }[]).map(t => (
+                  <button key={t.id} onClick={() => setAppointmentsTab(t.id)}
+                    style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: appointmentsTab === t.id ? 700 : 500, background: appointmentsTab === t.id ? TEAL : "transparent", color: appointmentsTab === t.id ? "white" : "#64748b", transition: "all 0.15s" }}>
+                    {t.label}
+                    {!!t.badge && (
+                      <span style={{ background: appointmentsTab === t.id ? "rgba(255,255,255,0.25)" : "#ef4444", color: "white", fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 10 }}>{t.badge}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {appointmentsTab === "requests" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {appointmentRequests.length === 0 ? (
+                    <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center" }}>
+                      <div style={{ fontSize: 13, color: "#94a3b8" }}>Aucune demande de rendez-vous reçue depuis la vitrine publique</div>
+                    </div>
+                  ) : appointmentRequests.map(r => (
+                    <div key={r.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 20px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", opacity: r.statut === "nouvelle" ? 1 : 0.6 }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{r.nom} · <span style={{ fontWeight: 500, color: "#64748b" }}>{r.telephone}</span></div>
+                          <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>
+                            {r.service && <>{r.service} · </>}{r.date_souhaitee ? fmtDate(r.date_souhaitee) : "Date non précisée"}
+                          </div>
+                          {r.motif && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{r.motif}</div>}
+                        </div>
+                        {r.statut === "nouvelle" ? (
+                          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                            <button onClick={async () => {
+                              const d = await put(`/appointment-requests/${r.id}/convert`, {});
+                              if (d.success) { setAppointmentRequests(rs => rs.map(x => x.id === r.id ? { ...x, statut: "converti" } : x)); showToast("Patient et rendez-vous créés"); }
+                              else showToast(d.message || "Erreur", false);
+                            }} style={{ padding: "6px 12px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Créer RDV</button>
+                            <button onClick={async () => {
+                              await put(`/appointment-requests/${r.id}/reject`, {});
+                              setAppointmentRequests(rs => rs.map(x => x.id === r.id ? { ...x, statut: "rejetee" } : x));
+                            }} style={{ padding: "6px 12px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Rejeter</button>
+                          </div>
+                        ) : (
+                          <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: r.statut === "converti" ? "#f0fdf0" : "#fef2f2", color: r.statut === "converti" ? "#1a8f1a" : "#ef4444", flexShrink: 0 }}>
+                            {r.statut === "converti" ? "✓ Converti" : "Rejetée"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {appointmentsTab === "list" && (
             <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
@@ -754,6 +827,8 @@ export default function GestionClinique() {
                   })}
                 </tbody>
               </table>
+            </div>
+              )}
             </div>
           )}
 
@@ -895,16 +970,19 @@ export default function GestionClinique() {
                       <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucune facture créée</td></tr>
                     ) : invoices.map(f => {
                       const isPaid = f.statut === "paye";
+                      const isPartial = f.statut === "partiel";
+                      const reste = Math.max(0, +f.total - +(f.montant_paye || 0));
                       return (
-                        <tr key={f.id} style={{ borderBottom: "1px solid #f8fafc" }}
+                        <Fragment key={f.id}>
+                        <tr style={{ borderBottom: payingInvoiceId === f.id ? "none" : "1px solid #f8fafc" }}
                           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#fafafa"}
                           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
                           <td style={{ padding: "11px 16px", fontFamily: "monospace", fontSize: 11, color: "#94a3b8" }}>{f.numero_facture}</td>
                           <td style={{ padding: "11px 16px", fontWeight: 600, color: "#0f172a" }}>{f.p_prenom || ""} {f.p_nom || <span style={{ color: "#94a3b8", fontWeight: 400 }}>Anonyme</span>}</td>
                           <td style={{ padding: "11px 16px", color: "#475569" }}>{f.s_nom ? `Dr. ${f.s_prenom || ""} ${f.s_nom}` : "—"}</td>
-                          <td style={{ padding: "11px 16px", fontWeight: 700, color: TEAL_DARK, fontSize: 14 }}>{fmtMoney(f.total)}</td>
+                          <td style={{ padding: "11px 16px", fontWeight: 700, color: TEAL_DARK, fontSize: 14 }}>{fmtMoney(f.total)}{isPartial && <div style={{ fontSize: 10, color: "#d97706", fontWeight: 600 }}>Reste {fmtMoney(reste)}</div>}</td>
                           <td style={{ padding: "11px 16px" }}>
-                            <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: isPaid ? "#f0fdf0" : "#fffbeb", color: isPaid ? "#1a8f1a" : "#d97706" }}>{isPaid ? "✓ Payée" : "⏳ En attente"}</span>
+                            <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: isPaid ? "#f0fdf0" : isPartial ? "#fff7ed" : "#fffbeb", color: isPaid ? "#1a8f1a" : isPartial ? "#c2410c" : "#d97706" }}>{isPaid ? "✓ Payée" : isPartial ? "◐ Partiel" : "⏳ En attente"}</span>
                           </td>
                           <td style={{ padding: "11px 16px", color: "#64748b" }}>{fmtDate(f.date_facture || f.created_at)}</td>
                           <td style={{ padding: "11px 16px" }}>
@@ -916,14 +994,42 @@ export default function GestionClinique() {
                               {!isPaid && (
                                 <button onClick={async () => {
                                   const d = await put(`/invoices/${f.id}`, { statut: "paye", mode_paiement: f.mode_paiement || "especes" });
-                                  if (d.success) { setInvoices(inv => inv.map(x => x.id === f.id ? { ...x, statut: "paye" } : x)); showToast("Facture marquée payée"); }
+                                  if (d.success) { setInvoices(inv => inv.map(x => x.id === f.id ? { ...x, statut: "paye", montant_paye: x.total } : x)); showToast("Facture marquée payée"); }
                                 }} style={{ padding: "4px 10px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
-                                  Marquer payée
+                                  Payée
+                                </button>
+                              )}
+                              {!isPaid && (
+                                <button onClick={() => { setPayingInvoiceId(payingInvoiceId === f.id ? null : f.id); setPartialAmount(String(f.montant_paye || "")); }} style={{ padding: "4px 10px", background: "#fff7ed", color: "#c2410c", border: "1px solid #fed7aa", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
+                                  Acompte
                                 </button>
                               )}
                             </div>
                           </td>
                         </tr>
+                        {payingInvoiceId === f.id && (
+                          <tr style={{ borderBottom: "1px solid #f8fafc" }}>
+                            <td colSpan={7} style={{ padding: "0 16px 14px", background: "#fffbeb" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 4 }}>
+                                <span style={{ fontSize: 12, color: "#78350f" }}>Montant déjà payé sur {fmtMoney(f.total)} :</span>
+                                <input type="number" min={0} max={+f.total} value={partialAmount} onChange={e => setPartialAmount(e.target.value)}
+                                  style={{ width: 120, border: "1px solid #fde68a", borderRadius: 6, padding: "5px 8px", fontSize: 12 }} />
+                                <button onClick={async () => {
+                                  const d = await put(`/invoices/${f.id}`, { montant_paye: +partialAmount || 0 });
+                                  if (d.success) {
+                                    const paye = +partialAmount || 0;
+                                    const statut = paye <= 0 ? "impaye" : paye >= +f.total ? "paye" : "partiel";
+                                    setInvoices(inv => inv.map(x => x.id === f.id ? { ...x, montant_paye: paye, statut } : x));
+                                    setPayingInvoiceId(null);
+                                    showToast("Paiement enregistré");
+                                  } else showToast(d.message || "Erreur", false);
+                                }} style={{ padding: "5px 12px", background: TEAL, color: "white", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Enregistrer</button>
+                                <button onClick={() => setPayingInvoiceId(null)} style={{ padding: "5px 12px", background: "white", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Annuler</button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -937,12 +1043,13 @@ export default function GestionClinique() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
               {/* Stats pharmacie */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 12 }}>
                 {[
                   { label: "Ordonnances en attente", val: pharmacyStats?.pending ?? "—",       color: "#d97706", bg: "#fffbeb", urgent: (pharmacyStats?.pending||0) > 0 },
                   { label: "Dispensées aujourd'hui", val: pharmacyStats?.dispensedToday ?? "—", color: TEAL,      bg: "#f0fdfa" },
                   { label: "Médicaments en stock",   val: pharmacyStats?.totalStock ?? "—",     color: "#7c3aed", bg: "#f5f3ff" },
                   { label: "Ruptures de stock",       val: pharmacyStats?.rupture ?? "—",        color: "#ef4444", bg: "#fef2f2", urgent: (pharmacyStats?.rupture||0) > 0 },
+                  { label: "Expirent bientôt (30j)",  val: pharmacyStats?.expiringSoon ?? "—",   color: "#d97706", bg: "#fffbeb", urgent: (pharmacyStats?.expiringSoon||0) > 0 },
                 ].map((s, i) => (
                   <div key={i} style={{ background: "white", borderRadius: 12, border: `1px solid ${s.urgent ? s.color+"55" : "#e2e8f0"}`, padding: "14px 16px", borderLeft: `3px solid ${s.color}`, boxShadow: s.urgent ? `0 0 0 2px ${s.color}22` : "0 1px 3px rgba(0,0,0,0.06)" }}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>{s.label}</div>
@@ -984,15 +1091,18 @@ export default function GestionClinique() {
                         <tr><td colSpan={8} style={{ padding: "48px", textAlign: "center", color: "#94a3b8" }}>Aucun médicament en stock. Ajoutez des médicaments pour commencer.</td></tr>
                       ) : pharmacyStock.map(m => {
                         const rupture = m.quantite <= m.quantite_min;
+                        const expBientot = m.date_expiration && !rupture && new Date(m.date_expiration) > new Date() && new Date(m.date_expiration) <= new Date(Date.now() + 30*24*60*60*1000);
+                        const alertRow = rupture || expBientot;
                         return (
-                          <tr key={m.id} style={{ borderBottom: "1px solid #f8fafc", background: rupture ? "#fff7f7" : "transparent" }}
-                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = rupture ? "#fef2f2" : "#fafafa"}
-                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = rupture ? "#fff7f7" : "transparent"}>
+                          <tr key={m.id} style={{ borderBottom: "1px solid #f8fafc", background: rupture ? "#fff7f7" : expBientot ? "#fffbeb" : "transparent" }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = rupture ? "#fef2f2" : expBientot ? "#fef3c7" : "#fafafa"}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = alertRow ? (rupture ? "#fff7f7" : "#fffbeb") : "transparent"}>
                             <td style={{ padding: "11px 14px", fontWeight: 700, color: "#0f172a" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <span style={{ fontSize: 18 }}>💊</span>
                                 {m.nom}
                                 {rupture && <span style={{ padding: "1px 7px", background: "#fef2f2", color: "#ef4444", borderRadius: 10, fontSize: 10, fontWeight: 700 }}>RUPTURE</span>}
+                                {expBientot && <span style={{ padding: "1px 7px", background: "#fffbeb", color: "#d97706", borderRadius: 10, fontSize: 10, fontWeight: 700 }}>EXPIRE BIENTÔT</span>}
                               </div>
                             </td>
                             <td style={{ padding: "11px 14px", color: "#64748b" }}>{m.forme || "—"}</td>
@@ -1215,6 +1325,16 @@ export default function GestionClinique() {
                   <div>
                     <label style={labelStyle}>Adresse</label>
                     <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} placeholder="Ex : Quartier Ratoma, Conakry" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Horaires d'ouverture</label>
+                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, horaires: e.target.value }))} placeholder="Ex : Lun-Sam 8h-18h, Dim fermé" />
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Affiché sur votre page vitrine publique.</p>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Téléphone urgence 24/7 (optionnel)</label>
+                    <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.phone_urgence || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone_urgence: e.target.value }))} placeholder="+224 6xx xxx xxx" />
+                    <p style={{ margin: "4px 0 0", fontSize: 11, color: "#94a3b8" }}>Affiche un bouton d'appel direct visible sur votre vitrine.</p>
                   </div>
                 </div>
               </div>

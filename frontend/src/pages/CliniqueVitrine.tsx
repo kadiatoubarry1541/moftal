@@ -44,6 +44,10 @@ export default function CliniqueVitrine() {
   const [error, setError] = useState<string | null>(null);
   const [isPatient, setIsPatient] = useState<boolean | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [quickForm, setQuickForm] = useState({ nom: "", telephone: "", service: "", date_souhaitee: "", motif: "" });
+  const [quickSending, setQuickSending] = useState(false);
+  const [quickSent, setQuickSent] = useState(false);
+  const [quickError, setQuickError] = useState("");
 
   const isLoggedIn = !!localStorage.getItem("token");
 
@@ -77,6 +81,21 @@ export default function CliniqueVitrine() {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setMobileMenuOpen(false);
+  };
+
+  const submitQuickRequest = async () => {
+    if (!quickForm.nom.trim() || !quickForm.telephone.trim()) { setQuickError("Nom et téléphone sont obligatoires."); return; }
+    setQuickError("");
+    setQuickSending(true);
+    try {
+      const r = await fetch(`${API_BASE}/clinic-public/${tenantCode}/quick-request`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(quickForm)
+      });
+      const d = await r.json();
+      if (d.success) { setQuickSent(true); }
+      else setQuickError(d.message || "Erreur lors de l'envoi.");
+    } catch { setQuickError("Impossible de joindre le serveur."); }
+    finally { setQuickSending(false); }
   };
 
   if (loading) return (
@@ -133,12 +152,19 @@ export default function CliniqueVitrine() {
       {/* ── BARRE TOP ─────────────────────────────────────────────────────────── */}
       <div style={{ background: TEAL_DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <div style={{ display: "flex", gap: 20 }}>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {clinic.phone && <span>📞 {clinic.phone}</span>}
             {clinic.email && <span>✉ {clinic.email}</span>}
             {clinic.address && <span>📍 {clinic.address}</span>}
+            {clinic.horaires && <span>🕐 {clinic.horaires}</span>}
           </div>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            {clinic.phone_urgence && (
+              <a href={`tel:${clinic.phone_urgence}`}
+                style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "3px 12px", fontSize: 11, cursor: "pointer", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                🚨 Urgence 24/7
+              </a>
+            )}
             {!isLoggedIn && (
               <button onClick={() => navigate("/login-membre", { state: { from: `/clinique/${tenantCode}/espace-patient` } })}
                 style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 6, padding: "3px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
@@ -412,18 +438,64 @@ export default function CliniqueVitrine() {
             <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nous Contacter</h2>
             <p style={{ color: "#64748b", fontSize: 15 }}>Nos équipes sont disponibles pour répondre à vos questions.</p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 800, margin: "0 auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, maxWidth: 1000, margin: "0 auto" }} className="services-grid">
             {[
               { icon: "📞", label: "Téléphone", val: clinic.phone || "Non renseigné" },
               { icon: "✉️", label: "Email", val: clinic.email || "Non renseigné" },
-              { icon: "📍", label: "Adresse", val: clinic.address || "Non renseignée" },
+              { icon: "📍", label: "Adresse", val: clinic.address || "Non renseignée",
+                extra: clinic.address ? (
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinic.address)}`} target="_blank" rel="noopener noreferrer"
+                    style={{ display: "inline-block", marginTop: 8, fontSize: 12, color: TEAL, fontWeight: 700, textDecoration: "none" }}>
+                    🗺️ Voir sur Google Maps
+                  </a>
+                ) : null },
+              { icon: "🕐", label: "Horaires", val: clinic.horaires || "Non renseignés" },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{item.val}</div>
+                {(item as any).extra}
               </div>
             ))}
+          </div>
+
+          {/* ── Demande de RDV rapide, sans compte requis ── */}
+          <div style={{ maxWidth: 560, margin: "48px auto 0", background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 16, padding: "28px 28px" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: TEAL_DARK, margin: "0 0 6px" }}>📅 Demander un rendez-vous rapide</h3>
+            <p style={{ fontSize: 13, color: "#475569", margin: "0 0 18px" }}>Pas encore patient ici ? Laissez vos coordonnées, la clinique vous recontacte pour confirmer.</p>
+            {quickSent ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+                <p style={{ fontSize: 14, color: TEAL_DARK, fontWeight: 700, margin: 0 }}>Demande envoyée !</p>
+                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>La clinique vous contactera prochainement au {quickForm.telephone}.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <input placeholder="Nom complet *" value={quickForm.nom} onChange={e => setQuickForm(f => ({ ...f, nom: e.target.value }))}
+                    style={{ border: "1px solid #99f6e4", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                  <input placeholder="Téléphone *" value={quickForm.telephone} onChange={e => setQuickForm(f => ({ ...f, telephone: e.target.value }))}
+                    style={{ border: "1px solid #99f6e4", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <select value={quickForm.service} onChange={e => setQuickForm(f => ({ ...f, service: e.target.value }))}
+                    style={{ border: "1px solid #99f6e4", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", background: "white" }}>
+                    <option value="">Service souhaité</option>
+                    {services.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <input type="date" value={quickForm.date_souhaitee} onChange={e => setQuickForm(f => ({ ...f, date_souhaitee: e.target.value }))}
+                    style={{ border: "1px solid #99f6e4", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                </div>
+                <textarea placeholder="Motif (optionnel)" value={quickForm.motif} onChange={e => setQuickForm(f => ({ ...f, motif: e.target.value }))}
+                  style={{ border: "1px solid #99f6e4", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", height: 60, resize: "none" }} />
+                {quickError && <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>{quickError}</p>}
+                <button onClick={submitQuickRequest} disabled={quickSending}
+                  style={{ background: quickSending ? `${TEAL}88` : TEAL, color: "white", border: "none", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: quickSending ? "not-allowed" : "pointer" }}>
+                  {quickSending ? "Envoi..." : "Envoyer la demande"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>

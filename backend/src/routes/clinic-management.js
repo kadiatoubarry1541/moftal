@@ -30,21 +30,32 @@ router.get('/:tenantCode/info', authenticate, verifyTenant, async (req, res) => 
   res.json({ success: true, tenant: req.tenant });
 });
 
+// Ajoute les colonnes horaires/téléphone d'urgence si elles n'existent pas encore
+export async function ensureTenantExtraColumns() {
+  await sequelize.query(`
+    ALTER TABLE management_tenants ADD COLUMN IF NOT EXISTS horaires TEXT;
+    ALTER TABLE management_tenants ADD COLUMN IF NOT EXISTS phone_urgence VARCHAR(50);
+  `);
+}
+
 // PUT /api/clinic-mgmt/:tenantCode/settings — mise à jour nom, logo, contact
 router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { name, logo_url, address, phone, email, description } = req.body;
+    await ensureTenantExtraColumns();
+    const { name, logo_url, address, phone, email, description, horaires, phone_urgence } = req.body;
     const code = req.params.tenantCode;
     await sequelize.query(
       `UPDATE management_tenants SET
-        name        = COALESCE(:name, name),
-        logo_url    = :logo,
-        address     = :address,
-        phone       = :phone,
-        email       = :email,
-        description = :desc
+        name          = COALESCE(:name, name),
+        logo_url      = :logo,
+        address       = :address,
+        phone         = :phone,
+        email         = :email,
+        description   = :desc,
+        horaires      = :horaires,
+        phone_urgence = :phone_urgence
        WHERE tenant_code = :code`,
-      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, code } }
+      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, horaires: horaires || null, phone_urgence: phone_urgence || null, code } }
     );
     const [updated] = await sequelize.query(
       `SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
@@ -83,11 +94,18 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 
 router.get('/:tenantCode/patients', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { search } = req.query;
-    let q = `SELECT * FROM clinic_patients WHERE tenant_code=:code`;
-    if (search) q += ` AND (nom ILIKE :s OR prenom ILIKE :s OR numero_matricule ILIKE :s OR telephone ILIKE :s)`;
-    q += ` ORDER BY nom`;
-    const patients = await sequelize.query(q, { replacements: { code: req.params.tenantCode, s: `%${search || ''}%` }, type: sequelize.QueryTypes.SELECT });
+    await ensureInvoicesTable();
+    const { search, groupe_sanguin } = req.query;
+    let q = `SELECT p.*, COALESCE(d.solde_du,0) as solde_du FROM clinic_patients p
+      LEFT JOIN (
+        SELECT patient_id, SUM(total - COALESCE(montant_paye,0)) as solde_du
+        FROM clinic_invoices WHERE tenant_code=:code AND statut != 'paye' GROUP BY patient_id
+      ) d ON d.patient_id = p.id
+      WHERE p.tenant_code=:code`;
+    if (search) q += ` AND (p.nom ILIKE :s OR p.prenom ILIKE :s OR p.numero_matricule ILIKE :s OR p.telephone ILIKE :s)`;
+    if (groupe_sanguin) q += ` AND p.groupe_sanguin = :gs`;
+    q += ` ORDER BY p.nom`;
+    const patients = await sequelize.query(q, { replacements: { code: req.params.tenantCode, s: `%${search || ''}%`, gs: groupe_sanguin || '' }, type: sequelize.QueryTypes.SELECT });
     res.json({ success: true, patients });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -284,12 +302,14 @@ async function ensureInvoicesTable() {
       sous_total NUMERIC(12,2) DEFAULT 0,
       remise NUMERIC(12,2) DEFAULT 0,
       total NUMERIC(12,2) DEFAULT 0,
+      montant_paye NUMERIC(12,2) DEFAULT 0,
       statut VARCHAR(20) DEFAULT 'impaye',
       mode_paiement VARCHAR(50) DEFAULT 'especes',
       notes TEXT,
       date_facture DATE DEFAULT CURRENT_DATE,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-    )
+    );
+    ALTER TABLE clinic_invoices ADD COLUMN IF NOT EXISTS montant_paye NUMERIC(12,2) DEFAULT 0;
   `);
 }
 
@@ -322,8 +342,18 @@ router.post('/:tenantCode/invoices', authenticate, verifyTenant, async (req, res
 router.put('/:tenantCode/invoices/:id', authenticate, verifyTenant, async (req, res) => {
   try {
     await ensureInvoicesTable();
-    const { statut, mode_paiement } = req.body;
-    await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,mode_paiement=:mode WHERE id=:id AND tenant_code=:code`, { replacements: { statut, mode: mode_paiement || 'especes', id: req.params.id, code: req.params.tenantCode } });
+    const code = req.params.tenantCode;
+    let { statut, mode_paiement, montant_paye } = req.body;
+    // Paiement échelonné : si un montant partiel est fourni, on déduit le statut automatiquement
+    if (montant_paye != null) {
+      const [inv] = await sequelize.query(`SELECT total FROM clinic_invoices WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
+      const total = +(inv?.total || 0);
+      const paye = Math.max(0, +montant_paye || 0);
+      statut = paye <= 0 ? 'impaye' : paye >= total ? 'paye' : 'partiel';
+      await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,montant_paye=:paye,mode_paiement=:mode WHERE id=:id AND tenant_code=:code`, { replacements: { statut, paye, mode: mode_paiement || 'especes', id: req.params.id, code } });
+    } else {
+      await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,mode_paiement=:mode,montant_paye=CASE WHEN :statut='paye' THEN total ELSE montant_paye END WHERE id=:id AND tenant_code=:code`, { replacements: { statut, mode: mode_paiement || 'especes', id: req.params.id, code } });
+    }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -452,13 +482,14 @@ router.get('/:tenantCode/pharmacy/stats', authenticate, verifyTenant, async (req
     await ensurePharmacyTable();
     const code = req.params.tenantCode;
     const q = (sql, rep) => sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT }).then(r => r[0]).catch(() => ({ c: 0 }));
-    const [pending, dispensedToday, rupture, totalStock] = await Promise.all([
+    const [pending, dispensedToday, rupture, totalStock, expiringSoon] = await Promise.all([
       q(`SELECT COUNT(*) as c FROM clinic_prescriptions WHERE tenant_code=:code AND (pharma_statut IS NULL OR pharma_statut='en_attente')`, { code }),
       q(`SELECT COUNT(*) as c FROM clinic_pharmacy_dispensing WHERE tenant_code=:code AND DATE(dispense_at)=CURRENT_DATE`, { code }),
       q(`SELECT COUNT(*) as c FROM clinic_pharmacy_stock WHERE tenant_code=:code AND quantite<=quantite_min`, { code }),
       q(`SELECT COUNT(*) as c FROM clinic_pharmacy_stock WHERE tenant_code=:code`, { code }),
+      q(`SELECT COUNT(*) as c FROM clinic_pharmacy_stock WHERE tenant_code=:code AND date_expiration IS NOT NULL AND date_expiration <= CURRENT_DATE + INTERVAL '30 days'`, { code }),
     ]);
-    res.json({ success: true, stats: { pending: +(pending.c||0), dispensedToday: +(dispensedToday.c||0), rupture: +(rupture.c||0), totalStock: +(totalStock.c||0) } });
+    res.json({ success: true, stats: { pending: +(pending.c||0), dispensedToday: +(dispensedToday.c||0), rupture: +(rupture.c||0), totalStock: +(totalStock.c||0), expiringSoon: +(expiringSoon.c||0) } });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -501,6 +532,77 @@ router.post('/:tenantCode/pharmacy/dispense/:prescriptionId', authenticate, veri
       { replacements: { id: prescriptionId, code } }
     );
 
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── DEMANDES DE RDV EN LIGNE (vitrine publique, visiteurs non-patients) ────
+
+export async function ensureAppointmentRequestsTable() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS clinic_appointment_requests (
+      id SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      nom VARCHAR(150) NOT NULL,
+      telephone VARCHAR(50) NOT NULL,
+      service VARCHAR(100),
+      date_souhaitee DATE,
+      motif TEXT,
+      statut VARCHAR(20) DEFAULT 'nouvelle',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+// GET les demandes reçues depuis la vitrine
+router.get('/:tenantCode/appointment-requests', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureAppointmentRequestsTable();
+    const rows = await sequelize.query(
+      `SELECT * FROM clinic_appointment_requests WHERE tenant_code=:code ORDER BY created_at DESC`,
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, requests: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// Convertir une demande en patient (si besoin) + rendez-vous
+router.put('/:tenantCode/appointment-requests/:id/convert', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureAppointmentRequestsTable();
+    const code = req.params.tenantCode;
+    const [reqRow] = await sequelize.query(`SELECT * FROM clinic_appointment_requests WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
+    if (!reqRow) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
+
+    let [patient] = await sequelize.query(`SELECT * FROM clinic_patients WHERE tenant_code=:code AND telephone=:tel LIMIT 1`, { replacements: { code, tel: reqRow.telephone }, type: sequelize.QueryTypes.SELECT });
+    if (!patient) {
+      const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_patients WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
+      const mat = `PAT-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
+      const nameParts = (reqRow.nom || '').trim().split(/\s+/);
+      const prenom = nameParts.shift() || reqRow.nom;
+      const nom = nameParts.join(' ') || '—';
+      const [rows] = await sequelize.query(
+        `INSERT INTO clinic_patients (tenant_code,nom,prenom,telephone,numero_matricule) VALUES(:code,:nom,:prenom,:tel,:mat) RETURNING *`,
+        { replacements: { code, nom, prenom, tel: reqRow.telephone, mat }, type: sequelize.QueryTypes.INSERT }
+      );
+      patient = rows[0];
+    }
+
+    const [apptRows] = await sequelize.query(
+      `INSERT INTO clinic_appointments_mgmt (tenant_code,patient_id,service,date_rdv,motif) VALUES(:code,:pid,:svc,:date,:motif) RETURNING *`,
+      { replacements: { code, pid: patient.id, svc: reqRow.service || null, date: reqRow.date_souhaitee || null, motif: reqRow.motif || null }, type: sequelize.QueryTypes.INSERT }
+    );
+
+    await sequelize.query(`UPDATE clinic_appointment_requests SET statut='converti' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code } });
+
+    res.json({ success: true, patient, appointment: apptRows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/:tenantCode/appointment-requests/:id/reject', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureAppointmentRequestsTable();
+    await sequelize.query(`UPDATE clinic_appointment_requests SET statut='rejetee' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
