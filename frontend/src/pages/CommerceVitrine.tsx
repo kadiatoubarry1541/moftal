@@ -334,10 +334,16 @@ export default function CommerceVitrine() {
             <div className="products-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
               {filteredProducts.map(p => (
                 <div key={p.id} className="prod-card" style={{ background: "white", borderRadius: 16, padding: "20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-                  {/* Icône catégorie */}
-                  <div style={{ width: 52, height: 52, borderRadius: 14, background: `${AMBER}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 14 }}>
-                    {getCatIcon(p.categorie || "")}
-                  </div>
+                  {/* Photo ou icône catégorie */}
+                  {p.photo_url ? (
+                    <div style={{ width: "100%", height: 120, borderRadius: 14, overflow: "hidden", marginBottom: 14, background: "#f8fafc" }}>
+                      <img src={p.photo_url} alt={p.nom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  ) : (
+                    <div style={{ width: 52, height: 52, borderRadius: 14, background: `${AMBER}12`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, marginBottom: 14 }}>
+                      {getCatIcon(p.categorie || "")}
+                    </div>
+                  )}
 
                   {/* Nom + catégorie */}
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4, lineHeight: 1.3 }}>{p.nom}</div>

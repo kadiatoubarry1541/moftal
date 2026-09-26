@@ -1,7 +1,7 @@
 import express from 'express';
 import { sequelize } from '../config/database.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
-import { ensureCommerceReviewsTable } from './commerce-management.js';
+import { ensureCommerceReviewsTable, ensureCommerceExtras } from './commerce-management.js';
 
 const router = express.Router();
 
@@ -29,9 +29,10 @@ router.get('/:tenantCode', async (req, res) => {
 // GET /api/commerce-public/:tenantCode/products — catalogue public
 router.get('/:tenantCode/products', async (req, res) => {
   try {
+    await ensureCommerceExtras();
     const { tenantCode } = req.params;
     const products = await sequelize.query(
-      `SELECT id, nom, categorie, prix_vente, unite, stock
+      `SELECT id, nom, categorie, prix_vente, unite, stock, photo_url
        FROM commerce_products
        WHERE tenant_code = :code AND is_active = true AND stock > 0
        ORDER BY categorie, nom`,

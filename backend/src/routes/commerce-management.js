@@ -57,7 +57,7 @@ async function verifyTenant(req, res, next) {
 }
 
 // ─── EXTRAS (traçabilité stock, annulation de vente) ───────────────────────────
-async function ensureCommerceExtras() {
+export async function ensureCommerceExtras() {
   await sequelize.query(`
     CREATE TABLE IF NOT EXISTS commerce_stock_movements (
       id           SERIAL PRIMARY KEY,
@@ -69,6 +69,34 @@ async function ensureCommerceExtras() {
     );
   `);
   await sequelize.query(`ALTER TABLE commerce_sales ADD COLUMN IF NOT EXISTS annulee BOOLEAN DEFAULT false;`);
+  await sequelize.query(`ALTER TABLE commerce_sales ADD COLUMN IF NOT EXISTS remise DECIMAL(15,0) DEFAULT 0;`);
+  await sequelize.query(`ALTER TABLE commerce_products ADD COLUMN IF NOT EXISTS code_barre VARCHAR(100);`);
+  await sequelize.query(`ALTER TABLE commerce_products ADD COLUMN IF NOT EXISTS photo_url TEXT;`);
+}
+
+// ─── FOURNISSEURS & ACHATS ──────────────────────────────────────────────────────
+async function ensureSuppliersTables() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS commerce_suppliers (
+      id           SERIAL PRIMARY KEY,
+      tenant_code  VARCHAR(50) NOT NULL,
+      nom          VARCHAR(255) NOT NULL,
+      telephone    VARCHAR(50),
+      adresse      TEXT,
+      is_active    BOOLEAN DEFAULT true,
+      created_at   TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS commerce_purchases (
+      id            SERIAL PRIMARY KEY,
+      tenant_code   VARCHAR(50) NOT NULL,
+      supplier_id   INTEGER,
+      product_id    INTEGER NOT NULL,
+      quantite      INTEGER NOT NULL DEFAULT 1,
+      prix_unitaire DECIMAL(15,0) NOT NULL DEFAULT 0,
+      total         DECIMAL(15,0) NOT NULL DEFAULT 0,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
 }
 
 async function logStockMovement(code, productId, delta, reason) {
@@ -221,11 +249,12 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 // ─── PRODUITS ─────────────────────────────────────────────────────────────────
 router.get('/:tenantCode/products', authenticate, verifyTenant, async (req, res) => {
   try {
+    await ensureCommerceExtras();
     const { search } = req.query;
     let q = `SELECT * FROM commerce_products WHERE tenant_code=:code AND is_active=true`;
-    if (search) q += ` AND (nom ILIKE :s OR categorie ILIKE :s)`;
+    if (search) q += ` AND (nom ILIKE :s OR categorie ILIKE :s OR code_barre = :exact)`;
     q += ` ORDER BY nom`;
-    const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, s: `%${search || ''}%` }, type: sequelize.QueryTypes.SELECT });
+    const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, s: `%${search || ''}%`, exact: search || '' }, type: sequelize.QueryTypes.SELECT });
     res.json({ success: true, products: rows });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -233,26 +262,44 @@ router.get('/:tenantCode/products', authenticate, verifyTenant, async (req, res)
 router.post('/:tenantCode/products', authenticate, verifyTenant, async (req, res) => {
   try {
     await ensureCommerceExtras();
-    const { nom, categorie, prix_vente, prix_achat, stock, stock_min, unite } = req.body;
+    const { nom, categorie, prix_vente, prix_achat, stock, stock_min, unite, code_barre, photo_url } = req.body;
     const code = req.params.tenantCode;
     const [rows] = await sequelize.query(
-      `INSERT INTO commerce_products (tenant_code,nom,categorie,prix_vente,prix_achat,stock,stock_min,unite) VALUES(:code,:nom,:cat,:pv,:pa,:stk,:smin,:u) RETURNING *`,
-      { replacements: { code, nom, cat: categorie || null, pv: prix_vente || 0, pa: prix_achat || 0, stk: stock || 0, smin: stock_min || 5, u: unite || 'pièce' }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO commerce_products (tenant_code,nom,categorie,prix_vente,prix_achat,stock,stock_min,unite,code_barre,photo_url) VALUES(:code,:nom,:cat,:pv,:pa,:stk,:smin,:u,:cb,:photo) RETURNING *`,
+      { replacements: { code, nom, cat: categorie || null, pv: prix_vente || 0, pa: prix_achat || 0, stk: stock || 0, smin: stock_min || 5, u: unite || 'pièce', cb: code_barre || null, photo: photo_url || null }, type: sequelize.QueryTypes.INSERT }
     );
     if (stock) await logStockMovement(code, rows[0].id, +stock, 'creation');
     res.json({ success: true, product: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+router.post('/:tenantCode/products/import', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureCommerceExtras();
+    const { products } = req.body;
+    const code = req.params.tenantCode;
+    let count = 0;
+    for (const p of products || []) {
+      if (!p.nom) continue;
+      await sequelize.query(
+        `INSERT INTO commerce_products (tenant_code,nom,categorie,prix_vente,prix_achat,stock,stock_min,unite) VALUES(:code,:nom,:cat,:pv,:pa,:stk,:smin,:u)`,
+        { replacements: { code, nom: p.nom, cat: p.categorie || null, pv: +p.prix_vente || 0, pa: +p.prix_achat || 0, stk: +p.stock || 0, smin: +p.stock_min || 5, u: p.unite || 'pièce' } }
+      );
+      count++;
+    }
+    res.json({ success: true, count });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 router.put('/:tenantCode/products/:id', authenticate, verifyTenant, async (req, res) => {
   try {
     await ensureCommerceExtras();
-    const { nom, categorie, prix_vente, prix_achat, stock, stock_min, unite } = req.body;
+    const { nom, categorie, prix_vente, prix_achat, stock, stock_min, unite, code_barre, photo_url } = req.body;
     const code = req.params.tenantCode;
     const [before] = await sequelize.query(`SELECT stock FROM commerce_products WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
     await sequelize.query(
-      `UPDATE commerce_products SET nom=:nom,categorie=:cat,prix_vente=:pv,prix_achat=:pa,stock=:stk,stock_min=:smin,unite=:u WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, cat: categorie, pv: prix_vente, pa: prix_achat, stk: stock, smin: stock_min, u: unite, id: req.params.id, code } }
+      `UPDATE commerce_products SET nom=:nom,categorie=:cat,prix_vente=:pv,prix_achat=:pa,stock=:stk,stock_min=:smin,unite=:u,code_barre=:cb,photo_url=:photo WHERE id=:id AND tenant_code=:code`,
+      { replacements: { nom, cat: categorie, pv: prix_vente, pa: prix_achat, stk: stock, smin: stock_min, u: unite, cb: code_barre || null, photo: photo_url || null, id: req.params.id, code } }
     );
     const delta = (+stock || 0) - (+(before?.stock) || 0);
     if (delta) await logStockMovement(code, req.params.id, delta, 'modification');
@@ -305,12 +352,13 @@ router.get('/:tenantCode/sales', authenticate, verifyTenant, async (req, res) =>
 router.post('/:tenantCode/sales', authenticate, verifyTenant, async (req, res) => {
   try {
     await ensureCommerceExtras();
-    const { client_nom, items, type_paiement, montant_recu, est_credit, notes } = req.body;
+    const { client_nom, items, type_paiement, montant_recu, est_credit, notes, remise } = req.body;
     const code = req.params.tenantCode;
-    const total = (items || []).reduce((s, i) => s + (+i.prix_unitaire || 0) * (+i.quantite || 1), 0);
+    const brut = (items || []).reduce((s, i) => s + (+i.prix_unitaire || 0) * (+i.quantite || 1), 0);
+    const total = Math.max(0, brut - (+remise || 0));
     const [rows] = await sequelize.query(
-      `INSERT INTO commerce_sales (tenant_code,client_nom,total,montant_recu,type_paiement,est_credit,notes,items) VALUES(:code,:nom,:total,:recu,:type,:credit,:notes,:items::jsonb) RETURNING *`,
-      { replacements: { code, nom: client_nom || 'Client', total, recu: montant_recu || total, type: type_paiement || 'especes', credit: !!est_credit, notes: notes || null, items: JSON.stringify(items || []) }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO commerce_sales (tenant_code,client_nom,total,montant_recu,type_paiement,est_credit,notes,items,remise) VALUES(:code,:nom,:total,:recu,:type,:credit,:notes,:items::jsonb,:remise) RETURNING *`,
+      { replacements: { code, nom: client_nom || 'Client', total, recu: montant_recu || total, type: type_paiement || 'especes', credit: !!est_credit, notes: notes || null, items: JSON.stringify(items || []), remise: remise || 0 }, type: sequelize.QueryTypes.INSERT }
     );
     // Déduire le stock pour chaque produit
     for (const item of items || []) {
@@ -453,6 +501,67 @@ router.delete('/:tenantCode/expenses/:id', authenticate, verifyTenant, async (re
   try {
     await sequelize.query(`DELETE FROM commerce_expenses WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── FOURNISSEURS ─────────────────────────────────────────────────────────────
+router.get('/:tenantCode/suppliers', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureSuppliersTables();
+    const rows = await sequelize.query(`SELECT * FROM commerce_suppliers WHERE tenant_code=:code AND is_active=true ORDER BY nom`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, suppliers: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.post('/:tenantCode/suppliers', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureSuppliersTables();
+    const { nom, telephone, adresse } = req.body;
+    const [rows] = await sequelize.query(
+      `INSERT INTO commerce_suppliers (tenant_code,nom,telephone,adresse) VALUES(:code,:nom,:tel,:adr) RETURNING *`,
+      { replacements: { code: req.params.tenantCode, nom, tel: telephone || null, adr: adresse || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, supplier: rows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/suppliers/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`UPDATE commerce_suppliers SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── ACHATS / RÉAPPROVISIONNEMENT ──────────────────────────────────────────────
+router.get('/:tenantCode/purchases', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureSuppliersTables();
+    const rows = await sequelize.query(
+      `SELECT p.*, pr.nom as product_nom, s.nom as supplier_nom FROM commerce_purchases p
+       LEFT JOIN commerce_products pr ON p.product_id = pr.id
+       LEFT JOIN commerce_suppliers s ON p.supplier_id = s.id
+       WHERE p.tenant_code=:code ORDER BY p.created_at DESC LIMIT 200`,
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, purchases: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.post('/:tenantCode/purchases', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureSuppliersTables();
+    await ensureCommerceExtras();
+    const { supplier_id, product_id, quantite, prix_unitaire } = req.body;
+    const code = req.params.tenantCode;
+    if (!product_id || !quantite) return res.status(400).json({ success: false, message: 'Produit et quantité requis.' });
+    const total = (+prix_unitaire || 0) * (+quantite || 0);
+    const [rows] = await sequelize.query(
+      `INSERT INTO commerce_purchases (tenant_code,supplier_id,product_id,quantite,prix_unitaire,total) VALUES(:code,:sup,:pid,:qty,:pu,:total) RETURNING *`,
+      { replacements: { code, sup: supplier_id || null, pid: product_id, qty: quantite, pu: prix_unitaire || 0, total }, type: sequelize.QueryTypes.INSERT }
+    );
+    await sequelize.query(`UPDATE commerce_products SET stock=stock+:qty WHERE id=:id AND tenant_code=:code`, { replacements: { qty: quantite, id: product_id, code } });
+    await logStockMovement(code, product_id, +quantite, 'achat_fournisseur');
+    res.json({ success: true, purchase: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 

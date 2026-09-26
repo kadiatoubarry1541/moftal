@@ -8,7 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses" | "staff" | "avis" | "settings";
+type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses" | "suppliers" | "staff" | "avis" | "settings";
 
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
@@ -21,6 +21,27 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+function parseCsv(text: string): string[][] {
+  const sep = text.includes(";") ? ";" : ",";
+  return text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim()).map(line => {
+    const cells: string[] = [];
+    let cur = "", inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQuotes) {
+        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (c === '"') inQuotes = false;
+        else cur += c;
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === sep) { cells.push(cur); cur = ""; }
+        else cur += c;
+      }
+    }
+    cells.push(cur);
+    return cells;
+  });
+}
 
 const COLOR      = "#d97706";
 const COLOR_BG   = "#fffbeb";
@@ -31,8 +52,8 @@ const GRADIENT   = "linear-gradient(135deg,#d97706,#f59e0b)";
 const CATS_EXP = ["Transport", "Loyer", "Électricité", "Eau", "Emballage", "Réparation", "Approvisionnement", "Autre"];
 const ROLES_STAFF = ["Propriétaire", "Gérant", "Caissier"];
 const ROLE_PERMISSIONS: Record<string, Tab[]> = {
-  "Propriétaire": ["dashboard", "products", "sales", "clients", "expenses", "staff", "avis", "settings"],
-  "Gérant":       ["dashboard", "products", "sales", "clients", "expenses", "staff", "avis"],
+  "Propriétaire": ["dashboard", "products", "sales", "clients", "expenses", "suppliers", "staff", "avis", "settings"],
+  "Gérant":       ["dashboard", "products", "sales", "clients", "expenses", "suppliers", "staff", "avis"],
   "Caissier":     ["dashboard", "products", "sales", "clients"],
 };
 
@@ -69,8 +90,15 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   const [editStaff, setEditStaff] = useState<any>(null);
   const [stockAlertDismissed, setStockAlertDismissed] = useState(false);
 
-  const [pForm, setPForm] = useState({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce" });
-  const [sForm, setSForm] = useState({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] });
+  const [pForm, setPForm] = useState<any>({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce", code_barre: "", photo_url: "" });
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [showNewPurchase, setShowNewPurchase] = useState(false);
+  const [supForm, setSupForm] = useState({ nom: "", telephone: "", adresse: "" });
+  const [purForm, setPurForm] = useState({ supplier_id: "", product_id: "", quantite: "1", prix_unitaire: "" });
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [sForm, setSForm] = useState({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", remise: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] });
   const [cForm, setCForm] = useState({ nom: "", telephone: "", adresse: "" });
   const [eForm, setEForm] = useState({ description: "", montant: "", categorie: "Transport" });
   const [stForm, setStForm] = useState({ nom: "", telephone: "", role: "Caissier", numero_h: "" });
@@ -92,6 +120,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     if (tab === "sales") { loadSales(); loadProducts(); }
     if (tab === "clients") loadClients();
     if (tab === "expenses") loadExpenses();
+    if (tab === "suppliers") { loadSuppliers(); loadPurchases(); loadProducts(); }
     if (tab === "staff") loadStaff();
     if (tab === "avis") loadReviews();
   }, [tab, tenantCode]);
@@ -133,6 +162,35 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     const r = await fetch(`${b(tenantCode!)}/expenses`, { headers: auth() });
     const d = await r.json();
     if (d.success) setExpenses(d.expenses || []);
+  }
+  async function loadSuppliers() {
+    const r = await fetch(`${b(tenantCode!)}/suppliers`, { headers: auth() });
+    const d = await r.json();
+    if (d.success) setSuppliers(d.suppliers || []);
+  }
+  async function loadPurchases() {
+    const r = await fetch(`${b(tenantCode!)}/purchases`, { headers: auth() });
+    const d = await r.json();
+    if (d.success) setPurchases(d.purchases || []);
+  }
+  async function saveSupplier() {
+    if (!supForm.nom) return;
+    setSaving(true);
+    await fetch(`${b(tenantCode!)}/suppliers`, { method: "POST", headers: auth(), body: JSON.stringify(supForm) });
+    setSaving(false); setShowAddSupplier(false); setSupForm({ nom: "", telephone: "", adresse: "" });
+    loadSuppliers();
+  }
+  async function deleteSupplier(id: number) {
+    if (!confirm("Supprimer ce fournisseur ?")) return;
+    await fetch(`${b(tenantCode!)}/suppliers/${id}`, { method: "DELETE", headers: auth() });
+    loadSuppliers();
+  }
+  async function savePurchase() {
+    if (!purForm.product_id || !purForm.quantite) return;
+    setSaving(true);
+    await fetch(`${b(tenantCode!)}/purchases`, { method: "POST", headers: auth(), body: JSON.stringify({ ...purForm, quantite: +purForm.quantite, prix_unitaire: +purForm.prix_unitaire || 0 }) });
+    setSaving(false); setShowNewPurchase(false); setPurForm({ supplier_id: "", product_id: "", quantite: "1", prix_unitaire: "" });
+    loadPurchases(); loadProducts();
   }
   async function loadStaff() {
     const r = await fetch(`${b(tenantCode!)}/staff`, { headers: auth() });
@@ -176,7 +234,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     const method = editProduct ? "PUT" : "POST";
     await fetch(url, { method, headers: auth(), body: JSON.stringify({ ...pForm, prix_vente: +pForm.prix_vente, prix_achat: +pForm.prix_achat, stock: +pForm.stock, stock_min: +pForm.stock_min }) });
     setSaving(false); setShowAddProduct(false); setEditProduct(null);
-    setPForm({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce" });
+    setPForm({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce", code_barre: "", photo_url: "" });
     loadProducts();
   }
   async function updateStock(id: number, delta: number) {
@@ -190,12 +248,26 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     const items = sForm.items.filter(i => i.nom && i.prix_unitaire);
     if (!items.length) return;
     setSaving(true);
-    const total = items.reduce((s, i) => s + +i.prix_unitaire * +i.quantite, 0);
-    const body: any = { ...sForm, items: items.map(i => ({ ...i, prix_unitaire: +i.prix_unitaire, quantite: +i.quantite })), montant_recu: sForm.montant_recu ? +sForm.montant_recu : total };
+    const brut = items.reduce((s, i) => s + +i.prix_unitaire * +i.quantite, 0);
+    const net = Math.max(0, brut - (+sForm.remise || 0));
+    const body: any = { ...sForm, remise: +sForm.remise || 0, items: items.map(i => ({ ...i, prix_unitaire: +i.prix_unitaire, quantite: +i.quantite })), montant_recu: sForm.montant_recu ? +sForm.montant_recu : net };
     await fetch(`${b(tenantCode!)}/sales`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    setSaving(false); setShowNewSale(false);
-    setSForm({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] });
+    setSaving(false); setShowNewSale(false); setBarcodeInput("");
+    setSForm({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", remise: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] });
     loadSales(); loadAll(); loadProducts();
+  }
+  function addByBarcode() {
+    const code = barcodeInput.trim();
+    if (!code) return;
+    const p = products.find(p => p.code_barre === code);
+    if (!p) { alert("Aucun article trouvé pour ce code-barres."); setBarcodeInput(""); return; }
+    setSForm(f => {
+      const empty = f.items.findIndex(i => !i.product_id);
+      const newItem = { nom: p.nom, product_id: String(p.id), prix_unitaire: String(p.prix_vente), quantite: "1" };
+      const items = empty >= 0 ? f.items.map((it, i) => i === empty ? newItem : it) : [...f.items, newItem];
+      return { ...f, items };
+    });
+    setBarcodeInput("");
   }
   async function saveClient() {
     if (!cForm.nom) return;
@@ -223,6 +295,23 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     if (!confirm("Supprimer cette dépense ?")) return;
     await fetch(`${b(tenantCode!)}/expenses/${id}`, { method: "DELETE", headers: auth() });
     loadExpenses(); loadAll();
+  }
+  async function importProductsCsv(file: File) {
+    const text = await file.text();
+    const rows = parseCsv(text);
+    if (rows.length < 2) { alert("Fichier vide ou invalide."); return; }
+    const header = rows[0].map(h => h.trim().toLowerCase());
+    const idx = (name: string) => header.findIndex(h => h.includes(name));
+    const iNom = idx("nom"), iCat = idx("catégor") >= 0 ? idx("catégor") : idx("categor"), iPv = idx("vente"), iPa = idx("achat"), iStk = idx("stock") >= 0 && !header[idx("stock")].includes("min") ? idx("stock") : -1, iSmin = idx("min"), iU = idx("unit");
+    if (iNom < 0) { alert("Colonne « Nom » introuvable dans le fichier."); return; }
+    const products = rows.slice(1).map(r => ({
+      nom: r[iNom], categorie: iCat >= 0 ? r[iCat] : "", prix_vente: iPv >= 0 ? r[iPv] : 0, prix_achat: iPa >= 0 ? r[iPa] : 0,
+      stock: iStk >= 0 ? r[iStk] : 0, stock_min: iSmin >= 0 ? r[iSmin] : 5, unite: iU >= 0 ? r[iU] : "pièce",
+    })).filter(p => p.nom);
+    const res = await fetch(`${b(tenantCode!)}/products/import`, { method: "POST", headers: auth(), body: JSON.stringify({ products }) });
+    const d = await res.json();
+    if (d.success) { alert(`${d.count} article(s) importé(s) avec succès.`); loadProducts(); }
+    else alert(d.message || "Erreur lors de l'import.");
   }
   async function deleteProduct(id: number) {
     if (!confirm("Supprimer cet article ? Il disparaîtra de votre catalogue et de la vitrine.")) return;
@@ -273,6 +362,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
         <div style="margin-top:10px;font-size:13px">Client : <b>${s.client_nom || "Client"}</b></div>
         <table><thead><tr><th style="text-align:left">Article</th><th>Qté</th><th style="text-align:right">P.U.</th><th style="text-align:right">Total</th></tr></thead>
         <tbody>${items}</tbody></table>
+        ${+s.remise > 0 ? `<div style="text-align:right;font-size:12px;color:#94a3b8">Remise : -${fmtMoney(+s.remise)}</div>` : ""}
         <div style="text-align:right;margin-top:12px" class="total">Total : ${fmtMoney(s.total)}</div>
         <div style="text-align:right;font-size:12px;color:#64748b">Reçu : ${fmtMoney(s.montant_recu)} · Mode : ${s.type_paiement}</div>
         <div style="margin-top:24px;text-align:center;font-size:11px;color:#94a3b8">Merci pour votre achat — propulsé par Moftal</div>
@@ -317,6 +407,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     { id: "sales",     label: "Ventes", icon: "🧾" },
     { id: "clients",   label: "Clients", icon: "👥" },
     { id: "expenses",  label: "Dépenses", icon: "💸" },
+    { id: "suppliers", label: "Fournisseurs", icon: "🚚" },
     { id: "staff",     label: "Personnel", icon: "🧑‍💼" },
     { id: "avis",      label: "Avis", icon: "⭐" },
     { id: "settings",  label: "Paramètres", icon: "⚙️" },
@@ -436,8 +527,10 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
         <div style={{ animation: "fadeIn 0.2s ease" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Articles / Produits ({products.length})</div>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button onClick={() => downloadCsv(`produits_${tenantCode}.csv`, [["Nom", "Catégorie", "Prix vente", "Prix achat", "Stock", "Stock min", "Unité"], ...products.map(p => [p.nom, p.categorie || "", p.prix_vente, p.prix_achat, p.stock, p.stock_min, p.unite])])} style={{ padding: "8px 14px", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>⬇️ CSV</button>
+              <label htmlFor="import-products-csv" style={{ padding: "8px 14px", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13, display: "inline-flex", alignItems: "center" }}>⬆️ Importer CSV</label>
+              <input id="import-products-csv" type="file" accept=".csv" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) importProductsCsv(f); e.target.value = ""; }} />
               <button onClick={() => setShowAddProduct(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
             </div>
           </div>
@@ -445,6 +538,22 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           {showAddProduct && (
             <div style={formBg}>
               <div style={{ fontWeight: 700, marginBottom: 12 }}>{editProduct ? "Modifier l'article" : "Nouvel article / produit"}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 10, border: `1px solid ${COLOR_BDR}`, background: "white", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                  {pForm.photo_url ? <img src={pForm.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 24 }}>📦</span>}
+                </div>
+                <div>
+                  <label htmlFor="product-photo-upload" style={{ display: "inline-flex", padding: "6px 12px", background: "white", border: `1px solid ${COLOR_BDR}`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, color: COLOR }}>Choisir une photo</label>
+                  <input id="product-photo-upload" type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) { alert("Photo trop volumineuse (max 2 Mo)"); return; }
+                    const reader = new FileReader();
+                    reader.onload = () => setPForm((f: any) => ({ ...f, photo_url: reader.result as string }));
+                    reader.readAsDataURL(file);
+                  }} />
+                </div>
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {([
                   ["Nom de l'article *", "nom"],
@@ -454,16 +563,17 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                   ["Quantité en stock", "stock"],
                   ["Stock minimum alerte", "stock_min"],
                   ["Unité (pièce, kg, litre…)", "unite"],
+                  ["Code-barres", "code_barre"],
                 ] as [string, string][]).map(([label, key]) => (
                   <div key={key}>
                     <label style={labelStyle}>{label}</label>
-                    <input value={(pForm as any)[key]} onChange={e => setPForm(f => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
+                    <input value={(pForm as any)[key]} onChange={e => setPForm((f: any) => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
                   </div>
                 ))}
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                 <button onClick={saveProduct} disabled={saving} style={{ padding: "8px 20px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer"}</button>
-                <button onClick={() => { setShowAddProduct(false); setEditProduct(null); setPForm({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce" }); }} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+                <button onClick={() => { setShowAddProduct(false); setEditProduct(null); setPForm({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce", code_barre: "", photo_url: "" }); }} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
               </div>
             </div>
           )}
@@ -471,6 +581,11 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 12 }}>
             {products.map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 12, padding: 16, border: `1px solid ${p.stock <= p.stock_min ? "#fca5a5" : "#f1f5f9"}`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                {p.photo_url && (
+                  <div style={{ width: "100%", height: 100, borderRadius: 8, overflow: "hidden", marginBottom: 10, background: "#f8fafc" }}>
+                    <img src={p.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </div>
+                )}
                 <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{p.nom}</div>
                 {p.categorie && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>{p.categorie}</div>}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
@@ -480,7 +595,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => updateStock(p.id, -1)} style={{ flex: 1, padding: "4px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}>−1</button>
                   <button onClick={() => updateStock(p.id, 1)} style={{ flex: 1, padding: "4px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}>+1</button>
-                  <button onClick={() => { setEditProduct(p); setPForm({ nom: p.nom, categorie: p.categorie || "", prix_vente: p.prix_vente, prix_achat: p.prix_achat || "", stock: p.stock, stock_min: p.stock_min || "5", unite: p.unite || "pièce" }); setShowAddProduct(true); }}
+                  <button onClick={() => { setEditProduct(p); setPForm({ nom: p.nom, categorie: p.categorie || "", prix_vente: p.prix_vente, prix_achat: p.prix_achat || "", stock: p.stock, stock_min: p.stock_min || "5", unite: p.unite || "pièce", code_barre: p.code_barre || "", photo_url: p.photo_url || "" }); setShowAddProduct(true); }}
                     style={{ padding: "4px 8px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>✏️</button>
                   <button onClick={() => openMovements(p)} title="Historique du stock" style={{ padding: "4px 8px", background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>📈</button>
                   <button onClick={() => deleteProduct(p.id)} title="Supprimer" style={{ padding: "4px 8px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>🗑️</button>
@@ -519,6 +634,11 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                 </div>
               </div>
 
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <input placeholder="🔎 Scanner ou saisir un code-barres…" value={barcodeInput} onChange={e => setBarcodeInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addByBarcode(); } }} style={{ ...inputStyle, flex: 1 }} />
+                <button onClick={addByBarcode} style={{ padding: "8px 14px", background: COLOR_BG, color: COLOR, border: `1px solid ${COLOR_BDR}`, borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Ajouter</button>
+              </div>
+
               <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Articles vendus</div>
               {sForm.items.map((item, i) => (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" }}>
@@ -536,13 +656,27 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
               ))}
               <button onClick={() => setSForm(f => ({ ...f, items: [...f.items, { nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] }))} style={{ fontSize: 12, color: COLOR, background: "none", border: "none", cursor: "pointer", marginBottom: 12 }}>+ Ajouter un article</button>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
-                <div style={{ fontWeight: 700 }}>Total : {fmtMoney(sForm.items.reduce((s, i) => s + (+i.prix_unitaire || 0) * (+i.quantite || 1), 0))}</div>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-                  <input type="checkbox" checked={sForm.est_credit} onChange={e => setSForm(f => ({ ...f, est_credit: e.target.checked }))} />
-                  Vente à crédit
-                </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Remise (GNF)</label>
+                <input placeholder="0" value={sForm.remise} onChange={e => setSForm(f => ({ ...f, remise: e.target.value }))} style={{ ...inputStyle, width: 120 }} />
               </div>
+
+              {(() => {
+                const brut = sForm.items.reduce((s, i) => s + (+i.prix_unitaire || 0) * (+i.quantite || 1), 0);
+                const net = Math.max(0, brut - (+sForm.remise || 0));
+                return (
+                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
+                    <div style={{ fontWeight: 700 }}>
+                      {(+sForm.remise || 0) > 0 && <span style={{ color: "#94a3b8", fontWeight: 500, textDecoration: "line-through", marginRight: 8 }}>{fmtMoney(brut)}</span>}
+                      Total : {fmtMoney(net)}
+                    </div>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                      <input type="checkbox" checked={sForm.est_credit} onChange={e => setSForm(f => ({ ...f, est_credit: e.target.checked }))} />
+                      Vente à crédit
+                    </label>
+                  </div>
+                );
+              })()}
 
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={saveSale} disabled={saving} style={{ padding: "8px 20px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer la vente"}</button>
@@ -706,6 +840,101 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
               </div>
             ))}
             {expenses.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune dépense enregistrée.</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── FOURNISSEURS & ACHATS ── */}
+      {tab === "suppliers" && (
+        <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>Fournisseurs ({suppliers.length})</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowAddSupplier(true)} style={{ padding: "8px 16px", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Fournisseur</button>
+              <button onClick={() => setShowNewPurchase(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Réapprovisionner</button>
+            </div>
+          </div>
+
+          {showAddSupplier && (
+            <div style={formBg}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouveau fournisseur</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {([["Nom *", "nom"], ["Téléphone", "telephone"], ["Adresse", "adresse"]] as [string, string][]).map(([label, key]) => (
+                  <div key={key}>
+                    <label style={labelStyle}>{label}</label>
+                    <input value={(supForm as any)[key]} onChange={e => setSupForm(f => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <button onClick={saveSupplier} disabled={saving} style={{ padding: "8px 20px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer"}</button>
+                <button onClick={() => setShowAddSupplier(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+              </div>
+            </div>
+          )}
+
+          {showNewPurchase && (
+            <div style={formBg}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>Enregistrer un réapprovisionnement</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={labelStyle}>Fournisseur</label>
+                  <select value={purForm.supplier_id} onChange={e => setPurForm(f => ({ ...f, supplier_id: e.target.value }))} style={{ ...inputStyle, width: "100%" }}>
+                    <option value="">-- Aucun --</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Article *</label>
+                  <select value={purForm.product_id} onChange={e => {
+                    const p = products.find(p => p.id === +e.target.value);
+                    setPurForm(f => ({ ...f, product_id: e.target.value, prix_unitaire: p?.prix_achat?.toString() || f.prix_unitaire }));
+                  }} style={{ ...inputStyle, width: "100%" }}>
+                    <option value="">-- Article --</option>
+                    {products.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Quantité *</label>
+                  <input value={purForm.quantite} onChange={e => setPurForm(f => ({ ...f, quantite: e.target.value }))} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Prix d'achat unitaire (GNF)</label>
+                  <input value={purForm.prix_unitaire} onChange={e => setPurForm(f => ({ ...f, prix_unitaire: e.target.value }))} style={inputStyle} />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                <button onClick={savePurchase} disabled={saving} style={{ padding: "8px 20px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer"}</button>
+                <button onClick={() => setShowNewPurchase(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+            {suppliers.map(s => (
+              <div key={s.id} style={{ background: "white", borderRadius: 10, padding: "12px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{s.nom}</div>
+                  {s.telephone && <div style={{ fontSize: 12, color: "#64748b" }}>{s.telephone}</div>}
+                </div>
+                <button onClick={() => deleteSupplier(s.id)} style={{ padding: "5px 8px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>🗑️</button>
+              </div>
+            ))}
+            {suppliers.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 20, fontSize: 13 }}>Aucun fournisseur enregistré.</div>}
+          </div>
+
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Historique des achats</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {purchases.map(p => (
+              <div key={p.id} style={{ background: "white", borderRadius: 10, padding: "10px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <div>
+                  <b>{p.product_nom}</b> × {p.quantite} {p.supplier_nom ? `· ${p.supplier_nom}` : ""}
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(p.created_at)}</div>
+                </div>
+                <div style={{ fontWeight: 700, color: COLOR }}>{fmtMoney(p.total)}</div>
+              </div>
+            ))}
+            {purchases.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 20, fontSize: 13 }}>Aucun achat enregistré.</div>}
           </div>
         </div>
       )}
