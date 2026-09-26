@@ -71,7 +71,15 @@ export interface BuildLogoOptions {
   gradientColor?: string;
   fontFamily?: string;
   twoLines?: boolean;
+  strokeWidth?: number;
+  shadow?: boolean;
+  iconOffsetX?: number;
+  iconOffsetY?: number;
+  textOffsetX?: number;
+  textOffsetY?: number;
 }
+
+const SHADOW_FILTER = `<filter id="ds" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-opacity="0.35"/></filter>`;
 
 export function buildLogoSvg(tpl: LogoTemplateId, opts: BuildLogoOptions): string {
   const { icon, color } = opts;
@@ -79,12 +87,20 @@ export function buildLogoSvg(tpl: LogoTemplateId, opts: BuildLogoOptions): strin
   const transparent = opts.transparent ?? false;
   const fontFamily = opts.fontFamily || "Arial,Helvetica,sans-serif";
   const twoLines = opts.twoLines ?? false;
+  const strokeWidth = opts.strokeWidth ?? 14;
+  const shadow = opts.shadow ?? false;
+  const ix = opts.iconOffsetX ?? 0, iy = opts.iconOffsetY ?? 0;
+  const tx = opts.textOffsetX ?? 0, ty = opts.textOffsetY ?? 0;
   const text = escapeXml(opts.text.trim());
 
   const fillRef = opts.useGradient && opts.gradientColor ? "url(#lg)" : color;
-  const defs = opts.useGradient && opts.gradientColor
-    ? `<defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${opts.gradientColor}"/></linearGradient></defs>`
+  let defs = opts.useGradient && opts.gradientColor
+    ? `<linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${opts.gradientColor}"/></linearGradient>`
     : "";
+  if (shadow) defs += SHADOW_FILTER;
+
+  const wrapStart = shadow ? `<g filter="url(#ds)">` : "";
+  const wrapEnd = shadow ? `</g>` : "";
 
   let inner = "";
   switch (tpl) {
@@ -92,7 +108,7 @@ export function buildLogoSvg(tpl: LogoTemplateId, opts: BuildLogoOptions): strin
       const size = Math.round(260 * scale);
       const iconFill = opts.textColor || (transparent ? color : "#ffffff");
       inner = `${transparent ? "" : `<rect width="512" height="512" rx="96" fill="${fillRef}"/>`}
-        ${glyph(icon, (512 - size) / 2, (512 - size) / 2, size, iconFill)}`;
+        ${wrapStart}${glyph(icon, (512 - size) / 2 + ix, (512 - size) / 2 + iy, size, iconFill)}${wrapEnd}`;
       break;
     }
     case "icon_text": {
@@ -100,8 +116,8 @@ export function buildLogoSvg(tpl: LogoTemplateId, opts: BuildLogoOptions): strin
       const fs = fitFontSize(text, 420, 56);
       const size = Math.round(180 * scale);
       inner = `${transparent ? "" : `<rect width="512" height="512" rx="96" fill="${fillRef}"/>`}
-        ${glyph(icon, (512 - size) / 2, 90, size, txtColor)}
-        ${textOrTspans(text, 256, 360, fs, fontFamily, txtColor, "middle", twoLines)}`;
+        ${wrapStart}${glyph(icon, (512 - size) / 2 + ix, 90 + iy, size, txtColor)}
+        ${textOrTspans(text, 256 + tx, 360 + ty, fs, fontFamily, txtColor, "middle", twoLines)}${wrapEnd}`;
       break;
     }
     case "icon_side_text": {
@@ -110,8 +126,8 @@ export function buildLogoSvg(tpl: LogoTemplateId, opts: BuildLogoOptions): strin
       const size = Math.round(150 * scale);
       inner = `${transparent ? "" : `<rect width="512" height="512" rx="48" fill="#ffffff"/>`}
         <circle cx="150" cy="256" r="100" fill="${fillRef}"/>
-        ${glyph(icon, 150 - size / 2, 256 - size / 2, size, "#ffffff")}
-        ${textOrTspans(text, 270, 270, fs, fontFamily, txtColor, "start", twoLines)}`;
+        ${wrapStart}${glyph(icon, 150 - size / 2 + ix, 256 - size / 2 + iy, size, "#ffffff")}
+        ${textOrTspans(text, 270 + tx, 270 + ty, fs, fontFamily, txtColor, "start", twoLines)}${wrapEnd}`;
       break;
     }
     case "banner": {
@@ -119,22 +135,22 @@ export function buildLogoSvg(tpl: LogoTemplateId, opts: BuildLogoOptions): strin
       const fs = fitFontSize(text, 460, 48);
       const size = Math.round(200 * scale);
       inner = `${transparent ? "" : `<rect width="512" height="512" fill="#ffffff"/>`}
-        ${glyph(icon, (512 - size) / 2, 80, size, color)}
+        ${wrapStart}${glyph(icon, (512 - size) / 2 + ix, 80 + iy, size, color)}
         <rect x="0" y="380" width="512" height="90" fill="${fillRef}"/>
-        <text x="256" y="432" font-size="${fs}" font-family="${fontFamily}" font-weight="700" fill="${txtColor}" text-anchor="middle" dominant-baseline="middle">${text}</text>`;
+        <text x="${256 + tx}" y="${432 + ty}" font-size="${fs}" font-family="${fontFamily}" font-weight="700" fill="${txtColor}" text-anchor="middle" dominant-baseline="middle">${text}</text>${wrapEnd}`;
       break;
     }
     case "outline": {
       const txtColor = opts.textColor || color;
       const fs = fitFontSize(text, 420, 46);
       const size = Math.round(190 * scale);
-      inner = `<rect width="512" height="512" rx="64" fill="${transparent ? "none" : "#ffffff"}" stroke="${fillRef}" stroke-width="14"/>
-        ${glyph(icon, (512 - size) / 2, 80, size, color)}
-        ${textOrTspans(text, 256, 360, fs, fontFamily, txtColor, "middle", twoLines)}`;
+      inner = `<rect width="512" height="512" rx="64" fill="${transparent ? "none" : "#ffffff"}" stroke="${fillRef}" stroke-width="${strokeWidth}"/>
+        ${wrapStart}${glyph(icon, (512 - size) / 2 + ix, 80 + iy, size, color)}
+        ${textOrTspans(text, 256 + tx, 360 + ty, fs, fontFamily, txtColor, "middle", twoLines)}${wrapEnd}`;
       break;
     }
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${defs}${inner}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${defs ? `<defs>${defs}</defs>` : ""}${inner}</svg>`;
 }
 
 // Palette de couleurs professionnelles proposées en plus de la couleur du secteur
@@ -189,7 +205,21 @@ function downloadLogoPng(dataUrl: string, filename: string) {
   img.src = dataUrl;
 }
 
+// ── Téléchargement du logo en SVG (vectoriel, pour impression grand format) ─
+function downloadLogoSvg(svg: string, filename: string) {
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 const MAX_SEARCH_RESULTS = 48;
+const MAX_DRAFTS = 3;
 
 interface EditorState {
   tpl: LogoTemplateId;
@@ -203,6 +233,17 @@ interface EditorState {
   useGradient: boolean;
   gradientColor: string;
   twoLines: boolean;
+  strokeWidth: number;
+  shadow: boolean;
+  iconOffsetX: number;
+  iconOffsetY: number;
+  textOffsetX: number;
+  textOffsetY: number;
+}
+
+interface Draft {
+  id: number;
+  dataUrl: string;
 }
 
 export default function LogoPicker({
@@ -227,6 +268,14 @@ export default function LogoPicker({
   const [useGradient, setUseGradient] = useState(false);
   const [gradientColor, setGradientColor] = useState("#1a8f1a");
   const [twoLines, setTwoLines] = useState(false);
+  const [strokeWidth, setStrokeWidth] = useState(14);
+  const [shadow, setShadow] = useState(false);
+  const [iconOffsetX, setIconOffsetX] = useState(0);
+  const [iconOffsetY, setIconOffsetY] = useState(0);
+  const [textOffsetX, setTextOffsetX] = useState(0);
+  const [textOffsetY, setTextOffsetY] = useState(0);
+  const [darkPreview, setDarkPreview] = useState(false);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
   const [autoMatched, setAutoMatched] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [search, setSearch] = useState("");
@@ -250,7 +299,8 @@ export default function LogoPicker({
       initialState.current = {
         tpl: "icon_text", text: defaultText, scale: 1, brandColor: color, textColor: null,
         customIconName: iconName, fontFamily: "sans", transparent: false, useGradient: false,
-        gradientColor: "#1a8f1a", twoLines: false,
+        gradientColor: "#1a8f1a", twoLines: false, strokeWidth: 14, shadow: false,
+        iconOffsetX: 0, iconOffsetY: 0, textOffsetX: 0, textOffsetY: 0,
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -279,8 +329,23 @@ export default function LogoPicker({
     setUseGradient(init.useGradient);
     setGradientColor(init.gradientColor);
     setTwoLines(init.twoLines);
+    setStrokeWidth(init.strokeWidth);
+    setShadow(init.shadow);
+    setIconOffsetX(init.iconOffsetX);
+    setIconOffsetY(init.iconOffsetY);
+    setTextOffsetX(init.textOffsetX);
+    setTextOffsetY(init.textOffsetY);
     setAutoMatched(!!init.customIconName);
   };
+
+  const saveDraft = () => {
+    setDrafts(prev => {
+      const next = [...prev, { id: Date.now(), dataUrl: preview }];
+      return next.slice(-MAX_DRAFTS);
+    });
+  };
+
+  const removeDraft = (id: number) => setDrafts(prev => prev.filter(d => d.id !== id));
 
   const openBrowser = () => {
     setShowBrowser(true);
@@ -297,13 +362,16 @@ export default function LogoPicker({
   const buildOpts: BuildLogoOptions = {
     icon: currentIcon, color: brandColor, textColor: textColor || undefined,
     text: effectiveText, scale, transparent, useGradient, gradientColor, fontFamily: fontStack, twoLines,
+    strokeWidth, shadow, iconOffsetX, iconOffsetY, textOffsetX, textOffsetY,
   };
 
-  const preview = useMemo(
-    () => svgToDataUrl(buildLogoSvg(tpl, buildOpts)),
+  const previewSvg = useMemo(
+    () => buildLogoSvg(tpl, buildOpts),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tpl, currentIcon, brandColor, textColor, effectiveText, scale, transparent, useGradient, gradientColor, fontFamily, twoLines]
+    [tpl, currentIcon, brandColor, textColor, effectiveText, scale, transparent, useGradient, gradientColor,
+     fontFamily, twoLines, strokeWidth, shadow, iconOffsetX, iconOffsetY, textOffsetX, textOffsetY]
   );
+  const preview = useMemo(() => svgToDataUrl(previewSvg), [previewSvg]);
 
   const surfaceColor = tpl === "icon" || tpl === "icon_text" || tpl === "banner" ? brandColor : "#ffffff";
   const effectiveTextColor = textColor || (tpl === "icon" || tpl === "icon_text" || tpl === "banner" ? "#ffffff" : brandColor);
@@ -356,15 +424,17 @@ export default function LogoPicker({
       <div className="flex items-center gap-4 mb-4">
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <div
-            className={`w-24 h-24 rounded-xl overflow-hidden border-2 border-orange-300 ${transparent ? "bg-[repeating-conic-gradient(#e5e7eb_0%_25%,white_0%_50%)] bg-[length:14px_14px]" : "bg-white"}`}
+            className={`w-24 h-24 rounded-xl overflow-hidden border-2 border-orange-300 ${darkPreview ? "bg-gray-800" : transparent ? "bg-[repeating-conic-gradient(#e5e7eb_0%_25%,white_0%_50%)] bg-[length:14px_14px]" : "bg-white"}`}
           >
             <img src={preview} alt="Aperçu" className="w-full h-full object-contain" />
           </div>
-          <span className="text-[9px] text-gray-400">Carré</span>
+          <button type="button" onClick={() => setDarkPreview(v => !v)} className="text-[9px] text-gray-400 hover:text-orange-600">
+            {darkPreview ? "🌙 Fond sombre" : "☀️ Fond clair"}
+          </button>
         </div>
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <div
-            className={`w-20 h-20 overflow-hidden border-2 border-orange-300 shadow-md ${transparent ? "bg-[repeating-conic-gradient(#e5e7eb_0%_25%,white_0%_50%)] bg-[length:14px_14px]" : "bg-white"}`}
+            className={`w-20 h-20 overflow-hidden border-2 border-orange-300 shadow-md ${darkPreview ? "bg-gray-800" : transparent ? "bg-[repeating-conic-gradient(#e5e7eb_0%_25%,white_0%_50%)] bg-[length:14px_14px]" : "bg-white"}`}
             style={{ borderRadius: "22%" }}
           >
             <img src={preview} alt="Aperçu icône app" className="w-full h-full object-contain" />
@@ -467,7 +537,48 @@ export default function LogoPicker({
           <input type="checkbox" checked={twoLines} onChange={e => setTwoLines(e.target.checked)} disabled={tpl === "icon"} />
           Texte sur 2 lignes
         </label>
+        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+          <input type="checkbox" checked={shadow} onChange={e => setShadow(e.target.checked)} />
+          Ombre portée
+        </label>
       </div>
+
+      <details className="mb-4">
+        <summary className="text-xs font-semibold text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+          ⚙️ Réglages avancés (position, contour)
+        </summary>
+        <div className="mt-3 space-y-3 pl-1">
+          {(tpl === "outline" || tpl === "icon_side_text") && (
+            <div>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Épaisseur du contour ({strokeWidth}px)</label>
+              <input type="range" min={4} max={30} step={1} value={strokeWidth}
+                onChange={e => setStrokeWidth(Number(e.target.value))} className="w-full" />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Icône ↔ horizontal</label>
+              <input type="range" min={-60} max={60} step={2} value={iconOffsetX}
+                onChange={e => setIconOffsetX(Number(e.target.value))} className="w-full" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Icône ↕ vertical</label>
+              <input type="range" min={-60} max={60} step={2} value={iconOffsetY}
+                onChange={e => setIconOffsetY(Number(e.target.value))} className="w-full" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Texte ↔ horizontal</label>
+              <input type="range" min={-60} max={60} step={2} value={textOffsetX}
+                onChange={e => setTextOffsetX(Number(e.target.value))} className="w-full" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Texte ↕ vertical</label>
+              <input type="range" min={-60} max={60} step={2} value={textOffsetY}
+                onChange={e => setTextOffsetY(Number(e.target.value))} className="w-full" />
+            </div>
+          </div>
+        </div>
+      </details>
 
       {!showBrowser ? (
         <button type="button" onClick={openBrowser}
@@ -509,6 +620,33 @@ export default function LogoPicker({
         </div>
       )}
 
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Comparer plusieurs essais ({drafts.length}/{MAX_DRAFTS})</label>
+          <button type="button" onClick={saveDraft} disabled={drafts.length >= MAX_DRAFTS}
+            className="text-[11px] font-semibold text-orange-600 hover:text-orange-700 disabled:opacity-40 whitespace-nowrap">
+            💾 Sauvegarder cet essai
+          </button>
+        </div>
+        {drafts.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {drafts.map(d => (
+              <div key={d.id} className="relative w-14 h-14 rounded-lg border-2 border-gray-200 overflow-hidden bg-white group">
+                <img src={d.dataUrl} alt="Essai" className="w-full h-full object-contain" />
+                <button type="button" onClick={() => onConfirm(d.dataUrl)}
+                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold transition-opacity">
+                  Choisir
+                </button>
+                <button type="button" onClick={() => removeDraft(d.id)}
+                  className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gray-700 text-white text-[9px] flex items-center justify-center">
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="flex gap-2">
         <button type="button" onClick={() => onConfirm(preview)}
           className="flex-1 min-h-[40px] px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition-colors">
@@ -517,6 +655,10 @@ export default function LogoPicker({
         <button type="button" onClick={() => downloadLogoPng(preview, `${(text || "logo").trim().replace(/\s+/g, "_")}.png`)}
           className="min-h-[40px] px-3 py-2 rounded-lg border-2 border-orange-300 text-orange-700 text-sm font-semibold hover:bg-orange-100">
           ⬇️ PNG
+        </button>
+        <button type="button" onClick={() => downloadLogoSvg(previewSvg, `${(text || "logo").trim().replace(/\s+/g, "_")}.svg`)}
+          className="min-h-[40px] px-3 py-2 rounded-lg border-2 border-orange-300 text-orange-700 text-sm font-semibold hover:bg-orange-100">
+          ⬇️ SVG
         </button>
         <button type="button" onClick={onCancel}
           className="min-h-[40px] px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-100">
