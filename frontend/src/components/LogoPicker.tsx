@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
+import { SECTOR_ICONS } from "./sectorIcons";
 
-export type LogoTemplateId = "icon" | "icon_text" | "initial_text" | "banner" | "outline";
+export type LogoTemplateId = "icon" | "icon_text" | "icon_side_text" | "banner" | "outline";
 
 const TEMPLATES: { id: LogoTemplateId; label: string }[] = [
-  { id: "icon",         label: "Icône seule" },
-  { id: "icon_text",    label: "Icône + nom" },
-  { id: "initial_text", label: "Initiale + nom" },
-  { id: "banner",       label: "Bandeau" },
-  { id: "outline",      label: "Contour" },
+  { id: "icon",           label: "Icône seule" },
+  { id: "icon_text",      label: "Icône + nom" },
+  { id: "icon_side_text", label: "Icône à côté" },
+  { id: "banner",         label: "Bandeau" },
+  { id: "outline",        label: "Contour" },
 ];
 
 function escapeXml(s: string) {
@@ -21,47 +22,57 @@ function fitFontSize(text: string, maxWidth: number, baseSize: number) {
   return Math.max(22, Math.floor(baseSize * (maxWidth / estWidth)));
 }
 
-export function buildLogoSvg(tpl: LogoTemplateId, opts: { icon: string; color: string; text: string; scale?: number }): string {
-  const { icon, color } = opts;
+// Icône vectorielle (Material Symbols, libre de droits) positionnée dans un carré size×size, coin haut-gauche (x,y)
+function glyph(typeId: string, x: number, y: number, size: number, fill: string): string {
+  const icon = SECTOR_ICONS[typeId];
+  if (!icon) return "";
+  const paths = icon.paths.map(p => `<path d="${p}" fill="${fill}"/>`).join("");
+  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="${icon.viewBox}">${paths}</svg>`;
+}
+
+export function buildLogoSvg(tpl: LogoTemplateId, opts: { typeId: string; color: string; text: string; scale?: number }): string {
+  const { typeId, color } = opts;
   const scale = opts.scale ?? 1;
   const text = escapeXml(opts.text.trim());
-  const initial = escapeXml((opts.text.trim().charAt(0) || "?").toUpperCase());
   let inner = "";
   switch (tpl) {
     case "icon": {
-      const size = Math.round(240 * scale);
+      const size = Math.round(260 * scale);
       inner = `<rect width="512" height="512" rx="96" fill="${color}"/>
-        <text x="256" y="276" font-size="${size}" text-anchor="middle" dominant-baseline="middle">${icon}</text>`;
+        ${glyph(typeId, (512 - size) / 2, (512 - size) / 2, size, "#ffffff")}`;
       break;
     }
     case "icon_text": {
       const fs = fitFontSize(text, 420, 56);
+      const size = Math.round(180 * scale);
       inner = `<rect width="512" height="512" rx="96" fill="${color}"/>
-        <text x="256" y="200" font-size="${Math.round(150 * scale)}" text-anchor="middle" dominant-baseline="middle">${icon}</text>
+        ${glyph(typeId, (512 - size) / 2, 90, size, "#ffffff")}
         <text x="256" y="360" font-size="${fs}" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#ffffff" text-anchor="middle">${text}</text>`;
       break;
     }
-    case "initial_text": {
-      const fs = fitFontSize(text, 280, 46);
-      const r = Math.round(90 * scale);
+    case "icon_side_text": {
+      const fs = fitFontSize(text, 260, 44);
+      const size = Math.round(150 * scale);
       inner = `<rect width="512" height="512" rx="48" fill="#ffffff" stroke="${color}" stroke-width="10"/>
-        <circle cx="150" cy="256" r="${r}" fill="${color}"/>
-        <text x="150" y="256" font-size="${r}" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initial}</text>
+        <circle cx="150" cy="256" r="100" fill="${color}"/>
+        ${glyph(typeId, 150 - size / 2, 256 - size / 2, size, "#ffffff")}
         <text x="270" y="270" font-size="${fs}" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="${color}" text-anchor="start">${text}</text>`;
       break;
     }
     case "banner": {
       const fs = fitFontSize(text, 460, 48);
+      const size = Math.round(200 * scale);
       inner = `<rect width="512" height="512" fill="#ffffff"/>
-        <text x="256" y="210" font-size="${Math.round(180 * scale)}" text-anchor="middle" dominant-baseline="middle">${icon}</text>
+        ${glyph(typeId, (512 - size) / 2, 80, size, color)}
         <rect x="0" y="380" width="512" height="90" fill="${color}"/>
         <text x="256" y="432" font-size="${fs}" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${text}</text>`;
       break;
     }
     case "outline": {
       const fs = fitFontSize(text, 420, 46);
+      const size = Math.round(190 * scale);
       inner = `<rect width="512" height="512" rx="64" fill="#ffffff" stroke="${color}" stroke-width="14"/>
-        <text x="256" y="210" font-size="${Math.round(170 * scale)}" text-anchor="middle" dominant-baseline="middle">${icon}</text>
+        ${glyph(typeId, (512 - size) / 2, 80, size, color)}
         <text x="256" y="360" font-size="${fs}" font-family="Arial,Helvetica,sans-serif" font-weight="700" fill="${color}" text-anchor="middle">${text}</text>`;
       break;
     }
@@ -74,9 +85,9 @@ export function svgToDataUrl(svg: string): string {
 }
 
 export default function LogoPicker({
-  icon, color, defaultText, onCancel, onConfirm,
+  typeId, color, defaultText, onCancel, onConfirm,
 }: {
-  icon: string;
+  typeId: string;
   color: string;
   defaultText: string;
   onCancel: () => void;
@@ -89,17 +100,17 @@ export default function LogoPicker({
   const effectiveText = text || defaultText || "?";
 
   const preview = useMemo(
-    () => svgToDataUrl(buildLogoSvg(tpl, { icon, color, text: effectiveText, scale })),
-    [tpl, icon, color, effectiveText, scale]
+    () => svgToDataUrl(buildLogoSvg(tpl, { typeId, color, text: effectiveText, scale })),
+    [tpl, typeId, color, effectiveText, scale]
   );
 
   return (
     <div className="mt-3 p-4 rounded-xl border-2 border-orange-200 bg-orange-50/50 dark:bg-orange-900/10 dark:border-orange-800">
       <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">🎨 Choisissez un modèle de logo</p>
 
-      <div className="grid grid-cols-5 gap-2 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         {TEMPLATES.map(t => {
-          const thumb = svgToDataUrl(buildLogoSvg(t.id, { icon, color, text: effectiveText, scale: 1 }));
+          const thumb = svgToDataUrl(buildLogoSvg(t.id, { typeId, color, text: effectiveText, scale: 1 }));
           return (
             <button
               key={t.id}
@@ -115,7 +126,7 @@ export default function LogoPicker({
       </div>
 
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-20 h-20 rounded-xl overflow-hidden border-2 border-orange-300 bg-white flex-shrink-0">
+        <div className="w-24 h-24 rounded-xl overflow-hidden border-2 border-orange-300 bg-white flex-shrink-0">
           <img src={preview} alt="Aperçu" className="w-full h-full object-contain" />
         </div>
         <div className="flex-1 space-y-2">

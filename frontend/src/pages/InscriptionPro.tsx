@@ -537,7 +537,7 @@ export default function InscriptionPro() {
               )}
               {selectedType && showLogoPicker && (
                 <LogoPicker
-                  icon={PRO_TYPES.find(pt => pt.id === selectedType)?.icon || "🏢"}
+                  typeId={selectedType}
                   color={LOGO_COLORS[selectedType] || "#f59e0b"}
                   defaultText={form.name.trim() || PRO_TYPES.find(pt => pt.id === selectedType)?.label || ""}
                   onCancel={() => setShowLogoPicker(false)}
