@@ -27,6 +27,24 @@ const PRO_TYPES = [
   { id: "reseau",          label: "Association / Réseau",            icon: "🌐", desc: "Association, comité, groupe communautaire — membres, projets, cotisations" },
 ];
 
+// Couleur de secteur (même palette que l'Espace Gestion) pour générer un logo par défaut
+const LOGO_COLORS: Record<string, string> = {
+  clinic: "#1a8f1a", health_worker: "#059669", school: "#1a8f1a", mosque: "#1a8f1a",
+  madrasa: "#0891b2", commerce: "#d97706", security_agency: "#475569", journalist: "#dc2626",
+  enterprise: "#4f46e5", restaurant: "#ea580c", vendor: "#0891b2", supplier: "#0e7490",
+  producer: "#7c3aed", broker: "#b45309", scientist: "#4338ca", ngo: "#e11d48",
+  transport: "#1d4ed8", beauty: "#db2777", artisan: "#d97706", mairie: "#1d4ed8", reseau: "#2563eb",
+};
+
+// Génère un logo simple (carré arrondi coloré + icône du secteur) en SVG, encodé en data URL
+function buildDefaultLogo(icon: string, color: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
+    <rect width="512" height="512" rx="96" fill="${color}"/>
+    <text x="50%" y="54%" font-size="260" text-anchor="middle" dominant-baseline="middle">${icon}</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
   clinic: {
     expect: "Nous attendons que vous proposiez des soins ou services médicaux (consultations, urgences, spécialités) et que vous acceptiez les demandes de rendez-vous des utilisateurs.",
@@ -500,18 +518,39 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                 📲 Ce logo sera l'icône de votre app sur les téléphones (le vôtre et celui de vos clients). Carré recommandé. Max 5 Mo.
               </p>
-              <input type="file" accept="image/*"
-                onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (!file) { setForm(f => ({ ...f, mediaUrl: "" })); return; }
-                  if (file.size > 5 * 1024 * 1024) { setError("La photo ne doit pas dépasser 5 Mo."); return; }
-                  setError("");
-                  const reader = new FileReader();
-                  reader.onload = () => setForm(f => ({ ...f, mediaUrl: String(reader.result) }));
-                  reader.readAsDataURL(file);
-                }}
-                className="w-full min-h-[44px] px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-orange-50 file:text-orange-700"
-              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input type="file" accept="image/*"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) { setForm(f => ({ ...f, mediaUrl: "" })); return; }
+                    if (file.size > 5 * 1024 * 1024) { setError("La photo ne doit pas dépasser 5 Mo."); return; }
+                    setError("");
+                    const reader = new FileReader();
+                    reader.onload = () => setForm(f => ({ ...f, mediaUrl: String(reader.result) }));
+                    reader.readAsDataURL(file);
+                  }}
+                  className="flex-1 min-h-[44px] px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-orange-50 file:text-orange-700"
+                />
+                {selectedType && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const t = PRO_TYPES.find(pt => pt.id === selectedType);
+                      if (!t) return;
+                      const color = LOGO_COLORS[selectedType] || "#f59e0b";
+                      setForm(f => ({ ...f, mediaUrl: buildDefaultLogo(t.icon, color) }));
+                    }}
+                    className="min-h-[44px] px-4 py-2.5 rounded-lg border-2 border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-semibold whitespace-nowrap transition-colors"
+                  >
+                    🎨 Logo automatique
+                  </button>
+                )}
+              </div>
+              {!form.mediaUrl && (
+                <p className="mt-1.5 text-xs text-gray-400">
+                  Pas encore de logo ? Cliquez sur « Logo automatique » pour en obtenir un selon votre secteur.
+                </p>
+              )}
               {form.mediaUrl && (
                 <div className="mt-3 flex items-center gap-3">
                   <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-orange-200 bg-gray-100 flex-shrink-0">
