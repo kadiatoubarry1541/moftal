@@ -30,6 +30,17 @@
     padding-right: 12px !important;
   }
 
+  /* Espacement vertical réduit dans la zone de contenu */
+  .gestion-page .gestion-pad[style*="padding: 28px"],
+  .gestion-page .gestion-pad[style*="padding: 24px 28px"] {
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+  .gestion-page .gestion-pad[style*="padding: 16px 28px"] {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
   /* Fenêtres modales : 12px de marge autour */
   .gestion-page [style*="position: fixed"][style*="inset: 0"] {
     padding-left: 12px !important;
@@ -82,7 +93,7 @@
   .gestion-page [style*="padding: 24px 28px"],
   .gestion-page [style*="padding: 16px 20px"],
   .gestion-page [style*="padding: 14px 16px"] {
-    padding: 10px 12px !important;
+    padding: 8px 10px !important;
   }
   .gestion-page [style*="width: 40px"][style*="height: 40px"],
   .gestion-page [style*="width: 48px"][style*="height: 48px"] {
@@ -91,24 +102,44 @@
   }
 
   /* Tableaux : colonnes resserrées, texte réduit, tout tient dans la largeur */
-  .gestion-page table {
-    font-size: 10.5px !important;
+  .gestion-page table,
+  .gestion-page table[style] {
+    font-size: var(--gestion-table-fs, 10.5px) !important;
     width: 100% !important;
   }
   .gestion-page th,
   .gestion-page td {
-    padding: 6px 4px !important;
+    padding: 5px 3px !important;
     white-space: normal !important;
     word-break: normal !important;
     overflow-wrap: normal !important;
   }
-  .gestion-page th {
-    font-size: 9.5px !important;
+  /* Téléphones, dates, montants : jamais coupés (repérés par gestionMobileFit.ts) */
+  .gestion-page td.gestion-nowrap,
+  .gestion-page th.gestion-nowrap,
+  .gestion-page a[href^="tel:"],
+  .gestion-page .gestion-nowrap {
+    white-space: nowrap !important;
+  }
+  /* Les blocs de texte dans une rangée peuvent se resserrer (sinon un
+     chiffre trop long pousse hors de sa carte au lieu d'être réduit). */
+  .gestion-page [style*="display: flex"] > :not(button) {
+    min-width: 0;
+  }
+  .gestion-page .gestion-fit.gestion-fit.gestion-fit {
+    font-size: var(--gestion-fit-fs) !important;
+  }
+  .gestion-page table th,
+  .gestion-page table th[style] {
+    font-size: calc(var(--gestion-table-fs, 10.5px) - 1px) !important;
     letter-spacing: 0 !important;
   }
-  .gestion-page td button:not([style*="padding: 0"]) {
-    padding: 4px 6px !important;
-    font-size: 10.5px !important;
+  .gestion-page table [style*="font-size"]:not(th) {
+    font-size: inherit !important;
+  }
+  .gestion-page table td button:not([style*="padding: 0"]):not([style*="padding: 4px"]):not([style*="padding: 2px"]) {
+    padding: 3px 5px !important;
+    font-size: var(--gestion-table-fs, 10.5px) !important;
   }
 
   /* Grilles à 3 colonnes ou plus → 2 colonnes compactes */
@@ -118,7 +149,7 @@
   .gestion-page [style*="grid-template-columns: repeat(6"],
   .gestion-page [style*="grid-template-columns: 1fr 1fr 1fr"] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 8px !important;
+    gap: 6px !important;
   }
   /* Chiffres clés des cartes : réduits pour tenir dans la carte */
   .gestion-page [style*="grid-template-columns"] > [style*="display: flex"] {
