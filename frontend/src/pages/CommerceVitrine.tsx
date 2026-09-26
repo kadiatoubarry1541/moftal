@@ -176,10 +176,14 @@ export default function CommerceVitrine() {
       {/* ── BARRE TOP ────────────────────────────────────────────────────────── */}
       <div style={{ background: AMBER_DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
             {store.phone   && <span>📞 {store.phone}</span>}
             {store.email   && <span>✉ {store.email}</span>}
             {(store.address || store.city) && <span>📍 {[store.address, store.city].filter(Boolean).join(", ")}</span>}
+            {store.horaires && <span>🕐 {store.horaires}</span>}
+            {store.phone_urgence && (
+              <a href={`tel:${store.phone_urgence}`} style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>🚨 Urgence</a>
+            )}
           </div>
           <span style={{ opacity: 0.5 }}>Moftal · Marché numérique</span>
         </div>

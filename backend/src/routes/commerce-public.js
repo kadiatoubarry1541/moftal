@@ -1,14 +1,16 @@
 import express from 'express';
 import { sequelize } from '../config/database.js';
+import { ensureTenantExtraColumns } from './clinic-management.js';
 
 const router = express.Router();
 
 // GET /api/commerce-public/:tenantCode — infos publiques de la boutique
 router.get('/:tenantCode', async (req, res) => {
   try {
+    await ensureTenantExtraColumns();
     const { tenantCode } = req.params;
     const [tenant] = await sequelize.query(
-      `SELECT tenant_code, type, name, logo_url, address, city, phone, email, description
+      `SELECT tenant_code, type, name, logo_url, address, city, phone, email, description, horaires, phone_urgence
        FROM management_tenants
        WHERE tenant_code = :code
          AND type IN ('commerce','vendor','supplier','producer','broker','restaurant','transport','beauty','artisan')

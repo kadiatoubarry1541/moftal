@@ -8,7 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses";
+type Tab = "dashboard" | "products" | "sales" | "clients" | "expenses" | "settings";
 
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
@@ -43,12 +43,18 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [editProduct, setEditProduct] = useState<any>(null);
+  const [editClient, setEditClient] = useState<any>(null);
+  const [editExpense, setEditExpense] = useState<any>(null);
+  const [movementsFor, setMovementsFor] = useState<any>(null);
+  const [movements, setMovements] = useState<any[]>([]);
 
   const [pForm, setPForm] = useState({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce" });
   const [sForm, setSForm] = useState({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] });
   const [cForm, setCForm] = useState({ nom: "", telephone: "", adresse: "" });
   const [eForm, setEForm] = useState({ description: "", montant: "", categorie: "Transport" });
   const [saving, setSaving] = useState(false);
+  const [settingsForm, setSettingsForm] = useState<any>({});
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   const b = (code: string) => BASE(code);
 
@@ -76,6 +82,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       const tData = await tenantRes.json();
       if (!tData.success) { setError(tData.message || "Accès refusé"); setLoading(false); return; }
       setTenant(tData.tenant);
+      setSettingsForm({ name: tData.tenant.name || "", address: tData.tenant.address || "", phone: tData.tenant.phone || "", email: tData.tenant.email || "", description: tData.tenant.description || "", horaires: tData.tenant.horaires || "", phone_urgence: tData.tenant.phone_urgence || "" });
       const dData = await dashRes.json();
       if (dData.success) setDash(dData);
     } catch { setError("Erreur de connexion"); }
@@ -147,9 +154,88 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   async function saveExpense() {
     if (!eForm.description || !eForm.montant) return;
     setSaving(true);
-    await fetch(`${b(tenantCode!)}/expenses`, { method: "POST", headers: auth(), body: JSON.stringify(eForm) });
-    setSaving(false); setShowAddExpense(false); setEForm({ description: "", montant: "", categorie: "Transport" });
+    const url = editExpense ? `${b(tenantCode!)}/expenses/${editExpense.id}` : `${b(tenantCode!)}/expenses`;
+    const method = editExpense ? "PUT" : "POST";
+    await fetch(url, { method, headers: auth(), body: JSON.stringify(eForm) });
+    setSaving(false); setShowAddExpense(false); setEditExpense(null); setEForm({ description: "", montant: "", categorie: "Transport" });
     loadExpenses(); loadAll();
+  }
+  async function deleteExpense(id: number) {
+    if (!confirm("Supprimer cette dépense ?")) return;
+    await fetch(`${b(tenantCode!)}/expenses/${id}`, { method: "DELETE", headers: auth() });
+    loadExpenses(); loadAll();
+  }
+  async function deleteProduct(id: number) {
+    if (!confirm("Supprimer cet article ? Il disparaîtra de votre catalogue et de la vitrine.")) return;
+    await fetch(`${b(tenantCode!)}/products/${id}`, { method: "DELETE", headers: auth() });
+    loadProducts();
+  }
+  async function openMovements(product: any) {
+    setMovementsFor(product);
+    const r = await fetch(`${b(tenantCode!)}/products/${product.id}/movements`, { headers: auth() });
+    const d = await r.json();
+    if (d.success) setMovements(d.movements || []);
+  }
+  async function saveClientEdit() {
+    if (!editClient?.nom) return;
+    setSaving(true);
+    await fetch(`${b(tenantCode!)}/clients/${editClient.id}`, { method: "PUT", headers: auth(), body: JSON.stringify(editClient) });
+    setSaving(false); setEditClient(null);
+    loadClients();
+  }
+  async function deleteClient(id: number) {
+    if (!confirm("Supprimer ce client ?")) return;
+    const r = await fetch(`${b(tenantCode!)}/clients/${id}`, { method: "DELETE", headers: auth() });
+    const d = await r.json();
+    if (!d.success) { alert(d.message || "Erreur"); return; }
+    loadClients();
+  }
+  async function cancelSale(id: number) {
+    if (!confirm("Annuler cette vente ? Le stock sera restauré et le crédit client ajusté.")) return;
+    const r = await fetch(`${b(tenantCode!)}/sales/${id}`, { method: "DELETE", headers: auth() });
+    const d = await r.json();
+    if (!d.success) { alert(d.message || "Erreur"); return; }
+    loadSales(); loadAll(); loadProducts();
+  }
+  function printSaleReceipt(s: any) {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const items = (s.items || []).map((i: any) => `<tr><td>${i.nom}</td><td style="text-align:center">${i.quantite}</td><td style="text-align:right">${fmtMoney(+i.prix_unitaire)}</td><td style="text-align:right">${fmtMoney(+i.prix_unitaire * +i.quantite)}</td></tr>`).join("");
+    w.document.write(`
+      <html><head><title>Reçu ${s.id}</title><style>
+        body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}
+        h1{font-size:18px;margin:0 0 4px}
+        table{width:100%;border-collapse:collapse;margin-top:16px}
+        th,td{padding:6px 4px;border-bottom:1px solid #e2e8f0;font-size:13px}
+        .total{font-weight:700;font-size:15px}
+      </style></head><body>
+        <h1>${tenant?.name || "Boutique"}</h1>
+        <div style="font-size:12px;color:#64748b">Reçu de vente #${s.id} · ${fmtDate(s.date_vente)}</div>
+        <div style="margin-top:10px;font-size:13px">Client : <b>${s.client_nom || "Client"}</b></div>
+        <table><thead><tr><th style="text-align:left">Article</th><th>Qté</th><th style="text-align:right">P.U.</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>${items}</tbody></table>
+        <div style="text-align:right;margin-top:12px" class="total">Total : ${fmtMoney(s.total)}</div>
+        <div style="text-align:right;font-size:12px;color:#64748b">Reçu : ${fmtMoney(s.montant_recu)} · Mode : ${s.type_paiement}</div>
+        <div style="margin-top:24px;text-align:center;font-size:11px;color:#94a3b8">Merci pour votre achat — propulsé par Moftal</div>
+      </body></html>
+    `);
+    w.document.close(); w.print();
+  }
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert("Logo trop volumineux (max 2 Mo)"); return; }
+    const reader = new FileReader();
+    reader.onload = () => setSettingsForm((f: any) => ({ ...f, logo_url: reader.result as string }));
+    reader.readAsDataURL(file);
+  };
+  async function saveSettings() {
+    setSettingsSaving(true);
+    try {
+      const r = await fetch(`${b(tenantCode!)}/settings`, { method: "PUT", headers: auth(), body: JSON.stringify(settingsForm) });
+      const d = await r.json();
+      if (d.success) setTenant(d.tenant);
+    } finally { setSettingsSaving(false); }
   }
 
   if (loading) return (
@@ -172,6 +258,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     { id: "sales",     label: "Ventes", icon: "🧾" },
     { id: "clients",   label: "Clients", icon: "👥" },
     { id: "expenses",  label: "Dépenses", icon: "💸" },
+    { id: "settings",  label: "Paramètres", icon: "⚙️" },
   ];
 
   const inputStyle = { width: "100%", border: `1px solid ${COLOR_BDR}`, borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" as const };
@@ -318,6 +405,8 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                   <button onClick={() => updateStock(p.id, 1)} style={{ flex: 1, padding: "4px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700 }}>+1</button>
                   <button onClick={() => { setEditProduct(p); setPForm({ nom: p.nom, categorie: p.categorie || "", prix_vente: p.prix_vente, prix_achat: p.prix_achat || "", stock: p.stock, stock_min: p.stock_min || "5", unite: p.unite || "pièce" }); setShowAddProduct(true); }}
                     style={{ padding: "4px 8px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>✏️</button>
+                  <button onClick={() => openMovements(p)} title="Historique du stock" style={{ padding: "4px 8px", background: "#eff6ff", color: "#2563eb", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>📈</button>
+                  <button onClick={() => deleteProduct(p.id)} title="Supprimer" style={{ padding: "4px 8px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>🗑️</button>
                 </div>
               </div>
             ))}
@@ -384,14 +473,20 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {sales.map(s => (
-              <div key={s.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: `1px solid ${s.est_credit ? "#fca5a5" : "#f1f5f9"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div key={s.id} style={{ background: s.annulee ? "#f8fafc" : "white", opacity: s.annulee ? 0.6 : 1, borderRadius: 10, padding: "14px 16px", border: `1px solid ${s.est_credit && !s.annulee ? "#fca5a5" : "#f1f5f9"}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{s.client_nom || "Client"}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{s.client_nom || "Client"} {s.annulee && <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 600 }}>· Annulée</span>}</div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(s.date_vente)} · {s.type_paiement}</div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: s.est_credit ? "#ef4444" : "#22a722" }}>{fmtMoney(s.total)}</div>
-                  {s.est_credit && <div style={{ fontSize: 11, color: "#ef4444" }}>Crédit</div>}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: s.annulee ? "#94a3b8" : s.est_credit ? "#ef4444" : "#22a722", textDecoration: s.annulee ? "line-through" : "none" }}>{fmtMoney(s.total)}</div>
+                    {s.est_credit && !s.annulee && <div style={{ fontSize: 11, color: "#ef4444" }}>Crédit</div>}
+                  </div>
+                  <button onClick={() => printSaleReceipt(s)} title="Imprimer le reçu" style={{ padding: "6px 10px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>🖨️</button>
+                  {!s.annulee && (
+                    <button onClick={() => cancelSale(s.id)} title="Annuler la vente" style={{ padding: "6px 10px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>Annuler</button>
+                  )}
                 </div>
               </div>
             ))}
@@ -426,23 +521,47 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
             </div>
           )}
 
+          {editClient && (
+            <div style={formBg}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>Modifier le client</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {([["Nom *", "nom"], ["Téléphone", "telephone"], ["Adresse / Quartier", "adresse"]] as [string, string][]).map(([label, key]) => (
+                  <div key={key}>
+                    <label style={labelStyle}>{label}</label>
+                    <input value={editClient[key] || ""} onChange={e => setEditClient((f: any) => ({ ...f, [key]: e.target.value }))} style={inputStyle} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <button onClick={saveClientEdit} disabled={saving} style={{ padding: "8px 20px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer"}</button>
+                <button onClick={() => setEditClient(null)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {clients.map(c => (
-              <div key={c.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: `1px solid ${c.credit_total > 0 ? "#fca5a5" : "#f1f5f9"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div key={c.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: `1px solid ${c.credit_total > 0 ? "#fca5a5" : "#f1f5f9"}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{c.nom}</div>
                   {c.telephone && <div style={{ fontSize: 12, color: "#64748b" }}>{c.telephone}</div>}
                   {c.adresse && <div style={{ fontSize: 11, color: "#94a3b8" }}>{c.adresse}</div>}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   {c.credit_total > 0 ? (
                     <>
                       <div style={{ fontWeight: 700, color: "#ef4444" }}>Crédit : {fmtMoney(c.credit_total)}</div>
                       <button onClick={() => payCredit(c.id)} style={{ padding: "6px 12px", background: "#dcfcdc", color: "#1a8f1a", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Rembourser</button>
+                      {c.telephone && (
+                        <button onClick={() => window.open(`https://wa.me/${c.telephone.replace(/\D/g, "")}?text=${encodeURIComponent(`Bonjour ${c.nom}, un rappel amical : vous avez un crédit de ${fmtMoney(c.credit_total)} chez ${tenant?.name || "nous"}. Merci de régulariser dès que possible.`)}`, "_blank")}
+                            style={{ padding: "6px 10px", background: "#dcfce7", color: "#16a34a", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📲 Relancer</button>
+                      )}
                     </>
                   ) : (
                     <div style={{ fontSize: 12, color: "#94a3b8" }}>Pas de crédit</div>
                   )}
+                  <button onClick={() => setEditClient(c)} title="Modifier" style={{ padding: "6px 8px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>✏️</button>
+                  <button onClick={() => deleteClient(c.id)} title="Supprimer" style={{ padding: "6px 8px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>🗑️</button>
                 </div>
               </div>
             ))}
@@ -465,7 +584,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
 
           {showAddExpense && (
             <div style={formBg}>
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Nouvelle dépense</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>{editExpense ? "Modifier la dépense" : "Nouvelle dépense"}</div>
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 10 }}>
                 <div>
                   <label style={labelStyle}>Description *</label>
@@ -484,22 +603,111 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
                 <button onClick={saveExpense} disabled={saving} style={{ padding: "8px 20px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>{saving ? "..." : "Enregistrer"}</button>
-                <button onClick={() => setShowAddExpense(false)} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
+                <button onClick={() => { setShowAddExpense(false); setEditExpense(null); setEForm({ description: "", montant: "", categorie: "Transport" }); }} style={{ padding: "8px 16px", background: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer" }}>Annuler</button>
               </div>
             </div>
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {expenses.map(e => (
-              <div key={e.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #fee2e2", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div key={e.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #fee2e2", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{e.description}</div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(e.date_depense)} · {e.categorie}</div>
                 </div>
-                <div style={{ fontWeight: 700, color: "#dc2626", fontSize: 15 }}>{fmtMoney(e.montant)}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontWeight: 700, color: "#dc2626", fontSize: 15 }}>{fmtMoney(e.montant)}</div>
+                  <button onClick={() => { setEditExpense(e); setEForm({ description: e.description, montant: e.montant, categorie: e.categorie || "Transport" }); setShowAddExpense(true); }} title="Modifier" style={{ padding: "5px 8px", background: COLOR_BG, color: COLOR, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>✏️</button>
+                  <button onClick={() => deleteExpense(e.id)} title="Supprimer" style={{ padding: "5px 8px", background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>🗑️</button>
+                </div>
               </div>
             ))}
             {expenses.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune dépense enregistrée.</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── PARAMÈTRES ── */}
+      {tab === "settings" && (
+        <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={formBg}>
+            <div style={{ fontWeight: 700, marginBottom: 12 }}>Logo</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <div style={{ width: 72, height: 72, borderRadius: 14, border: `2px solid ${COLOR_BDR}`, background: "white", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                {(settingsForm.logo_url || tenant?.logo_url)
+                  ? <img src={settingsForm.logo_url || tenant.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <span style={{ fontSize: 30 }}>🏪</span>}
+              </div>
+              <div>
+                <label htmlFor="logo-upload-com" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: COLOR, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Choisir un logo</label>
+                <input id="logo-upload-com" type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} />
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG, SVG · Max 2 Mo</p>
+              </div>
+            </div>
+          </div>
+
+          <div style={formBg}>
+            <div style={{ fontWeight: 700, marginBottom: 12 }}>Informations de la boutique</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Nom</label>
+                <input style={inputStyle} value={settingsForm.name || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div>
+                <label style={labelStyle}>Description</label>
+                <textarea style={{ ...inputStyle, height: 70, resize: "none" as const }} value={settingsForm.description || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, description: e.target.value }))} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div><label style={labelStyle}>Téléphone</label><input style={inputStyle} value={settingsForm.phone || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Email</label><input type="email" style={inputStyle} value={settingsForm.email || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
+              </div>
+              <div>
+                <label style={labelStyle}>Adresse</label>
+                <input style={inputStyle} value={settingsForm.address || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, address: e.target.value }))} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={labelStyle}>Horaires d'ouverture</label>
+                  <input style={inputStyle} placeholder="Ex : Lun-Sam 8h-19h" value={settingsForm.horaires || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, horaires: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Téléphone d'urgence</label>
+                  <input style={inputStyle} value={settingsForm.phone_urgence || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, phone_urgence: e.target.value }))} />
+                </div>
+              </div>
+              <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>Ces informations sont affichées sur votre page vitrine publique.</p>
+            </div>
+          </div>
+
+          <button onClick={saveSettings} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${COLOR}88` : COLOR, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer" }}>
+            {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
+          </button>
+        </div>
+      )}
+
+      {/* ── HISTORIQUE DES MOUVEMENTS DE STOCK ── */}
+      {movementsFor && (
+        <div onClick={() => setMovementsFor(null)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "white", borderRadius: 14, padding: 24, width: "min(440px,95vw)", maxHeight: "80vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>📈 Historique — {movementsFor.nom}</div>
+              <button onClick={() => setMovementsFor(null)} style={{ background: "#f1f5f9", border: "none", borderRadius: 6, width: 28, height: 28, cursor: "pointer" }}>×</button>
+            </div>
+            {movements.length === 0 ? (
+              <div style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>Aucun mouvement enregistré.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {movements.map((m, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: 13 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, textTransform: "capitalize" }}>{m.reason.replace(/_/g, " ")}</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtDate(m.created_at)}</div>
+                    </div>
+                    <div style={{ fontWeight: 700, color: m.delta > 0 ? "#1a8f1a" : "#dc2626" }}>{m.delta > 0 ? "+" : ""}{m.delta}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
