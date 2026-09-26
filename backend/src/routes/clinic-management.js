@@ -5,7 +5,13 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 
 const router = express.Router();
 
-// Vérifie que le tenant appartient à l'utilisateur connecté (ou admin)
+export async function ensureStaffExtraColumns() {
+  await sequelize.query(`ALTER TABLE clinic_staff ADD COLUMN IF NOT EXISTS numero_h VARCHAR(50);`);
+}
+
+// Vérifie que le tenant appartient à l'utilisateur connecté (propriétaire, membre du
+// personnel relié à son compte Moftal, ou admin plateforme). req.myRole indique le
+// rôle utilisé côté frontend pour limiter les sections visibles (droits par rôle).
 async function verifyTenant(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
@@ -14,11 +20,25 @@ async function verifyTenant(req, res, next) {
     if (isAdminUser) {
       const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`, { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT });
       req.tenant = tenant || { tenant_code: tenantCode, name: 'Clinique Admin', type: 'clinic', owner_numero_h: 'ADMIN-G7', is_active: true };
+      req.myRole = 'Admin';
       return next();
     }
     const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code AND owner_numero_h = :n LIMIT 1`, { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT });
-    if (!tenant) return res.status(403).json({ success: false, message: 'Accès refusé à cet espace clinique.' });
-    req.tenant = tenant;
+    if (tenant) {
+      req.tenant = tenant;
+      req.myRole = 'Admin';
+      return enforceGestionAccess(req, res, next);
+    }
+    // Pas le propriétaire : vérifier si connecté en tant que membre du personnel
+    await ensureStaffExtraColumns();
+    const [staffMember] = await sequelize.query(
+      `SELECT s.*, t.* FROM clinic_staff s JOIN management_tenants t ON t.tenant_code = s.tenant_code
+       WHERE s.tenant_code = :code AND s.numero_h = :n AND s.is_active = true LIMIT 1`,
+      { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!staffMember) return res.status(403).json({ success: false, message: 'Accès refusé à cet espace clinique.' });
+    req.tenant = staffMember;
+    req.myRole = staffMember.role || 'Autre';
     return enforceGestionAccess(req, res, next);
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -27,7 +47,7 @@ async function verifyTenant(req, res, next) {
 
 // GET /api/clinic-mgmt/:tenantCode/info
 router.get('/:tenantCode/info', authenticate, verifyTenant, async (req, res) => {
-  res.json({ success: true, tenant: req.tenant });
+  res.json({ success: true, tenant: req.tenant, myRole: req.myRole });
 });
 
 // Ajoute les colonnes horaires/téléphone d'urgence si elles n'existent pas encore
@@ -162,13 +182,14 @@ router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =>
 
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, role, service, specialite, telephone, email } = req.body;
+    await ensureStaffExtraColumns();
+    const { nom, prenom, role, service, specialite, telephone, email, numero_h } = req.body;
     const code = req.params.tenantCode;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `STAFF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const [rows] = await sequelize.query(
-      `INSERT INTO clinic_staff (tenant_code,nom,prenom,role,service,specialite,telephone,email,matricule) VALUES(:code,:nom,:prenom,:role,:svc,:spec,:tel,:email,:mat) RETURNING *`,
-      { replacements: { code, nom, prenom, role, svc: service, spec: specialite, tel: telephone, email, mat }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO clinic_staff (tenant_code,nom,prenom,role,service,specialite,telephone,email,matricule,numero_h) VALUES(:code,:nom,:prenom,:role,:svc,:spec,:tel,:email,:mat,:nh) RETURNING *`,
+      { replacements: { code, nom, prenom, role, svc: service, spec: specialite, tel: telephone, email, mat, nh: numero_h || null }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, staff: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -196,10 +217,20 @@ router.get('/:tenantCode/appointments', authenticate, verifyTenant, async (req, 
 
 router.post('/:tenantCode/appointments', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { patient_id, staff_id, service, date_rdv, heure, motif } = req.body;
+    const { patient_id, staff_id, service, date_rdv, heure, motif, force } = req.body;
+    const code = req.params.tenantCode;
+    // Agenda médecin : empêcher la double réservation au même créneau, sauf si l'utilisateur confirme explicitement (force)
+    if (staff_id && date_rdv && heure && !force) {
+      const [clash] = await sequelize.query(
+        `SELECT a.id, p.nom as p_nom, p.prenom as p_prenom FROM clinic_appointments_mgmt a LEFT JOIN clinic_patients p ON a.patient_id=p.id
+         WHERE a.tenant_code=:code AND a.staff_id=:sid AND a.date_rdv=:date AND a.heure=:heure AND a.statut NOT IN ('cancelled') LIMIT 1`,
+        { replacements: { code, sid: staff_id, date: date_rdv, heure }, type: sequelize.QueryTypes.SELECT }
+      );
+      if (clash) return res.status(409).json({ success: false, message: `Ce médecin a déjà un rendez-vous à cette heure (${clash.p_prenom || ''} ${clash.p_nom || ''}).`, conflict: true });
+    }
     const [rows] = await sequelize.query(
       `INSERT INTO clinic_appointments_mgmt (tenant_code,patient_id,staff_id,service,date_rdv,heure,motif) VALUES(:code,:pid,:sid,:svc,:date,:heure,:motif) RETURNING *`,
-      { replacements: { code: req.params.tenantCode, pid: patient_id, sid: staff_id || null, svc: service, date: date_rdv, heure, motif }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, pid: patient_id, sid: staff_id || null, svc: service, date: date_rdv, heure, motif }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, appointment: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -317,7 +348,7 @@ router.get('/:tenantCode/invoices', authenticate, verifyTenant, async (req, res)
   try {
     await ensureInvoicesTable();
     const rows = await sequelize.query(
-      `SELECT i.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom,s.prenom as s_prenom FROM clinic_invoices i LEFT JOIN clinic_patients p ON i.patient_id=p.id LEFT JOIN clinic_staff s ON i.staff_id=s.id WHERE i.tenant_code=:code ORDER BY i.created_at DESC`,
+      `SELECT i.*,p.nom as p_nom,p.prenom as p_prenom,p.telephone as p_tel,s.nom as s_nom,s.prenom as s_prenom FROM clinic_invoices i LEFT JOIN clinic_patients p ON i.patient_id=p.id LEFT JOIN clinic_staff s ON i.staff_id=s.id WHERE i.tenant_code=:code ORDER BY i.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, invoices: rows });

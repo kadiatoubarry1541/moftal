@@ -31,10 +31,33 @@ const ROLE_COLORS: Record<string, { bg: string; color: string }> = {
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
 function calcTotal(lignes: any[], remise: number) {
   const st = (lignes || []).reduce((s: number, l: any) => s + (+l.prix_unitaire || 0) * (+l.quantite || 1), 0);
   return Math.max(0, st - (remise || 0));
 }
+
+// Droits par rôle : sections visibles pour chaque poste du personnel (Admin = accès complet)
+const ROLE_PERMISSIONS: Record<string, Section[]> = {
+  "Admin":        ["dashboard","patients","staff","appointments","prescriptions","records","payments","factures","pharmacie","settings"],
+  "Médecin":      ["dashboard","patients","appointments","prescriptions","records"],
+  "Spécialiste":  ["dashboard","patients","appointments","prescriptions","records"],
+  "Infirmier(e)": ["dashboard","patients","appointments","records"],
+  "Sage-femme":   ["dashboard","patients","appointments","records"],
+  "Laborantin":   ["dashboard","patients","records"],
+  "Radiologue":   ["dashboard","patients","records"],
+  "Secrétaire":   ["dashboard","patients","appointments","payments"],
+  "Comptable":    ["dashboard","payments","factures"],
+  "Autre":        ["dashboard"],
+};
 
 const NAV_ITEMS: { id: Section; label: string; icon: string }[] = [
   { id: "dashboard",     label: "Tableau de bord",  icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -105,6 +128,7 @@ export default function GestionClinique() {
   const [section, setSection] = useState<Section>("dashboard");
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
   const [tenant, setTenant] = useState<any>(null);
+  const [myRole, setMyRole] = useState<string>("Admin");
   const [stats, setStats] = useState<any>(null);
   const [recentPatients, setRecentPatients] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
@@ -179,6 +203,7 @@ export default function GestionClinique() {
       .then(d => {
         if (d.success) {
           setTenant(d.tenant);
+          setMyRole(d.myRole || "Admin");
           setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", horaires: d.tenant.horaires || "", phone_urgence: d.tenant.phone_urgence || "" });
         } else if (d.success === false) setError(d.message || "Accès refusé.");
       })
@@ -280,9 +305,12 @@ export default function GestionClinique() {
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-appointment") {
         if (!form.patient_id || !form.date_rdv) { showToast("Patient et date obligatoires", false); return; }
-        const d = await post("/appointments", form);
+        let d = await post("/appointments", form);
+        if (!d.success && d.conflict && confirm(`${d.message}\n\nCréer quand même ce rendez-vous ?`)) {
+          d = await post("/appointments", { ...form, force: true });
+        }
         if (d.success) { setAppointments(p => [d.appointment, ...p]); setModal(null); setForm({}); showToast("Rendez-vous créé"); }
-        else showToast(d.message || "Erreur", false);
+        else if (!d.conflict) showToast(d.message || "Erreur", false);
       } else if (modal === "add-prescription") {
         if (!form.patient_id) { showToast("Patient obligatoire", false); return; }
         const meds = form.medicaments_text ? form.medicaments_text.split("\n").filter(Boolean).map((m: string) => ({ medicament: m.trim() })) : [];
@@ -406,7 +434,7 @@ export default function GestionClinique() {
           )}
         </div>
         <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
-          {NAV_ITEMS.map(n => {
+          {NAV_ITEMS.filter(n => (ROLE_PERMISSIONS[myRole] || ROLE_PERMISSIONS.Autre).includes(n.id)).map(n => {
             const active = section === n.id;
             const isUrgent = n.id === "appointments" && stats?.urgences > 0;
             return (
@@ -512,6 +540,26 @@ export default function GestionClinique() {
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={async () => {
+                  const d = await get("/patients");
+                  const list = d.success ? d.patients : [];
+                  downloadCsv(`rapport_${tenant?.name || "clinique"}_${new Date().toISOString().slice(0,10)}.csv`, [
+                    ["Rapport", tenant?.name, new Date().toLocaleDateString("fr-FR")],
+                    [],
+                    ["Statistiques"],
+                    ["Patients", stats?.patients ?? 0], ["Personnel actif", stats?.staff ?? 0],
+                    ["RDV aujourd'hui", stats?.appointmentsToday ?? 0], ["RDV en attente", stats?.appointmentsPending ?? 0],
+                    ["Revenu du mois (GNF)", stats?.revenueMonth ?? 0], ["Revenu du jour (GNF)", stats?.revenueToday ?? 0],
+                    [],
+                    ["Liste des patients"],
+                    ["Matricule","Nom","Prénom","Sexe","Né(e) le","Groupe sanguin","Téléphone","Solde dû (GNF)"],
+                    ...list.map((p: any) => [p.numero_matricule, p.nom, p.prenom, p.sexe || "", p.date_naissance || "", p.groupe_sanguin || "", p.telephone || "", p.solde_du || 0]),
+                  ]);
+                }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "white", color: TEAL_DARK, border: `1px solid ${TEAL}55`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                  ⬇️ Exporter le rapport (CSV / Excel)
+                </button>
+              </div>
               {/* Alertes pharmacie */}
               {(pharmacyStats?.pending > 0 || pharmacyStats?.rupture > 0) && (
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -1004,6 +1052,13 @@ export default function GestionClinique() {
                                   Acompte
                                 </button>
                               )}
+                              {!isPaid && f.p_tel && (
+                                <a href={`https://wa.me/${f.p_tel.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Bonjour ${f.p_prenom || ""}, un rappel de ${tenant?.name || "notre clinique"} : la facture N° ${f.numero_facture} de ${fmtMoney(reste)} reste à régler. Merci de votre compréhension.`)}`}
+                                  target="_blank" rel="noopener noreferrer"
+                                  style={{ display: "flex", alignItems: "center", padding: "4px 10px", background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
+                                  💬 Relancer
+                                </a>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1422,6 +1477,11 @@ export default function GestionClinique() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div><label style={labelStyle}>Téléphone</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.telephone || ""} onChange={e => setForm((f: any) => ({ ...f, telephone: e.target.value }))} /></div>
                   <div><label style={labelStyle}>Email</label><input type="email" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.email || ""} onChange={e => setForm((f: any) => ({ ...f, email: e.target.value }))} /></div>
+                </div>
+                <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 10, padding: "12px 14px" }}>
+                  <label style={{ ...labelStyle, color: TEAL_DARK }}>Numéro Moftal (optionnel)</label>
+                  <input className={inp} style={{ ...inpStyle, marginTop: 6, fontFamily: "monospace" }} placeholder="Ex: H-12345" value={form.numero_h || ""} onChange={e => setForm((f: any) => ({ ...f, numero_h: e.target.value }))} />
+                  <p style={{ margin: "6px 0 0", fontSize: 11, color: "#156315" }}>Si renseigné, cette personne pourra se connecter avec son propre compte Moftal et n'aura accès qu'aux sections liées à son rôle ({form.role || "à choisir"}).</p>
                 </div>
               </>}
 
