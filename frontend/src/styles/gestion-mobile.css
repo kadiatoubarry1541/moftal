@@ -13,10 +13,9 @@
   min-width: 0;
 }
 
-/* Les tableaux défilent horizontalement au lieu d'être coupés. */
+/* Les tableaux ne sont jamais coupés par leur cadre. */
 .gestion-page div:has(> table) {
   overflow-x: auto !important;
-  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 768px) {
@@ -37,39 +36,117 @@
     padding-right: 12px !important;
   }
 
-  /* Lignes « titre … boutons » : les boutons passent à la ligne au lieu
-     de sortir de l'écran. */
-  .gestion-page [style*="justify-content: space-between"] {
-    flex-wrap: wrap !important;
-    row-gap: 8px;
-  }
+  /* ── RÉDUIRE plutôt que couper : tout tient dans l'écran ── */
 
-  /* Groupes de boutons : ils peuvent rétrécir et passer à la ligne. */
-  .gestion-page [style*="display: flex"]:has(> * + button) {
-    flex-wrap: wrap !important;
+  /* Boutons plus compacts (hors barre latérale et boutons-icônes) */
+  .gestion-page button:not(aside button):not([style*="padding: 0"]):not([style*="padding: 4px"]):not([style*="padding: 2px"]) {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    padding-left: 9px !important;
+    padding-right: 9px !important;
+    font-size: 11.5px !important;
+    gap: 4px !important;
   }
-  .gestion-page [style*="flex-shrink: 0"]:has(> button) {
-    flex-shrink: 1 !important;
-    max-width: 100%;
-  }
-
   .gestion-page button {
     max-width: 100%;
   }
 
-  /* Grilles à 3 colonnes ou plus → 2 colonnes sur mobile */
+  /* Textes réduits proportionnellement */
+  .gestion-page h1 { font-size: 16px !important; }
+  .gestion-page h2 { font-size: 15px !important; }
+  .gestion-page h3 { font-size: 14px !important; }
+  .gestion-page [style*="font-size: 13px"] { font-size: 12px !important; }
+  .gestion-page [style*="font-size: 14px"],
+  .gestion-page [style*="font-size: 15px"] { font-size: 13px !important; }
+  .gestion-page [style*="font-size: 16px"],
+  .gestion-page [style*="font-size: 17px"],
+  .gestion-page [style*="font-size: 18px"] { font-size: 14px !important; }
+  .gestion-page [style*="font-size: 20px"],
+  .gestion-page [style*="font-size: 22px"] { font-size: 16px !important; }
+  .gestion-page [style*="font-size: 24px"],
+  .gestion-page [style*="font-size: 26px"],
+  .gestion-page [style*="font-size: 28px"],
+  .gestion-page [style*="font-size: 30px"] { font-size: 19px !important; }
+  .gestion-page [style*="font-size: 36px"],
+  .gestion-page [style*="font-size: 38px"],
+  .gestion-page [style*="font-size: 40px"],
+  .gestion-page [style*="font-size: 44px"],
+  .gestion-page [style*="font-size: 48px"] { font-size: 28px !important; }
+
+  /* Espacements intérieurs des cartes réduits */
+  .gestion-page [style*="padding: 16px 18px"],
+  .gestion-page [style*="padding: 18px 20px"],
+  .gestion-page [style*="padding: 18px 22px"],
+  .gestion-page [style*="padding: 18px 24px"],
+  .gestion-page [style*="padding: 20px 24px"],
+  .gestion-page [style*="padding: 24px 28px"],
+  .gestion-page [style*="padding: 16px 20px"],
+  .gestion-page [style*="padding: 14px 16px"] {
+    padding: 10px 12px !important;
+  }
+  .gestion-page [style*="width: 40px"][style*="height: 40px"],
+  .gestion-page [style*="width: 48px"][style*="height: 48px"] {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Tableaux : colonnes resserrées, texte réduit, tout tient dans la largeur */
+  .gestion-page table {
+    font-size: 10.5px !important;
+    width: 100% !important;
+  }
+  .gestion-page th,
+  .gestion-page td {
+    padding: 6px 4px !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+  .gestion-page th {
+    font-size: 9.5px !important;
+    letter-spacing: 0 !important;
+  }
+  .gestion-page td button:not([style*="padding: 0"]) {
+    padding: 4px 6px !important;
+    font-size: 10.5px !important;
+  }
+
+  /* Grilles à 3 colonnes ou plus → 2 colonnes compactes */
   .gestion-page [style*="grid-template-columns: repeat(3"],
   .gestion-page [style*="grid-template-columns: repeat(4"],
   .gestion-page [style*="grid-template-columns: repeat(5"],
   .gestion-page [style*="grid-template-columns: repeat(6"],
   .gestion-page [style*="grid-template-columns: 1fr 1fr 1fr"] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  /* Chiffres clés des cartes : réduits pour tenir dans la carte */
+  .gestion-page [style*="grid-template-columns"] > [style*="display: flex"] {
+    gap: 8px !important;
+  }
+  .gestion-page [style*="grid-template-columns"] [style*="font-size: 20px"],
+  .gestion-page [style*="grid-template-columns"] [style*="font-size: 22px"],
+  .gestion-page [style*="grid-template-columns"] [style*="font-size: 24px"] {
+    font-size: 15px !important;
   }
 
-  /* Cellules de tableau plus compactes */
-  .gestion-page th,
-  .gestion-page td {
-    padding-left: 8px !important;
-    padding-right: 8px !important;
+  /* Filet de sécurité : si malgré la réduction une rangée ne tient pas,
+     les boutons restent visibles (jamais coupés). */
+  .gestion-page [style*="justify-content: space-between"] {
+    flex-wrap: wrap !important;
+    row-gap: 6px;
+    column-gap: 8px;
+  }
+  /* Le titre se resserre pour laisser les boutons sur la même ligne */
+  .gestion-page [style*="justify-content: space-between"] > :first-child:not(button) {
+    flex: 1 1 110px;
+    min-width: 0;
+  }
+  .gestion-page [style*="flex-shrink: 0"]:has(> button) {
+    flex-shrink: 1 !important;
+    max-width: 100%;
+  }
+  .gestion-page [style*="display: flex"]:has(> * + button) {
+    gap: 6px !important;
   }
 }
