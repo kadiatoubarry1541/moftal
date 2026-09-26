@@ -48,6 +48,8 @@ export default function CliniqueVitrine() {
   const [quickSending, setQuickSending] = useState(false);
   const [quickSent, setQuickSent] = useState(false);
   const [quickError, setQuickError] = useState("");
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewStats, setReviewStats] = useState<{ moyenne: number; total: number }>({ moyenne: 0, total: 0 });
 
   const isLoggedIn = !!localStorage.getItem("token");
 
@@ -58,12 +60,14 @@ export default function CliniqueVitrine() {
       fetch(`${API_BASE}/clinic-public/${code}/staff`).then(r => r.json()),
       fetch(`${API_BASE}/clinic-public/${code}/services`).then(r => r.json()),
       fetch(`${API_BASE}/clinic-public/${code}/pharmacy-status`).then(r => r.json()),
-    ]).then(([c, s, sv, ph]) => {
+      fetch(`${API_BASE}/clinic-public/${code}/reviews`).then(r => r.json()),
+    ]).then(([c, s, sv, ph, rv]) => {
       if (c.success) setClinic(c.clinic);
       else setError(c.message || "Clinique introuvable");
       if (s.success) setStaff(s.staff);
       if (sv.success) setServices(sv.services);
       if (ph.success) setHasPharmacy(ph.hasPharmacy);
+      if (rv.success) { setReviews(rv.reviews); setReviewStats({ moyenne: rv.moyenne, total: rv.total }); }
     }).catch(() => setError("Impossible de charger la clinique."))
       .finally(() => setLoading(false));
   }, [tenantCode]);
@@ -268,7 +272,9 @@ export default function CliniqueVitrine() {
             { icon: "👨‍⚕️", val: `${doctors.length}+`, label: "Médecins spécialistes" },
             { icon: "🏥", val: `${services.length}+`, label: "Services médicaux" },
             { icon: "⏰", val: "7j/7", label: "Disponibilité" },
-            { icon: "🌟", val: "Excellence", label: "Soins de qualité" },
+            reviewStats.total > 0
+              ? { icon: "🌟", val: `${reviewStats.moyenne}/5`, label: `${reviewStats.total} avis patients` }
+              : { icon: "🌟", val: "Excellence", label: "Soins de qualité" },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
@@ -430,6 +436,27 @@ export default function CliniqueVitrine() {
           )}
         </div>
       </section>
+
+      {/* ── AVIS PATIENTS ─────────────────────────────────────────────────────── */}
+      {reviews.length > 0 && (
+        <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
+          <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 40 }}>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Avis de nos patients</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>Note moyenne : {reviewStats.moyenne}/5 sur {reviewStats.total} avis</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }} className="services-grid">
+              {reviews.slice(0, 6).map((r, i) => (
+                <div key={i} style={{ background: "white", borderRadius: 16, padding: "22px 20px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+                  <div style={{ color: "#f59e0b", fontSize: 15, marginBottom: 8 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
+                  {r.commentaire && <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "0 0 10px" }}>{r.commentaire}</p>}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{r.nom_patient || "Patient"}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── CONTACT ───────────────────────────────────────────────────────────── */}
       <section id="contact" style={{ background: "white", padding: "60px 20px" }}>

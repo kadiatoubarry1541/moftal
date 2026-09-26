@@ -7,7 +7,7 @@ const TEAL = "#1a8f1a";
 const TEAL_DARK = "#156315";
 const TEAL_LIGHT = "#14b8a6";
 
-type Tab = "appointments" | "prescriptions" | "records" | "rdv";
+type Tab = "appointments" | "prescriptions" | "records" | "rdv" | "avis";
 
 const SERVICES = ["Médecine générale", "Chirurgie", "Maternité", "Pédiatrie", "Ophtalmologie", "Gynécologie", "Urgences", "Radiologie", "Autre"];
 
@@ -44,6 +44,10 @@ export default function EspacePatientClinique() {
   const [rdvForm, setRdvForm] = useState({ service: "", date_rdv: "", heure: "", motif: "" });
   const [rdvSaving, setRdvSaving] = useState(false);
   const [rdvSuccess, setRdvSuccess] = useState(false);
+  const [reviewNote, setReviewNote] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewSent, setReviewSent] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const token = localStorage.getItem("token");
@@ -175,6 +179,7 @@ export default function EspacePatientClinique() {
     { id: "prescriptions", label: "Ordonnances", icon: "💊", count: prescriptions.length },
     { id: "records", label: "Consultations", icon: "📋", count: records.length },
     { id: "rdv", label: "Demander un RDV", icon: "➕" },
+    { id: "avis", label: "Laisser un avis", icon: "⭐" },
   ];
 
   return (
@@ -434,6 +439,56 @@ export default function EspacePatientClinique() {
                   <button onClick={handleRdvSubmit} disabled={rdvSaving}
                     style={{ background: rdvSaving ? "#94a3b8" : TEAL, color: "white", border: "none", borderRadius: 10, padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: rdvSaving ? "not-allowed" : "pointer", transition: "all 0.15s" }}>
                     {rdvSaving ? "Envoi en cours..." : "Envoyer la demande →"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Laisser un avis ─────────────────────────────────────────────────── */}
+        {tab === "avis" && (
+          <div style={{ maxWidth: 560, margin: "0 auto" }}>
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #e2e8f0", padding: "32px 28px", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
+              <h2 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 700, color: "#0f172a" }}>Laisser un avis</h2>
+              <p style={{ margin: "0 0 28px", fontSize: 13, color: "#64748b" }}>Votre avis sera visible sur la page publique de {clinic?.name} après validation.</p>
+              {reviewSent ? (
+                <div style={{ textAlign: "center", padding: "32px 0" }}>
+                  <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "#1a8f1a", marginBottom: 8 }}>Merci pour votre avis !</div>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>Il sera publié après validation par la clinique.</div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 8 }}>Votre note</label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {[1,2,3,4,5].map(n => (
+                        <button key={n} onClick={() => setReviewNote(n)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 32, color: n <= reviewNote ? "#f59e0b" : "#e2e8f0", lineHeight: 1 }}>★</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>Commentaire (optionnel)</label>
+                    <textarea value={reviewComment} onChange={e => setReviewComment(e.target.value)} rows={4}
+                      placeholder="Partagez votre expérience..."
+                      style={{ width: "100%", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, color: "#0f172a", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+                  </div>
+                  <button onClick={async () => {
+                    setReviewSaving(true);
+                    try {
+                      const r = await fetch(`${API_BASE}/clinic-public/${tenantCode}/reviews`, {
+                        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ nom_patient: patient ? `${patient.prenom} ${patient.nom}` : undefined, note: reviewNote, commentaire: reviewComment })
+                      });
+                      const d = await r.json();
+                      if (d.success) setReviewSent(true);
+                      else showToast(d.message || "Erreur", false);
+                    } catch { showToast("Erreur de connexion", false); }
+                    finally { setReviewSaving(false); }
+                  }} disabled={reviewSaving}
+                    style={{ background: reviewSaving ? "#94a3b8" : TEAL, color: "white", border: "none", borderRadius: 10, padding: "12px 24px", fontWeight: 700, fontSize: 14, cursor: reviewSaving ? "not-allowed" : "pointer" }}>
+                    {reviewSaving ? "Envoi..." : "Envoyer mon avis →"}
                   </button>
                 </div>
               )}

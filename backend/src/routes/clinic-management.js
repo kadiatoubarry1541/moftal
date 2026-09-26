@@ -689,6 +689,150 @@ router.post('/:tenantCode/pharmacy/dispense/:prescriptionId', authenticate, veri
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// ─── HOSPITALISATION : CHAMBRES/LITS & ADMISSIONS ──────────────────────────
+
+async function ensureHospitalisationTables() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS clinic_beds (
+      id SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      numero VARCHAR(50) NOT NULL,
+      type_chambre VARCHAR(50) DEFAULT 'commune',
+      statut VARCHAR(20) DEFAULT 'libre',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS clinic_admissions (
+      id SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      patient_id INTEGER NOT NULL,
+      bed_id INTEGER,
+      staff_id INTEGER,
+      motif_admission TEXT,
+      date_admission TIMESTAMPTZ DEFAULT NOW(),
+      date_sortie TIMESTAMPTZ,
+      statut VARCHAR(20) DEFAULT 'en_cours',
+      notes_sortie TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+
+router.get('/:tenantCode/beds', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureHospitalisationTables();
+    const rows = await sequelize.query(`SELECT * FROM clinic_beds WHERE tenant_code=:code ORDER BY numero`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, beds: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.post('/:tenantCode/beds', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureHospitalisationTables();
+    const { numero, type_chambre } = req.body;
+    if (!numero) return res.status(400).json({ success: false, message: 'Numéro de chambre/lit requis.' });
+    const [rows] = await sequelize.query(
+      `INSERT INTO clinic_beds (tenant_code,numero,type_chambre) VALUES(:code,:num,:type) RETURNING *`,
+      { replacements: { code: req.params.tenantCode, num: numero, type: type_chambre || 'commune' }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, bed: rows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/beds/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`DELETE FROM clinic_beds WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.get('/:tenantCode/admissions', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureHospitalisationTables();
+    const { statut } = req.query;
+    let q = `SELECT a.*,p.nom as p_nom,p.prenom as p_prenom,s.nom as s_nom,b.numero as bed_numero
+      FROM clinic_admissions a LEFT JOIN clinic_patients p ON a.patient_id=p.id LEFT JOIN clinic_staff s ON a.staff_id=s.id LEFT JOIN clinic_beds b ON a.bed_id=b.id
+      WHERE a.tenant_code=:code`;
+    if (statut) q += ` AND a.statut=:statut`;
+    q += ` ORDER BY a.date_admission DESC`;
+    const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, statut }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, admissions: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.post('/:tenantCode/admissions', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureHospitalisationTables();
+    const { patient_id, bed_id, staff_id, motif_admission } = req.body;
+    const code = req.params.tenantCode;
+    if (!patient_id) return res.status(400).json({ success: false, message: 'Patient requis.' });
+    if (bed_id) {
+      const [bed] = await sequelize.query(`SELECT statut FROM clinic_beds WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: bed_id, code }, type: sequelize.QueryTypes.SELECT });
+      if (bed?.statut === 'occupe') return res.status(409).json({ success: false, message: 'Ce lit est déjà occupé.' });
+    }
+    const [rows] = await sequelize.query(
+      `INSERT INTO clinic_admissions (tenant_code,patient_id,bed_id,staff_id,motif_admission) VALUES(:code,:pid,:bid,:sid,:motif) RETURNING *`,
+      { replacements: { code, pid: patient_id, bid: bed_id || null, sid: staff_id || null, motif: motif_admission || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    if (bed_id) await sequelize.query(`UPDATE clinic_beds SET statut='occupe' WHERE id=:id AND tenant_code=:code`, { replacements: { id: bed_id, code } });
+    res.json({ success: true, admission: rows[0] });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// Sortie du patient (libère le lit)
+router.put('/:tenantCode/admissions/:id/discharge', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureHospitalisationTables();
+    const code = req.params.tenantCode;
+    const { notes_sortie } = req.body;
+    const [admission] = await sequelize.query(`SELECT * FROM clinic_admissions WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
+    if (!admission) return res.status(404).json({ success: false, message: 'Admission introuvable.' });
+    await sequelize.query(`UPDATE clinic_admissions SET statut='sorti',date_sortie=NOW(),notes_sortie=:notes WHERE id=:id AND tenant_code=:code`, { replacements: { notes: notes_sortie || null, id: req.params.id, code } });
+    if (admission.bed_id) await sequelize.query(`UPDATE clinic_beds SET statut='libre' WHERE id=:id AND tenant_code=:code`, { replacements: { id: admission.bed_id, code } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── AVIS PATIENTS ──────────────────────────────────────────────────────────
+
+export async function ensureReviewsTable() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS clinic_reviews (
+      id SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      nom_patient VARCHAR(150),
+      numero_h VARCHAR(50),
+      note INTEGER NOT NULL,
+      commentaire TEXT,
+      statut VARCHAR(20) DEFAULT 'en_attente',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+router.get('/:tenantCode/reviews', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureReviewsTable();
+    const rows = await sequelize.query(`SELECT * FROM clinic_reviews WHERE tenant_code=:code ORDER BY created_at DESC`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, reviews: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.put('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureReviewsTable();
+    const { statut } = req.body; // 'approuve' | 'rejete'
+    await sequelize.query(`UPDATE clinic_reviews SET statut=:statut WHERE id=:id AND tenant_code=:code`, { replacements: { statut, id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`DELETE FROM clinic_reviews WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // ─── DEMANDES DE RDV EN LIGNE (vitrine publique, visiteurs non-patients) ────
 
 export async function ensureAppointmentRequestsTable() {

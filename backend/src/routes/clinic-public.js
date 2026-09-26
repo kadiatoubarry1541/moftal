@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
-import { ensurePharmacyTable, ensureAppointmentRequestsTable, ensureTenantExtraColumns } from './clinic-management.js';
+import { ensurePharmacyTable, ensureAppointmentRequestsTable, ensureTenantExtraColumns, ensureReviewsTable } from './clinic-management.js';
 
 const router = express.Router();
 
@@ -190,6 +190,45 @@ router.post('/:tenantCode/quick-request', async (req, res) => {
       { replacements: { code: tenantCode, nom, tel: telephone, svc: service || null, date: date_souhaitee || null, motif: motif || null }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, request: rows[0] });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─── AVIS PATIENTS (publics) ────────────────────────────────────────────────
+
+// GET les avis approuvés + note moyenne, visibles sur la vitrine
+router.get('/:tenantCode/reviews', async (req, res) => {
+  try {
+    const { tenantCode } = req.params;
+    await ensureReviewsTable();
+    const reviews = await sequelize.query(
+      `SELECT nom_patient, note, commentaire, created_at FROM clinic_reviews WHERE tenant_code=:code AND statut='approuve' ORDER BY created_at DESC LIMIT 30`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    const [avg] = await sequelize.query(
+      `SELECT AVG(note)::numeric(10,1) as moyenne, COUNT(*) as total FROM clinic_reviews WHERE tenant_code=:code AND statut='approuve'`,
+      { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, reviews, moyenne: +(avg?.moyenne || 0), total: +(avg?.total || 0) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// POST un nouvel avis (authentification requise pour éviter le spam, un patient Moftal)
+router.post('/:tenantCode/reviews', authenticate, async (req, res) => {
+  try {
+    const { tenantCode } = req.params;
+    await ensureReviewsTable();
+    const { nom_patient, note, commentaire } = req.body;
+    const n = +note;
+    if (!n || n < 1 || n > 5) return res.status(400).json({ success: false, message: 'Note invalide (1 à 5).' });
+    const [rows] = await sequelize.query(
+      `INSERT INTO clinic_reviews (tenant_code, nom_patient, numero_h, note, commentaire) VALUES (:code, :nom, :nh, :note, :com) RETURNING *`,
+      { replacements: { code: tenantCode, nom: nom_patient || null, nh: req.userId, note: n, com: commentaire || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    res.json({ success: true, review: rows[0], message: 'Merci ! Votre avis sera visible après validation.' });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

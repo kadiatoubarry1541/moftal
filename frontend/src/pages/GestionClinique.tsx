@@ -8,7 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "patients" | "staff" | "appointments" | "prescriptions" | "records" | "exams" | "vaccinations" | "payments" | "factures" | "pharmacie" | "settings";
+type Section = "dashboard" | "patients" | "staff" | "appointments" | "prescriptions" | "records" | "exams" | "vaccinations" | "hospitalisation" | "avis" | "payments" | "factures" | "pharmacie" | "settings";
 
 const SERVICES = ["Médecine générale", "Chirurgie", "Maternité", "Pédiatrie", "Ophtalmologie", "Gynécologie", "Urgences", "Radiologie", "Autre"];
 const ROLES_CLINIC = ["Admin", "Médecin", "Spécialiste", "Infirmier(e)", "Sage-femme", "Laborantin", "Radiologue", "Secrétaire", "Comptable", "Autre"];
@@ -47,11 +47,11 @@ function calcTotal(lignes: any[], remise: number) {
 
 // Droits par rôle : sections visibles pour chaque poste du personnel (Admin = accès complet)
 const ROLE_PERMISSIONS: Record<string, Section[]> = {
-  "Admin":        ["dashboard","patients","staff","appointments","prescriptions","records","exams","vaccinations","payments","factures","pharmacie","settings"],
-  "Médecin":      ["dashboard","patients","appointments","prescriptions","records","exams","vaccinations"],
-  "Spécialiste":  ["dashboard","patients","appointments","prescriptions","records","exams"],
-  "Infirmier(e)": ["dashboard","patients","appointments","records","vaccinations"],
-  "Sage-femme":   ["dashboard","patients","appointments","records","vaccinations"],
+  "Admin":        ["dashboard","patients","staff","appointments","prescriptions","records","exams","vaccinations","hospitalisation","avis","payments","factures","pharmacie","settings"],
+  "Médecin":      ["dashboard","patients","appointments","prescriptions","records","exams","vaccinations","hospitalisation"],
+  "Spécialiste":  ["dashboard","patients","appointments","prescriptions","records","exams","hospitalisation"],
+  "Infirmier(e)": ["dashboard","patients","appointments","records","vaccinations","hospitalisation"],
+  "Sage-femme":   ["dashboard","patients","appointments","records","vaccinations","hospitalisation"],
   "Laborantin":   ["dashboard","patients","records","exams"],
   "Radiologue":   ["dashboard","patients","records","exams"],
   "Secrétaire":   ["dashboard","patients","appointments","payments"],
@@ -68,6 +68,8 @@ const NAV_ITEMS: { id: Section; label: string; icon: string }[] = [
   { id: "records",       label: "Dossiers médicaux", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" },
   { id: "exams",         label: "Labo & Imagerie",   icon: "M9 3v4a1 1 0 01-1 1H4m5-5h6l4 4v10a2 2 0 01-2 2H7a2 2 0 01-2-2V8l4-5zM9 15h6m-6-4h1" },
   { id: "vaccinations",  label: "Vaccination",       icon: "M19 9l1.5-1.5m0 0L22 6m-1.5 1.5L19 9m2.5-3L15 12.5 11.5 9 3 17.5V21h3.5L15 12.5" },
+  { id: "hospitalisation", label: "Hospitalisation", icon: "M3 21h18M5 21V7a2 2 0 012-2h10a2 2 0 012 2v14M9 21v-6h6v6M9 3v4m6-4v4" },
+  { id: "avis",          label: "Avis patients",     icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" },
   { id: "payments",      label: "Paiements",         icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
   { id: "factures",      label: "Factures",          icon: "M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" },
   { id: "pharmacie",     label: "Pharmacie",         icon: "M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" },
@@ -142,6 +144,12 @@ export default function GestionClinique() {
   const [examsCategory, setExamsCategory] = useState<"laboratoire"|"imagerie">("laboratoire");
   const [resultModalExam, setResultModalExam] = useState<any>(null);
   const [vaccinations, setVaccinations] = useState<any[]>([]);
+  const [beds, setBeds] = useState<any[]>([]);
+  const [admissions, setAdmissions] = useState<any[]>([]);
+  const [hospitalTab, setHospitalTab] = useState<"admissions"|"beds">("admissions");
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [historyPatient, setHistoryPatient] = useState<any>(null);
+  const [historyRecords, setHistoryRecords] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [pharmacyStock, setPharmacyStock] = useState<any[]>([]);
@@ -273,6 +281,15 @@ export default function GestionClinique() {
       get("/patients").then(d => d.success && setPatients(d.patients));
       get("/staff").then(d => d.success && setStaff(d.staff));
     }
+    if (s === "hospitalisation") {
+      get("/admissions").then(d => d.success && setAdmissions(d.admissions));
+      get("/beds").then(d => d.success && setBeds(d.beds));
+      get("/patients").then(d => d.success && setPatients(d.patients));
+      get("/staff").then(d => d.success && setStaff(d.staff));
+    }
+    if (s === "avis") {
+      get("/reviews").then(d => d.success && setReviews(d.reviews));
+    }
     if (s === "payments") {
       get("/payments").then(d => d.success && setPayments(d.payments));
       get("/patients").then(d => d.success && setPatients(d.patients));
@@ -352,6 +369,19 @@ export default function GestionClinique() {
         const d = await post("/vaccinations", form);
         if (d.success) { setVaccinations(p => [d.vaccination, ...p]); setModal(null); setForm({}); showToast("Vaccination enregistrée"); }
         else showToast(d.message || "Erreur", false);
+      } else if (modal === "add-bed") {
+        if (!form.numero) { showToast("Numéro de chambre/lit obligatoire", false); return; }
+        const d = await post("/beds", form);
+        if (d.success) { setBeds(p => [...p, d.bed]); setModal(null); setForm({}); showToast("Chambre/lit ajouté"); }
+        else showToast(d.message || "Erreur", false);
+      } else if (modal === "add-admission") {
+        if (!form.patient_id) { showToast("Patient obligatoire", false); return; }
+        const d = await post("/admissions", form);
+        if (d.success) {
+          setAdmissions(p => [d.admission, ...p]);
+          if (form.bed_id) setBeds(bs => bs.map(b => b.id === +form.bed_id ? { ...b, statut: "occupe" } : b));
+          setModal(null); setForm({}); showToast("Patient admis");
+        } else showToast(d.message || "Erreur", false);
       } else if (modal === "add-payment") {
         if (!form.montant) { showToast("Montant obligatoire", false); return; }
         const d = await post("/payments", form);
@@ -556,6 +586,8 @@ export default function GestionClinique() {
             {section === "records"       && <BtnAdd label="Nouvelle consultation" onClick={() => { setModal("add-record"); setForm({}); }} />}
             {section === "exams"         && <BtnAdd label="Prescrire un examen" onClick={() => { setModal("add-exam"); setForm({ categorie: examsCategory }); }} />}
             {section === "vaccinations"  && <BtnAdd label="Enregistrer un vaccin" onClick={() => { setModal("add-vaccination"); setForm({}); }} />}
+            {section === "hospitalisation" && hospitalTab === "admissions" && <BtnAdd label="Nouvelle admission" onClick={() => { setModal("add-admission"); setForm({}); }} />}
+            {section === "hospitalisation" && hospitalTab === "beds" && <BtnAdd label="Ajouter une chambre/lit" onClick={() => { setModal("add-bed"); setForm({ type_chambre: "commune" }); }} />}
             {section === "payments"      && <BtnAdd label="Encaisser paiement" onClick={() => { setModal("add-payment"); setForm({}); }} />}
             {section === "factures"      && <BtnAdd label="Nouvelle facture"   onClick={() => { setModal("add-invoice"); setForm({ lignes: [{ description: "", quantite: 1, prix_unitaire: 0 }], statut: "impaye", mode_paiement: "especes" }); }} />}
             {section === "pharmacie" && pharmacyTab === "stock" && <BtnAdd label="Ajouter médicament" onClick={() => { setModal("add-stock"); setForm({ forme: "comprimé", quantite: 0, quantite_min: 5, prix_unitaire: 0 }); }} />}
@@ -748,7 +780,14 @@ export default function GestionClinique() {
                           {+p.solde_du > 0 ? <span style={{ padding: "2px 8px", background: "#fef2f2", color: "#ef4444", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{fmtMoney(p.solde_du)}</span> : <span style={{ color: "#94a3b8" }}>—</span>}
                         </td>
                         <td style={{ padding: "11px 16px" }}>
-                          <button onClick={async () => { if (confirm(`Supprimer le dossier de ${p.prenom} ${p.nom} ?`)) { await del(`/patients/${p.id}`); setPatients(ps => ps.filter(x => x.id !== p.id)); showToast("Patient supprimé"); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
+                          <div style={{ display: "flex", gap: 10 }}>
+                            <button onClick={async () => {
+                              setHistoryPatient(p);
+                              const d = await get(`/records?patient_id=${p.id}`);
+                              if (d.success) setHistoryRecords(d.records);
+                            }} style={{ color: TEAL_DARK, background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📈 Historique</button>
+                            <button onClick={async () => { if (confirm(`Supprimer le dossier de ${p.prenom} ${p.nom} ?`)) { await del(`/patients/${p.id}`); setPatients(ps => ps.filter(x => x.id !== p.id)); showToast("Patient supprimé"); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1050,6 +1089,116 @@ export default function GestionClinique() {
               </table>
             </div>
           )}
+
+          {/* ── HOSPITALISATION ── */}
+          {section === "hospitalisation" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", gap: 4, background: "white", borderRadius: 10, padding: 5, border: "1px solid #e2e8f0", maxWidth: 340 }}>
+                {([{ id: "admissions", label: "Admissions" }, { id: "beds", label: "Chambres & lits" }] as { id: "admissions"|"beds"; label: string }[]).map(t => (
+                  <button key={t.id} onClick={() => setHospitalTab(t.id)}
+                    style={{ flex: 1, padding: "9px 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: hospitalTab === t.id ? 700 : 500, background: hospitalTab === t.id ? TEAL : "transparent", color: hospitalTab === t.id ? "white" : "#64748b" }}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {hospitalTab === "admissions" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {admissions.length === 0 ? (
+                    <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center" }}>
+                      <div style={{ fontSize: 13, color: "#94a3b8" }}>Aucune admission enregistrée</div>
+                    </div>
+                  ) : admissions.map(a => {
+                    const enCours = a.statut === "en_cours";
+                    return (
+                      <div key={a.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 18, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", borderLeft: `3px solid ${enCours ? "#d97706" : TEAL}` }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                          <div>
+                            <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 15 }}>{a.p_prenom} {a.p_nom} {a.bed_numero && <span style={{ fontWeight: 500, color: "#64748b", fontSize: 12 }}>· Chambre/Lit {a.bed_numero}</span>}</div>
+                            <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Admis le {new Date(a.date_admission).toLocaleString("fr-FR")} {a.s_nom ? `· Dr. ${a.s_nom}` : ""}</div>
+                            {a.motif_admission && <p style={{ fontSize: 13, color: "#475569", marginTop: 6 }}>{a.motif_admission}</p>}
+                            {a.date_sortie && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>Sorti le {new Date(a.date_sortie).toLocaleString("fr-FR")}</div>}
+                          </div>
+                          {enCours ? (
+                            <button onClick={async () => {
+                              const d = await put(`/admissions/${a.id}/discharge`, {});
+                              if (d.success) { loadSection("hospitalisation"); showToast("Patient sorti, lit libéré"); }
+                            }} style={{ padding: "6px 14px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                              Enregistrer la sortie
+                            </button>
+                          ) : (
+                            <span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "#f0fdf0", color: "#1a8f1a", flexShrink: 0 }}>✓ Sorti</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {hospitalTab === "beds" && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12 }}>
+                  {beds.length === 0 ? (
+                    <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center", gridColumn: "1/-1" }}>
+                      <div style={{ fontSize: 13, color: "#94a3b8" }}>Aucune chambre/lit enregistré</div>
+                    </div>
+                  ) : beds.map(b => {
+                    const occupe = b.statut === "occupe";
+                    return (
+                      <div key={b.id} style={{ background: "white", borderRadius: 12, border: `1px solid ${occupe ? "#fecaca" : "#bbf7bb"}`, padding: 16, textAlign: "center" }}>
+                        <div style={{ fontSize: 24, marginBottom: 6 }}>{occupe ? "🛌" : "🛏️"}</div>
+                        <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{b.numero}</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>{b.type_chambre}</div>
+                        <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: occupe ? "#fef2f2" : "#f0fdf0", color: occupe ? "#ef4444" : "#1a8f1a" }}>{occupe ? "Occupé" : "Libre"}</span>
+                        {!occupe && (
+                          <div style={{ marginTop: 8 }}>
+                            <button onClick={async () => { if (confirm(`Supprimer ${b.numero} ?`)) { await del(`/beds/${b.id}`); setBeds(bs => bs.filter(x => x.id !== b.id)); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── AVIS PATIENTS ── */}
+          {section === "avis" && (() => {
+            const approved = reviews.filter(r => r.statut === "approuve");
+            const moyenne = approved.length ? (approved.reduce((s, r) => s + r.note, 0) / approved.length).toFixed(1) : "—";
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: TEAL_DARK }}>{moyenne}<span style={{ fontSize: 14, color: "#94a3b8", fontWeight: 500 }}> / 5</span></div>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>{approved.length} avis publié{approved.length > 1 ? "s" : ""} sur la vitrine · {reviews.filter(r => r.statut === "en_attente").length} en attente de validation</div>
+                </div>
+                {reviews.length === 0 ? (
+                  <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center" }}>
+                    <div style={{ fontSize: 13, color: "#94a3b8" }}>Aucun avis reçu pour le moment</div>
+                  </div>
+                ) : reviews.map(r => (
+                  <div key={r.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 18, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                      <div>
+                        <div style={{ color: "#f59e0b", fontSize: 15, marginBottom: 4 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
+                        <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{r.nom_patient || "Patient anonyme"}</div>
+                        <div style={{ fontSize: 11, color: "#94a3b8" }}>{new Date(r.created_at).toLocaleDateString("fr-FR")}</div>
+                        {r.commentaire && <p style={{ fontSize: 13, color: "#475569", marginTop: 8 }}>{r.commentaire}</p>}
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        {r.statut === "en_attente" && (
+                          <button onClick={async () => { await put(`/reviews/${r.id}`, { statut: "approuve" }); setReviews(rs => rs.map(x => x.id === r.id ? { ...x, statut: "approuve" } : x)); }} style={{ padding: "5px 12px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approuver</button>
+                        )}
+                        <button onClick={async () => { if (confirm("Supprimer cet avis ?")) { await del(`/reviews/${r.id}`); setReviews(rs => rs.filter(x => x.id !== r.id)); }}} style={{ padding: "5px 12px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
+                      </div>
+                      {r.statut === "en_attente" && <span style={{ padding: "2px 8px", background: "#fffbeb", color: "#d97706", borderRadius: 20, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>En attente</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* ── PAIEMENTS ── */}
           {section === "payments" && (
@@ -1544,6 +1693,8 @@ export default function GestionClinique() {
                 {modal === "add-record"       && "Nouvelle consultation"}
                 {modal === "add-exam"         && "Prescrire un examen"}
                 {modal === "add-vaccination"  && "Enregistrer une vaccination"}
+                {modal === "add-bed"          && "Ajouter une chambre/lit"}
+                {modal === "add-admission"    && "Nouvelle admission"}
                 {modal === "add-payment"      && "Encaisser un paiement"}
                 {modal === "add-invoice"      && "Créer une facture"}
                 {modal === "add-stock"        && "Ajouter un médicament au stock"}
@@ -1659,6 +1810,18 @@ export default function GestionClinique() {
                 <div><label style={labelStyle}>Notes</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.notes || ""} onChange={e => setForm((f: any) => ({ ...f, notes: e.target.value }))} /></div>
               </>}
 
+              {modal === "add-bed" && <>
+                <div><label style={labelStyle}>Numéro de chambre/lit *</label><input className={inp} style={{ ...inpStyle, marginTop: 4 }} placeholder="Ex: Chambre 12, Lit A3..." value={form.numero || ""} onChange={e => setForm((f: any) => ({ ...f, numero: e.target.value }))} /></div>
+                <div><label style={labelStyle}>Type</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.type_chambre || "commune"} onChange={e => setForm((f: any) => ({ ...f, type_chambre: e.target.value }))}>{["commune","privée","VIP","soins intensifs","maternité","pédiatrie"].map(t => <option key={t}>{t}</option>)}</select></div>
+              </>}
+
+              {modal === "add-admission" && <>
+                <div><label style={labelStyle}>Patient *</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">Choisir...</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Médecin responsable</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.staff_id || ""} onChange={e => setForm((f: any) => ({ ...f, staff_id: e.target.value }))}><option value="">—</option>{staff.map(s => <option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}</select></div>
+                <div><label style={labelStyle}>Chambre/Lit</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.bed_id || ""} onChange={e => setForm((f: any) => ({ ...f, bed_id: e.target.value }))}><option value="">—</option>{beds.filter(b => b.statut === "libre").map(b => <option key={b.id} value={b.id}>{b.numero} ({b.type_chambre})</option>)}</select></div>
+                <div><label style={labelStyle}>Motif d'admission</label><textarea className={inp} style={{ ...inpStyle, marginTop: 4, height: 80, resize: "none" as const }} value={form.motif_admission || ""} onChange={e => setForm((f: any) => ({ ...f, motif_admission: e.target.value }))} /></div>
+              </>}
+
               {modal === "add-payment" && <>
                 <div><label style={labelStyle}>Patient</label><select className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.patient_id || ""} onChange={e => setForm((f: any) => ({ ...f, patient_id: e.target.value }))}><option value="">—</option>{patients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}</select></div>
                 <div><label style={labelStyle}>Montant (GNF) *</label><input type="number" className={inp} style={{ ...inpStyle, marginTop: 4 }} value={form.montant || ""} onChange={e => setForm((f: any) => ({ ...f, montant: e.target.value }))} /></div>
@@ -1735,6 +1898,63 @@ export default function GestionClinique() {
           </div>
         </div>
       )}
+
+      {/* ── MODAL : historique / courbe du patient ── */}
+      {historyPatient && (() => {
+        const chrono = [...historyRecords].filter(r => r.poids).sort((a, b) => new Date(a.date_visite || a.created_at).getTime() - new Date(b.date_visite || b.created_at).getTime());
+        const W = 520, H = 140, PAD = 20;
+        const weights = chrono.map(r => +r.poids);
+        const min = weights.length ? Math.min(...weights) : 0, max = weights.length ? Math.max(...weights) : 1;
+        const range = max - min || 1;
+        const points = chrono.map((r, i) => {
+          const x = chrono.length > 1 ? PAD + (i / (chrono.length - 1)) * (W - PAD * 2) : W / 2;
+          const y = H - PAD - ((+r.poids - min) / range) * (H - PAD * 2);
+          return `${x},${y}`;
+        });
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000, padding: 16, backdropFilter: "blur(2px)" }} onClick={e => { if (e.target === e.currentTarget) { setHistoryPatient(null); setHistoryRecords([]); } }}>
+            <div style={{ background: "white", borderRadius: 16, width: "100%", maxWidth: 600, maxHeight: "85vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+              <div style={{ height: 3, background: `linear-gradient(90deg,${TEAL},${TEAL_LIGHT})` }} />
+              <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9" }}>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#0f172a" }}>Historique — {historyPatient.prenom} {historyPatient.nom}</h3>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#64748b" }}>Évolution du poids sur les consultations enregistrées</p>
+              </div>
+              <div style={{ padding: "20px 24px" }}>
+                {chrono.length < 2 ? (
+                  <p style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", padding: "20px 0" }}>Pas assez de mesures de poids pour tracer une courbe (minimum 2 consultations avec poids renseigné).</p>
+                ) : (
+                  <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ background: "#f8fafc", borderRadius: 10 }}>
+                    <polyline points={points.join(" ")} fill="none" stroke={TEAL} strokeWidth={2.5} />
+                    {chrono.map((r, i) => {
+                      const [x, y] = points[i].split(",").map(Number);
+                      return <circle key={i} cx={x} cy={y} r={4} fill={TEAL} />;
+                    })}
+                    <text x={PAD} y={16} fontSize={11} fill="#64748b">{max} kg</text>
+                    <text x={PAD} y={H - 6} fontSize={11} fill="#64748b">{min} kg</text>
+                  </svg>
+                )}
+                <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {historyRecords.length === 0 ? (
+                    <p style={{ fontSize: 13, color: "#94a3b8", textAlign: "center" }}>Aucune consultation enregistrée pour ce patient</p>
+                  ) : historyRecords.map(r => (
+                    <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 12px", background: "#f8fafc", borderRadius: 8, fontSize: 12 }}>
+                      <span style={{ color: "#64748b" }}>{fmtDate(r.date_visite || r.created_at)}</span>
+                      <span style={{ display: "flex", gap: 10 }}>
+                        {r.poids && <span>⚖️ {r.poids} kg</span>}
+                        {r.tension && <span>🩺 {r.tension}</span>}
+                        {r.temperature && <span style={{ color: +r.temperature > 38 ? "#ef4444" : "inherit" }}>🌡️ {r.temperature}°C</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ padding: "16px 24px", borderTop: "1px solid #f1f5f9" }}>
+                <button onClick={() => { setHistoryPatient(null); setHistoryRecords([]); }} style={{ width: "100%", padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Fermer</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── MODAL : saisir le résultat d'un examen ── */}
       {resultModalExam && (
