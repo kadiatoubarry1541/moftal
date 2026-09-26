@@ -206,6 +206,19 @@ router.delete('/:tenantCode/classrooms/:id', authenticate, verifyTenant, async (
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// Emploi du temps hebdomadaire d'une classe — tableau [{jour, heure_debut, heure_fin, matiere}]
+router.put('/:tenantCode/classrooms/:id/schedule', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`ALTER TABLE school_classrooms ADD COLUMN IF NOT EXISTS emploi_du_temps JSONB DEFAULT '[]';`);
+    const { emploi_du_temps } = req.body;
+    await sequelize.query(
+      `UPDATE school_classrooms SET emploi_du_temps=:edt::jsonb WHERE id=:id AND tenant_code=:code`,
+      { replacements: { edt: JSON.stringify(emploi_du_temps || []), id: req.params.id, code: req.params.tenantCode } }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // ─── PRÉSENCES ───────────────────────────────────────────────────────────────
 
 router.get('/:tenantCode/attendance', authenticate, verifyTenant, async (req, res) => {
@@ -232,6 +245,27 @@ router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, r
       );
     }
     res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// Historique agrégé des présences — total présent/absent par élève d'une classe,
+// sur toute la période enregistrée (pas seulement le jour affiché).
+router.get('/:tenantCode/attendance/summary', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const { classroom_id } = req.query;
+    if (!classroom_id) return res.status(400).json({ success: false, message: 'classroom_id requis.' });
+    const rows = await sequelize.query(
+      `SELECT s.id as student_id, s.nom, s.prenom,
+              COUNT(*) FILTER (WHERE a.est_present) as presences,
+              COUNT(*) FILTER (WHERE NOT a.est_present) as absences,
+              COUNT(*) as total
+       FROM school_students s
+       LEFT JOIN school_attendance a ON a.student_id=s.id AND a.classroom_id=:cid
+       WHERE s.tenant_code=:code AND s.classroom_id=:cid AND s.statut='actif'
+       GROUP BY s.id, s.nom, s.prenom ORDER BY s.nom`,
+      { replacements: { code: req.params.tenantCode, cid: classroom_id }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, summary: rows });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 

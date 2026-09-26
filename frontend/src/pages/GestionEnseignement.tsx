@@ -115,6 +115,8 @@ export default function GestionEnseignement({ mode }: Props) {
   const [niveauFilter, setNiveauFilter] = useState("");
   const [attendDate, setAttendDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedGroup, setSelectedGroup] = useState("");
+  const [attendanceView, setAttendanceView] = useState<"appel"|"historique">("appel");
+  const [attendanceSummary, setAttendanceSummary] = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState<string | null>(null);
@@ -248,6 +250,10 @@ export default function GestionEnseignement({ mode }: Props) {
           if (created) { setGroupes(p => [...p, created]); setModal(null); setForm({}); showToast(V.groupe + " créé(e)"); }
           else showToast(d.message || "Erreur", false);
         }
+      } else if (modal === "edit-schedule") {
+        const d = await put(`/classrooms/${form.id}/schedule`, { emploi_du_temps: form.emploi_du_temps || [] });
+        if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, emploi_du_temps: form.emploi_du_temps } : x)); setModal(null); setForm({}); showToast("Emploi du temps enregistré"); }
+        else showToast(d.message || "Erreur", false);
       } else if (modal === "add-note") {
         if (!form.student_id || !form.matiere || form.note === "") { showToast("Apprenant, matière et note obligatoires", false); return; }
         const body = { ...form, note: parseFloat(form.note), note_max: parseFloat(form.note_max || 20) };
@@ -324,7 +330,7 @@ export default function GestionEnseignement({ mode }: Props) {
   const MODAL = modal ? (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
       onClick={e => { if (e.target === e.currentTarget) setModal(null); }}>
-      <div style={{ background: "white", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: 520, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+      <div style={{ background: "white", borderRadius: 16, padding: "28px 32px", width: "100%", maxWidth: modal === "edit-schedule" ? 640 : 520, maxHeight: "88vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
 
         {modal === "add-apprenant" && (<>
           <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? "Modifier" : "Nouvel"} {V.apprenant.toLowerCase()}</h3>
@@ -416,6 +422,33 @@ export default function GestionEnseignement({ mode }: Props) {
                 {staff.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom} ({s.specialite||s.role})</option>)}
               </select>
             </div>
+          </div>
+        </>)}
+
+        {modal === "edit-schedule" && (<>
+          <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700 }}>Emploi du temps — {form.nom}</h3>
+          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#94a3b8" }}>Ajoutez les créneaux de cours de la semaine.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(form.emploi_du_temps || []).map((slot: any, i: number) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr 0.8fr 1.3fr 28px", gap: 6, alignItems: "center" }}>
+                <select value={slot.jour||"Lundi"} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],jour:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                  style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }}>
+                  {["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"].map(j=><option key={j}>{j}</option>)}
+                </select>
+                <input type="time" value={slot.heure_debut||""} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],heure_debut:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                  style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }} />
+                <input type="time" value={slot.heure_fin||""} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],heure_fin:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                  style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }} />
+                <input value={slot.matiere||""} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],matiere:e.target.value}; return {...f,emploi_du_temps:edt}; })}
+                  placeholder="Matière" style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }} />
+                <button onClick={()=>setForm((f:any)=>({...f,emploi_du_temps:f.emploi_du_temps.filter((_:any,idx:number)=>idx!==i)}))}
+                  style={{ width:28,height:28,border:"none",background:"#fef2f2",color:"#ef4444",borderRadius:6,cursor:"pointer",fontWeight:700 }}>×</button>
+              </div>
+            ))}
+            <button onClick={()=>setForm((f:any)=>({...f,emploi_du_temps:[...(f.emploi_du_temps||[]),{jour:"Lundi",heure_debut:"08:00",heure_fin:"09:00",matiere:""}]}))}
+              style={{ padding:"8px", border:"1.5px dashed #cbd5e1", borderRadius:8, background:"transparent", color:V.color, cursor:"pointer", fontSize:12, fontWeight:600, marginTop:4 }}>
+              + Ajouter un créneau
+            </button>
           </div>
         </>)}
 
@@ -732,6 +765,13 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 16px" }}>
                           <div style={{ display:"flex", gap:10 }}>
                             <button onClick={()=>{ setForm({ ...s }); setModal("add-apprenant"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
+                            <button onClick={async()=>{
+                              const nh = prompt(`Numéro Moftal du parent à relier à ${s.prenom} ${s.nom} :`);
+                              if (!nh) return;
+                              const d = await post("/members/add", { numero_h: nh.trim(), role: "parent", linked_student_id: s.id });
+                              if (d.success) showToast(d.user ? `Parent relié (${d.user.prenom} ${d.user.nom})` : (d.message || "Parent relié"));
+                              else showToast(d.message || "Erreur", false);
+                            }} style={{ color:"#7c3aed",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>👪 Lier parent</button>
                             <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){await del(`/students/${s.id}`);setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
                           </div>
                         </td>
@@ -802,8 +842,19 @@ export default function GestionEnseignement({ mode }: Props) {
                           <div style={{ height:"100%",width:`${pct}%`,background:niveauColor(g.niveau),borderRadius:2,transition:"width 0.4s ease" }} />
                         </div>
                         {teacher && <div style={{ fontSize:12,color:"#475569",marginBottom:10 }}>👤 {isMadrasa?"Cheikh":"Prof."} {teacher.prenom} {teacher.nom}</div>}
-                        <div style={{ display:"flex", gap:12 }}>
+                        {Array.isArray(g.emploi_du_temps) && g.emploi_du_temps.length > 0 && (
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
+                            {g.emploi_du_temps.slice(0,3).map((s:any,i:number)=>(
+                              <span key={i} style={{ padding:"2px 8px", background:"#eff6ff", color:"#0369a1", borderRadius:10, fontSize:10, fontWeight:600 }}>{s.jour?.slice(0,3)} {s.heure_debut} {s.matiere}</span>
+                            ))}
+                            {g.emploi_du_temps.length>3 && <span style={{ fontSize:10, color:"#94a3b8" }}>+{g.emploi_du_temps.length-3}</span>}
+                          </div>
+                        )}
+                        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                           <button onClick={()=>{ setForm({ ...g, enseignant_id: g.enseignant_id || g.professeur_id }); setModal("add-groupe"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
+                          {!isMadrasa && (
+                            <button onClick={()=>{ setForm({ id: g.id, nom: g.nom, emploi_du_temps: Array.isArray(g.emploi_du_temps) ? g.emploi_du_temps : [] }); setModal("edit-schedule"); }} style={{ color:"#0369a1",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>📅 Emploi du temps</button>
+                          )}
                           <button onClick={async()=>{ if(confirm(`Supprimer ${g.nom} ?`)){await del(`/${groupEP}/${g.id}`);setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(V.groupe+" supprimée"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Supprimer</button>
                         </div>
                       </div>
@@ -823,11 +874,49 @@ export default function GestionEnseignement({ mode }: Props) {
                   <option value="">Choisir {V.groupe.toLowerCase()}…</option>
                   {groupes.map(g=><option key={g.id} value={g.id}>{g.nom} — {g.niveau}</option>)}
                 </select>
+                {!isMadrasa && selectedGroup && (
+                  <div style={{ display:"flex",gap:4,background:"white",borderRadius:8,padding:4,border:"1px solid #e2e8f0" }}>
+                    {([{ id:"appel",label:"Appel du jour" },{ id:"historique",label:"Historique" }] as { id:"appel"|"historique"; label:string }[]).map(t=>(
+                      <button key={t.id} onClick={()=>{ setAttendanceView(t.id); if(t.id==="historique" && selectedGroup) get(`/attendance/summary?classroom_id=${selectedGroup}`).then(d=>d.success&&setAttendanceSummary(d.summary)); }}
+                        style={{ padding:"6px 12px",borderRadius:6,border:"none",cursor:"pointer",fontSize:12,fontWeight:attendanceView===t.id?700:500,background:attendanceView===t.id?V.color:"transparent",color:attendanceView===t.id?"white":"#64748b" }}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               {!selectedGroup ? (
                 <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"48px 20px",textAlign:"center" }}>
                   <div style={{ fontSize:40,marginBottom:12 }}>📋</div>
                   <div style={{ fontSize:13,color:"#94a3b8" }}>Sélectionnez une {V.groupe.toLowerCase()} pour faire l'appel</div>
+                </div>
+              ) : attendanceView === "historique" ? (
+                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+                  <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
+                    <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
+                      {[V.apprenant,"Présences","Absences","Taux présence"].map(h=>(
+                        <th key={h} style={{ padding:"10px 16px",textAlign:"left",fontSize:11,fontWeight:600,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em" }}>{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {attendanceSummary.length===0 ? (
+                        <tr><td colSpan={4} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>Aucun historique pour cette {V.groupe.toLowerCase()}</td></tr>
+                      ) : attendanceSummary.map((s:any)=>{
+                        const total = +s.presences + +s.absences;
+                        const pct = total>0 ? Math.round((+s.presences/total)*100) : 0;
+                        return (
+                          <tr key={s.student_id} style={{ borderBottom:"1px solid #f8fafc" }}>
+                            <td style={{ padding:"11px 16px",fontWeight:600,color:"#0f172a" }}>{s.prenom} {s.nom}</td>
+                            <td style={{ padding:"11px 16px",color:V.color,fontWeight:700 }}>{s.presences}</td>
+                            <td style={{ padding:"11px 16px",color:"#ef4444",fontWeight:700 }}>{s.absences}</td>
+                            <td style={{ padding:"11px 16px" }}>
+                              <span style={{ padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:pct>=80?"#f0fdf0":pct>=50?"#fffbeb":"#fef2f2",color:pct>=80?"#1a8f1a":pct>=50?"#d97706":"#ef4444" }}>{total>0?`${pct}%`:"—"}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               ) : (
                 <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>

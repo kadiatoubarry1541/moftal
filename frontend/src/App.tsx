@@ -110,6 +110,7 @@ const GestionProducer = lazy(() => import("./pages/GestionProducer"));
 const GestionMosquee = lazy(() => import("./pages/GestionMosquee"));
 const GestionReseau  = lazy(() => import("./pages/GestionReseau"));
 const GestionEnseignement = lazy(() => import("./pages/GestionEnseignement"));
+const EspaceParentEcole   = lazy(() => import("./pages/EspaceParentEcole"));
 const GestionEntreprise   = lazy(() => import("./pages/GestionEntreprise"));
 const GestionNgo          = lazy(() => import("./pages/GestionNgo"));
 const GestionJournaliste  = lazy(() => import("./pages/GestionJournaliste"));
@@ -705,6 +706,8 @@ function App() {
           <Route path="/gestion-commerce/:tenantCode" element={<GestionCommerce />} />
           <Route path="/commerce/:tenantCode" element={<CommerceVitrine />} />
           <Route path="/ecole/:tenantCode"         element={<EcoleVitrine />} />
+          <Route path="/ecole/:tenantCode/espace-parent"   element={<EspaceParentEcole mode="school" />} />
+          <Route path="/madrasa/:tenantCode/espace-parent" element={<EspaceParentEcole mode="madrasa" />} />
           <Route path="/madrasa/:tenantCode"       element={<MadrasaVitrine />} />
           <Route path="/mosquee/:tenantCode"       element={<MosqueeVitrine />} />
           <Route path="/imam/:tenantCode"          element={<MosqueeVitrine />} />
