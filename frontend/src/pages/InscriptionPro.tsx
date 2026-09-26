@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import LogoPicker from "../components/LogoPicker";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -35,15 +36,6 @@ const LOGO_COLORS: Record<string, string> = {
   producer: "#7c3aed", broker: "#b45309", scientist: "#4338ca", ngo: "#e11d48",
   transport: "#1d4ed8", beauty: "#db2777", artisan: "#d97706", mairie: "#1d4ed8", reseau: "#2563eb",
 };
-
-// Génère un logo simple (carré arrondi coloré + icône du secteur) en SVG, encodé en data URL
-function buildDefaultLogo(icon: string, color: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
-    <rect width="512" height="512" rx="96" fill="${color}"/>
-    <text x="50%" y="54%" font-size="260" text-anchor="middle" dominant-baseline="middle">${icon}</text>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
 
 const PRO_TYPE_INFO: Record<string, { expect: string; page: string }> = {
   clinic: {
@@ -212,6 +204,7 @@ export default function InscriptionPro() {
     }
   };
   const [justificatifFileName, setJustificatifFileName] = useState("");
+  const [showLogoPicker, setShowLogoPicker] = useState(false);
 
   // Types Échanges qui nécessitent un sous-secteur
   const NEEDS_SUBSECTOR = ["vendor", "supplier", "producer"];
@@ -242,21 +235,17 @@ export default function InscriptionPro() {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
     if (!planType) { setError("Veuillez choisir une formule (Visibilité ou Gestion Interne)."); return; }
-if (!form.name.trim()) { setError("Le nom est requis"); return; }
-    if (nomStatut === 'pris') {
+    if (!form.phone.trim()) { setError("Le numéro de téléphone est obligatoire."); return; }
+    if (!form.email.trim()) { setError("L'email est obligatoire."); return; }
+    // Seuls téléphone et email sont obligatoires : le nom, le justificatif et le
+    // niveau d'échanges sont facultatifs à l'inscription et pourront être
+    // complétés plus tard depuis le profil, pour ne pas alourdir l'inscription.
+    if (form.name.trim() && nomStatut === 'pris') {
       setError(`Le nom "${form.name.trim()}" est déjà utilisé. Veuillez en choisir un autre.`);
       return;
     }
-    if (nomStatut === 'checking') {
+    if (form.name.trim() && nomStatut === 'checking') {
       setError("Vérification du nom en cours, attendez un instant...");
-      return;
-    }
-    if (NEEDS_SUBSECTOR.includes(selectedType) && !subSector) {
-      setError("Veuillez choisir votre niveau d'échanges (primaire, secondaire ou tertiaire).");
-      return;
-    }
-    if (REQUIRES_JUSTIFICATIF.includes(selectedType) && !form.justificatifDocument) {
-      setError("Un justificatif officiel est obligatoire pour ce type de compte. Veuillez joindre un document (diplôme, agrément, autorisation…).");
       return;
     }
     setLoading(true);
@@ -302,8 +291,8 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
         body: JSON.stringify({
           type: selectedType,
           planType,
-          subSector: NEEDS_SUBSECTOR.includes(selectedType) ? subSector : (selectedType === "broker" ? "tertiaire" : undefined),
-          name: form.name.trim(),
+          subSector: NEEDS_SUBSECTOR.includes(selectedType) ? (subSector || "tertiaire") : (selectedType === "broker" ? "tertiaire" : undefined),
+          name: form.name.trim() || `${PRO_TYPES.find(t => t.id === selectedType)?.label || "Professionnel"} - ${form.phone.trim()}`,
           description: [
             form.description.trim(),
             form.website.trim() ? `Site: ${form.website.trim()}` : "",
@@ -476,12 +465,12 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className={labelCls}>
-                {selectedType === "restaurant" ? "Nom du restaurant *" : "Nom *"}
+                {selectedType === "restaurant" ? "Nom du restaurant" : "Nom"}{" "}
+                <span className="text-gray-400 font-normal">(optionnel, à compléter plus tard si besoin)</span>
               </label>
               <div className="relative">
                 <input
                   type="text"
-                  required
                   value={form.name}
                   onChange={e => { setForm({ ...form, name: e.target.value }); setNomStatut(''); }}
                   onBlur={verifierNom}
@@ -534,22 +523,26 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
                 {selectedType && (
                   <button
                     type="button"
-                    onClick={() => {
-                      const t = PRO_TYPES.find(pt => pt.id === selectedType);
-                      if (!t) return;
-                      const color = LOGO_COLORS[selectedType] || "#f59e0b";
-                      setForm(f => ({ ...f, mediaUrl: buildDefaultLogo(t.icon, color) }));
-                    }}
+                    onClick={() => setShowLogoPicker(v => !v)}
                     className="min-h-[44px] px-4 py-2.5 rounded-lg border-2 border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-semibold whitespace-nowrap transition-colors"
                   >
-                    🎨 Logo automatique
+                    🎨 Choisir un logo
                   </button>
                 )}
               </div>
               {!form.mediaUrl && (
                 <p className="mt-1.5 text-xs text-gray-400">
-                  Pas encore de logo ? Cliquez sur « Logo automatique » pour en obtenir un selon votre secteur.
+                  Pas encore de logo ? Cliquez sur « Choisir un logo » : vous pourrez en prendre un tout fait puis le modifier (texte, taille) en attendant de créer le vôtre.
                 </p>
+              )}
+              {selectedType && showLogoPicker && (
+                <LogoPicker
+                  icon={PRO_TYPES.find(pt => pt.id === selectedType)?.icon || "🏢"}
+                  color={LOGO_COLORS[selectedType] || "#f59e0b"}
+                  defaultText={form.name.trim() || PRO_TYPES.find(pt => pt.id === selectedType)?.label || ""}
+                  onCancel={() => setShowLogoPicker(false)}
+                  onConfirm={dataUrl => { setForm(f => ({ ...f, mediaUrl: dataUrl })); setShowLogoPicker(false); }}
+                />
               )}
               {form.mediaUrl && (
                 <div className="mt-3 flex items-center gap-3">
@@ -577,15 +570,13 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
               <input type="text" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>
-                Téléphone {selectedType === "restaurant" && <span className="text-gray-400 font-normal">(recommandé, visible par les clients)</span>}
-              </label>
-              <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={inputCls}
+              <label className={labelCls}>Téléphone *</label>
+              <input type="tel" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className={inputCls}
                 placeholder={selectedType === "restaurant" ? "Ex: 620 00 00 00" : ""} />
             </div>
             <div>
-              <label className={labelCls}>Email</label>
-              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={inputCls} />
+              <label className={labelCls}>Email *</label>
+              <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={inputCls} />
             </div>
 
             {/* ── Choix du niveau Échanges (primaire / secondaire / tertiaire) ── */}
@@ -758,14 +749,11 @@ if (!form.name.trim()) { setError("Le nom est requis"); return; }
             <div className="sm:col-span-2">
               <label className={labelCls}>
                 Justificatif d'activité{" "}
-                {REQUIRES_JUSTIFICATIF.includes(selectedType)
-                  ? <span className="text-red-500 font-semibold">* (obligatoire)</span>
-                  : <span className="text-gray-400 font-normal">(optionnel)</span>
-                }
+                <span className="text-gray-400 font-normal">(optionnel, à ajouter plus tard si besoin)</span>
               </label>
               {REQUIRES_JUSTIFICATIF.includes(selectedType) && (
-                <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">
-                  ⚠️ Ce type de compte nécessite un document officiel pour être validé par l'administration.
+                <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">
+                  💡 Recommandé pour ce type de compte : accélère la validation par l'administration.
                 </p>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
