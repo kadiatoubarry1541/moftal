@@ -1,6 +1,7 @@
 ﻿import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../utils/api'
+import { config } from '../../config/api'
 import { uploadForRegistration } from '../../utils/uploadMedia'
 import { getAllCountries, getRegionsByCountry, getContinentAndRegionByCountry, getPrefecturesByRegion, WORLD_GEOGRAPHY } from '../../utils/worldGeography'
 import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
@@ -53,7 +54,11 @@ interface WrittenData {
   numeroH?: string
 }
 
-export function WrittenRegistration() {
+// mode="complete" : mise à jour du profil d'un compte créé avec seulement
+// téléphone + mot de passe. On ne redemande ni téléphone ni mot de passe ;
+// seuls les champs qui fabriquent le NuméroH restent obligatoires.
+export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' | 'complete' } = {}) {
+  const isComplete = mode === 'complete'
   const [data, setData] = useState<WrittenData>({
     numeroHPere: '',
     numeroHMere: '',
@@ -168,6 +173,14 @@ export function WrittenRegistration() {
 
     if (!data.paysCode) errors.add('paysCode')
     if (!(data.region && data.region.trim())) errors.add('region')
+    if (isComplete) {
+      if (!hasEthnie) errors.add('ethnie')
+      if (!hasFamille) errors.add('famille')
+      if (!data.prenom) errors.add('prenom')
+      if (!data.dateNaissance) errors.add('dateNaissance')
+      setValidationErrors(errors)
+      return errors.size === 0
+    }
     if (!(data.prefecture && data.prefecture.trim())) errors.add('prefecture')
     if (!(data.sousPrefecture && data.sousPrefecture.trim())) errors.add('sousPrefecture')
     if (!(data.quartier && data.quartier.trim())) errors.add('quartier')
@@ -347,8 +360,8 @@ export function WrittenRegistration() {
     // Upload photo vers ImageKit
     let photoUrl = normalizedForm.photoPreview || null
     try {
-      if (photo) {
-        photoUrl = await uploadForRegistration(photo, 'photos')
+      if (normalizedForm.photo) {
+        photoUrl = await uploadForRegistration(normalizedForm.photo, 'photos')
       }
     } catch (e) {
       console.warn('Upload photo échoué, fallback base64:', e)
@@ -372,6 +385,32 @@ export function WrittenRegistration() {
       activitePreuve: activitePreuveBase64,
       activiteDoc: activiteDocBase64,
       lieu1: (normalizedForm.quartier && normalizedForm.quartier.trim()) || normalizedForm.lieu1 || ''
+    }
+
+    if (isComplete) {
+      try {
+        const { password: _pw, confirmPassword: _cpw, telephone: _tel, ...profil } = completeData as any
+        const res = await fetch(`${config.API_BASE_URL}/auth/complete-profile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+          body: JSON.stringify({
+            ...profil,
+            generation: calculateGeneration(normalizedForm.dateNaissance),
+            email: (normalizedForm.email && normalizedForm.email.trim()) || ''
+          })
+        })
+        const result = await res.json()
+        if (!result.success) { alert(result.message || 'Erreur lors de la mise à jour du profil.'); return }
+        localStorage.setItem('token', result.token)
+        localStorage.setItem('session_user', JSON.stringify({ numeroH: result.user.numeroH, userData: result.user, token: result.token, type: 'vivant', source: 'profile_completed' }))
+        alert(`✅ Profil mis à jour !\n\nVotre NuméroH : ${result.user.numeroH}\n\nVous pouvez toujours vous connecter avec votre numéro de téléphone.`)
+        window.location.href = '/compte'
+      } catch {
+        alert('Erreur de connexion. Vérifiez votre connexion et réessayez.')
+      } finally {
+        setLoading(false)
+      }
+      return
     }
 
     try {
@@ -420,18 +459,26 @@ export function WrittenRegistration() {
   const ethnieFilled = !!(data.ethnie && (data.ethnie !== 'Autre' || data.ethnieAutre?.trim()))
   const familleFilled = !!(data.famille && (data.famille !== 'Autre' || data.familleAutre?.trim()))
   const activiteFilled = !!(data.activite1 && (data.activite1 !== 'Autre' || data.activite1Autre?.trim()))
-  const identiteOK = ethnieFilled && familleFilled && activiteFilled
-  const coordonneesOK = !!(data.prenom && data.telephone)
+  const identiteOK = ethnieFilled && familleFilled && (activiteFilled || isComplete)
+  const coordonneesOK = !!(data.prenom && (data.telephone || isComplete))
 
   // Calcul indicateur d'étapes
   const totalSteps = 4
   const step1Done = !!data.dateNaissance
-  const step2Done = step1Done && !!data.paysCode && !!(data.region?.trim()) && !!(data.prefecture?.trim()) && !!(data.sousPrefecture?.trim()) && !!(data.quartier?.trim())
+  const step2Done = step1Done && !!data.paysCode && !!(data.region?.trim()) && (isComplete || (!!(data.prefecture?.trim()) && !!(data.sousPrefecture?.trim()) && !!(data.quartier?.trim())))
   const step3Done = step2Done && identiteOK && coordonneesOK
-  const step4Done = step3Done && !!data.email && !!data.password && data.password === data.confirmPassword && data.password.length >= 6
+  const step4Done = step3Done && (isComplete || (!!data.email && !!data.password && data.password === data.confirmPassword && data.password.length >= 6))
   const currentStep = step4Done ? 4 : step3Done ? 3 : step2Done ? 2 : 1
 
   const missingFields: string[] = []
+  if (isComplete) {
+    if (!data.dateNaissance) missingFields.push('Date de naissance')
+    if (!data.paysCode) missingFields.push('Pays')
+    if (!(data.region && data.region.trim())) missingFields.push(geoLabels.level1.label)
+    if (!ethnieFilled) missingFields.push('Ethnie')
+    if (!familleFilled) missingFields.push('Nom de famille')
+    if (!data.prenom) missingFields.push('Prénom')
+  } else {
   if (!data.dateNaissance) missingFields.push('Date de naissance')
   if (!data.paysCode) missingFields.push('Pays')
   if (!(data.region && data.region.trim())) missingFields.push(geoLabels.level1.label)
@@ -454,6 +501,7 @@ export function WrittenRegistration() {
   if (data.password && data.password.length < 6) {
     missingFields.push('Le mot de passe doit contenir au moins 6 caractères')
   }
+  }
   const isDisabled = missingFields.length > 0
 
   // Labels des étapes
@@ -461,13 +509,19 @@ export function WrittenRegistration() {
 
   return (
     <div className="stack">
-      <button onClick={() => navigate('/vivant')} className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors text-sm font-medium w-fit bg-transparent border-none cursor-pointer p-0">
+      <button onClick={() => navigate(isComplete ? '/compte' : '/vivant')} className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors text-sm font-medium w-fit bg-transparent border-none cursor-pointer p-0">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         Retour
       </button>
-      <h2>Inscription par écrit</h2>
+      <h2>{isComplete ? '✏️ Mettre mon profil à jour' : 'Inscription par écrit'}</h2>
+      {isComplete && (
+        <p className="text-sm text-gray-600 -mt-2">
+          Ces informations créent votre <strong>NuméroH</strong> (votre identifiant dans l'arbre familial).
+          Seuls les champs marqués * sont obligatoires ; le reste peut être complété plus tard.
+        </p>
+      )}
 
       {/* ── Barre de progression ── */}
       <div className="mb-4">
@@ -892,7 +946,7 @@ export function WrittenRegistration() {
                 />
               </div>
             </div>
-            <div className="col-6">
+            {!isComplete && <div className="col-6">
               <div className="field">
                 <label>Téléphone *</label>
                 <input
@@ -912,7 +966,7 @@ export function WrittenRegistration() {
                   className={getFieldClassName('telephone', !!data.telephone)}
                 />
               </div>
-            </div>
+            </div>}
           </div>
         )}
 
@@ -924,7 +978,7 @@ export function WrittenRegistration() {
             <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
               <div className="col-6">
                 <div className="field">
-                  <label>E-mail *</label>
+                  <label>{isComplete ? 'E-mail (facultatif)' : 'E-mail *'}</label>
                   <input
                     type="email"
                     value={data.email}
@@ -939,14 +993,14 @@ export function WrittenRegistration() {
                       }
                     }}
                     placeholder="Email"
-                    required
+                    required={!isComplete}
                     className={getFieldClassName('email', !!data.email)}
                   />
                 </div>
               </div>
               <div className="col-6">
                 <div className="field">
-                  <label>Religion *</label>
+                  <label>{isComplete ? 'Religion (facultatif)' : 'Religion *'}</label>
                   <input
                     value={data.religion}
                     onChange={(e) => {
@@ -969,9 +1023,9 @@ export function WrittenRegistration() {
         )}
 
         {/* ══ SECTION 10 – Après email : Mot de passe + Photo ══ */}
-        {data.email && (
+        {(isComplete ? coordonneesOK : !!data.email) && (
           <>
-            <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
+            {!isComplete && <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
               <div className="col-6">
                 <div className="field">
                   <label>Mot de passe *</label>
@@ -1049,12 +1103,12 @@ export function WrittenRegistration() {
                   </div>
                 </div>
               )}
-            </div>
+            </div>}
 
             <div className="row">
               <div className="col-12">
                 <div className="field">
-                  <label>Photo de profil *</label>
+                  <label>{isComplete ? 'Photo de profil (facultatif)' : 'Photo de profil *'}</label>
                   <div className={`photo-upload-section${validationErrors.has('photo') ? ' border-2 border-red-500 rounded-lg p-1' : ''}`}>
                     {data.photoPreview ? (
                       <div className="photo-preview">
@@ -1096,7 +1150,7 @@ export function WrittenRegistration() {
                   ? 'Remplir les champs obligatoires'
                   : loading
                   ? 'Envoi en cours…'
-                  : '✅ Envoyer'}
+                  : isComplete ? '✅ Mettre mon profil à jour' : '✅ Envoyer'}
               </button>
             </div>
           </>

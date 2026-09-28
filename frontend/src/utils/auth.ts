@@ -163,6 +163,8 @@ export function getNumeroHForDisplay(
   if (!numeroH || typeof numeroH !== "string") return "";
   const trimmed = numeroH.trim();
   if (!trimmed) return "";
+  // Compte créé par inscription rapide : le vrai NuméroH arrive avec la mise à jour du profil
+  if (trimmed.startsWith("TMP-")) return "Profil à mettre à jour";
   const parts = trimmed.split(/\s+/);
   const sansCompteur = parts[0] ?? trimmed;
   if (showCompteur && isOwner) return trimmed;

@@ -5,6 +5,12 @@ import { config } from '../../config.js';
 // NumeroH des comptes administrateurs spéciaux
 export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
 
+// Inscription rapide (téléphone + mot de passe) : identifiant provisoire
+// jusqu'à la mise à jour du profil, qui attribue le vrai NuméroH.
+export const PROVISIONAL_PREFIX = 'TMP-';
+export const isProvisionalNumeroH = (numeroH) => typeof numeroH === 'string' && numeroH.startsWith(PROVISIONAL_PREFIX);
+const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications'];
+
 // Alias pour authenticateToken (compatibilité)
 export const authenticateToken = async (req, res, next) => {
   return authenticate(req, res, next);
@@ -52,6 +58,20 @@ export const authenticate = async (req, res, next) => {
 
       req.user = user;
       req.userId = user.numeroH;
+
+      // Compte créé avec seulement téléphone + mot de passe : il peut se
+      // connecter et consulter le site, mais doit compléter son profil (ce qui
+      // lui attribue son vrai NuméroH) avant de publier, se lier ou modifier
+      // quoi que ce soit — sinon ces données seraient rattachées à un
+      // identifiant provisoire.
+      if (isProvisionalNumeroH(user.numeroH) && req.method !== 'GET'
+          && !PROVISIONAL_ALLOWED_PATHS.some((p) => (req.originalUrl || '').startsWith(p))) {
+        return res.status(403).json({
+          success: false,
+          code: 'PROFILE_INCOMPLETE',
+          message: 'Mettez votre profil à jour (1 minute) pour pouvoir faire cette action.'
+        });
+      }
 
       // Donner les droits master admin aux comptes admins reconnus (via JWT uniquement)
       if (MASTER_ADMIN_NUMEROS.includes(user.numeroH)) {

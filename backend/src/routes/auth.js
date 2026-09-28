@@ -13,7 +13,7 @@ import { normalizeNumeroH } from '../utils/numeroH.js';
 import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
-import { authenticate, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
+import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 
 const router = Router();
@@ -394,6 +394,172 @@ router.post('/register', validateUser, async (req, res) => {
   }
 });
 
+// Cherche un compte par numéro de téléphone (compare les 9 derniers chiffres,
+// pour tolérer l'indicatif pays et les espaces). Renvoie son NuméroH ou null.
+async function findNumeroHByPhone(digits) {
+  if (!digits || digits.length < 6) return null;
+  // type SELECT → la requête renvoie directement le tableau des lignes
+  const rows = await User.sequelize.query(
+    `SELECT numero_h FROM users
+     WHERE tel1 IS NOT NULL
+       AND RIGHT(REGEXP_REPLACE(tel1, '[^0-9]', '', 'g'), 9) = RIGHT(:digits, 9)
+     LIMIT 1`,
+    { replacements: { digits }, type: 'SELECT' }
+  );
+  return rows && rows.length > 0 ? rows[0].numero_h : null;
+}
+
+const signToken = (numeroH) => jwt.sign({ userId: numeroH, numeroH }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRE });
+
+// @route   POST /api/auth/register-quick
+// @desc    Inscription rapide : numéro de téléphone + mot de passe seulement.
+//          Le compte reçoit un identifiant provisoire (TMP-…) ; le vrai NuméroH,
+//          l'email et le reste arrivent avec la mise à jour du profil.
+// @access  Public
+router.post('/register-quick', [
+  body('telephone').trim().notEmpty().withMessage('Le numéro de téléphone est requis'),
+  body('password').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: errors.array()[0].msg, errors: errors.array() });
+    }
+    const telephone = String(req.body.telephone).trim();
+    const digits = telephone.replace(/[^0-9]/g, '');
+    if (digits.length < 8) {
+      return res.status(400).json({ success: false, message: 'Numéro de téléphone invalide.' });
+    }
+    if (await findNumeroHByPhone(digits)) {
+      return res.status(409).json({ success: false, message: 'Ce numéro de téléphone a déjà un compte. Connectez-vous avec ce numéro.' });
+    }
+
+    const numeroH = `${PROVISIONAL_PREFIX}${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    const hashedPassword = await bcrypt.hash(req.body.password, config.BCRYPT_ROUNDS);
+    const newUser = await User.create({
+      numeroH,
+      password: hashedPassword,
+      prenom: 'Nouveau',
+      nomFamille: 'membre',
+      tel1: telephone,
+      genre: 'AUTRE',
+      generation: 'G1',
+      type: 'vivant',
+      isActive: true,
+      isVerified: false,
+      role: 'user'
+    });
+
+    const user = { ...newUser.dataValues };
+    delete user.password;
+    res.status(201).json({ success: true, message: 'Compte créé', user, token: signToken(numeroH), profileIncomplete: true });
+  } catch (error) {
+    if (error?.name === 'SequelizeUniqueConstraintError' || error?.parent?.code === '23505') {
+      return res.status(409).json({ success: false, message: 'Ce numéro de téléphone a déjà un compte. Connectez-vous avec ce numéro.' });
+    }
+    console.error('Erreur inscription rapide:', error);
+    res.status(500).json({ success: false, message: "Erreur serveur lors de l'inscription." });
+  }
+});
+
+// @route   POST /api/auth/complete-profile
+// @desc    Mise à jour du profil d'un compte créé par inscription rapide :
+//          attribue le vrai NuméroH (calculé comme à l'inscription complète) et
+//          enregistre l'identité. L'identifiant provisoire est remplacé partout.
+// @access  Privé (compte provisoire uniquement)
+router.post('/complete-profile', authenticate, [
+  body('numeroH').trim().notEmpty().withMessage('NuméroH manquant'),
+  body('prenom').trim().notEmpty().withMessage('Le prénom est requis'),
+  body('nomFamille').trim().notEmpty().withMessage('Le nom de famille est requis'),
+  body('dateNaissance').trim().notEmpty().withMessage('La date de naissance est requise'),
+  body('email').optional({ values: 'falsy' }).trim().isEmail().withMessage('Email invalide')
+], async (req, res) => {
+  const oldNumeroH = req.user.numeroH;
+  if (!isProvisionalNumeroH(oldNumeroH)) {
+    return res.status(400).json({ success: false, message: 'Votre profil a déjà son NuméroH.' });
+  }
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, message: errors.array()[0].msg, errors: errors.array() });
+  }
+  const newNumeroH = String(req.body.numeroH).trim();
+  if (isProvisionalNumeroH(newNumeroH) || isReservedGeneration(req.body.generation)) {
+    return res.status(400).json({ success: false, message: 'NuméroH invalide.' });
+  }
+  if (await User.findByNumeroH(newNumeroH)) {
+    return res.status(409).json({ success: false, message: 'Ce NuméroH existe déjà. Réessayez.' });
+  }
+
+  // Champs du profil acceptés (jamais le mot de passe, le rôle ni le téléphone de connexion)
+  const { password: _pw, confirmPassword: _cpw, role: _role, isAdmin: _ia, numeroH: _n, tel1: _t, telephone: _tel, ...profil } = req.body;
+
+  const t = await User.sequelize.transaction();
+  try {
+    // Des tables ont une clé étrangère vers users.numero_h : on crée d'abord le
+    // compte avec le vrai NuméroH, on y rattache tout, puis on supprime le compte
+    // provisoire — le tout dans une seule transaction (tout ou rien).
+    const oldRow = await User.findOne({ where: { numeroH: oldNumeroH }, transaction: t });
+    const allowed = Object.keys(User.rawAttributes).filter((k) => !['numeroH', 'password', 'role', 'isAdmin', 'tel1', 'isActive', 'isVerified', 'type', 'createdAt', 'updatedAt'].includes(k));
+    const updates = {};
+    for (const k of allowed) if (profil[k] !== undefined) updates[k] = profil[k];
+    if (!updates.email) updates.email = null;
+    const base = oldRow.get({ plain: true });
+    // Libère téléphone / email (colonnes uniques) sur l'ancien compte
+    await User.sequelize.query('UPDATE users SET tel1 = NULL, email = NULL WHERE numero_h = :ancien',
+      { replacements: { ancien: oldNumeroH }, transaction: t });
+    await User.create({ ...base, ...updates, numeroH: newNumeroH }, { transaction: t });
+
+    // Remplacer l'identifiant provisoire dans toutes les colonnes « numero_h » des autres tables
+    const cols = await User.sequelize.query(
+      // colonnes nommées « …numero_h… » + toute colonne ayant une clé étrangère vers users
+      `SELECT table_name, column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND column_name ILIKE '%numero_h%'
+         AND data_type IN ('character varying', 'text') AND table_name <> 'users'
+       UNION
+       SELECT kcu.table_name, kcu.column_name
+       FROM information_schema.referential_constraints rc
+       JOIN information_schema.key_column_usage kcu
+         ON kcu.constraint_name = rc.constraint_name AND kcu.constraint_schema = rc.constraint_schema
+       JOIN information_schema.constraint_column_usage ccu
+         ON ccu.constraint_name = rc.unique_constraint_name AND ccu.constraint_schema = rc.unique_constraint_schema
+       WHERE ccu.table_name = 'users' AND kcu.table_schema = 'public' AND kcu.table_name <> 'users'`,
+      { type: 'SELECT', transaction: t }
+    );
+    for (const c of cols) {
+      await User.sequelize.query(
+        `UPDATE "${c.table_name}" SET "${c.column_name}" = :nouveau WHERE "${c.column_name}" = :ancien`,
+        { replacements: { nouveau: newNumeroH, ancien: oldNumeroH }, transaction: t }
+      );
+    }
+    await User.destroy({ where: { numeroH: oldNumeroH }, transaction: t });
+    await t.commit();
+  } catch (error) {
+    await t.rollback();
+    if (error?.name === 'SequelizeUniqueConstraintError' || error?.parent?.code === '23505') {
+      const fields = (error.errors || []).map((e) => e.path).join(', ');
+      return res.status(409).json({
+        success: false,
+        message: fields.includes('email') ? 'Cette adresse email est déjà utilisée par un autre compte.' : 'Ces informations sont déjà utilisées par un autre compte.'
+      });
+    }
+    console.error('Erreur complete-profile:', error);
+    return res.status(500).json({ success: false, message: 'Erreur serveur lors de la mise à jour du profil.' });
+  }
+
+  const updated = await User.findByNumeroH(newNumeroH);
+  const user = { ...updated.dataValues };
+  delete user.password;
+  res.json({ success: true, message: 'Profil mis à jour', user, token: signToken(newNumeroH) });
+
+  // Comme après une inscription complète
+  setImmediate(() => {
+    if (updated.numeroHPere || updated.numeroHMere) {
+      handleParentConfirmations(updated).catch((err) => console.error('handleParentConfirmations:', err.message));
+    }
+    createActivityGroupsForUser(updated).catch((err) => console.error('createActivityGroupsForUser:', err.message));
+  });
+});
+
 // @route   POST /api/auth/login
 // @desc    Connexion utilisateur
 // @access  Public
@@ -430,14 +596,8 @@ router.post('/login', [
           // Connexion par téléphone — tolère indicatif pays et formats différents
           // en comparant seulement les 9 derniers chiffres (numéro guinéen).
           try {
-            const [rows] = await User.sequelize.query(
-              `SELECT numero_h FROM users
-               WHERE tel1 IS NOT NULL
-                 AND RIGHT(REGEXP_REPLACE(tel1, '[^0-9]', '', 'g'), 9) = RIGHT(:digits, 9)
-               LIMIT 1`,
-              { replacements: { digits: digitsOnly }, type: 'SELECT' }
-            );
-            if (rows && rows.length > 0) user = await User.findByNumeroH(rows[0].numero_h);
+            const numeroHParTel = await findNumeroHByPhone(digitsOnly);
+            if (numeroHParTel) user = await User.findByNumeroH(numeroHParTel);
           } catch (phoneErr) {
             console.error('Login phone lookup error:', phoneErr.message);
           }
@@ -461,7 +621,8 @@ router.post('/login', [
       // Fallback SQL brut si Sequelize ne trouve pas (problème modèle/colonne)
       if (!user) {
         try {
-          const [rows] = await User.sequelize.query(
+          // type SELECT → la requête renvoie directement le tableau des lignes
+          const rows = await User.sequelize.query(
             'SELECT * FROM users WHERE LOWER(numero_h) = LOWER(:n) LIMIT 1',
             { replacements: { n: normalizedNumeroH }, type: 'SELECT' }
           );
