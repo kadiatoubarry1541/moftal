@@ -1,6 +1,6 @@
 import express from 'express';
 import { Op } from 'sequelize';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, isProvisionalNumeroH } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import Notification from '../models/Notification.js';
 import PageAdmin from '../models/PageAdmin.js';
@@ -77,6 +77,15 @@ function sanitizeAccountForPublic(account) {
   const a = account?.toJSON ? account.toJSON() : { ...account };
   const { justificatifDocument, ...rest } = a;
   return rest;
+}
+
+/** Validation d'un compte pro vue par son propriétaire : 60 % tant que le
+ * profil du propriétaire n'est pas à jour (NuméroH provisoire), 100 % dès
+ * qu'il l'est (la mise à jour du profil rattache le compte pro au vrai NuméroH). */
+function withValidation(account) {
+  const a = sanitizeAccountForPublic(account);
+  const incomplete = isProvisionalNumeroH(a.ownerNumeroH);
+  return { ...a, validationPercent: incomplete ? 60 : 100, ownerProfileIncomplete: incomplete };
 }
 
 /**
@@ -218,12 +227,16 @@ router.post('/register', authenticate, async (req, res) => {
       await finalizeApproval(account, req.userId);
     }
 
+    const validated = withValidation(account);
     res.status(201).json({
       success: true,
       message: isAnyAdmin(req.user)
         ? 'Compte créé et publié.'
-        : 'Inscription envoyée. En attente de validation par l\'administrateur.',
-      account: sanitizeAccountForPublic(account)
+        : validated.ownerProfileIncomplete
+          ? 'Compte créé : il est validé à 60 %. Mettez votre profil à jour pour le passer à 100 %.'
+          : 'Inscription envoyée. En attente de validation par l\'administrateur.',
+      validationPercent: validated.validationPercent,
+      account: validated
     });
   } catch (error) {
     console.error('Erreur inscription professionnelle:', error);
@@ -533,7 +546,7 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
 router.get('/my-accounts', authenticate, async (req, res) => {
   try {
     const accounts = await ProfessionalAccount.getByOwner(req.userId);
-    const sanitized = (accounts || []).map(sanitizeAccountForPublic);
+    const sanitized = (accounts || []).map(withValidation);
     res.json({ success: true, accounts: sanitized });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
