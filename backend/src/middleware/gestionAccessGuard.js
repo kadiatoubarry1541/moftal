@@ -54,6 +54,12 @@ export async function getGestionInterneAccess(ownerNumeroH) {
     where: { payerNumeroH: ownerNumeroH, purpose: 'gestion_interne_vie', status: 'completed' },
   });
 
+  // Formule « Visibilité + Rendez-vous » : pas de Gestion Interne tant qu'elle
+  // n'est pas payée (le paiement Gestion Interne ou à vie la débloque).
+  if (proAccount.planType === 'visibility' && !giPayee && !paiementVie) {
+    return { aAcces: false, mode: 'visibilite', proAccount, validUntil, giValidUntil };
+  }
+
   const aAcces = subscriptionOk || giPayee || !!paiementVie;
   const mode = paiementVie
     ? 'vie'
@@ -78,6 +84,12 @@ export async function enforceGestionAccess(req, res, next) {
   try {
     const access = await getGestionInterneAccess(req.tenant?.owner_numero_h);
     if (!access.aAcces) {
+      if (access.mode === 'visibilite') {
+        return res.status(402).json({
+          ...PAYMENT_REQUIRED_RESPONSE,
+          message: "Votre formule Visibilité + Rendez-vous n'inclut pas la Gestion Interne. Passez à la Gestion Interne pour y accéder.",
+        });
+      }
       return res.status(402).json(PAYMENT_REQUIRED_RESPONSE);
     }
     next();

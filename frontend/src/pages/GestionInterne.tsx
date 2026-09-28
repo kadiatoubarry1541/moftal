@@ -422,6 +422,7 @@ export default function GestionInterne() {
   }
 
   async function ouvrirGestion(account: any) {
+    if (accesGI?.mode === "visibilite") { navigate(`/espace-pro/${account.id}`); return; }
     if (accesGI && !accesGI.aAcces) {
       alert("Votre essai gratuit est terminé. Achetez l'accès ci-dessous pour continuer.");
       return;
@@ -603,6 +604,25 @@ export default function GestionInterne() {
           </p>
         </div>
       </>
+    );
+    if (accesGI.mode === "visibilite") return (
+      <div style={{ background:"#eff6ff", border:"1px solid #93c5fd", borderRadius:10, padding:"12px 16px", marginBottom:16 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:20 }}>🌐</span>
+            <div>
+              <p style={{ margin:0, fontSize:13, color:"#1e40af", fontWeight:700 }}>Formule Visibilité + Rendez-vous</p>
+              <p style={{ margin:"2px 0 0", fontSize:11, color:"#3b82f6" }}>
+                Page vitrine, publications et rendez-vous inclus. La gestion complète n'est pas incluse.
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setShowPaywall(v => !v)} disabled={payGILoading}
+            style={{ padding:"7px 14px", background:"#2563eb", color:"white", border:"none", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
+            {payGILoading ? "..." : "Passer à la Gestion Interne"}
+          </button>
+        </div>
+      </div>
     );
     if (accesGI.mode === "essai") return (
       <div style={{ background:"#eff6ff", border:"1px solid #93c5fd", borderRadius:10, padding:"12px 16px", marginBottom:16 }}>
@@ -1012,6 +1032,14 @@ export default function GestionInterne() {
       desc: "Compte bloqué pour impayé — réglez vos mois consommés pour continuer.",
       label: "Payer et débloquer",
       onClick: () => setShowRegulPayment(true),
+    };
+  } else if (accesGI?.mode === "visibilite") {
+    // Formule Visibilité : l'Espace Pro (vitrine, publications, rendez-vous), pas la gestion complète
+    espacePro = {
+      emoji: "🌐", titre: "Espace Pro",
+      desc: accounts.length === 1 ? (accounts[0].name || "") : `${accounts.length} établissements`,
+      label: "Ouvrir mon Espace Pro",
+      onClick: () => navigate(`/espace-pro/${accounts[0].id}`),
     };
   } else if (sansAcces) {
     espacePro = {

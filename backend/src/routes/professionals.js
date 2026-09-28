@@ -159,7 +159,7 @@ router.get('/verifier-nom', authenticate, async (req, res) => {
 // POST /api/professionals/register - Inscription d'un compte professionnel
 router.post('/register', authenticate, async (req, res) => {
   try {
-    const { type, subSector, name, description, address, city, country, phone, email, services, specialties, photo, justificatifDocument } = req.body;
+    const { type, subSector, name, description, address, city, country, phone, email, services, specialties, photo, justificatifDocument, planType } = req.body;
 
     if (!type || !name) {
       return res.status(400).json({ success: false, message: 'Type et nom requis' });
@@ -207,6 +207,7 @@ router.post('/register', authenticate, async (req, res) => {
       specialties: specialties || [],
       photo: photo || null,
       justificatifDocument: (justificatifDocument && String(justificatifDocument).trim()) || null,
+      planType: planType === 'full' ? 'full' : 'visibility',
       ownerNumeroH: req.userId,
       status: 'pending'
     });
