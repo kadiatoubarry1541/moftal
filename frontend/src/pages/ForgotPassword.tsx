@@ -115,9 +115,13 @@ export function ForgotPassword() {
         {step === 'verify' ? (
           <>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Saisissez votre NuméroH, votre numéro de téléphone ou votre email. Le code de récupération
-              est envoyé à l'<strong>email</strong> de votre compte : sans email, le mot de passe ne peut pas être récupéré.
+              Saisissez votre NuméroH, votre numéro de téléphone ou votre email pour retrouver votre compte.
             </p>
+            <div className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              ⚠️ <strong>Le numéro de téléphone seul ne permet pas de récupérer un compte.</strong>{' '}
+              La récupération n'est possible que pour un compte <strong>à jour avec une adresse email</strong> :
+              le code de récupération est envoyé à cet email.
+            </div>
 
             <div className="field">
               <label>NuméroH, téléphone ou email <span className="text-red-500">*</span></label>

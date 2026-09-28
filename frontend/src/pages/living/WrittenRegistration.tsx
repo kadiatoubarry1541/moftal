@@ -978,7 +978,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
             <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
               <div className="col-6">
                 <div className="field">
-                  <label>{isComplete ? 'E-mail (facultatif)' : 'E-mail *'}</label>
+                  <label>{isComplete ? 'E-mail (conseillé)' : 'E-mail *'}</label>
                   <input
                     type="email"
                     value={data.email}
@@ -996,6 +996,12 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
                     required={!isComplete}
                     className={getFieldClassName('email', !!data.email)}
                   />
+                  {isComplete && (
+                    <small className="block mt-1 text-amber-700">
+                      ⚠️ Sans email, votre compte ne pourra pas être récupéré si vous oubliez votre mot de passe
+                      (le numéro de téléphone seul ne suffit pas).
+                    </small>
+                  )}
                 </div>
               </div>
               <div className="col-6">

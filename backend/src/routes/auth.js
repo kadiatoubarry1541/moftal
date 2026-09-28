@@ -327,6 +327,12 @@ router.post('/register', validateUser, async (req, res) => {
         });
       }
 
+      // Un numéro de téléphone = un seul compte (même écrit autrement)
+      const telDigits = String(userData.tel1 || '').replace(/[^0-9]/g, '');
+      if (telDigits.length >= 6 && await findNumeroHByPhone(telDigits)) {
+        return res.status(409).json({ success: false, message: 'Ce numéro de téléphone est déjà associé à un compte existant. Utilisez un autre numéro.' });
+      }
+
       // ✅ CRÉER L'UTILISATEUR EN BASE DE DONNÉES
       const newUser = await User.create(userData);
 
@@ -410,6 +416,15 @@ async function findNumeroHByPhone(digits) {
 }
 
 const signToken = (numeroH) => jwt.sign({ userId: numeroH, numeroH }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRE });
+
+// Seul le titulaire du compte (ou un administrateur) peut modifier son profil.
+function peutModifierProfil(req, numeroH) {
+  if (!req.user || !numeroH) return false;
+  const role = String(req.user.role || '').toLowerCase();
+  if (req.user.isMasterAdmin || role === 'admin' || role === 'super-admin' || req.user.isAdmin === true) return true;
+  return String(req.user.numeroH).trim().toLowerCase() === String(numeroH).trim().toLowerCase();
+}
+const refusModification = (res) => res.status(403).json({ success: false, message: 'Vous ne pouvez modifier que votre propre profil.' });
 
 // @route   POST /api/auth/register-quick
 // @desc    Inscription rapide : numéro de téléphone + mot de passe seulement.
@@ -739,13 +754,23 @@ router.post('/forgot-password/verify', [
     if (!user) {
       return res.status(400).json({ success: false, message: 'Compte introuvable. Vérifiez votre NuméroH, téléphone ou email.' });
     }
+    // Récupération réservée à un compte complet : profil à jour ET email.
+    // Le numéro de téléphone seul ne permet jamais de récupérer un compte.
+    if (isProvisionalNumeroH(user.numeroH)) {
+      return res.status(400).json({
+        success: false,
+        noEmail: true,
+        message: "Ce compte n'a pas encore été mis à jour : il ne peut pas être récupéré. " +
+          "Le numéro de téléphone seul ne permet pas de récupérer un compte ; il faut un profil à jour avec une adresse email."
+      });
+    }
     // Le code de récupération est envoyé par email : sans email, pas de récupération
     if (!user.email) {
       return res.status(400).json({
         success: false,
         noEmail: true,
         message: "Ce compte n'a pas d'adresse email : le mot de passe ne peut pas être récupéré. " +
-          "Conseil : une fois reconnecté, ajoutez un email dans votre profil."
+          "Le numéro de téléphone seul ne permet pas de récupérer un compte. Une fois reconnecté, ajoutez un email dans votre profil."
       });
     }
     if (user.type === 'defunt' || user.isDeceased) {
@@ -1002,7 +1027,7 @@ router.post('/logout', (req, res) => {
 // @route   PUT /api/auth/profile
 // @desc    Mettre à jour le profil utilisateur
 // @access  Private
-router.put('/profile', async (req, res) => {
+router.put('/profile', authenticate, async (req, res) => {
   try {
     const { numeroH } = req.body;
     
@@ -1013,6 +1038,7 @@ router.put('/profile', async (req, res) => {
       });
     }
 
+    if (!peutModifierProfil(req, numeroH)) return refusModification(res);
     const user = await User.findByNumeroH(numeroH);
     
     if (!user) {
@@ -1039,6 +1065,15 @@ router.put('/profile', async (req, res) => {
         updates[field] = req.body[field];
       }
     });
+
+    // Un numéro de téléphone = un seul compte (même écrit autrement)
+    const nouveauTel = String(updates.tel1 || updates.telephone || '').replace(/[^0-9]/g, '');
+    if (nouveauTel.length >= 6) {
+      const titulaire = await findNumeroHByPhone(nouveauTel);
+      if (titulaire && titulaire !== user.numeroH) {
+        return res.status(409).json({ success: false, message: 'Ce numéro de téléphone est déjà associé à un autre compte.' });
+      }
+    }
 
     await user.update(updates);
 
@@ -1074,7 +1109,7 @@ router.put('/profile', async (req, res) => {
 // @route   POST /api/auth/profile/photo
 // @desc    Mettre à jour la photo de profil
 // @access  Private
-router.post('/profile/photo', (req, res) => {
+router.post('/profile/photo', authenticate, (req, res) => {
   // Wrapper multer pour attraper ses erreurs et renvoyer du JSON propre
   upload.single('photo')(req, res, async (multerErr) => {
     if (multerErr) {
@@ -1102,6 +1137,7 @@ router.post('/profile/photo', (req, res) => {
         });
       }
 
+      if (!peutModifierProfil(req, numeroH)) return refusModification(res);
       const user = await User.findByNumeroH(numeroH);
 
       if (!user) {
@@ -1137,7 +1173,7 @@ router.post('/profile/photo', (req, res) => {
 // @route   POST /api/auth/profile/video
 // @desc    Remplacer la vidéo d'inscription (jamais supprimer, seulement remplacer)
 // @access  Private
-router.post('/profile/video', (req, res) => {
+router.post('/profile/video', authenticate, (req, res) => {
   upload.single('video')(req, res, async (multerErr) => {
     if (multerErr) {
       return res.status(400).json({ success: false, message: multerErr.message || 'Erreur upload vidéo' });
@@ -1147,6 +1183,7 @@ router.post('/profile/video', (req, res) => {
       if (!numeroH) return res.status(400).json({ success: false, message: 'NumeroH requis' });
       if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
 
+      if (!peutModifierProfil(req, numeroH)) return refusModification(res);
       const user = await User.findByNumeroH(numeroH);
       if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
@@ -1203,7 +1240,7 @@ registerVitrinePhotoRoute('photo2');
 // @route   POST /api/auth/profile/vitrine-video
 // @desc    Mettre à jour la courte vidéo (5s max, vérifié côté client) de la vitrine de profil
 // @access  Private
-router.post('/profile/vitrine-video', (req, res) => {
+router.post('/profile/vitrine-video', authenticate, (req, res) => {
   upload.single('video')(req, res, async (multerErr) => {
     if (multerErr) {
       return res.status(400).json({ success: false, message: multerErr.message || 'Erreur upload vidéo' });
@@ -1213,6 +1250,7 @@ router.post('/profile/vitrine-video', (req, res) => {
       if (!numeroH) return res.status(400).json({ success: false, message: 'NumeroH requis' });
       if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
 
+      if (!peutModifierProfil(req, numeroH)) return refusModification(res);
       const user = await User.findByNumeroH(numeroH);
       if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
