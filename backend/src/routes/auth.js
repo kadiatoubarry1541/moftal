@@ -716,7 +716,7 @@ router.post('/login', [
 // @desc    Vérifier l'identité : NumeroH obligatoire, NumeroH parent et code arbre facultatifs
 // @access  Public
 router.post('/forgot-password/verify', [
-  body('numeroH').trim().notEmpty().withMessage('Le NumeroH est requis')
+  body('numeroH').trim().notEmpty().withMessage('Le NumeroH, le téléphone ou l\'email est requis')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -724,11 +724,29 @@ router.post('/forgot-password/verify', [
       return res.status(400).json({ success: false, message: 'Données invalides', errors: errors.array() });
     }
     const { numeroH, parentNumeroH, familyCode } = req.body;
-    const normalizedNumeroH = normalizeNumeroH(numeroH);
-
-    const user = await User.findByNumeroH(normalizedNumeroH);
+    // Comme pour la connexion : NuméroH, numéro de téléphone ou email
+    const identifiant = String(numeroH).trim();
+    const digitsOnly = identifiant.replace(/[^0-9]/g, '');
+    let user = null;
+    if (identifiant.includes('@')) {
+      user = await User.findOne({ where: { email: { [Op.iLike]: identifiant } } });
+    } else if (digitsOnly.length >= 6 && digitsOnly === identifiant.replace(/[\s\-().+]/g, '')) {
+      const n = await findNumeroHByPhone(digitsOnly);
+      if (n) user = await User.findByNumeroH(n);
+    }
+    const normalizedNumeroH = user ? user.numeroH : normalizeNumeroH(identifiant);
+    if (!user) user = await User.findByNumeroH(normalizedNumeroH);
     if (!user) {
-      return res.status(400).json({ success: false, message: 'NumeroH introuvable. Vérifiez votre numéro.' });
+      return res.status(400).json({ success: false, message: 'Compte introuvable. Vérifiez votre NuméroH, téléphone ou email.' });
+    }
+    // Le code de récupération est envoyé par email : sans email, pas de récupération
+    if (!user.email) {
+      return res.status(400).json({
+        success: false,
+        noEmail: true,
+        message: "Ce compte n'a pas d'adresse email : le mot de passe ne peut pas être récupéré. " +
+          "Conseil : une fois reconnecté, ajoutez un email dans votre profil."
+      });
     }
     if (user.type === 'defunt' || user.isDeceased) {
       return res.status(403).json({ success: false, message: 'Ce compte ne peut pas réinitialiser un mot de passe.' });
