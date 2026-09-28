@@ -92,6 +92,9 @@ export default function Famille() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             {activeTab === 'heritage' && (
+              <InspirButton compact />
+            )}
+            {activeTab === 'heritage' && (
               <button
                 type="button"
                 onClick={goToMairie}
@@ -102,7 +105,6 @@ export default function Famille() {
             )}
             {activeTab === 'amitie' && (
               <>
-                <InspirButton compact />
                 <button
                   type="button"
                   onClick={() => amitieRef.current?.openAddFriend()}

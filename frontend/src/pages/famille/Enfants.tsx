@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
-import InspirButton from '../../components/InspirButton'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -435,7 +434,6 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-bold text-slate-800">🧒 Mes Enfants</h2>
-          <InspirButton />
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}

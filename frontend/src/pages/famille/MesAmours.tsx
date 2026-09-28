@@ -7,7 +7,6 @@ import { getNumeroHForDisplay } from '../../utils/auth';
 import { isContactPickerSupported, pickContactPhones } from '../../utils/contactPicker';
 import ProfileBadge from '../../components/ProfileBadge';
 import { useI18n } from '../../i18n/useI18n';
-import InspirButton from '../../components/InspirButton';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -876,7 +875,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">💕 Amitié</h1>
-              <InspirButton compact />
             </div>
             <button
               type="button"

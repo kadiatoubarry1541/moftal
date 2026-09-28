@@ -6,6 +6,10 @@ import PaymentModal from '../../components/PaymentModal';
 
 const API_ORIGIN = (config.API_BASE_URL || '').replace(/\/api\/?$/, '') || 'http://localhost:5002';
 
+// Les médias sont stockés avec leur adresse complète (ImageKit / R2) ;
+// les anciens fichiers locaux gardent un chemin relatif au serveur.
+const mediaSrc = (url?: string | null) => (!url ? null : /^https?:\/\//i.test(url) ? url : `${API_ORIGIN}${url}`);
+
 interface UserData {
   numeroH: string;
   prenom: string;
@@ -18,7 +22,19 @@ interface UserData {
   [key: string]: any;
 }
 
-type Audience = 'hommes' | 'femmes' | 'enfants';
+// Sections d'Inspir : « ce qu'on doit faire POUR l'autre ».
+// Homme → Parents · Femmes · Enfants ; Femme → Parents · Hommes · Enfants ;
+// moins de 18 ans → Parents seulement ; admin → tout. (Vérifié aussi par le serveur.)
+type Section = 'parents' | 'femmes' | 'hommes' | 'enfants';
+type SectionTab = 'tout' | Section;
+
+const SECTION_INFO: Record<Section, { label: string; icon: string; pour: string }> = {
+  parents: { label: 'Parents', icon: '👨‍👩‍👦', pour: 'Pour nos parents' },
+  femmes:  { label: 'Femmes',  icon: '👰',    pour: 'Pour nos femmes' },
+  hommes:  { label: 'Hommes',  icon: '🤵',    pour: 'Pour nos maris' },
+  enfants: { label: 'Enfants', icon: '🧒',    pour: 'Pour nos enfants' },
+};
+const ALL_SECTIONS: Section[] = ['parents', 'femmes', 'hommes', 'enfants'];
 // Fil principal : vidéos, photos et audio ensemble (comme YouTube / Facebook).
 // Bibliothèque : livres (abonnement) + écrits & PDF.
 type View = 'fil' | 'bibliotheque';
@@ -34,7 +50,7 @@ const MEDIA_TYPES: { id: MediaType; label: string; icon: string; desc: string }[
 ];
 
 const FEED_FILTERS: { id: FeedFilter; label: string }[] = [
-  { id: 'tout', label: 'Tout' },
+  { id: 'tout', label: 'Tous les médias' },
   { id: 'video', label: '🎬 Vidéos' },
   { id: 'image', label: '📷 Photos' },
   { id: 'audio', label: '🎵 Audio' },
@@ -73,7 +89,9 @@ export default function Inspir() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [audienceTab, setAudienceTab] = useState<Audience>('hommes');
+  const [sections, setSections] = useState<Section[]>([]);
+  const [sectionTab, setSectionTab] = useState<SectionTab>('tout');
+  const [publishSection, setPublishSection] = useState<Section>('parents');
   const [view, setView] = useState<View>('fil');
   const [biblioTab, setBiblioTab] = useState<BiblioTab>('livres');
   const [publishType, setPublishType] = useState<MediaType>('video');
@@ -105,18 +123,40 @@ export default function Inspir() {
 
   const isAdmin = userData?.role === 'admin' || userData?.role === 'Admin' || userData?.role === 'ADMIN';
 
-  const autoAudience = (): Audience => {
-    if (!userData) return 'hommes';
-    const age = calculateAge(userData.dateNaissance || userData.date_naissance);
-    if (age !== null && age < 18) return 'enfants';
-    const g = userData.genre?.toUpperCase();
-    if (g === 'FEMME' || g === 'F' || g === 'FEMININ' || g === 'FEMALE') return 'femmes';
-    return 'hommes';
+  // Sections permises (calcul local immédiat, puis confirmé par le serveur)
+  const localSections = (u: UserData): Section[] => {
+    if (isAdmin) return [...ALL_SECTIONS];
+    const age = calculateAge(u.dateNaissance || u.date_naissance);
+    if (age !== null && age < 18) return ['parents'];
+    const g = String(u.genre || '').trim().toUpperCase();
+    if (['HOMME', 'H', 'M', 'MASCULIN', 'MALE'].includes(g)) return ['parents', 'femmes', 'enfants'];
+    if (['FEMME', 'F', 'FEMININ', 'FÉMININ', 'FEMALE'].includes(g)) return ['parents', 'hommes', 'enfants'];
+    return ['parents', 'enfants'];
   };
 
-  const currentAudience: Audience = useMemo(() => {
-    return isAdmin ? audienceTab : autoAudience();
-  }, [userData, isAdmin, audienceTab]);
+  useEffect(() => {
+    if (!userData) return;
+    setSections(localSections(userData));
+    const token = localStorage.getItem('token');
+    fetch(`${API_ORIGIN}/api/organizations/inspir/sections`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success && Array.isArray(d.sections)) setSections(d.sections.filter((x: string) => (ALL_SECTIONS as string[]).includes(x))); })
+      .catch(() => {});
+  }, [userData]);
+
+  // Onglet / section de publication toujours dans ce qui est permis
+  useEffect(() => {
+    if (!sections.length) return;
+    if (sectionTab !== 'tout' && !sections.includes(sectionTab)) setSectionTab('tout');
+    if (!sections.includes(publishSection)) setPublishSection(sections[0]);
+  }, [sections]);
+
+  const visibleSections: Section[] = useMemo(
+    () => (sectionTab === 'tout' ? sections : sections.filter(x => x === sectionTab)),
+    [sections, sectionTab]
+  );
+  // En publiant depuis un onglet précis, on publie dans cette section
+  const targetSection: Section = sectionTab === 'tout' ? publishSection : sectionTab;
 
   // Load user
   useEffect(() => {
@@ -151,7 +191,7 @@ export default function Inspir() {
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(
-        `${API_ORIGIN}/api/organizations/posts?category=livres_inspir&subcategory=tous`,
+        `${API_ORIGIN}/api/organizations/posts?category=livres_inspir`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (res.ok) {
@@ -217,29 +257,33 @@ export default function Inspir() {
   };
 
   // Load posts
+  // « Tout » = toutes les sections permises réunies, du plus récent au plus ancien
   const loadPosts = async () => {
+    if (!visibleSections.length) { setPosts([]); return; }
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(
-        `${API_ORIGIN}/api/organizations/posts?category=demographie&subcategory=${currentAudience}`,
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
-      );
-      if (res.ok) {
+      const lists = await Promise.all(visibleSections.map(async section => {
+        const res = await fetch(
+          `${API_ORIGIN}/api/organizations/posts?category=inspir&subcategory=${section}`,
+          { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        );
+        if (!res.ok) return [];
         const data = await res.json();
-        setPosts((data.posts || []).reverse());
-      }
+        return (data.posts || []).map((p: any) => ({ ...p, section: p.section || section }));
+      }));
+      setPosts(lists.flat().sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch { /* silencieux */ }
   };
 
   useEffect(() => {
-    if (userData) {
+    if (userData && visibleSections.length) {
       loadPosts();
       const iv = setInterval(() => {
         if (!document.hidden) loadPosts();
       }, 10000);
       return () => clearInterval(iv);
     }
-  }, [currentAudience, userData]);
+  }, [visibleSections, userData]);
 
   // Audio recording avec timer 3 min
   const startRecording = async () => {
@@ -306,8 +350,8 @@ export default function Inspir() {
       const formData = new FormData();
       formData.append('content', content);
       formData.append('messageType', messageType);
-      formData.append('category', 'demographie');
-      formData.append('subcategory', currentAudience);
+      formData.append('category', 'inspir');
+      formData.append('subcategory', targetSection);
       formData.append('postCategory', category);
       if (mediaFile) formData.append('media', mediaFile);
 
@@ -360,9 +404,7 @@ export default function Inspir() {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-black text-gray-900">🤝 Inspir</h1>
-            <p className="text-gray-500 text-xs">
-              {currentAudience === 'hommes' ? 'Section Hommes' : currentAudience === 'femmes' ? 'Section Femmes' : 'Section Enfants (- 18 ans)'}
-            </p>
+            <p className="text-gray-500 text-xs">Le bien que l'on fait pour l'autre</p>
           </div>
           {view === 'fil' ? (
             <button onClick={() => openView('bibliotheque')}
@@ -380,23 +422,23 @@ export default function Inspir() {
         </div>
       </div>
 
-      {/* ── Onglets audience (admin seulement) ── */}
-      {isAdmin && (
+      {/* ── Sections : Tout + celles ouvertes à la personne (comme la messagerie familiale) ── */}
+      {sections.length > 1 && (
         <div className="bg-white border-b">
           <div className="max-w-3xl mx-auto px-4">
-            <div className="flex gap-1 py-2">
-              {([
-                { id: 'hommes', label: '👨 Hommes' },
-                { id: 'femmes', label: '👩 Femmes' },
-                { id: 'enfants', label: '🧒 Enfants' },
-              ] as { id: Audience; label: string }[]).map(t => (
-                <button key={t.id} onClick={() => setAudienceTab(t.id)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    audienceTab === t.id ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'
-                  }`}>
-                  {t.label}
-                </button>
-              ))}
+            <div className="flex gap-2 py-2.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              {(['tout', ...sections] as SectionTab[]).map(id => {
+                const active = sectionTab === id;
+                const label = id === 'tout' ? '💬 Tout' : `${SECTION_INFO[id].icon} ${SECTION_INFO[id].label}`;
+                return (
+                  <button key={id} onClick={() => { setSectionTab(id); resetForm(); }}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                      active ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}>
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -404,18 +446,39 @@ export default function Inspir() {
 
       <div className="max-w-3xl mx-auto px-4 py-5 space-y-5">
 
+        {/* ── Pourquoi Inspir ── */}
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm text-amber-900 leading-relaxed">
+            <strong>🤝 Inspir sert à nous rappeler ce que l'autre attend de nous.</strong>{' '}
+            Publiez ici uniquement le bien que l'on doit faire pour ses parents, son mari ou sa femme, et ses enfants :
+            un conseil, un bon exemple, un geste qui fait du bien. Pas de dispute, pas de moquerie — seulement ce qui fait grandir.
+          </p>
+        </div>
+
         {/* ════════════ FIL : vidéos, photos et audio ensemble ════════════ */}
         {view === 'fil' && (
           <>
             {/* Publier */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold text-gray-800 text-sm">✦ Publier</h3>
+                <h3 className="font-bold text-gray-800 text-sm">
+                  ✦ Publier{sectionTab !== 'tout' || sections.length === 1 ? ` · ${SECTION_INFO[targetSection].pour.toLowerCase()}` : ''}
+                </h3>
                 <select value={category} onChange={e => setCategory(e.target.value)}
                   className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white text-gray-700">
                   {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
+
+              {sectionTab === 'tout' && sections.length > 1 && (
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                  Pour qui ?
+                  <select value={publishSection} onChange={e => setPublishSection(e.target.value as Section)}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white text-gray-800">
+                    {sections.map(sec => <option key={sec} value={sec}>{SECTION_INFO[sec].icon} {SECTION_INFO[sec].pour}</option>)}
+                  </select>
+                </label>
+              )}
 
               {/* Choix du type : un seul endroit pour vidéo, photo et audio */}
               <div className="grid grid-cols-3 gap-2">
@@ -575,7 +638,7 @@ export default function Inspir() {
             ) : (
               <div className="-mx-4 sm:mx-0 space-y-3" style={{ maxWidth: 'none' }}>
                 {feedPosts.map(post => {
-                  const mediaUrl = post.mediaUrl ? `${API_ORIGIN}${post.mediaUrl}` : null;
+                  const mediaUrl = mediaSrc(post.mediaUrl);
                   const author = post.authorName || post.author || post.numeroH || 'Membre';
                   return (
                     <article key={post.id} className="bg-white sm:rounded-2xl border-y sm:border border-gray-100 shadow-sm overflow-hidden">
@@ -590,6 +653,11 @@ export default function Inspir() {
                             {getCategoryLabel(post.postCategory || post.category || 'information')} · {formatPostDate(post.createdAt)}
                           </p>
                         </div>
+                        {SECTION_INFO[post.section as Section] && (
+                          <span className="flex-shrink-0 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                            {SECTION_INFO[post.section as Section].icon} {SECTION_INFO[post.section as Section].pour}
+                          </span>
+                        )}
                       </div>
 
                       {post.content && (
@@ -735,7 +803,7 @@ export default function Inspir() {
                   ) : (
                     <div className="space-y-3">
                       {livres.map(livre => {
-                        const mediaUrl = livre.mediaUrl ? `${API_ORIGIN}${livre.mediaUrl}` : null;
+                        const mediaUrl = mediaSrc(livre.mediaUrl);
                         const lines = (livre.content || '').split('\n');
                         const titre = lines[0]?.replace(/\*\*/g, '') || 'Sans titre';
                         const auteurLine = lines[1] || '';
@@ -779,6 +847,15 @@ export default function Inspir() {
                       {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                     </select>
                   </div>
+                  {sectionTab === 'tout' && sections.length > 1 && (
+                    <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                      Pour qui ?
+                      <select value={publishSection} onChange={e => setPublishSection(e.target.value as Section)}
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white text-gray-800">
+                        {sections.map(sec => <option key={sec} value={sec}>{SECTION_INFO[sec].icon} {SECTION_INFO[sec].pour}</option>)}
+                      </select>
+                    </label>
+                  )}
                   <textarea value={content} onChange={e => setContent(e.target.value)}
                     placeholder="Rédigez votre texte ou message ici..."
                     rows={4}
@@ -811,7 +888,7 @@ export default function Inspir() {
                       <p className="text-gray-300 text-xs mt-1">Soyez le premier à publier !</p>
                     </div>
                   ) : ecritsPosts.map(post => {
-                    const mediaUrl = post.mediaUrl ? `${API_ORIGIN}${post.mediaUrl}` : null;
+                    const mediaUrl = mediaSrc(post.mediaUrl);
                     const author = post.authorName || post.author || post.numeroH || 'Membre';
                     return (
                       <div key={post.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -823,6 +900,11 @@ export default function Inspir() {
                             <p className="text-sm font-semibold text-gray-900 truncate">{author}</p>
                             <p className="text-xs text-gray-400">{getCategoryLabel(post.postCategory || post.category || 'information')} · {formatPostDate(post.createdAt)}</p>
                           </div>
+                          {SECTION_INFO[post.section as Section] && (
+                            <span className="flex-shrink-0 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                              {SECTION_INFO[post.section as Section].icon} {SECTION_INFO[post.section as Section].pour}
+                            </span>
+                          )}
                         </div>
                         <div className="p-4">
                           {post.content && <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-line">{post.content}</p>}

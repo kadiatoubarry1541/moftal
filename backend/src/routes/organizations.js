@@ -6,6 +6,7 @@ import { authenticate } from '../middleware/auth.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
+import { allowedInspirSections, hasLivresAccess } from '../services/inspirAccess.js';
 
 const router = express.Router();
 
@@ -26,20 +27,55 @@ const uploadInspir = multer({
 // Toutes les routes nécessitent l'authentification
 router.use(authenticate);
 
-// --- Inspir (page Famille) : category=demographie, subcategory=hommes|femmes|enfants ---
+// --- Inspir (page Famille) ---
+// category=inspir, subcategory=parents|femmes|hommes|enfants : « ce qu'on doit faire
+// pour l'autre ». Chaque utilisateur ne lit / publie que dans les sections permises
+// (voir services/inspirAccess.js). Les anciennes sections « demographie »
+// (inspir_hommes, inspir_femmes, inspir_enfants) sont conservées telles quelles.
+// category=livres_inspir : Bibliothèque (abonnement ou admin).
 
-const INSPIR_GROUP_TYPE = (sub) => `inspir_${sub}`;
+const INSPIR_GROUP_TYPE = (section) => `inspir_pour_${section}`;
+const LIVRES_GROUP_TYPE = 'inspir_livres';
+const GROUP_NAMES = {
+  parents: 'Inspir — pour nos parents',
+  femmes: 'Inspir — pour nos femmes',
+  hommes: 'Inspir — pour nos maris',
+  enfants: 'Inspir — pour nos enfants',
+};
 
-// @route   GET /api/organizations/posts?category=demographie&subcategory=hommes|femmes|enfants
-// @desc    Liste des messages Inspir pour la section Hommes / Femmes / Enfants
-// @access  Authentifié
+// Résout le groupe demandé et vérifie le droit d'accès de l'utilisateur.
+async function resolveInspirTarget(user, category, subcategory) {
+  if (category === 'livres_inspir') {
+    if (!(await hasLivresAccess(user))) {
+      return { status: 402, message: 'Abonnement Bibliothèque requis.' };
+    }
+    return { groupType: LIVRES_GROUP_TYPE, name: 'Inspir — Bibliothèque' };
+  }
+  if (category === 'inspir') {
+    if (!allowedInspirSections(user).includes(subcategory)) {
+      return { status: 403, message: "Cette section d'Inspir ne vous est pas ouverte." };
+    }
+    return { groupType: INSPIR_GROUP_TYPE(subcategory), name: GROUP_NAMES[subcategory] };
+  }
+  return { status: 400, message: 'category et subcategory invalides' };
+}
+
+// @route   GET /api/organizations/inspir/sections
+// @desc    Sections d'Inspir ouvertes à l'utilisateur connecté
+router.get('/inspir/sections', (req, res) => {
+  res.json({ success: true, sections: allowedInspirSections(req.user) });
+});
+
+// @route   GET /api/organizations/posts?category=inspir&subcategory=parents|femmes|hommes|enfants
+//          GET /api/organizations/posts?category=livres_inspir
+// @desc    Publications d'une section Inspir (ou livres de la Bibliothèque)
+// @access  Authentifié + droit sur la section
 router.get('/posts', async (req, res) => {
   try {
     const { category, subcategory } = req.query;
-    if (category !== 'demographie' || !['hommes', 'femmes', 'enfants'].includes(subcategory)) {
-      return res.json({ success: true, posts: [] });
-    }
-    const groupType = INSPIR_GROUP_TYPE(subcategory);
+    const target = await resolveInspirTarget(req.user, category, subcategory);
+    if (target.status) return res.status(target.status).json({ success: false, message: target.message, posts: [] });
+    const groupType = target.groupType;
     const group = await OrganizationGroup.findOne({
       where: { type: groupType, isActive: true }
     });
@@ -60,25 +96,27 @@ router.post('/create-post', uploadInspir.single('media'), async (req, res) => {
     const numeroH = user.numeroH || user.numero_h;
     const authorName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || numeroH;
     const { content, messageType, category, subcategory, postCategory } = req.body;
-    if (category !== 'demographie' || !['hommes', 'femmes', 'enfants'].includes(subcategory)) {
-      return res.status(400).json({ success: false, message: 'category et subcategory invalides' });
+    const target = await resolveInspirTarget(user, category, subcategory);
+    if (target.status) return res.status(target.status).json({ success: false, message: target.message });
+    if (category === 'livres_inspir' && !(req.file && req.file.mimetype === 'application/pdf')) {
+      return res.status(400).json({ success: false, message: 'Le PDF du livre est obligatoire.' });
     }
     const type = (messageType || 'text').toLowerCase();
-    if (type === 'text' && !(content && String(content).trim())) {
+    // Un écrit peut être un texte, un PDF, ou les deux
+    if (type === 'text' && !(content && String(content).trim()) && !req.file) {
       return res.status(400).json({ success: false, message: 'Veuillez entrer un message' });
     }
     if (type !== 'text' && !req.file) {
       return res.status(400).json({ success: false, message: 'Veuillez sélectionner un fichier' });
     }
-    const groupType = INSPIR_GROUP_TYPE(subcategory);
+    const groupType = target.groupType;
     let group = await OrganizationGroup.findOne({
       where: { type: groupType, isActive: true }
     });
     if (!group) {
-      const names = { hommes: 'Inspir Hommes', femmes: 'Inspir Femmes', enfants: 'Inspir Enfants' };
       group = await OrganizationGroup.create({
-        name: names[subcategory] || `Inspir ${subcategory}`,
-        description: `Inspir dédiée aux ${subcategory}`,
+        name: target.name,
+        description: target.name,
         type: groupType,
         members: [],
         posts: [],
@@ -103,6 +141,7 @@ router.post('/create-post', uploadInspir.single('media'), async (req, res) => {
       category: postCategory || 'information',
       postCategory: postCategory || 'information',
       mediaUrl,
+      section: category === 'inspir' ? subcategory : 'livres',
       createdAt: new Date().toISOString()
     };
     const posts = Array.isArray(group.posts) ? [...group.posts] : [];
