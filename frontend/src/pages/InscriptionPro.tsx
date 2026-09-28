@@ -144,6 +144,8 @@ export default function InscriptionPro() {
   const [planType, setPlanType] = useState<'visibility' | 'full' | ''>('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  // 60 % tant que le profil du propriétaire n'est pas à jour, 100 % ensuite
+  const [validationPercent, setValidationPercent] = useState(100);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -309,6 +311,7 @@ export default function InscriptionPro() {
       });
       const data = await res.json();
       if (data.success) {
+        setValidationPercent(data.validationPercent ?? 100);
         setSuccess(true);
       } else {
         setError(data.message || "Erreur lors de l'inscription");
@@ -333,6 +336,20 @@ export default function InscriptionPro() {
             Votre demande est en attente de validation par l'administrateur.
             Vous recevrez une notification dès qu'elle sera approuvée.
           </p>
+          {validationPercent < 100 && (
+            <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-left">
+              <p className="font-bold text-amber-800 dark:text-amber-200">Compte validé à {validationPercent} %</p>
+              <div className="mt-2 h-2 rounded-full bg-amber-100 dark:bg-amber-900 overflow-hidden">
+                <div className="h-full bg-amber-500" style={{ width: `${validationPercent}%` }} />
+              </div>
+              <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+                Pour le reste, mettez votre profil à jour : votre compte passera automatiquement à 100 %.
+              </p>
+              <button onClick={() => navigate("/vivant/completer")} className="mt-3 w-full min-h-[44px] px-4 py-2 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600">
+                ✏️ Mettre mon profil à jour
+              </button>
+            </div>
+          )}
           <button onClick={() => navigate("/compte")} className="w-full min-h-[44px] px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
             Retour à mon espace
           </button>
