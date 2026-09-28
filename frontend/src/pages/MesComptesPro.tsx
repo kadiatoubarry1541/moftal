@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
+import { VerifiedBadge } from "../components/VerifiedBadge";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -15,6 +16,7 @@ interface ProAccount {
   subscriptionStatus?: "never_paid" | "active" | "overdue" | "blocked";
   subscriptionValidUntil?: string | null;
   gestionInterneValidUntil?: string | null;
+  validationPercent?: number;
   billingInfo?: {
     proPaymentDetails?: string;
   } | null;
@@ -266,6 +268,17 @@ export default function MesComptesPro() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center flex-wrap gap-2 mb-1">
                         <span className="font-bold text-gray-900 dark:text-gray-100 text-base">{acc.name}</span>
+                        {(acc.validationPercent ?? 100) >= 100 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 dark:text-green-300">
+                            <VerifiedBadge size={16} title="Compte validé à 100 %" /> 100 %
+                          </span>
+                        ) : (
+                          <button type="button" onClick={() => navigate("/vivant/completer")}
+                            title="Mettez votre profil à jour pour passer à 100 %"
+                            className="text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                            Validé à {acc.validationPercent} % · mettre le profil à jour
+                          </button>
+                        )}
                         {svcLabel && (
                           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${badgeClass}`}>
                             {svcLabel}

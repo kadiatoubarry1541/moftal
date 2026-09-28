@@ -10,10 +10,11 @@ export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
 export const PROVISIONAL_PREFIX = 'TMP-';
 export const isProvisionalNumeroH = (numeroH) => typeof numeroH === 'string' && numeroH.startsWith(PROVISIONAL_PREFIX);
 // Avant la mise à jour du profil, seules ces actions sont permises :
-// se connecter / mettre son profil à jour (/api/auth/) et lire ses notifications.
-// Toute autre action (y compris créer un compte professionnel) demande d'abord
-// de mettre son profil à jour.
-const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications'];
+// se connecter / mettre son profil à jour (/api/auth/), lire ses notifications
+// et créer son compte professionnel (validé à 60 % tant que le profil n'est
+// pas à jour, 100 % ensuite). Toute autre action demande d'abord de mettre son
+// profil à jour.
+const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications', '/api/professionals/register'];
 
 // Alias pour authenticateToken (compatibilité)
 export const authenticateToken = async (req, res, next) => {
