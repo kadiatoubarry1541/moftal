@@ -418,10 +418,10 @@ export default function InscriptionPro() {
                     {planType === 'visibility' && <span className="ml-auto w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">✓</span>}
                   </div>
                   <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mt-2">
-                    <li>✅ Profil visible sur la plateforme</li>
-                    <li>✅ Clients peuvent vous trouver</li>
-                    <li>✅ Prise de rendez-vous en ligne</li>
-                    <li className="text-gray-400">❌ Pas d'installation ni de suivi client continu</li>
+                    <li>✅ Présent dans les pages publiques du site (ex. : Santé)</li>
+                    <li>✅ Les clients vous trouvent et prennent rendez-vous</li>
+                    <li className="text-gray-400">❌ Pas de gestion interne</li>
+                    <li className="text-gray-400">❌ Pas de site ni d'application à vous</li>
                   </ul>
                   <div className="mt-3 text-xs font-bold text-blue-600 dark:text-blue-400">Formule de base — incluse</div>
                 </button>
@@ -443,8 +443,8 @@ export default function InscriptionPro() {
                     {planType === 'full' && <span className="ml-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">✓</span>}
                   </div>
                   <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mt-2">
-                    <li>✅ Profil visible + prise de rendez-vous</li>
-                    <li>✅ Site vitrine de votre établissement</li>
+                    <li>✅ Tout de la formule 1 (pages publiques + rendez-vous)</li>
+                    <li>✅ Votre propre site vitrine</li>
                     <li>✅ Tableau de bord complet</li>
                     <li>✅ Gestion stock, clients, personnel…</li>
                     <li>✅ App installée sur vos appareils</li>
