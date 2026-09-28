@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, isProvisionalNumeroH } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import ProfessionalWallet from '../models/ProfessionalWallet.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
@@ -108,6 +108,11 @@ router.get('/mon-compte', async (req, res) => {
   try {
     const { numeroH, prenom, nomFamille } = req.user;
     const nom = `${prenom || ''} ${nomFamille || ''}`.trim();
+
+    // Compte pas encore mis à jour : aucun compte Zakat créé à son nom
+    if (isProvisionalNumeroH(numeroH)) {
+      return res.json({ success: true, profileIncomplete: true, compte: { solde: 0, totalDepose: 0, totalDonne: 0 }, operations: [] });
+    }
 
     // Créer le compte s'il n'existe pas
     await sequelize.query(`

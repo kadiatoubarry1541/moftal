@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, isProvisionalNumeroH } from '../middleware/auth.js';
 import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import User from '../models/User.js';
@@ -80,7 +80,7 @@ router.get('/mon-compte', async (req, res) => {
   try {
     const { numeroH, nomFamille } = req.user;
 
-    if (!nomFamille?.trim()) {
+    if (!nomFamille?.trim() || isProvisionalNumeroH(numeroH)) {
       return res.json({ success: true, existe: false, message: 'Aucun nom de famille dans votre profil.' });
     }
 

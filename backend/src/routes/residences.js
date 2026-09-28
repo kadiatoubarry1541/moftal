@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 import ResidenceGroup from '../models/ResidenceGroup.js';
 import ResidenceMessage from '../models/ResidenceMessage.js';
 import User from '../models/User.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, isProvisionalNumeroH } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
@@ -96,8 +96,13 @@ router.get('/groups', async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
+    // Compte pas encore mis à jour : il peut voir, mais n'est ajouté à aucun groupe
+    const lectureSeule = isProvisionalNumeroH(req.user.numeroH);
+
     // Créer automatiquement un groupe si le quartier n'existe pas encore
-    if (normalizedLocation && groups.length === 0) {
+    if (lectureSeule) {
+      // rien : consultation seulement
+    } else if (normalizedLocation && groups.length === 0) {
       const displayName = formatDisplayName(location);
       const newGroup = await ResidenceGroup.create({
         location: normalizedLocation,

@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, isProvisionalNumeroH } from '../middleware/auth.js';
 import User from '../models/User.js';
 import DeceasedMember from '../models/DeceasedMember.js';
 import FamilyTreeConfirmation from '../models/FamilyTreeConfirmation.js';
@@ -55,6 +55,11 @@ router.use(authenticate);
 router.get('/tree', async (req, res) => {
   try {
     const user = req.user;
+    // Compte pas encore mis à jour : pas d'arbre créé à son nom
+    if (isProvisionalNumeroH(user.numeroH)) {
+      return res.status(403).json({ success: false, code: 'PROFILE_INCOMPLETE',
+        message: 'Mettez votre profil à jour (1 minute) pour créer et voir votre arbre familial.' });
+    }
     
     // Trouver l'arbre auquel appartient l'utilisateur
     let tree = await FamilyTree.findOne({
