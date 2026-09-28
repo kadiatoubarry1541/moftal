@@ -1378,7 +1378,8 @@ export default function EspacePro() {
               { key: "history"  as TabType, icon: "📋", label: "Historique", badge: 0 },
               // Membres et Cours = Gestion Interne ; Retrait = Moftal Pay → absents de la formule Visibilité + Rendez-vous
               ...(hasGestionInterne ? [{ key: "membres" as TabType, icon: "👥", label: memberLabel.tab, badge: 0 }] : []),
-              ...(account.type === 'restaurant' ? [{ key: "menu" as TabType, icon: "🍽️", label: "Mon Menu", badge: 0 }] : []),
+              // Formule Visibilité + Rendez-vous : 3 onglets seulement (le menu reste accessible depuis Paramètres)
+              ...(hasGestionInterne && account.type === 'restaurant' ? [{ key: "menu" as TabType, icon: "🍽️", label: "Mon Menu", badge: 0 }] : []),
               ...(hasGestionInterne && account.type === 'school' ? [{ key: "cours" as TabType, icon: "📚", label: "Cours", badge: 0 }] : []),
               ...(showMoftalPay ? [{ key: "retrait" as TabType, icon: "💸", label: "Retrait", badge: mesDemandes.filter(d => d.statut === 'en_attente').length }] : []),
               // Un seul bouton Paramètres : profil + modification du profil (vue "vitrine")
@@ -1388,7 +1389,7 @@ export default function EspacePro() {
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors flex-1 justify-center ${
-                  tab === t.key || (t.key === "profile" && tab === "vitrine")
+                  tab === t.key || (t.key === "profile" && (tab === "vitrine" || (tab === "menu" && !hasGestionInterne)))
                     ? svc.tabActive
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 }`}
@@ -1531,14 +1532,14 @@ export default function EspacePro() {
                           <button
                             onClick={() => openVideoModal(apt.id)}
                             disabled={!!actionLoading}
-                            className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
                           >
-                            📹 Accepter + Vidéo
+                            🎥 Accepter + Vidéo 30s
                           </button>
                           <button
                             onClick={() => { setRejectId(apt.id); setRejectReason(""); }}
                             disabled={!!actionLoading}
-                            className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 sm:flex-none min-h-[42px] px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 border border-red-200 disabled:opacity-50 text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
                           >
                             ❌ Refuser
                           </button>
