@@ -413,43 +413,41 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
       return
     }
 
+    // Le compte n'existe que s'il est enregistré dans la base : jamais de
+    // « faux » compte gardé seulement dans le téléphone si le serveur échoue.
     try {
       const result = await api.registerLiving(completeData as any)
 
-      const saveAndGo = (user: any, source: string) => {
-        const userDataWithPassword = { ...user, password: data.password, confirmPassword: data.confirmPassword }
-        localStorage.setItem('vivant_written', JSON.stringify(userDataWithPassword))
-        localStorage.setItem('dernier_vivant', JSON.stringify(userDataWithPassword))
+      if (result.success) {
+        const user = result.user || completeData
         localStorage.setItem('session_user', JSON.stringify({
-          numeroH,
-          userData: userDataWithPassword,
-          token: result?.token || null,
+          numeroH: user.numeroH || numeroH,
+          userData: user,
+          token: result.token || null,
           type: 'vivant',
-          source,
+          source: 'registration_written',
         }))
-        if (result?.token) localStorage.setItem('token', result.token)
+        if (result.token) localStorage.setItem('token', result.token)
         showCredentialsReminder(numeroH, data.password)
         navigate('/compte')
+        return
       }
 
-      if (result.success) {
-        saveAndGo(result.user, 'registration_written')
+      // Échec : le compte a peut-être déjà été créé par une tentative précédente
+      // → on essaie de connecter la personne avec ce qu'elle vient de saisir.
+      const identifiant = data.email?.trim() || data.telephone?.trim() || ''
+      const loginResult = identifiant
+        ? await api.login(identifiant, data.password).catch(() => null)
+        : null
+      if (loginResult?.success) {
+        showCredentialsReminder(numeroH, data.password)
+        navigate('/compte')
       } else {
-        saveAndGo(completeData, 'registration_written_fallback')
+        alert(result.message || "L'inscription n'a pas pu être enregistrée. Réessayez.")
       }
     } catch (error) {
       console.error('Erreur enregistrement (écrit):', error)
-      const dataWithClearPassword = { ...completeData, password: data.password, confirmPassword: data.confirmPassword }
-      localStorage.setItem('vivant_written', JSON.stringify(dataWithClearPassword))
-      localStorage.setItem('dernier_vivant', JSON.stringify(dataWithClearPassword))
-      localStorage.setItem('session_user', JSON.stringify({
-        numeroH,
-        userData: dataWithClearPassword,
-        type: 'vivant',
-        source: 'registration_written_fallback'
-      }))
-      showCredentialsReminder(numeroH, data.password)
-      navigate('/compte')
+      alert("Erreur de connexion : votre compte n'a pas été créé. Vérifiez votre connexion internet et réessayez.")
     } finally {
       setLoading(false)
     }
