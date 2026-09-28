@@ -206,7 +206,7 @@ router.post('/register', authenticate, async (req, res) => {
       services: services || [],
       specialties: specialties || [],
       photo: photo || null,
-      justificatifDocument: String(justificatifDocument).trim() || null,
+      justificatifDocument: (justificatifDocument && String(justificatifDocument).trim()) || null,
       ownerNumeroH: req.userId,
       status: 'pending'
     });

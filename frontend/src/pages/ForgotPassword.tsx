@@ -31,13 +31,14 @@ export function ForgotPassword() {
   const onVerify = async () => {
     setError('')
     if (!numeroH.trim()) {
-      setError('Veuillez saisir votre NumeroH.')
+      setError('Veuillez saisir votre NuméroH, votre téléphone ou votre email.')
       return
     }
     setLoading(true)
     try {
       const result = await api.forgotPasswordVerify(
-        api.normalizeNumeroH(numeroH),
+        // Téléphone ou email : envoyés tels quels ; sinon c'est un NuméroH
+        /@/.test(numeroH) || /^[\d\s\-().+]+$/.test(numeroH.trim()) ? numeroH.trim() : api.normalizeNumeroH(numeroH),
         parentNumeroH.trim() ? api.normalizeNumeroH(parentNumeroH) : undefined,
         familyCode.trim() ? familyCode.trim().toUpperCase() : undefined
       )
@@ -114,15 +115,16 @@ export function ForgotPassword() {
         {step === 'verify' ? (
           <>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Saisissez votre NumeroH pour vérifier votre identité. Les autres champs sont facultatifs.
+              Saisissez votre NuméroH, votre numéro de téléphone ou votre email. Le code de récupération
+              est envoyé à l'<strong>email</strong> de votre compte : sans email, le mot de passe ne peut pas être récupéré.
             </p>
 
             <div className="field">
-              <label>Votre NumeroH <span className="text-red-500">*</span></label>
+              <label>NuméroH, téléphone ou email <span className="text-red-500">*</span></label>
               <input
                 value={numeroH}
                 onChange={(e) => setNumeroH(e.target.value)}
-                placeholder="Ex: G1C1P2R1E1F1 1"
+                placeholder="Ex : 620 00 00 00 ou G1C1P2R1E1F1 1"
               />
             </div>
             <div className="field">

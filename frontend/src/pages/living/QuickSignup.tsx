@@ -86,6 +86,11 @@ export function QuickSignup() {
             {confirm && !same && <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas.</p>}
           </div>
 
+          <p className="text-xs text-gray-500 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+            💡 Retenez bien votre mot de passe. Pour pouvoir le récupérer si vous l'oubliez,
+            ajoutez un email dans votre profil : le code de récupération est envoyé par email.
+          </p>
+
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
 
           <button type="submit" disabled={!canSubmit}

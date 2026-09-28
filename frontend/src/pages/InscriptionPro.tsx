@@ -234,10 +234,9 @@ export default function InscriptionPro() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
-    if (!planType) { setError("Veuillez choisir une formule (Visibilité ou Gestion Interne)."); return; }
     if (!form.phone.trim()) { setError("Le numéro de téléphone est obligatoire."); return; }
-    if (!form.email.trim()) { setError("L'email est obligatoire."); return; }
-    // Seuls téléphone et email sont obligatoires : le nom, le justificatif et le
+    // Seul le téléphone est obligatoire (avec le type de compte) : la formule,
+    // l'email, le nom, le justificatif et le
     // niveau d'échanges sont facultatifs à l'inscription et pourront être
     // complétés plus tard depuis le profil, pour ne pas alourdir l'inscription.
     if (form.name.trim() && nomStatut === 'pris') {
@@ -290,7 +289,7 @@ export default function InscriptionPro() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           type: selectedType,
-          planType,
+          planType: planType || 'visibility',
           subSector: NEEDS_SUBSECTOR.includes(selectedType) ? (subSector || "tertiaire") : (selectedType === "broker" ? "tertiaire" : undefined),
           name: form.name.trim() || `${PRO_TYPES.find(t => t.id === selectedType)?.label || "Professionnel"} - ${form.phone.trim()}`,
           description: [
@@ -400,7 +399,7 @@ export default function InscriptionPro() {
           {/* ── Choix de formule ── */}
           {selectedType && (
             <div className="mb-6">
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">Quelle formule souhaitez-vous ? *</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-3">Quelle formule souhaitez-vous ? <span className="font-normal text-gray-400">(facultatif — Visibilité par défaut)</span></p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
                 {/* Option 1 : Visibilité + RDV */}
@@ -576,8 +575,8 @@ export default function InscriptionPro() {
                 placeholder={selectedType === "restaurant" ? "Ex: 620 00 00 00" : ""} />
             </div>
             <div>
-              <label className={labelCls}>Email *</label>
-              <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={inputCls} />
+              <label className={labelCls}>Email <span className="font-normal text-gray-400">(facultatif)</span></label>
+              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className={inputCls} />
             </div>
 
             {/* ── Choix du niveau Échanges (primaire / secondaire / tertiaire) ── */}
