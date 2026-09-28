@@ -1376,10 +1376,11 @@ export default function EspacePro() {
             {([
               { key: "pending"  as TabType, icon: "⏳", label: "Demandes",   badge: pendingApts.length },
               { key: "history"  as TabType, icon: "📋", label: "Historique", badge: 0 },
-              { key: "membres"  as TabType, icon: "👥", label: memberLabel.tab, badge: 0 },
+              // Membres et Cours = Gestion Interne ; Retrait = Moftal Pay → absents de la formule Visibilité + Rendez-vous
+              ...(hasGestionInterne ? [{ key: "membres" as TabType, icon: "👥", label: memberLabel.tab, badge: 0 }] : []),
               ...(account.type === 'restaurant' ? [{ key: "menu" as TabType, icon: "🍽️", label: "Mon Menu", badge: 0 }] : []),
-              ...(account.type === 'school' ? [{ key: "cours" as TabType, icon: "📚", label: "Cours", badge: 0 }] : []),
-              { key: "retrait" as TabType, icon: "💸", label: "Retrait", badge: mesDemandes.filter(d => d.statut === 'en_attente').length },
+              ...(hasGestionInterne && account.type === 'school' ? [{ key: "cours" as TabType, icon: "📚", label: "Cours", badge: 0 }] : []),
+              ...(showMoftalPay ? [{ key: "retrait" as TabType, icon: "💸", label: "Retrait", badge: mesDemandes.filter(d => d.statut === 'en_attente').length }] : []),
               // Un seul bouton Paramètres : profil + modification du profil (vue "vitrine")
               { key: "profile"  as TabType, icon: "⚙️", label: "Paramètres", badge: 0 },
             ]).map((t) => (
@@ -1740,7 +1741,7 @@ export default function EspacePro() {
         {/* ─────────────────────────────
             ONGLET : COURS (École / Prof)
             ───────────────────────────── */}
-        {tab === "cours" && account.type === "school" && (
+        {tab === "cours" && hasGestionInterne && account.type === "school" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h2 className="font-bold text-gray-900 dark:text-gray-100 text-lg">📚 Gestion des cours</h2>
@@ -1859,7 +1860,7 @@ export default function EspacePro() {
         {/* ─────────────────────────────
             ONGLET : RETRAIT PROFESSIONNEL
             ───────────────────────────── */}
-        {tab === "retrait" && (
+        {tab === "retrait" && showMoftalPay && (
           <div className="space-y-4">
 
             {/* Reçu retrait */}
@@ -2006,7 +2007,7 @@ export default function EspacePro() {
         {/* ─────────────────────────────
             ONGLET : MEMBRES (carnet d'accès)
             ───────────────────────────── */}
-        {tab === "membres" && (
+        {tab === "membres" && hasGestionInterne && (
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>

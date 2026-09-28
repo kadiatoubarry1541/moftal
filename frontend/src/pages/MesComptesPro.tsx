@@ -16,6 +16,7 @@ interface ProAccount {
   subscriptionStatus?: "never_paid" | "active" | "overdue" | "blocked";
   subscriptionValidUntil?: string | null;
   gestionInterneValidUntil?: string | null;
+  planType?: "visibility" | "full" | null;
   validationPercent?: number;
   billingInfo?: {
     proPaymentDetails?: string;
@@ -248,7 +249,9 @@ export default function MesComptesPro() {
 
               // ── Gestion Interne (Niveau 2) ───────────────────────────────────
               const giExpiry   = acc.gestionInterneValidUntil ? new Date(acc.gestionInterneValidUntil) : null;
-              const hasGI      = giExpiry ? giExpiry > now : false;
+              // Formule complète : Gestion Interne incluse tant que l'abonnement est actif.
+              // Formule Visibilité + Rendez-vous : seulement si la Gestion Interne a été payée à part.
+              const hasGI      = (giExpiry ? giExpiry > now : false) || (acc.planType !== "visibility" && hasVisibilite);
               const giDaysLeft = giExpiry ? Math.ceil((giExpiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
               const canOpenDashboard = hasVisibilite || hasGI;
@@ -316,7 +319,7 @@ export default function MesComptesPro() {
                           {giDaysLeft <= 7 ? `⚠️ GI expire dans ${giDaysLeft}j` : `⚡ GI valide ${giDaysLeft}j`}
                         </span>
                       )}
-                      {acc.status === "approved" && hasVisibilite && !hasGI && expiry && (
+                      {acc.status === "approved" && hasVisibilite && !(hasGI && giDaysLeft !== null) && expiry && (
                         <>
                           <span className={`px-3 py-1 text-[11px] font-medium rounded-full ${
                             expiringSoon ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
