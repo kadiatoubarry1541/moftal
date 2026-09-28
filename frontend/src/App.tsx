@@ -9,6 +9,7 @@ import DefaultAvatar from "./assets/default-avatar.svg";
 import NotificationBell from "./components/NotificationBell";
 import GestionPaymentGate from "./components/GestionPaymentGate";
 import OfflineStatusBar from "./components/OfflineStatusBar";
+import ProfileCompletionPrompt from "./components/ProfileCompletionPrompt";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
 
@@ -345,6 +346,7 @@ function App() {
     <div className={!isFullscreenPage ? "bg-gray-900 min-h-dvh" : (isGestionMode || isVitrineMode ? "pro-page" : "")}>
     <GestionPaymentGate />
     <OfflineStatusBar />
+    <ProfileCompletionPrompt />
     <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-dvh' : ''}${isHome ? ' h-dvh overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine, et sur les
           pages qui n'ont rien à y afficher (Famille/Terre ADAM/Échanges/Services ont
@@ -572,7 +574,7 @@ function App() {
                       {(currentUser as any).prenom || (currentUser as any).nom || "Profil"}
                     </div>
                     <div style={{ color: "#34d399", fontSize: 9, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 70 }}>
-                      {((currentUser as any).numeroH || "").split(' ')[0]}
+                      {getNumeroHForDisplay((currentUser as any).numeroH, true, false)}
                     </div>
                   </div>
                 </Link>
