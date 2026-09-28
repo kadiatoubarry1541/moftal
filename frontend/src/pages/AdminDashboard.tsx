@@ -32,7 +32,11 @@ interface ProfessionalAccount {
   subscriptionValidUntil?: string | null;
   /** true = encore en période d'essai gratuit 3 mois ; false = compte payant */
   isTrial?: boolean;
+  /** "visibility" = formule 1 (Rendez-vous) ; "full" ou vide (anciens comptes) = Gestion Interne */
+  planType?: "visibility" | "full" | null;
 }
+
+const isFormuleRdv = (p: { planType?: string | null }) => p.planType === "visibility";
 
 interface UserData {
   numeroH: string;
@@ -558,7 +562,7 @@ export default function AdminDashboard() {
     ...(isSuperAdmin7(userData) ? [
       { id: "arbres-activation", label: "Arbres Familiaux", icon: "🩸" },
       { id: "narrateurs-reci",   label: "Narrateurs Reci",  icon: "📜" },
-      { id: "services",          label: "Espaces RDV",      icon: "📅" },
+      { id: "services",          label: "Rendez-vous",      icon: "📅" },
       { id: "gestion-interne",   label: "Gestion Interne",  icon: "🔧" },
       { id: "sector-admins",     label: "Admins secteurs",  icon: "🏛️" },
       { id: "moftal-pay",        label: "Moftal Pay",       icon: "💰" },
@@ -687,7 +691,7 @@ export default function AdminDashboard() {
                 if (tab.id === "pros") { loadAllPros("all"); setProFilter("all"); }
                 if (tab.id === "annonces") loadPublications();
                 if (tab.id === "echange-produits") loadExchangeProducts();
-                if (tab.id === "services") loadAllPros("approved");
+                if (tab.id === "services" || tab.id === "gestion-interne") loadAllPros("all");
                 if (tab.id === "sector-admins") loadPageAdmins();
               }}
               className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
@@ -1215,7 +1219,12 @@ export default function AdminDashboard() {
                     <div key={pro.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
                       <div className="text-3xl">{typeLabels[pro.type]?.icon || "📄"}</div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-gray-900">{pro.name}</div>
+                        <div className="font-bold text-gray-900 flex items-center gap-2 flex-wrap">
+                          {pro.name}
+                          {isFormuleRdv(pro)
+                            ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">📅 Rendez-vous</span>
+                            : <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 font-semibold">🔧 Gestion Interne</span>}
+                        </div>
                         <div className="text-sm text-gray-600">
                           {typeLabels[pro.type]?.label || pro.type}
                           {pro.subSector && ` (${SECTEUR_LABELS[pro.subSector] || pro.subSector})`}
@@ -1436,6 +1445,26 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-500 mt-1">Ce que chaque professionnel voit dans son espace — onglets, statistiques, actions disponibles.</p>
               </div>
 
+              <div className="bg-white rounded-2xl border border-gray-200 p-4">
+                <h3 className="font-bold text-gray-900">📅 Comptes Rendez-vous + Visibilité ({allPros.filter(p => isFormuleRdv(p)).length})</h3>
+                <div className="mt-3 space-y-2">
+                  {allPros.filter(p => isFormuleRdv(p)).length === 0 && <p className="text-sm text-gray-500">Aucun compte en formule Rendez-vous.</p>}
+                  {allPros.filter(p => isFormuleRdv(p)).map(pro => (
+                    <button key={pro.id} type="button" onClick={() => navigate(`/espace-pro/${pro.id}`)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 text-left">
+                      <span className="text-2xl">{typeLabels[pro.type]?.icon || "📄"}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-semibold text-gray-900 truncate">{pro.name}</span>
+                        <span className="block text-xs text-gray-500">{typeLabels[pro.type]?.label || pro.type} • {pro.city || "?"} • {pro.phone || ""}</span>
+                      </span>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${pro.status === "approved" ? "bg-green-100 text-green-700" : pro.status === "pending" ? "bg-orange-100 text-orange-700" : "bg-gray-200 text-gray-600"}`}>
+                        {pro.status === "approved" ? "Validé" : pro.status === "pending" ? "En attente" : pro.status}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {[
                 {
                   icon: "🏥", label: "Santé", subtitle: "Cliniques · Hôpitaux · Médecins",
@@ -1583,6 +1612,26 @@ export default function AdminDashboard() {
               <div>
                 <h2 className="text-xl font-bold text-gray-800">🔧 Exemples de Gestion Interne</h2>
                 <p className="text-sm text-gray-500 mt-1">Un espace fonctionnel complet par type d'établissement — identique à ce que voit un professionnel client, pour vérifier que chaque gestion marche.</p>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-200 p-4">
+                <h3 className="font-bold text-gray-900">🔧 Comptes Gestion Interne ({allPros.filter(p => !isFormuleRdv(p)).length})</h3>
+                <div className="mt-3 space-y-2">
+                  {allPros.filter(p => !isFormuleRdv(p)).length === 0 && <p className="text-sm text-gray-500">Aucun compte en Gestion Interne.</p>}
+                  {allPros.filter(p => !isFormuleRdv(p)).map(pro => (
+                    <button key={pro.id} type="button" onClick={() => navigate(`/espace-pro/${pro.id}`)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 text-left">
+                      <span className="text-2xl">{typeLabels[pro.type]?.icon || "📄"}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-semibold text-gray-900 truncate">{pro.name}</span>
+                        <span className="block text-xs text-gray-500">{typeLabels[pro.type]?.label || pro.type} • {pro.city || "?"} • {pro.phone || ""}</span>
+                      </span>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${pro.status === "approved" ? "bg-green-100 text-green-700" : pro.status === "pending" ? "bg-orange-100 text-orange-700" : "bg-gray-200 text-gray-600"}`}>
+                        {pro.status === "approved" ? "Validé" : pro.status === "pending" ? "En attente" : pro.status}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
