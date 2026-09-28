@@ -3,7 +3,7 @@ import { Op } from 'sequelize';
 import ActivityGroup from '../models/ActivityGroup.js';
 import ActivityMessage from '../models/ActivityMessage.js';
 import User from '../models/User.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, isProvisionalNumeroH } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
 
 const router = express.Router();
@@ -27,6 +27,12 @@ router.get('/my-group', async (req, res) => {
 
     const userRecord = await User.findOne({ where: { numero_h: req.user.numeroH } });
     const activityValue = userRecord ? userRecord[activityKey] : null;
+
+    // Compte pas encore mis à jour : il n'est ajouté à aucun groupe
+    if (isProvisionalNumeroH(req.user.numeroH)) {
+      return res.json({ success: true, group: null, activityValue: null, profileIncomplete: true,
+        message: 'Mettez votre profil à jour pour rejoindre le groupe de votre activité.' });
+    }
 
     if (!activityValue) {
       return res.json({ success: true, group: null, activityValue: null,
