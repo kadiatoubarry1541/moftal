@@ -384,8 +384,7 @@ export function VideoRegistration() {
     try {
       const result = await api.registerLiving(completeData as any)
       const saveAndGo = (user: any, source: string) => {
-        const userDataWithPassword = { ...user, password: normalizedData.password, confirmPassword: normalizedData.confirmPassword }
-        localStorage.setItem('vivant_video', JSON.stringify(userDataWithPassword))
+        const userDataWithPassword = { ...user }
         localStorage.setItem('dernier_vivant', JSON.stringify(userDataWithPassword))
         localStorage.setItem('session_user', JSON.stringify({
           numeroH,
@@ -421,18 +420,9 @@ export function VideoRegistration() {
         }
       }
     } catch (error) {
+      // Jamais de compte gardé seulement dans le téléphone : il doit être en base.
       console.error('Erreur enregistrement vidéo:', error)
-      const dataWithClearPassword = { ...completeData, password: normalizedData.password, confirmPassword: normalizedData.confirmPassword }
-      localStorage.setItem('vivant_video', JSON.stringify(dataWithClearPassword))
-      localStorage.setItem('dernier_vivant', JSON.stringify(dataWithClearPassword))
-      localStorage.setItem('session_user', JSON.stringify({
-        numeroH,
-        userData: dataWithClearPassword,
-        type: 'vivant',
-        source: 'registration_video_fallback',
-      }))
-      showCredentialsReminder(numeroH, normalizedData.password)
-      navigate('/compte')
+      alert("Erreur de connexion : votre compte n'a pas été créé. Vérifiez votre connexion internet et réessayez.")
     } finally {
       setLoading(false)
     }

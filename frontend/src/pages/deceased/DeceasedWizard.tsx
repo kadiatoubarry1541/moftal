@@ -151,7 +151,7 @@ export function DeceasedWizard() {
     const nextNumber = counter + 1
     localStorage.setItem(counterKey, String(nextNumber))
     
-    const numero = `${prefix} ${nextNumber}`
+    let numero = `${prefix} ${nextNumber}`
     
     // ✅ Données complètes pour le défunt
     const complet = { 
@@ -175,20 +175,21 @@ export function DeceasedWizard() {
       }
     }
     
-    try {
-      // Essayer d'enregistrer dans le backend
-      const result = await api.registerDeceased(complet)
-      
-      if (result.success) {
-        console.log('✅ Défunt enregistré dans le backend:', result.user)
-      }
-    } catch (error) {
-      console.warn('⚠️ Erreur backend, sauvegarde locale uniquement:', error)
+    // Le défunt doit être enregistré dans la base AVANT tout : sinon on s'arrête
+    // et on affiche l'erreur (jamais de faux « succès » gardé dans le téléphone).
+    const result = await api.registerDeceased(complet)
+    if (!result.success) {
+      alert(`Le défunt n'a pas été enregistré : ${result.message || 'erreur du serveur'}.\n\nVérifiez votre connexion et réessayez.`)
+      return
     }
-    
-    // ✅ IMPORTANT : Les défunts n'ont PAS de compte, ils existent uniquement dans l'arbre généalogique
-    // Toujours sauvegarder en localStorage comme backup
-    localStorage.setItem('dernier_defunt', JSON.stringify(complet))
+    // NuméroHD attribué par le serveur (DM0001, DM0002…)
+    numero = (result as any).deceased?.numeroHD || numero
+    complet.numeroHD = numero
+    complet.numeroH = numero
+    const { password: _pw, confirmPassword: _cpw, ...sansMotDePasse } = complet
+
+    // Copie locale pour l'affichage immédiat dans l'arbre (la base reste la référence)
+    localStorage.setItem('dernier_defunt', JSON.stringify(sansMotDePasse))
 
     // Sauvegarder dans la liste des défunts pour l'arbre généalogique
     const sessionRaw = localStorage.getItem('session_user')
@@ -200,7 +201,7 @@ export function DeceasedWizard() {
           const key = `deceased_members_${ownerNumeroH}`
           const existing = JSON.parse(localStorage.getItem(key) || '[]')
           existing.push({
-            ...complet,
+            ...sansMotDePasse,
             relation: (localStorage.getItem('defunt_relation') || 'autre'),
             ownerNumeroH
           })
