@@ -1757,6 +1757,9 @@ async function initAllTables() {
     await sequelize.query(`CREATE INDEX IF NOT EXISTS "idx_payments_gateway_ref" ON "payments" ("gateway_ref");`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "billing_info" JSONB;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "is_trial" BOOLEAN DEFAULT true;`).catch(() => {});
+    // Formule choisie à l'inscription : 'visibility' (Visibilité + Rendez-vous) ou
+    // 'full' (+ Gestion Interne). NULL = anciens comptes, traités comme 'full'.
+    await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "plan_type" VARCHAR(20);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "granted_to_sub_admin" BOOLEAN DEFAULT false;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "numero_h" VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "parent_numero_h" VARCHAR(50);`).catch(() => {});

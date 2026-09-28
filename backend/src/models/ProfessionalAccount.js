@@ -209,6 +209,14 @@ ProfessionalAccount.init({
     field: 'granted_to_sub_admin',
     comment: 'Si true, le petit admin (G0) peut voir ce compte même hors du quota 50%'
   },
+  // Formule choisie à l'inscription : 'visibility' = Visibilité + Rendez-vous
+  // (pas de Gestion Interne sans paiement) ; 'full' = + Gestion Interne.
+  // NULL = compte créé avant cette colonne → traité comme 'full'.
+  planType: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    field: 'plan_type'
+  },
   // Indique si le compte est encore en période d'essai gratuit (3 mois)
   isTrial: {
     type: DataTypes.BOOLEAN,
