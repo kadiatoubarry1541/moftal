@@ -80,6 +80,7 @@ const Zaka = lazy(() => import("./pages/Zaka"));
 const ProfesseurIA = lazy(() => import("./pages/ProfesseurIA"));
 const InscriptionPro = lazy(() => import("./pages/InscriptionPro"));
 const ListeProfessionnels = lazy(() => import("./pages/ListeProfessionnels"));
+const PanneauEspacePro = lazy(() => import("./components/PanneauEspacePro"));
 const MesComptesPro = lazy(() => import("./pages/MesComptesPro"));
 const EspacePro = lazy(() => import("./pages/EspacePro"));
 const MonEspacePro = lazy(() => import("./pages/MonEspacePro"));
@@ -307,6 +308,9 @@ function App() {
   // Espace d'un professionnel ouvert (/gestion-xxx/CODE) : son logo remplace celui de Moftal
   const proBrand = useProBrand();
   const isEspaceTenant = /^\/gestion-[^/]+\/[^/]+/.test(pathname);
+  // Panneau « Espace Pro » (site client, publications, profil, clients, formules)
+  const [panneauProOuvert, setPanneauProOuvert] = useState(false);
+  useEffect(() => { setPanneauProOuvert(false); }, [pathname]);
   const isMoftalPayMode =
     pathname === "/compte-famille" ||
     pathname === "/moftal-pay-pro";
@@ -596,7 +600,7 @@ function App() {
                 </Link>
               )}
               <button
-                onClick={() => navigate("/gestion-interne?tab=pro")}
+                onClick={() => isEspaceTenant ? setPanneauProOuvert(true) : navigate("/gestion-interne?tab=pro")}
                 style={{ background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}
               >
                 Espace Pro
@@ -604,6 +608,11 @@ function App() {
             </div>
           </div>
         </header>
+      )}
+      {isGestionMode && isEspaceTenant && panneauProOuvert && (
+        <Suspense fallback={null}>
+          <PanneauEspacePro tenantCode={pathname.split("/")[2]} onClose={() => setPanneauProOuvert(false)} />
+        </Suspense>
       )}
 
       {/* Main content - plein écran, chaque page gère son propre container.
