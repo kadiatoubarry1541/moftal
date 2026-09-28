@@ -17,7 +17,11 @@ interface User {
   created_at: string
   lastLogin?: string
   email?: string
+  tel1?: string | null
 }
+
+// Compte créé par l'inscription rapide (téléphone + mot de passe) : NuméroH provisoire
+const isQuickAccount = (u: User) => (u.numeroH || '').startsWith('TMP-')
 
 interface Stats {
   totalUsers: number
@@ -93,8 +97,11 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
     const prenom     = (user.prenom     || '').toLowerCase()
     const nomFamille = (user.nomFamille || '').toLowerCase()
     const numeroH    = (user.numeroH    || '').toLowerCase()
+    const telephone  = (user.tel1       || '').replace(/[^0-9]/g, '')
     const search     = searchTerm.toLowerCase()
+    const searchDigits = search.replace(/[^0-9]/g, '')
     const matchesSearch = !search || prenom.includes(search) || nomFamille.includes(search) || numeroH.includes(search)
+      || (searchDigits.length >= 3 && telephone.includes(searchDigits))
     const matchesRole   = filterRole === 'all' || user.role === filterRole
     return matchesSearch && matchesRole
   })
@@ -270,7 +277,7 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
               <div className="flex flex-col gap-2 md:flex-row md:items-center">
                 <input
                   type="text"
-                  placeholder="Rechercher un utilisateur..."
+                  placeholder="Rechercher (nom, NuméroH, téléphone)..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full md:w-72 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400"
@@ -306,11 +313,22 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 font-semibold">
-                            {user.prenom.charAt(0)}
+                            {isQuickAccount(user) ? '📱' : (user.prenom || '?').charAt(0)}
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{user.prenom} {user.nomFamille}</div>
-                            <div className="text-xs text-gray-500">{user.genre} • {user.dateNaissance}</div>
+                            {isQuickAccount(user) ? (
+                              <>
+                                <div className="text-sm font-medium text-gray-900">{user.tel1 || 'Téléphone inconnu'}</div>
+                                <div className="text-xs text-amber-700">Inscription rapide · profil à compléter</div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-sm font-medium text-gray-900">{user.prenom} {user.nomFamille}</div>
+                                <div className="text-xs text-gray-500">
+                                  {[user.genre, user.dateNaissance, user.tel1].filter(Boolean).join(' • ')}
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -512,16 +530,18 @@ export function AdminPanel({ userData: _userData }: AdminPanelProps) {
             <div className="px-5 py-4">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-lg font-semibold">
-                  {selectedUser.prenom.charAt(0)}
+                  {isQuickAccount(selectedUser) ? '📱' : (selectedUser.prenom || '?').charAt(0)}
                 </div>
                 <div className="space-y-1 text-sm">
                   <div className="text-gray-900 font-medium">{selectedUser.prenom} {selectedUser.nomFamille}</div>
                   <div className="text-gray-700"><strong>NumeroH:</strong> <span className="font-mono">{selectedUser.numeroH}</span></div>
+                  {isQuickAccount(selectedUser) && <div className="text-amber-700">Inscription rapide · profil à compléter</div>}
+                  {selectedUser.tel1 && <div className="text-gray-700"><strong>Téléphone:</strong> {selectedUser.tel1}</div>}
                   <div className="text-gray-700"><strong>Genre:</strong> {selectedUser.genre}</div>
-                  <div className="text-gray-700"><strong>Date de naissance:</strong> {selectedUser.dateNaissance}</div>
+                  <div className="text-gray-700"><strong>Date de naissance:</strong> {selectedUser.dateNaissance || '—'}</div>
                   <div className="text-gray-700 flex items-center gap-2"><strong>Rôle:</strong> {getRoleBadge(selectedUser.role)}</div>
                   <div className="text-gray-700 flex items-center gap-2"><strong>Statut:</strong> {getStatusBadge(selectedUser.isActive)}</div>
-                  <div className="text-gray-700"><strong>Enfants:</strong> {selectedUser.children.length}</div>
+                  <div className="text-gray-700"><strong>Enfants:</strong> {selectedUser.children?.length ?? 0}</div>
                   <div className="text-gray-700"><strong>Membre depuis:</strong> {new Date(selectedUser.created_at).toLocaleDateString('fr-FR')}</div>
                   <div className="text-gray-700"><strong>Type:</strong> {selectedUser.type === 'vivant' ? 'Vivant' : 'Défunt'}</div>
                   {selectedUser.email && <div className="text-gray-700"><strong>Email:</strong> {selectedUser.email}</div>}

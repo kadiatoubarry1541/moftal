@@ -25,7 +25,8 @@ router.get('/users', async (req, res) => {
         { prenom:      { [Op.iLike]: `%${search}%` } },
         { nomFamille:  { [Op.iLike]: `%${search}%` } },
         { numeroH:     { [Op.iLike]: `%${search}%` } },
-        { email:       { [Op.iLike]: `%${search}%` } }
+        { email:       { [Op.iLike]: `%${search}%` } },
+        { tel1:        { [Op.iLike]: `%${search}%` } }
       ];
     }
 
