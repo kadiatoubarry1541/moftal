@@ -69,6 +69,8 @@ interface ProInfo {
   description?: string;
   phone?: string;
   tenant_code?: string | null;
+  // Calculé par le serveur : false = formule Visibilité + Rendez-vous
+  hasGestionInterne?: boolean;
 }
 
 export default function InstallClientApp() {
@@ -117,8 +119,9 @@ export default function InstallClientApp() {
   const vitrinePath  = VITRINE_PATH[pro.type];
   const clientPortal = CLIENT_PORTAL[pro.type];
 
-  // Gestion Interne = tenant_code présent → expérience client complète
-  const hasGestionInterne = !!pro.tenant_code;
+  // Gestion Interne = formule qui l'inclut (le tenant_code seul ne suffit pas : il est
+  // attribué à l'approbation même en formule Visibilité + Rendez-vous)
+  const hasGestionInterne = pro.hasGestionInterne !== false && !!pro.tenant_code;
   const vitrineUrl   = hasGestionInterne && vitrinePath ? `/${vitrinePath}/${pro.tenant_code}` : null;
   const portalUrl    = hasGestionInterne && clientPortal ? `/${vitrinePath}/${pro.tenant_code}/${clientPortal.path}` : null;
 
@@ -127,14 +130,17 @@ export default function InstallClientApp() {
 
   return (
     <>
-      <DynamicAppManifest
-        name={pro.name}
-        description={`${typeInfo.icon} ${pro.name} — Accès direct`}
-        proId={pro.id}
-        startUrl={startUrl}
-        themeColor={typeInfo.color}
-        backgroundColor="#ffffff"
-      />
+      {/* Formule Visibilité + Rendez-vous : pas d'application installable */}
+      {hasGestionInterne && (
+        <DynamicAppManifest
+          name={pro.name}
+          description={`${typeInfo.icon} ${pro.name} — Accès direct`}
+          proId={pro.id}
+          startUrl={startUrl}
+          themeColor={typeInfo.color}
+          backgroundColor="#ffffff"
+        />
+      )}
 
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-5">
         <div className="w-full max-w-sm">
@@ -231,13 +237,15 @@ export default function InstallClientApp() {
                 </a>
               )}
 
-              {/* Installer comme app */}
-              <div className="bg-blue-50 rounded-xl px-4 py-3 text-center">
-                <p className="text-xs font-semibold text-blue-700 mb-0.5">Installez l'app</p>
-                <p className="text-[11px] text-blue-500">
-                  Ajoutez <strong>{pro.name}</strong> à votre écran d'accueil pour un accès direct sans navigateur.
-                </p>
-              </div>
+              {/* Installer comme app — Gestion Interne uniquement */}
+              {hasGestionInterne && (
+                <div className="bg-blue-50 rounded-xl px-4 py-3 text-center">
+                  <p className="text-xs font-semibold text-blue-700 mb-0.5">Installez l'app</p>
+                  <p className="text-[11px] text-blue-500">
+                    Ajoutez <strong>{pro.name}</strong> à votre écran d'accueil pour un accès direct sans navigateur.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

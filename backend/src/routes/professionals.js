@@ -4,6 +4,7 @@ import { authenticate, requireAdmin } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import Notification from '../models/Notification.js';
 import PageAdmin from '../models/PageAdmin.js';
+import { compteAGestionInterne } from '../middleware/gestionAccessGuard.js';
 import { sequelize } from '../config/database.js';
 import {
   isGlobalAdmin,
@@ -276,7 +277,10 @@ router.get('/detail/:id', async (req, res) => {
     if (!account || !account.isActive) {
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     }
-    res.json({ success: true, account: sanitizeAccountForPublic(account) });
+    res.json({
+      success: true,
+      account: { ...sanitizeAccountForPublic(account), hasGestionInterne: await compteAGestionInterne(account) },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
@@ -314,9 +318,13 @@ router.get('/pwa-icon/:id', async (req, res) => {
 router.get('/pro-manifest/:id', async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id, {
-      attributes: ['id', 'name', 'type', 'isActive', 'photo']
+      attributes: ['id', 'name', 'type', 'isActive', 'photo', 'planType', 'gestionInterneValidUntil', 'ownerNumeroH']
     });
     if (!account) return res.status(404).json({ error: 'Compte introuvable' });
+    // Formule Visibilité + Rendez-vous : pas d'app installable → pas de manifest
+    if (!(await compteAGestionInterne(account))) {
+      return res.status(404).json({ error: "Formule Visibilité + Rendez-vous : pas d'application installable" });
+    }
 
     const TYPE_COLORS = {
       clinic: '#1a8f1a', health_worker: '#1a8f1a',

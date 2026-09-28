@@ -21,6 +21,21 @@ function finDeGrace(validUntil) {
   return fin;
 }
 
+// La formule de CE compte inclut-elle la Gestion Interne (app installable, lien de
+// partage, vitrine…) ? 'visibility' = Visibilité + Rendez-vous : non, sauf si la
+// Gestion Interne a été payée à part (période en cours ou paiement à vie).
+// planType NULL = compte créé avant cette colonne → traité comme 'full'.
+export async function compteAGestionInterne(proAccount) {
+  if (!proAccount) return false;
+  if (proAccount.planType !== 'visibility') return true;
+  const gi = proAccount.gestionInterneValidUntil ? new Date(proAccount.gestionInterneValidUntil) : null;
+  if (gi && gi > new Date()) return true;
+  const paiementVie = await Payment.findOne({
+    where: { payerNumeroH: proAccount.ownerNumeroH, purpose: 'gestion_interne_vie', status: 'completed' },
+  });
+  return !!paiementVie;
+}
+
 // Source de vérité : subscriptionStatus + subscriptionValidUntil, tenus à jour par
 // l'approbation du compte (essai gratuit de 3 mois, voir professionals.js) et par les
 // paiements (admin/subscription, webhook de paiement). Ne PAS recalculer un essai à part

@@ -25,6 +25,8 @@ interface ProAccount {
   subscriptionValidUntil?: string | null;
   isTrial?: boolean;
   photo?: string | null;
+  // Calculé par le serveur : false = formule Visibilité + Rendez-vous (Gestion Interne non payée)
+  hasGestionInterne?: boolean;
 }
 
 interface MenuItem {
@@ -1209,6 +1211,8 @@ export default function EspacePro() {
 
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== account.ownerNumeroH;
+  // Seul un false explicite du serveur masque l'app (évite de cacher à tort si le champ manque)
+  const hasGestionInterne = account.hasGestionInterne !== false;
 
   // Mur d'abonnement — bypassé pour les admins (ils doivent pouvoir inspecter n'importe quel dashboard)
   if (!isAdminViewing && account.status === "approved" && account.subscriptionStatus && account.subscriptionStatus !== "active") {
@@ -1248,14 +1252,17 @@ export default function EspacePro() {
             <span className="text-xs bg-white/25 px-3 py-1 rounded-full font-semibold tracking-wide uppercase">
               {svc.icon} {svc.label}
             </span>
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                onClick={() => navigate("/moftal-pay-pro")}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors min-h-[36px]"
-              >
-                💰 Moftal Pay
-              </button>
-            </div>
+            {/* Moftal Pay — pas pour la formule Visibilité + Rendez-vous */}
+            {hasGestionInterne && (
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={() => navigate("/moftal-pay-pro")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors min-h-[36px]"
+                >
+                  💰 Moftal Pay
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Identité du compte */}
@@ -1307,6 +1314,8 @@ export default function EspacePro() {
           APPLICATION INSTALLABLE
           Icône + nom propres à l'établissement, accès direct à cet espace
           ══════════════════════════════════════════ */}
+      {/* Formule Visibilité + Rendez-vous : ni app installable, ni lien de partage */}
+      {hasGestionInterne && (<>
       <DynamicAppManifest
         name={account.name}
         description={`Gestion ${typeInfo.label} — ${account.name}`}
@@ -1348,6 +1357,7 @@ export default function EspacePro() {
           </p>
         </div>
       </div>
+      </>)}
 
       {/* ══════════════════════════════════════════
           BANNIÈRE ESSAI GRATUIT
@@ -1368,7 +1378,9 @@ export default function EspacePro() {
                 <span className={`ml-2 text-xs ${isUrgent ? "text-orange-600" : "text-amber-600"}`}>
                   {isUrgent
                     ? "Contactez l'administrateur pour continuer sans interruption."
-                    : `Visibilité, rendez-vous et gestion interne inclus jusqu'au ${expiry.toLocaleDateString("fr-FR")}.`}
+                    : hasGestionInterne
+                    ? `Visibilité, rendez-vous et gestion interne inclus jusqu'au ${expiry.toLocaleDateString("fr-FR")}.`
+                    : `Visibilité et rendez-vous inclus jusqu'au ${expiry.toLocaleDateString("fr-FR")}.`}
                 </span>
               </div>
             </div>
@@ -1389,14 +1401,14 @@ export default function EspacePro() {
               ...(account.type === 'restaurant' ? [{ key: "menu" as TabType, icon: "🍽️", label: "Mon Menu", badge: 0 }] : []),
               ...(account.type === 'school' ? [{ key: "cours" as TabType, icon: "📚", label: "Cours", badge: 0 }] : []),
               { key: "retrait" as TabType, icon: "💸", label: "Retrait", badge: mesDemandes.filter(d => d.statut === 'en_attente').length },
-              { key: "vitrine"  as TabType, icon: "🏪", label: "Ma Vitrine", badge: 0 },
-              { key: "profile"  as TabType, icon: "👤", label: "Mon profil", badge: 0 },
+              // Un seul bouton Paramètres : profil + modification du profil (vue "vitrine")
+              { key: "profile"  as TabType, icon: "⚙️", label: "Paramètres", badge: 0 },
             ]).map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors flex-1 justify-center ${
-                  tab === t.key
+                  tab === t.key || (t.key === "profile" && tab === "vitrine")
                     ? svc.tabActive
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 }`}
@@ -2091,6 +2103,12 @@ export default function EspacePro() {
             ═══════════════════════════════════════════════════════════════ */}
         {tab === "vitrine" && (
           <div className="space-y-5">
+            <button
+              onClick={() => setTab("profile")}
+              className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:underline"
+            >
+              ← Paramètres
+            </button>
 
             {/* ── SECTION 1 : Informations de base ────────────────────── */}
             <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
@@ -2600,7 +2618,7 @@ export default function EspacePro() {
                 )}
 
                 {/* Moftal Pay — clinic & supplier uniquement */}
-                {(account.type === 'clinic' || account.type === 'supplier') && (
+                {hasGestionInterne && (account.type === 'clinic' || account.type === 'supplier') && (
                   <>
                     <hr className="border-gray-100 dark:border-gray-700" />
                     <div className="flex items-start gap-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl p-4">
