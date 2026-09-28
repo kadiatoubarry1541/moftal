@@ -4,6 +4,7 @@ import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
+import AbonnementGestion from "../components/AbonnementGestion";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -1077,6 +1078,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           <button onClick={saveSettings} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${COLOR}88` : COLOR, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer" }}>
             {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
           </button>
+          <AbonnementGestion />
         </div>
       )}
 

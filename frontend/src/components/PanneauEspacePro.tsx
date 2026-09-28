@@ -1,48 +1,40 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getSessionUser } from "../utils/auth";
 import { AddPersonModal } from "./AddPersonModal";
-import PaymentModal from "./PaymentModal";
+import AbonnementGestion from "./AbonnementGestion";
 import {
-  DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
-  type PublishModal, type ProfilModal, type PeriodeGI,
+  DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp,
+  type PublishModal, type ProfilModal,
 } from "./EspaceProModals";
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
 
-const PURPOSE_GI: Record<PeriodeGI, string> = { mois: "gestion_mois", troisMois: "gestion_3mois", an: "gestion_an", vie: "gestion_interne_vie" };
-const LIBELLE_GI: Record<PeriodeGI, string> = { mois: "mensuel", troisMois: "3 mois", an: "annuel", vie: "à vie" };
-
 // Panneau « Espace Pro » ouvert depuis la gestion interne d'un établissement :
-// abonnement, site client, publications, profil public et clients — tout au même
-// endroit, sans quitter la gestion interne.
+// site client, publications, profil public et clients — tout au même endroit,
+// sans quitter la gestion interne. L'abonnement reste discret, tout en bas.
 export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: string; onClose: () => void }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // Ces gestions ont leur page Paramètres, où se trouve l'abonnement
+  const abonnementDansParametres = /^\/gestion-(clinique|commerce|ecole|ecole-v1|madrasa|madrasa-v2|mairie)\//.test(pathname);
+  const [voirAbonnement, setVoirAbonnement] = useState(false);
   const token = localStorage.getItem("token") || "";
   const currentUser = getSessionUser();
 
   const [account, setAccount] = useState<any>(null);
-  const [accesGI, setAccesGI] = useState<any>(null);
   const [erreur, setErreur] = useState("");
-  const [showOffre, setShowOffre] = useState(false);
-  const [periode, setPeriode] = useState<PeriodeGI | null>(null);
   const [publishModal, setPublishModal] = useState<PublishModal | null>(null);
   const [profilModal, setProfilModal] = useState<ProfilModal | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
 
   const auth = { Authorization: `Bearer ${token}` };
 
-  function chargerAcces() {
-    fetch(`${API}/api/payment/acces-gestion-interne`, { headers: auth })
-      .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {});
-  }
-
   useEffect(() => {
     fetch(`${API}/api/pro-vitrine/by-tenant/${tenantCode}/account`, { headers: auth })
       .then(r => r.json())
       .then(d => { if (d.success && d.account) setAccount(d.account); else setErreur(d.message || "Compte introuvable."); })
       .catch(() => setErreur("Erreur de connexion au serveur."));
-    chargerAcces();
   }, [tenantCode]);
 
   // ─── Publications ──────────────────────────────────────────────────────────
@@ -127,16 +119,7 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
   // ─── Rendu ─────────────────────────────────────────────────────────────────
 
   const info = account ? getTypeInfo(account.type) : null;
-  const sousFenetre = publishModal || profilModal || connectOpen || periode;
-  const pluriel = (n: number) => (n > 1 ? "s" : "");
-
-  const statut = (() => {
-    if (!accesGI) return null;
-    if (accesGI.mode === "essai") return { icone: "⏳", titre: `Essai gratuit — ${accesGI.joursRestants} jour${pluriel(accesGI.joursRestants)} restant${pluriel(accesGI.joursRestants)}`, fond: "#eff6ff", bord: "#93c5fd", texte: "#1e40af" };
-    if (accesGI.mode === "paye") return { icone: "✅", titre: `Gestion Interne active — ${accesGI.joursRestants} jour${pluriel(accesGI.joursRestants)} restant${pluriel(accesGI.joursRestants)}`, fond: "#f0fdf0", bord: "#86efac", texte: "#0f4b0f" };
-    if (accesGI.mode === "vie") return { icone: "♾️", titre: "Gestion Interne à vie", fond: "#f0fdf0", bord: "#86efac", texte: "#0f4b0f" };
-    return null;
-  })();
+  const sousFenetre = publishModal || profilModal || connectOpen;
 
   const bouton = (label: string, onClick: () => void, style: React.CSSProperties) => (
     <button onClick={onClick}
@@ -164,30 +147,22 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
             {erreur && <p style={{ color: "#dc2626", fontSize: 13, margin: "0 0 12px" }}>{erreur}</p>}
             {!account && !erreur && <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 12px" }}>Chargement…</p>}
 
-            {statut && (
-              <div style={{ background: statut.fond, border: `1px solid ${statut.bord}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, color: statut.texte, fontSize: 13, fontWeight: 700 }}>
-                  <span style={{ fontSize: 18 }}>{statut.icone}</span>{statut.titre}
-                </div>
-                {accesGI.mode !== "vie" && (
-                  <button onClick={() => setShowOffre(v => !v)}
-                    style={{ padding: "7px 12px", background: "#2563eb", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-                    {showOffre ? "Masquer les formules" : "Voir les formules"}
-                  </button>
-                )}
-              </div>
-            )}
-            {showOffre && accesGI && (
-              <OffreGestionInterne accesGI={accesGI} onChoisir={setPeriode}
-                onVisibilite={() => { onClose(); navigate("/mes-comptes-pro"); }} />
-            )}
-
             {account && info && (
               <div style={{ display: "grid", gap: 8 }}>
                 {info.vitrinePath && bouton("🌐  Voir le site client", () => { onClose(); navigate(`/${info.vitrinePath}/${tenantCode}`); }, { background: info.color, color: "white" })}
                 {bouton("📢  Nouvelle publication", ouvrirPublication, { background: "#2563eb", color: "white" })}
                 {bouton("✏️  Modifier le profil public", ouvrirProfil, { background: "#f0fdf4", color: "#059669", border: "1.5px solid #a7f3d0" })}
                 {bouton("🤝  Connecter un client", () => setConnectOpen(true), { background: "#f8fafc", color: "#475569", border: "1.5px solid #e2e8f0" })}
+              </div>
+            )}
+
+            {account && !abonnementDansParametres && (
+              <div style={{ marginTop: 18, borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
+                <button onClick={() => setVoirAbonnement(v => !v)}
+                  style={{ background: "none", border: "none", padding: "4px 0", cursor: "pointer", fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
+                  ⚙️ Paramètres · Abonnement {voirAbonnement ? "▴" : "▾"}
+                </button>
+                {voirAbonnement && <div style={{ marginTop: 8 }}><AbonnementGestion /></div>}
               </div>
             )}
           </div>
@@ -231,18 +206,6 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
           myNumeroH={currentUser?.numeroH}
           myPrenom={currentUser?.prenom}
           myNom={currentUser?.nomFamille}
-        />
-      )}
-      {periode && accesGI && (
-        <PaymentModal
-          isOpen
-          onClose={() => setPeriode(null)}
-          onSuccess={() => { setPeriode(null); setShowOffre(false); chargerAcces(); }}
-          amount={({ mois: accesGI.prixMois, troisMois: accesGI.prixTroisMois, an: accesGI.prixAn, vie: accesGI.prixVie } as Record<PeriodeGI, number>)[periode] || 0}
-          currency="GNF"
-          purpose={PURPOSE_GI[periode]}
-          relatedId={accesGI.proId}
-          description={`Gestion Interne ${LIBELLE_GI[periode]}`}
         />
       )}
     </>

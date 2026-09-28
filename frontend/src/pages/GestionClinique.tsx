@@ -4,6 +4,7 @@ import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
+import AbonnementGestion from "../components/AbonnementGestion";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -1673,6 +1674,7 @@ export default function GestionClinique() {
               <button onClick={handleSettingsSave} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${TEAL}88` : TEAL, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
                 {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
               </button>
+              {!isAdminViewing && <AbonnementGestion />}
             </div>
           )}
 

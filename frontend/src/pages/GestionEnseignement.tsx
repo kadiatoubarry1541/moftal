@@ -4,6 +4,7 @@ import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
+import AbonnementGestion from "../components/AbonnementGestion";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -1197,6 +1198,7 @@ export default function GestionEnseignement({ mode }: Props) {
               <button onClick={handleSettingsSave} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${V.color}88` : V.color, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer" }}>
                 {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
               </button>
+              {!isAdminViewing && <AbonnementGestion />}
             </div>
           )}
 
