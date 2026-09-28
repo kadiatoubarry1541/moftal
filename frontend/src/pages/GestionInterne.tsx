@@ -403,6 +403,20 @@ export default function GestionInterne() {
     }
   }, [accesGI?.mode, accesGI?.proId]);
 
+  // Formule complète + un seul établissement : « Espace Pro » ouvre directement la
+  // gestion interne complète, sans passer par la page intermédiaire.
+  const [ouvertureDirecte, setOuvertureDirecte] = useState(false);
+  useEffect(() => {
+    if (loading || userIsAdmin || ouvertureDirecte) return;
+    if (new URLSearchParams(location.search).get("tab") !== "pro") return;
+    if (accounts.length !== 1 || !accesGI) return;
+    if (accesGI.mode === "visibilite" || accesGI.mode === "bloque" || !accesGI.aAcces) return;
+    if (accounts[0].subscriptionStatus === "blocked") return;
+    setOuvertureDirecte(true);
+    // Si l'ouverture échoue (erreur déjà affichée), on montre la page normale.
+    ouvrirGestion(accounts[0], true).then(ok => { if (!ok) setOuvertureDirecte(false); });
+  }, [loading, accounts, accesGI, location.search]);
+
   // ─── FONCTIONS PAIEMENT ─────────────────────────────────────────────────────
 
   const purposeMapGI = { mois: "gestion_mois", troisMois: "gestion_3mois", an: "gestion_an", vie: "gestion_interne_vie" } as const;
@@ -415,30 +429,36 @@ export default function GestionInterne() {
 
   // ─── NAVIGATION VERS GESTION EXTERNE ────────────────────────────────────────
 
-  function ouvrirGestionUrl(path: string, tenantCode: string) {
+  // remplacer = true : la page intermédiaire ne reste pas dans l'historique (le
+  // bouton retour ne la ramène pas).
+  function ouvrirGestionUrl(path: string, tenantCode: string, remplacer = false) {
     const t = localStorage.getItem("token") || "";
     const s = localStorage.getItem("session_user") || "";
-    window.location.href = `https://gestions.moftal.com/${path}/${tenantCode}?_t=${encodeURIComponent(t)}&_s=${encodeURIComponent(s)}`;
+    const url = `https://gestions.moftal.com/${path}/${tenantCode}?_t=${encodeURIComponent(t)}&_s=${encodeURIComponent(s)}`;
+    if (remplacer) window.location.replace(url);
+    else window.location.href = url;
   }
 
-  async function ouvrirGestion(account: any) {
-    if (accesGI?.mode === "visibilite") { navigate(`/espace-pro/${account.id}`); return; }
+  async function ouvrirGestion(account: any, remplacer = false): Promise<boolean> {
+    if (accesGI?.mode === "visibilite") { navigate(`/espace-pro/${account.id}`); return true; }
     if (accesGI && !accesGI.aAcces) {
       alert("Votre essai gratuit est terminé. Achetez l'accès ci-dessous pour continuer.");
-      return;
+      return false;
     }
     const info = getTypeInfo(account.type);
-    if (account.tenant_code) { ouvrirGestionUrl(info.path, account.tenant_code); return; }
+    if (account.tenant_code) { ouvrirGestionUrl(info.path, account.tenant_code, remplacer); return true; }
     try {
       const r = await fetch(`${API}/api/professionals/${account.id}/ensure-tenant`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
       const d = await r.json();
-      if (d.success && d.tenantCode) ouvrirGestionUrl(info.path, d.tenantCode);
-      else alert(d.message || "Impossible d'activer la gestion interne.");
+      if (d.success && d.tenantCode) { ouvrirGestionUrl(info.path, d.tenantCode, remplacer); return true; }
+      alert(d.message || "Impossible d'activer la gestion interne.");
     } catch { alert("Erreur de connexion."); }
+    return false;
   }
+
 
   // ─── FONCTIONS PUBLICATION ───────────────────────────────────────────────────
 
@@ -551,7 +571,7 @@ export default function GestionInterne() {
 
   // ─── RENDU CHARGEMENT ────────────────────────────────────────────────────────
 
-  if (loading) return (
+  if (loading || ouvertureDirecte) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", minHeight:300 }}>
       <div style={{ width:32, height:32, border:"3px solid #e2e8f0", borderTopColor:"#1a8f1a", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>

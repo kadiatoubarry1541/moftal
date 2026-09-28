@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { setProBrand } from "./proBrand";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -308,6 +309,12 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   const STORAGE_KEY = getTenantStorageKey();
 
+  // La barre du haut affiche le logo du professionnel (pas celui de Moftal)
+  useEffect(() => {
+    setProBrand({ name, logoUrl, color: themeColor });
+  }, [name, logoUrl, themeColor]);
+  useEffect(() => () => setProBrand(null), []);
+
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -377,16 +384,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     }
   };
 
-  if (installed) {
-    return (
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
-          <span style={{ fontSize: 15 }}>✅</span> Application installée
-        </div>
-        <BackToMoftalBadge />
-      </div>
-    );
-  }
+  // Déjà installée : rien à afficher (le professionnel le sait déjà)
+  if (installed) return null;
 
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
@@ -398,7 +397,6 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
         <span style={{ fontSize: 16 }}>{installing ? "⏳" : "📲"}</span>
         {installing ? "Installation…" : (label || "Installer")}
       </button>
-      <BackToMoftalBadge />
       {showToast && (
         <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "#1e293b", color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
           📲 Appuyez sur l'icône d'installation dans la barre du navigateur

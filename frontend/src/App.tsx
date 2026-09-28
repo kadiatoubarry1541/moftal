@@ -12,6 +12,7 @@ import OfflineStatusBar from "./components/OfflineStatusBar";
 import ProfileCompletionPrompt from "./components/ProfileCompletionPrompt";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
+import { useProBrand } from "./components/proBrand";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
@@ -303,6 +304,9 @@ function App() {
   }, [currentUser?.numeroH]);
 
   const isGestionMode = pathname.startsWith("/gestion");
+  // Espace d'un professionnel ouvert (/gestion-xxx/CODE) : son logo remplace celui de Moftal
+  const proBrand = useProBrand();
+  const isEspaceTenant = /^\/gestion-[^/]+\/[^/]+/.test(pathname);
   const isMoftalPayMode =
     pathname === "/compte-famille" ||
     pathname === "/moftal-pay-pro";
@@ -548,10 +552,22 @@ function App() {
               >
                 ‹
               </button>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
-                <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 24, width: 24, objectFit: "contain", display: "block" }} />
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: isEspaceTenant ? "default" : "pointer" }} onClick={() => { if (!isEspaceTenant) navigate("/gestion-interne"); }}>
+                {isEspaceTenant ? (
+                  proBrand?.logoUrl ? (
+                    <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <img src={proBrand.logoUrl} alt={proBrand.name || ""} style={{ height: 24, width: 24, objectFit: "cover", borderRadius: 6, display: "block" }} />
+                    </div>
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: proBrand?.color || "#1a8f1a", color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14, fontWeight: 800 }}>
+                      {(proBrand?.name?.trim()?.[0] || "").toUpperCase()}
+                    </div>
+                  )
+                ) : (
+                  <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 24, width: 24, objectFit: "contain", display: "block" }} />
+                  </div>
+                )}
                 <span style={{ color: "white", fontWeight: 800, fontSize: 14, letterSpacing: "-0.2px" }}>{t('header.pro_mode')}</span>
               </div>
             </div>

@@ -617,7 +617,7 @@ export default function GestionEnseignement({ mode }: Props) {
           <button onClick={()=>navigate(-1 as any)} title={collapsed?"Retour":undefined}
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "rgba(200,240,200,0.4)", fontSize: 12, justifyContent: collapsed?"center":"flex-start" }}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="white";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color="rgba(200,240,200,0.4)";}}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: 6, background: "white", flexShrink: 0 }}><img src="/logo-moftal.svg" alt="Moftal" style={{ width: 16, height: 16, display: "block" }} /></span>
             {!collapsed && "Retour plateforme"}
           </button>
           <button onClick={()=>setCollapsed(!collapsed)} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "5px 0", border: "none", background: "transparent", color: `${V.color}80`, cursor: "pointer", fontSize: 11, marginTop: 4 }}>
