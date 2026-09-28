@@ -1146,7 +1146,8 @@ export default function GestionInterne() {
                       {/* Pied de carte : toutes les actions */}
                       <div style={{ borderTop:"1px solid #f1f5f9", padding:"8px 20px", background:"#fafbfc" }}>
                         <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-                          {info.vitrinePath && (
+                          {/* Site vitrine : seulement avec la Gestion Interne (formule 2) */}
+                          {info.vitrinePath && accesGI?.mode !== "visibilite" && (
                             <button onClick={() => navigate(`/${info.vitrinePath}/${a.tenant_code}`)}
                               style={{ padding:"6px 14px", background:info.color, color:"white", border:"none", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>
                               Voir le site client
@@ -1164,10 +1165,10 @@ export default function GestionInterne() {
                               </button>
                             </>
                           )}
-                          <button onClick={() => setConnectModal({ accountId: a.id, name: a.name })}
+                          {accesGI?.mode !== "visibilite" && <button onClick={() => setConnectModal({ accountId: a.id, name: a.name })}
                             style={{ padding:"6px 14px", background:"#f8fafc", color:"#475569", border:"1.5px solid #e2e8f0", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, marginLeft:"auto" }}>
                             Connecter un client
-                          </button>
+                          </button>}
                         </div>
                       </div>
                     </div>

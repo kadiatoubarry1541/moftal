@@ -418,7 +418,7 @@ export default function InscriptionPro() {
                     {planType === 'visibility' && <span className="ml-auto w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">✓</span>}
                   </div>
                   <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mt-2">
-                    <li>✅ Page vitrine publique</li>
+                    <li>✅ Profil visible sur la plateforme</li>
                     <li>✅ Clients peuvent vous trouver</li>
                     <li>✅ Prise de rendez-vous en ligne</li>
                     <li className="text-gray-400">❌ Pas d'installation ni de suivi client continu</li>
@@ -443,8 +443,8 @@ export default function InscriptionPro() {
                     {planType === 'full' && <span className="ml-auto w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold">✓</span>}
                   </div>
                   <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 mt-2">
-                    <li>✅ Page vitrine publique</li>
-                    <li>✅ Prise de rendez-vous en ligne</li>
+                    <li>✅ Profil visible + prise de rendez-vous</li>
+                    <li>✅ Site vitrine de votre établissement</li>
                     <li>✅ Tableau de bord complet</li>
                     <li>✅ Gestion stock, clients, personnel…</li>
                     <li>✅ App installée sur vos appareils</li>
