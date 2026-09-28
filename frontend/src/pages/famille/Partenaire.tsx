@@ -58,7 +58,8 @@ function getToken() {
 
 type SessionId = 'avant' | 'paradis' | 'objectif'
 
-export default function Partenaire({ inline }: { inline?: boolean } = {}) {
+// focusNumeroH : ouvre directement la galerie avec cette épouse / ce mari (clic depuis le Noyau)
+export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
   const navigate = useNavigate()
   const location = useLocation()
   const [user, setUser] = useState<UserData | null>(null)
@@ -141,7 +142,9 @@ export default function Partenaire({ inline }: { inline?: boolean } = {}) {
         setWives(data.wives || [])
         // Synchro : afficher la 1ère épouse dans l'espace partenaire existant
         if ((data.wives || []).length > 0) {
-          const first = data.wives[selectedWifeIndex] || data.wives[0]
+          const focusIdx = focusNumeroH ? (data.wives as Array<{ wife: PartnerInfo | null }>).findIndex(w => w.wife?.numeroH === focusNumeroH) : -1
+          if (focusIdx >= 0) setSelectedWifeIndex(focusIdx)
+          const first = data.wives[focusIdx >= 0 ? focusIdx : selectedWifeIndex] || data.wives[0]
           setPartner(first.wife)
           setLinkInfo(first.link)
         } else {
@@ -581,6 +584,8 @@ export default function Partenaire({ inline }: { inline?: boolean } = {}) {
   const partnerLabel = isHomme ? 'votre femme' : 'votre homme'
   const userIsAdmin = isAdmin(user)
 
+  const focusedOnPartner = !!focusNumeroH && partner?.numeroH === focusNumeroH
+
   // Pour les femmes : un seul mari possible — on dérive husbands depuis partner + linkInfo
   const husbands: Array<{ link: any; husband: PartnerInfo | null }> =
     !isHomme && partner && linkInfo
@@ -624,7 +629,8 @@ export default function Partenaire({ inline }: { inline?: boolean } = {}) {
       )}
 
       {/* ── BANNIÈRE COMPACTE avec bouton Vérifier ─────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
+      {/* Ouvert depuis le Noyau sur une personne précise : on va directement à sa galerie */}
+      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap ${focusedOnPartner ? 'hidden' : ''}`}>
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-bold text-slate-800">{titleIcon} {title}</h2>
         </div>
@@ -683,7 +689,7 @@ export default function Partenaire({ inline }: { inline?: boolean } = {}) {
       )}
 
       {/* ── ONGLETS MARIS (FEMME seulement) ─────────────────────── */}
-      {!isHomme && husbands.length > 0 && (
+      {!isHomme && husbands.length > 0 && !focusedOnPartner && (
         <div className="mb-4 flex flex-wrap gap-2">
           {husbands.map((h, i) => (
             <div key={h.link.id} className="flex items-center gap-1">
@@ -721,7 +727,7 @@ export default function Partenaire({ inline }: { inline?: boolean } = {}) {
       )}
 
       {/* ── ONGLETS ÉPOUSES (HOMME seulement) ─────────────────────── */}
-      {isHomme && wives.length > 0 && (
+      {isHomme && wives.length > 0 && !focusedOnPartner && (
         <div className="mb-4 flex flex-wrap gap-2">
           {wives.map((w, i) => (
             <div key={w.link.id} className="flex items-center gap-1">
@@ -996,8 +1002,8 @@ export default function Partenaire({ inline }: { inline?: boolean } = {}) {
               const active = tiles.find(t => t.key === openSection)!
               return (
                 <div>
-                  {/* 4 tuiles navigation */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-slate-100">
+                  {/* 4 tuiles navigation — une seule ligne compacte (même modèle que la galerie Enfants) */}
+                  <div className="grid grid-cols-4 gap-0 border-b border-slate-100">
                     {tiles.map((tile) => {
                       const isActive = openSection === tile.key
                       return (
@@ -1005,24 +1011,20 @@ export default function Partenaire({ inline }: { inline?: boolean } = {}) {
                           key={tile.key}
                           type="button"
                           onClick={() => setOpenSection(tile.key)}
-                          className={`relative flex flex-col items-center gap-2 py-5 px-3 transition-all duration-200 border-r last:border-r-0 border-slate-100 ${isActive ? 'bg-white' : 'bg-slate-50 hover:bg-white'}`}
+                          className={`relative flex flex-col items-center gap-1 py-2.5 px-1 transition-all duration-200 border-r last:border-r-0 border-slate-100 ${isActive ? 'bg-white' : 'bg-slate-50 hover:bg-white'}`}
                         >
                           {isActive && (
                             <span className={`absolute top-0 left-0 right-0 h-0.5 ${tile.dotColor} rounded-b`} />
                           )}
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all duration-200 ${isActive ? `${tile.activeBg} shadow-lg` : 'bg-slate-100'}`}>
+                          <div className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-base sm:text-lg transition-all duration-200 ${isActive ? `${tile.activeBg} shadow` : 'bg-slate-100'}`}>
                             {tile.icon}
+                            {(tile.badgeCount ?? 0) > 0 && (
+                              <span className={`absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center ${isActive ? `${tile.activeBg} text-white ring-2 ring-white` : 'bg-slate-300 text-slate-700 ring-2 ring-slate-50'}`}>
+                                {tile.badgeCount}
+                              </span>
+                            )}
                           </div>
-                          <div className="text-center">
-                            <p className={`text-xs font-extrabold leading-tight transition-colors ${isActive ? tile.activeText : 'text-slate-700'}`}>{tile.label}</p>
-                            <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{tile.desc}</p>
-                          </div>
-                          {(tile.badgeCount ?? 0) > 0 && (
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? `${tile.activeBg} text-white` : 'bg-slate-200 text-slate-600'}`}>
-                              {tile.badgeCount}
-                            </span>
-                          )}
-                          {isActive && <span className={`w-1.5 h-1.5 rounded-full ${tile.dotColor}`} />}
+                          <p className={`text-[9px] sm:text-[10px] font-extrabold leading-tight text-center truncate w-full transition-colors ${isActive ? tile.activeText : 'text-slate-700'}`}>{tile.label}</p>
                         </button>
                       )
                     })}

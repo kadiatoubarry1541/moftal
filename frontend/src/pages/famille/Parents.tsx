@@ -67,7 +67,8 @@ interface PendingInvitation {
   parent?: { numeroH: string; prenom: string; nomFamille: string }
 }
 
-export default function Parents({ inline }: { inline?: boolean } = {}) {
+// focusNumeroH : ouvre directement la galerie avec ce parent (clic depuis le Noyau)
+export default function Parents({ inline, focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
   const [user, setUser] = useState<UserData | null>(null)
   const [parents, setParents] = useState<ParentLink[]>([])
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
@@ -270,10 +271,11 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
   }, [])
 
   useEffect(() => {
-    if (!selectedParent && parents.length > 0) {
-      setSelectedParent(parents[0])
-    }
-  }, [parents, selectedParent])
+    if (!parents.length) return
+    const focused = focusNumeroH ? parents.find(p => p.parentNumeroH === focusNumeroH) : undefined
+    if (focused && selectedParent?.id !== focused.id) { setSelectedParent(focused); return }
+    if (!selectedParent) setSelectedParent(parents[0])
+  }, [parents, selectedParent, focusNumeroH])
 
   useEffect(() => {
     if (selectedParent) {
@@ -380,11 +382,13 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
       }
     : null
   const activeParent = selectedParent || adminDemoParent
+  // Ouvert depuis le Noyau sur un parent précis : on affiche directement sa galerie
+  const focused = !!focusNumeroH && selectedParent?.parentNumeroH === focusNumeroH
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3">
+      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 ${focused ? 'hidden' : ''}`}>
         <h2 className="text-lg font-bold text-slate-800">👨‍👩‍👦 Mes Parents</h2>
       </div>
 
@@ -450,7 +454,7 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
           </div>
         )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-3">
+          <div className={`lg:col-span-1 space-y-3 ${focused ? 'hidden' : ''}`}>
             {parents.map((link) => (
               <div
                 key={link.id}
@@ -496,7 +500,7 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
             ))}
           </div>
 
-          <div className="lg:col-span-2">
+          <div className={focused ? 'lg:col-span-3' : 'lg:col-span-2'}>
             {(selectedParent || adminDemoParent) ? (
               <div className="space-y-5">
 
@@ -538,8 +542,8 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
 
                     return (
                       <div>
-                        {/* ── 4 tuiles de navigation ── */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-slate-100">
+                        {/* 4 tuiles navigation — une seule ligne compacte (même modèle que la galerie Enfants) */}
+                        <div className="grid grid-cols-4 gap-0 border-b border-slate-100">
                           {tiles.map((tile) => {
                             const isActive = openSection === tile.key
                             return (
@@ -547,39 +551,20 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
                                 key={tile.key}
                                 type="button"
                                 onClick={() => setOpenSection(tile.key)}
-                                className={`relative flex flex-col items-center gap-2 py-5 px-3 transition-all duration-200 border-r last:border-r-0 border-slate-100 ${
-                                  isActive ? 'bg-white' : 'bg-slate-50 hover:bg-white'
-                                }`}
+                                className={`relative flex flex-col items-center gap-1 py-2.5 px-1 transition-all duration-200 border-r last:border-r-0 border-slate-100 ${isActive ? 'bg-white' : 'bg-slate-50 hover:bg-white'}`}
                               >
-                                {/* Barre colorée en haut quand actif */}
                                 {isActive && (
                                   <span className={`absolute top-0 left-0 right-0 h-0.5 ${tile.dotColor} rounded-b`} />
                                 )}
-                                {/* Icône */}
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-all duration-200 ${
-                                  isActive ? `${tile.activeBg} shadow-lg` : 'bg-slate-100'
-                                }`}>
+                                <div className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-base sm:text-lg transition-all duration-200 ${isActive ? `${tile.activeBg} shadow` : 'bg-slate-100'}`}>
                                   {tile.icon}
+                                  {(tile.badgeCount ?? 0) > 0 && (
+                                    <span className={`absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center ${isActive ? `${tile.activeBg} text-white ring-2 ring-white` : 'bg-slate-300 text-slate-700 ring-2 ring-slate-50'}`}>
+                                      {tile.badgeCount}
+                                    </span>
+                                  )}
                                 </div>
-                                {/* Texte */}
-                                <div className="text-center">
-                                  <p className={`text-xs font-extrabold leading-tight transition-colors ${isActive ? tile.activeText : 'text-slate-700'}`}>
-                                    {tile.label}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{tile.desc}</p>
-                                </div>
-                                {/* Badge nombre */}
-                                {(tile.badgeCount ?? 0) > 0 && (
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    isActive ? `${tile.activeBg} text-white` : 'bg-slate-200 text-slate-600'
-                                  }`}>
-                                    {tile.badgeCount}
-                                  </span>
-                                )}
-                                {/* Point actif */}
-                                {isActive && (
-                                  <span className={`w-1.5 h-1.5 rounded-full ${tile.dotColor}`} />
-                                )}
+                                <p className={`text-[9px] sm:text-[10px] font-extrabold leading-tight text-center truncate w-full transition-colors ${isActive ? tile.activeText : 'text-slate-700'}`}>{tile.label}</p>
                               </button>
                             )
                           })}
@@ -589,36 +574,21 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
                         <div className="p-6">
 
                           {/* En-tête de la section active */}
-                          <div className="flex items-center justify-between mb-5">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${active.activeBg} shadow-md`}>
-                                {active.icon}
-                              </div>
-                              <div>
-                                <h4 className={`font-extrabold text-base ${active.activeText}`}>
-                                  {active.label} <span className="text-slate-400 font-normal">{active.desc}</span>
-                                </h4>
-                                {openSection !== 'notes' && (
-                                  <p className="text-xs text-slate-400">
-                                    {(mediaByChapter[openSection as ChapterKey] ?? []).length === 0
-                                      ? 'Aucun média partagé pour le moment'
-                                      : `${mediaByChapter[openSection as ChapterKey].length} média${mediaByChapter[openSection as ChapterKey].length > 1 ? 's' : ''} partagé${mediaByChapter[openSection as ChapterKey].length > 1 ? 's' : ''}`}
-                                  </p>
-                                )}
-                                {openSection === 'notes' && (
-                                  <p className="text-xs text-slate-400">
-                                    {notesFromParents.length === 0 ? 'Aucune note reçue' : `${notesFromParents.length} note${notesFromParents.length > 1 ? 's' : ''} reçue${notesFromParents.length > 1 ? 's' : ''}`}
-                                  </p>
-                                )}
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${active.activeBg} text-white flex-shrink-0`}>{active.icon}</span>
+                              <div className="min-w-0">
+                                <h4 className="text-base font-bold text-slate-800">{active.label}</h4>
+                                <p className="text-xs text-slate-500">{active.desc}</p>
                               </div>
                             </div>
                             {openSection !== 'notes' && (
                               <button
                                 type="button"
                                 onClick={() => setUploaderChapter(openSection as ChapterKey)}
-                                className={`flex items-center gap-2 px-4 py-2 ${active.activeBg} hover:opacity-90 text-white font-semibold rounded-xl shadow-sm text-sm transition-all hover:scale-105 active:scale-95`}
+                                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm"
                               >
-                                📷 Ajouter un média
+                                📷 Ajouter
                               </button>
                             )}
                           </div>
@@ -627,18 +597,12 @@ export default function Parents({ inline }: { inline?: boolean } = {}) {
                           {openSection !== 'notes' && (() => {
                             const items = mediaByChapter[openSection as ChapterKey] ?? []
                             return items.length === 0 ? (
-                              <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-10 text-center">
-                                <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-3xl mb-4 ${active.activeBg} shadow-lg`}>
-                                  📸
-                                </div>
-                                <p className="text-slate-700 font-bold mb-1">Aucun souvenir partagé</p>
-                                <p className="text-slate-400 text-sm mb-6">
-                                  Partagez ici vos photos, vidéos et moments précieux avec vos parents
-                                </p>
+                              <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+                                <p className="text-slate-500 text-sm mb-3">Aucun média dans cette section</p>
                                 <button
                                   type="button"
                                   onClick={() => setUploaderChapter(openSection as ChapterKey)}
-                                  className={`inline-flex items-center gap-2 px-6 py-3 ${active.activeBg} hover:opacity-90 text-white font-bold rounded-xl shadow-md text-sm transition-all hover:scale-105`}
+                                  className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm"
                                 >
                                   🚀 Commencer à partager
                                 </button>

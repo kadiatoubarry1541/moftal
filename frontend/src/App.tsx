@@ -40,7 +40,6 @@ const FamilleAdmin = lazy(() => import("./pages/famille/FamilleAdmin"));
 const FamilleAdminArbres = lazy(() => import("./pages/famille/FamilleAdminArbres"));
 const Inspir = lazy(() => import("./pages/famille/Inspir"));
 const Noyau = lazy(() => import("./pages/famille/Noyau"));
-const Foyer = lazy(() => import("./pages/famille/Foyer"));
 const Probleme = lazy(() => import("./pages/Probleme"));
 const Journalistes = lazy(() => import("./pages/Journalistes"));
 const Transport = lazy(() => import("./pages/Transport"));
@@ -659,7 +658,8 @@ function App() {
           <Route path="/famille/admin/arbres" element={<FamilleAdminArbres />} />
           <Route path="/famille/inspir" element={<Inspir />} />
           <Route path="/famille/noyau" element={<Noyau />} />
-          <Route path="/famille/foyer" element={<Foyer />} />
+          {/* Foyer fusionné dans le Noyau */}
+          <Route path="/famille/foyer" element={<Navigate to="/famille/noyau" replace />} />
           <Route path="/lieux-residence" element={<Navigate to="/terre-adam" replace />} />
           <Route path="/pays" element={<Pays />} />
           <Route path="/terre-adam" element={<TerreAdam />} />

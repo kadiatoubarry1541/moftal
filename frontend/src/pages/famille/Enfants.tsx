@@ -57,7 +57,8 @@ function getToken() {
 
 type SessionKey = 'avant' | 'paradis' | 'objectif'
 
-export default function Enfants({ inline }: { inline?: boolean } = {}) {
+// focusNumeroH : ouvre directement la galerie avec cet enfant (clic depuis le Noyau)
+export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; focusNumeroH?: string } = {}) {
   const [user, setUser] = useState<UserData | null>(null)
   const [children, setChildren] = useState<ChildLink[]>([])
   const [loading, setLoading] = useState(true)
@@ -234,6 +235,12 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
       setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (!focusNumeroH || !children.length) return
+    const match = children.find(c => c.childNumeroH === focusNumeroH)
+    if (match && selectedChild?.id !== match.id) setSelectedChild(match)
+  }, [focusNumeroH, children])
 
   useEffect(() => {
     if (selectedChild) {
@@ -427,11 +434,13 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
       }
     : null
   const activeChild = selectedChild || adminDemoChild
+  // Ouvert depuis le Noyau sur un enfant précis : on affiche directement sa galerie
+  const focused = !!focusNumeroH && selectedChild?.childNumeroH === focusNumeroH
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
+      <div className={`bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap ${focused ? 'hidden' : ''}`}>
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-bold text-slate-800">🧒 Mes Enfants</h2>
         </div>
@@ -573,7 +582,7 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
         </div>
       )}
 
-      {children.length > 0 && (
+      {children.length > 0 && !focused && (
         <div className="mb-4 flex items-center gap-2 text-slate-600 text-sm">
           <span className="font-medium">{children.length} enfant{children.length > 1 ? 's' : ''} lié{children.length > 1 ? 's' : ''}</span>
         </div>
@@ -602,7 +611,7 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
         )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Liste des enfants */}
-          <div className="lg:col-span-1 space-y-3">
+          <div className={`lg:col-span-1 space-y-3 ${focused ? 'hidden' : ''}`}>
             {children.map((link) => (
               <div
                 key={link.id}
@@ -645,7 +654,7 @@ export default function Enfants({ inline }: { inline?: boolean } = {}) {
           </div>
 
           {/* Détail enfant sélectionné */}
-          <div className="lg:col-span-2">
+          <div className={focused ? 'lg:col-span-3' : 'lg:col-span-2'}>
             {(selectedChild || adminDemoChild) ? (
               <>
                 {(() => {
