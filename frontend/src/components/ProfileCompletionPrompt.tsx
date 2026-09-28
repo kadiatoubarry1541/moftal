@@ -64,7 +64,7 @@ export default function ProfileCompletionPrompt() {
           <span className="text-2xl">👤</span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900">Mettez votre profil à jour</p>
-            <p className="text-xs text-gray-500">1 minute pour recevoir votre NuméroH et tout débloquer.</p>
+            <p className="text-xs text-gray-500">1 minute pour recevoir votre NuméroH, tout débloquer et pouvoir récupérer votre compte (avec un email).</p>
           </div>
           <button type="button" onClick={goComplete}
             className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold text-white"
