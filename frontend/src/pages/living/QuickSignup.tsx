@@ -54,11 +54,7 @@ export function QuickSignup() {
         ← Retour
       </Link>
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <h1 className="text-2xl font-black text-gray-900">Créer mon compte</h1>
-        <p className="text-sm text-gray-500 mt-1">Numéro de téléphone et mot de passe suffisent.</p>
-        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-3 mb-5">
-          ⚠️ Mettez ensuite votre profil à jour avec un <strong>email</strong> : sans email, un compte perdu ne peut pas être récupéré.
-        </p>
+        <h1 className="text-2xl font-black text-gray-900 mb-5">Créer mon compte</h1>
 
         <form onSubmit={submit} className="space-y-4">
           <div>
@@ -86,6 +82,10 @@ export function QuickSignup() {
               className={`${field} ${confirm && !same ? 'border-red-400' : 'border-gray-300'}`} />
             {confirm && !same && <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas.</p>}
           </div>
+
+          <p className="text-[11px] leading-snug text-amber-700">
+            ⚠️ Mettez ensuite votre profil à jour avec un email : sans email, un compte perdu ne peut pas être récupéré.
+          </p>
 
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
 
