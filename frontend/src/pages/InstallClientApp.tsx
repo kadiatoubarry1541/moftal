@@ -71,6 +71,8 @@ interface ProInfo {
   tenant_code?: string | null;
   // Calculé par le serveur : false = formule Visibilité + Rendez-vous
   hasGestionInterne?: boolean;
+  planType?: "visibility" | "full" | null;
+  gestionInterneValidUntil?: string | null;
 }
 
 export default function InstallClientApp() {
@@ -121,7 +123,11 @@ export default function InstallClientApp() {
 
   // Gestion Interne = formule qui l'inclut (le tenant_code seul ne suffit pas : il est
   // attribué à l'approbation même en formule Visibilité + Rendez-vous)
-  const hasGestionInterne = pro.hasGestionInterne !== false && !!pro.tenant_code;
+  const formuleGestion = pro.hasGestionInterne ?? (
+    pro.planType !== "visibility" ||
+    (!!pro.gestionInterneValidUntil && new Date(pro.gestionInterneValidUntil) > new Date())
+  );
+  const hasGestionInterne = formuleGestion && !!pro.tenant_code;
   const vitrineUrl   = hasGestionInterne && vitrinePath ? `/${vitrinePath}/${pro.tenant_code}` : null;
   const portalUrl    = hasGestionInterne && clientPortal ? `/${vitrinePath}/${pro.tenant_code}/${clientPortal.path}` : null;
 

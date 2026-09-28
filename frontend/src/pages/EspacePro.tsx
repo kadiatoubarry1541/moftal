@@ -27,6 +27,8 @@ interface ProAccount {
   photo?: string | null;
   // Calculé par le serveur : false = formule Visibilité + Rendez-vous (Gestion Interne non payée)
   hasGestionInterne?: boolean;
+  planType?: "visibility" | "full" | null;
+  gestionInterneValidUntil?: string | null;
 }
 
 interface MenuItem {
@@ -1211,8 +1213,12 @@ export default function EspacePro() {
 
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== account.ownerNumeroH;
-  // Seul un false explicite du serveur masque l'app (évite de cacher à tort si le champ manque)
-  const hasGestionInterne = account.hasGestionInterne !== false;
+  // Formule Visibilité + Rendez-vous → pas de Gestion Interne (sauf si payée à part).
+  // Lit directement planType pour ne pas dépendre du champ calculé par le serveur.
+  const hasGestionInterne = account.hasGestionInterne ?? (
+    account.planType !== "visibility" ||
+    (!!account.gestionInterneValidUntil && new Date(account.gestionInterneValidUntil) > new Date())
+  );
 
   // Mur d'abonnement — bypassé pour les admins (ils doivent pouvoir inspecter n'importe quel dashboard)
   if (!isAdminViewing && account.status === "approved" && account.subscriptionStatus && account.subscriptionStatus !== "active") {
