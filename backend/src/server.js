@@ -78,6 +78,7 @@ import uploadRoutes from './routes/upload.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import quartierFundRoutes from './routes/quartierFund.js';
+import familyDataRoutes from './routes/familyData.js';
 import quartierDocumentsRoutes from './routes/quartierDocuments.js';
 import residenceProofsRoutes from './routes/residenceProofs.js';
 import locationChildrenRoutes from './routes/locationChildren.js';
@@ -732,6 +733,51 @@ async function initAllTables() {
         );`,
       indexes: [
         `CREATE INDEX IF NOT EXISTS idx_lc_parent ON "location_children" ("parent_scope", "parent_location");`
+      ],
+      alters: []
+    },
+    {
+      // Invitations familiales de l'arbre (grands-parents, oncles, cousins…)
+      name: 'family_invitations',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "family_invitations" (
+          "id"               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "from_numero_h"    VARCHAR(255) NOT NULL,
+          "from_name"        VARCHAR(255),
+          "from_photo"       TEXT,
+          "to_numero_h"      VARCHAR(255) NOT NULL,
+          "to_name"          VARCHAR(255),
+          "relation"         VARCHAR(60)  NOT NULL,
+          "message"          TEXT,
+          "status"           VARCHAR(20)  NOT NULL DEFAULT 'pending',
+          "receiver_seen"    BOOLEAN      NOT NULL DEFAULT FALSE,
+          "sender_seen"      BOOLEAN      NOT NULL DEFAULT FALSE,
+          "date_responded"   TIMESTAMPTZ,
+          "created_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_finv_to   ON "family_invitations" ("to_numero_h");`,
+        `CREATE INDEX IF NOT EXISTS idx_finv_from ON "family_invitations" ("from_numero_h");`
+      ],
+      alters: []
+    },
+    {
+      // Documents familiaux (actes de naissance, mariage…) notés sur un membre de l'arbre
+      name: 'family_documents',
+      sql: `
+        CREATE TABLE IF NOT EXISTS "family_documents" (
+          "id"               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+          "owner_numero_h"   VARCHAR(255) NOT NULL,
+          "member_numero_h"  VARCHAR(255) NOT NULL,
+          "type"             VARCHAR(40)  NOT NULL,
+          "description"      TEXT         NOT NULL,
+          "annee"            VARCHAR(20),
+          "created_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+          "updated_at"       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );`,
+      indexes: [
+        `CREATE INDEX IF NOT EXISTS idx_fdoc_owner ON "family_documents" ("owner_numero_h");`
       ],
       alters: []
     }
@@ -2765,6 +2811,7 @@ app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);
 app.use('/api/quartier-fund', quartierFundRoutes);
 app.use('/api/quartier-documents', quartierDocumentsRoutes);
+app.use('/api/family-data', familyDataRoutes);
 app.use('/api/residence-proofs', residenceProofsRoutes);
 app.use('/api/location-children', locationChildrenRoutes);
 app.use('/api/withdrawal-requests', withdrawalRequestsRoutes);

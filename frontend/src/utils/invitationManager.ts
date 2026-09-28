@@ -1,144 +1,82 @@
 import { Invitation, InvitationNotification } from '../types/invitation.ts'
+import { config } from '../config/api'
 
-// Fonctions utilitaires pour gérer les invitations
+// Invitations familiales : enregistrées dans la base (API /family-data),
+// jamais seulement dans le téléphone.
+
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+})
+
+async function call<T = any>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${config.API_BASE_URL}/family-data${path}`, { ...init, headers: authHeaders() })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || !data.success) throw new Error(data.message || "L'enregistrement a échoué. Réessayez.")
+  return data
+}
+
+const LEGACY_KEY = 'invitations'
+
 export const InvitationManager = {
-  // Envoyer une invitation
-  sendInvitation: (invitation: Omit<Invitation, 'id' | 'dateSent' | 'status'>) => {
-    const newInvitation: Invitation = {
-      ...invitation,
-      id: Date.now().toString(),
-      dateSent: new Date().toISOString(),
-      status: 'pending'
+  // Envoyer une invitation (le nom et la photo de l'expéditeur viennent du serveur)
+  sendInvitation: async (invitation: Omit<Invitation, 'id' | 'dateSent' | 'status' | 'fromNumeroH' | 'fromName'> & Partial<Pick<Invitation, 'fromNumeroH' | 'fromName'>>): Promise<Invitation> => {
+    const data = await call('/invitations', {
+      method: 'POST',
+      body: JSON.stringify({ toNumeroH: invitation.toNumeroH, toName: invitation.toName, relation: invitation.relation, message: invitation.message }),
+    })
+    return data.invitation
+  },
+
+  acceptInvitation: async (invitationId: string): Promise<Invitation> =>
+    (await call(`/invitations/${invitationId}/respond`, { method: 'POST', body: JSON.stringify({ action: 'accept' }) })).invitation,
+
+  declineInvitation: async (invitationId: string): Promise<Invitation> =>
+    (await call(`/invitations/${invitationId}/respond`, { method: 'POST', body: JSON.stringify({ action: 'decline' }) })).invitation,
+
+  getInvitations: async (): Promise<{ received: Invitation[]; sent: Invitation[] }> => {
+    await InvitationManager.migrateLegacy()
+    const data = await call('/invitations')
+    return { received: data.received || [], sent: data.sent || [] }
+  },
+
+  getReceivedInvitations: async (): Promise<Invitation[]> => (await InvitationManager.getInvitations()).received,
+
+  getSentInvitations: async (): Promise<Invitation[]> => (await InvitationManager.getInvitations()).sent,
+
+  getNotifications: async (): Promise<InvitationNotification[]> => (await call('/notifications')).notifications || [],
+
+  markNotificationAsRead: async (notificationId: string): Promise<void> => {
+    await call(`/notifications/${encodeURIComponent(notificationId)}/read`, { method: 'POST' })
+  },
+
+  deleteInvitation: async (invitationId: string): Promise<boolean> => {
+    await call(`/invitations/${invitationId}`, { method: 'DELETE' })
+    return true
+  },
+
+  // Anciennes invitations gardées dans ce téléphone : on envoie celles que
+  // l'utilisateur connecté a écrites (en attente) vers la base, puis on nettoie.
+  migrateLegacy: async (): Promise<void> => {
+    let legacy: Invitation[] = []
+    try { legacy = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]') } catch { legacy = [] }
+    if (!Array.isArray(legacy) || legacy.length === 0) return
+    let me = ''
+    try { me = JSON.parse(localStorage.getItem('session_user') || '{}')?.numeroH || '' } catch { /* ignore */ }
+    if (!me) return
+    const restantes: Invitation[] = []
+    for (const inv of legacy) {
+      if (inv.fromNumeroH !== me || inv.status !== 'pending') { restantes.push(inv); continue }
+      try {
+        await call('/invitations', {
+          method: 'POST',
+          body: JSON.stringify({ toNumeroH: inv.toNumeroH, toName: inv.toName, relation: inv.relation, message: inv.message }),
+        })
+      } catch {
+        restantes.push(inv) // on réessaiera plus tard : rien n'est perdu
+      }
     }
-
-    // Sauvegarder l'invitation dans localStorage
-    const invitations = InvitationManager.getAllInvitations()
-    invitations.push(newInvitation)
-    localStorage.setItem('invitations', JSON.stringify(invitations))
-
-    // Créer une notification pour l'invité
-    InvitationManager.createNotification({
-      invitationId: newInvitation.id,
-      type: 'invitation_received',
-      fromNumeroH: invitation.fromNumeroH,
-      fromName: invitation.fromName,
-      fromPhoto: invitation.fromPhoto,
-      message: `${invitation.fromName} vous invite à rejoindre son site en tant que ${invitation.relation}`,
-      date: new Date().toISOString(),
-      read: false
-    }, invitation.toNumeroH)
-
-    return newInvitation
+    if (restantes.length) localStorage.setItem(LEGACY_KEY, JSON.stringify(restantes))
+    else localStorage.removeItem(LEGACY_KEY)
   },
-
-  // Accepter une invitation
-  acceptInvitation: (invitationId: string, responderNumeroH: string) => {
-    const invitations = InvitationManager.getAllInvitations()
-    const invitation = invitations.find(inv => inv.id === invitationId)
-    
-    if (invitation && invitation.toNumeroH === responderNumeroH) {
-      invitation.status = 'accepted'
-      invitation.dateResponded = new Date().toISOString()
-      
-      localStorage.setItem('invitations', JSON.stringify(invitations))
-
-      // Créer une notification pour l'expéditeur
-      InvitationManager.createNotification({
-        invitationId: invitation.id,
-        type: 'invitation_accepted',
-        fromNumeroH: responderNumeroH,
-        fromName: invitation.toName,
-        message: `${invitation.toName} a accepté votre invitation`,
-        date: new Date().toISOString(),
-        read: false
-      }, invitation.fromNumeroH)
-
-      return invitation
-    }
-    return null
-  },
-
-  // Refuser une invitation
-  declineInvitation: (invitationId: string, responderNumeroH: string) => {
-    const invitations = InvitationManager.getAllInvitations()
-    const invitation = invitations.find(inv => inv.id === invitationId)
-    
-    if (invitation && invitation.toNumeroH === responderNumeroH) {
-      invitation.status = 'declined'
-      invitation.dateResponded = new Date().toISOString()
-      
-      localStorage.setItem('invitations', JSON.stringify(invitations))
-
-      // Créer une notification pour l'expéditeur
-      InvitationManager.createNotification({
-        invitationId: invitation.id,
-        type: 'invitation_declined',
-        fromNumeroH: responderNumeroH,
-        fromName: invitation.toName,
-        message: `${invitation.toName} a refusé votre invitation`,
-        date: new Date().toISOString(),
-        read: false
-      }, invitation.fromNumeroH)
-
-      return invitation
-    }
-    return null
-  },
-
-  // Récupérer toutes les invitations
-  getAllInvitations: (): Invitation[] => {
-    const invitations = localStorage.getItem('invitations')
-    return invitations ? JSON.parse(invitations) : []
-  },
-
-  // Récupérer les invitations envoyées par un utilisateur
-  getSentInvitations: (fromNumeroH: string): Invitation[] => {
-    return InvitationManager.getAllInvitations().filter(inv => inv.fromNumeroH === fromNumeroH)
-  },
-
-  // Récupérer les invitations reçues par un utilisateur
-  getReceivedInvitations: (toNumeroH: string): Invitation[] => {
-    return InvitationManager.getAllInvitations().filter(inv => inv.toNumeroH === toNumeroH)
-  },
-
-  // Créer une notification
-  createNotification: (notification: Omit<InvitationNotification, 'id'>, targetNumeroH: string) => {
-    const newNotification: InvitationNotification = {
-      ...notification,
-      id: Date.now().toString()
-    }
-
-    const notifications = InvitationManager.getNotifications(targetNumeroH)
-    notifications.push(newNotification)
-    localStorage.setItem(`notifications_${targetNumeroH}`, JSON.stringify(notifications))
-  },
-
-  // Récupérer les notifications d'un utilisateur
-  getNotifications: (numeroH: string): InvitationNotification[] => {
-    const notifications = localStorage.getItem(`notifications_${numeroH}`)
-    return notifications ? JSON.parse(notifications) : []
-  },
-
-  // Marquer une notification comme lue
-  markNotificationAsRead: (notificationId: string, numeroH: string) => {
-    const notifications = InvitationManager.getNotifications(numeroH)
-    const notification = notifications.find(notif => notif.id === notificationId)
-    if (notification) {
-      notification.read = true
-      localStorage.setItem(`notifications_${numeroH}`, JSON.stringify(notifications))
-    }
-  },
-
-  // Supprimer une invitation
-  deleteInvitation: (invitationId: string, ownerNumeroH: string) => {
-    const invitations = InvitationManager.getAllInvitations()
-    const invitation = invitations.find(inv => inv.id === invitationId)
-    
-    if (invitation && invitation.fromNumeroH === ownerNumeroH) {
-      const filteredInvitations = invitations.filter(inv => inv.id !== invitationId)
-      localStorage.setItem('invitations', JSON.stringify(filteredInvitations))
-      return true
-    }
-    return false
-  }
 }

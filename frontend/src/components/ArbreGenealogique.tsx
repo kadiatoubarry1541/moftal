@@ -4,6 +4,7 @@ import { getNumeroHForDisplay } from '../utils/auth'
 import './ArbreGenealogique.css'
 import { buildFamilyTree, getTreeCompletionRecommendations, FamilyMember as FamilyMemberType, CercleDesRacinesCounts } from '../services/FamilyTreeBuilder'
 import { InvitationManager } from '../utils/invitationManager'
+import type { Invitation } from '../types/invitation.ts'
 import { useI18n } from '../i18n/useI18n'
 import { InvitationsReceived } from './InvitationsReceived'
 
@@ -56,7 +57,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [recommendations, setRecommendations] = useState<string[]>([])
   const [pendingInvitationCount, setPendingInvitationCount] = useState(0)
   const [spouseTreeModal, setSpouseTreeModal] = useState<{ open: boolean; data: any | null; loading: boolean }>({ open: false, data: null, loading: false })
-  const [familyDocs, setFamilyDocs] = useState<Record<string, Array<{type: string; description: string; annee?: string}>>>({})
+  const [familyDocs, setFamilyDocs] = useState<Record<string, Array<{id: string; type: string; description: string; annee?: string}>>>({})
+  const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([])
   const [newDoc, setNewDoc] = useState({ type: 'naissance', description: '', annee: '' })
   const [showAddDoc, setShowAddDoc] = useState(false)
   const [zoom, setZoom] = useState(0.25)
@@ -288,36 +290,83 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
       } catch { /* silencieux — l'arbre local reste affiché */ }
     })()
 
-    // Compter les invitations de famille en attente pour cet utilisateur
-    const receivedInvitations = InvitationManager.getReceivedInvitations(userData.numeroH)
-    const pending = receivedInvitations.filter((inv) => inv.status === 'pending').length
-    setPendingInvitationCount(pending)
+    // Invitations de famille en attente pour cet utilisateur (enregistrées en base)
+    InvitationManager.getReceivedInvitations()
+      .then((received) => {
+        const pending = received.filter((inv) => inv.status === 'pending')
+        setPendingInvitations(pending)
+        setPendingInvitationCount(pending.length)
+      })
+      .catch((err) => console.error('Invitations:', err))
   }, [userData])
 
-  useEffect(() => {
-    const key = `family_docs_${userData.numeroH}`
-    try {
-      const stored = JSON.parse(localStorage.getItem(key) || '{}')
-      setFamilyDocs(stored)
-    } catch { /* ignore */ }
-  }, [userData.numeroH])
-
-  const addDocToMember = (memberNumeroH: string) => {
-    if (!newDoc.description.trim()) return
-    const existing = familyDocs[memberNumeroH] || []
-    const updated = { ...familyDocs, [memberNumeroH]: [...existing, { type: newDoc.type, description: newDoc.description.trim(), annee: newDoc.annee.trim() || undefined }] }
-    localStorage.setItem(`family_docs_${userData.numeroH}`, JSON.stringify(updated))
-    setFamilyDocs(updated)
-    setNewDoc({ type: 'naissance', description: '', annee: '' })
-    setShowAddDoc(false)
+  // Documents familiaux : enregistrés en base (/api/family-data/documents)
+  const familyDataHeaders = (): HeadersInit => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` })
+  const groupDocs = (docs: Array<{ id: string; memberNumeroH: string; type: string; description: string; annee?: string }>) => {
+    const grouped: Record<string, Array<{ id: string; type: string; description: string; annee?: string }>> = {}
+    for (const d of docs) (grouped[d.memberNumeroH] ||= []).push({ id: d.id, type: d.type, description: d.description, annee: d.annee })
+    return grouped
   }
 
-  const deleteDocFromMember = (memberNumeroH: string, index: number) => {
-    const existing = [...(familyDocs[memberNumeroH] || [])]
-    existing.splice(index, 1)
-    const updated = { ...familyDocs, [memberNumeroH]: existing }
-    localStorage.setItem(`family_docs_${userData.numeroH}`, JSON.stringify(updated))
-    setFamilyDocs(updated)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      // Anciens documents gardés seulement dans ce téléphone → envoyés vers la base
+      const legacyKey = `family_docs_${userData.numeroH}`
+      try {
+        const legacy = JSON.parse(localStorage.getItem(legacyKey) || '{}') as Record<string, Array<{ type: string; description: string; annee?: string }>>
+        const restants: typeof legacy = {}
+        for (const [memberNumeroH, docs] of Object.entries(legacy || {})) {
+          for (const d of docs || []) {
+            const r = await fetch(`${API_BASE}/api/family-data/documents`, {
+              method: 'POST', headers: familyDataHeaders(),
+              body: JSON.stringify({ memberNumeroH, type: d.type, description: d.description, annee: d.annee })
+            }).then(r => r.json()).catch(() => null)
+            if (!r?.success) (restants[memberNumeroH] ||= []).push(d)
+          }
+        }
+        if (Object.keys(restants).length) localStorage.setItem(legacyKey, JSON.stringify(restants))
+        else localStorage.removeItem(legacyKey)
+      } catch { /* rien à transférer */ }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/family-data/documents`, { headers: familyDataHeaders() })
+        const data = await res.json()
+        if (!cancelled && data.success) setFamilyDocs(groupDocs(data.documents || []))
+      } catch (err) {
+        console.error('Documents familiaux:', err)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [userData.numeroH])
+
+  const addDocToMember = async (memberNumeroH: string) => {
+    if (!newDoc.description.trim()) return
+    try {
+      const res = await fetch(`${API_BASE}/api/family-data/documents`, {
+        method: 'POST', headers: familyDataHeaders(),
+        body: JSON.stringify({ memberNumeroH, type: newDoc.type, description: newDoc.description.trim(), annee: newDoc.annee.trim() || undefined })
+      })
+      const data = await res.json()
+      if (!data.success) { alert(data.message || "Le document n'a pas été enregistré. Réessayez."); return }
+      const d = data.document
+      setFamilyDocs(prev => ({ ...prev, [memberNumeroH]: [...(prev[memberNumeroH] || []), { id: d.id, type: d.type, description: d.description, annee: d.annee }] }))
+      setNewDoc({ type: 'naissance', description: '', annee: '' })
+      setShowAddDoc(false)
+    } catch {
+      alert("Erreur de connexion : le document n'a pas été enregistré. Réessayez.")
+    }
+  }
+
+  const deleteDocFromMember = async (memberNumeroH: string, docId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/family-data/documents/${docId}`, { method: 'DELETE', headers: familyDataHeaders() })
+      const data = await res.json()
+      if (!data.success) { alert(data.message || "La suppression n'a pas été enregistrée."); return }
+      setFamilyDocs(prev => ({ ...prev, [memberNumeroH]: (prev[memberNumeroH] || []).filter(d => d.id !== docId) }))
+    } catch {
+      alert("Erreur de connexion : la suppression n'a pas été enregistrée.")
+    }
   }
 
   const getGenerationMembers = (generation: string) => {
@@ -443,19 +492,19 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
     // Grands-parents, oncle/tante/cousin : ces relations se déduisent
     // automatiquement des liens parent-enfant confirmés — pas de lien
-    // backend direct pour ces types, on garde l'ancien système local.
-    const fromName = `${userData.prenom ?? ''} ${userData.nomFamille ?? ''}`.trim() || userData.numeroH
-    InvitationManager.sendInvitation({
-      fromNumeroH: userData.numeroH,
-      fromName,
-      fromPhoto: userData.photo || undefined,
-      toNumeroH: newMember.numeroH.trim(),
-      toName,
-      relation: newMember.relation,
-      message: undefined
-    })
-    alert(`Invitation envoyée au membre ${toName} (${newMember.numeroH}).\nIl pourra accepter ou refuser depuis sa page "Mes invitations".`)
-    resetAddMemberForm()
+    // backend direct pour ces types : invitation enregistrée en base (/api/family-data).
+    try {
+      await InvitationManager.sendInvitation({
+        toNumeroH: newMember.numeroH.trim(),
+        toName,
+        relation: newMember.relation,
+        message: undefined
+      })
+      alert(`Invitation envoyée au membre ${toName} (${newMember.numeroH}).\nIl pourra accepter ou refuser depuis sa page "Mes invitations".`)
+      resetAddMemberForm()
+    } catch (err: any) {
+      alert(err?.message || "Erreur : l'invitation n'a pas été enregistrée. Réessayez.")
+    }
   }
 
   const calculateGeneration = (relation: string): string => {
@@ -639,8 +688,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const filteredMembers = getGenerationMembers(generationFilter).filter(m => (m as any).isVisible !== false && !isHidden(m.numeroH))
   const generations = [...new Set(visibleMembers.map(m => m.generation))].sort()
 
-  // Invitations en attente (chargées en direct)
-  const pendingInvitations = InvitationManager.getReceivedInvitations(userData.numeroH).filter(inv => inv.status === 'pending')
 
   // Variables pour le rendu SVG (MyHeritage-style)
   const pereMember = familyMembers.find(m => m.relation === 'pere')
@@ -724,10 +771,13 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 {/* Boutons */}
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <button
-                    onClick={() => {
-                      InvitationManager.acceptInvitation(inv.id, userData.numeroH)
-                      setPendingInvitationCount(c => Math.max(0, c - 1))
-                      window.location.reload()
+                    onClick={async () => {
+                      try {
+                        await InvitationManager.acceptInvitation(inv.id)
+                        window.location.reload()
+                      } catch (err: any) {
+                        alert(err?.message || "Erreur : la réponse n'a pas été enregistrée.")
+                      }
                     }}
                     style={{
                       background: '#22a722', color: 'white', border: 'none',
@@ -738,10 +788,13 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     ✅ Accepter
                   </button>
                   <button
-                    onClick={() => {
-                      InvitationManager.declineInvitation(inv.id, userData.numeroH)
-                      setPendingInvitationCount(c => Math.max(0, c - 1))
-                      window.location.reload()
+                    onClick={async () => {
+                      try {
+                        await InvitationManager.declineInvitation(inv.id)
+                        window.location.reload()
+                      } catch (err: any) {
+                        alert(err?.message || "Erreur : la réponse n'a pas été enregistrée.")
+                      }
                     }}
                     style={{
                       background: '#ef4444', color: 'white', border: 'none',
@@ -1450,7 +1503,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                         <p className="text-xs text-gray-400 italic">Aucun document. Actes de naissance, de mariage, photos anciennes…</p>
                       )}
                       {(familyDocs[selectedMember.numeroH] || []).map((doc, i) => (
-                        <div key={i} className="flex items-start gap-2 bg-gray-50 rounded-lg px-3 py-2 mb-1 border border-gray-100">
+                        <div key={doc.id || i} className="flex items-start gap-2 bg-gray-50 rounded-lg px-3 py-2 mb-1 border border-gray-100">
                           <span className="text-base flex-shrink-0">
                             {doc.type === 'naissance' ? '🟢' : doc.type === 'mariage' ? '💍' : doc.type === 'deces' ? '🕯️' : doc.type === 'militaire' ? '🎖️' : doc.type === 'recensement' ? '📋' : doc.type === 'photo' ? '📷' : '📄'}
                           </span>
@@ -1460,7 +1513,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                           </div>
                           <button
                             type="button"
-                            onClick={() => deleteDocFromMember(selectedMember.numeroH, i)}
+                            onClick={() => deleteDocFromMember(selectedMember.numeroH, doc.id)}
                             className="text-gray-300 hover:text-red-500 text-xs flex-shrink-0"
                           >✕</button>
                         </div>

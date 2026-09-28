@@ -18,7 +18,7 @@ interface FamilyMember {
   message?: string
 }
 
-export function InviterMembres({ userData }: { userData: UserData }) {
+export function InviterMembres({ userData: _userData }: { userData: UserData }) {
   const [, setShowInviteForm] = useState(false)
   const [inviteData, setInviteData] = useState({
     numeroH: '',
@@ -38,42 +38,44 @@ export function InviterMembres({ userData }: { userData: UserData }) {
     { value: 'invite', label: 'Invité' }
   ]
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     if (inviteData.numeroH.trim() && inviteData.nomComplet.trim()) {
-      // Utiliser le système d'invitations
-      const invitation = InvitationManager.sendInvitation({
-        fromNumeroH: userData.numeroH,
-        fromName: `${userData.prenom} ${userData.nomFamille}`,
-        fromPhoto: userData.photo || undefined,
-        toNumeroH: inviteData.numeroH.trim(),
-        toName: inviteData.nomComplet.trim(),
-        relation: inviteData.relation,
-        message: inviteData.message.trim() || undefined
-      })
-      
-      // Ajouter à la liste locale pour affichage
-      const newMember: FamilyMember = {
-        id: invitation.id,
-        numeroH: invitation.toNumeroH,
-        nomComplet: invitation.toName,
-        relation: invitation.relation,
-        status: invitation.status,
-        dateInvited: invitation.dateSent,
-        message: invitation.message
+      try {
+        // Invitation enregistrée en base (/api/family-data)
+        const invitation = await InvitationManager.sendInvitation({
+          toNumeroH: inviteData.numeroH.trim(),
+          toName: inviteData.nomComplet.trim(),
+          relation: inviteData.relation,
+          message: inviteData.message.trim() || undefined
+        })
+
+        const newMember: FamilyMember = {
+          id: invitation.id,
+          numeroH: invitation.toNumeroH,
+          nomComplet: invitation.toName,
+          relation: invitation.relation,
+          status: invitation.status,
+          dateInvited: invitation.dateSent,
+          message: invitation.message
+        }
+
+        setFamilyMembers(prev => [...prev, newMember])
+        setInviteData({ numeroH: '', nomComplet: '', relation: 'parent', message: '' })
+        setShowInviteForm(false)
+
+        alert(`Invitation envoyée à ${newMember.nomComplet} (${newMember.numeroH})`)
+      } catch (err: any) {
+        alert(err?.message || "Erreur : l'invitation n'a pas été enregistrée. Réessayez.")
       }
-      
-      setFamilyMembers(prev => [...prev, newMember])
-      setInviteData({ numeroH: '', nomComplet: '', relation: 'parent', message: '' })
-      setShowInviteForm(false)
-      
-      alert(`Invitation envoyée à ${newMember.nomComplet} (${newMember.numeroH})`)
     }
   }
 
-  const handleRemoveMember = (id: string) => {
-    const success = InvitationManager.deleteInvitation(id, userData.numeroH)
-    if (success) {
+  const handleRemoveMember = async (id: string) => {
+    try {
+      await InvitationManager.deleteInvitation(id)
       setFamilyMembers(prev => prev.filter(member => member.id !== id))
+    } catch (err: any) {
+      alert(err?.message || "Erreur : la suppression n'a pas été enregistrée.")
     }
   }
 

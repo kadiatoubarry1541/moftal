@@ -19,38 +19,50 @@ export function InvitationsReceived({ userData }: InvitationsReceivedProps) {
   useEffect(() => {
     loadInvitations()
     loadNotifications()
-  }, [])
+  }, [userData.numeroH])
 
-  const loadInvitations = () => {
-    const receivedInvitations = InvitationManager.getReceivedInvitations(userData.numeroH)
-    setInvitations(receivedInvitations)
+  const loadInvitations = async () => {
+    try {
+      setInvitations(await InvitationManager.getReceivedInvitations())
+    } catch (err) {
+      console.error('Invitations:', err)
+    }
   }
 
-  const loadNotifications = () => {
-    const userNotifications = InvitationManager.getNotifications(userData.numeroH)
-    setNotifications(userNotifications)
+  const loadNotifications = async () => {
+    try {
+      setNotifications(await InvitationManager.getNotifications())
+    } catch (err) {
+      console.error('Notifications invitations:', err)
+    }
   }
 
-  const handleAcceptInvitation = (invitationId: string) => {
-    const invitation = InvitationManager.acceptInvitation(invitationId, userData.numeroH)
-    if (invitation) {
-      loadInvitations()
-      loadNotifications()
+  const handleAcceptInvitation = async (invitationId: string) => {
+    try {
+      const invitation = await InvitationManager.acceptInvitation(invitationId)
+      await Promise.all([loadInvitations(), loadNotifications()])
       alert(`Vous avez accepté l'invitation de ${invitation.fromName}`)
+    } catch (err: any) {
+      alert(err?.message || "Erreur : la réponse n'a pas été enregistrée.")
     }
   }
 
-  const handleDeclineInvitation = (invitationId: string) => {
-    const invitation = InvitationManager.declineInvitation(invitationId, userData.numeroH)
-    if (invitation) {
-      loadInvitations()
-      loadNotifications()
+  const handleDeclineInvitation = async (invitationId: string) => {
+    try {
+      const invitation = await InvitationManager.declineInvitation(invitationId)
+      await Promise.all([loadInvitations(), loadNotifications()])
       alert(`Vous avez refusé l'invitation de ${invitation.fromName}`)
+    } catch (err: any) {
+      alert(err?.message || "Erreur : la réponse n'a pas été enregistrée.")
     }
   }
 
-  const markNotificationAsRead = (notificationId: string) => {
-    InvitationManager.markNotificationAsRead(notificationId, userData.numeroH)
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      await InvitationManager.markNotificationAsRead(notificationId)
+    } catch (err) {
+      console.error('Notification:', err)
+    }
     loadNotifications()
   }
 
