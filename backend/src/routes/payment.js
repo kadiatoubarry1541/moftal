@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import Payment from '../models/Payment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
@@ -1124,6 +1124,12 @@ export async function handlePostPayment(payment) {
  */
 router.get('/acces-livres', authenticate, async (req, res) => {
   try {
+    // Les administrateurs voient la bibliothèque sans abonnement
+    const role = (req.user.role || '').toLowerCase();
+    if (role === 'admin' || role === 'super-admin' || req.user.isAdmin === true || req.user.isMasterAdmin || MASTER_ADMIN_NUMEROS.includes(req.user.numeroH)) {
+      return res.json({ success: true, aAcces: true, expireAt: null, admin: true });
+    }
+
     const maintenant = new Date();
     const unAnAvant = new Date(maintenant);
     unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);

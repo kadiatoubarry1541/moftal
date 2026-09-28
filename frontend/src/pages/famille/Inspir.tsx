@@ -111,6 +111,8 @@ export default function Inspir() {
   // Vérifier l'accès à la bibliothèque et charger le prix
   useEffect(() => {
     if (!userData) return;
+    // Admin : accès à la bibliothèque sans abonnement
+    if (isAdmin) setAAccesLivres(true);
     const token = localStorage.getItem('token');
     Promise.all([
       fetch(`${API_ORIGIN}/api/payment/acces-livres`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
