@@ -1219,6 +1219,8 @@ export default function EspacePro() {
     account.planType !== "visibility" ||
     (!!account.gestionInterneValidUntil && new Date(account.gestionInterneValidUntil) > new Date())
   );
+  // Moftal Pay n'apparaît jamais pour la formule Visibilité + Rendez-vous.
+  const showMoftalPay = hasGestionInterne && account.planType !== "visibility";
 
   // Mur d'abonnement — bypassé pour les admins (ils doivent pouvoir inspecter n'importe quel dashboard)
   if (!isAdminViewing && account.status === "approved" && account.subscriptionStatus && account.subscriptionStatus !== "active") {
@@ -1259,7 +1261,7 @@ export default function EspacePro() {
               {svc.icon} {svc.label}
             </span>
             {/* Moftal Pay — pas pour la formule Visibilité + Rendez-vous */}
-            {hasGestionInterne && (
+            {showMoftalPay && (
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => navigate("/moftal-pay-pro")}
@@ -1364,35 +1366,6 @@ export default function EspacePro() {
         </div>
       </div>
       </>)}
-
-      {/* ══════════════════════════════════════════
-          BANNIÈRE ESSAI GRATUIT
-          ══════════════════════════════════════════ */}
-      {account.isTrial && account.subscriptionStatus === "active" && account.subscriptionValidUntil && (() => {
-        const expiry = new Date(account.subscriptionValidUntil);
-        const now = new Date();
-        const daysLeft = Math.max(0, Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-        const isUrgent = daysLeft <= 14;
-        return (
-          <div className={`${isUrgent ? "bg-orange-50 border-orange-300" : "bg-amber-50 border-amber-200"} border-b px-4 py-3`}>
-            <div className="max-w-5xl mx-auto flex items-center gap-3">
-              <span className="text-xl flex-shrink-0">{isUrgent ? "⚠️" : "🎁"}</span>
-              <div className="flex-1 min-w-0">
-                <span className={`font-bold text-sm ${isUrgent ? "text-orange-800" : "text-amber-800"}`}>
-                  {isUrgent ? `Essai gratuit — plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} !` : `Essai gratuit — ${daysLeft} jours restants`}
-                </span>
-                <span className={`ml-2 text-xs ${isUrgent ? "text-orange-600" : "text-amber-600"}`}>
-                  {isUrgent
-                    ? "Contactez l'administrateur pour continuer sans interruption."
-                    : hasGestionInterne
-                    ? `Visibilité, rendez-vous et gestion interne inclus jusqu'au ${expiry.toLocaleDateString("fr-FR")}.`
-                    : `Visibilité et rendez-vous inclus jusqu'au ${expiry.toLocaleDateString("fr-FR")}.`}
-                </span>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ══════════════════════════════════════════
           ONGLETS DE NAVIGATION
@@ -2525,6 +2498,32 @@ export default function EspacePro() {
             ───────────────────────────── */}
         {tab === "profile" && (
           <div>
+            {/* Essai gratuit — affiché ici pour ne pas surcharger la page */}
+            {account.isTrial && account.subscriptionStatus === "active" && account.subscriptionValidUntil && (() => {
+            const expiry = new Date(account.subscriptionValidUntil);
+            const now = new Date();
+            const daysLeft = Math.max(0, Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+            const isUrgent = daysLeft <= 14;
+            return (
+              <div className={`${isUrgent ? "bg-orange-50 border-orange-300" : "bg-amber-50 border-amber-200"} border rounded-2xl px-4 py-3 mb-4`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl flex-shrink-0">{isUrgent ? "⚠️" : "🎁"}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className={`font-bold text-sm ${isUrgent ? "text-orange-800" : "text-amber-800"}`}>
+                      {isUrgent ? `Essai gratuit — plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} !` : `Essai gratuit — ${daysLeft} jours restants`}
+                    </span>
+                    <span className={`ml-2 text-xs ${isUrgent ? "text-orange-600" : "text-amber-600"}`}>
+                      {isUrgent
+                        ? "Contactez l'administrateur pour continuer sans interruption."
+                        : hasGestionInterne
+                        ? `Visibilité, rendez-vous et gestion interne inclus jusqu'au ${expiry.toLocaleDateString("fr-FR")}.`
+                        : `Visibilité et rendez-vous inclus jusqu'au ${expiry.toLocaleDateString("fr-FR")}.`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
             <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ${svc.ringColor} overflow-hidden`}>
               {/* En-tête unique */}
               <div className={`bg-gradient-to-r ${svc.bgGradient} px-5 py-4`}>
@@ -2624,7 +2623,7 @@ export default function EspacePro() {
                 )}
 
                 {/* Moftal Pay — clinic & supplier uniquement */}
-                {hasGestionInterne && (account.type === 'clinic' || account.type === 'supplier') && (
+                {showMoftalPay && (account.type === 'clinic' || account.type === 'supplier') && (
                   <>
                     <hr className="border-gray-100 dark:border-gray-700" />
                     <div className="flex items-start gap-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl p-4">
