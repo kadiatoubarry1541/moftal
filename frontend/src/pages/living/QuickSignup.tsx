@@ -31,6 +31,7 @@ export function QuickSignup() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ telephone: telephone.trim(), password })
       })
+      if (res.status === 404) { setError("L'inscription est momentanément indisponible. Réessayez dans quelques minutes."); return }
       const data = await res.json()
       if (!data.success) { setError(data.message || "Impossible de créer le compte."); return }
       localStorage.setItem('token', data.token)
@@ -54,9 +55,9 @@ export function QuickSignup() {
       </Link>
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-2xl font-black text-gray-900">Créer mon compte</h1>
-        <p className="text-sm text-gray-500 mt-1 mb-5">
-          Il vous faut seulement votre numéro de téléphone et un mot de passe.
-          Vous compléterez votre profil ensuite, quand vous voudrez.
+        <p className="text-sm text-gray-500 mt-1">Numéro de téléphone et mot de passe suffisent.</p>
+        <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-3 mb-5">
+          ⚠️ Mettez ensuite votre profil à jour avec un <strong>email</strong> : sans email, un compte perdu ne peut pas être récupéré.
         </p>
 
         <form onSubmit={submit} className="space-y-4">
@@ -84,15 +85,6 @@ export function QuickSignup() {
               onChange={e => setConfirm(e.target.value)} placeholder="Retapez le mot de passe"
               className={`${field} ${confirm && !same ? 'border-red-400' : 'border-gray-300'}`} />
             {confirm && !same && <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas.</p>}
-          </div>
-
-          <div className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 space-y-1">
-            <p>💡 <strong>Retenez bien votre mot de passe.</strong></p>
-            <p>
-              ⚠️ Le numéro de téléphone seul <strong>ne permet pas de récupérer un compte</strong>.
-              Si vous oubliez votre mot de passe, seul un profil à jour avec une <strong>adresse email</strong> permet
-              de le récupérer. Mettez votre profil à jour dès que possible.
-            </p>
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
