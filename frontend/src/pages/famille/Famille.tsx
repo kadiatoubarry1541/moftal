@@ -5,6 +5,7 @@ import { AdCarousel } from '../../components/AdCarousel'
 import { useI18n } from '../../i18n/useI18n'
 import HeritageTab from './Arbre'
 import type { MesAmoursHandle } from './MesAmours'
+import InspirButton from '../../components/InspirButton'
 
 const AmitieTab     = lazy(() => import('./MesAmours'))
 const RecitTab      = lazy(() => import('../HistoireHumanite'))
@@ -91,6 +92,9 @@ export default function Famille() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             {activeTab === 'heritage' && (
+              <InspirButton compact />
+            )}
+            {activeTab === 'heritage' && (
               <button
                 type="button"
                 onClick={goToMairie}
@@ -101,12 +105,6 @@ export default function Famille() {
             )}
             {activeTab === 'amitie' && (
               <>
-                <Link
-                  to="/famille/inspir"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-medium rounded-lg transition-colors border border-yellow-300 flex-shrink-0"
-                >
-                  🤝 Inspir
-                </Link>
                 <button
                   type="button"
                   onClick={() => amitieRef.current?.openAddFriend()}

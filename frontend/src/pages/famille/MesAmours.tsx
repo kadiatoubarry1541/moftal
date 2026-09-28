@@ -875,9 +875,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">💕 Amitié</h1>
-              <Link to="/famille/inspir" className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs font-medium rounded-lg transition-colors border border-yellow-300">
-                🤝 Inspir
-              </Link>
             </div>
             <button
               type="button"

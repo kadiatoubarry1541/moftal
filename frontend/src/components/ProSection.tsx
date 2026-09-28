@@ -181,7 +181,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
               </div>
               <div className="p-3 sm:p-4 flex flex-col flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                  <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-gray-100 leading-snug truncate">
+                  <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-gray-100 leading-snug break-words">
                     {t.name}
                   </h3>
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 text-indigo-700 bg-indigo-50 border border-indigo-200 dark:text-indigo-300 dark:bg-indigo-900/30 dark:border-indigo-800">
@@ -242,7 +242,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
 
                   {/* Nom */}
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-gray-100 leading-snug truncate">
+                    <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-gray-100 leading-snug break-words">
                       {pro.name}
                     </h3>
                     {prox && (

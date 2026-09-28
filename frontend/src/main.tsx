@@ -3,11 +3,13 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import "./styles/globals.css";
+import "./styles/pro-mobile.css";
 import App from "./App.tsx";
 import { I18nProvider } from "./i18n/I18nProvider";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
+import { installOfflineSync } from "./utils/offlineSync";
 
 // Supprimer les anciennes données de test qui stockaient des mots de passe en clair
 const keysToClean = [
@@ -95,6 +97,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 function initAndRender() {
+  // Santé & Éducation : données gardées sur l'appareil + envoi différé hors connexion
+  installOfflineSync();
+
   if ('serviceWorker' in navigator) {
     // En développement : enregistrement manuel (VitePWA désactivé en dev)
     // En production : VitePWA enregistre automatiquement son SW workbox

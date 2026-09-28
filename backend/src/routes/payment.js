@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { isInspirAdmin, hasLivresAccess } from '../services/inspirAccess.js';
 import Payment from '../models/Payment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
@@ -1124,19 +1125,12 @@ export async function handlePostPayment(payment) {
  */
 router.get('/acces-livres', authenticate, async (req, res) => {
   try {
-    const maintenant = new Date();
-    const unAnAvant = new Date(maintenant);
-    unAnAvant.setFullYear(unAnAvant.getFullYear() - 1);
+    // Les administrateurs voient la bibliothèque sans abonnement
+    if (isInspirAdmin(req.user)) {
+      return res.json({ success: true, aAcces: true, expireAt: null, admin: true });
+    }
 
-    const passAn = await Payment.findOne({
-      where: {
-        payerNumeroH: req.user.numeroH,
-        purpose: 'subscription_livres_an',
-        status: 'completed',
-        createdAt: { [Op.gte]: unAnAvant },
-      },
-      order: [['createdAt', 'DESC']],
-    });
+    const passAn = await hasLivresAccess(req.user);
 
     let expireAt = null;
     if (passAn) {

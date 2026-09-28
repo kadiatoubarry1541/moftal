@@ -1,10 +1,20 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { getPhotoUrl, getSessionUser, isAdmin } from '../../utils/auth'
 import { AudioRecorder } from '../../components/AudioRecorder'
 import { VideoRecorder } from '../../components/VideoRecorder'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
+
+// Galeries partagées (même modèle que la galerie Enfants), ouvertes au clic sur une personne
+const ParentsGallery    = lazy(() => import('./Parents'))
+const EnfantsGallery    = lazy(() => import('./Enfants'))
+const PartenaireGallery = lazy(() => import('./Partenaire'))
+
+type GalleryKind = 'parent' | 'enfant' | 'conjoint'
+interface OpenGallery { kind: GalleryKind; member: Member | null }
+
+// Accord au singulier tant qu'il n'y a qu'une personne
+const plural = (n: number, one: string, many: string) => (n > 1 ? `${many} (${n})` : one)
 
 function getToken() {
   return localStorage.getItem('token')
@@ -129,16 +139,56 @@ function MemberAvatar({ member, size = 'md' }: { member: Member; size?: 'sm' | '
   )
 }
 
-function MemberCard({ member }: { member: Member }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white dark:bg-gray-800 dark:border-emerald-900/40 p-3 shadow-sm">
+function MemberCard({ member, badge, onOpen }: { member: Member; badge?: string; onOpen?: () => void }) {
+  const body = (
+    <>
       <MemberAvatar member={member} />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1 text-left">
         <p className="font-semibold text-gray-900 dark:text-white truncate">{member.prenom} {member.nomFamille}</p>
         {member.type === 'defunt' && <p className="text-xs text-gray-400">Défunt(e)</p>}
+        {badge && <p className="text-xs text-amber-600">{badge}</p>}
+        {onOpen && <p className="text-xs font-semibold text-emerald-600">📷 Voir notre galerie</p>}
       </div>
+      {onOpen && <span className="text-2xl text-emerald-500 flex-shrink-0">›</span>}
+    </>
+  )
+  const cls = 'w-full flex items-center gap-3 rounded-xl border border-emerald-100 bg-white dark:bg-gray-800 dark:border-emerald-900/40 p-3 shadow-sm'
+  return onOpen ? (
+    <button type="button" onClick={onOpen}
+      className={`${cls} hover:border-emerald-300 hover:bg-emerald-50/50 active:scale-[0.99] transition-all`}>
+      {body}
+    </button>
+  ) : (
+    <div className={cls}>{body}</div>
+  )
+}
+
+function GroupHeader({ title, onAdd, addLabel }: { title: string; onAdd?: () => void; addLabel?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2 mb-2">
+      <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{title}</h2>
+      {onAdd && (
+        <button type="button" onClick={onAdd}
+          className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+          {addLabel || '+ Ajouter'}
+        </button>
+      )}
     </div>
   )
+}
+
+interface LinkedPerson { numeroH: string; prenom: string; nomFamille: string; photo?: string | null; genre?: string }
+
+const toMember = (p: LinkedPerson | null | undefined): Member | null =>
+  p?.numeroH ? { numeroH: p.numeroH, prenom: p.prenom, nomFamille: p.nomFamille, photo: p.photo ?? null, genre: p.genre } : null
+
+async function fetchJson(path: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${getToken()}` } })
+    return await res.json()
+  } catch {
+    return {}
+  }
 }
 
 function EntryCard({
@@ -359,8 +409,12 @@ function AddEntryModal({ onClose, onSave }: {
 }
 
 export default function Noyau() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
+  // Famille proche (mêmes sources que les galeries → le clic ouvre la bonne galerie)
+  const [myParents, setMyParents] = useState<Array<{ member: Member; parentType?: string; status?: string }>>([])
+  const [myChildren, setMyChildren] = useState<Array<{ member: Member; status?: string }>>([])
+  const [mySpouses, setMySpouses] = useState<Array<{ member: Member; status?: string }>>([])
+  const [openGallery, setOpenGallery] = useState<OpenGallery | null>(null)
   const [data, setData] = useState<Record<TabKey, NoyauData>>({ mine: EMPTY, pere: EMPTY, mere: EMPTY })
   const [activeTab, setActiveTab] = useState<TabKey | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -368,13 +422,27 @@ export default function Noyau() {
 
   const user = useMemo(() => getSessionUser(), [])
 
+  const isMan = String(user?.genre || '').toUpperCase() === 'HOMME'
+
   const load = useCallback(async () => {
     setLoading(true)
-    const [mine, pere, mere] = await Promise.all([
+    const [mine, pere, mere, parentsRes, childrenRes, spouseRes] = await Promise.all([
       fetchNoyau('mine'),
       fetchNoyau('parent/pere'),
-      fetchNoyau('parent/mere')
+      fetchNoyau('parent/mere'),
+      fetchJson('/api/parent-child/my-parents'),
+      fetchJson('/api/parent-child/my-children'),
+      fetchJson(isMan ? '/api/couple/my-wives' : '/api/couple/my-partner')
     ])
+    setMyParents((parentsRes.parents || [])
+      .map((l: any) => ({ member: toMember(l.parent), parentType: l.parentType, status: l.status }))
+      .filter((x: any) => x.member))
+    setMyChildren((childrenRes.children || [])
+      .map((l: any) => ({ member: toMember(l.child), status: l.status }))
+      .filter((x: any) => x.member))
+    setMySpouses(isMan
+      ? (spouseRes.wives || []).map((w: any) => ({ member: toMember(w.wife), status: w.link?.status })).filter((x: any) => x.member)
+      : (spouseRes.partner ? [{ member: toMember(spouseRes.partner) as Member }] : []))
     const next: Record<TabKey, NoyauData> = { mine, pere, mere }
     setData(next)
     setActiveTab((prev) => {
@@ -396,7 +464,8 @@ export default function Noyau() {
   if (data.pere.exists) tabs.push({ key: 'pere', label: 'Noyau de mon Père' })
   if (data.mere.exists) tabs.push({ key: 'mere', label: 'Noyau de ma Mère' })
 
-  const isDemo = !activeTab && isAdmin(user)
+  const userIsAdmin = isAdmin(user)
+  const isDemo = !activeTab && userIsAdmin
   const isMyNoyau = activeTab === 'mine' || isDemo
   const current = activeTab ? data[activeTab] : (isDemo ? buildDemoData(user, demoEntries) : EMPTY)
 
@@ -467,26 +536,93 @@ export default function Noyau() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold mt-1 flex items-center gap-2">🏠 Noyau Familial</h1>
             <p className="text-emerald-50 mt-1 text-sm">
-              La famille restreinte : un fondateur, ses épouses, ses enfants — et le Livre qu'il laisse aux siens.
+              Ma famille proche : mes parents, mon foyer, mes enfants — et le Livre que l'on laisse aux siens.
+              Touchez une personne pour ouvrir votre galerie commune.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/famille/foyer')}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-sm font-semibold transition-colors"
-          >
-            🏡 Foyer
-          </button>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 sm:px-6">
+        {/* ════ Ma famille proche : chaque personne est cliquable ════ */}
+        <div className="mb-6 space-y-4">
+          {(() => {
+            const demo = userIsAdmin && !myParents.length && !myChildren.length && !mySpouses.length
+            const parents = demo
+              ? [{ member: { numeroH: 'DEMO-PERE', prenom: 'Alpha', nomFamille: user?.nomFamille || '', genre: 'HOMME' } as Member, parentType: 'pere', status: undefined }]
+              : myParents
+            const spouses = demo
+              ? [{ member: { numeroH: 'DEMO-CONJOINT', prenom: isMan ? 'Mariama' : 'Ibrahima', nomFamille: user?.nomFamille || '', genre: isMan ? 'FEMME' : 'HOMME' } as Member, status: undefined }]
+              : mySpouses
+            const kids = demo
+              ? [{ member: { numeroH: 'DEMO-ENFANT', prenom: 'Fatoumata', nomFamille: user?.nomFamille || '', genre: 'FEMME' } as Member, status: undefined }]
+              : myChildren
+            return (
+              <>
+                {demo && (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    Aperçu admin : exemples de personnes. Touchez-en une pour voir la galerie.
+                  </p>
+                )}
+                <div>
+                  <GroupHeader
+                    title={parents.length > 1 ? 'Mes parents' : 'Mon parent'}
+                    onAdd={parents.length < 2 ? () => setOpenGallery({ kind: 'parent', member: null }) : undefined}
+                    addLabel="+ Lier un parent" />
+                  {parents.length ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {parents.map(p => (
+                        <MemberCard key={p.member.numeroH} member={p.member}
+                          badge={p.parentType === 'mere' ? 'Ma mère' : p.parentType === 'pere' ? 'Mon père' : undefined}
+                          onOpen={() => setOpenGallery({ kind: 'parent', member: p.member })} />
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-gray-400 italic">Aucun parent lié pour le moment.</p>}
+                </div>
+
+                <div>
+                  <GroupHeader
+                    title={isMan ? plural(spouses.length, 'Mon épouse', 'Mes épouses') : 'Mon mari'}
+                    onAdd={(isMan ? spouses.length < 4 : spouses.length < 1) ? () => setOpenGallery({ kind: 'conjoint', member: null }) : undefined}
+                    addLabel={isMan ? '+ Lier une épouse' : '+ Lier mon mari'} />
+                  {spouses.length ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {spouses.map(sp => (
+                        <MemberCard key={sp.member.numeroH} member={sp.member}
+                          badge={sp.status === 'pending' ? 'En attente de confirmation' : undefined}
+                          onOpen={() => setOpenGallery({ kind: 'conjoint', member: sp.member })} />
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-gray-400 italic">{isMan ? 'Aucune épouse liée pour le moment.' : 'Aucun mari lié pour le moment.'}</p>}
+                </div>
+
+                <div>
+                  <GroupHeader
+                    title={plural(kids.length, 'Mon enfant', 'Mes enfants')}
+                    onAdd={() => setOpenGallery({ kind: 'enfant', member: null })}
+                    addLabel="+ Lier un enfant" />
+                  {kids.length ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {kids.map(k => (
+                        <MemberCard key={k.member.numeroH} member={k.member}
+                          badge={k.status === 'pending' ? 'En attente de confirmation' : undefined}
+                          onOpen={() => setOpenGallery({ kind: 'enfant', member: k.member })} />
+                      ))}
+                    </div>
+                  ) : <p className="text-sm text-gray-400 italic">Aucun enfant lié pour le moment.</p>}
+                </div>
+              </>
+            )
+          })()}
+        </div>
+
+        <h2 className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">📖 Noyau & Livre</h2>
         {!activeTab && !isDemo ? (
-          <div className="text-center py-12">
-            <p className="text-4xl mb-3">🏠</p>
+          <div className="text-center py-6">
+            <p className="text-4xl mb-3">📖</p>
             <p className="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
-              Vous n'avez pas encore de noyau familial. Un noyau apparaît dès que vous avez au moins un enfant
-              confirmé dans votre arbre, ou dès que votre père ou votre mère y est enregistré.
+              Le Livre apparaît dès que vous avez au moins un enfant confirmé dans votre arbre,
+              ou dès que votre père ou votre mère y est enregistré.
             </p>
           </div>
         ) : (
@@ -529,6 +665,12 @@ export default function Noyau() {
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                           Fondateur du noyau{isMyNoyau ? ' (vous)' : ''}
                         </p>
+                        {!isMyNoyau && current.founder && myParents.some(p => p.member.numeroH === current.founder!.numeroH) && (
+                          <button type="button" onClick={() => setOpenGallery({ kind: 'parent', member: current.founder! })}
+                            className="mt-1 text-xs font-semibold text-emerald-600 hover:underline">
+                            📷 Voir notre galerie ›
+                          </button>
+                        )}
                       </div>
                     </div>
                     <span
@@ -548,27 +690,33 @@ export default function Noyau() {
                   )}
                 </div>
 
-                {!!current.wives?.length && (
+                {/* Mon noyau : épouse(s) et enfants sont déjà dans « Ma famille proche » ci-dessus */}
+                {!isMyNoyau && !!current.wives?.length && (
                   <div className="mb-4">
                     <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                      Épouses
+                      {plural(current.wives.length, `Épouse de ${current.founder.prenom}`, `Épouses de ${current.founder.prenom}`)}
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {current.wives.map((w) => (
-                        <MemberCard key={w.numeroH} member={w} />
-                      ))}
+                      {current.wives.map((w) => {
+                        const isMyParent = myParents.some(p => p.member.numeroH === w.numeroH)
+                        return (
+                          <MemberCard key={w.numeroH} member={w}
+                            badge={isMyParent ? 'Ma mère' : undefined}
+                            onOpen={isMyParent ? () => setOpenGallery({ kind: 'parent', member: w }) : undefined} />
+                        )
+                      })}
                     </div>
                   </div>
                 )}
 
-                {!!current.children?.length && (
+                {!isMyNoyau && !!current.children?.length && (
                   <div className="mb-4">
                     <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">
-                      Enfants
+                      {plural(current.children.length, `Enfant de ${current.founder.prenom}`, `Enfants de ${current.founder.prenom}`)}
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {current.children.map((c) => (
-                        <MemberCard key={c.numeroH} member={c} />
+                        <MemberCard key={c.numeroH} member={c} badge={c.numeroH === user?.numeroH ? 'Vous' : undefined} />
                       ))}
                     </div>
                   </div>
@@ -616,6 +764,29 @@ export default function Noyau() {
       </div>
 
       {showModal && <AddEntryModal onClose={() => setShowModal(false)} onSave={addEntry} />}
+
+      {/* ════ Galerie commune avec la personne touchée ════ */}
+      {openGallery && (
+        <div className="fixed inset-0 z-50 bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+          <div className="sticky top-0 z-10 flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-3 py-3 shadow">
+            <button type="button" onClick={() => { setOpenGallery(null); load() }}
+              className="text-3xl leading-none px-2" aria-label="Retour au Noyau">‹</button>
+            <div className="min-w-0">
+              <p className="font-bold truncate">
+                {openGallery.member
+                  ? `${openGallery.member.prenom} ${openGallery.member.nomFamille}`
+                  : openGallery.kind === 'parent' ? 'Mes parents' : openGallery.kind === 'enfant' ? 'Mes enfants' : isMan ? 'Mon épouse' : 'Mon mari'}
+              </p>
+              <p className="text-xs text-emerald-100">Notre galerie commune</p>
+            </div>
+          </div>
+          <Suspense fallback={<p className="p-8 text-center text-emerald-600">Chargement de la galerie…</p>}>
+            {openGallery.kind === 'parent' && <ParentsGallery inline focusNumeroH={openGallery.member?.numeroH} />}
+            {openGallery.kind === 'enfant' && <EnfantsGallery inline focusNumeroH={openGallery.member?.numeroH} />}
+            {openGallery.kind === 'conjoint' && <PartenaireGallery inline focusNumeroH={openGallery.member?.numeroH} />}
+          </Suspense>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 /// <reference lib="WebWorker" />
 /// <reference types="vite-plugin-pwa/client" />
 
-import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL, matchPrecache } from 'workbox-precaching'
 import { registerRoute, NavigationRoute } from 'workbox-routing'
 import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
@@ -72,7 +72,11 @@ registerRoute(
       plugins: [
         // maxAgeSeconds court : filet de sécurité en plus du vidage sur activate() —
         // borne le risque de page périmée à 1 jour max, pas 7.
-        new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 24 * 60 * 60 })
+        new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 24 * 60 * 60 }),
+        // Hors connexion et page jamais ouverte (ou cache vidé après une mise à jour) :
+        // on sert l'index.html précaché — l'app s'ouvre quand même (Santé/Éducation
+        // lisent ensuite leurs données gardées sur l'appareil).
+        { handlerDidError: async () => (await matchPrecache('/index.html')) || (await matchPrecache('index.html')) || undefined }
       ]
     }),
     { denylist: [/\/api\//, /\/uploads\//] }

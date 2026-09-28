@@ -8,6 +8,7 @@ import { config } from "./config/api";
 import DefaultAvatar from "./assets/default-avatar.svg";
 import NotificationBell from "./components/NotificationBell";
 import GestionPaymentGate from "./components/GestionPaymentGate";
+import OfflineStatusBar from "./components/OfflineStatusBar";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
 
@@ -39,7 +40,6 @@ const FamilleAdmin = lazy(() => import("./pages/famille/FamilleAdmin"));
 const FamilleAdminArbres = lazy(() => import("./pages/famille/FamilleAdminArbres"));
 const Inspir = lazy(() => import("./pages/famille/Inspir"));
 const Noyau = lazy(() => import("./pages/famille/Noyau"));
-const Foyer = lazy(() => import("./pages/famille/Foyer"));
 const Probleme = lazy(() => import("./pages/Probleme"));
 const Journalistes = lazy(() => import("./pages/Journalistes"));
 const Transport = lazy(() => import("./pages/Transport"));
@@ -342,8 +342,9 @@ function App() {
   // d'adresse qui apparaît/disparaît, ce qui laissait un grand vide entre
   // le pied de page et le vrai bas de l'écran. dvh suit la hauteur réelle visible.
   return (
-    <div className={!isFullscreenPage ? "bg-gray-900 min-h-dvh" : ""}>
+    <div className={!isFullscreenPage ? "bg-gray-900 min-h-dvh" : (isGestionMode || isVitrineMode ? "pro-page" : "")}>
     <GestionPaymentGate />
+    <OfflineStatusBar />
     <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-dvh' : ''}${isHome ? ' h-dvh overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine, et sur les
           pages qui n'ont rien à y afficher (Famille/Terre ADAM/Échanges/Services ont
@@ -657,7 +658,8 @@ function App() {
           <Route path="/famille/admin/arbres" element={<FamilleAdminArbres />} />
           <Route path="/famille/inspir" element={<Inspir />} />
           <Route path="/famille/noyau" element={<Noyau />} />
-          <Route path="/famille/foyer" element={<Foyer />} />
+          {/* Foyer fusionné dans le Noyau */}
+          <Route path="/famille/foyer" element={<Navigate to="/famille/noyau" replace />} />
           <Route path="/lieux-residence" element={<Navigate to="/terre-adam" replace />} />
           <Route path="/pays" element={<Pays />} />
           <Route path="/terre-adam" element={<TerreAdam />} />
