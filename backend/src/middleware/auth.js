@@ -9,9 +9,11 @@ export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
 // jusqu'à la mise à jour du profil, qui attribue le vrai NuméroH.
 export const PROVISIONAL_PREFIX = 'TMP-';
 export const isProvisionalNumeroH = (numeroH) => typeof numeroH === 'string' && numeroH.startsWith(PROVISIONAL_PREFIX);
-// Créer un compte professionnel ne demande que le téléphone : permis aussi
-// avant la mise à jour du profil (le propriétaire suit le NuméroH ensuite).
-const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications', '/api/professionals/register'];
+// Avant la mise à jour du profil, seules ces actions sont permises :
+// se connecter / mettre son profil à jour (/api/auth/) et lire ses notifications.
+// Toute autre action (y compris créer un compte professionnel) demande d'abord
+// de mettre son profil à jour.
+const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications'];
 
 // Alias pour authenticateToken (compatibilité)
 export const authenticateToken = async (req, res, next) => {
