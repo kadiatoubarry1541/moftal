@@ -71,7 +71,13 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             key={pub.id}
             onClick={() => goTo(pub.lien)}
             className="absolute inset-0 transition-opacity duration-300"
-            style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
+            style={{
+              opacity: i === active ? 1 : 0,
+              // Les cartes sont empilées : seule la carte visible reçoit le clic
+              // (sinon c'est toujours la dernière de la pile qui l'attrape).
+              pointerEvents: i === active ? 'auto' : 'none',
+              cursor: pub.lien ? 'pointer' : 'default'
+            }}
           >
             {hasImage(pub) && <img src={imgUrl(pub.image_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />}
             {(pub.titre || pub.description || pub.bouton_texte) && (
@@ -122,7 +128,13 @@ export function AdCarousel({ fill = false, compact = false }: { fill?: boolean; 
             key={pub.id}
             onClick={() => goTo(pub.lien)}
             className="absolute inset-0 transition-opacity duration-300"
-            style={{ opacity: i === active ? 1 : 0, cursor: pub.lien ? 'pointer' : 'default' }}
+            style={{
+              opacity: i === active ? 1 : 0,
+              // Les cartes sont empilées : seule la carte visible reçoit le clic
+              // (sinon c'est toujours la dernière de la pile qui l'attrape).
+              pointerEvents: i === active ? 'auto' : 'none',
+              cursor: pub.lien ? 'pointer' : 'default'
+            }}
           >
             {hasImage(pub) && (
               <img
