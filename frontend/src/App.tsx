@@ -311,6 +311,22 @@ function App() {
   // Panneau « Espace Pro » (site client, publications, profil, clients, formules)
   const [panneauProOuvert, setPanneauProOuvert] = useState(false);
   useEffect(() => { setPanneauProOuvert(false); }, [pathname]);
+  // Dans l'espace du pro : icône d'onglet et titre à son nom, pas ceux de Moftal
+  useEffect(() => {
+    if (!isEspaceTenant || !proBrand) return;
+    const icone = proBrand.logoUrl || `data:image/svg+xml;utf8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${proBrand.color || "#1a8f1a"}"/><text x="32" y="43" font-family="Arial,sans-serif" font-size="32" font-weight="700" fill="white" text-anchor="middle">${(proBrand.name?.trim()?.[0] || "").toUpperCase().replace(/[<&>]/g, "")}</text></svg>`
+    )}`;
+    const liens = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]'));
+    const anciens = liens.map(l => ({ l, href: l.getAttribute("href"), type: l.getAttribute("type") }));
+    liens.forEach(l => { l.setAttribute("href", icone); l.removeAttribute("type"); });
+    const ancienTitre = document.title;
+    if (proBrand.name) document.title = proBrand.name;
+    return () => {
+      anciens.forEach(({ l, href, type }) => { if (href) l.setAttribute("href", href); if (type) l.setAttribute("type", type); });
+      document.title = ancienTitre;
+    };
+  }, [isEspaceTenant, proBrand?.logoUrl, proBrand?.name, proBrand?.color]);
   const isMoftalPayMode =
     pathname === "/compte-famille" ||
     pathname === "/moftal-pay-pro";

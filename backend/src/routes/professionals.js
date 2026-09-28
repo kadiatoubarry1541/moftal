@@ -12,7 +12,6 @@ import {
   canUserApproveProfessional,
   getProTypesForSectors
 } from '../utils/sectorAdmin.js';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
@@ -427,53 +426,50 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
   }
 });
 
-// GET /api/professionals/tenant-icon-badged/:tenantCode — logo établissement + vrai logo Moftal en badge
+// Couleur de l'icône selon le secteur (quand l'établissement n'a pas encore de logo)
+const TENANT_ICON_COLORS = {
+  clinic: '#1a8f1a', health_worker: '#1a8f1a', school: '#1a8f1a', madrasa: '#0891b2',
+  mosque: '#1a8f1a', ngo: '#e11d48', enterprise: '#4f46e5', restaurant: '#ea580c',
+  transport: '#1d4ed8', beauty: '#db2777', artisan: '#d97706', security_agency: '#475569',
+  mairie: '#1d4ed8', scientist: '#4338ca', commerce: '#d97706', journalist: '#dc2626',
+  supplier: '#0e7490', vendor: '#0891b2', reseau: '#2563eb', broker: '#b45309', producer: '#7c3aed',
+};
+
+// GET /api/professionals/tenant-icon-badged/:tenantCode — icône de l'app installée
+// d'un établissement. C'est son application : uniquement SON logo (aucun logo Moftal).
+// Sans logo : l'initiale de l'établissement sur la couleur de son secteur.
 router.get('/tenant-icon-badged/:tenantCode', async (req, res) => {
+  let tenant;
   try {
-    const [tenant] = await sequelize.query(
-      `SELECT mt.logo_url, pa.photo FROM management_tenants mt
+    [tenant] = await sequelize.query(
+      `SELECT mt.name, mt.type, mt.logo_url, pa.photo FROM management_tenants mt
        LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
        WHERE mt.tenant_code = :code LIMIT 1`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
-    const logo = tenant?.logo_url || tenant?.photo;
+  } catch { tenant = null; }
 
-    // Si pas de logo → retourner le logo Moftal directement
-    if (!logo || !logo.startsWith('data:')) {
-      return res.status(302).redirect('/logo-moftal.svg');
-    }
-
-    // Lire le vrai logo Moftal SVG depuis le disque et l'encoder en base64
-    let moftalBadgeDataUrl = '';
-    try {
-      const moftalSvgPath = path.join(__dirname, '../../../frontend/public/logo-moftal.svg');
-      const moftalSvgContent = fs.readFileSync(moftalSvgPath, 'utf8');
-      moftalBadgeDataUrl = 'data:image/svg+xml;base64,' + Buffer.from(moftalSvgContent).toString('base64');
-    } catch {
-      // Si le fichier n'est pas accessible, on utilise une URL publique
-      moftalBadgeDataUrl = 'https://moftal.com/logo-moftal.svg';
-    }
-
-    // SVG composite : logo établissement (grand) + logo Moftal (petit badge en bas à droite)
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" width="512" height="512">
-  <defs><clipPath id="main"><rect width="100" height="100" rx="18"/></clipPath></defs>
-  <!-- Fond blanc -->
-  <rect width="100" height="100" rx="18" fill="white"/>
-  <!-- Logo de l'établissement (occupe 80% de l'icône) -->
-  <image href="${logo}" x="2" y="2" width="78" height="78" preserveAspectRatio="xMidYMid meet" clip-path="url(#main)"/>
-  <!-- Fond blanc pour le badge Moftal -->
-  <circle cx="77" cy="77" r="24" fill="white"/>
-  <!-- Vrai logo Moftal en petit en bas à droite -->
-  <image href="${moftalBadgeDataUrl}" x="55" y="55" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>
-</svg>`;
-
-    res.set('Content-Type', 'image/svg+xml');
-    res.set('Cache-Control', 'public, max-age=86400');
-    res.set('Access-Control-Allow-Origin', '*');
-    return res.send(svg);
-  } catch {
-    res.status(302).redirect('/logo-moftal.svg');
+  const logo = tenant?.logo_url || tenant?.photo;
+  const esc = (v) => String(v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  let contenu;
+  if (logo && (logo.startsWith('data:') || /^https?:\/\//.test(logo))) {
+    contenu = `<rect width="100" height="100" rx="18" fill="white"/>
+  <image href="${esc(logo)}" x="6" y="6" width="88" height="88" preserveAspectRatio="xMidYMid meet" clip-path="url(#main)"/>`;
+  } else {
+    const couleur = TENANT_ICON_COLORS[tenant?.type] || '#1a8f1a';
+    const initiale = esc(((tenant?.name || '').trim()[0] || '•').toUpperCase());
+    contenu = `<rect width="100" height="100" rx="18" fill="${couleur}"/>
+  <text x="50" y="67" font-family="Arial, Helvetica, sans-serif" font-size="50" font-weight="700" fill="white" text-anchor="middle">${initiale}</text>`;
   }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" width="512" height="512">
+  <defs><clipPath id="main"><rect width="100" height="100" rx="18"/></clipPath></defs>
+  ${contenu}
+</svg>`;
+  res.set('Content-Type', 'image/svg+xml');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Access-Control-Allow-Origin', '*');
+  return res.send(svg);
 });
 
 // GET /api/professionals/pro-manifest/by-tenant/:tenantCode — manifest PWA pour les pages gestion
@@ -508,20 +504,11 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     };
     const themeColor = TYPE_COLORS[tenant?.type] || '#1a8f1a';
 
-    // Détecter le type MIME réel du logo tenant
-    let iconMime = 'image/svg+xml';
-    if (tenant?.logo_url?.startsWith('data:')) {
-      const m = tenant.logo_url.match(/data:([^;]+);/);
-      if (m) iconMime = m[1];
-    }
-
     const iconUrl = `/api/professionals/tenant-icon-badged/${tenantCode}`;
-    const icons = tenant?.logo_url ? [
+    // Toujours l'icône de l'établissement (son logo, ou son initiale) — jamais celle de Moftal
+    const icons = [
       { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
       { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
-    ] : [
-      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
     ];
 
     const manifest = {

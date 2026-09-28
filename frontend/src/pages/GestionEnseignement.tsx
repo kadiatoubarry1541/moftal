@@ -24,7 +24,6 @@ function printFeeReceipt(f: any, orgName: string, color: string) {
 <div class="amount">${(+f.montant || 0).toLocaleString("fr-FR")} GNF</div>
 ${f.echeance ? `<p style="font-size:13px;color:#64748b">Échéance : ${new Date(f.echeance).toLocaleDateString("fr-FR")}</p>` : ""}
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature & Cachet</div></div>
-<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Moftal · Plateforme éducative</div>
 </body></html>`;
   const w = window.open("", "_blank", "width=800,height=900");
   if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
@@ -38,7 +37,6 @@ function printBulletin(b: any, orgName: string, color: string) {
 <div class="box"><strong>${b.student_prenom || ""} ${b.student_nom || ""}</strong><br><span style="color:#64748b;font-size:13px">${b.niveau || b.classe || ""}</span></div>
 <div class="moy">${b.moyenne_generale}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${b.mention || ""}</div></div>
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature & Cachet</div></div>
-<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Moftal · Plateforme éducative</div>
 </body></html>`;
   const w = window.open("", "_blank", "width=800,height=900");
   if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
@@ -65,7 +63,7 @@ export default function GestionEnseignement({ mode }: Props) {
     apprenants: "Apprenants", apprenant: "Apprenant",
     groupes: "Halaqas",  groupe: "Halaqa",
     staffLabel: "Enseignants", staffSingular: "Enseignant",
-    niveaux: ["Iqra", "Qa'idah", "Débutant", "Juz' Amma", "Hizb", "Hafiz"],
+    cycles: [{ cycle: "", niveaux: ["Iqra", "Qa'idah", "Débutant", "Juz' Amma", "Hizb", "Hafiz"] }],
     matieres: ["Coran", "Tajwid", "Hadith", "Fiqh", "Arabe", "Histoire islamique", "Morale"],
     roles: ["Directeur", "Cheikh", "Enseignant", "Surveillant", "Administratif", "Autre"],
     fraisTypes: ["Inscription", "Frais mensuels", "Frais annuels", "Examen", "Tenue islamique", "Autre"],
@@ -76,12 +74,31 @@ export default function GestionEnseignement({ mode }: Props) {
     apprenants: "Élèves", apprenant: "Élève",
     groupes: "Classes", groupe: "Classe",
     staffLabel: "Personnel", staffSingular: "Professeur",
-    niveaux: ["CP", "CE1", "CE2", "CM1", "CM2", "6ème", "5ème", "4ème", "3ème", "Terminale"],
+    // Parcours complet en Guinée, de la maternelle à l'université
+    cycles: [
+      { cycle: "Maternelle",  niveaux: ["Petite section", "Moyenne section", "Grande section"] },
+      { cycle: "Primaire",    niveaux: ["CP1", "CP2", "CE1", "CE2", "CM1", "CM2"] },
+      { cycle: "Collège",     niveaux: ["7ème année", "8ème année", "9ème année", "10ème année"] },
+      { cycle: "Lycée",       niveaux: ["11ème année", "12ème année", "Terminale"] },
+      { cycle: "Université",  niveaux: ["Licence 1", "Licence 2", "Licence 3", "Master 1", "Master 2", "Doctorat"] },
+      { cycle: "Formation professionnelle", niveaux: ["Formation professionnelle / technique"] },
+    ],
     matieres: ["Mathématiques", "Français", "Sciences", "Histoire-Géo", "Anglais", "Arts", "EPS", "Autre"],
     roles: ["Directeur(trice)", "Professeur", "Surveillant", "Administratif", "Autre"],
     fraisTypes: ["Inscription", "Mensualité", "Cantine", "Transport", "Fournitures", "Examen", "Autre"],
     sourate: false,
   };
+
+  const niveaux = V.cycles.flatMap(c => c.niveaux);
+  // Options groupées par cycle ; un ancien niveau déjà enregistré reste affiché
+  const optionsNiveaux = (courant?: string) => (
+    <>
+      {courant && !niveaux.includes(courant) && <option value={courant}>{courant}</option>}
+      {V.cycles.map(c => c.cycle
+        ? <optgroup key={c.cycle} label={c.cycle}>{c.niveaux.map(n => <option key={n}>{n}</option>)}</optgroup>
+        : c.niveaux.map(n => <option key={n}>{n}</option>))}
+    </>
+  );
 
   const NAV: { id: Section; label: string; icon: string }[] = [
     { id: "dashboard",   label: "Tableau de bord",       icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -218,11 +235,11 @@ export default function GestionEnseignement({ mode }: Props) {
       if (modal === "add-apprenant") {
         if (!form.nom || !form.prenom) { showToast("Nom et prénom obligatoires", false); return; }
         if (form.id) {
-          const d = await put(`/students/${form.id}`, { ...form, niveau: form.niveau || V.niveaux[0] });
+          const d = await put(`/students/${form.id}`, { ...form, niveau: form.niveau || niveaux[0] });
           if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(V.apprenant + " modifié(e)"); }
           else showToast(d.message || "Erreur", false);
         } else {
-          const d = await post("/students", { ...form, niveau: form.niveau || V.niveaux[0] });
+          const d = await post("/students", { ...form, niveau: form.niveau || niveaux[0] });
           if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(V.apprenant + " ajouté(e)"); }
           else showToast(d.message || "Erreur", false);
         }
@@ -239,7 +256,7 @@ export default function GestionEnseignement({ mode }: Props) {
         }
       } else if (modal === "add-groupe") {
         if (!form.nom) { showToast("Nom obligatoire", false); return; }
-        const body: any = { nom: form.nom, niveau: form.niveau || V.niveaux[0], capacite: +(form.capacite || 20) };
+        const body: any = { nom: form.nom, niveau: form.niveau || niveaux[0], capacite: +(form.capacite || 20) };
         if (form.enseignant_id) body[teacherFld] = form.enseignant_id;
         if (form.id) {
           const d = await put(`/${groupEP}/${form.id}`, body);
@@ -346,8 +363,8 @@ export default function GestionEnseignement({ mode }: Props) {
                       <option value="M">Masculin</option><option value="F">Féminin</option>
                     </select>
                   ) : type === "niveau" ? (
-                    <select value={form[key]||V.niveaux[0]} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
-                      {V.niveaux.map(n=><option key={n}>{n}</option>)}
+                    <select value={form[key]||niveaux[0]} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
+                      {optionsNiveaux(form[key])}
                     </select>
                   ) : (
                     <input type={type} value={form[key]||""} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt} />
@@ -408,8 +425,8 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Niveau</label>
-              <select value={form.niveau||V.niveaux[0]} onChange={e=>setForm((f:any)=>({...f,niveau:e.target.value}))} className={inp} style={inpSt}>
-                {V.niveaux.map(n=><option key={n}>{n}</option>)}
+              <select value={form.niveau||niveaux[0]} onChange={e=>setForm((f:any)=>({...f,niveau:e.target.value}))} className={inp} style={inpSt}>
+                {optionsNiveaux(form.niveau)}
               </select>
             </div>
             <div>
@@ -738,7 +755,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 </div>
                 <select value={niveauFilter} onChange={e=>setNiveauFilter(e.target.value)} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#475569",outline:"none",background:"white",minWidth:140 }}>
                   <option value="">Tous les niveaux</option>
-                  {V.niveaux.map(n=><option key={n}>{n}</option>)}
+                  {optionsNiveaux()}
                 </select>
               </div>
               <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>

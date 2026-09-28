@@ -366,7 +366,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
         ${+s.remise > 0 ? `<div style="text-align:right;font-size:12px;color:#94a3b8">Remise : -${fmtMoney(+s.remise)}</div>` : ""}
         <div style="text-align:right;margin-top:12px" class="total">Total : ${fmtMoney(s.total)}</div>
         <div style="text-align:right;font-size:12px;color:#64748b">Reçu : ${fmtMoney(s.montant_recu)} · Mode : ${s.type_paiement}</div>
-        <div style="margin-top:24px;text-align:center;font-size:11px;color:#94a3b8">Merci pour votre achat — propulsé par Moftal</div>
+        <div style="margin-top:24px;text-align:center;font-size:11px;color:#94a3b8">Merci pour votre achat</div>
       </body></html>
     `);
     w.document.close(); w.print();
