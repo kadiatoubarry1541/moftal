@@ -1,0 +1,143 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Gestions internes & sites vitrines — affichage téléphone
+   Règle : aucune information à moins de 12 px du bord de l'écran, rien ne
+   déborde à droite. Les pages utilisent des styles inline (grilles fixes à
+   3/4/5 colonnes pensées pour ordinateur) : on les adapte ici, une seule fois,
+   pour toutes les gestions et tous les sites (classe .pro-page posée dans App).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.pro-page {
+  --pro-gutter: 12px;
+}
+
+@media (max-width: 640px) {
+  /* Sections pleine largeur : 12 px de marge de chaque côté */
+  .pro-page section,
+  .pro-page header,
+  .pro-page footer {
+    padding-left: var(--pro-gutter) !important;
+    padding-right: var(--pro-gutter) !important;
+  }
+
+  /* Le contenu de la page ne dépasse jamais la largeur de l'écran (une barre
+     d'onglets trop longue défile à l'intérieur au lieu d'élargir toute la page) */
+  .pro-page main > * {
+    width: 100%;
+    max-width: 100% !important;
+    min-width: 0;
+  }
+
+  /* Grilles 3 colonnes (et variantes) → 1 colonne */
+  .pro-page [style*="grid-template-columns: repeat(3,"],
+  .pro-page [style*="grid-template-columns:repeat(3,"],
+  .pro-page [style*="grid-template-columns: 1fr 1fr 1fr"],
+  .pro-page [style*="grid-template-columns: 2fr 1fr 1fr;"],
+  .pro-page [style*="grid-template-columns: 2fr 1fr 1fr\""] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* Grilles 4/5/6 colonnes (chiffres clés, contacts…) → 2 colonnes */
+  .pro-page [style*="grid-template-columns: repeat(4,"],
+  .pro-page [style*="grid-template-columns:repeat(4,"],
+  .pro-page [style*="grid-template-columns: repeat(5,"],
+  .pro-page [style*="grid-template-columns:repeat(5,"],
+  .pro-page [style*="grid-template-columns: repeat(6,"],
+  .pro-page [style*="grid-template-columns:repeat(6,"],
+  .pro-page [style*="grid-template-columns: repeat(2, 1fr) repeat(2, 1fr)"],
+  .pro-page [style*="grid-template-columns: repeat(2,1fr) repeat(2,1fr)"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Grilles « auto-fill minmax(240px+) » : jamais plus large que l'écran */
+  .pro-page [style*="minmax(240px"],
+  .pro-page [style*="minmax(260px"],
+  .pro-page [style*="minmax(280px"],
+  .pro-page [style*="minmax(290px"],
+  .pro-page [style*="minmax(300px"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* Les cases de grille / flex peuvent rétrécir au lieu de pousser hors écran */
+  .pro-page [style*="display: grid"] > *,
+  .pro-page [style*="display:grid"] > * {
+    min-width: 0;
+  }
+
+  /* Grosses marges intérieures de cartes (28–40 px) → plus de place pour le texte */
+  .pro-page [style*="padding: 36px 40px"],
+  .pro-page [style*="padding: 28px 28px"],
+  .pro-page [style*="padding: 40px"] {
+    padding: 20px 16px !important;
+  }
+
+  /* Lignes « titre à gauche / boutons à droite » : les boutons passent dessous
+     au lieu d'être coupés au bord de l'écran */
+  .pro-page [style*="justify-content: space-between"] {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  /* Barres de navigation des sites vitrines : tout reste visible (retour à la ligne) */
+  .pro-page nav > div {
+    height: auto !important;
+    min-height: 56px;
+    flex-wrap: wrap !important;
+    row-gap: 8px;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    padding-left: var(--pro-gutter) !important;
+    padding-right: var(--pro-gutter) !important;
+  }
+  .pro-page nav > div > div {
+    min-width: 0;
+  }
+  /* Liens du menu + bouton : une seule ligne qui défile au doigt */
+  .pro-page nav > div > div:last-child {
+    width: 100%;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 16px !important;
+  }
+  .pro-page nav > div > div:last-child::-webkit-scrollbar {
+    display: none;
+  }
+  .pro-page nav > div > div:last-child > * {
+    flex-shrink: 0;
+  }
+
+  /* Titres et textes longs (noms, e-mails, adresses) : retour à la ligne */
+  .pro-page h1,
+  .pro-page h2,
+  .pro-page h3,
+  .pro-page h4,
+  .pro-page p,
+  .pro-page span,
+  .pro-page a,
+  .pro-page td,
+  .pro-page li,
+  .pro-page div {
+    overflow-wrap: break-word;
+  }
+
+  /* Gros chiffres / mots des cartes en grille (2 par ligne) : un peu plus petits */
+  .pro-page [style*="display: grid"] > * > [style*="font-size: 22px"][style*="font-weight: 800"],
+  .pro-page [style*="display: grid"] > * > [style*="font-size: 24px"][style*="font-weight: 800"],
+  .pro-page [style*="display: grid"] > * > [style*="font-size: 26px"][style*="font-weight: 800"],
+  .pro-page [style*="display: grid"] > * > [style*="font-size: 28px"][style*="font-weight: 800"] {
+    font-size: 18px !important;
+  }
+
+  /* Noms coupés par « … » : sur téléphone on affiche le nom en entier (2 lignes si besoin) */
+  .pro-page :is(h1, h2, h3, h4)[style*="text-overflow: ellipsis"],
+  .pro-page [style*="font-weight: 800"][style*="text-overflow: ellipsis"] {
+    white-space: normal !important;
+    text-overflow: clip !important;
+  }
+
+  .pro-page img,
+  .pro-page video,
+  .pro-page iframe {
+    max-width: 100%;
+  }
+}

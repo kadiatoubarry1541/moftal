@@ -343,7 +343,7 @@ function App() {
   // d'adresse qui apparaît/disparaît, ce qui laissait un grand vide entre
   // le pied de page et le vrai bas de l'écran. dvh suit la hauteur réelle visible.
   return (
-    <div className={!isFullscreenPage ? "bg-gray-900 min-h-dvh" : ""}>
+    <div className={!isFullscreenPage ? "bg-gray-900 min-h-dvh" : (isGestionMode || isVitrineMode ? "pro-page" : "")}>
     <GestionPaymentGate />
     <OfflineStatusBar />
     <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-dvh' : ''}${isHome ? ' h-dvh overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
