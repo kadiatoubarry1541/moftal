@@ -56,6 +56,7 @@ const PROVISIONAL_ALLOWED_PRO_ROUTES = [
   /^\/api\/pro-vitrine\/[^/?]+\/publish-info(\?|$)/,     // Modifier le profil public
   /^\/api\/professionals\/[^/?]+\/ensure-tenant(\?|$)/,  // Ouvrir sa gestion interne
   /^\/api\/professionals\/\d+(\?|$)/,                     // Logo depuis l'Espace Pro
+  /^\/api\/professionals\/tenant-icon-png\/[^/?]+(\?|$)/, // Icône de l'app de la gestion
 ];
 
 // Alias pour authenticateToken (compatibilité)

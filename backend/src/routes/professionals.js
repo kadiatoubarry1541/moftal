@@ -484,6 +484,77 @@ router.get('/tenant-icon-badged/:tenantCode', async (req, res) => {
   return res.send(svg);
 });
 
+// ─── Icône d'application (PNG) de l'établissement ─────────────────────────────
+// Les téléphones (Chrome Android) n'acceptent qu'une image PNG comme icône d'app
+// installée : pas de SVG. Le serveur n'a pas d'outil de dessin ; c'est la page de
+// gestion qui dessine l'icône (logo, ou initiale sur la couleur du secteur) en PNG
+// 512×512 et l'enregistre ici. « source » dit à partir de quoi elle a été dessinée,
+// pour la redessiner quand le logo change.
+let tenantIconColumnsReady = false;
+async function ensureTenantIconColumns() {
+  if (tenantIconColumnsReady) return;
+  await sequelize.query(`
+    ALTER TABLE management_tenants ADD COLUMN IF NOT EXISTS icon_png TEXT;
+    ALTER TABLE management_tenants ADD COLUMN IF NOT EXISTS icon_source VARCHAR(200);
+  `);
+  tenantIconColumnsReady = true;
+}
+
+// GET /api/professionals/tenant-icon-png/:tenantCode/source — d'où vient l'icône actuelle
+router.get('/tenant-icon-png/:tenantCode/source', async (req, res) => {
+  try {
+    await ensureTenantIconColumns();
+    const [row] = await sequelize.query(
+      'SELECT icon_source FROM management_tenants WHERE tenant_code = :code LIMIT 1',
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, source: row?.icon_source || null });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// GET /api/professionals/tenant-icon-png/:tenantCode — l'icône PNG (pour le manifest)
+router.get('/tenant-icon-png/:tenantCode', async (req, res) => {
+  try {
+    await ensureTenantIconColumns();
+    const [row] = await sequelize.query(
+      'SELECT icon_png FROM management_tenants WHERE tenant_code = :code LIMIT 1',
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!row?.icon_png?.startsWith('data:image/png')) return res.status(404).end();
+    const { buffer } = decodeDataUrl(row.icon_png);
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=60');
+    res.set('Access-Control-Allow-Origin', '*');
+    return res.send(buffer);
+  } catch { res.status(404).end(); }
+});
+
+// PUT /api/professionals/tenant-icon-png/:tenantCode — enregistre l'icône (propriétaire ou admin)
+router.put('/tenant-icon-png/:tenantCode', authenticate, async (req, res) => {
+  try {
+    await ensureTenantIconColumns();
+    const { png, source } = req.body || {};
+    if (typeof png !== 'string' || !png.startsWith('data:image/png;base64,') || png.length > 3_000_000) {
+      return res.status(400).json({ success: false, message: 'Icône invalide.' });
+    }
+    const [tenant] = await sequelize.query(
+      'SELECT owner_numero_h FROM management_tenants WHERE tenant_code = :code LIMIT 1',
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!tenant) return res.status(404).json({ success: false, message: 'Établissement introuvable.' });
+    const role = String(req.user?.role || '').toLowerCase();
+    const estAdmin = req.user?.isMasterAdmin || req.user?.isAdmin === true || role === 'admin' || role === 'super-admin';
+    if (!estAdmin && tenant.owner_numero_h !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Non autorisé.' });
+    }
+    await sequelize.query(
+      'UPDATE management_tenants SET icon_png = :png, icon_source = :source WHERE tenant_code = :code',
+      { replacements: { png, source: String(source || '').slice(0, 200), code: req.params.tenantCode } }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // GET /api/professionals/pro-manifest/by-tenant/:tenantCode — manifest PWA pour les pages gestion
 router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
   try {
@@ -494,8 +565,10 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     // Scope spécifique à cet établissement — évite le conflit avec le scope "/" de l'app Moftal principale
     const scopeUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
 
+    await ensureTenantIconColumns().catch(() => {});
     const [tenant] = await sequelize.query(
-      `SELECT mt.tenant_code, mt.name, mt.type, COALESCE(mt.logo_url, pa.photo) AS logo_url
+      `SELECT mt.tenant_code, mt.name, mt.type, COALESCE(mt.logo_url, pa.photo) AS logo_url,
+              (mt.icon_png IS NOT NULL) AS has_icon_png, mt.icon_source
        FROM management_tenants mt
        LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
        WHERE mt.tenant_code = :code LIMIT 1`,
@@ -521,8 +594,14 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     // de Moftal. Un logo PNG/JPG est donné tel quel en premier : c'est le format que
     // les téléphones Android acceptent comme icône d'application.
     const logoMime = (tenant?.logo_url || '').match(/^data:(image\/(?:png|jpeg|jpg|webp))/i)?.[1];
+    // Icône PNG 512×512 dessinée par la gestion : celle que le téléphone utilise
+    const iconVersion = encodeURIComponent(String(tenant?.icon_source || '1').slice(-24));
     const icons = [
-      ...(logoMime ? [
+      ...(tenant?.has_icon_png ? [
+        { src: `/api/professionals/tenant-icon-png/${tenantCode}?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: `/api/professionals/tenant-icon-png/${tenantCode}?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ] : []),
+      ...(!tenant?.has_icon_png && logoMime ? [
         { src: `/api/professionals/tenant-icon/${tenantCode}`, sizes: '512x512', type: logoMime, purpose: 'any' },
       ] : []),
       { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { setProBrand } from "./proBrand";
+import { synchroniserIconeApp } from "../utils/appIcon";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -107,6 +108,11 @@ export default function InstallAppButton({ name, logoUrl, themeColor, color, lab
 // La barre du haut affiche le logo du professionnel (pas celui de Moftal)
 function ProBrandPublisher({ name, logoUrl, color }: { name?: string; logoUrl?: string; color: string }) {
   useEffect(() => { setProBrand({ name, logoUrl, color }); }, [name, logoUrl, color]);
+  // Icône PNG de l'app installée (sur l'écran d'accueil), toujours à jour du logo
+  useEffect(() => {
+    const code = window.location.pathname.match(/^\/gestion-[^/]+\/([^/]+)/)?.[1];
+    if (code && (name || logoUrl)) synchroniserIconeApp(decodeURIComponent(code), name, logoUrl, color);
+  }, [name, logoUrl, color]);
   useEffect(() => () => setProBrand(null), []);
   return null;
 }
