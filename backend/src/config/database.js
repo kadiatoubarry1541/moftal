@@ -64,6 +64,18 @@ if (process.env.DATABASE_URL) {
 });
 }
 
+// Un champ de formulaire laissé vide arrive souvent `undefined` : Sequelize refuse
+// alors la requête (« Named replacement ":x" has no entry in the replacement map »).
+// On l'enregistre comme NULL, pour toutes les routes.
+const rawQuery = sequelize.query.bind(sequelize);
+sequelize.query = (sql, options) => {
+  const r = options?.replacements;
+  if (r && typeof r === 'object' && !Array.isArray(r) && Object.values(r).some(v => v === undefined)) {
+    options = { ...options, replacements: Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v === undefined ? null : v])) };
+  }
+  return rawQuery(sql, options);
+};
+
 // Fonction pour tester la connexion
 const connectDB = async () => {
   try {

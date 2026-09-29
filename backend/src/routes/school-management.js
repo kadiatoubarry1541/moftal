@@ -93,13 +93,14 @@ router.get('/:tenantCode/students', authenticate, verifyTenant, async (req, res)
 
 router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id } = req.body;
+    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, niveau, numero_h, parent_numero_h } = req.body;
+    if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
     const code = req.params.tenantCode;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
     const [rows] = await sequelize.query(
-      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat) RETURNING *`,
-      { replacements: { code, nom, prenom, dob: date_naissance || null, sexe, tel: telephone_parent, parent: nom_parent, adr: adresse, cid: classroom_id || null, mat }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule,niveau,numero_h,parent_numero_h) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat,:niveau,:nh,:pnh) RETURNING *`,
+      { replacements: { code, nom, prenom, dob: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, mat, niveau: niveau || null, nh: numero_h?.trim() || null, pnh: parent_numero_h?.trim() || null }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, student: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -107,10 +108,35 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
 
 router.put('/:tenantCode/students/:id', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, statut } = req.body;
+    const b = req.body;
+    // Un champ absent du formulaire garde sa valeur (pas d'effacement silencieux).
+    const keep = (k) => (Object.prototype.hasOwnProperty.call(b, k) ? (b[k] === '' ? null : b[k]) : undefined);
     await sequelize.query(
-      `UPDATE school_students SET nom=:nom,prenom=:prenom,date_naissance=:dob,sexe=:sexe,telephone_parent=:tel,nom_parent=:parent,adresse=:adr,classroom_id=:cid,statut=:statut WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, dob: date_naissance || null, sexe, tel: telephone_parent, parent: nom_parent, adr: adresse, cid: classroom_id || null, statut: statut || 'actif', id: req.params.id, code: req.params.tenantCode } }
+      `UPDATE school_students SET
+         nom=COALESCE(:nom,nom), prenom=COALESCE(:prenom,prenom),
+         date_naissance=CASE WHEN :has_dob THEN CAST(:dob AS DATE) ELSE date_naissance END,
+         sexe=COALESCE(:sexe,sexe),
+         telephone_parent=CASE WHEN :has_tel THEN :tel ELSE telephone_parent END,
+         nom_parent=CASE WHEN :has_parent THEN :parent ELSE nom_parent END,
+         adresse=CASE WHEN :has_adr THEN :adr ELSE adresse END,
+         classroom_id=CASE WHEN :has_cid THEN CAST(:cid AS INTEGER) ELSE classroom_id END,
+         niveau=CASE WHEN :has_niveau THEN :niveau ELSE niveau END,
+         numero_h=CASE WHEN :has_nh THEN :nh ELSE numero_h END,
+         parent_numero_h=CASE WHEN :has_pnh THEN :pnh ELSE parent_numero_h END,
+         statut=COALESCE(:statut,statut)
+       WHERE id=:id AND tenant_code=:code`,
+      { replacements: {
+          nom: b.nom || null, prenom: b.prenom || null, sexe: b.sexe || null, statut: b.statut || null,
+          has_dob: keep('date_naissance') !== undefined, dob: keep('date_naissance') ?? null,
+          has_tel: keep('telephone_parent') !== undefined, tel: keep('telephone_parent') ?? null,
+          has_parent: keep('nom_parent') !== undefined, parent: keep('nom_parent') ?? null,
+          has_adr: keep('adresse') !== undefined, adr: keep('adresse') ?? null,
+          has_cid: keep('classroom_id') !== undefined, cid: keep('classroom_id') ?? null,
+          has_niveau: keep('niveau') !== undefined, niveau: keep('niveau') ?? null,
+          has_nh: keep('numero_h') !== undefined, nh: keep('numero_h') ?? null,
+          has_pnh: keep('parent_numero_h') !== undefined, pnh: keep('parent_numero_h') ?? null,
+          id: req.params.id, code: req.params.tenantCode,
+        } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -181,7 +207,8 @@ router.get('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, re
 
 router.post('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, niveau, capacite, professeur_principal_id } = req.body;
+    const { nom, niveau, capacite } = req.body;
+    const professeur_principal_id = req.body.professeur_principal_id ?? req.body.professeur_id;
     const [rows] = await sequelize.query(
       `INSERT INTO school_classrooms (tenant_code,nom,niveau,capacite,professeur_principal_id) VALUES(:code,:nom,:niveau,:cap,:prof) RETURNING *`,
       { replacements: { code: req.params.tenantCode, nom, niveau, cap: capacite || 30, prof: professeur_principal_id || null }, type: sequelize.QueryTypes.INSERT }
@@ -192,7 +219,8 @@ router.post('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, r
 
 router.put('/:tenantCode/classrooms/:id', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, niveau, capacite, professeur_principal_id } = req.body;
+    const { nom, niveau, capacite } = req.body;
+    const professeur_principal_id = req.body.professeur_principal_id ?? req.body.professeur_id;
     await sequelize.query(
       `UPDATE school_classrooms SET nom=:nom,niveau=:niveau,capacite=:cap,professeur_principal_id=:prof WHERE id=:id AND tenant_code=:code`,
       { replacements: { nom, niveau, cap: capacite || 30, prof: professeur_principal_id || null, id: req.params.id, code: req.params.tenantCode } }

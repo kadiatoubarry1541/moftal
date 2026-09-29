@@ -242,7 +242,7 @@ export default function GestionEnseignement({ mode }: Props) {
           if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(V.apprenant + " modifié(e)"); }
           else showToast(d.message || "Erreur", false);
         } else {
-          const d = await post("/students", { ...form, niveau: form.niveau || niveaux[0] });
+          const d = await post("/students", { ...form, sexe: form.sexe || "M", niveau: form.niveau || niveaux[0] });
           if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(V.apprenant + " ajouté(e)"); }
           else showToast(d.message || "Erreur", false);
         }

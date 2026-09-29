@@ -1810,6 +1810,7 @@ async function initAllTables() {
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "granted_to_sub_admin" BOOLEAN DEFAULT false;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "numero_h" VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "parent_numero_h" VARCHAR(50);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "niveau" VARCHAR(100);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "address"      TEXT;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "phone"        VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "email"        VARCHAR(255);`).catch(() => {});
