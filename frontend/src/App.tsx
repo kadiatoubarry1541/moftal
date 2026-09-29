@@ -859,8 +859,9 @@ function App() {
         </Suspense>
       )}
 
-      {/* Footer minimal Espace Gestion */}
-      {isGestionMode && (
+      {/* Footer minimal Espace Gestion — pas dans l'espace d'un établissement
+          (c'est son application : jamais « Moftal » dedans) */}
+      {isGestionMode && !isEspaceTenant && (
         <div style={{ textAlign: "center", padding: "12px 16px", fontSize: 11, color: "#94a3b8", borderTop: "1px solid #f1f5f9", background: "white" }}>
           {t('footer.pro_space')}
         </div>

@@ -340,8 +340,9 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       setPrompt(existing);
       if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
     }
-    const noteLocale = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
-    setInstalled(appGestion || (noteLocale && !existing));
+    // On n'affirme « installée » que si c'est certain (dans l'app, ou confirmé par
+    // le téléphone plus bas) — jamais sur la seule foi d'une note locale.
+    setInstalled(appGestion);
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -392,8 +393,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     if (!prompt) {
       // Prompt pas encore prêt : ouvrir un nouvel onglet pour forcer Chrome à proposer l'install
       if (isInsidePWA) { window.open(window.location.href, '_blank'); return; }
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3500);
+      setShowToast(v => !v);
       return;
     }
     setInstalling(true);
@@ -403,6 +403,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       if (outcome === "accepted") {
         if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
         setInstalled(true);
+        setDejaSurEcran(true);
       }
     } finally {
       setPrompt(null);
@@ -425,26 +426,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       </span>
     );
   }
-  if (installed) {
-    // Installée d'après ce téléphone, mais on est dans le navigateur : on le dit
-    // sans l'affirmer, et on laisse la possibilité de réinstaller.
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#166534" }}>
-          ✅ Installée sur ce téléphone — ouvrez-la depuis votre écran d'accueil.
-        </span>
-        <button
-          onClick={() => { if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY); setInstalled(false); }}
-          style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: "#2563eb", fontSize: 12, textDecoration: "underline", cursor: "pointer" }}
-        >
-          Elle n'est pas sur l'écran d'accueil ? L'installer
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
       <button
         onClick={handleInstall}
         disabled={installing}
@@ -454,8 +437,12 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
         {installing ? "Installation…" : (label || "Installer")}
       </button>
       {showToast && (
-        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "#1e293b", color: "white", padding: "12px 20px", borderRadius: 12, fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
-          📲 Appuyez sur l'icône d'installation dans la barre du navigateur
+        <div style={{ flexBasis: "100%", marginTop: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#334155", lineHeight: 1.6 }}>
+          <strong>Le téléphone n'a pas ouvert l'installation.</strong> Faites-le à la main :
+          <div>1. Menu <strong>⋮</strong> du navigateur (en haut à droite)</div>
+          <div>2. « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
+          <div>3. Confirmez. L'icône avec votre logo apparaît sur l'écran d'accueil.</div>
+          <div style={{ marginTop: 4, color: "#64748b" }}>Si le menu dit « Ouvrir l'application », elle est déjà installée : cherchez-la dans la liste de vos applications.</div>
         </div>
       )}
       {installing && (
