@@ -309,6 +309,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   const [installed, setInstalled] = useState(false);
   // true = on tourne DANS l'app installée de cette gestion (certitude)
   const [dansLApp, setDansLApp] = useState(false);
+  // true = le téléphone confirme que l'app est sur l'écran d'accueil
+  const [dejaSurEcran, setDejaSurEcran] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [isInsidePWA, setIsInsidePWA] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -351,6 +353,24 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       }
     };
 
+    // Demande au téléphone si CETTE app de gestion est sur l'écran d'accueil
+    // (Chrome Android ; le manifest de la gestion la déclare dans
+    // related_applications). Réponse positive = certitude : installée.
+    const nav = navigator as any;
+    if (!appGestion && typeof nav.getInstalledRelatedApps === "function") {
+      nav.getInstalledRelatedApps()
+        .then((apps: any[]) => {
+          // Chrome ne renvoie que les apps déclarées par le manifest de cette gestion
+          const trouvee = (apps || []).some(a => a.platform === "webapp");
+          if (trouvee) {
+            if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
+            setInstalled(true);
+            setDejaSurEcran(true);
+          }
+        })
+        .catch(() => {});
+    }
+
     // (Plus d'écoute de « appinstalled » ici : cet événement arrive aussi quand on
     // installe l'app Moftal principale, ce qui marquait à tort la gestion installée.
     // L'installation n'est notée que si l'utilisateur accepte NOTRE demande.)
@@ -385,6 +405,13 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     }
   };
 
+  if (installed && dejaSurEcran && !dansLApp) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#166534" }}>
+        ✅ Application installée sur votre écran d'accueil — ouvrez-la depuis l'icône.
+      </span>
+    );
+  }
   if (installed && dansLApp) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#166534" }}>
