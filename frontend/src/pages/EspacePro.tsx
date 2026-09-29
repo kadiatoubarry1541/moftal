@@ -2181,7 +2181,7 @@ export default function EspacePro() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">PNG, JPG ou SVG — max 2 Mo. Mise à jour instantanée sur la vitrine.</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">PNG, JPG ou SVG. Mise à jour instantanée partout (gestion, site, application).</p>
                     <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 ${logoUploading ? 'opacity-60 cursor-not-allowed' : ''} ${svc.btnPrimary} text-white font-semibold rounded-xl text-sm`}>
                       {logoUploading ? '⏳ Envoi...' : '📷 Changer le logo'}
                       <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />

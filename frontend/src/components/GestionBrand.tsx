@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { NavigateFunction } from "react-router-dom";
 import { config } from "../config/api";
 
@@ -18,6 +18,8 @@ export function TenantLogo({ tenantCode, logoUrl, fallback, size = 40, radius = 
   const [failed, setFailed] = useState(false);
   // logo_url du tenant, sinon photo du compte pro (servie par le serveur)
   const src = logoUrl || (tenantCode ? `${config.API_BASE_URL}/professionals/tenant-icon/${encodeURIComponent(tenantCode)}?fallback=none` : "");
+  // Nouveau logo enregistré → on réessaie de l'afficher (même si l'ancien était illisible)
+  useEffect(() => { setFailed(false); }, [src]);
   const box: CSSProperties = {
     width: size, height: size, borderRadius: radius, flexShrink: 0, overflow: "hidden",
     display: "flex", alignItems: "center", justifyContent: "center", ...style,

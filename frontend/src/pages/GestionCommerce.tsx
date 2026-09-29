@@ -1030,14 +1030,12 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
             <div style={{ fontWeight: 700, marginBottom: 12 }}>Logo</div>
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
               <div style={{ width: 72, height: 72, borderRadius: 14, border: `2px solid ${COLOR_BDR}`, background: "white", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-                {(settingsForm.logo_url || tenant?.logo_url)
-                  ? <img src={settingsForm.logo_url || tenant.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span style={{ fontSize: 30 }}>🏪</span>}
+                <TenantLogo tenantCode={tenantCode} logoUrl={settingsForm.logo_url || tenant?.logo_url} fallback="🏪" size={72} radius={14} />
               </div>
               <div>
                 <label htmlFor="logo-upload-com" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: COLOR, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Choisir un logo</label>
                 <input id="logo-upload-com" type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} />
-                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG, SVG · Max 2 Mo</p>
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG ou SVG · appliqué partout dans votre gestion</p>
               </div>
             </div>
           </div>

@@ -1050,9 +1050,7 @@ export default function GestionMairie() {
             <label style={labelStyle}>Logo</label>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 6 }}>
               <div style={{ width: 72, height: 72, borderRadius: 14, border: "2px solid #dbeafe", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-                {settingsForm.logo_url
-                  ? <img src={settingsForm.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                  : <span style={{ fontSize: 28 }}>🏛️</span>}
+                <TenantLogo tenantCode={tenantCode} logoUrl={settingsForm.logo_url || tenant?.logo_url} fallback="🏛️" size={72} radius={14} />
               </div>
               <label htmlFor="logo-upload-mairie" style={{ display: "inline-flex", alignItems: "center", padding: "8px 16px", background: BLUE, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                 Choisir un logo

@@ -1590,10 +1590,7 @@ export default function GestionClinique() {
                 <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Logo de la clinique</h3>
                 <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
                   <div style={{ width: 80, height: 80, borderRadius: 14, border: `2px solid ${TEAL}44`, background: "#f0fdfa", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-                    {(settingsForm.logo_url || tenant?.logo_url)
-                      ? <img src={settingsForm.logo_url || tenant.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <svg width="32" height="32" fill="none" stroke={TEAL} strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                    }
+                    <TenantLogo tenantCode={tenantCode} logoUrl={settingsForm.logo_url || tenant?.logo_url} fallback="🏥" size={80} radius={14} />
                   </div>
                   <div>
                     <label htmlFor="logo-upload-clin" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: TEAL, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
@@ -1601,7 +1598,7 @@ export default function GestionClinique() {
                       Choisir un logo
                     </label>
                     <input id="logo-upload-clin" type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} />
-                    <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG, SVG · Max 2 Mo</p>
+                    <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG ou SVG · appliqué partout dans votre gestion</p>
                     {settingsForm.logo_url && settingsForm.logo_url !== tenant?.logo_url && (
                       <p style={{ margin: "4px 0 0", fontSize: 11, color: TEAL, fontWeight: 600 }}>✓ Nouveau logo sélectionné — enregistrez pour l'appliquer</p>
                     )}

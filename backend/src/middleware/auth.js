@@ -15,6 +15,16 @@ export const isProvisionalNumeroH = (numeroH) => typeof numeroH === 'string' && 
 // pas à jour, 100 % ensuite). Toute autre action demande d'abord de mettre son
 // profil à jour.
 const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications', '/api/professionals/register'];
+// Le professionnel gère l'identité de SON établissement (logo, nom, contact,
+// profil public) même si son profil personnel n'est pas encore complété : ces
+// données appartiennent à l'établissement, pas au NuméroH provisoire (et elles
+// suivent automatiquement quand le vrai NuméroH est attribué).
+const PROVISIONAL_ALLOWED_PRO_ROUTES = [
+  /^\/api\/[a-z]+-mgmt\/[^/?]+\/settings(\?|$)/,          // Paramètres de la gestion (logo…)
+  /^\/api\/pro-vitrine\/[^/?]+\/publish-info(\?|$)/,     // Modifier le profil public
+  /^\/api\/professionals\/[^/?]+\/ensure-tenant(\?|$)/,  // Ouvrir sa gestion interne
+  /^\/api\/professionals\/\d+(\?|$)/,                     // Logo depuis l'Espace Pro
+];
 
 // Alias pour authenticateToken (compatibilité)
 export const authenticateToken = async (req, res, next) => {
@@ -70,7 +80,8 @@ export const authenticate = async (req, res, next) => {
       // quoi que ce soit — sinon ces données seraient rattachées à un
       // identifiant provisoire.
       if (isProvisionalNumeroH(user.numeroH) && req.method !== 'GET'
-          && !PROVISIONAL_ALLOWED_PATHS.some((p) => (req.originalUrl || '').startsWith(p))) {
+          && !PROVISIONAL_ALLOWED_PATHS.some((p) => (req.originalUrl || '').startsWith(p))
+          && !PROVISIONAL_ALLOWED_PRO_ROUTES.some((r) => r.test(req.originalUrl || ''))) {
         return res.status(403).json({
           success: false,
           code: 'PROFILE_INCOMPLETE',
