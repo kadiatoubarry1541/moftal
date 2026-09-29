@@ -86,12 +86,19 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
 
   // ─── Profil public ─────────────────────────────────────────────────────────
 
-  function ouvrirProfil() {
+  // Relit le compte avant d'ouvrir : si le logo a été changé ailleurs (Paramètres
+  // de la gestion) depuis l'ouverture du panneau, on n'enregistre pas l'ancien.
+  async function ouvrirProfil() {
+    let acc = account;
+    try {
+      const d = await fetch(`${API}/api/pro-vitrine/by-tenant/${tenantCode}/account`, { headers: auth }).then(r => r.json());
+      if (d.success && d.account) { acc = d.account; setAccount(d.account); }
+    } catch { /* on garde le compte déjà chargé */ }
     setProfilModal({
-      accountId: account.id, tenantCode, name: account.name,
+      accountId: acc.id, tenantCode, name: acc.name,
       form: {
-        name: account.name || "", description: account.description || "", address: account.address || "",
-        city: account.city || "", phone: account.phone || "", email: account.email || "", photo: account.photo || "",
+        name: acc.name || "", description: acc.description || "", address: acc.address || "",
+        city: acc.city || "", phone: acc.phone || "", email: acc.email || "", photo: acc.photo || "",
       },
       step: "ready",
     });
