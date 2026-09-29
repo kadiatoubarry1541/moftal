@@ -298,6 +298,20 @@ router.get('/detail/:id', async (req, res) => {
   }
 });
 
+// Lit une image « data: » : en base64 (photo PNG/JPG) ou en texte (logo SVG de la
+// galerie, « data:image/svg+xml;utf8,… »). Avant, tout était lu comme du base64 :
+// les logos SVG sortaient cassés.
+function decodeDataUrl(dataUrl) {
+  const commaIdx = dataUrl.indexOf(',');
+  const header = dataUrl.substring(0, commaIdx);
+  const body = dataUrl.substring(commaIdx + 1);
+  const mime = (header.match(/^data:([^;,]+)/) || [])[1] || 'image/png';
+  const buffer = /;base64/i.test(header)
+    ? Buffer.from(body, 'base64')
+    : Buffer.from(decodeURIComponent(body), 'utf8');
+  return { mime, buffer };
+}
+
 // GET /api/professionals/pwa-icon/:id — sert le logo du pro comme image pour le manifest PWA
 router.get('/pwa-icon/:id', async (req, res) => {
   try {
@@ -309,12 +323,7 @@ router.get('/pwa-icon/:id', async (req, res) => {
     }
     const photo = account.photo;
     if (photo.startsWith('data:')) {
-      const commaIdx = photo.indexOf(',');
-      const header = photo.substring(0, commaIdx);
-      const base64 = photo.substring(commaIdx + 1);
-      const mimeMatch = header.match(/data:([^;]+);/);
-      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
-      const buffer = Buffer.from(base64, 'base64');
+      const { mime, buffer } = decodeDataUrl(photo);
       res.set('Content-Type', mime);
       res.set('Cache-Control', 'public, max-age=86400');
       res.set('Access-Control-Allow-Origin', '*');
@@ -412,9 +421,7 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
     if (!logo) return res.status(302).redirect('/logo-moftal.svg');
 
     if (logo.startsWith('data:')) {
-      const commaIdx = logo.indexOf(',');
-      const mime = (logo.substring(0, commaIdx).match(/data:([^;]+);/) || [])[1] || 'image/png';
-      const buffer = Buffer.from(logo.substring(commaIdx + 1), 'base64');
+      const { mime, buffer } = decodeDataUrl(logo);
       res.set('Content-Type', mime);
       res.set('Cache-Control', 'public, max-age=86400');
       res.set('Access-Control-Allow-Origin', '*');
@@ -505,8 +512,14 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     const themeColor = TYPE_COLORS[tenant?.type] || '#1a8f1a';
 
     const iconUrl = `/api/professionals/tenant-icon-badged/${tenantCode}`;
-    // Toujours l'icône de l'établissement (son logo, ou son initiale) — jamais celle de Moftal
+    // Toujours l'icône de l'établissement (son logo, ou son initiale) — jamais celle
+    // de Moftal. Un logo PNG/JPG est donné tel quel en premier : c'est le format que
+    // les téléphones Android acceptent comme icône d'application.
+    const logoMime = (tenant?.logo_url || '').match(/^data:(image\/(?:png|jpeg|jpg|webp))/i)?.[1];
     const icons = [
+      ...(logoMime ? [
+        { src: `/api/professionals/tenant-icon/${tenantCode}`, sizes: '512x512', type: logoMime, purpose: 'any' },
+      ] : []),
       { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
       { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
     ];

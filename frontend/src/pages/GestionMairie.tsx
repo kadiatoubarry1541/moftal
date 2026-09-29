@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
+import { normaliserLogo } from "../utils/logoImage";
 
 const BASE = (code: string) => `/api/mairie-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -134,7 +135,7 @@ export default function GestionMairie() {
   const fetchTenant = useCallback(async () => {
     const r = await fetch(`${BASE(tenantCode!)}/info`, { headers: auth() });
     const d = await r.json();
-    if (d.success) { setTenant(d.tenant); setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "" }); }
+    if (d.success) { setTenant(d.tenant); setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", logo_url: d.tenant.logo_url || "" }); }
   }, [tenantCode]);
 
   const fetchDashboard = useCallback(async () => {
@@ -1043,6 +1044,28 @@ export default function GestionMairie() {
       <h2 style={{ margin: "0 0 20px", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>Paramètres de la mairie</h2>
       <div style={{ background: "#fff", borderRadius: 12, padding: 28, boxShadow: "0 1px 4px rgba(0,0,0,0.07)", maxWidth: 560 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <label style={labelStyle}>Logo</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 6 }}>
+              <div style={{ width: 72, height: 72, borderRadius: 14, border: "2px solid #dbeafe", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                {settingsForm.logo_url
+                  ? <img src={settingsForm.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  : <span style={{ fontSize: 28 }}>🏛️</span>}
+              </div>
+              <label htmlFor="logo-upload-mairie" style={{ display: "inline-flex", alignItems: "center", padding: "8px 16px", background: BLUE, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                Choisir un logo
+              </label>
+              <input id="logo-upload-mairie" type="file" accept="image/*" style={{ display: "none" }}
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  normaliserLogo(file)
+                    .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+                    .catch(err => alert(err.message));
+                }} />
+            </div>
+          </div>
           <div>
             <label style={labelStyle}>Nom de la mairie</label>
             <input className={inp} style={{ ...inpStyle, marginTop: 4 }} value={settingsForm.name || ""} onChange={e => setSettingsForm((f: any) => ({ ...f, name: e.target.value }))} placeholder="Mairie de …" />

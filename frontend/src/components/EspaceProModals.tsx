@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { normaliserLogo } from "../utils/logoImage";
 
 // Outils de l'Espace Pro partagés entre la page « Activité » (GestionInterne) et
 // le panneau « Espace Pro » ouvert depuis la gestion interne d'un établissement.
@@ -217,10 +218,11 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
 
   function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => onChange({ ...modal.form, photo: (ev.target?.result as string) || "" });
-    reader.readAsDataURL(file);
+    normaliserLogo(file)
+      .then(logo => onChange({ ...modal.form, photo: logo }))
+      .catch(err => alert(err.message));
   }
 
   const field = (label: string, key: keyof typeof DEFAULT_PROFIL_FORM, placeholder: string, type: "input" | "textarea" = "input") => (

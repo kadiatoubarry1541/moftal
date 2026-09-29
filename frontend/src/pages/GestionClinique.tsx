@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
+import { normaliserLogo } from "../utils/logoImage";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -228,13 +229,14 @@ export default function GestionClinique() {
     get("/pharmacy/stats").then(d => d.success && setPharmacyStats(d.stats)).catch(() => {});
   }, [get, navigate, tenantCode]);
 
+  // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showToast("Logo trop volumineux (max 2 Mo)", false); return; }
-    const reader = new FileReader();
-    reader.onload = () => setSettingsForm((f: any) => ({ ...f, logo_url: reader.result as string }));
-    reader.readAsDataURL(file);
+    normaliserLogo(file)
+      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .catch(err => alert(err.message));
   };
 
   const handleSettingsSave = async () => {

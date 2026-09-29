@@ -5,6 +5,7 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
+import { normaliserLogo } from "../utils/logoImage";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -371,13 +372,14 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     `);
     w.document.close(); w.print();
   }
+  // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert("Logo trop volumineux (max 2 Mo)"); return; }
-    const reader = new FileReader();
-    reader.onload = () => setSettingsForm((f: any) => ({ ...f, logo_url: reader.result as string }));
-    reader.readAsDataURL(file);
+    normaliserLogo(file)
+      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .catch(err => alert(err.message));
   };
   async function saveSettings() {
     setSettingsSaving(true);

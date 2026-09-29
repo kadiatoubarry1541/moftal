@@ -6,6 +6,7 @@ import { ReçuTransaction } from "../components/ReçuTransaction";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 import { AddPersonModal } from "../components/AddPersonModal";
+import { normaliserLogo } from "../utils/logoImage";
 
 interface ProAccount {
   id: string;
@@ -1075,32 +1076,33 @@ export default function EspacePro() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !account) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Fichier trop grand. Maximum : 2 Mo");
-      return;
-    }
+    e.target.value = "";
+    let base64: string;
+    try {
+      // Converti en PNG 512 px : s'affiche partout et sert d'icône d'application
+      base64 = await normaliserLogo(file);
+    } catch (err: any) { alert(err.message); return; }
     setLogoUploading(true);
     setLogoSuccess(false);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      try {
-        const res  = await fetch(`${API}/api/professionals/${account.id}`, {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ photo: base64 }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setAccount(prev => prev ? { ...prev, photo: base64 } : prev);
-          setLogoSuccess(true);
-          setTimeout(() => setLogoSuccess(false), 3500);
-        }
-      } finally {
-        setLogoUploading(false);
+    try {
+      const res  = await fetch(`${API}/api/professionals/${account.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ photo: base64 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAccount(prev => prev ? { ...prev, photo: base64 } : prev);
+        setLogoSuccess(true);
+        setTimeout(() => setLogoSuccess(false), 3500);
+      } else {
+        alert(data.message || "Le logo n'a pas pu être enregistré.");
       }
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      alert("Erreur de connexion : le logo n'a pas été enregistré.");
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   /* ---- Chargement menu restaurant ---- */

@@ -68,7 +68,7 @@ router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res)
     await sequelize.query(
       `UPDATE management_tenants SET
         name          = COALESCE(:name, name),
-        logo_url      = :logo,
+        logo_url      = CASE WHEN :hasLogo THEN :logo ELSE logo_url END,
         address       = :address,
         phone         = :phone,
         email         = :email,
@@ -76,7 +76,7 @@ router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res)
         horaires      = :horaires,
         phone_urgence = :phone_urgence
        WHERE tenant_code = :code`,
-      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, horaires: horaires || null, phone_urgence: phone_urgence || null, code } }
+      { replacements: { name: name || null, hasLogo: logo_url !== undefined, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, horaires: horaires || null, phone_urgence: phone_urgence || null, code } }
     );
     const [updated] = await sequelize.query(
       `SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`,

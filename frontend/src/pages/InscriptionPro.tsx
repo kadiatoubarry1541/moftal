@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LogoPicker from "../components/LogoPicker";
+import { normaliserLogo } from "../utils/logoImage";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -521,18 +522,18 @@ export default function InscriptionPro() {
                 Logo de votre établissement <span className="text-gray-400 font-normal">(optionnel)</span>
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                📲 Ce logo sera l'icône de votre app sur les téléphones (le vôtre et celui de vos clients). Carré recommandé. Max 5 Mo.
+                📲 Ce logo sera l'icône de votre app sur les téléphones (le vôtre et celui de vos clients). Carré recommandé.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input type="file" accept="image/*"
                   onChange={e => {
                     const file = e.target.files?.[0];
                     if (!file) { setForm(f => ({ ...f, mediaUrl: "" })); return; }
-                    if (file.size > 5 * 1024 * 1024) { setError("La photo ne doit pas dépasser 5 Mo."); return; }
                     setError("");
-                    const reader = new FileReader();
-                    reader.onload = () => setForm(f => ({ ...f, mediaUrl: String(reader.result) }));
-                    reader.readAsDataURL(file);
+                    // Converti en PNG 512 px : aperçu garanti, et icône d'app valable sur tous les téléphones
+                    normaliserLogo(file)
+                      .then(logo => setForm(f => ({ ...f, mediaUrl: logo })))
+                      .catch(err => { setForm(f => ({ ...f, mediaUrl: "" })); setError(err.message); });
                   }}
                   className="flex-1 min-h-[44px] px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-orange-50 file:text-orange-700"
                 />
@@ -558,7 +559,12 @@ export default function InscriptionPro() {
                   defaultText={form.name.trim() || PRO_TYPES.find(pt => pt.id === selectedType)?.label || ""}
                   matchText={form.description}
                   onCancel={() => setShowLogoPicker(false)}
-                  onConfirm={dataUrl => { setForm(f => ({ ...f, mediaUrl: dataUrl })); setShowLogoPicker(false); }}
+                  onConfirm={dataUrl => {
+                    setShowLogoPicker(false);
+                    normaliserLogo(dataUrl)
+                      .then(logo => setForm(f => ({ ...f, mediaUrl: logo })))
+                      .catch(err => setError(err.message));
+                  }}
                 />
               )}
               {form.mediaUrl && (
