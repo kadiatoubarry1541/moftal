@@ -555,11 +555,89 @@ router.put('/tenant-icon-png/:tenantCode', authenticate, async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// ─── Icône d'application PNG fabriquée par le serveur ─────────────────────────
+// Avant, seule la page de gestion dessinait l'icône PNG, et seulement une fois
+// ouverte par le propriétaire. À la toute première visite (compte neuf), le
+// téléphone lisait le manifest AVANT ce dessin : pas d'icône PNG → Chrome disait
+// « installée » mais aucune icône n'apparaissait sur l'écran d'accueil.
+// Désormais le serveur fabrique toujours une icône PNG 512×512 : l'icône dessinée
+// par la gestion si elle existe, sinon le logo, sinon l'initiale sur la couleur du secteur.
+function empreinteLogo(logo) {
+  if (!logo) return '';
+  let h = 5381;
+  for (let i = 0; i < logo.length; i += Math.max(1, Math.floor(logo.length / 4000))) h = ((h << 5) + h + logo.charCodeAt(i)) | 0;
+  return 'l' + (h >>> 0).toString(36);
+}
+
+let sharpLib;
+async function getSharp() {
+  if (sharpLib === undefined) {
+    try { sharpLib = (await import('sharp')).default; } catch { sharpLib = null; }
+  }
+  return sharpLib;
+}
+
+async function fabriquerIconeApp(tenant) {
+  if (tenant?.icon_png?.startsWith('data:image/png')) return decodeDataUrl(tenant.icon_png).buffer;
+  const sharp = await getSharp();
+  if (!sharp) return null;
+  const T = 512;
+  const logo = tenant?.logo_url;
+  if (logo) {
+    try {
+      let src;
+      if (logo.startsWith('data:')) src = decodeDataUrl(logo).buffer;
+      else if (/^https?:\/\//.test(logo)) {
+        const r = await fetch(logo, { signal: AbortSignal.timeout(8000) });
+        if (r.ok) src = Buffer.from(await r.arrayBuffer());
+      }
+      if (src) {
+        // Logo entier dans les 76 % du centre : visible même quand Android arrondit l'icône
+        const zone = Math.round(T * 0.76);
+        const logoPng = await sharp(src, { density: 300 })
+          .resize(zone, zone, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+          .flatten({ background: '#ffffff' }).png().toBuffer();
+        return await sharp({ create: { width: T, height: T, channels: 3, background: '#ffffff' } })
+          .composite([{ input: logoPng, gravity: 'center' }]).png().toBuffer();
+      }
+    } catch { /* logo illisible : on passe à l'initiale */ }
+  }
+  const couleur = TENANT_ICON_COLORS[tenant?.type] || '#1a8f1a';
+  const esc = (v) => String(v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+  const initiale = esc(((tenant?.name || '').trim()[0] || '•').toUpperCase());
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${T}" height="${T}"><rect width="${T}" height="${T}" fill="${couleur}"/><text x="256" y="345" font-family="Arial, Helvetica, DejaVu Sans, Liberation Sans, sans-serif" font-size="270" font-weight="700" fill="#ffffff" text-anchor="middle">${initiale}</text></svg>`;
+  return await sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+// GET /api/professionals/tenant-app-icon/:tenantCode — icône PNG de l'app (toujours disponible)
+router.get('/tenant-app-icon/:tenantCode', async (req, res) => {
+  try {
+    await ensureTenantIconColumns().catch(() => {});
+    const [tenant] = await sequelize.query(
+      `SELECT mt.name, mt.type, mt.icon_png, COALESCE(mt.logo_url, pa.photo) AS logo_url
+       FROM management_tenants mt
+       LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
+       WHERE mt.tenant_code = :code LIMIT 1`,
+      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!tenant) return res.status(404).end();
+    const png = await fabriquerIconeApp(tenant);
+    if (!png) return res.redirect(302, `/api/professionals/tenant-icon-badged/${encodeURIComponent(req.params.tenantCode)}`);
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=300');
+    res.set('Access-Control-Allow-Origin', '*');
+    return res.send(png);
+  } catch { res.status(404).end(); }
+});
+
 // GET /api/professionals/pro-manifest/by-tenant/:tenantCode — manifest PWA pour les pages gestion
 router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
   try {
     const { tenantCode } = req.params;
-    const relativeStart = req.query.startUrl || `/gestion-interne`;
+    // Toujours l'accueil de CETTE gestion (/gestion-ecole/CODE), jamais la sous-page
+    // où l'on se trouvait : sinon l'identité de l'app changeait d'une page à l'autre.
+    const demande = String(req.query.startUrl || '');
+    const relativeStart = (demande.match(/^\/gestion-[a-z-]+\/[^/?#]+/i) || [])[0] || `/gestion-interne`;
     const pageOrigin = req.query.origin ? decodeURIComponent(req.query.origin) : '';
     const startUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
     // Scope spécifique à cet établissement — évite le conflit avec le scope "/" de l'app Moftal principale
@@ -589,23 +667,14 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     };
     const themeColor = TYPE_COLORS[tenant?.type] || '#1a8f1a';
 
-    const iconUrl = `/api/professionals/tenant-icon-badged/${tenantCode}`;
-    // Toujours l'icône de l'établissement (son logo, ou son initiale) — jamais celle
-    // de Moftal. Un logo PNG/JPG est donné tel quel en premier : c'est le format que
-    // les téléphones Android acceptent comme icône d'application.
-    const logoMime = (tenant?.logo_url || '').match(/^data:(image\/(?:png|jpeg|jpg|webp))/i)?.[1];
-    // Icône PNG 512×512 dessinée par la gestion : celle que le téléphone utilise
-    const iconVersion = encodeURIComponent(String(tenant?.icon_source || '1').slice(-24));
+    // Icône PNG 512×512 fabriquée par le serveur : toujours présente, même pour un
+    // compte tout neuf (les téléphones Android refusent une icône SVG seule).
+    const iconVersion = encodeURIComponent(String(tenant?.icon_source || empreinteLogo(tenant?.logo_url) || '1').slice(-24));
+    const pngUrl = `/api/professionals/tenant-app-icon/${tenantCode}?v=${iconVersion}`;
     const icons = [
-      ...(tenant?.has_icon_png ? [
-        { src: `/api/professionals/tenant-icon-png/${tenantCode}?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: `/api/professionals/tenant-icon-png/${tenantCode}?v=${iconVersion}`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      ] : []),
-      ...(!tenant?.has_icon_png && logoMime ? [
-        { src: `/api/professionals/tenant-icon/${tenantCode}`, sizes: '512x512', type: logoMime, purpose: 'any' },
-      ] : []),
-      { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: iconUrl, sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      { src: pngUrl, sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: pngUrl, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: `/api/professionals/tenant-icon-badged/${tenantCode}`, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
     ];
 
     const manifest = {
@@ -630,7 +699,7 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     };
 
     res.set('Content-Type', 'application/manifest+json');
-    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Cache-Control', 'no-cache'); // un nouveau logo / une nouvelle icône est vu tout de suite
     res.set('Access-Control-Allow-Origin', '*');
     return res.json(manifest);
   } catch {

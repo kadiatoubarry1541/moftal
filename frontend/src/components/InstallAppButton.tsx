@@ -320,6 +320,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   const [installing, setInstalling] = useState(false);
   const [isInsidePWA, setIsInsidePWA] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [attente, setAttente] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
 
@@ -398,13 +399,28 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     }
     setInstalling(true);
     try {
+      // « Accepté » veut seulement dire que la personne a appuyé sur Installer :
+      // le téléphone peut encore échouer. On n'affirme « installée » que lorsque le
+      // navigateur confirme (événement appinstalled) ; sinon on explique quoi faire.
+      let confirme = false;
+      const onInstalled = () => { confirme = true; };
+      window.addEventListener("appinstalled", onInstalled);
       await prompt.prompt();
       const { outcome } = await prompt.userChoice;
       if (outcome === "accepted") {
-        if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
-        setInstalled(true);
-        setDejaSurEcran(true);
+        setAttente(true);
+        const debut = Date.now();
+        while (!confirme && Date.now() - debut < 45000) await new Promise(r => setTimeout(r, 500));
+        setAttente(false);
+        if (confirme) {
+          if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
+          setInstalled(true);
+          setDejaSurEcran(true);
+        } else {
+          setShowToast(true);
+        }
       }
+      window.removeEventListener("appinstalled", onInstalled);
     } finally {
       setPrompt(null);
       (window as any).__pwaGestionPrompt = null;
@@ -436,9 +452,14 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
         <span style={{ fontSize: 16 }}>{installing ? "⏳" : "📲"}</span>
         {installing ? "Installation…" : (label || "Installer")}
       </button>
+      {attente && (
+        <div style={{ flexBasis: "100%", fontSize: 12.5, color: "#334155" }}>
+          ⏳ Le téléphone installe l'application… l'icône va apparaître sur l'écran d'accueil.
+        </div>
+      )}
       {showToast && (
         <div style={{ flexBasis: "100%", marginTop: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#334155", lineHeight: 1.6 }}>
-          <strong>Le téléphone n'a pas ouvert l'installation.</strong> Faites-le à la main :
+          <strong>L'installation n'est pas confirmée par le téléphone.</strong> Faites-la à la main :
           <div>1. Menu <strong>⋮</strong> du navigateur (en haut à droite)</div>
           <div>2. « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
           <div>3. Confirmez. L'icône avec votre logo apparaît sur l'écran d'accueil.</div>

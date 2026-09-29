@@ -184,13 +184,31 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
 });
 
 router.put('/:tenantCode/students/:id', authenticate, verifyTenant, async (req, res) => {
-  const { tenantCode: tc, id } = req.params;
-  const { niveau } = req.body;
-  await sequelize.query(
-    `UPDATE madrasa_students SET niveau = COALESCE(:niveau, niveau), updated_at = NOW() WHERE id = :id AND tenant_code = :tc`,
-    { replacements: { niveau: niveau || null, id, tc } }
-  );
-  res.json({ success: true });
+  try {
+    const { tenantCode: tc, id } = req.params;
+    const b = req.body;
+    // Avant, seul le niveau était enregistré : le reste de la fiche était perdu.
+    await sequelize.query(
+      `UPDATE madrasa_students SET
+         prenom = COALESCE(:prenom, prenom), nom = COALESCE(:nom, nom),
+         date_naissance = CASE WHEN :has_dob THEN CAST(:dob AS DATE) ELSE date_naissance END,
+         sexe = COALESCE(:sexe, sexe), niveau = COALESCE(:niveau, niveau),
+         telephone_parent = CASE WHEN :has_tel THEN :tel ELSE telephone_parent END,
+         numero_h = CASE WHEN :has_nh THEN :nh ELSE numero_h END,
+         parent_numero_h = CASE WHEN :has_pnh THEN :pnh ELSE parent_numero_h END,
+         updated_at = NOW()
+       WHERE id = :id AND tenant_code = :tc`,
+      { replacements: {
+          prenom: b.prenom || null, nom: b.nom || null, sexe: b.sexe ? String(b.sexe).slice(0, 1) : null, niveau: b.niveau || null,
+          has_dob: 'date_naissance' in b, dob: b.date_naissance || null,
+          has_tel: 'telephone_parent' in b, tel: b.telephone_parent || null,
+          has_nh: 'numero_h' in b, nh: b.numero_h?.trim() || null,
+          has_pnh: 'parent_numero_h' in b, pnh: b.parent_numero_h?.trim() || null,
+          id, tc,
+        } }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 router.delete('/:tenantCode/students/:id', authenticate, verifyTenant, async (req, res) => {
@@ -220,6 +238,19 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh: numero_h || null } }
   );
   res.json({ staff: rows[0] });
+});
+
+router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const { prenom, nom, role, specialite, telephone, numero_h } = req.body;
+    await sequelize.query(
+      `UPDATE madrasa_staff SET prenom = COALESCE(:prenom, prenom), nom = COALESCE(:nom, nom), role = COALESCE(:role, role),
+         specialite = COALESCE(:spec, specialite), telephone = :tel, numero_h = :nh
+       WHERE id = :id AND tenant_code = :tc`,
+      { replacements: { prenom: prenom || null, nom: nom || null, role: role || null, spec: specialite || null, tel: telephone || null, nh: numero_h?.trim() || null, id: req.params.id, tc: req.params.tenantCode } }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
@@ -253,6 +284,19 @@ router.post('/:tenantCode/halaqas', authenticate, verifyTenant, async (req, res)
     { replacements: { tc, nom, niveau: niveau || 'Iqra', cap: capacite || 20, eid: enseignant_id || null } }
   );
   res.json({ halaqa: rows[0] });
+});
+
+router.put('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const { nom, niveau, capacite, enseignant_id } = req.body;
+    await sequelize.query(
+      `UPDATE madrasa_halaqas SET nom = COALESCE(:nom, nom), niveau = COALESCE(:niveau, niveau),
+         capacite = COALESCE(:cap, capacite), enseignant_id = :eid
+       WHERE id = :id AND tenant_code = :tc`,
+      { replacements: { nom: nom || null, niveau: niveau || null, cap: capacite ? parseInt(capacite) : null, eid: enseignant_id || null, id: req.params.id, tc: req.params.tenantCode } }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 router.delete('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req, res) => {
@@ -292,6 +336,28 @@ router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, r
   res.json({ success: true });
 });
 
+// Historique des présences d'une halaqa (élèves de son niveau)
+router.get('/:tenantCode/attendance/summary', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const { classroom_id } = req.query;
+    if (!classroom_id) return res.status(400).json({ success: false, message: 'Halaqa requise.' });
+    const [summary] = await sequelize.query(
+      `SELECT s.id AS student_id, s.nom, s.prenom,
+              COUNT(a.id) FILTER (WHERE a.statut <> 'absent')::int AS presences,
+              COUNT(a.id) FILTER (WHERE a.statut = 'absent')::int AS absences,
+              COUNT(a.id) FILTER (WHERE a.statut = 'retard')::int AS retards,
+              COUNT(a.id)::int AS total
+       FROM madrasa_students s
+       JOIN madrasa_halaqas h ON h.id = :hid AND h.tenant_code = s.tenant_code AND h.niveau = s.niveau
+       LEFT JOIN madrasa_attendance a ON a.student_id = s.id
+       WHERE s.tenant_code = :tc AND s.is_active = true
+       GROUP BY s.id, s.nom, s.prenom ORDER BY s.nom`,
+      { replacements: { hid: classroom_id, tc: req.params.tenantCode } }
+    );
+    res.json({ success: true, summary });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // ── Notes / Progression ───────────────────────────────────────────────────────
 router.get('/:tenantCode/grades', authenticate, verifyMember, async (req, res) => {
   const tc = req.params.tenantCode;
@@ -315,6 +381,26 @@ router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) 
     { replacements: { tc, sid: student_id, mat: matiere || 'Coran', note: parseFloat(note) || 0, nm: parseFloat(note_max) || 20, per: periode || 'Trim 1', srt: sourate || '', com: commentaire || '' } }
   );
   res.json({ grade: rows[0] });
+});
+
+router.put('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    const { matiere, note, note_max, periode, sourate, commentaire } = req.body;
+    await sequelize.query(
+      `UPDATE madrasa_grades SET matiere = COALESCE(:mat, matiere), note = COALESCE(:note, note), note_max = COALESCE(:nm, note_max),
+         periode = COALESCE(:per, periode), sourate = :srt, commentaire = :com
+       WHERE id = :id AND tenant_code = :tc`,
+      { replacements: { mat: matiere || null, note: note === '' || note == null ? null : parseFloat(note), nm: note_max ? parseFloat(note_max) : null, per: periode || null, srt: sourate || null, com: commentaire || null, id: req.params.id, tc: req.params.tenantCode } }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`DELETE FROM madrasa_grades WHERE id = :id AND tenant_code = :tc`, { replacements: { id: req.params.id, tc: req.params.tenantCode } });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // ── Frais ─────────────────────────────────────────────────────────────────────

@@ -293,8 +293,9 @@ export default function GestionEnseignement({ mode }: Props) {
         if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast("Frais ajouté"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "save-presence") {
-        await post("/attendance", { records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
-        setModal(null); showToast("Présences enregistrées");
+        const d = await post("/attendance", { classroom_id: selectedGroup || undefined, records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
+        if (d.success) { setModal(null); showToast("Présences enregistrées"); }
+        else showToast(d.message || "Présences non enregistrées", false);
       } else if (modal === "gen-bulletin") {
         if (!form.periode) { showToast("Période obligatoire", false); return; }
         const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || "2025-2026", publish: !!form.publish });
