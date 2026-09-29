@@ -6,6 +6,7 @@ import { ReçuTransaction } from "../components/ReçuTransaction";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 import { AddPersonModal } from "../components/AddPersonModal";
+import { normaliserLogo } from "../utils/logoImage";
 
 interface ProAccount {
   id: string;
@@ -636,6 +637,8 @@ export default function EspacePro() {
   // Logo
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoSuccess, setLogoSuccess]     = useState(false);
+  // Logo enregistré dans un format que le navigateur ne sait pas afficher (ex. HEIC)
+  const [logoIllisible, setLogoIllisible] = useState(false);
 
   // Lien client à partager
   const [clientLinkCopied, setClientLinkCopied] = useState(false);
@@ -731,6 +734,18 @@ export default function EspacePro() {
 
   /* ---- Chargement initial ---- */
   useEffect(() => { loadAccount(); }, [id]);
+  // Formule « Visibilité + Gestion Interne » : le propriétaire arrive directement dans
+  // sa gestion interne complète (cette page-ci est le modèle de la formule Visibilité).
+  // ?rdv=1 : ouverte depuis la gestion pour traiter les demandes de rendez-vous.
+  useEffect(() => {
+    if (!account) return;
+    const me = getSessionUser();
+    const estProprietaire = !!me && me.numeroH === account.ownerNumeroH;
+    const depuisGestion = new URLSearchParams(window.location.search).get("rdv") === "1";
+    if (estProprietaire && !depuisGestion && account.status === "approved" && account.hasGestionInterne && account.planType === "full") {
+      navigate(`/gestion-interne?tab=pro&ouvrir=${account.id}`, { replace: true });
+    }
+  }, [account?.id]);
   useEffect(() => { if (tab === 'retrait' && account) loadMesDemandes(); }, [tab, account?.id]);
   useEffect(() => { if (tab === 'membres' && account) loadMembers(); }, [tab, account?.id]);
   useEffect(() => {
@@ -1075,32 +1090,34 @@ export default function EspacePro() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !account) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Fichier trop grand. Maximum : 2 Mo");
-      return;
-    }
+    e.target.value = "";
+    let base64: string;
+    try {
+      // Converti en PNG 512 px : s'affiche partout et sert d'icône d'application
+      base64 = await normaliserLogo(file);
+    } catch (err: any) { alert(err.message); return; }
     setLogoUploading(true);
     setLogoSuccess(false);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result as string;
-      try {
-        const res  = await fetch(`${API}/api/professionals/${account.id}`, {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ photo: base64 }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setAccount(prev => prev ? { ...prev, photo: base64 } : prev);
-          setLogoSuccess(true);
-          setTimeout(() => setLogoSuccess(false), 3500);
-        }
-      } finally {
-        setLogoUploading(false);
+    try {
+      const res  = await fetch(`${API}/api/professionals/${account.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ photo: base64 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAccount(prev => prev ? { ...prev, photo: base64 } : prev);
+        setLogoIllisible(false);
+        setLogoSuccess(true);
+        setTimeout(() => setLogoSuccess(false), 3500);
+      } else {
+        alert(data.message || "Le logo n'a pas pu être enregistré.");
       }
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      alert("Erreur de connexion : le logo n'a pas été enregistré.");
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   /* ---- Chargement menu restaurant ---- */
@@ -1276,11 +1293,12 @@ export default function EspacePro() {
           {/* Identité du compte */}
           <div className="flex items-start gap-4 mb-6">
             <div className="w-16 h-16 rounded-2xl flex-shrink-0 shadow-inner overflow-hidden border-2 border-white/30">
-              {account.photo ? (
+              {account.photo && !logoIllisible ? (
                 <img
                   src={account.photo}
                   alt={`Logo ${account.name}`}
                   className="w-full h-full object-contain bg-white"
+                  onError={() => setLogoIllisible(true)}
                 />
               ) : (
                 <div className="w-full h-full bg-white/20 flex items-center justify-center text-4xl">
@@ -1896,7 +1914,7 @@ export default function EspacePro() {
 
                 {account?.photo && (
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <img src={account.photo} alt={account.name} className="w-12 h-12 rounded-xl object-cover border border-gray-200" />
+                    <img src={account.photo} alt={account.name} className="w-12 h-12 rounded-xl object-cover border border-gray-200" onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }} />
                     <div>
                       <p className="font-bold text-sm text-gray-900">{account.name}</p>
                       <p className="text-xs text-gray-500">{account.type}</p>
@@ -2157,7 +2175,7 @@ export default function EspacePro() {
                 <div className="flex items-center gap-5">
                   <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center border border-gray-200 dark:border-gray-600">
                     {account.photo ? (
-                      <img src={account.photo} alt="Logo" className="w-full h-full object-contain" />
+                      <img src={account.photo} alt="Logo" className="w-full h-full object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }} />
                     ) : (
                       <span className="text-4xl">{typeInfo.icon}</span>
                     )}
@@ -2538,7 +2556,7 @@ export default function EspacePro() {
                 <div className="flex flex-col sm:flex-row items-center gap-5">
                   <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center shadow-inner border border-gray-200 dark:border-gray-600">
                     {account.photo ? (
-                      <img src={account.photo} alt="Logo" className="w-full h-full object-contain" />
+                      <img src={account.photo} alt="Logo" className="w-full h-full object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }} />
                     ) : (
                       <span className="text-5xl">{typeInfo.icon}</span>
                     )}

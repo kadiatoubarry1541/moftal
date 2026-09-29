@@ -5,6 +5,8 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import { normaliserLogo } from "../utils/logoImage";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -98,7 +100,6 @@ ${p.diagnostic?`<div class="s-label">Diagnostic</div><div class="diag">${p.diagn
 ${meds.length===0?'<p style="color:#94a3b8;font-size:13px">Aucun médicament</p>':meds.map((m:any)=>`<div class="med-item">◆ &nbsp;${m.medicament||m}</div>`).join("")}
 ${p.notes?`<div class="s-label">Notes</div><p style="font-size:12px;color:#64748b;font-style:italic">${p.notes}</p>`:""}
 <div class="footer"><div class="sig">Dr. ${p.s_nom?`${p.s_prenom||""} ${p.s_nom}`:"..."}<br>Médecin prescripteur</div></div>
-<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Moftal · Plateforme de santé</div>
 </body></html>`;
   const w = window.open("", "_blank", "width=800,height=900");
   if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
@@ -119,7 +120,6 @@ ${+f.remise>0?`<tr><td colspan="3" style="text-align:right;color:#64748b">Remise
 ${f.mode_paiement&&isPaid?`<p style="font-size:12px;color:#64748b;margin-top:8px">Mode de paiement : <strong>${PAYMENT_LABELS[f.mode_paiement]||f.mode_paiement}</strong></p>`:""}
 ${f.notes?`<p style="font-size:12px;color:#64748b;margin-top:8px;font-style:italic">Notes : ${f.notes}</p>`:""}
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature &amp; Cachet</div></div>
-<div style="font-size:10px;color:#e2e8f0;text-align:center;margin-top:40px">Moftal · Plateforme de santé</div>
 </body></html>`;
   const w = window.open("", "_blank", "width=800,height=900");
   if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
@@ -230,13 +230,14 @@ export default function GestionClinique() {
     get("/pharmacy/stats").then(d => d.success && setPharmacyStats(d.stats)).catch(() => {});
   }, [get, navigate, tenantCode]);
 
+  // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showToast("Logo trop volumineux (max 2 Mo)", false); return; }
-    const reader = new FileReader();
-    reader.onload = () => setSettingsForm((f: any) => ({ ...f, logo_url: reader.result as string }));
-    reader.readAsDataURL(file);
+    normaliserLogo(file)
+      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .catch(err => alert(err.message));
   };
 
   const handleSettingsSave = async () => {
@@ -427,7 +428,6 @@ export default function GestionClinique() {
         </div>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Espace clinique inaccessible</h2>
         <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error || "Erreur inconnue"}</p>
-        <p style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace", marginBottom: 16 }}>Code : {tenantCode}</p>
         <button onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 20px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>← Retour à la liste</button>
       </div>
     </div>
@@ -1669,6 +1669,7 @@ export default function GestionClinique() {
               <button onClick={handleSettingsSave} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${TEAL}88` : TEAL, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
                 {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
               </button>
+              {!isAdminViewing && <ParametresEspacePro />}
             </div>
           )}
 

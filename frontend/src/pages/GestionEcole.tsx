@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { normaliserLogo } from "../utils/logoImage";
 
 const BASE = (code: string) => `/api/school-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -100,13 +101,14 @@ export default function GestionEcole() {
       .catch(() => {});
   }, [get]);
 
+  // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showToast("Logo trop volumineux (max 2 Mo)", false); return; }
-    const reader = new FileReader();
-    reader.onload = () => setSettingsForm((f: any) => ({ ...f, logo_url: reader.result as string }));
-    reader.readAsDataURL(file);
+    normaliserLogo(file)
+      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .catch(err => alert(err.message));
   };
 
   const handleSettingsSave = async () => {
@@ -198,7 +200,6 @@ export default function GestionEcole() {
         </div>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Espace école inaccessible</h2>
         <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error || "Erreur inconnue"}</p>
-        <p style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace", marginBottom: 16 }}>Code : {tenantCode}</p>
         <button onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 20px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
           ← Retour à la liste
         </button>

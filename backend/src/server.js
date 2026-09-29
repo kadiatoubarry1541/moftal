@@ -5,6 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { fillTenantsFromAccounts } from './utils/tenantSync.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -2567,6 +2568,14 @@ async function initAllTables() {
     console.log('✅ Tenants DEMO seedés dans management_tenants');
   } catch (err) {
     console.warn('⚠️ initAllTables [demo-seed]:', err.message);
+  }
+
+  // ── Gestion interne : compléter les infos vides (email, téléphone, logo…) avec
+  //    celles du compte pro, pour que le site client les affiche ─────────────────
+  try {
+    await fillTenantsFromAccounts();
+  } catch (err) {
+    console.warn('⚠️ initAllTables [tenants-sync]:', err.message);
   }
 
   // ── published_stories : colonnes ajoutées progressivement ─────────────────

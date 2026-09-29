@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { setProBrand } from "./proBrand";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -13,8 +14,10 @@ interface Props {
   color?: string;
   label?: string;
   // "icon" (rond compact, par défaut) ou "banner" (rangée pleine largeur,
-  // utilisée dans le panneau de notifications)
-  variant?: "icon" | "banner";
+  // utilisée dans le panneau de notifications). Dans une gestion interne, le
+  // bouton n'apparaît que dans les Paramètres ("settings") ; ailleurs il ne fait
+  // que transmettre le nom et le logo du pro à la barre du haut.
+  variant?: "icon" | "banner" | "settings";
 }
 
 // ─── Utilitaires ────────────────────────────────────────────────────────────
@@ -90,20 +93,22 @@ export default function InstallAppButton({ name, logoUrl, themeColor, color, lab
   // MODE 1 — PAGE D'ACCUEIL : installer l'application Moftal principale
   // ══════════════════════════════════════════════════════════════════════════
   if (!onGestionPage) {
-    return <MainAppInstallButton variant={variant} />;
+    return <MainAppInstallButton variant={variant === "banner" ? "banner" : "icon"} />;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   // MODE 2 — GESTION INTERNE : installer l'espace de gestion du professionnel
   // ══════════════════════════════════════════════════════════════════════════
-  return (
-    <GestionInstallButton
-      name={name}
-      logoUrl={logoUrl}
-      themeColor={themeColor || color || "#1d4ed8"}
-      label={label}
-    />
-  );
+  const couleur = themeColor || color || "#1d4ed8";
+  if (variant !== "settings") return <ProBrandPublisher name={name} logoUrl={logoUrl} color={couleur} />;
+  return <GestionInstallButton name={name} logoUrl={logoUrl} themeColor={couleur} label={label} />;
+}
+
+// La barre du haut affiche le logo du professionnel (pas celui de Moftal)
+function ProBrandPublisher({ name, logoUrl, color }: { name?: string; logoUrl?: string; color: string }) {
+  useEffect(() => { setProBrand({ name, logoUrl, color }); }, [name, logoUrl, color]);
+  useEffect(() => () => setProBrand(null), []);
+  return null;
 }
 
 // ─── Bouton installation app principale (page d'accueil) ────────────────────
@@ -379,11 +384,9 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   if (installed) {
     return (
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
-          <span style={{ fontSize: 15 }}>✅</span> Application installée
-        </div>
-      </div>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#166534" }}>
+        ✅ Application installée
+      </span>
     );
   }
 

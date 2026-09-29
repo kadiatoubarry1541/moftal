@@ -83,7 +83,6 @@ export default function ScientifiqueVitrine() {
             {lab.email   && <span>✉ {lab.email}</span>}
             {lab.address && <span>📍 {lab.address}</span>}
           </div>
-          <span style={{ opacity: 0.5 }}>Moftal · Science & Recherche</span>
         </div>
       </div>
 
@@ -96,7 +95,7 @@ export default function ScientifiqueVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "white" }}>{lab.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>Laboratoire · {tenantCode}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>Laboratoire</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
@@ -238,10 +237,9 @@ export default function ScientifiqueVitrine() {
       {/* FOOTER */}
       <footer style={{ background: INDIGO_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: "white", marginBottom: 8 }}>{lab.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Centre de Recherche · {tenantCode}</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Centre de Recherche</p>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          Propulsé par <strong style={{ color: "white" }}>Moftal</strong> · Science Africaine
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
         </div>
       </footer>
     </div>

@@ -12,6 +12,7 @@ import OfflineStatusBar from "./components/OfflineStatusBar";
 import ProfileCompletionPrompt from "./components/ProfileCompletionPrompt";
 import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdown";
 import { SalesIcon } from "./components/icons/SalesIcon";
+import { useProBrand } from "./components/proBrand";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
@@ -79,6 +80,7 @@ const Zaka = lazy(() => import("./pages/Zaka"));
 const ProfesseurIA = lazy(() => import("./pages/ProfesseurIA"));
 const InscriptionPro = lazy(() => import("./pages/InscriptionPro"));
 const ListeProfessionnels = lazy(() => import("./pages/ListeProfessionnels"));
+const PanneauEspacePro = lazy(() => import("./components/PanneauEspacePro"));
 const MesComptesPro = lazy(() => import("./pages/MesComptesPro"));
 const EspacePro = lazy(() => import("./pages/EspacePro"));
 const MonEspacePro = lazy(() => import("./pages/MonEspacePro"));
@@ -303,6 +305,28 @@ function App() {
   }, [currentUser?.numeroH]);
 
   const isGestionMode = pathname.startsWith("/gestion");
+  // Espace d'un professionnel ouvert (/gestion-xxx/CODE) : son logo remplace celui de Moftal
+  const proBrand = useProBrand();
+  const isEspaceTenant = /^\/gestion-[^/]+\/[^/]+/.test(pathname);
+  // Panneau « Espace Pro » (site client, publications, profil, clients, formules)
+  const [panneauProOuvert, setPanneauProOuvert] = useState(false);
+  useEffect(() => { setPanneauProOuvert(false); }, [pathname]);
+  // Dans l'espace du pro : icône d'onglet et titre à son nom, pas ceux de Moftal
+  useEffect(() => {
+    if (!isEspaceTenant || !proBrand) return;
+    const icone = proBrand.logoUrl || `data:image/svg+xml;utf8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="${proBrand.color || "#1a8f1a"}"/><text x="32" y="43" font-family="Arial,sans-serif" font-size="32" font-weight="700" fill="white" text-anchor="middle">${(proBrand.name?.trim()?.[0] || "").toUpperCase().replace(/[<&>]/g, "")}</text></svg>`
+    )}`;
+    const liens = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="apple-touch-icon"]'));
+    const anciens = liens.map(l => ({ l, href: l.getAttribute("href"), type: l.getAttribute("type") }));
+    liens.forEach(l => { l.setAttribute("href", icone); l.removeAttribute("type"); });
+    const ancienTitre = document.title;
+    if (proBrand.name) document.title = proBrand.name;
+    return () => {
+      anciens.forEach(({ l, href, type }) => { if (href) l.setAttribute("href", href); if (type) l.setAttribute("type", type); });
+      document.title = ancienTitre;
+    };
+  }, [isEspaceTenant, proBrand?.logoUrl, proBrand?.name, proBrand?.color]);
   const isMoftalPayMode =
     pathname === "/compte-famille" ||
     pathname === "/moftal-pay-pro";
@@ -548,10 +572,22 @@ function App() {
               >
                 ‹
               </button>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }} onClick={() => navigate("/gestion-interne")}>
-                <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 24, width: 24, objectFit: "contain", display: "block" }} />
-                </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: isEspaceTenant ? "default" : "pointer" }} onClick={() => { if (!isEspaceTenant) navigate("/gestion-interne"); }}>
+                {isEspaceTenant ? (
+                  proBrand?.logoUrl ? (
+                    <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <img src={proBrand.logoUrl} alt={proBrand.name || ""} style={{ height: 24, width: 24, objectFit: "cover", borderRadius: 6, display: "block" }} />
+                    </div>
+                  ) : (
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: proBrand?.color || "#1a8f1a", color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14, fontWeight: 800 }}>
+                      {(proBrand?.name?.trim()?.[0] || "").toUpperCase()}
+                    </div>
+                  )
+                ) : (
+                  <div style={{ background: "white", borderRadius: 8, padding: 2, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <img src="/logo-moftal.svg" alt="Moftal" style={{ height: 24, width: 24, objectFit: "contain", display: "block" }} />
+                  </div>
+                )}
                 <span style={{ color: "white", fontWeight: 800, fontSize: 14, letterSpacing: "-0.2px" }}>{t('header.pro_mode')}</span>
               </div>
             </div>
@@ -580,7 +616,7 @@ function App() {
                 </Link>
               )}
               <button
-                onClick={() => navigate("/gestion-interne?tab=pro")}
+                onClick={() => isEspaceTenant ? setPanneauProOuvert(true) : navigate("/gestion-interne?tab=pro")}
                 style={{ background: "#1a8f1a", color: "white", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}
               >
                 Espace Pro
@@ -588,6 +624,11 @@ function App() {
             </div>
           </div>
         </header>
+      )}
+      {isGestionMode && isEspaceTenant && panneauProOuvert && (
+        <Suspense fallback={null}>
+          <PanneauEspacePro tenantCode={pathname.split("/")[2]} onClose={() => setPanneauProOuvert(false)} />
+        </Suspense>
       )}
 
       {/* Main content - plein écran, chaque page gère son propre container.

@@ -197,7 +197,6 @@ export default function CommerceVitrine() {
               <a href={`tel:${store.phone_urgence}`} style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "2px 10px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>🚨 Urgence</a>
             )}
           </div>
-          <span style={{ opacity: 0.5 }}>Moftal · Marché numérique</span>
         </div>
       </div>
 
@@ -212,7 +211,7 @@ export default function CommerceVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "white", lineHeight: 1.1 }}>{store.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>{storeLabel} · {tenantCode}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>{storeLabel}</div>
             </div>
           </div>
 
@@ -488,11 +487,10 @@ export default function CommerceVitrine() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{store.name}</span>
           </div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>{storeLabel} · {tenantCode}</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>{storeLabel}</p>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            Propulsé par <strong style={{ color: "white" }}>Moftal</strong> · Marché numérique africain
             <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              Retour à la plateforme
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
             </button>
           </div>
         </div>

@@ -5,6 +5,8 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import ParametresEspacePro from "../components/ParametresEspacePro";
+import { normaliserLogo } from "../utils/logoImage";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -366,18 +368,19 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
         ${+s.remise > 0 ? `<div style="text-align:right;font-size:12px;color:#94a3b8">Remise : -${fmtMoney(+s.remise)}</div>` : ""}
         <div style="text-align:right;margin-top:12px" class="total">Total : ${fmtMoney(s.total)}</div>
         <div style="text-align:right;font-size:12px;color:#64748b">Reçu : ${fmtMoney(s.montant_recu)} · Mode : ${s.type_paiement}</div>
-        <div style="margin-top:24px;text-align:center;font-size:11px;color:#94a3b8">Merci pour votre achat — propulsé par Moftal</div>
+        <div style="margin-top:24px;text-align:center;font-size:11px;color:#94a3b8">Merci pour votre achat</div>
       </body></html>
     `);
     w.document.close(); w.print();
   }
+  // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert("Logo trop volumineux (max 2 Mo)"); return; }
-    const reader = new FileReader();
-    reader.onload = () => setSettingsForm((f: any) => ({ ...f, logo_url: reader.result as string }));
-    reader.readAsDataURL(file);
+    normaliserLogo(file)
+      .then(logo => setSettingsForm((f: any) => ({ ...f, logo_url: logo })))
+      .catch(err => alert(err.message));
   };
   async function saveSettings() {
     setSettingsSaving(true);
@@ -1075,6 +1078,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           <button onClick={saveSettings} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${COLOR}88` : COLOR, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer" }}>
             {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
           </button>
+          <ParametresEspacePro />
         </div>
       )}
 

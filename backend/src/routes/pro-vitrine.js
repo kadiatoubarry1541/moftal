@@ -191,7 +191,7 @@ router.put('/:id/publish-info', authenticate, async (req, res) => {
     // Synchroniser management_tenants pour que la vitrine publique soit à jour
     await sequelize.query(
       `UPDATE management_tenants
-       SET name=:name, description=:desc, address=:addr, phone=:phone, email=:email, logo_url=:logo
+       SET name=:name, description=:desc, address=:addr, phone=:phone, email=:email, logo_url=COALESCE(:logo, logo_url)
        WHERE tenant_code=:code`,
       {
         replacements: {

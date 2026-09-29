@@ -88,7 +88,6 @@ export default function JournalisteVitrine() {
             {media.email   && <span>✉ {media.email}</span>}
             {media.address && <span>📍 {media.address}</span>}
           </div>
-          <span style={{ opacity: 0.5 }}>Moftal · Presse & Information</span>
         </div>
       </div>
 
@@ -101,7 +100,7 @@ export default function JournalisteVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "white", letterSpacing: "0.02em" }}>{media.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>Presse · {tenantCode}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>Presse</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
@@ -252,10 +251,9 @@ export default function JournalisteVitrine() {
       {/* FOOTER */}
       <footer style={{ background: SLATE_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 800, fontSize: 18, color: "white", marginBottom: 8, fontFamily: "'Georgia', serif" }}>{media.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Presse & Information · {tenantCode}</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Presse & Information</p>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          Propulsé par <strong style={{ color: "white" }}>Moftal</strong>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
         </div>
       </footer>
     </div>

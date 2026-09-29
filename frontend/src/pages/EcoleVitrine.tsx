@@ -115,7 +115,6 @@ export default function EcoleVitrine() {
             {school.phone_urgence && (
               <a href={`tel:${school.phone_urgence}`} style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "3px 12px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>🚨 Urgence</a>
             )}
-            <span style={{ opacity: 0.5 }}>Moftal · Éducation numérique</span>
           </div>
         </div>
       </div>
@@ -129,7 +128,7 @@ export default function EcoleVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "white", lineHeight: 1.1 }}>{school.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>École · {tenantCode}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>École</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
@@ -324,7 +323,7 @@ export default function EcoleVitrine() {
                   <input type="date" placeholder="Date de naissance" value={enrollForm.date_naissance} onChange={e => setEnrollForm(f => ({ ...f, date_naissance: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                 </div>
-                <input placeholder="Niveau souhaité (ex: CP, 6ème...)" value={enrollForm.niveau_souhaite} onChange={e => setEnrollForm(f => ({ ...f, niveau_souhaite: e.target.value }))}
+                <input placeholder="Niveau souhaité (ex: CP1, 7ème année, Licence 1...)" value={enrollForm.niveau_souhaite} onChange={e => setEnrollForm(f => ({ ...f, niveau_souhaite: e.target.value }))}
                   style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <input placeholder="Nom du parent" value={enrollForm.nom_parent} onChange={e => setEnrollForm(f => ({ ...f, nom_parent: e.target.value }))}
@@ -390,11 +389,10 @@ export default function EcoleVitrine() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{school.name}</span>
           </div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>École · {tenantCode}</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>École</p>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            Propulsé par <strong style={{ color: "white" }}>Moftal</strong> · Éducation numérique
             <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              Retour à la plateforme
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
             </button>
           </div>
         </div>

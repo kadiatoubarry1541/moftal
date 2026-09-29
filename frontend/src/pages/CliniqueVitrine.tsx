@@ -175,7 +175,6 @@ export default function CliniqueVitrine() {
                 Se connecter
               </button>
             )}
-            <span style={{ opacity: 0.5 }}>Moftal · Plateforme de santé</span>
           </div>
         </div>
       </div>
@@ -193,7 +192,7 @@ export default function CliniqueVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "white", lineHeight: 1.1 }}>{clinic.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>Centre Médical · {tenantCode}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>Centre Médical</div>
             </div>
           </div>
 
@@ -538,11 +537,10 @@ export default function CliniqueVitrine() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{clinic.name}</span>
           </div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>Centre Médical · {tenantCode}</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>Centre Médical</p>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            Propulsé par <strong style={{ color: "white" }}>Moftal</strong> · Plateforme de santé numérique
             <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              Retour à la plateforme
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
             </button>
           </div>
         </div>

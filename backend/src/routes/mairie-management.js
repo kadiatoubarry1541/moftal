@@ -1,4 +1,5 @@
 import express from 'express';
+import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
@@ -43,18 +44,19 @@ router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res)
     await sequelize.query(
       `UPDATE management_tenants SET
         name        = COALESCE(:name, name),
-        logo_url    = :logo,
+        logo_url    = CASE WHEN :hasLogo THEN :logo ELSE logo_url END,
         address     = :address,
         phone       = :phone,
         email       = :email,
         description = :desc
        WHERE tenant_code = :code`,
-      { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, code } }
+      { replacements: { name: name || null, hasLogo: logo_url !== undefined, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, code } }
     );
     const [updated] = await sequelize.query(
       `SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
       { replacements: { code }, type: sequelize.QueryTypes.SELECT }
     );
+    await syncAccountFromTenant(req.params.tenantCode);
     res.json({ success: true, tenant: updated });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
