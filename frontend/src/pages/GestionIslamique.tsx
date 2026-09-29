@@ -216,7 +216,7 @@ export default function GestionIslamique({ mode }: Props) {
           <div style={{ width:52, height:52, borderRadius:14, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>{M.icon}</div>
           <div>
             <div style={{ fontWeight:800, fontSize:20, color:"white" }}>{tenant?.name || M.label}</div>
-            <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", marginTop:3 }}>{tenantCode} · {M.label}</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", marginTop:3 }}>{M.label}</div>
           </div>
         </div>
         <button onClick={() => navigate("/gestion-interne")} style={{ padding:"8px 16px", background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600 }}>← Retour</button>

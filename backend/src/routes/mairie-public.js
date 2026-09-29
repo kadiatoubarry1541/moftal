@@ -1,4 +1,5 @@
 import express from 'express';
+import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
 
 const router = express.Router();
@@ -6,6 +7,8 @@ const router = express.Router();
 // GET /api/mairie-public/:code — infos publiques de la mairie
 router.get('/:code', async (req, res) => {
   try {
+    // Le site client s'alimente de la gestion interne (et du compte pro si vide)
+    await fillTenantsFromAccounts(req.params.code).catch(() => {});
     const [tenant] = await sequelize.query(
       `SELECT * FROM management_tenants WHERE tenant_code = :code AND is_active = true LIMIT 1`,
       { replacements: { code: req.params.code }, type: sequelize.QueryTypes.SELECT }

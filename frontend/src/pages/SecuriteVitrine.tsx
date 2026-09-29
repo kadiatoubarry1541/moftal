@@ -75,7 +75,6 @@ export default function SecuriteVitrine() {
             {agency.email   && <span>✉ {agency.email}</span>}
             {agency.address && <span>📍 {agency.address}</span>}
           </div>
-          <span style={{ opacity: 0.5 }}>Moftal · Sécurité & Protection</span>
         </div>
       </div>
 
@@ -88,7 +87,7 @@ export default function SecuriteVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "white" }}>{agency.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>Sécurité · {tenantCode}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>Sécurité</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
@@ -232,10 +231,9 @@ export default function SecuriteVitrine() {
       {/* FOOTER */}
       <footer style={{ background: "#020617", color: "rgba(255,255,255,0.6)", padding: "28px 20px", textAlign: "center" }}>
         <div style={{ fontWeight: 700, fontSize: 16, color: "white", marginBottom: 8 }}>{agency.name}</div>
-        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Agence de Sécurité · {tenantCode}</p>
+        <p style={{ fontSize: 12, margin: "0 0 8px" }}>Agence de Sécurité</p>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          Propulsé par <strong style={{ color: "white" }}>Moftal</strong>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.5)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>Retour à la plateforme</button>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.5)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
         </div>
       </footer>
     </div>

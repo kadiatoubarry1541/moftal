@@ -4,7 +4,7 @@ import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
-import AbonnementGestion from "../components/AbonnementGestion";
+import ParametresEspacePro from "../components/ParametresEspacePro";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -441,7 +441,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           <div style={{ minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontWeight: 800, fontSize: 18, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Boutique"}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 3 }}>
-              <span>{tenantCode} · Gestion Commerce</span>
+              <span>Gestion Commerce</span>
             </div>
           </div>
         </div>
@@ -1078,7 +1078,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           <button onClick={saveSettings} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${COLOR}88` : COLOR, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer" }}>
             {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
           </button>
-          <AbonnementGestion />
+          <ParametresEspacePro />
         </div>
       )}
 

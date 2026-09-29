@@ -168,7 +168,6 @@ export default function GestionTransport() {
           <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
             <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 4 }}>Gestion Interne · Transport & Livraison</div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🚌 {tenant?.name || "Transport & Livraison"}</h1>
-            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>Code : {code}</div>
           </div>
           <div style={{ flexShrink: 0 }}><InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={BLUE} /></div>
         </div>

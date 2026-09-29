@@ -7,6 +7,7 @@
  */
 
 import express from 'express';
+import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
@@ -106,6 +107,7 @@ router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res)
       { replacements: { name: name || null, logo: logo_url || null, address: address || null, phone: phone || null, email: email || null, desc: description || null, horaires: horaires || null, phone_urgence: phone_urgence || null, code } }
     );
     const [rows] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`, { replacements: { code } });
+    await syncAccountFromTenant(req.params.tenantCode);
     res.json({ success: true, tenant: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });

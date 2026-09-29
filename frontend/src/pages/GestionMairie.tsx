@@ -4,7 +4,7 @@ import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
-import AbonnementGestion from "../components/AbonnementGestion";
+import ParametresEspacePro from "../components/ParametresEspacePro";
 
 const BASE = (code: string) => `/api/mairie-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -1070,7 +1070,7 @@ export default function GestionMairie() {
           </button>
         </div>
       </div>
-      <div style={{ maxWidth: 560, marginTop: 20 }}><AbonnementGestion /></div>
+      <div style={{ maxWidth: 560, marginTop: 20, display: "grid", gap: 16 }}><ParametresEspacePro /></div>
     </div>
   );
 

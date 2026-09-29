@@ -149,7 +149,7 @@ export default function GestionScientifique() {
           )}
           <div style={{ flex:1, minWidth:0, overflow:"hidden" }}>
             <div style={{ fontWeight:800, color:"white", fontSize:20, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{tenant?.name || "Scientifiques"}</div>
-            <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", marginTop:2 }}>Code : {tenantCode} · Scientifiques & Recherche</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", marginTop:2 }}>Scientifiques & Recherche</div>
           </div>
           <div style={{ display:"flex", gap:8, flexShrink:0 }}>
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={INDIGO} />

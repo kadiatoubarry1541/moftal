@@ -4,7 +4,7 @@ import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
-import AbonnementGestion from "../components/AbonnementGestion";
+import ParametresEspacePro from "../components/ParametresEspacePro";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -607,7 +607,6 @@ export default function GestionEnseignement({ mode }: Props) {
           {!collapsed && (
             <div style={{ overflow: "hidden" }}>
               <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 165 }}>{tenant.name}</p>
-              <p style={{ fontSize: 10, color: "rgba(200,240,200,0.7)", margin: 0, fontFamily: "monospace" }}>{tenantCode}</p>
             </div>
           )}
         </div>
@@ -1215,7 +1214,7 @@ export default function GestionEnseignement({ mode }: Props) {
               <button onClick={handleSettingsSave} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${V.color}88` : V.color, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer" }}>
                 {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
               </button>
-              {!isAdminViewing && <AbonnementGestion />}
+              {!isAdminViewing && <ParametresEspacePro />}
             </div>
           )}
 

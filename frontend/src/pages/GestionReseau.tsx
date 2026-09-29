@@ -192,7 +192,7 @@ export default function GestionReseau() {
           <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>🌐</div>
           <div style={{ minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontWeight: 800, fontSize: 18, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Mon Réseau"}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{tenantCode} · Gestion Réseau</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Gestion Réseau</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>

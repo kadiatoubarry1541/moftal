@@ -268,7 +268,7 @@ export default function GestionMosquee() {
           )}
           <div style={{ minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontWeight: 800, fontSize: 18, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Réseau Imam"}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{tenantCode} · Réseau Imam & Mosquée</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Réseau Imam & Mosquée</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>

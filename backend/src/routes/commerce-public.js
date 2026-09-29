@@ -1,4 +1,5 @@
 import express from 'express';
+import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { ensureCommerceReviewsTable, ensureCommerceExtras } from './commerce-management.js';
@@ -10,6 +11,8 @@ router.get('/:tenantCode', async (req, res) => {
   try {
     await ensureTenantExtraColumns();
     const { tenantCode } = req.params;
+    // Le site client s'alimente de la gestion interne (et du compte pro si vide)
+    await fillTenantsFromAccounts(tenantCode).catch(() => {});
     const [tenant] = await sequelize.query(
       `SELECT tenant_code, type, name, logo_url, address, city, phone, email, description, horaires, phone_urgence
        FROM management_tenants

@@ -4,7 +4,7 @@ import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
-import AbonnementGestion from "../components/AbonnementGestion";
+import ParametresEspacePro from "../components/ParametresEspacePro";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -425,7 +425,6 @@ export default function GestionClinique() {
         </div>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Espace clinique inaccessible</h2>
         <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error || "Erreur inconnue"}</p>
-        <p style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace", marginBottom: 16 }}>Code : {tenantCode}</p>
         <button onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 20px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>← Retour à la liste</button>
       </div>
     </div>
@@ -484,7 +483,6 @@ export default function GestionClinique() {
           {!collapsed && (
             <div style={{ overflow: "hidden" }}>
               <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 165 }}>{tenant.name}</p>
-              <p style={{ fontSize: 10, color: "rgba(153,246,228,0.7)", margin: 0, fontFamily: "monospace" }}>{tenantCode}</p>
             </div>
           )}
         </div>
@@ -1672,7 +1670,7 @@ export default function GestionClinique() {
               <button onClick={handleSettingsSave} disabled={settingsSaving} style={{ alignSelf: "flex-start", padding: "10px 28px", background: settingsSaving ? `${TEAL}88` : TEAL, color: "white", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: settingsSaving ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
                 {settingsSaving ? "Enregistrement..." : "Enregistrer les paramètres"}
               </button>
-              {!isAdminViewing && <AbonnementGestion />}
+              {!isAdminViewing && <ParametresEspacePro />}
             </div>
           )}
 

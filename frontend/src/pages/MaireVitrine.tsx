@@ -114,7 +114,6 @@ export default function MaireVitrine() {
             {mairie.email   && <span>✉ {mairie.email}</span>}
             {mairie.address && <span>📍 {mairie.address}</span>}
           </div>
-          <span style={{ opacity: 0.5 }}>Moftal · Plateforme État Civil</span>
         </div>
       </div>
 
@@ -127,7 +126,7 @@ export default function MaireVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 16, color: "white", lineHeight: 1.1 }}>{mairie.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.65)", fontFamily: "monospace" }}>État Civil · {tenantCode}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.65)", fontFamily: "monospace" }}>État Civil</div>
             </div>
           </div>
 
@@ -403,11 +402,10 @@ export default function MaireVitrine() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{mairie.name}</span>
           </div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>Service Public · État Civil · {tenantCode}</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>Service Public · État Civil</p>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            Propulsé par <strong style={{ color: "white" }}>Moftal</strong> · Plateforme d'État Civil Numérique
             <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              Retour à la plateforme
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
             </button>
           </div>
         </div>

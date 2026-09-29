@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getSessionUser } from "../utils/auth";
 import { AddPersonModal } from "./AddPersonModal";
-import AbonnementGestion from "./AbonnementGestion";
+import ParametresEspacePro from "./ParametresEspacePro";
 import {
   DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp,
   type PublishModal, type ProfilModal,
@@ -160,9 +160,9 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
               <div style={{ marginTop: 18, borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
                 <button onClick={() => setVoirAbonnement(v => !v)}
                   style={{ background: "none", border: "none", padding: "4px 0", cursor: "pointer", fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
-                  ⚙️ Paramètres · Abonnement {voirAbonnement ? "▴" : "▾"}
+                  ⚙️ Paramètres · Application et abonnement {voirAbonnement ? "▴" : "▾"}
                 </button>
-                {voirAbonnement && <div style={{ marginTop: 8 }}><AbonnementGestion /></div>}
+                {voirAbonnement && <div style={{ marginTop: 8 }}><div style={{ display: "grid", gap: 12 }}><ParametresEspacePro /></div></div>}
               </div>
             )}
           </div>

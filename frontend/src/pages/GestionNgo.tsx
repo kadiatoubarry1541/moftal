@@ -212,7 +212,7 @@ export default function GestionNgo() {
           )}
           <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontWeight: 800, color: "white", fontSize: 20, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "ONG & Associations"}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>Code : {tenantCode} · ONG & Associations</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>ONG & Associations</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={ROSE} />

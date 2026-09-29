@@ -444,7 +444,6 @@ export default function GestionMadrasa() {
           {!collapsed && (
             <div style={{ overflow: "hidden" }}>
               <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 165 }}>{tenant.name}</p>
-              <p style={{ fontSize: 10, color: "rgba(125,211,252,0.7)", margin: 0, fontFamily: "monospace" }}>{tenantCode}</p>
             </div>
           )}
         </div>

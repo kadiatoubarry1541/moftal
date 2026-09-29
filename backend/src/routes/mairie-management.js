@@ -1,4 +1,5 @@
 import express from 'express';
+import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
@@ -55,6 +56,7 @@ router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res)
       `SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`,
       { replacements: { code }, type: sequelize.QueryTypes.SELECT }
     );
+    await syncAccountFromTenant(req.params.tenantCode);
     res.json({ success: true, tenant: updated });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
