@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
@@ -435,11 +436,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* Header */}
       <div style={{ background: GRADIENT, borderRadius: 14, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, flex: 1, overflow: "hidden" }}>
-          {tenant?.logo_url ? (
-            <img src={tenant.logo_url} alt="" style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-          ) : (
-            <div style={{ width: 52, height: 52, borderRadius: 12, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>🏪</div>
-          )}
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🏪" size={52} radius={12} style={{ background: "rgba(255,255,255,0.15)" }} />
           <div style={{ minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontWeight: 800, fontSize: 18, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Boutique"}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.85)", marginTop: 3 }}>
@@ -450,7 +447,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={COLOR} />
           <button className="gestion-btn-secondary" onClick={() => navigate(`/commerce/${tenantCode}`)} style={{ padding: "8px 14px", background: "rgba(255,255,255,0.25)", color: "white", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🌐 Voir ma vitrine</button>
-          <button className="gestion-btn-secondary" onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>← Retour</button>
+          <button onClick={() => goToMoftal(navigate)} title="Retour sur Moftal" style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}><MoftalMark /> Moftal</button>
         </div>
       </div>
 
@@ -1028,6 +1025,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* ── PARAMÈTRES ── */}
       {tab === "settings" && (
         <div style={{ animation: "fadeIn 0.2s ease", maxWidth: 640, display: "flex", flexDirection: "column", gap: 16 }}>
+          <TenantCodeCard code={tenantCode} />
           <div style={formBg}>
             <div style={{ fontWeight: 700, marginBottom: 12 }}>Logo</div>
             <div style={{ display: "flex", alignItems: "center", gap: 20 }}>

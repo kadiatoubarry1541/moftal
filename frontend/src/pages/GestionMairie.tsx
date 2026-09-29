@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
@@ -411,7 +412,7 @@ export default function GestionMairie() {
     <aside style={{ width: 220, background: `linear-gradient(180deg, ${BLUE_DARK} 0%, ${BLUE} 100%)`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0 }}>
       <div style={{ padding: "24px 16px 16px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <span style={{ fontSize: 22 }}>🏛️</span>
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🏛️" size={32} style={{ background: "rgba(255,255,255,0.15)" }} />
           <span style={{ color: "#fff", fontWeight: 800, fontSize: 13, lineHeight: 1.2 }}>{tenant?.name || "Mairie"}</span>
         </div>
         <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>État Civil · Administration</div>
@@ -425,9 +426,9 @@ export default function GestionMairie() {
         ))}
       </nav>
       <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
-        <button onClick={() => navigate(-1)} style={{ width: "100%", background: "rgba(255,255,255,0.1)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          Retour
+        <button onClick={() => goToMoftal(navigate)} style={{ width: "100%", background: "rgba(255,255,255,0.1)", color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+          <MoftalMark />
+          Retour sur Moftal
         </button>
       </div>
     </aside>
@@ -1042,6 +1043,7 @@ export default function GestionMairie() {
   const renderSettings = () => (
     <div>
       <h2 style={{ margin: "0 0 20px", fontSize: 22, fontWeight: 800, color: "#0f172a" }}>Paramètres de la mairie</h2>
+      <div style={{ maxWidth: 560, marginBottom: 16 }}><TenantCodeCard code={tenantCode} /></div>
       <div style={{ background: "#fff", borderRadius: 12, padding: 28, boxShadow: "0 1px 4px rgba(0,0,0,0.07)", maxWidth: 560 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>

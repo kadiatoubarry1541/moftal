@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
@@ -476,12 +477,7 @@ export default function GestionClinique() {
       {/* SIDEBAR */}
       <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 240, flexShrink: 0, transition: "width 0.25s ease", background: "linear-gradient(180deg,#042f2e 0%,#0d3d3c 50%,#134d4b 100%)", borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, left: 0, height: "100vh", zIndex: 50 } : {}) }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${TEAL},${TEAL_LIGHT})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
-            {(settingsForm.logo_url || tenant?.logo_url)
-              ? <img src={settingsForm.logo_url || tenant.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <svg width="18" height="18" fill="none" stroke="white" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-            }
-          </div>
+          <TenantLogo tenantCode={tenantCode} logoUrl={settingsForm.logo_url || tenant?.logo_url} fallback="🏥" size={36} style={{ background: "rgba(255,255,255,0.15)" }} />
           {!collapsed && (
             <div style={{ overflow: "hidden" }}>
               <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 165 }}>{tenant.name}</p>
@@ -505,12 +501,12 @@ export default function GestionClinique() {
           })}
         </nav>
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: 8, flexShrink: 0 }}>
-          <button onClick={() => navigate(-1 as any)} title={collapsed ? "Retour" : undefined}
+          <button onClick={() => goToMoftal(navigate)} title={collapsed ? "Retour sur Moftal" : undefined}
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "rgba(153,246,228,0.45)", fontSize: 12, justifyContent: collapsed ? "center" : "flex-start" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(153,246,228,0.45)"; }}>
-            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: 6, background: "white", flexShrink: 0 }}><img src="/logo-moftal.svg" alt="Moftal" style={{ width: 16, height: 16, display: "block" }} /></span>
-            {!collapsed && "Retour plateforme"}
+            <MoftalMark />
+            {!collapsed && "Retour sur Moftal"}
           </button>
           <button onClick={() => setCollapsed(!collapsed)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "5px 0", border: "none", background: "transparent", color: "rgba(13,148,136,0.4)", cursor: "pointer", marginTop: 4 }}>
@@ -1587,6 +1583,7 @@ export default function GestionClinique() {
           {/* ── PARAMÈTRES ── */}
           {section === "settings" && (
             <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
+              <TenantCodeCard code={tenantCode} />
 
               {/* Logo */}
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "24px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>

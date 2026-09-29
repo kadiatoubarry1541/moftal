@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 
 const BASE = (code: string) => `${config.API_BASE_URL}/scientist-mgmt/${code}`;
@@ -142,11 +143,7 @@ export default function GestionScientifique() {
 
       <div style={{ background:"linear-gradient(135deg,#3730a3,#4338ca)", padding:"28px 28px 0" }}>
         <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20 }}>
-          {tenant?.logo_url ? (
-            <img src={tenant.logo_url} alt="" style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover", flexShrink: 0 }} />
-          ) : (
-            <div style={{ width:56, height:56, borderRadius:14, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30, flexShrink:0 }}>🔬</div>
-          )}
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🔬" size={56} radius={12} style={{ background: "rgba(255,255,255,0.15)" }} />
           <div style={{ flex:1, minWidth:0, overflow:"hidden" }}>
             <div style={{ fontWeight:800, color:"white", fontSize:20, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{tenant?.name || "Scientifiques"}</div>
             <div style={{ fontSize:12, color:"rgba(255,255,255,0.75)", marginTop:2 }}>Scientifiques & Recherche</div>
@@ -154,7 +151,7 @@ export default function GestionScientifique() {
           <div style={{ display:"flex", gap:8, flexShrink:0 }}>
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={INDIGO} />
             <button className="gestion-btn-secondary" onClick={() => navigate(`/scientifique/${tenantCode}`)} style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"1px solid rgba(255,255,255,0.3)", borderRadius:8, padding:"8px 14px", cursor:"pointer", fontWeight:600, fontSize:13 }}>🌐 Vitrine</button>
-            <button className="gestion-btn-secondary" onClick={() => navigate(-1)} style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"none", borderRadius:8, padding:"8px 16px", cursor:"pointer", fontWeight:600, fontSize:13 }}>← Retour</button>
+            <button onClick={() => goToMoftal(navigate)} title="Retour sur Moftal" style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", background:"rgba(255,255,255,0.15)", color:"white", border:"none", borderRadius:8, padding:"8px 16px", cursor:"pointer", fontWeight:600, fontSize:13 }}><MoftalMark /> Moftal</button>
           </div>
         </div>
         <div style={{ display:"flex", gap:4, overflowX:"auto" }}>

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 
 const BASE = (code: string) => `/api/mosque-mgmt/${code}`;
@@ -261,11 +262,7 @@ export default function GestionMosquee() {
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg, #0f4b0f, #1a8f1a)", borderRadius: 14, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, flex: 1, overflow: "hidden" }}>
-          {tenant?.logo_url ? (
-            <img src={tenant.logo_url} alt="" style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-          ) : (
-            <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>🕌</div>
-          )}
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🕌" size={48} radius={12} style={{ background: "rgba(255,255,255,0.15)" }} />
           <div style={{ minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontWeight: 800, fontSize: 18, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Réseau Imam"}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Réseau Imam & Mosquée</div>
@@ -274,7 +271,7 @@ export default function GestionMosquee() {
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={GREEN} />
           <button className="gestion-btn-secondary" onClick={() => navigate(`/mosquee/${tenantCode}`)} style={{ padding: "8px 14px", background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🌐 Vitrine</button>
-          <button className="gestion-btn-secondary" onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>← Retour</button>
+          <button onClick={() => goToMoftal(navigate)} title="Retour sur Moftal" style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}><MoftalMark /> Moftal</button>
         </div>
       </div>
 

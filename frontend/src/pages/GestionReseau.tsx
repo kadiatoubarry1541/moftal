@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
@@ -189,7 +190,7 @@ export default function GestionReseau() {
       {/* Header */}
       <div style={{ background: "linear-gradient(135deg,#1e40af,#2563eb)", borderRadius: 14, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, flex: 1, overflow: "hidden" }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>🌐</div>
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🌐" size={48} radius={12} style={{ background: "rgba(255,255,255,0.2)" }} />
           <div style={{ minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontWeight: 800, fontSize: 18, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Mon Réseau"}</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>Gestion Réseau</div>
@@ -198,7 +199,7 @@ export default function GestionReseau() {
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={BLUE} />
           <button className="gestion-btn-secondary" onClick={() => navigate(`/reseau-vitrine/${tenantCode}`)} style={{ padding: "8px 14px", background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🌐 Vitrine</button>
-          <button className="gestion-btn-secondary" onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}>← Retour</button>
+          <button onClick={() => goToMoftal(navigate)} title="Retour sur Moftal" style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", padding: "8px 16px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13 }}><MoftalMark /> Moftal</button>
         </div>
       </div>
 

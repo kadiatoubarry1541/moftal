@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 
 const token = () => localStorage.getItem("token") || "";
@@ -20,6 +21,7 @@ const BLUE_BORDER = "#bfdbfe";
 
 export default function GestionTransport() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
+  const navigate = useNavigate();
   const code = tenantCode!;
   const [tab, setTab] = useState<Tab>("dashboard");
   const [tenant, setTenant] = useState<any>(null);
@@ -165,11 +167,15 @@ export default function GestionTransport() {
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg, ${BLUE}, #1d4ed8)`, color: "white", padding: "20px 24px" }}>
         <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🚌" size={48} radius={12} style={{ background: "rgba(255,255,255,0.2)" }} />
           <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
             <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 4 }}>Gestion Interne · Transport & Livraison</div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🚌 {tenant?.name || "Transport & Livraison"}</h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Transport & Livraison"}</h1>
           </div>
-          <div style={{ flexShrink: 0 }}><InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={BLUE} /></div>
+          <div style={{ flexShrink: 0, display: "flex", gap: 8 }}>
+            <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={BLUE} />
+            <button onClick={() => goToMoftal(navigate)} title="Retour sur Moftal" style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", padding: "8px 14px", background: "rgba(255,255,255,0.2)", color: "white", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}><MoftalMark /> Moftal</button>
+          </div>
         </div>
       </div>
 

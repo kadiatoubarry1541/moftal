@@ -418,7 +418,11 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     const logo = tenant?.logo_url || tenant?.photo;
-    if (!logo) return res.status(302).redirect('/logo-moftal.svg');
+    // ?fallback=none : pas de logo Moftal à la place (Gestion Interne = logo du pro uniquement)
+    if (!logo) {
+      if (req.query.fallback === 'none') return res.status(404).end();
+      return res.status(302).redirect('/logo-moftal.svg');
+    }
 
     if (logo.startsWith('data:')) {
       const { mime, buffer } = decodeDataUrl(logo);
@@ -429,6 +433,7 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
     }
     res.redirect(302, logo);
   } catch {
+    if (req.query.fallback === 'none') return res.status(404).end();
     res.status(302).redirect('/logo-moftal.svg');
   }
 });
