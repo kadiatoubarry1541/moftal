@@ -13,7 +13,7 @@ import { normalizeNumeroH } from '../utils/numeroH.js';
 import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
-import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH } from '../middleware/auth.js';
+import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 
 const router = Router();
@@ -547,6 +547,13 @@ router.post('/complete-profile', authenticate, [
       );
     }
     await User.destroy({ where: { numeroH: oldNumeroH }, transaction: t });
+    // Les sessions ouvertes ailleurs avec l'ancien identifiant suivent le vrai NuméroH
+    await ensureNumeroHAliasTable(t);
+    await User.sequelize.query(
+      `INSERT INTO numero_h_aliases (ancien, nouveau) VALUES (:ancien, :nouveau)
+       ON CONFLICT (ancien) DO UPDATE SET nouveau = EXCLUDED.nouveau`,
+      { replacements: { ancien: oldNumeroH, nouveau: newNumeroH }, transaction: t }
+    );
     await t.commit();
   } catch (error) {
     await t.rollback();
