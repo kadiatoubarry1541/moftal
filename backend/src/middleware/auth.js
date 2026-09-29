@@ -9,6 +9,38 @@ export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
 // jusqu'à la mise à jour du profil, qui attribue le vrai NuméroH.
 export const PROVISIONAL_PREFIX = 'TMP-';
 export const isProvisionalNumeroH = (numeroH) => typeof numeroH === 'string' && numeroH.startsWith(PROVISIONAL_PREFIX);
+
+// Quand un compte provisoire complète son profil, son identifiant TMP-… est
+// remplacé par le vrai NuméroH. Les autres appareils / l'app de gestion
+// (gestions.moftal.com) gardent un jeton avec l'ancien identifiant : on garde la
+// correspondance en base pour que ces sessions suivent le compte au lieu de
+// rester sur un « Nouveau membre » vide.
+let aliasTableReady = false;
+export async function ensureNumeroHAliasTable(transaction) {
+  if (aliasTableReady && !transaction) return;
+  await User.sequelize.query(
+    `CREATE TABLE IF NOT EXISTS numero_h_aliases (
+       ancien  VARCHAR(100) PRIMARY KEY,
+       nouveau VARCHAR(100) NOT NULL,
+       created_at TIMESTAMP DEFAULT NOW()
+     )`,
+    transaction ? { transaction } : {}
+  );
+  if (!transaction) aliasTableReady = true;
+}
+
+async function findUserFollowingAlias(numeroH) {
+  const user = await User.findByNumeroH(numeroH);
+  if (user || !isProvisionalNumeroH(numeroH)) return user;
+  try {
+    await ensureNumeroHAliasTable();
+    const rows = await User.sequelize.query(
+      'SELECT nouveau FROM numero_h_aliases WHERE ancien = :ancien LIMIT 1',
+      { replacements: { ancien: numeroH }, type: 'SELECT' }
+    );
+    return rows?.[0]?.nouveau ? await User.findByNumeroH(rows[0].nouveau) : null;
+  } catch { return null; }
+}
 // Avant la mise à jour du profil, seules ces actions sont permises :
 // se connecter / mettre son profil à jour (/api/auth/), lire ses notifications
 // et créer son compte professionnel (validé à 60 % tant que le profil n'est
@@ -55,7 +87,7 @@ export const authenticate = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, config.JWT_SECRET);
 
-      const user = await User.findByNumeroH(decoded.numeroH);
+      const user = await findUserFollowingAlias(decoded.numeroH);
 
       if (!user) {
         return res.status(401).json({

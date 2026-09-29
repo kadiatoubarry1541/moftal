@@ -256,7 +256,19 @@ function App() {
     fetch(`${config.API_BASE_URL}/auth/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.ok ? res.json() : null)
+      .then(res => {
+        // Session plus reconnue par le serveur (jeton expiré, ou ancien identifiant
+        // provisoire d'un profil complété sur un autre appareil) : on ne garde pas un
+        // profil périmé à l'écran, on redemande la connexion.
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("session_user");
+          setCurrentUser(null);
+          navigate("/login", { replace: true });
+          return null;
+        }
+        return res.ok ? res.json() : null;
+      })
       .then(data => {
         if (data?.success && data.user) {
           const local = getSessionUser();
@@ -272,6 +284,8 @@ function App() {
               const parsed = JSON.parse(raw);
               if (parsed.userData) parsed.userData = { ...parsed.userData, ...data.user };
               else Object.assign(parsed, data.user);
+              // Le NuméroH peut avoir changé (profil provisoire complété ailleurs)
+              if (data.user.numeroH) parsed.numeroH = data.user.numeroH;
               if (data.token) parsed.token = data.token;
               localStorage.setItem("session_user", JSON.stringify(parsed));
             }
