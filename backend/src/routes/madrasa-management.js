@@ -14,8 +14,11 @@ import { trouverUtilisateur, MESSAGE_INTROUVABLE } from '../utils/trouverUtilisa
 import { authenticate } from '../middleware/auth.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
+import { verifyDirecteurOuEnseignant, exigerDroit, elevesAutorises, peutVoirEleve, peutVoirClasse, descriptionAcces, preparerAcces, appliquerAcces, ensureColonnesAcces } from '../utils/accesEnseignant.js';
 
 const router = express.Router();
+// Directeur (tout) ou enseignant ayant reçu l'accès (seulement ses halaqas)
+const verifyAcces = verifyDirecteurOuEnseignant('madrasa');
 
 // ─── Middleware : vérifier que l'utilisateur est directeur / propriétaire ──────
 async function verifyTenant(req, res, next) {
@@ -85,8 +88,22 @@ async function verifyMember(req, res, next) {
 }
 
 // ── Infos générales ────────────────────────────────────────────────────────────
-router.get('/:tenantCode/info', authenticate, verifyTenant, async (req, res) => {
-  res.json({ success: true, tenant: req.tenant });
+router.get('/:tenantCode/info', authenticate, verifyAcces, async (req, res) => {
+  res.json({ success: true, tenant: req.tenant, acces: descriptionAcces(req) });
+});
+
+// GET /api/madrasa-mgmt/enseignant/mes-etablissements — les madrasas où j'enseigne
+router.get('/enseignant/mes-etablissements', authenticate, async (req, res) => {
+  try {
+    await ensureColonnesAcces('madrasa');
+    const [rows] = await sequelize.query(
+      `SELECT mt.tenant_code, mt.name, mt.logo_url, 'madrasa' AS type FROM madrasa_staff s
+       JOIN management_tenants mt ON mt.tenant_code = s.tenant_code
+       WHERE s.numero_h = :n AND s.acces_actif = true ORDER BY mt.name`,
+      { replacements: { n: req.userId } }
+    );
+    res.json({ success: true, etablissements: rows });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // ── Paramètres : nom, logo, contact ────────────────────────────────────────────
@@ -159,14 +176,16 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 });
 
 // ── Étudiants ──────────────────────────────────────────────────────────────────
-router.get('/:tenantCode/students', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/students', authenticate, verifyAcces, async (req, res) => {
   const tc = req.params.tenantCode;
   const search = req.query.search || '';
+  const ids = await elevesAutorises('madrasa', req); // enseignant : ses élèves seulement
   const [students] = await sequelize.query(
     `SELECT * FROM madrasa_students WHERE tenant_code = :tc AND is_active = true
      ${search ? "AND (prenom ILIKE :s OR nom ILIKE :s OR numero_h ILIKE :s)" : ""}
+     ${ids ? (ids.length ? 'AND id IN (:ids)' : 'AND false') : ''}
      ORDER BY nom, prenom`,
-    { replacements: { tc, s: `%${search}%` } }
+    { replacements: { tc, s: `%${search}%`, ids: ids?.length ? ids : [0] } }
   );
   res.json({ students });
 });
@@ -222,7 +241,8 @@ router.delete('/:tenantCode/students/:id', authenticate, verifyTenant, async (re
 });
 
 // ── Personnel enseignant ───────────────────────────────────────────────────────
-router.get('/:tenantCode/staff', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
+  await ensureColonnesAcces('madrasa');
   const [staff] = await sequelize.query(
     `SELECT * FROM madrasa_staff WHERE tenant_code = :tc ORDER BY nom`,
     { replacements: { tc: req.params.tenantCode } }
@@ -233,26 +253,36 @@ router.get('/:tenantCode/staff', authenticate, verifyMember, async (req, res) =>
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const { prenom, nom, role, specialite, telephone, numero_h } = req.body;
-  if (!prenom || !nom) return res.status(400).json({ message: 'Prénom et nom requis.' });
-  const [rows] = await sequelize.query(
-    `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, telephone, numero_h)
-     VALUES (:tc, :prenom, :nom, :role, :spec, :tel, :nh) RETURNING *`,
-    { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh: numero_h || null } }
-  );
-  res.json({ staff: rows[0] });
+  if (!prenom || !nom) return res.status(400).json({ success: false, message: 'Prénom et nom requis.' });
+  try {
+    const acces = await preparerAcces(req.body); // vérifié avant d'enregistrer quoi que ce soit
+    const [rows] = await sequelize.query(
+      `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, telephone, numero_h)
+       VALUES (:tc, :prenom, :nom, :role, :spec, :tel, :nh) RETURNING *`,
+      { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh: numero_h || null } }
+    );
+    await appliquerAcces('madrasa', tc, rows[0].id, acces, { nomEtablissement: req.tenant?.name });
+    const [[staff]] = await sequelize.query(`SELECT * FROM madrasa_staff WHERE id = :id`, { replacements: { id: rows[0].id } });
+    res.json({ success: true, staff });
+  } catch (e) { res.status(e.status || 500).json({ success: false, message: e.message }); }
 });
 
 router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
   try {
     const { prenom, nom, role, specialite, telephone, numero_h } = req.body;
+    const acces = await preparerAcces(req.body);
+    await ensureColonnesAcces('madrasa');
+    const [[avant]] = await sequelize.query(`SELECT acces_actif FROM madrasa_staff WHERE id = :id AND tenant_code = :tc`, { replacements: { id: req.params.id, tc: req.params.tenantCode } });
     await sequelize.query(
       `UPDATE madrasa_staff SET prenom = COALESCE(:prenom, prenom), nom = COALESCE(:nom, nom), role = COALESCE(:role, role),
          specialite = COALESCE(:spec, specialite), telephone = :tel, numero_h = :nh
        WHERE id = :id AND tenant_code = :tc`,
       { replacements: { prenom: prenom || null, nom: nom || null, role: role || null, spec: specialite || null, tel: telephone || null, nh: numero_h?.trim() || null, id: req.params.id, tc: req.params.tenantCode } }
     );
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+    await appliquerAcces('madrasa', req.params.tenantCode, req.params.id, acces, { nomEtablissement: req.tenant?.name, dejaActif: avant?.acces_actif });
+    const [[staff]] = await sequelize.query(`SELECT * FROM madrasa_staff WHERE id = :id`, { replacements: { id: req.params.id } });
+    res.json({ success: true, staff });
+  } catch (e) { res.status(e.status || 500).json({ success: false, message: e.message }); }
 });
 
 router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
@@ -264,7 +294,7 @@ router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, 
 });
 
 // ── Halaqas (classes) ─────────────────────────────────────────────────────────
-router.get('/:tenantCode/halaqas', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/halaqas', authenticate, verifyAcces, async (req, res) => {
   const [halaqas] = await sequelize.query(
     `SELECT h.*, COUNT(s.id) AS student_count
      FROM madrasa_halaqas h
@@ -273,7 +303,7 @@ router.get('/:tenantCode/halaqas', authenticate, verifyMember, async (req, res) 
      GROUP BY h.id ORDER BY h.nom`,
     { replacements: { tc: req.params.tenantCode } }
   );
-  res.json({ halaqas });
+  res.json({ halaqas: halaqas.filter(h => peutVoirClasse(req, h.id)) });
 });
 
 router.post('/:tenantCode/halaqas', authenticate, verifyTenant, async (req, res) => {
@@ -310,7 +340,7 @@ router.delete('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req
 });
 
 // ── Présences ─────────────────────────────────────────────────────────────────
-router.get('/:tenantCode/attendance', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/attendance', authenticate, verifyAcces, async (req, res) => {
   const tc = req.params.tenantCode;
   const date = req.query.date || new Date().toISOString().slice(0, 10);
   const [attendance] = await sequelize.query(
@@ -320,16 +350,19 @@ router.get('/:tenantCode/attendance', authenticate, verifyMember, async (req, re
      WHERE a.tenant_code = :tc AND a.date_presence = :date ORDER BY s.nom`,
     { replacements: { tc, date } }
   );
-  res.json({ attendance });
+  const ids = await elevesAutorises('madrasa', req);
+  res.json({ success: true, attendance: ids ? attendance.filter(a => ids.includes(a.student_id)) : attendance });
 });
 
-router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, res) => {
+router.post('/:tenantCode/attendance', authenticate, verifyAcces, exigerDroit('presences'), async (req, res) => {
   const tc = req.params.tenantCode;
   const { records } = req.body; // [{ student_id, statut }]
+  const ids = await elevesAutorises('madrasa', req); // enseignant : seulement ses élèves
   // Le jour choisi à l'écran (rattraper l'appel d'hier), jamais dans le futur
   const aujourdhui = new Date().toISOString().slice(0, 10);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') && req.body.date <= aujourdhui ? req.body.date : aujourdhui;
   for (const r of records || []) {
+    if (!r?.student_id || (ids && !ids.includes(Number(r.student_id)))) continue;
     await sequelize.query(
       `INSERT INTO madrasa_attendance (tenant_code, student_id, date_presence, statut)
        VALUES (:tc, :sid, :date, :statut)
@@ -341,10 +374,11 @@ router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, r
 });
 
 // Historique des présences d'une halaqa (élèves de son niveau)
-router.get('/:tenantCode/attendance/summary', authenticate, verifyTenant, async (req, res) => {
+router.get('/:tenantCode/attendance/summary', authenticate, verifyAcces, async (req, res) => {
   try {
     const { classroom_id } = req.query;
     if (!classroom_id) return res.status(400).json({ success: false, message: 'Halaqa requise.' });
+    if (!peutVoirClasse(req, classroom_id)) return res.status(403).json({ success: false, message: "Cette halaqa ne vous est pas attribuée." });
     const [summary] = await sequelize.query(
       `SELECT s.id AS student_id, s.nom, s.prenom,
               COUNT(a.id) FILTER (WHERE a.statut <> 'absent')::int AS presences,
@@ -363,22 +397,24 @@ router.get('/:tenantCode/attendance/summary', authenticate, verifyTenant, async 
 });
 
 // ── Notes / Progression ───────────────────────────────────────────────────────
-router.get('/:tenantCode/grades', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/grades', authenticate, verifyAcces, async (req, res) => {
   const tc = req.params.tenantCode;
+  const ids = await elevesAutorises('madrasa', req);
   const [grades] = await sequelize.query(
     `SELECT g.*, s.prenom AS student_prenom, s.nom AS student_nom
      FROM madrasa_grades g
      JOIN madrasa_students s ON s.id = g.student_id
-     WHERE g.tenant_code = :tc ORDER BY g.created_at DESC`,
-    { replacements: { tc } }
+     WHERE g.tenant_code = :tc ${ids ? (ids.length ? 'AND g.student_id IN (:ids)' : 'AND false') : ''} ORDER BY g.created_at DESC`,
+    { replacements: { tc, ids: ids?.length ? ids : [0] } }
   );
   res.json({ grades });
 });
 
-router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) => {
+router.post('/:tenantCode/grades', authenticate, verifyAcces, exigerDroit('notes'), async (req, res) => {
   const tc = req.params.tenantCode;
   const { student_id, matiere, note, note_max, periode, sourate, commentaire } = req.body;
-  if (!student_id) return res.status(400).json({ message: 'Étudiant requis.' });
+  if (!student_id) return res.status(400).json({ success: false, message: 'Étudiant requis.' });
+  if (!(await peutVoirEleve('madrasa', req, student_id))) return res.status(403).json({ success: false, message: "Cet élève n'est pas dans vos halaqas." });
   const [rows] = await sequelize.query(
     `INSERT INTO madrasa_grades (tenant_code, student_id, matiere, note, note_max, periode, sourate, commentaire)
      VALUES (:tc, :sid, :mat, :note, :nm, :per, :srt, :com) RETURNING *`,
@@ -387,8 +423,11 @@ router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) 
   res.json({ grade: rows[0] });
 });
 
-router.put('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
+router.put('/:tenantCode/grades/:id', authenticate, verifyAcces, exigerDroit('notes'), async (req, res) => {
   try {
+    const [[noteExistante]] = await sequelize.query(`SELECT student_id FROM madrasa_grades WHERE id = :id AND tenant_code = :tc`, { replacements: { id: req.params.id, tc: req.params.tenantCode } });
+    if (!noteExistante) return res.status(404).json({ success: false, message: 'Note introuvable.' });
+    if (!(await peutVoirEleve('madrasa', req, noteExistante.student_id))) return res.status(403).json({ success: false, message: "Cet élève n'est pas dans vos halaqas." });
     const { matiere, note, note_max, periode, sourate, commentaire } = req.body;
     await sequelize.query(
       `UPDATE madrasa_grades SET matiere = COALESCE(:mat, matiere), note = COALESCE(:note, note), note_max = COALESCE(:nm, note_max),
@@ -400,15 +439,18 @@ router.put('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, re
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
+router.delete('/:tenantCode/grades/:id', authenticate, verifyAcces, exigerDroit('notes'), async (req, res) => {
   try {
+    const [[noteExistante]] = await sequelize.query(`SELECT student_id FROM madrasa_grades WHERE id = :id AND tenant_code = :tc`, { replacements: { id: req.params.id, tc: req.params.tenantCode } });
+    if (!noteExistante) return res.status(404).json({ success: false, message: 'Note introuvable.' });
+    if (!(await peutVoirEleve('madrasa', req, noteExistante.student_id))) return res.status(403).json({ success: false, message: "Cet élève n'est pas dans vos halaqas." });
     await sequelize.query(`DELETE FROM madrasa_grades WHERE id = :id AND tenant_code = :tc`, { replacements: { id: req.params.id, tc: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // ── Frais ─────────────────────────────────────────────────────────────────────
-router.get('/:tenantCode/fees', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const [fees] = await sequelize.query(
     `SELECT f.*, s.prenom AS student_prenom, s.nom AS student_nom
@@ -555,7 +597,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
 });
 
 // ── Bulletins de progression ───────────────────────────────────────────────────
-router.get('/:tenantCode/bulletins', authenticate, verifyMember, async (req, res) => {
+router.get('/:tenantCode/bulletins', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const periode = req.query.periode;
   const [bulletins] = await sequelize.query(

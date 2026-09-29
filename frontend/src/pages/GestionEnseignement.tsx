@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import { imageEnDataUrl, ACCEPT_IMAGES } from "../utils/imageLisible";
 import { CYCLES_ECOLE } from "../utils/niveauxEcole";
 import ChoixOuSaisie from "../components/ChoixOuSaisie";
@@ -119,6 +119,9 @@ export default function GestionEnseignement({ mode }: Props) {
   const [section, setSection]     = useState<Section>("dashboard");
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
   const [tenant, setTenant]       = useState<any>(null);
+  // Qui est connecté : le directeur (tout) ou un enseignant (ses classes et ses droits)
+  const [acces, setAcces] = useState<{ role: string; prenom?: string; nom?: string; classes?: number[]; droits?: { presences?: boolean; notes?: boolean } }>({ role: "directeur" });
+  const estEnseignant = acces.role === "enseignant";
   const [stats, setStats]         = useState<any>(null);
   const [students, setStudents]   = useState<any[]>([]);
   const [staff, setStaff]         = useState<any[]>([]);
@@ -144,6 +147,7 @@ export default function GestionEnseignement({ mode }: Props) {
   const [settingsForm, setSettingsForm] = useState<any>({});
   const [settingsSaving, setSettingsSaving] = useState(false);
 
+  const loadSectionRef = useRef<((s: Section) => void) | null>(null);
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
   const get = useCallback(async (path: string) => {
@@ -169,12 +173,19 @@ export default function GestionEnseignement({ mode }: Props) {
   useEffect(() => {
     const user = getSessionUser();
     if (!user) { navigate("/login"); return; }
-    Promise.all([get("/info"), get("/dashboard")])
-      .then(([info, dash]) => {
+    get("/info")
+      .then(async info => {
         if (!info.tenant) { setError(info.message || "Accès refusé."); return; }
         setTenant(info.tenant);
+        const a = info.acces || { role: "directeur" };
+        setAcces(a);
+        if (a.role === "enseignant") {
+          // L'enseignant arrive directement sur son travail : l'appel, sinon les notes
+          loadSectionRef.current?.(a.droits?.presences ? "presences" : a.droits?.notes ? "notes" : "apprenants");
+          return;
+        }
         setSettingsForm({ name: info.tenant.name, address: info.tenant.address || "", phone: info.tenant.phone || "", email: info.tenant.email || "", description: info.tenant.description || "", horaires: info.tenant.horaires || "", phone_urgence: info.tenant.phone_urgence || "" });
-        setStats(dash);
+        setStats(await get("/dashboard"));
       })
       .catch(e => setError("Impossible de joindre le serveur : " + (e?.message || e)))
       .finally(() => setLoading(false));
@@ -185,7 +196,7 @@ export default function GestionEnseignement({ mode }: Props) {
     if (window.innerWidth < 768) setCollapsed(true);
     const loadG = () => get(`/${groupEP}`).then(d => setGroupes(d[groupEP] || []));
     if (s === "apprenants")  { get("/students").then(d => d.students && setStudents(d.students)); loadG(); }
-    if (s === "staff")       { get("/staff").then(d => d.staff && setStaff(d.staff)); }
+    if (s === "staff")       { get("/staff").then(d => d.staff && setStaff(d.staff)); loadG(); }
     if (s === "groupes")     { loadG(); get("/staff").then(d => d.staff && setStaff(d.staff)); }
     if (s === "presences")   { loadG(); get("/students").then(d => d.students && setStudents(d.students)); }
     if (s === "notes")       { get("/grades").then(d => d.grades && setGrades(d.grades)); get("/students").then(d => d.students && setStudents(d.students)); }
@@ -194,6 +205,7 @@ export default function GestionEnseignement({ mode }: Props) {
     if (s === "inscriptions") { get("/enroll-requests").then(d => d.success && setEnrollRequests(d.requests)); }
     if (s === "avis")        { get("/reviews").then(d => d.success && setReviews(d.reviews)); }
   }, [get, groupEP]);
+  loadSectionRef.current = loadSection;
 
   const loadAttendance = useCallback((date: string, groupId: string) => {
     if (!groupId) return;
@@ -248,7 +260,7 @@ export default function GestionEnseignement({ mode }: Props) {
         if (!form.nom || !form.prenom) { showToast("Nom et prénom obligatoires", false); return; }
         if (form.id) {
           const d = await put(`/staff/${form.id}`, { ...form, role: form.role || V.roles[1], specialite: form.specialite || V.matieres[0] });
-          if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(V.staffSingular + " modifié(e)"); }
+          if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...(d.staff || form) } : x)); setModal(null); setForm({}); showToast(V.staffSingular + " modifié(e)"); }
           else showToast(d.message || "Erreur", false);
         } else {
           const d = await post("/staff", { ...form, role: form.role || V.roles[1], specialite: form.specialite || V.matieres[0] });
@@ -330,7 +342,11 @@ export default function GestionEnseignement({ mode }: Props) {
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
   const isMobile = window.innerWidth < 768;
   const sideW = collapsed ? (isMobile ? 0 : 64) : 244;
-  const currentNav = NAV.find(n => n.id === section)!;
+  // Enseignant : seulement ses élèves, et l'appel / les notes si le directeur le lui permet
+  const NAV_VISIBLE = estEnseignant
+    ? NAV.filter(n => n.id === "apprenants" || (n.id === "presences" && acces.droits?.presences) || (n.id === "notes" && acces.droits?.notes))
+    : NAV;
+  const currentNav = NAV_VISIBLE.find(n => n.id === section) || NAV_VISIBLE[0];
 
   const filteredStudents = students.filter(s => {
     const q = search.toLowerCase();
@@ -409,6 +425,49 @@ export default function GestionEnseignement({ mode }: Props) {
               </div>
             </div>
           )}
+          {/* Accès à l'application : le directeur choisit les classes et les droits */}
+          <div style={{ marginTop: 16, border: `1px solid ${form.acces_actif ? V.color : "#e2e8f0"}`, borderRadius: 10, padding: "12px 14px", background: form.acces_actif ? (isMadrasa ? "#ecfeff" : "#f0fdf0") : "#f8fafc" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: "#0f172a", cursor: "pointer" }}>
+              <input type="checkbox" checked={!!form.acces_actif} onChange={e => setForm((f: any) => ({ ...f, acces_actif: e.target.checked, droits: f.droits || { presences: true, notes: true } }))} />
+              🔑 Donner accès à l'application
+            </label>
+            <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#64748b", lineHeight: 1.5 }}>
+              La personne se connecte à Moftal avec son téléphone et ne voit que les {V.apprenants.toLowerCase()} de ses {V.groupes.toLowerCase()}.
+              Elle doit avoir un compte Moftal (le téléphone ci-dessus).
+            </p>
+            {form.acces_actif && (<>
+              <div style={{ ...lbl, margin: "12px 0 6px" }}>{V.groupes} attribuées *</div>
+              {groupes.length === 0 ? (
+                <div style={{ fontSize: 12, color: "#b45309" }}>Créez d'abord vos {V.groupes.toLowerCase()} (onglet {V.groupes}).</div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {groupes.map((g: any) => {
+                    const choisi = (form.classes_autorisees || []).map(Number).includes(Number(g.id));
+                    return (
+                      <button type="button" key={g.id}
+                        onClick={() => setForm((f: any) => {
+                          const cl = (f.classes_autorisees || []).map(Number);
+                          return { ...f, classes_autorisees: choisi ? cl.filter((x: number) => x !== Number(g.id)) : [...cl, Number(g.id)] };
+                        })}
+                        style={{ padding: "5px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                          border: `1.5px solid ${choisi ? V.color : "#e2e8f0"}`, background: choisi ? V.color : "white", color: choisi ? "white" : "#475569" }}>
+                        {choisi ? "✓ " : ""}{g.nom} · {g.niveau}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <div style={{ ...lbl, margin: "12px 0 6px" }}>Droits</div>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                {([["presences", "📋 Faire l'appel"], ["notes", "📝 Saisir les notes"]] as const).map(([k, l]) => (
+                  <label key={k} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                    <input type="checkbox" checked={!!form.droits?.[k]} onChange={e => setForm((f: any) => ({ ...f, droits: { ...(f.droits || {}), [k]: e.target.checked } }))} />
+                    {l}
+                  </label>
+                ))}
+              </div>
+            </>)}
+          </div>
         </>)}
 
         {modal === "add-groupe" && (<>
@@ -598,7 +657,7 @@ export default function GestionEnseignement({ mode }: Props) {
           )}
         </div>
         <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
-          {NAV.map(n => {
+          {NAV_VISIBLE.map(n => {
             const active = section === n.id;
             return (
               <button key={n.id} onClick={()=>loadSection(n.id)} title={collapsed?n.label:undefined}
@@ -649,24 +708,24 @@ export default function GestionEnseignement({ mode }: Props) {
             )}
             <div>
               <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>{currentNav.label}</h1>
-              <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</p>
+              <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name}{estEnseignant ? ` · Espace ${V.staffSingular.toLowerCase()} : ${acces.prenom || ""} ${acces.nom || ""}` : ""} ·{new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</p>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={V.color} />
-            {section === "apprenants"  && <button onClick={()=>{setModal("add-apprenant");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Nouvel {V.apprenant.toLowerCase()}</button>}
-            {section === "staff"       && <button onClick={()=>{setModal("add-staff");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter</button>}
-            {section === "groupes"     && <button onClick={()=>{setModal("add-groupe");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Créer {V.groupe.toLowerCase()}</button>}
+            {section === "apprenants"  && !estEnseignant && <button onClick={()=>{setModal("add-apprenant");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Nouvel {V.apprenant.toLowerCase()}</button>}
+            {section === "staff"       && !estEnseignant && <button onClick={()=>{setModal("add-staff");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter</button>}
+            {section === "groupes"     && !estEnseignant && <button onClick={()=>{setModal("add-groupe");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Créer {V.groupe.toLowerCase()}</button>}
             {section === "notes"       && <button onClick={()=>{setModal("add-note");setForm({matiere:V.matieres[0],periode:"Trim 1"});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter note</button>}
-            {section === "frais"       && <button onClick={()=>{setModal("add-frais");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter frais</button>}
-            {section === "bulletins" && <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>⚙ Générer bulletins</button>}
+            {section === "frais"       && !estEnseignant && <button onClick={()=>{setModal("add-frais");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter frais</button>}
+            {section === "bulletins" && !estEnseignant && <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>⚙ Générer bulletins</button>}
           </div>
         </div>
 
         <div style={{ padding: 28, flex: 1 }}>
 
           {/* ── DASHBOARD ── */}
-          {section === "dashboard" && (
+          {section === "dashboard" && !estEnseignant && (
             <div style={{ display:"flex",flexDirection:"column",gap:20,animation:"fadeIn 0.2s ease" }}>
               {/* KPI Cards */}
               <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14 }}>
@@ -767,7 +826,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 16px",color:"#64748b" }}>{s.date_naissance?fmtDate(s.date_naissance):"—"}</td>
                         <td style={{ padding:"11px 16px",color:"#475569" }}>{s.telephone_parent||"—"}</td>
                         <td style={{ padding:"11px 16px" }}>
-                          <div style={{ display:"flex", gap:10 }}>
+                          {estEnseignant ? <span style={{ fontSize:12,color:"#94a3b8" }}>—</span> : <div style={{ display:"flex", gap:10 }}>
                             <button onClick={()=>{ setForm({ ...s }); setModal("add-apprenant"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
                             <button onClick={async()=>{
                               const id = prompt(`Téléphone ou NuméroH du parent de ${s.prenom} ${s.nom} :`, s.telephone_parent || s.parent_numero_h || "");
@@ -777,7 +836,7 @@ export default function GestionEnseignement({ mode }: Props) {
                               else showToast(d.message || "Erreur", false);
                             }} style={{ color:"#7c3aed",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>👪 Lier parent</button>
                             <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){await del(`/students/${s.id}`);setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
-                          </div>
+                          </div>}
                         </td>
                       </tr>
                     ))}
@@ -808,6 +867,12 @@ export default function GestionEnseignement({ mode }: Props) {
                       <div style={{ fontSize:12,color:"#64748b",lineHeight:1.8 }}>
                         {s.telephone && <div>📞 {s.telephone}</div>}
                         {s.numero_h && <div style={{ fontFamily:"monospace",color:"#94a3b8",fontSize:11 }}>H: {s.numero_h}</div>}
+                        {s.acces_actif && (
+                          <div style={{ marginTop:6,padding:"4px 8px",background:isMadrasa?"#ecfeff":"#f0fdf0",color:V.colorDark,borderRadius:6,fontSize:11,fontWeight:600,display:"inline-block" }}>
+                            🔑 Accès : {(s.classes_autorisees||[]).map((id:any)=>groupes.find((g:any)=>Number(g.id)===Number(id))?.nom).filter(Boolean).join(", ") || "—"}
+                            {" · "}{[s.droits?.presences && "Appel", s.droits?.notes && "Notes"].filter(Boolean).join(", ") || "Lecture seule"}
+                          </div>
+                        )}
                       </div>
                       <div style={{ display:"flex", gap:12, marginTop:12 }}>
                         <button onClick={()=>{ setForm({ ...s }); setModal("add-staff"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>

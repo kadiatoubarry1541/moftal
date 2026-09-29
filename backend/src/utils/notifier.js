@@ -12,6 +12,7 @@ const TITRES = {
   imam_connection: 'Réseau des imams',
   friday_khutba: 'Khoutba du vendredi',
   coordinator_msg: 'Message du coordinateur',
+  acces_enseignant: 'Accès enseignant',
 };
 
 export function notifier(numeroH, type, message) {

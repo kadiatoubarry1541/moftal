@@ -35,6 +35,8 @@ export default function GestionInterne() {
   const [showPaywall, setShowPaywall]   = useState(false);
   const [tabOverride, setTabOverride]   = useState<"pro" | "activite" | null>(null);
   const [connectModal, setConnectModal] = useState<{ accountId: number; name: string } | null>(null);
+  // Établissements où je suis enseignant (accès donné par le directeur)
+  const [ouJEnseigne, setOuJEnseigne] = useState<any[]>([]);
 
   // Modals publication et profil
   const [publishModal, setPublishModal] = useState<PublishModal | null>(null);
@@ -71,7 +73,12 @@ export default function GestionInterne() {
           .then(r => r.json()).then(data => { if (data.success) setAdminTenants(data.tenants || []); }).catch(() => {})
       : Promise.resolve();
 
-    Promise.all([myAccountsPromise, accesPromise, adminTenantsPromise]).finally(() => setLoading(false));
+    const enseignePromise = Promise.all(["school-mgmt", "madrasa-mgmt"].map(api =>
+      fetch(`${API}/api/${api}/enseignant/mes-etablissements`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(d => d.etablissements || []).catch(() => [])
+    )).then(l => setOuJEnseigne(l.flat()));
+
+    Promise.all([myAccountsPromise, accesPromise, adminTenantsPromise, enseignePromise]).finally(() => setLoading(false));
   }, []);
 
   // Compte bloqué (3 mois d'impayé) : charger le montant à régulariser (tous les mois consommés)
@@ -370,7 +377,7 @@ export default function GestionInterne() {
       onChoisir={payerGestionInterne} onVisibilite={() => navigate("/mes-comptes-pro")} />
   );
 
-  const defaultTab: "pro" | "activite" = "activite";
+  const defaultTab: "pro" | "activite" = ouJEnseigne.length > 0 && accounts.length === 0 ? "pro" : "activite";
   const tab = tabOverride ?? defaultTab;
 
   const TabButtons = () => (
@@ -729,6 +736,28 @@ export default function GestionInterne() {
           <BandeauRegularisation />
           {showPaywall && sansAcces && accesGI?.mode !== "bloque" && <OffreVie />}
           <BandeauAcces />
+
+          {/* Où j'enseigne : accès donné par le directeur de l'établissement */}
+          {ouJEnseigne.length > 0 && (
+            <div style={{ marginBottom:16 }}>
+              <h2 style={{ margin:"0 0 10px", fontSize:15, fontWeight:800, color:"#0f172a" }}>🎓 Où j'enseigne</h2>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {ouJEnseigne.map((e: any) => (
+                  <div key={e.tenant_code} style={{ display:"flex", alignItems:"center", gap:12, background:"white", border:"1px solid #e2e8f0", borderRadius:12, padding:"12px 14px" }}>
+                    <TenantLogo tenantCode={e.tenant_code} logoUrl={e.logo_url} fallback={e.type === "madrasa" ? "🕌" : "🏫"} size={40} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:"#0f172a" }}>{e.name}</div>
+                      <div style={{ fontSize:12, color:"#64748b" }}>{e.type === "madrasa" ? "Madrasa" : "École"} · accès enseignant</div>
+                    </div>
+                    <button onClick={() => ouvrirGestionUrl(e.type === "madrasa" ? "gestion-madrasa" : "gestion-ecole", e.tenant_code)}
+                      style={{ padding:"8px 14px", background:"#1a8f1a", color:"white", border:"none", borderRadius:9, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>
+                      Ouvrir
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Liste des comptes — toujours visible dès qu'il y en a */}
           {accounts.length > 0 && (

@@ -64,6 +64,18 @@ const PROVISIONAL_PRO_SPACE_ROUTES = [
   /^\/api\/education/,                  // outils de la gestion école
 ];
 
+// Enseignant à qui un directeur a donné l'accès à sa gestion (école / madrasa) :
+// comme le pro, il travaille même si son profil personnel n'est pas complété.
+async function estEnseignantActif(numeroH, url) {
+  const table = /^\/api\/school-mgmt\//.test(url) ? 'school_staff' : /^\/api\/madrasa-mgmt\//.test(url) ? 'madrasa_staff' : null;
+  if (!table) return false;
+  try {
+    const [rows] = await ProfessionalAccount.sequelize.query(
+      `SELECT 1 FROM ${table} WHERE numero_h = :n AND acces_actif = true LIMIT 1`, { replacements: { n: numeroH } });
+    return rows.length > 0;
+  } catch { return false; }
+}
+
 async function ownsApprovedProAccount(numeroH) {
   try {
     const n = await ProfessionalAccount.count({ where: { ownerNumeroH: numeroH, status: 'approved', isActive: true } });
@@ -127,7 +139,7 @@ export const authenticate = async (req, res, next) => {
       if (isProvisionalNumeroH(user.numeroH) && req.method !== 'GET'
           && !PROVISIONAL_ALLOWED_PATHS.some((p) => (req.originalUrl || '').startsWith(p))
           && !(PROVISIONAL_PRO_SPACE_ROUTES.some((r) => r.test(req.originalUrl || ''))
-               && await ownsApprovedProAccount(user.numeroH))) {
+               && (await ownsApprovedProAccount(user.numeroH) || await estEnseignantActif(user.numeroH, req.originalUrl || '')))) {
         return res.status(403).json({
           success: false,
           code: 'PROFILE_INCOMPLETE',
