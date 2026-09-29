@@ -542,6 +542,12 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
       background_color: '#ffffff',
       theme_color: themeColor,
       icons,
+      // Permet au téléphone de dire si CETTE app est déjà sur l'écran d'accueil
+      // (navigator.getInstalledRelatedApps) : l'URL doit être celle du manifest.
+      prefer_related_applications: false,
+      related_applications: pageOrigin
+        ? [{ platform: 'webapp', url: `${pageOrigin}${req.originalUrl}` }]
+        : [],
     };
 
     res.set('Content-Type', 'application/manifest+json');
