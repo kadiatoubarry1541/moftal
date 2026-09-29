@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cartes Moftal</title>
-<meta name="description" content="Cartes de présentation Moftal à remettre aux écoles et aux centres de santé.">
+<meta name="description" content="Cartes de présentation Moftal à remettre aux écoles, aux centres de santé et aux commerces.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/logo-moftal.svg">
 <style>
@@ -97,6 +97,9 @@
   .app-icon{width:17mm;height:17mm;border-radius:5mm;flex:none;display:flex;align-items:center;justify-content:center;
             background:linear-gradient(135deg,#14b8a6,#0d9488);box-shadow:0 1mm 3mm rgba(0,0,0,.18)}
   .app-icon svg{width:9mm;height:9mm}
+  .card.commerce{--amber:#eab308;--orange:#ea580c;--amber-l:#fff7ed;--amber-d:#9a3412;--full-border:#fdba74}
+  .card.commerce .example{background:#fff7ed;border-color:#fed7aa}
+  .card.commerce .app-icon{background:linear-gradient(135deg,#ea580c,#eab308)}
   .sheets{flex-direction:column;align-items:center;gap:24px}
   @media print{ .card{break-after:page;page-break-after:always} .card:last-child{break-after:auto;page-break-after:auto} }
 </style>
@@ -104,7 +107,7 @@
 <body>
 
 <div class="toolbar">
-  <p>Deux cartes au format A5 (148 × 210 mm), une seule face chacune : écoles, puis centres de santé.</p>
+  <p>Deux cartes au format A5 (148 × 210 mm), une seule face chacune : écoles, centres de santé, commerces.</p>
   <button type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
 </div>
 
@@ -117,6 +120,7 @@
     <symbol id="mail" viewBox="0 0 24 24"><path fill="currentColor" d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 4.2l-8 5-8-5V6l8 5 8-5z"/></symbol>
     <symbol id="web" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 3a9 9 0 100 18 9 9 0 000-18zm-9 9h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></symbol>
     <symbol id="ok3" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#0d9488"/><path d="M4.4 8.3l2.3 2.3 4.9-5" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="ok4" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#ea580c"/><path d="M4.4 8.3l2.3 2.3 4.9-5" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </defs>
 </svg>
 
@@ -272,6 +276,83 @@
     </div>
 
     <p class="hand">À remettre au responsable ou à la direction du centre.</p>
+  </section>
+
+  <section class="card commerce">
+    <header class="head">
+      <div class="brand">
+        <div class="logo"><img src="logo-moftal.svg" alt="Logo Moftal"></div>
+        <div>
+          <div class="brand-name">MOFTAL</div>
+          <div class="brand-sub">Le numérique au service de votre commerce</div>
+        </div>
+      </div>
+      <span class="tag">Spécial commerce</span>
+      <h1 class="title">Faites connaître votre commerce<br>et <em>gérez-le simplement</em>.</h1>
+    </header>
+
+    <div class="body">
+      <div class="plan">
+        <div class="plan-top">
+          <span class="num">1</span>
+          <div class="plan-name">Visibilité + Rendez-vous<small>Les clients trouvent votre commerce en ligne</small></div>
+        </div>
+        <ul class="feat">
+          <li><svg><use href="#ok"/></svg>Fiche dans les pages Échanges</li>
+          <li><svg><use href="#ok"/></svg>Présentation, adresse, contacts</li>
+          <li><svg><use href="#ok"/></svg>Historique des demandes</li>
+          <li class="etc"><svg><use href="#more"/></svg>etc.</li>
+        </ul>
+      </div>
+
+      <div class="plan full">
+        <div class="plan-top">
+          <span class="num">2</span>
+          <div class="plan-name">Gestion complète<small>La formule 1, plus la gestion interne</small></div>
+          <span class="badge">COMPLET</span>
+        </div>
+        <ul class="feat">
+          <li><svg><use href="#ok4"/></svg>Application à votre logo</li>
+          <li><svg><use href="#ok4"/></svg>Site vitrine de la boutique</li>
+          <li><svg><use href="#ok4"/></svg>Tableau de bord</li>
+          <li><svg><use href="#ok4"/></svg>Articles et stock</li>
+          <li><svg><use href="#ok4"/></svg>Alertes de stock faible</li>
+          <li><svg><use href="#ok4"/></svg>Ventes et caisse</li>
+          <li><svg><use href="#ok4"/></svg>Clients et crédits</li>
+          <li><svg><use href="#ok4"/></svg>Dépenses</li>
+          <li><svg><use href="#ok4"/></svg>Fournisseurs</li>
+          <li><svg><use href="#ok4"/></svg>Personnel</li>
+          <li><svg><use href="#ok4"/></svg>Avis clients</li>
+          <li><svg><use href="#ok4"/></svg>Moftal Pay</li>
+          <li class="etc"><svg><use href="#more"/></svg>etc.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="example">
+      <div class="app-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="#fff" d="M7 8V7a5 5 0 0110 0v1h3.2l-1.1 13H4.9L3.8 8zm2 0h6V7a3 3 0 00-6 0z"/></svg></div>
+      <div>
+        <div class="k">Gestion interne</div>
+        <h3>Votre propre application</h3>
+        <p>Installée sur vos téléphones et ordinateurs : stock, ventes, crédits et dépenses suivis au jour le jour.</p>
+      </div>
+    </div>
+
+    <div class="contact">
+      <div class="txt">
+        <div class="k">Contactez-nous</div>
+        <div class="tel"><svg><use href="#tel"/></svg>+224 625 32 60 37</div>
+        <div class="line"><svg><use href="#mail"/></svg>support@moftal.com</div>
+        <div class="line web"><svg><use href="#web"/></svg>moftal.com</div>
+      </div>
+      <div class="qr-box">
+        <svg class="qr" aria-label="QR code moftal.com" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 25" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h25v25H0z"/><path stroke="#0f3d0f" d="M0 0.5h7m4 0h2m1 0h1m3 0h7M0 1.5h1m5 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m5 0h1M0 2.5h1m1 0h3m1 0h1m1 0h1m2 0h1m2 0h1m1 0h1m1 0h1m1 0h3m1 0h1M0 3.5h1m1 0h3m1 0h1m1 0h1m1 0h2m2 0h3m1 0h1m1 0h3m1 0h1M0 4.5h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1M0 5.5h1m5 0h1m6 0h2m1 0h1m1 0h1m5 0h1M0 6.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M8 7.5h2m3 0h1m1 0h1M0 8.5h1m5 0h1m1 0h1m1 0h1m1 0h1m1 0h2m1 0h2m2 0h3M0 9.5h2m2 0h1m4 0h1m1 0h1m2 0h2m3 0h5M1 10.5h3m2 0h2m2 0h1m1 0h1m2 0h1m1 0h1m1 0h1m1 0h1m1 0h2M0 11.5h1m2 0h1m3 0h1m1 0h3m2 0h4m1 0h3m2 0h1M3 12.5h2m1 0h3m4 0h2m1 0h1m1 0h2m4 0h1M0 13.5h4m4 0h1m1 0h1m1 0h4m3 0h1m3 0h1M0 14.5h1m1 0h2m2 0h1m1 0h3m2 0h3m1 0h5m1 0h2M0 15.5h1m2 0h1m3 0h1m4 0h3m4 0h1m1 0h2m1 0h1M0 16.5h1m2 0h2m1 0h5m1 0h1m1 0h1m1 0h5m1 0h1M8 17.5h3m5 0h1m3 0h1M0 18.5h7m5 0h3m1 0h1m1 0h1m1 0h1m3 0h1M0 19.5h1m5 0h1m2 0h1m1 0h1m2 0h3m3 0h1M0 20.5h1m1 0h3m1 0h1m2 0h3m3 0h6m1 0h1m1 0h1M0 21.5h1m1 0h3m1 0h1m2 0h1m2 0h2m1 0h4m4 0h2M0 22.5h1m1 0h3m1 0h1m2 0h1m3 0h3m1 0h1m3 0h2m1 0h1M0 23.5h1m5 0h1m3 0h1m1 0h2m2 0h5m3 0h1M0 24.5h7m1 0h2m1 0h3m2 0h3m2 0h1m2 0h1"/></svg>
+
+        <small>SCANNEZ-MOI</small>
+      </div>
+    </div>
+
+    <p class="hand">À remettre au propriétaire ou au gérant du commerce.</p>
   </section>
 </div>
 </body>
