@@ -108,8 +108,11 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
       });
       const d = await r.json();
       if (d.success) {
+        const logoChange = profilModal.form.photo !== (account?.photo || "");
         setAccount((a: any) => ({ ...a, ...profilModal.form }));
         setProfilModal(null);
+        // Nouveau logo : on recharge pour qu'il soit le même partout dans la gestion
+        if (logoChange) window.location.reload();
       } else {
         alert(d.message || "Erreur lors de la mise à jour du profil.");
         setProfilModal(prev => prev ? { ...prev, step: "ready" } : null);

@@ -1174,16 +1174,14 @@ export default function GestionEnseignement({ mode }: Props) {
                 <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Logo</h3>
                 <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
                   <div style={{ width: 80, height: 80, borderRadius: 14, border: `2px solid ${V.color}44`, background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-                    {(settingsForm.logo_url || tenant?.logo_url)
-                      ? <img src={settingsForm.logo_url || tenant.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <span style={{ fontSize: 32 }}>{V.emoji}</span>}
+                    <TenantLogo tenantCode={tenantCode} logoUrl={settingsForm.logo_url || tenant?.logo_url} fallback={V.emoji} size={80} radius={14} />
                   </div>
                   <div>
                     <label htmlFor="logo-upload-ens" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: V.color, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                       Choisir un logo
                     </label>
                     <input id="logo-upload-ens" type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} />
-                    <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG, SVG · Max 2 Mo</p>
+                    <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG ou SVG · appliqué partout dans votre gestion</p>
                   </div>
                 </div>
               </div>

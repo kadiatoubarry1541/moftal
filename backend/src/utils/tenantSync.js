@@ -13,7 +13,7 @@ export async function syncAccountFromTenant(tenantCode) {
        address     = mt.address,
        phone       = mt.phone,
        email       = mt.email,
-       photo       = COALESCE(mt.logo_url, pa.photo)
+       photo       = mt.logo_url
      FROM management_tenants mt
      WHERE mt.tenant_code = :code AND pa.tenant_code = mt.tenant_code`,
     { replacements: { code: tenantCode } }

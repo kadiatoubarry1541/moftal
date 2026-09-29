@@ -4,6 +4,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import Activite from "./Activite";
 import { AddPersonModal } from "../components/AddPersonModal";
 import PaymentModal from "../components/PaymentModal";
+import { TenantLogo } from "../components/GestionBrand";
 import {
   ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
   type PublishModal, type ProfilModal,
@@ -759,7 +760,7 @@ export default function GestionInterne() {
                         style={{ display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left", padding:"16px 20px", cursor:"pointer", background:"transparent", border:"none", transition:"background 0.15s" }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#f8fafc"; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                        <div style={{ width:44, height:44, borderRadius:10, background:info.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, flexShrink:0 }}>{info.emoji}</div>
+                        <TenantLogo tenantCode={a.tenant_code} logoUrl={a.photo} fallback={info.emoji} size={44} radius={10} style={{ background: info.bg }} />
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontWeight:700, color:"#0f172a", fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{a.name}</div>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:3, flexWrap:"wrap" }}>

@@ -325,7 +325,7 @@ router.get('/pwa-icon/:id', async (req, res) => {
     if (photo.startsWith('data:')) {
       const { mime, buffer } = decodeDataUrl(photo);
       res.set('Content-Type', mime);
-      res.set('Cache-Control', 'public, max-age=86400');
+      res.set('Cache-Control', 'public, max-age=60'); // un nouveau logo apparaît vite partout
       res.set('Access-Control-Allow-Origin', '*');
       return res.send(buffer);
     }
@@ -427,7 +427,7 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
     if (logo.startsWith('data:')) {
       const { mime, buffer } = decodeDataUrl(logo);
       res.set('Content-Type', mime);
-      res.set('Cache-Control', 'public, max-age=86400');
+      res.set('Cache-Control', 'public, max-age=60'); // un nouveau logo apparaît vite partout
       res.set('Access-Control-Allow-Origin', '*');
       return res.send(buffer);
     }
@@ -479,7 +479,7 @@ router.get('/tenant-icon-badged/:tenantCode', async (req, res) => {
   ${contenu}
 </svg>`;
   res.set('Content-Type', 'image/svg+xml');
-  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Cache-Control', 'public, max-age=60'); // un nouveau logo apparaît vite partout
   res.set('Access-Control-Allow-Origin', '*');
   return res.send(svg);
 });
