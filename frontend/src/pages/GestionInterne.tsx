@@ -83,18 +83,23 @@ export default function GestionInterne() {
     }
   }, [accesGI?.mode, accesGI?.proId]);
 
-  // Formule complète + un seul établissement : « Espace Pro » ouvre directement la
-  // gestion interne complète, sans passer par la page intermédiaire.
+  // Formule complète : « Espace Pro » ouvre directement la gestion interne complète
+  // (un seul établissement, ou celui demandé par ?ouvrir=), sans page intermédiaire.
   const [ouvertureDirecte, setOuvertureDirecte] = useState(false);
   useEffect(() => {
     if (loading || userIsAdmin || ouvertureDirecte) return;
-    if (new URLSearchParams(location.search).get("tab") !== "pro") return;
-    if (accounts.length !== 1 || !accesGI) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get("tab") !== "pro") return;
+    // ?ouvrir=<id> : un établissement précis (ex. venu de la page Rendez-vous)
+    const cible = params.get("ouvrir")
+      ? accounts.find(a => String(a.id) === params.get("ouvrir"))
+      : (accounts.length === 1 ? accounts[0] : undefined);
+    if (!cible || !accesGI) return;
     if (accesGI.mode === "visibilite" || accesGI.mode === "bloque" || !accesGI.aAcces) return;
-    if (accounts[0].subscriptionStatus === "blocked") return;
+    if (cible.subscriptionStatus === "blocked") return;
     setOuvertureDirecte(true);
     // Si l'ouverture échoue (erreur déjà affichée), on montre la page normale.
-    ouvrirGestion(accounts[0], true).then(ok => { if (!ok) setOuvertureDirecte(false); });
+    ouvrirGestion(cible, true).then(ok => { if (!ok) setOuvertureDirecte(false); });
   }, [loading, accounts, accesGI, location.search]);
 
   // ─── FONCTIONS PAIEMENT ─────────────────────────────────────────────────────

@@ -342,14 +342,14 @@ export default function MesComptesPro() {
                       <div className="flex flex-col gap-2 flex-shrink-0">
                         {hasGI && (
                           <button
-                            onClick={() => navigate("/gestion-interne")}
+                            onClick={() => navigate(`/gestion-interne?tab=pro&ouvrir=${acc.id}`)}
                             className="min-h-[40px] px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap"
                           >
                             ⚡ Gestion Interne
                           </button>
                         )}
                         <button
-                          onClick={() => navigate(`/espace-pro/${acc.id}`)}
+                          onClick={() => navigate(hasGI ? `/espace-pro/${acc.id}?rdv=1` : `/espace-pro/${acc.id}`)}
                           className={`min-h-[40px] px-4 py-2 ${hasGI ? "bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200" : `${btnClass} text-white`} text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 whitespace-nowrap`}
                         >
                           📅 Mes Rendez-vous

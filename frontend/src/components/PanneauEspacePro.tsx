@@ -151,6 +151,7 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
             {account && info && (
               <div style={{ display: "grid", gap: 8 }}>
                 {info.vitrinePath && bouton("🌐  Voir le site client", () => { onClose(); navigate(`/${info.vitrinePath}/${tenantCode}`); }, { background: info.color, color: "white" })}
+                {bouton("📅  Demandes de rendez-vous", () => { onClose(); navigate(`/espace-pro/${account.id}?rdv=1`); }, { background: "#0f172a", color: "white" })}
                 {bouton("📢  Nouvelle publication", ouvrirPublication, { background: "#2563eb", color: "white" })}
                 {bouton("✏️  Modifier le profil public", ouvrirProfil, { background: "#f0fdf4", color: "#059669", border: "1.5px solid #a7f3d0" })}
                 {bouton("🤝  Connecter un client", () => setConnectOpen(true), { background: "#f8fafc", color: "#475569", border: "1.5px solid #e2e8f0" })}

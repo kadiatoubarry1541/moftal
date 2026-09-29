@@ -26,7 +26,10 @@ export default function MonEspacePro() {
         );
 
         if (activeAccounts.length === 1) {
-          navigate(`/espace-pro/${activeAccounts[0].id}`, { replace: true });
+          // Formule complète → sa gestion interne ; formule Visibilité → ses rendez-vous
+          navigate(activeAccounts[0].planType === "full"
+            ? `/gestion-interne?tab=pro&ouvrir=${activeAccounts[0].id}`
+            : `/espace-pro/${activeAccounts[0].id}`, { replace: true });
           return;
         }
 
