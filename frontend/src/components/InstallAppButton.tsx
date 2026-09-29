@@ -330,8 +330,12 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     setIsInsidePWA(standalone);
     // L'app d'une gestion s'ouvre sur gestions.moftal.com ; en mode app sur
     // moftal.com, c'est l'app Moftal principale, pas celle de la gestion.
+    // Une gestion ouverte depuis l'app Moftal s'affiche dans la fenêtre de Moftal
+    // (donc aussi en mode app) : ce n'est pas l'app de la gestion.
     const h = window.location.hostname;
-    const appGestion = standalone && (h.startsWith("gestions.") || !/moftal\.com$/.test(h));
+    let depuisMoftal = false;
+    try { depuisMoftal = sessionStorage.getItem("gestionOuverteDepuisMoftal") === "1"; } catch { /* ignore */ }
+    const appGestion = standalone && !depuisMoftal && (h.startsWith("gestions.") || !/moftal\.com$/.test(h));
     setDansLApp(appGestion);
 
     // Le navigateur propose l'installation → l'app N'EST PAS installée

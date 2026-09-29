@@ -465,7 +465,7 @@ export default function InscriptionPro() {
                     <li>✅ Votre propre site vitrine</li>
                     <li>✅ Tableau de bord complet</li>
                     <li>✅ Gestion stock, clients, personnel…</li>
-                    <li>✅ App installée sur vos appareils</li>
+                    <li>✅ Votre application à installer sur vos appareils</li>
                     <li>✅ Connexion continue avec vos clients</li>
                   </ul>
                   <div className="mt-3 text-xs font-bold text-orange-600 dark:text-orange-400">Formule complète — tous les outils de gestion</div>

@@ -35,6 +35,9 @@ if (window.location.hostname === 'gestions.moftal.com') {
   const _p = new URLSearchParams(window.location.search);
   const _t = _p.get('_t');
   const _s = _p.get('_s');
+  // Arrivée par un lien de Moftal (et non par l'icône de l'app de la gestion) :
+  // on le note pour ne jamais afficher « Application installée » dans ce cas.
+  if (_t || _s) sessionStorage.setItem('gestionOuverteDepuisMoftal', '1');
   if (_t) { localStorage.setItem('token', decodeURIComponent(_t)); _p.delete('_t'); }
   if (_s) { localStorage.setItem('session_user', decodeURIComponent(_s)); _p.delete('_s'); }
   if (_t || _s) {
