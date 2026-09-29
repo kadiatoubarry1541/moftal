@@ -2,6 +2,7 @@ import express from 'express';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { trouverUtilisateur, MESSAGE_INTROUVABLE } from '../utils/trouverUtilisateur.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 
@@ -419,7 +420,7 @@ async function verifyMember(req, res, next) {
 router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT m.*,u.prenom,u.nom,u.photo FROM school_members m LEFT JOIN users u ON m.numero_h=u."numeroH" WHERE m.tenant_code=:code AND m.is_active=true ORDER BY m.role,m.created_at`,
+      `SELECT m.*,u.prenom,u.nom_famille AS nom,u.photo,u.tel1 AS telephone FROM school_members m LEFT JOIN users u ON m.numero_h=u.numero_h WHERE m.tenant_code=:code AND m.is_active=true ORDER BY m.role,m.created_at`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, members: rows });
@@ -428,13 +429,12 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
 
 router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { numero_h, role, linked_student_id } = req.body;
+    const { role, linked_student_id } = req.body;
+    const identifiant = req.body.telephone || req.body.identifiant || req.body.numero_h;
     const code = req.params.tenantCode;
-    const [user] = await sequelize.query(
-      `SELECT "numeroH", prenom, nom FROM users WHERE "numeroH"=:n LIMIT 1`,
-      { replacements: { n: numero_h }, type: sequelize.QueryTypes.SELECT }
-    );
-    if (!user) return res.status(404).json({ success: false, message: `Aucun utilisateur avec le numéroH : ${numero_h}` });
+    const user = await trouverUtilisateur(identifiant);
+    if (!user) return res.status(404).json({ success: false, message: MESSAGE_INTROUVABLE(identifiant || '') });
+    const numero_h = user.numeroH;
     const nom_display = `${user.prenom} ${user.nom}`;
     const [rows] = await sequelize.query(
       `INSERT INTO school_members (tenant_code,numero_h,role,linked_student_id,nom_display,added_by)

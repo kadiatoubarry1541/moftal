@@ -9,6 +9,7 @@
 import express from 'express';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
+import { trouverUtilisateur, MESSAGE_INTROUVABLE } from '../utils/trouverUtilisateur.js';
 import { authenticate } from '../middleware/auth.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
@@ -118,7 +119,7 @@ router.get('/:tenantCode/director-profile', authenticate, verifyMember, async (r
   try {
     const [rows] = await sequelize.query(
       `SELECT u.numero_h, u.prenom,
-              COALESCE(u.nom_famille, u."nomFamille", '') AS nom_famille,
+              COALESCE(u.nom_famille, '') AS nom_famille,
               u.photo
        FROM management_tenants mt
        JOIN users u ON u.numero_h = mt.owner_numero_h
@@ -439,7 +440,7 @@ router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, 
 // ── Membres (accès app par numeroH) ──────────────────────────────────────────
 router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) => {
   const [members] = await sequelize.query(
-    `SELECT m.*, u.prenom || ' ' || u.nom AS nom_display
+    `SELECT m.*, COALESCE(u.prenom || ' ' || u.nom_famille, m.nom_display) AS nom_display, u.tel1 AS telephone
      FROM madrasa_members m
      LEFT JOIN users u ON u.numero_h = m.numero_h
      WHERE m.tenant_code = :tc AND m.is_active = true ORDER BY m.role, m.created_at`,
@@ -450,12 +451,13 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
 
 router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
-  const { numero_h, role, linked_student_id } = req.body;
-  if (!numero_h) return res.status(400).json({ message: 'NuméroH requis.' });
-  const [users] = await sequelize.query(
-    `SELECT * FROM users WHERE numero_h = :nh`, { replacements: { nh: numero_h } }
-  );
-  if (!users.length) return res.status(404).json({ message: 'Utilisateur introuvable sur la plateforme.' });
+  const { role, linked_student_id } = req.body;
+  const identifiant = req.body.telephone || req.body.identifiant || req.body.numero_h;
+  if (!identifiant) return res.status(400).json({ success: false, message: 'Téléphone ou NuméroH requis.' });
+  const user = await trouverUtilisateur(identifiant);
+  if (!user) return res.status(404).json({ success: false, message: MESSAGE_INTROUVABLE(identifiant) });
+  const numero_h = user.numeroH;
+  const users = [user];
   try {
     await sequelize.query(
       `INSERT INTO madrasa_members (tenant_code, numero_h, role, linked_student_id, nom_display, is_active)

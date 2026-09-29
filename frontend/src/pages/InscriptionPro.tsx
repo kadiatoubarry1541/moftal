@@ -1,3 +1,4 @@
+import { imageEnDataUrl, estImage, ACCEPT_IMAGES } from "../utils/imageLisible";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LogoPicker from "../components/LogoPicker";
@@ -238,6 +239,7 @@ export default function InscriptionPro() {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
     if (!form.phone.trim()) { setError("Le numéro de téléphone est obligatoire."); return; }
+    if (!form.mediaUrl.trim()) { setError("Le logo de votre établissement est obligatoire : c'est l'icône de votre application."); return; }
     // Seul le téléphone est obligatoire (avec le type de compte) : la formule,
     // l'email, le nom, le justificatif et le
     // niveau d'échanges sont facultatifs à l'inscription et pourront être
@@ -519,13 +521,13 @@ export default function InscriptionPro() {
             </div>
             <div className="sm:col-span-2">
               <label className={labelCls}>
-                Logo de votre établissement <span className="text-gray-400 font-normal">(optionnel)</span>
+                Logo de votre établissement <span className="text-red-500">*</span>
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                 📲 Ce logo sera l'icône de votre app sur les téléphones (le vôtre et celui de vos clients). Carré recommandé.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <input type="file" accept="image/*"
+                <input type="file" accept={ACCEPT_IMAGES}
                   onChange={e => {
                     const file = e.target.files?.[0];
                     if (!file) { setForm(f => ({ ...f, mediaUrl: "" })); return; }
@@ -794,10 +796,15 @@ export default function InscriptionPro() {
                   ? "Autorisation d'exploitation, patente, ou photo du local. PDF ou image. Max 10 Mo."
                   : "Diplôme, agrément, Kbis... PDF ou image. Max 10 Mo. Réservé à l'administrateur."}
               </p>
-              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
+              <input type="file" accept={`${ACCEPT_IMAGES},.pdf`}
                 onChange={e => {
                   const file = e.target.files?.[0];
                   if (!file) { setForm(f => ({ ...f, justificatifDocument: "" })); setJustificatifFileName(""); return; }
+                  if (estImage(file)) {
+                    setError("");
+                    imageEnDataUrl(file).then(doc => { setForm(f => ({ ...f, justificatifDocument: doc })); setJustificatifFileName(file.name); }).catch(err => setError(err.message));
+                    return;
+                  }
                   if (file.size > 10 * 1024 * 1024) { setError("Le fichier ne doit pas dépasser 10 Mo."); return; }
                   setError("");
                   const reader = new FileReader();

@@ -30,7 +30,7 @@ interface Props {
 }
 
 export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, myNom }: Props) {
-  const [mode, setMode] = useState<Mode>('numeroh');
+  const [mode, setMode] = useState<Mode>('phone');
 
   const [inputNumeroH, setInputNumeroH] = useState('');
 
@@ -336,8 +336,8 @@ export function AddPersonModal({ title, onSelect, onClose, myNumeroH, myPrenom, 
 
         <div className="flex border-b border-gray-200 mx-5">
           {([
-            { key: 'numeroh', label: '🔢 NumH' },
             { key: 'phone',   label: '📞 Tél.' },
+            { key: 'numeroh', label: '🔢 NumH' },
             { key: 'email',   label: '✉️ Email' },
             { key: 'qr',      label: '📷 QR' },
           ] as { key: Mode; label: string }[]).map(tab => (

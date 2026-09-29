@@ -63,7 +63,7 @@ export default function DynamicAppManifest({
       background_color: backgroundColor,
       theme_color: themeColor,
       icons: [
-        { src: iconSrc, sizes: "any", type: proId ? "image/png" : "image/svg+xml", purpose: "any" },
+        { src: iconSrc, sizes: proId ? "512x512" : "any", type: proId ? "image/png" : "image/svg+xml", purpose: "any" },
       ],
     };
 

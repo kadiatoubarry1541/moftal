@@ -1,3 +1,4 @@
+import { imageEnDataUrl } from "../../utils/imageLisible";
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { VideoRecorder } from '../../components/VideoRecorder'
@@ -113,7 +114,7 @@ export function DeceasedWrittenForm() {
       // Convertir la photo en base64 si présente
       let photoBase64: string | null = null
       if (data.photo) {
-        photoBase64 = await new Promise<string>((resolve, reject) => {
+        photoBase64 = await imageEnDataUrl(data.photo as File).catch(() => null) ?? await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
           reader.onload = () => resolve(reader.result as string)
           reader.onerror = reject

@@ -1,4 +1,5 @@
-﻿import { useState, useEffect } from "react";
+﻿import { CYCLES_ECOLE } from "../utils/niveauxEcole";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
@@ -323,8 +324,11 @@ export default function EcoleVitrine() {
                   <input type="date" placeholder="Date de naissance" value={enrollForm.date_naissance} onChange={e => setEnrollForm(f => ({ ...f, date_naissance: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                 </div>
-                <input placeholder="Niveau souhaité (ex: CP1, 7ème année, Licence 1...)" value={enrollForm.niveau_souhaite} onChange={e => setEnrollForm(f => ({ ...f, niveau_souhaite: e.target.value }))}
-                  style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                <select value={enrollForm.niveau_souhaite} onChange={e => setEnrollForm(f => ({ ...f, niveau_souhaite: e.target.value }))}
+                  style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none", background: "white" }}>
+                  <option value="">Niveau souhaité</option>
+                  {CYCLES_ECOLE.map(c => <optgroup key={c.cycle} label={c.cycle}>{c.niveaux.map(n => <option key={n}>{n}</option>)}</optgroup>)}
+                </select>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <input placeholder="Nom du parent" value={enrollForm.nom_parent} onChange={e => setEnrollForm(f => ({ ...f, nom_parent: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />

@@ -1,3 +1,4 @@
+import { imageEnDataUrl } from "../utils/imageLisible";
 import { useRef } from "react";
 import { normaliserLogo } from "../utils/logoImage";
 
@@ -82,9 +83,7 @@ export function PublierModal({ modal, token, onChange, onSubmit, onDelete, onClo
   function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => onChange({ ...modal.form, image: (ev.target?.result as string) || "" });
-    reader.readAsDataURL(file);
+    imageEnDataUrl(file).then(image => onChange({ ...modal.form, image })).catch(err => alert(err.message));
   }
 
   return (

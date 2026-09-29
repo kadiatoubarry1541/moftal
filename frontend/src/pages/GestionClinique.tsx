@@ -1,4 +1,5 @@
 ﻿import { Fragment, useState, useEffect, useCallback } from "react";
+import { imageEnDataUrl, estImage } from "../utils/imageLisible";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -1966,6 +1967,7 @@ export default function GestionClinique() {
                 <input type="file" accept="image/*,.pdf" style={{ marginTop: 4 }} onChange={e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
+                  if (estImage(file)) { imageEnDataUrl(file).then(fichier => setForm((f: any) => ({ ...f, fichier }))).catch(err => showToast(err.message, false)); return; }
                   if (file.size > 6 * 1024 * 1024) { showToast("Fichier trop volumineux (max 6 Mo)", false); return; }
                   const reader = new FileReader();
                   reader.onload = () => setForm((f: any) => ({ ...f, fichier: reader.result as string }));

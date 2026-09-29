@@ -170,6 +170,10 @@ router.post('/register', authenticate, async (req, res) => {
   try {
     const { type, subSector, name, description, address, city, country, phone, email, services, specialties, photo, justificatifDocument, planType } = req.body;
 
+    // Le logo est obligatoire : c'est l'icône de l'application de l'établissement
+    if (!photo || typeof photo !== 'string' || !photo.trim()) {
+      return res.status(400).json({ success: false, message: "Le logo de votre établissement est obligatoire : c'est l'icône de votre application." });
+    }
     if (!type || !name) {
       return res.status(400).json({ success: false, message: 'Type et nom requis' });
     }
@@ -312,26 +316,18 @@ function decodeDataUrl(dataUrl) {
   return { mime, buffer };
 }
 
-// GET /api/professionals/pwa-icon/:id — sert le logo du pro comme image pour le manifest PWA
+// GET /api/professionals/pwa-icon/:id — le logo du pro, au format PNG 512×512 des icônes d'app
 router.get('/pwa-icon/:id', async (req, res) => {
   try {
-    const account = await ProfessionalAccount.findByPk(req.params.id, {
-      attributes: ['photo', 'isActive']
-    });
-    if (!account?.photo || !account.isActive) {
-      return res.status(302).redirect('/logo-moftal.svg');
-    }
-    const photo = account.photo;
-    if (photo.startsWith('data:')) {
-      const { mime, buffer } = decodeDataUrl(photo);
-      res.set('Content-Type', mime);
-      res.set('Cache-Control', 'public, max-age=60'); // un nouveau logo apparaît vite partout
-      res.set('Access-Control-Allow-Origin', '*');
-      return res.send(buffer);
-    }
-    res.redirect(302, photo);
+    const account = await ProfessionalAccount.findByPk(req.params.id, { attributes: ['photo', 'isActive'] });
+    const png = account?.photo && account.isActive ? await fabriquerIconeApp({ logo_url: account.photo }) : null;
+    if (!png) return res.status(404).json({ success: false, message: 'Ajoutez le logo de votre établissement.' });
+    res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'public, max-age=60'); // un nouveau logo apparaît vite partout
+    res.set('Access-Control-Allow-Origin', '*');
+    return res.send(png);
   } catch {
-    res.status(302).redirect('/logo-moftal.svg');
+    res.status(404).end();
   }
 });
 
@@ -366,22 +362,13 @@ router.get('/pro-manifest/:id', async (req, res) => {
     // Scope spécifique à ce compte — évite le conflit avec le scope "/" de l'app Moftal principale
     const scopeUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
 
-    // Détecter le type MIME réel du logo
-    let iconMime = 'image/svg+xml';
-    if (account.photo?.startsWith('data:')) {
-      const m = account.photo.match(/data:([^;]+);/);
-      if (m) iconMime = m[1];
-    }
 
-    const iconUrl = `/api/professionals/pwa-icon/${account.id}`;
+    // Icône = le logo du pro uniquement (jamais celui de Moftal ni une icône fabriquée)
+    const iconUrl = `/api/professionals/pwa-icon/${account.id}?v=${encodeURIComponent(empreinteLogo(account.photo) || '0')}`;
     const icons = account.photo ? [
-      { src: iconUrl, sizes: 'any', type: iconMime, purpose: 'any' },
-      { src: iconUrl, sizes: 'any', type: iconMime, purpose: 'maskable' },
-      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-    ] : [
-      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: '/logo-moftal.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
-    ];
+      { src: iconUrl, sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: iconUrl, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ] : [];
 
     const manifest = {
       id: startUrl,
@@ -439,50 +426,8 @@ router.get('/tenant-icon/:tenantCode', async (req, res) => {
 });
 
 // Couleur de l'icône selon le secteur (quand l'établissement n'a pas encore de logo)
-const TENANT_ICON_COLORS = {
-  clinic: '#1a8f1a', health_worker: '#1a8f1a', school: '#1a8f1a', madrasa: '#0891b2',
-  mosque: '#1a8f1a', ngo: '#e11d48', enterprise: '#4f46e5', restaurant: '#ea580c',
-  transport: '#1d4ed8', beauty: '#db2777', artisan: '#d97706', security_agency: '#475569',
-  mairie: '#1d4ed8', scientist: '#4338ca', commerce: '#d97706', journalist: '#dc2626',
-  supplier: '#0e7490', vendor: '#0891b2', reseau: '#2563eb', broker: '#b45309', producer: '#7c3aed',
-};
 
-// GET /api/professionals/tenant-icon-badged/:tenantCode — icône de l'app installée
-// d'un établissement. C'est son application : uniquement SON logo (aucun logo Moftal).
-// Sans logo : l'initiale de l'établissement sur la couleur de son secteur.
-router.get('/tenant-icon-badged/:tenantCode', async (req, res) => {
-  let tenant;
-  try {
-    [tenant] = await sequelize.query(
-      `SELECT mt.name, mt.type, mt.logo_url, pa.photo FROM management_tenants mt
-       LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
-       WHERE mt.tenant_code = :code LIMIT 1`,
-      { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
-    );
-  } catch { tenant = null; }
 
-  const logo = tenant?.logo_url || tenant?.photo;
-  const esc = (v) => String(v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-  let contenu;
-  if (logo && (logo.startsWith('data:') || /^https?:\/\//.test(logo))) {
-    contenu = `<rect width="100" height="100" rx="18" fill="white"/>
-  <image href="${esc(logo)}" x="6" y="6" width="88" height="88" preserveAspectRatio="xMidYMid meet" clip-path="url(#main)"/>`;
-  } else {
-    const couleur = TENANT_ICON_COLORS[tenant?.type] || '#1a8f1a';
-    const initiale = esc(((tenant?.name || '').trim()[0] || '•').toUpperCase());
-    contenu = `<rect width="100" height="100" rx="18" fill="${couleur}"/>
-  <text x="50" y="67" font-family="Arial, Helvetica, sans-serif" font-size="50" font-weight="700" fill="white" text-anchor="middle">${initiale}</text>`;
-  }
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100" width="512" height="512">
-  <defs><clipPath id="main"><rect width="100" height="100" rx="18"/></clipPath></defs>
-  ${contenu}
-</svg>`;
-  res.set('Content-Type', 'image/svg+xml');
-  res.set('Cache-Control', 'public, max-age=60'); // un nouveau logo apparaît vite partout
-  res.set('Access-Control-Allow-Origin', '*');
-  return res.send(svg);
-});
 
 // ─── Icône d'application (PNG) de l'établissement ─────────────────────────────
 // Les téléphones (Chrome Android) n'acceptent qu'une image PNG comme icône d'app
@@ -577,13 +522,14 @@ async function getSharp() {
   return sharpLib;
 }
 
+// L'icône de l'app = le logo choisi par le propriétaire, et rien d'autre. Le
+// téléphone n'accepte qu'une image PNG : le logo est seulement mis au format PNG
+// carré (sans rien couper ni ajouter). Sans logo, pas d'icône : la gestion
+// demande d'abord le logo (champ obligatoire à l'inscription).
 async function fabriquerIconeApp(tenant) {
-  if (tenant?.icon_png?.startsWith('data:image/png')) return decodeDataUrl(tenant.icon_png).buffer;
-  const sharp = await getSharp();
-  if (!sharp) return null;
-  const T = 512;
   const logo = tenant?.logo_url;
-  if (logo) {
+  const sharp = await getSharp();
+  if (logo && sharp) {
     try {
       let src;
       if (logo.startsWith('data:')) src = decodeDataUrl(logo).buffer;
@@ -592,21 +538,19 @@ async function fabriquerIconeApp(tenant) {
         if (r.ok) src = Buffer.from(await r.arrayBuffer());
       }
       if (src) {
-        // Logo entier dans les 76 % du centre : visible même quand Android arrondit l'icône
-        const zone = Math.round(T * 0.76);
-        const logoPng = await sharp(src, { density: 300 })
-          .resize(zone, zone, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+        const { imageAffichable } = await import('../utils/images.js');
+        const lisible = (await imageAffichable(src, logo.match(/^data:([^;,]+)/)?.[1] || '')).buffer;
+        return await sharp(lisible, { density: 300 })
+          .resize(512, 512, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
           .flatten({ background: '#ffffff' }).png().toBuffer();
-        return await sharp({ create: { width: T, height: T, channels: 3, background: '#ffffff' } })
-          .composite([{ input: logoPng, gravity: 'center' }]).png().toBuffer();
       }
-    } catch { /* logo illisible : on passe à l'initiale */ }
+    } catch { /* logo illisible : on essaie la copie PNG enregistrée */ }
   }
-  const couleur = TENANT_ICON_COLORS[tenant?.type] || '#1a8f1a';
-  const esc = (v) => String(v).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-  const initiale = esc(((tenant?.name || '').trim()[0] || '•').toUpperCase());
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${T}" height="${T}"><rect width="${T}" height="${T}" fill="${couleur}"/><text x="256" y="345" font-family="Arial, Helvetica, DejaVu Sans, Liberation Sans, sans-serif" font-size="270" font-weight="700" fill="#ffffff" text-anchor="middle">${initiale}</text></svg>`;
-  return await sharp(Buffer.from(svg)).png().toBuffer();
+  // Copie PNG du même logo, dessinée par la gestion
+  if (tenant?.icon_png?.startsWith('data:image/png') && tenant?.icon_source?.startsWith('logo:')) {
+    return decodeDataUrl(tenant.icon_png).buffer;
+  }
+  return null;
 }
 
 // GET /api/professionals/tenant-app-icon/:tenantCode — icône PNG de l'app (toujours disponible)
@@ -614,7 +558,7 @@ router.get('/tenant-app-icon/:tenantCode', async (req, res) => {
   try {
     await ensureTenantIconColumns().catch(() => {});
     const [tenant] = await sequelize.query(
-      `SELECT mt.name, mt.type, mt.icon_png, COALESCE(mt.logo_url, pa.photo) AS logo_url
+      `SELECT mt.name, mt.type, mt.icon_png, mt.icon_source, COALESCE(mt.logo_url, pa.photo) AS logo_url
        FROM management_tenants mt
        LEFT JOIN professional_accounts pa ON pa.tenant_code = mt.tenant_code
        WHERE mt.tenant_code = :code LIMIT 1`,
@@ -622,7 +566,7 @@ router.get('/tenant-app-icon/:tenantCode', async (req, res) => {
     );
     if (!tenant) return res.status(404).end();
     const png = await fabriquerIconeApp(tenant);
-    if (!png) return res.redirect(302, `/api/professionals/tenant-icon-badged/${encodeURIComponent(req.params.tenantCode)}`);
+    if (!png) return res.status(404).json({ success: false, message: 'Ajoutez le logo de votre établissement.' });
     res.set('Content-Type', 'image/png');
     res.set('Cache-Control', 'public, max-age=300');
     res.set('Access-Control-Allow-Origin', '*');
@@ -667,15 +611,13 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
     };
     const themeColor = TYPE_COLORS[tenant?.type] || '#1a8f1a';
 
-    // Icône PNG 512×512 fabriquée par le serveur : toujours présente, même pour un
-    // compte tout neuf (les téléphones Android refusent une icône SVG seule).
-    const iconVersion = encodeURIComponent(String(tenant?.icon_source || empreinteLogo(tenant?.logo_url) || '1').slice(-24));
+    // Icône = le logo du propriétaire (mis au format PNG 512×512 exigé par les téléphones)
+    const iconVersion = encodeURIComponent(empreinteLogo(tenant?.logo_url) || '0');
     const pngUrl = `/api/professionals/tenant-app-icon/${tenantCode}?v=${iconVersion}`;
-    const icons = [
+    const icons = tenant?.logo_url ? [
       { src: pngUrl, sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: pngUrl, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      { src: `/api/professionals/tenant-icon-badged/${tenantCode}`, sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-    ];
+    ] : [];
 
     const manifest = {
       id: startUrl,

@@ -1,4 +1,5 @@
 import './utils/asyncErrors.js';
+import './utils/multerImages.js';
 import http from 'http';
 import express from 'express';
 import compression from 'compression';
@@ -51,6 +52,7 @@ import clinicPublicRoutes from './routes/clinic-public.js';
 import commercePublicRoutes from './routes/commerce-public.js';
 import proPublicRoutes from './routes/pro-public.js';
 import schoolMgmtRoutes from './routes/school-management.js';
+import imagesRoutes from './routes/images.js';
 import mosqueMgmtRoutes from './routes/mosque-management.js';
 import madrasaMgmtRoutes from './routes/madrasa-management.js';
 import imamMgmtRoutes from './routes/imam-management.js';
@@ -1816,6 +1818,12 @@ async function initAllTables() {
     await sequelize.query(`ALTER TABLE "school_staff" ADD COLUMN IF NOT EXISTS "numero_h" VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_attendance" ADD COLUMN IF NOT EXISTS "statut" VARCHAR(20);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_fees" ADD COLUMN IF NOT EXISTS "echeance" DATE;`).catch(() => {});
+    // Niveaux scolaires guinéens : 1ère année → Terminale (13ème année). Les anciens
+    // noms (CP1…CM2, « Terminale ») sont renommés, sans rien perdre.
+    for (const [ancien, nouveau] of [['CP1', '1ère année'], ['CP2', '2ème année'], ['CE1', '3ème année'], ['CE2', '4ème année'], ['CM1', '5ème année'], ['CM2', '6ème année'], ['Terminale', 'Terminale (13ème année)']]) {
+      await sequelize.query(`UPDATE "school_students" SET "niveau" = :nouveau WHERE "niveau" = :ancien`, { replacements: { ancien, nouveau } }).catch(() => {});
+      await sequelize.query(`UPDATE "school_classrooms" SET "niveau" = :nouveau WHERE "niveau" = :ancien`, { replacements: { ancien, nouveau } }).catch(() => {});
+    }
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "address"      TEXT;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "phone"        VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "email"        VARCHAR(255);`).catch(() => {});
@@ -2821,6 +2829,7 @@ app.use('/api/push', pushRoutes);
 app.use('/api/ia', iaRoutes);
 app.use('/api/admin/moderation', moderationRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/images', imagesRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);

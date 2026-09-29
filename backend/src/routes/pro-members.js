@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { trouverUtilisateur, MESSAGE_INTROUVABLE } from '../utils/trouverUtilisateur.js';
 import Notification from '../models/Notification.js';
 
 const router = express.Router();
@@ -47,9 +48,9 @@ router.get('/my-memberships', authenticate, async (req, res) => {
 router.get('/:proAccountId/members', authenticate, verifyOwner, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT m.*, u.prenom, u.nom, u.photo
+      `SELECT m.*, u.prenom, u.nom_famille AS nom, u.photo, u.tel1 AS telephone
        FROM professional_account_members m
-       LEFT JOIN users u ON m.numero_h = u."numeroH"
+       LEFT JOIN users u ON m.numero_h = u.numero_h
        WHERE m.professional_account_id = :id AND m.is_active = true
        ORDER BY m.created_at DESC`,
       { replacements: { id: req.params.proAccountId }, type: sequelize.QueryTypes.SELECT }
@@ -60,13 +61,12 @@ router.get('/:proAccountId/members', authenticate, verifyOwner, async (req, res)
 
 router.post('/:proAccountId/members', authenticate, verifyOwner, async (req, res) => {
   try {
-    const { numeroH, role } = req.body;
+    const { role } = req.body;
+    const identifiant = req.body.telephone || req.body.identifiant || req.body.numeroH;
     const id = req.params.proAccountId;
-    const [user] = await sequelize.query(
-      `SELECT "numeroH", prenom, nom FROM users WHERE "numeroH"=:n LIMIT 1`,
-      { replacements: { n: numeroH }, type: sequelize.QueryTypes.SELECT }
-    );
-    if (!user) return res.status(404).json({ success: false, message: `Aucun utilisateur avec le numéroH : ${numeroH}` });
+    const user = await trouverUtilisateur(identifiant);
+    if (!user) return res.status(404).json({ success: false, message: MESSAGE_INTROUVABLE(identifiant || '') });
+    const numeroH = user.numeroH;
     const nom_display = `${user.prenom} ${user.nom}`;
     const finalRole = role || 'client';
     const [rows] = await sequelize.query(

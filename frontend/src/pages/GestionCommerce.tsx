@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import { imageEnDataUrl } from "../utils/imageLisible";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -547,10 +548,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
                   <input id="product-photo-upload" type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    if (file.size > 2 * 1024 * 1024) { alert("Photo trop volumineuse (max 2 Mo)"); return; }
-                    const reader = new FileReader();
-                    reader.onload = () => setPForm((f: any) => ({ ...f, photo_url: reader.result as string }));
-                    reader.readAsDataURL(file);
+                    imageEnDataUrl(file, 1200).then(photo_url => setPForm((f: any) => ({ ...f, photo_url }))).catch(err => alert(err.message));
                   }} />
                 </div>
               </div>

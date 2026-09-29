@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef, useCallback } from "react";
+import { imageEnDataUrl } from "../utils/imageLisible";
 import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
 import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
@@ -921,10 +922,7 @@ export default function EspacePro() {
   const handlePubImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Image max 2 Mo'); return; }
-    const reader = new FileReader();
-    reader.onloadend = () => setNewPub(prev => ({ ...prev, image: reader.result as string, video: null }));
-    reader.readAsDataURL(file);
+    imageEnDataUrl(file).then(image => setNewPub(prev => ({ ...prev, image, video: null }))).catch(err => alert(err.message));
   };
 
   const handlePubVideo = (e: React.ChangeEvent<HTMLInputElement>) => {

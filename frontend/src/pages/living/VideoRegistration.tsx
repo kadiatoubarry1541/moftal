@@ -1,3 +1,4 @@
+import { imageEnDataUrl } from '../../utils/imageLisible'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { VideoRecorder } from '../../components/VideoRecorder'
@@ -224,12 +225,12 @@ export function VideoRegistration() {
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    if (!file.type.startsWith('image/')) { alert('Veuillez sélectionner un fichier image valide.'); return }
-    if (file.size > 5 * 1024 * 1024) { alert('La photo doit faire moins de 5MB.'); return }
-    const reader = new FileReader()
-    reader.onload = (e) =>
-      setVideoData((prev) => ({ ...prev, photo: file, photoPreview: e.target?.result as string }))
-    reader.readAsDataURL(file)
+    // Toute photo acceptée (HEIC, grosses photos…) : convertie et allégée automatiquement
+    imageEnDataUrl(file).then(async (dataUrl) => {
+      const blob = await (await fetch(dataUrl)).blob()
+      const photo = new File([blob], `photo.${blob.type === 'image/png' ? 'png' : 'jpg'}`, { type: blob.type })
+      setVideoData((prev) => ({ ...prev, photo, photoPreview: dataUrl }))
+    }).catch((err) => alert(err.message))
   }
 
   const removePhoto = () =>
@@ -923,7 +924,7 @@ export function VideoRegistration() {
                           <label htmlFor="video-photo-upload" className="upload-button">
                             <span className="upload-icon">📷</span>
                             <span>Cliquer pour ajouter une photo</span>
-                            <small>Formats acceptés : JPG, PNG (max 5MB)</small>
+                            <small>Toutes les photos sont acceptées</small>
                           </label>
                         </div>
                       )}

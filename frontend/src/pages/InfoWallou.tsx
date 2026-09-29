@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useCallback, useEffect } from "react";
+import { imageEnDataUrl } from "../utils/imageLisible";
 import { useNavigate } from "react-router-dom";
 import { BackToMoftalBadge, reconcileInstalledFlag } from "../components/InstallAppButton";
 
@@ -70,9 +71,7 @@ function Photo({ value, onChange, label }: { value: string | null; onChange: (v:
   const ref = useRef<HTMLInputElement>(null);
   const handle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => onChange(ev.target?.result as string);
-    r.readAsDataURL(f);
+    imageEnDataUrl(f).then(onChange).catch(err => alert(err.message));
   };
   return (
     <div className="relative w-20 h-20 flex-shrink-0 cursor-pointer group" onClick={() => ref.current?.click()}>

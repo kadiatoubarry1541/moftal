@@ -1,4 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from "react";
+import { imageEnDataUrl } from "../utils/imageLisible";
+import { CYCLES_ECOLE } from "../utils/niveauxEcole";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -76,15 +78,8 @@ export default function GestionEnseignement({ mode }: Props) {
     apprenants: "Élèves", apprenant: "Élève",
     groupes: "Classes", groupe: "Classe",
     staffLabel: "Personnel", staffSingular: "Professeur",
-    // Parcours complet en Guinée, de la maternelle à l'université
-    cycles: [
-      { cycle: "Maternelle",  niveaux: ["Petite section", "Moyenne section", "Grande section"] },
-      { cycle: "Primaire",    niveaux: ["CP1", "CP2", "CE1", "CE2", "CM1", "CM2"] },
-      { cycle: "Collège",     niveaux: ["7ème année", "8ème année", "9ème année", "10ème année"] },
-      { cycle: "Lycée",       niveaux: ["11ème année", "12ème année", "Terminale"] },
-      { cycle: "Université",  niveaux: ["Licence 1", "Licence 2", "Licence 3", "Master 1", "Master 2", "Doctorat"] },
-      { cycle: "Formation professionnelle", niveaux: ["Formation professionnelle / technique"] },
-    ],
+    // Parcours complet en Guinée : 1ère année → Terminale (13ème année), + maternelle et université
+    cycles: CYCLES_ECOLE,
     matieres: ["Mathématiques", "Français", "Sciences", "Histoire-Géo", "Anglais", "Arts", "EPS", "Autre"],
     roles: ["Directeur(trice)", "Professeur", "Surveillant", "Administratif", "Autre"],
     fraisTypes: ["Inscription", "Mensualité", "Cantine", "Transport", "Fournitures", "Examen", "Autre"],
@@ -357,7 +352,7 @@ export default function GestionEnseignement({ mode }: Props) {
         {modal === "add-apprenant" && (<>
           <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? "Modifier" : "Nouvel"} {V.apprenant.toLowerCase()}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {(["Prénom *|prenom|text","Nom *|nom|text","Date de naissance|date_naissance|date","Sexe|sexe|sexe","Tél. parent|telephone_parent|text","Niveau|niveau|niveau","NuméroH|numero_h|text","NuméroH parent|parent_numero_h|text"] as string[]).map(raw => {
+            {(["Prénom *|prenom|text","Nom *|nom|text","Date de naissance|date_naissance|date","Sexe|sexe|sexe","Tél. parent|telephone_parent|text","Niveau|niveau|niveau","NuméroH (facultatif)|numero_h|text","NuméroH parent (facultatif)|parent_numero_h|text"] as string[]).map(raw => {
               const [label, key, type] = raw.split("|");
               return (
                 <div key={key}>
@@ -382,7 +377,7 @@ export default function GestionEnseignement({ mode }: Props) {
         {modal === "add-staff" && (<>
           <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? "Modifier" : "Nouveau"} {V.staffSingular.toLowerCase()}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {(["Prénom *|prenom|text","Nom *|nom|text","Rôle|role|role","Spécialité / Matière|specialite|mat","Téléphone|telephone|text","NuméroH|numero_h|text"] as string[]).map(raw => {
+            {(["Prénom *|prenom|text","Nom *|nom|text","Rôle|role|role","Spécialité / Matière|specialite|mat","Téléphone|telephone|text","NuméroH (facultatif)|numero_h|text"] as string[]).map(raw => {
               const [label, key, type] = raw.split("|");
               return (
                 <div key={key}>
@@ -410,10 +405,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 <input type="file" accept="image/*" onChange={e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  if (file.size > 1.5 * 1024 * 1024) { showToast("Photo trop volumineuse (max 1.5 Mo)", false); return; }
-                  const reader = new FileReader();
-                  reader.onload = () => setForm((f: any) => ({ ...f, photo_url: reader.result as string }));
-                  reader.readAsDataURL(file);
+                  imageEnDataUrl(file, 800).then(photo_url => setForm((f: any) => ({ ...f, photo_url }))).catch(err => showToast(err.message, false));
                 }} style={{ fontSize: 12 }} />
               </div>
             </div>
@@ -787,9 +779,9 @@ export default function GestionEnseignement({ mode }: Props) {
                           <div style={{ display:"flex", gap:10 }}>
                             <button onClick={()=>{ setForm({ ...s }); setModal("add-apprenant"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
                             <button onClick={async()=>{
-                              const nh = prompt(`Numéro Moftal du parent à relier à ${s.prenom} ${s.nom} :`);
-                              if (!nh) return;
-                              const d = await post("/members/add", { numero_h: nh.trim(), role: "parent", linked_student_id: s.id });
+                              const id = prompt(`Téléphone ou NuméroH du parent de ${s.prenom} ${s.nom} :`, s.telephone_parent || s.parent_numero_h || "");
+                              if (!id?.trim()) return;
+                              const d = await post("/members/add", { identifiant: id.trim(), role: "parent", linked_student_id: s.id });
                               if (d.success) showToast(d.user ? `Parent relié (${d.user.prenom} ${d.user.nom})` : (d.message || "Parent relié"));
                               else showToast(d.message || "Erreur", false);
                             }} style={{ color:"#7c3aed",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>👪 Lier parent</button>

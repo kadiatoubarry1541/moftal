@@ -428,6 +428,15 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     }
   };
 
+  // L'icône de l'app est le logo du propriétaire : sans logo, on le demande d'abord
+  if (!logoUrl && !installed) {
+    return (
+      <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "10px 12px", fontSize: 13, color: "#92400e", lineHeight: 1.5 }}>
+        <strong>Ajoutez d'abord le logo de votre établissement</strong> (ci-dessus, dans Paramètres).
+        Votre logo sera l'icône de votre application sur les téléphones.
+      </div>
+    );
+  }
   if (installed && dejaSurEcran && !dansLApp) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#166534" }}>

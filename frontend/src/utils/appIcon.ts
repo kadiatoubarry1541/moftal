@@ -2,8 +2,7 @@ import { config } from "../config/api";
 
 // Icône d'application de la gestion : une vraie image PNG 512×512 (les téléphones
 // refusent le SVG comme icône d'app installée). Dessinée ici à partir du logo de
-// l'établissement — ou de son initiale sur la couleur du secteur s'il n'a pas de
-// logo — puis enregistrée en base ; le manifest de l'app la donne au téléphone.
+// l'établissement (jamais une icône inventée à sa place) — puis enregistrée en base ; le manifest de l'app la donne au téléphone.
 
 function empreinte(texte: string): string {
   let h = 5381;
@@ -35,14 +34,6 @@ async function dessinerIcone(nom: string, logoUrl: string | undefined, couleur: 
     const w = img.naturalWidth || zone, h = img.naturalHeight || zone;
     const k = Math.min(zone / w, zone / h);
     ctx.drawImage(img, (T - w * k) / 2, (T - h * k) / 2, w * k, h * k);
-  } else {
-    ctx.fillStyle = couleur;
-    ctx.fillRect(0, 0, T, T);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 260px Arial, Helvetica, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText((nom.trim()[0] || "•").toUpperCase(), T / 2, T / 2 + 10);
   }
   return canvas.toDataURL("image/png");
 }
@@ -52,10 +43,9 @@ const enCours = new Set<string>();
 /** Met à jour l'icône PNG de l'app si le logo (ou le nom / la couleur) a changé. */
 export async function synchroniserIconeApp(tenantCode: string, nom?: string, logoUrl?: string, couleur?: string) {
   const token = localStorage.getItem("token");
-  if (!token || !tenantCode || (!nom && !logoUrl)) return;
-  const source = logoUrl
-    ? `logo:${empreinte(logoUrl)}`
-    : `init:${(nom || "").trim()[0] || ""}:${couleur || ""}`;
+  // Seulement le logo du propriétaire : aucune icône n'est inventée à sa place
+  if (!token || !tenantCode || !logoUrl) return;
+  const source = `logo:${empreinte(logoUrl)}`;
   const cle = `${tenantCode}|${source}`;
   if (enCours.has(cle)) return;
   enCours.add(cle);

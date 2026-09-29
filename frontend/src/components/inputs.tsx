@@ -181,7 +181,7 @@ export function FilePicker({ accept, onFile }: { accept?: string, onFile: (file:
             </label>
           </div>
           <small className="text-gray-500 text-xs text-center">
-            Formats acceptés: JPG, PNG, GIF (max 5MB)
+            Toutes les photos sont acceptées
           </small>
         </div>
       )}
