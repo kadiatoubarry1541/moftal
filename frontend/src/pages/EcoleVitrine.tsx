@@ -177,7 +177,7 @@ export default function EcoleVitrine() {
       <section style={{ background: "white", padding: "0 20px 48px" }}>
         <div className="stats-g" style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, transform: "translateY(-30px)" }}>
           {[
-            { icon: "👨‍🏫", val: `${stats.staff || 0}`, label: "Enseignants qualifiés" },
+            { icon: "👨‍🏫", val: `${stats.staff || 0}`, label: "Membres du personnel" },
             { icon: "👨‍🎓", val: `${stats.students || 0}`, label: "Élèves inscrits" },
             { icon: "🏫", val: `${stats.classes || 0}`, label: "Classes" },
             reviewStats.total > 0

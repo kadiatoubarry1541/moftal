@@ -2,6 +2,7 @@ import express from 'express';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
+import { notifier } from '../utils/notifier.js';
 import { trouverUtilisateur, MESSAGE_INTROUVABLE } from '../utils/trouverUtilisateur.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
@@ -67,14 +68,23 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
   try {
     const code = req.params.tenantCode;
     const q = (sql, rep) => sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT }).then(r => r[0]).catch(() => ({ c: 0, t: 0 }));
-    const [stu, sta, cls, fees, recent] = await Promise.all([
+    const [stu, sta, cls, fees, recent, pres, coll, impayes] = await Promise.all([
       q(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code AND statut='actif'`, { code }),
       q(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
-      q(`SELECT COALESCE(SUM(montant-montant_paye),0) as t FROM school_fees WHERE tenant_code=:code AND est_paye=false`, { code }),
+      q(`SELECT COALESCE(SUM(montant-COALESCE(montant_paye,0)),0) as t FROM school_fees WHERE tenant_code=:code AND est_paye=false`, { code }),
       sequelize.query(`SELECT * FROM school_students WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 6`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
+      q(`SELECT COUNT(*) as c FROM school_attendance WHERE tenant_code=:code AND date_presence=CURRENT_DATE AND COALESCE(statut, CASE WHEN est_present THEN 'present' ELSE 'absent' END) <> 'absent'`, { code }),
+      q(`SELECT COALESCE(SUM(COALESCE(montant_paye,montant)),0) as t FROM school_fees WHERE tenant_code=:code AND est_paye=true AND date_paiement>=date_trunc('month',CURRENT_DATE)`, { code }),
+      q(`SELECT COUNT(DISTINCT student_id) as c FROM school_fees WHERE tenant_code=:code AND est_paye=false`, { code }),
     ]);
-    res.json({ success: true, stats: { students: +(stu.c||0), staff: +(sta.c||0), classrooms: +(cls.c||0), feesPending: +(fees.t||0) }, recentStudents: recent });
+    // Mêmes noms que la madrasa : c'est ce que lit le tableau de bord (avant, il affichait 0 partout)
+    res.json({
+      success: true,
+      totalStudents: +(stu.c||0), totalStaff: +(sta.c||0), totalClassrooms: +(cls.c||0),
+      presentToday: +(pres.c||0), feesCollected: +(coll.t||0), unpaidFees: +(impayes.c||0), feesPending: +(fees.t||0),
+      stats: { students: +(stu.c||0), staff: +(sta.c||0), classrooms: +(cls.c||0), feesPending: +(fees.t||0) }, recentStudents: recent,
+    });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -202,7 +212,14 @@ router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, 
 router.get('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT c.*,c.professeur_principal_id as professeur_id,s.nom as prof_nom,s.prenom as prof_prenom,COUNT(st.id)::int as nb_eleves FROM school_classrooms c LEFT JOIN school_staff s ON c.professeur_principal_id=s.id LEFT JOIN school_students st ON st.classroom_id=c.id AND st.statut='actif' WHERE c.tenant_code=:code GROUP BY c.id,s.nom,s.prenom ORDER BY c.nom`,
+      // Élèves de la classe : ceux qui y sont affectés, ou (sans affectation) ceux de son niveau
+      `SELECT c.*,c.professeur_principal_id as professeur_id,s.nom as prof_nom,s.prenom as prof_prenom,
+              COUNT(st.id)::int as nb_eleves, COUNT(st.id)::int as student_count
+       FROM school_classrooms c
+       LEFT JOIN school_staff s ON c.professeur_principal_id=s.id
+       LEFT JOIN school_students st ON st.tenant_code=c.tenant_code AND st.statut='actif'
+            AND (st.classroom_id=c.id OR (st.classroom_id IS NULL AND st.niveau=c.niveau))
+       WHERE c.tenant_code=:code GROUP BY c.id,s.nom,s.prenom ORDER BY c.nom`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, classrooms: rows });
@@ -273,7 +290,9 @@ router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, r
   try {
     const { records, classroom_id } = req.body;
     const code = req.params.tenantCode;
-    const date = new Date().toISOString().split('T')[0];
+    // Le jour choisi à l'écran (rattraper l'appel d'hier), jamais dans le futur
+    const aujourdhui = new Date().toISOString().split('T')[0];
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') && req.body.date <= aujourdhui ? req.body.date : aujourdhui;
     for (const r of records || []) {
       if (!r?.student_id) continue;
       const statut = ['present', 'absent', 'retard'].includes(r.statut) ? r.statut : (r.est_present === false ? 'absent' : 'present');
@@ -439,14 +458,11 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
     const [rows] = await sequelize.query(
       `INSERT INTO school_members (tenant_code,numero_h,role,linked_student_id,nom_display,added_by)
        VALUES(:code,:n,:role,:sid,:nom,:by)
-       ON CONFLICT(tenant_code,numero_h) DO UPDATE SET role=EXCLUDED.role,linked_student_id=EXCLUDED.linked_student_id,is_active=true
+       ON CONFLICT(tenant_code,numero_h,(COALESCE(linked_student_id,0))) DO UPDATE SET role=EXCLUDED.role,nom_display=EXCLUDED.nom_display,is_active=true
        RETURNING *`,
       { replacements: { code, n: numero_h, role: role || 'parent', sid: linked_student_id || null, nom: nom_display, by: req.userId }, type: sequelize.QueryTypes.INSERT }
     );
-    await sequelize.query(
-      `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
-      { replacements: { uid: numero_h, msg: `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}).` } }
-    ).catch(() => {});
+    await notifier(numero_h, 'school_member', `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}).`);
     res.json({ success: true, member: rows[0], user: { prenom: user.prenom, nom: user.nom } });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -470,7 +486,15 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
     let data = {};
 
     if (member.role === 'apprenant' || member.role === 'parent') {
-      const studentId = member.linked_student_id;
+      // Tous les enfants reliés à ce parent ; ?eleve=ID choisit celui à afficher
+      const children = await sequelize.query(
+        `SELECT s.id, s.prenom, s.nom, s.niveau FROM school_members m JOIN school_students s ON s.id = m.linked_student_id
+         WHERE m.tenant_code=:code AND m.numero_h=:n AND m.is_active=true AND s.statut='actif' ORDER BY s.prenom`,
+        { replacements: { code, n: req.userId }, type: sequelize.QueryTypes.SELECT }
+      );
+      data.children = children;
+      const choisi = children.find(c => String(c.id) === String(req.query.eleve || ''));
+      const studentId = choisi?.id || children[0]?.id || member.linked_student_id;
       if (studentId) {
         const [student] = await sequelize.query(
           `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE s.id=:id LIMIT 1`,
@@ -492,7 +516,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
           `SELECT b.*,g.matiere,g.note,g.note_max,g.coefficient,g.periode as g_periode FROM school_bulletins b LEFT JOIN school_grades g ON g.student_id=b.student_id AND g.periode=b.periode WHERE b.student_id=:sid AND b.is_published=true ORDER BY b.created_at DESC`,
           { replacements: { sid: studentId }, type: sequelize.QueryTypes.SELECT }
         );
-        data = { student: student || null, grades, attendance, fees, bulletins };
+        data = { ...data, student: student || null, grades, attendance, fees, bulletins };
       }
     }
 
@@ -505,7 +529,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
 router.get('/:tenantCode/bulletins', authenticate, verifyTenant, async (req, res) => {
   try {
     const { periode, student_id } = req.query;
-    let q = `SELECT b.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,c.nom as classe FROM school_bulletins b LEFT JOIN school_students s ON b.student_id=s.id LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE b.tenant_code=:code`;
+    let q = `SELECT b.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,s.niveau,c.nom as classe FROM school_bulletins b LEFT JOIN school_students s ON b.student_id=s.id LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE b.tenant_code=:code`;
     if (periode)    q += ` AND b.periode=:periode`;
     if (student_id) q += ` AND b.student_id=:sid`;
     q += ` ORDER BY s.nom`;
@@ -549,10 +573,7 @@ router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async
           { replacements: { code, sid: student.id }, type: sequelize.QueryTypes.SELECT }
         );
         for (const m of members) {
-          await sequelize.query(
-            `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'bulletin',:msg)`,
-            { replacements: { uid: m.numero_h, msg: `📊 Bulletin du ${periode} disponible — ${student.prenom} ${student.nom} : ${moy ? moy + '/20' : '—'} (${calcMention(moy)})` } }
-          ).catch(() => {});
+          await notifier(m.numero_h, 'bulletin', `📊 Bulletin du ${periode} disponible — ${student.prenom} ${student.nom} : ${moy ? moy + '/20' : '—'} (${calcMention(moy)})`);
         }
       }
     }
@@ -572,10 +593,7 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
         { replacements: { code: req.params.tenantCode, sid: bulletin.student_id }, type: sequelize.QueryTypes.SELECT }
       );
       for (const m of members) {
-        await sequelize.query(
-          `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'bulletin',:msg)`,
-          { replacements: { uid: m.numero_h, msg: `📊 Nouveau bulletin disponible — ${bulletin.periode} : ${bulletin.moyenne_generale ? bulletin.moyenne_generale + '/20' : '—'} (${bulletin.mention})` } }
-        ).catch(() => {});
+        await notifier(m.numero_h, 'bulletin', `📊 Nouveau bulletin disponible — ${bulletin.periode} : ${bulletin.moyenne_generale ? bulletin.moyenne_generale + '/20' : '—'} (${bulletin.mention})`);
       }
     }
     res.json({ success: true });
@@ -619,8 +637,8 @@ router.put('/:tenantCode/enroll-requests/:id/convert', authenticate, verifyTenan
     const prenom = nameParts.shift() || reqRow.nom_enfant;
     const nom = nameParts.join(' ') || '—';
     const [rows] = await sequelize.query(
-      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,telephone_parent,nom_parent,numero_matricule) VALUES(:code,:nom,:prenom,:dob,:tel,:parent,:mat) RETURNING *`,
-      { replacements: { code, nom, prenom, dob: reqRow.date_naissance || null, tel: reqRow.telephone_parent, parent: reqRow.nom_parent || null, mat }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,telephone_parent,nom_parent,numero_matricule,niveau) VALUES(:code,:nom,:prenom,:dob,:tel,:parent,:mat,:niveau) RETURNING *`,
+      { replacements: { code, nom, prenom, dob: reqRow.date_naissance || null, tel: reqRow.telephone_parent, parent: reqRow.nom_parent || null, mat, niveau: reqRow.niveau_souhaite || null }, type: sequelize.QueryTypes.INSERT }
     );
     await sequelize.query(`UPDATE school_enroll_requests SET statut='converti' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code } });
     res.json({ success: true, student: rows[0] });

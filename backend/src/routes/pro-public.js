@@ -70,8 +70,9 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code AND statut='actif'`, { code }),
           q1(`SELECT COUNT(*) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
-          q1(`SELECT COUNT(DISTINCT niveau) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
-          q(`SELECT nom,prenom,role,matiere,photo_url FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY role,nom LIMIT 12`, { code }),
+          q1(`SELECT COUNT(DISTINCT niveau) as c FROM (SELECT niveau FROM school_classrooms WHERE tenant_code=:code UNION SELECT niveau FROM school_students WHERE tenant_code=:code AND statut='actif') n WHERE niveau IS NOT NULL`, { code }),
+          // (Avant : colonne « matiere » inexistante → erreur ignorée → aucun personnel affiché)
+          q(`SELECT nom,prenom,role,COALESCE(specialite, matieres->>0) AS matiere,photo_url FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY role,nom LIMIT 24`, { code }),
           q(`SELECT nom,niveau,capacite FROM school_classrooms WHERE tenant_code=:code ORDER BY nom`, { code }),
           q(`SELECT type_frais, MIN(montant) as min_montant, MAX(montant) as max_montant FROM school_fees WHERE tenant_code=:code GROUP BY type_frais`, { code }),
         ]);
@@ -83,7 +84,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM madrasa_staff WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM madrasa_students WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM madrasa_halaqas WHERE tenant_code=:code`, { code }),
-          q(`SELECT nom,prenom,role FROM madrasa_staff WHERE tenant_code=:code ORDER BY nom LIMIT 12`, { code }),
+          q(`SELECT nom,prenom,role,specialite FROM madrasa_staff WHERE tenant_code=:code ORDER BY nom LIMIT 24`, { code }),
         ]);
         return res.json({ success: true, stats: { staff: +(staffCnt.c||0), students: +(stuCnt.c||0), halaqas: +(halCnt.c||0) }, staff });
       }

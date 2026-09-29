@@ -6,6 +6,7 @@
 
 import express from 'express';
 import { sequelize } from '../config/database.js';
+import { notifier } from '../utils/notifier.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -98,10 +99,7 @@ router.post('/:type/connect/:targetNh', authenticate, validateType, async (req, 
        ON CONFLICT (from_numero_h, to_numero_h, pro_type) DO NOTHING`,
       { replacements: { from, to, type } }
     );
-    await sequelize.query(
-      `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'pro_connection', :msg)`,
-      { replacements: { uid: to, msg: `🤝 Un professionnel souhaite se connecter avec vous dans le réseau.` } }
-    ).catch(() => {});
+    await notifier(to, 'pro_connection', `🤝 Un professionnel souhaite se connecter avec vous dans le réseau.`);
     res.json({ success: true, message: 'Demande envoyée.' });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
@@ -186,10 +184,7 @@ router.post('/:type/community/join/:proNh', authenticate, validateType, async (r
         tel: u.tel1 || '', qrt: req.body.quartier || ''
     }}
   );
-  await sequelize.query(
-    `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'community_join', :msg)`,
-    { replacements: { uid: proNh, msg: `👤 Un nouveau membre a rejoint votre communauté.` } }
-  ).catch(() => {});
+  await notifier(proNh, 'community_join', `👤 Un nouveau membre a rejoint votre communauté.`);
   res.json({ success: true, message: `Vous avez rejoint ${pro[0].nom_structure}.` });
 });
 
@@ -241,10 +236,7 @@ router.post('/:type/announcement/:id/send', authenticate, validateType, async (r
   );
   let sent = 0;
   for (const m of members) {
-    await sequelize.query(
-      `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'pro_announcement', :msg)`,
-      { replacements: { uid: m.member_numero_h, msg } }
-    ).catch(() => {});
+    await notifier(m.member_numero_h, 'pro_announcement', msg);
     sent++;
   }
   await sequelize.query(

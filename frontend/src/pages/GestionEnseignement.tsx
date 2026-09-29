@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useCallback } from "react";
-import { imageEnDataUrl } from "../utils/imageLisible";
+import { imageEnDataUrl, ACCEPT_IMAGES } from "../utils/imageLisible";
 import { CYCLES_ECOLE } from "../utils/niveauxEcole";
+import ChoixOuSaisie from "../components/ChoixOuSaisie";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -47,6 +48,8 @@ function printBulletin(b: any, orgName: string, color: string) {
 }
 
 const PERIODES = ["Trim 1", "Trim 2", "Trim 3", "Sem 1", "Sem 2", "Annuel"];
+// Année scolaire en cours : elle commence en septembre (ex. sept. 2026 → « 2026-2027 »)
+const anneeScolaire = () => { const d = new Date(), y = d.getFullYear(); return d.getMonth() >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`; };
 
 const inp = "w-full border rounded-lg px-3 py-2 text-sm focus:outline-none";
 const inpSt = { borderColor: "#e2e8f0", color: "#0f172a" };
@@ -244,11 +247,11 @@ export default function GestionEnseignement({ mode }: Props) {
       } else if (modal === "add-staff") {
         if (!form.nom || !form.prenom) { showToast("Nom et prénom obligatoires", false); return; }
         if (form.id) {
-          const d = await put(`/staff/${form.id}`, { ...form, role: form.role || V.roles[1] });
+          const d = await put(`/staff/${form.id}`, { ...form, role: form.role || V.roles[1], specialite: form.specialite || V.matieres[0] });
           if (d.success) { setStaff(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(V.staffSingular + " modifié(e)"); }
           else showToast(d.message || "Erreur", false);
         } else {
-          const d = await post("/staff", { ...form, role: form.role || V.roles[1] });
+          const d = await post("/staff", { ...form, role: form.role || V.roles[1], specialite: form.specialite || V.matieres[0] });
           if (d.staff) { setStaff(p => [d.staff, ...p]); setModal(null); setForm({}); showToast(V.staffSingular + " ajouté(e)"); }
           else showToast(d.message || "Erreur", false);
         }
@@ -271,7 +274,7 @@ export default function GestionEnseignement({ mode }: Props) {
         if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, emploi_du_temps: form.emploi_du_temps } : x)); setModal(null); setForm({}); showToast("Emploi du temps enregistré"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-note") {
-        if (!form.student_id || !form.matiere || form.note === "") { showToast("Apprenant, matière et note obligatoires", false); return; }
+        if (!form.student_id || !form.matiere || form.note === "" || form.note == null || isNaN(parseFloat(form.note))) { showToast("Apprenant, matière et note obligatoires", false); return; }
         const body = { ...form, note: parseFloat(form.note), note_max: parseFloat(form.note_max || 20) };
         if (form.id) {
           const d = await put(`/grades/${form.id}`, body);
@@ -288,15 +291,17 @@ export default function GestionEnseignement({ mode }: Props) {
         if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast("Frais ajouté"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "save-presence") {
-        const d = await post("/attendance", { classroom_id: selectedGroup || undefined, records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
+        const d = await post("/attendance", { date: attendDate, classroom_id: selectedGroup || undefined, records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
         if (d.success) { setModal(null); showToast("Présences enregistrées"); }
         else showToast(d.message || "Présences non enregistrées", false);
       } else if (modal === "gen-bulletin") {
         if (!form.periode) { showToast("Période obligatoire", false); return; }
-        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || "2025-2026", publish: !!form.publish });
+        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || anneeScolaire(), publish: !!form.publish });
         if (d.success) { showToast(`${d.generated} bulletin(s) généré(s)`); setModal(null); get("/bulletins").then(b => b.bulletins && setBulletins(b.bulletins)); }
         else showToast(d.message || "Erreur", false);
       }
+    } catch {
+      showToast("Connexion impossible : rien n'a été enregistré. Réessayez.", false);
     } finally { setSaving(false); }
   };
 
@@ -362,9 +367,7 @@ export default function GestionEnseignement({ mode }: Props) {
                       <option value="M">Masculin</option><option value="F">Féminin</option>
                     </select>
                   ) : type === "niveau" ? (
-                    <select value={form[key]||niveaux[0]} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
-                      {optionsNiveaux(form[key])}
-                    </select>
+                    <ChoixOuSaisie value={form[key]} defaut={niveaux[0]} groupes={V.cycles} placeholder="Écrivez le niveau" onChange={v=>setForm((f:any)=>({...f,[key]:v}))} className={inp} style={inpSt} />
                   ) : (
                     <input type={type} value={form[key]||""} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt} />
                   )}
@@ -383,13 +386,9 @@ export default function GestionEnseignement({ mode }: Props) {
                 <div key={key}>
                   <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{label}</label>
                   {type === "role" ? (
-                    <select value={form[key]||V.roles[1]} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
-                      {V.roles.map(r=><option key={r}>{r}</option>)}
-                    </select>
+                    <ChoixOuSaisie value={form[key]} defaut={V.roles[1]} options={V.roles} placeholder="Écrivez le rôle" onChange={v=>setForm((f:any)=>({...f,[key]:v}))} className={inp} style={inpSt} />
                   ) : type === "mat" ? (
-                    <select value={form[key]||V.matieres[0]} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt}>
-                      {V.matieres.map(m=><option key={m}>{m}</option>)}
-                    </select>
+                    <ChoixOuSaisie value={form[key]} defaut={V.matieres[0]} options={V.matieres} placeholder="Écrivez la matière" onChange={v=>setForm((f:any)=>({...f,[key]:v}))} className={inp} style={inpSt} />
                   ) : (
                     <input type={type} value={form[key]||""} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} className={inp} style={inpSt} />
                   )}
@@ -402,7 +401,7 @@ export default function GestionEnseignement({ mode }: Props) {
               {form.photo_url && <img src={form.photo_url} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }} />}
               <div>
                 <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Photo (optionnel)</label>
-                <input type="file" accept="image/*" onChange={e => {
+                <input type="file" accept={ACCEPT_IMAGES} onChange={e => {
                   const file = e.target.files?.[0];
                   if (!file) return;
                   imageEnDataUrl(file, 800).then(photo_url => setForm((f: any) => ({ ...f, photo_url }))).catch(err => showToast(err.message, false));
@@ -421,9 +420,7 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Niveau</label>
-              <select value={form.niveau||niveaux[0]} onChange={e=>setForm((f:any)=>({...f,niveau:e.target.value}))} className={inp} style={inpSt}>
-                {optionsNiveaux(form.niveau)}
-              </select>
+              <ChoixOuSaisie value={form.niveau} defaut={niveaux[0]} groupes={V.cycles} placeholder="Écrivez le niveau" onChange={v=>setForm((f:any)=>({...f,niveau:v}))} className={inp} style={inpSt} />
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Capacité</label>
@@ -478,15 +475,11 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Matière *</label>
-              <select value={form.matiere||V.matieres[0]} onChange={e=>setForm((f:any)=>({...f,matiere:e.target.value}))} className={inp} style={inpSt}>
-                {V.matieres.map(m=><option key={m}>{m}</option>)}
-              </select>
+              <ChoixOuSaisie value={form.matiere} defaut={V.matieres[0]} options={V.matieres} placeholder="Écrivez la matière" onChange={v=>setForm((f:any)=>({...f,matiere:v}))} className={inp} style={inpSt} />
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Période</label>
-              <select value={form.periode||"Trim 1"} onChange={e=>setForm((f:any)=>({...f,periode:e.target.value}))} className={inp} style={inpSt}>
-                {PERIODES.map(p=><option key={p}>{p}</option>)}
-              </select>
+              <ChoixOuSaisie value={form.periode} defaut="Trim 1" options={PERIODES} placeholder="Ex : Composition 1" onChange={v=>setForm((f:any)=>({...f,periode:v}))} className={inp} style={inpSt} />
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Note *</label>
@@ -522,9 +515,7 @@ export default function GestionEnseignement({ mode }: Props) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
                 <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Type</label>
-                <select value={form.type_frais||V.fraisTypes[1]} onChange={e=>setForm((f:any)=>({...f,type_frais:e.target.value}))} className={inp} style={inpSt}>
-                  {V.fraisTypes.map(t=><option key={t}>{t}</option>)}
-                </select>
+                <ChoixOuSaisie value={form.type_frais} defaut={V.fraisTypes[1]} options={V.fraisTypes} placeholder="Ex : Tenue scolaire" onChange={v=>setForm((f:any)=>({...f,type_frais:v}))} className={inp} style={inpSt} />
               </div>
               <div>
                 <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Montant (GNF) *</label>
@@ -541,7 +532,7 @@ export default function GestionEnseignement({ mode }: Props) {
         {modal === "save-presence" && (<>
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>Confirmer les présences</h3>
           <div style={{ background: "#f0fdf0", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: V.colorDark }}>
-            {attendance.filter(r=>r.statut==="present").length} présents · {attendance.filter(r=>r.statut!=="present").length} absents
+            {attendance.filter(r=>r.statut==="present").length} présents · {attendance.filter(r=>r.statut==="retard").length} en retard · {attendance.filter(r=>r.statut==="absent").length} absents
           </div>
         </>)}
 
@@ -557,7 +548,7 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Année scolaire</label>
-              <input value={form.annee||"2025-2026"} onChange={e=>setForm((f:any)=>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
+              <input value={form.annee ?? anneeScolaire()} onChange={e=>setForm((f:any)=>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
             </div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
@@ -887,7 +878,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   <option value="">Choisir {V.groupe.toLowerCase()}…</option>
                   {groupes.map(g=><option key={g.id} value={g.id}>{g.nom} — {g.niveau}</option>)}
                 </select>
-                {!isMadrasa && selectedGroup && (
+                {selectedGroup && (
                   <div style={{ display:"flex",gap:4,background:"white",borderRadius:8,padding:4,border:"1px solid #e2e8f0" }}>
                     {([{ id:"appel",label:"Appel du jour" },{ id:"historique",label:"Historique" }] as { id:"appel"|"historique"; label:string }[]).map(t=>(
                       <button key={t.id} onClick={()=>{ setAttendanceView(t.id); if(t.id==="historique" && selectedGroup) get(`/attendance/summary?classroom_id=${selectedGroup}`).then(d=>d.success&&setAttendanceSummary(d.summary)); }}
@@ -936,7 +927,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   <div style={{ padding:"14px 20px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
                     <div>
                       <span style={{ fontWeight:600,color:"#0f172a",fontSize:14 }}>Appel du {new Date(attendDate+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</span>
-                      <div style={{ fontSize:11,color:"#94a3b8",marginTop:2 }}>✅ {attendance.filter(r=>r.statut==="present").length} présents · ❌ {attendance.filter(r=>r.statut!=="present").length} absents</div>
+                      <div style={{ fontSize:11,color:"#94a3b8",marginTop:2 }}>✅ {attendance.filter(r=>r.statut==="present").length} présents · ⏰ {attendance.filter(r=>r.statut==="retard").length} en retard · ❌ {attendance.filter(r=>r.statut==="absent").length} absents</div>
                     </div>
                     <button onClick={()=>setModal("save-presence")} style={{ padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>✓ Enregistrer</button>
                   </div>
@@ -1173,8 +1164,8 @@ export default function GestionEnseignement({ mode }: Props) {
                     <label htmlFor="logo-upload-ens" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", background: V.color, color: "white", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
                       Choisir un logo
                     </label>
-                    <input id="logo-upload-ens" type="file" accept="image/*" style={{ display: "none" }} onChange={handleLogoUpload} />
-                    <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>PNG, JPG ou SVG · appliqué partout dans votre gestion</p>
+                    <input id="logo-upload-ens" type="file" accept={ACCEPT_IMAGES} style={{ display: "none" }} onChange={handleLogoUpload} />
+                    <p style={{ margin: "6px 0 0", fontSize: 11, color: "#94a3b8" }}>Toutes les images · c'est aussi l'icône de votre application</p>
                   </div>
                 </div>
               </div>

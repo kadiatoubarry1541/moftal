@@ -4,6 +4,25 @@ import { api } from '../utils/api'
 import { useI18n } from '../i18n/useI18n'
 import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
 
+// Page où revenir après la connexion : state.from (même site) ou ?redirect=
+// (ex. l'application de gestion sur gestions.moftal.com, à qui on passe la session).
+function allerApresConnexion(navigate: (to: string, o?: any) => void, state: any, search: string, extra?: any) {
+  const redirect = new URLSearchParams(search).get('redirect')
+  if (redirect) {
+    try {
+      const u = new URL(redirect, window.location.origin)
+      if (u.origin === window.location.origin) { navigate(u.pathname + u.search, { replace: true, ...extra }); return }
+      if (/(^|\.)moftal\.com$/.test(u.hostname)) {
+        u.searchParams.set('_t', localStorage.getItem('token') || '')
+        u.searchParams.set('_s', localStorage.getItem('session_user') || '')
+        window.location.href = u.toString()
+        return
+      }
+    } catch { /* adresse invalide : on ignore */ }
+  }
+  navigate(state?.from || '/compte', { replace: true, ...extra })
+}
+
 export function Login() {
   const [numeroH, setNumeroH] = useState('')
   const [password, setPassword] = useState('')
@@ -26,8 +45,7 @@ export function Login() {
         const parsed = JSON.parse(session)
         const user   = parsed.userData || parsed
         if (user?.numeroH) {
-          const from = (location.state as any)?.from || '/compte'
-          navigate(from, { replace: true })
+          allerApresConnexion(navigate, location.state, location.search)
           return
         }
       }
@@ -71,8 +89,7 @@ export function Login() {
 
       if (result?.success) {
         // Retourner à la page d'origine (espace-pro, gestion, etc.) ou /compte par défaut
-        const from = (location.state as any)?.from || '/compte'
-        navigate(from, { replace: true, state: { fromLogin: true } })
+        allerApresConnexion(navigate, location.state, location.search, { state: { fromLogin: true } })
       } else if (result?.networkError) {
         setIsNetworkError(true)
         setError(result.message || 'Serveur inaccessible. Réessayez dans quelques instants.')

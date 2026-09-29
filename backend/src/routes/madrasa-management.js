@@ -9,6 +9,7 @@
 import express from 'express';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
+import { notifier } from '../utils/notifier.js';
 import { trouverUtilisateur, MESSAGE_INTROUVABLE } from '../utils/trouverUtilisateur.js';
 import { authenticate } from '../middleware/auth.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
@@ -325,7 +326,9 @@ router.get('/:tenantCode/attendance', authenticate, verifyMember, async (req, re
 router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const { records } = req.body; // [{ student_id, statut }]
-  const date = new Date().toISOString().slice(0, 10);
+  // Le jour choisi à l'écran (rattraper l'appel d'hier), jamais dans le futur
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') && req.body.date <= aujourdhui ? req.body.date : aujourdhui;
   for (const r of records || []) {
     await sequelize.query(
       `INSERT INTO madrasa_attendance (tenant_code, student_id, date_presence, statut)
@@ -462,7 +465,7 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
     await sequelize.query(
       `INSERT INTO madrasa_members (tenant_code, numero_h, role, linked_student_id, nom_display, is_active)
        VALUES (:tc, :nh, :role, :lsid, :nom, true)
-       ON CONFLICT (tenant_code, numero_h) DO UPDATE SET role = EXCLUDED.role, is_active = true`,
+       ON CONFLICT (tenant_code, numero_h, (COALESCE(linked_student_id, 0))) DO UPDATE SET role = EXCLUDED.role, is_active = true`,
       { replacements: { tc, nh: numero_h, role: role || 'apprenant', lsid: linked_student_id || null, nom: users[0].prenom + ' ' + users[0].nom } }
     );
     res.json({ success: true, message: `${users[0].prenom} ajouté comme ${role}.` });
@@ -482,21 +485,38 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
   const tc = req.params.tenantCode;
   const userId = req.userId;
   const role = req.memberRole;
+  const tenant = { name: req.tenant?.name, logo_url: req.tenant?.logo_url, address: req.tenant?.address, phone: req.tenant?.phone };
 
   if (role === 'directeur' || role === 'enseignant') {
-    return res.json({ role, message: 'Accès directeur/enseignant — utilisez le tableau de bord complet.' });
+    return res.json({ success: true, role, tenant, message: 'Accès directeur/enseignant — utilisez le tableau de bord complet.' });
   }
 
-  // Trouver l'étudiant lié
+  // Tous les enfants reliés à ce parent ; ?eleve=ID choisit celui à afficher
   const [members] = await sequelize.query(
     `SELECT * FROM madrasa_members WHERE tenant_code = :tc AND numero_h = :uid AND is_active = true`,
     { replacements: { tc, uid: userId } }
   );
   const member = members[0];
-  const studentId = member?.linked_student_id;
+  const [children] = await sequelize.query(
+    `SELECT s.id, s.prenom, s.nom, s.niveau FROM madrasa_members m JOIN madrasa_students s ON s.id = m.linked_student_id
+     WHERE m.tenant_code = :tc AND m.numero_h = :uid AND m.is_active = true AND s.is_active = true ORDER BY s.prenom`,
+    { replacements: { tc, uid: userId } }
+  );
+  const choisi = children.find(c => String(c.id) === String(req.query.eleve || '')) || children[0];
+  const studentId = choisi?.id;
 
-  let grades = [], fees = [], student = null;
+  let grades = [], fees = [], student = null, attendance = [], bulletins = [];
   if (studentId) {
+    const [at] = await sequelize.query(
+      `SELECT * FROM madrasa_attendance WHERE tenant_code = :tc AND student_id = :sid ORDER BY date_presence DESC LIMIT 30`,
+      { replacements: { tc, sid: studentId } }
+    );
+    attendance = at;
+    const [bl] = await sequelize.query(
+      `SELECT * FROM madrasa_bulletins WHERE tenant_code = :tc AND student_id = :sid AND is_published = true ORDER BY created_at DESC`,
+      { replacements: { tc, sid: studentId } }
+    );
+    bulletins = bl;
     const [gs] = await sequelize.query(
       `SELECT * FROM madrasa_grades WHERE tenant_code = :tc AND student_id = :sid ORDER BY created_at DESC`,
       { replacements: { tc, sid: studentId } }
@@ -531,7 +551,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
     }
   }
 
-  res.json({ role, student, grades, fees, member });
+  res.json({ success: true, role, tenant, member, children, student, grades, fees, attendance, bulletins });
 });
 
 // ── Bulletins de progression ───────────────────────────────────────────────────
@@ -596,10 +616,7 @@ router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async
         { replacements: { tc, sid: s.id, snh: s.numero_h || '' } }
       );
       for (const m of linkedMembers) {
-        await sequelize.query(
-          `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'bulletin', :msg)`,
-          { replacements: { uid: m.numero_h, msg: `📋 Bulletin de ${s.prenom} ${s.nom} pour ${periode} disponible — Moyenne : ${moyenne}/20 (${mention})` } }
-        ).catch(() => {});
+        await notifier(m.numero_h, 'bulletin', `📋 Bulletin de ${s.prenom} ${s.nom} pour ${periode} disponible — Moyenne : ${moyenne}/20 (${mention})`);
       }
     }
     generated++;
@@ -626,10 +643,7 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
       { replacements: { tc, sid: b.student_id, snh: b.student_nh || '' } }
     );
     for (const m of linked) {
-      await sequelize.query(
-        `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'bulletin', :msg)`,
-        { replacements: { uid: m.numero_h, msg: `📋 Bulletin de ${b.prenom} ${b.nom} (${b.periode}) publié — Moyenne : ${b.moyenne_generale}/20` } }
-      ).catch(() => {});
+      await notifier(m.numero_h, 'bulletin', `📋 Bulletin de ${b.prenom} ${b.nom} (${b.periode}) publié — Moyenne : ${b.moyenne_generale}/20`);
     }
   }
   res.json({ success: true });

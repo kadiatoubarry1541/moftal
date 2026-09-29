@@ -10,6 +10,7 @@
 
 import express from 'express';
 import { sequelize } from '../config/database.js';
+import { notifier } from '../utils/notifier.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -108,11 +109,7 @@ router.post('/connect/:targetNumeroH', authenticate, async (req, res) => {
       { replacements: { nh: to } }
     );
     if (target.length) {
-      await sequelize.query(
-        `INSERT INTO notifications (user_id, type, message)
-         VALUES (:uid, 'imam_connection', :msg)`,
-        { replacements: { uid: to, msg: `🕌 Un imam souhaite se connecter avec vous dans le réseau.` } }
-      ).catch(() => {});
+      await notifier(to, 'imam_connection', `🕌 Un imam souhaite se connecter avec vous dans le réseau.`);
     }
     res.json({ success: true, message: 'Demande de connexion envoyée.' });
   } catch (err) { res.status(500).json({ message: err.message }); }
@@ -198,10 +195,7 @@ router.post('/community/join/:imamNumeroH', authenticate, async (req, res) => {
         tel: u.tel1 || '', qrt: req.body.quartier || ''
     }}
   );
-  await sequelize.query(
-    `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'community_join', :msg)`,
-    { replacements: { uid: imamNh, msg: `👤 Un nouveau fidèle a rejoint votre communauté.` } }
-  ).catch(() => {});
+  await notifier(imamNh, 'community_join', `👤 Un nouveau fidèle a rejoint votre communauté.`);
   res.json({ success: true, message: `Vous avez rejoint la mosquée ${imam[0].nom_mosquee}.` });
 });
 
@@ -275,10 +269,7 @@ router.post('/friday/:id/send', authenticate, async (req, res) => {
 
   let sent = 0;
   for (const f of fideles) {
-    await sequelize.query(
-      `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'friday_khutba', :msg)`,
-      { replacements: { uid: f.fidele_numero_h, msg } }
-    ).catch(() => {});
+    await notifier(f.fidele_numero_h, 'friday_khutba', msg);
     sent++;
   }
 
@@ -378,10 +369,7 @@ router.post('/coordinator/broadcast', authenticate, async (req, res) => {
     );
     let sent = 0;
     for (const imam of imams) {
-      await sequelize.query(
-        `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'coordinator_msg', :msg)`,
-        { replacements: { uid: imam.numero_h, msg: `📢 Message du coordinateur : ${message}` } }
-      ).catch(() => {});
+      await notifier(imam.numero_h, 'coordinator_msg', `📢 Message du coordinateur : ${message}`);
       sent++;
     }
     res.json({ success: true, nb_imams_notifies: sent });

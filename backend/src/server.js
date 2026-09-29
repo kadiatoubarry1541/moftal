@@ -1978,6 +1978,13 @@ async function initAllTables() {
       );
     `).catch(() => {});
 
+    // Un parent peut avoir plusieurs enfants dans le même établissement : un lien
+    // par enfant (avant, relier un 2e enfant remplaçait le 1er).
+    for (const t of ['school_members', 'madrasa_members']) {
+      await sequelize.query(`ALTER TABLE "${t}" DROP CONSTRAINT IF EXISTS "${t}_tenant_code_numero_h_key";`).catch(() => {});
+      await sequelize.query(`CREATE UNIQUE INDEX IF NOT EXISTS "${t}_lien_unique" ON "${t}" ("tenant_code", "numero_h", (COALESCE("linked_student_id", 0)));`).catch(() => {});
+    }
+
     // ── Vendeurs en Détail ──────────────────────────────────────────────────────
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "retailer_products" (

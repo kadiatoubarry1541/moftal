@@ -30,9 +30,12 @@ export default function EspaceParentEcole({ mode }: Props) {
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500); };
 
+  // Parent de plusieurs enfants : l'enfant affiché
+  const [eleveId, setEleveId] = useState<string>("");
+
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: `/espace-parent-${mode}/${tenantCode}` } }); return; }
-    fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode}/my-access`, { headers: auth() })
+    if (!localStorage.getItem("token")) { navigate("/login", { state: { from: `/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}/espace-parent` } }); return; }
+    fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode}/my-access${eleveId ? `?eleve=${encodeURIComponent(eleveId)}` : ""}`, { headers: auth() })
       .then(r => r.json())
       .then(d => {
         if (d.success === false) { setError(d.message || "Accès refusé."); return; }
@@ -40,7 +43,7 @@ export default function EspaceParentEcole({ mode }: Props) {
       })
       .catch(e => setError("Impossible de joindre le serveur : " + (e?.message || e)))
       .finally(() => setLoading(false));
-  }, [apiName, tenantCode, navigate, mode]);
+  }, [apiName, tenantCode, navigate, mode, eleveId]);
 
   const payFee = async (feeId: number) => {
     if (!payPhone.trim()) { showToast("Numéro de téléphone requis", false); return; }
@@ -48,7 +51,7 @@ export default function EspaceParentEcole({ mode }: Props) {
     try {
       const r = await fetch(`${config.API_BASE_URL}/djomy/initiate`, {
         method: "POST", headers: auth(),
-        body: JSON.stringify({ paymentMethod: payMethod, payerPhone: payPhone, purpose: "school_fee", relatedId: feeId, description: "Frais scolaire" })
+        body: JSON.stringify({ paymentMethod: payMethod, payerPhone: payPhone, purpose: isMadrasa ? "madrasa_fee" : "school_fee", relatedId: feeId, description: "Frais scolaire" })
       });
       const d = await r.json();
       if (!d.success) { showToast(d.message || "Erreur de paiement", false); setPaying(false); return; }
@@ -123,6 +126,20 @@ export default function EspaceParentEcole({ mode }: Props) {
           <div style={{ fontSize: 12, opacity: 0.8 }}>{data.tenant?.name}</div>
           <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 800 }}>👪 Espace Parent</h1>
           {student && <p style={{ margin: "6px 0 0", fontSize: 14, opacity: 0.9 }}>{student.prenom} {student.nom} {student.niveau ? `· ${student.niveau}` : ""}{student.classe ? ` · ${student.classe}` : ""}</p>}
+          {(data.children?.length || 0) > 1 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+              {data.children.map((c: any) => {
+                const actif = String(c.id) === String(student?.id);
+                return (
+                  <button key={c.id} onClick={() => { if (!actif) { setLoading(true); setEleveId(String(c.id)); } }}
+                    style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 12, fontWeight: 700,
+                      background: actif ? "white" : "transparent", color: actif ? color : "white" }}>
+                    {c.prenom}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </header>
 
