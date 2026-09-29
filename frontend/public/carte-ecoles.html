@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moftal pour les écoles</title>
+<meta name="description" content="Carte de présentation Moftal à remettre aux écoles : formule Visibilité et formule Gestion complète.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/logo-moftal.svg">
+<style>
+  :root{
+    --green:#1a8f1a; --green-d:#0f5c0f; --green-dd:#0a3d0a; --green-l:#eaf7ea;
+    --amber:#f59e0b; --orange:#f97316; --amber-l:#fff7e6; --amber-d:#92400e;
+    --ink:#14201a; --muted:#5b6b62; --line:#dfe7e1; --paper:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#e9eee9;color:var(--ink)}
+  body{font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  .toolbar{max-width:900px;margin:0 auto;padding:16px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .toolbar p{font-size:14px;color:var(--muted);flex-basis:100%;text-align:center}
+  .toolbar button{font:600 14px inherit;font-family:inherit;border:0;border-radius:10px;padding:10px 18px;background:var(--green);color:#fff;cursor:pointer}
+  .sheets{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:8px 16px 40px}
+
+  /* Format A6 : 105 × 148 mm */
+  .card{width:105mm;height:148mm;background:var(--paper);border-radius:4mm;overflow:hidden;position:relative;
+        box-shadow:0 10px 30px rgba(10,61,10,.18);display:flex;flex-direction:column}
+
+  /* ---------- En-tête ---------- */
+  .head{background:linear-gradient(135deg,var(--green-dd) 0%,var(--green) 70%,#2fb52f 100%);color:#fff;
+        padding:5mm 5.5mm 4.2mm;position:relative;overflow:hidden}
+  .head::after{content:"";position:absolute;right:-14mm;top:-16mm;width:44mm;height:44mm;border-radius:50%;
+        border:6mm solid rgba(255,255,255,.07)}
+  .brand{display:flex;align-items:center;gap:3mm;position:relative;z-index:1}
+  .logo{width:13mm;height:13mm;background:#fff;border-radius:3mm;display:flex;align-items:center;justify-content:center;
+        box-shadow:0 1.5mm 3mm rgba(0,0,0,.18);flex:none}
+  .logo img{width:10mm;height:10mm;display:block}
+  .brand-name{font-size:17pt;font-weight:800;letter-spacing:.14em;line-height:1}
+  .brand-sub{font-size:6.6pt;opacity:.85;margin-top:1mm;letter-spacing:.02em}
+  .tag{display:inline-block;margin-top:3.2mm;background:linear-gradient(90deg,var(--amber),var(--orange));color:#fff;
+       font-size:6.4pt;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:1mm 2.6mm;border-radius:10mm;position:relative;z-index:1}
+  .title{font-size:12.5pt;font-weight:800;line-height:1.18;margin-top:2mm;position:relative;z-index:1}
+  .title em{font-style:normal;color:#ffd48a}
+
+  /* ---------- Formules ---------- */
+  .body{padding:4mm 5mm 4mm;flex:1;display:flex;flex-direction:column;justify-content:space-evenly;gap:3mm}
+  .plan{border:0.3mm solid var(--line);border-radius:2.6mm;padding:3.2mm 3.2mm 3mm;position:relative}
+  .plan.full{border-color:#f7c77b;background:linear-gradient(180deg,var(--amber-l),#fff 70%)}
+  .plan-top{display:flex;align-items:center;gap:2mm;margin-bottom:2.4mm}
+  .num{width:5.2mm;height:5.2mm;border-radius:50%;display:flex;align-items:center;justify-content:center;
+       font-size:7pt;font-weight:800;color:#fff;background:var(--green);flex:none}
+  .full .num{background:linear-gradient(135deg,var(--amber),var(--orange))}
+  .plan-name{font-size:9.4pt;font-weight:800;line-height:1.1}
+  .plan-name small{display:block;font-size:6.2pt;font-weight:600;color:var(--muted);margin-top:.4mm}
+  .badge{margin-left:auto;font-size:5.6pt;font-weight:800;letter-spacing:.08em;color:#fff;
+         background:linear-gradient(90deg,var(--amber),var(--orange));padding:.7mm 2mm;border-radius:10mm}
+  ul.feat{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:1.5mm 2.4mm}
+  ul.feat.one{grid-template-columns:1fr}
+  ul.feat li{font-size:7.3pt;line-height:1.25;display:flex;gap:1.3mm;align-items:flex-start}
+  ul.feat li svg{width:2.9mm;height:2.9mm;flex:none;margin-top:.25mm}
+  ul.feat li.etc{color:var(--muted);font-weight:700;font-style:italic}
+  .plan .note{font-size:6.1pt;color:var(--amber-d);font-weight:700;margin-top:1.5mm}
+
+  /* ---------- Pied de carte : contacts ---------- */
+  .foot{margin-top:auto;background:var(--green-dd);color:#fff;padding:2.8mm 5mm;display:flex;align-items:center;justify-content:space-between;gap:2mm}
+  .foot .c{display:flex;align-items:center;gap:1.4mm;font-size:7pt;font-weight:700;white-space:nowrap}
+  .foot .c svg{width:3.2mm;height:3.2mm;flex:none}
+  .foot .c.tel{font-size:8.2pt;color:#ffd48a}
+
+  /* ---------- Verso ---------- */
+  .v-head{padding:4.6mm 5.5mm 3mm;display:flex;align-items:center;gap:3mm;border-bottom:0.3mm solid var(--line)}
+  .v-head .logo{width:10mm;height:10mm;border:0.3mm solid var(--line);box-shadow:none}
+  .v-head .logo img{width:7.6mm;height:7.6mm}
+  .v-head h2{font-size:10.5pt;font-weight:800;line-height:1.15}
+  .v-head p{font-size:6.6pt;color:var(--muted);margin-top:.6mm}
+  .v-body{padding:4.4mm 5mm 0;display:flex;gap:3.6mm;align-items:flex-start}
+
+  .phone{width:43mm;flex:none;background:#101814;border-radius:5mm;padding:1.6mm;box-shadow:0 2mm 5mm rgba(0,0,0,.25)}
+  .screen{background:#fff;border-radius:3.8mm;overflow:hidden}
+  .app-bar{background:linear-gradient(135deg,var(--amber),var(--orange));color:#fff;padding:2.6mm 2.4mm 2.4mm;display:flex;align-items:center;gap:1.8mm}
+  .school-logo{width:7mm;height:7mm;border-radius:50%;background:#fff;color:var(--orange);display:flex;align-items:center;justify-content:center;
+               font-size:6.4pt;font-weight:900;flex:none;border:0.5mm solid rgba(255,255,255,.6)}
+  .app-bar b{font-size:7pt;display:block;line-height:1.1}
+  .app-bar span{font-size:4.8pt;opacity:.9}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:1.3mm;padding:2mm}
+  .tile{background:#fff8ec;border:0.25mm solid #fbe0b0;border-radius:1.6mm;padding:2.3mm 1.3mm;display:flex;align-items:center;gap:1mm;font-size:5.4pt;font-weight:700;color:#5a3408}
+  .tile svg{width:2.6mm;height:2.6mm;flex:none}
+  .home-ind{width:10mm;height:.7mm;border-radius:1mm;background:#cfd6d1;margin:0 auto 1.4mm}
+
+  .v-side{flex:1;display:flex;flex-direction:column;gap:3mm}
+  .v-side h3{font-size:8.6pt;font-weight:800;color:var(--amber-d);line-height:1.2}
+  .v-side ul{list-style:none;display:flex;flex-direction:column;gap:2mm}
+  .v-side li{font-size:7pt;line-height:1.28;display:flex;gap:1.3mm}
+  .v-side li svg{width:2.8mm;height:2.8mm;flex:none;margin-top:.2mm}
+
+  .contact{margin:auto 5mm 0;border-radius:2.8mm;background:linear-gradient(135deg,var(--green-dd),var(--green));color:#fff;padding:3mm 3.4mm;display:flex;align-items:center;gap:3mm}
+  .contact .txt{flex:1;min-width:0}
+  .contact .k{font-size:6pt;text-transform:uppercase;letter-spacing:.12em;opacity:.8;font-weight:700}
+  .contact .phone-n{font-size:13pt;font-weight:900;letter-spacing:.02em;color:#ffd48a;line-height:1.15;margin-top:.6mm;white-space:nowrap}
+  .contact .mail{font-size:7.4pt;font-weight:700;margin-top:.8mm;display:flex;align-items:center;gap:1.2mm}
+  .contact .mail svg{width:3mm;height:3mm}
+  .contact .web{font-size:6.4pt;opacity:.85;margin-top:.5mm}
+  .qr-box{background:#fff;border-radius:2mm;padding:1.4mm;flex:none;text-align:center}
+  .qr{width:18mm;height:18mm;display:block}
+  .qr-box small{display:block;font-size:4.6pt;color:var(--green-dd);font-weight:800;margin-top:.6mm;letter-spacing:.04em}
+  .hand{margin:3mm 5mm 3.6mm;text-align:center;font-size:6.2pt;color:var(--muted);font-style:italic}
+
+  @page{size:105mm 148mm;margin:0}
+  @media print{
+    html,body{background:#fff}
+    .toolbar{display:none}
+    .sheets{display:block;padding:0}
+    .card{border-radius:0;box-shadow:none;page-break-after:always;break-after:page}
+  }
+  @media (max-width:440px){ .sheets{zoom:.86} }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <p>Carte recto-verso au format A6 (105 × 148 mm). Imprimez-la, ou enregistrez-la en PDF pour l'envoyer.</p>
+  <button type="button" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="ok" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#1a8f1a"/><path d="M4.4 8.3l2.3 2.3 4.9-5" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="ok2" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#f97316"/><path d="M4.4 8.3l2.3 2.3 4.9-5" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="more" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.3" fill="none" stroke="#9aa89f" stroke-width="1.3"/><circle cx="4.8" cy="8" r="1.1" fill="#9aa89f"/><circle cx="8" cy="8" r="1.1" fill="#9aa89f"/><circle cx="11.2" cy="8" r="1.1" fill="#9aa89f"/></symbol>
+    <symbol id="tel" viewBox="0 0 24 24"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.6.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1z"/></symbol>
+    <symbol id="mail" viewBox="0 0 24 24"><path fill="currentColor" d="M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 4.2l-8 5-8-5V6l8 5 8-5z"/></symbol>
+    <symbol id="web" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 3a9 9 0 100 18 9 9 0 000-18zm-9 9h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></symbol>
+    <symbol id="t-dash" viewBox="0 0 24 24"><path fill="#f97316" d="M3 13h8V3H3zm0 8h8v-6H3zm10 0h8V11h-8zm0-18v6h8V3z"/></symbol>
+    <symbol id="t-users" viewBox="0 0 24 24"><path fill="#f97316" d="M16 11a3 3 0 10-3-3 3 3 0 003 3zm-8 0a3 3 0 10-3-3 3 3 0 003 3zm0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13zm8 0c-.3 0-.6 0-1 .1a4.2 4.2 0 012 3.4V19h6v-2.5c0-2.3-4.7-3.5-7-3.5z"/></symbol>
+    <symbol id="t-class" viewBox="0 0 24 24"><path fill="#f97316" d="M12 3L1 9l11 6 9-4.9V17h2V9zM5 13.2v4L12 21l7-3.8v-4L12 17z"/></symbol>
+    <symbol id="t-check" viewBox="0 0 24 24"><path fill="#f97316" d="M19 3h-4.2A3 3 0 0012 1a3 3 0 00-2.8 2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-9 14l-4-4 1.4-1.4L10 14.2l6.6-6.6L18 9z"/></symbol>
+    <symbol id="t-notes" viewBox="0 0 24 24"><path fill="#f97316" d="M3 17.2V21h3.8l11-11-3.8-3.8zM20.7 7a1 1 0 000-1.4l-2.3-2.3a1 1 0 00-1.4 0l-1.8 1.8 3.7 3.7z"/></symbol>
+    <symbol id="t-doc" viewBox="0 0 24 24"><path fill="#f97316" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zm-1 7V3.5L18.5 9zM8 13h8v2H8zm0 4h8v2H8z"/></symbol>
+    <symbol id="t-money" viewBox="0 0 24 24"><path fill="#f97316" d="M21 7H3a1 1 0 00-1 1v10a1 1 0 001 1h18a1 1 0 001-1V8a1 1 0 00-1-1zm-9 9a3 3 0 113-3 3 3 0 01-3 3zM4 4h16v2H4z"/></symbol>
+    <symbol id="t-plus" viewBox="0 0 24 24"><path fill="#f97316" d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4z"/></symbol>
+    <symbol id="t-star" viewBox="0 0 24 24"><path fill="#f97316" d="M12 17.3l6.2 3.7-1.6-7 5.4-4.7-7.2-.6L12 2 9.2 8.7 2 9.3l5.4 4.7-1.6 7z"/></symbol>
+    <symbol id="t-par" viewBox="0 0 24 24"><path fill="#f97316" d="M12 12a4 4 0 10-4-4 4 4 0 004 4zm0 2c-2.7 0-8 1.3-8 4v2h16v-2c0-2.7-5.3-4-8-4z"/></symbol>
+  </defs>
+</svg>
+
+<div class="sheets">
+
+  <!-- ================= RECTO ================= -->
+  <section class="card" aria-label="Recto">
+    <header class="head">
+      <div class="brand">
+        <div class="logo"><img src="/logo-moftal.svg" alt="Logo Moftal"></div>
+        <div>
+          <div class="brand-name">MOFTAL</div>
+          <div class="brand-sub">Le numérique au service de votre école</div>
+        </div>
+      </div>
+      <span class="tag">Spécial écoles</span>
+      <h1 class="title">Faites connaître votre école<br>et <em>gérez-la simplement</em>.</h1>
+    </header>
+
+    <div class="body">
+      <div class="plan">
+        <div class="plan-top">
+          <span class="num">1</span>
+          <div class="plan-name">Visibilité + Rendez-vous<small>Votre école présente sur Moftal</small></div>
+        </div>
+        <ul class="feat">
+          <li><svg><use href="#ok"/></svg>Visible dans les pages Éducation</li>
+          <li><svg><use href="#ok"/></svg>Les parents vous trouvent</li>
+          <li><svg><use href="#ok"/></svg>Présentation, adresse, contacts</li>
+          <li><svg><use href="#ok"/></svg>Rendez-vous en ligne</li>
+          <li><svg><use href="#ok"/></svg>Historique des demandes</li>
+          <li class="etc"><svg><use href="#more"/></svg>etc.</li>
+        </ul>
+      </div>
+
+      <div class="plan full">
+        <div class="plan-top">
+          <span class="num">2</span>
+          <div class="plan-name">Gestion complète<small>Visibilité + Gestion interne de l'école</small></div>
+          <span class="badge">COMPLET</span>
+        </div>
+        <ul class="feat">
+          <li><svg><use href="#ok2"/></svg>Tout de la formule 1</li>
+          <li><svg><use href="#ok2"/></svg>Application à votre logo</li>
+          <li><svg><use href="#ok2"/></svg>Site vitrine de l'école</li>
+          <li><svg><use href="#ok2"/></svg>Tableau de bord complet</li>
+          <li><svg><use href="#ok2"/></svg>Élèves et inscriptions</li>
+          <li><svg><use href="#ok2"/></svg>Personnel et classes</li>
+          <li><svg><use href="#ok2"/></svg>Présences des élèves</li>
+          <li><svg><use href="#ok2"/></svg>Notes et bulletins</li>
+          <li><svg><use href="#ok2"/></svg>Frais scolaires et paiements</li>
+          <li><svg><use href="#ok2"/></svg>Espace parents et avis</li>
+          <li><svg><use href="#ok2"/></svg>Paiement Moftal Pay</li>
+          <li class="etc"><svg><use href="#more"/></svg>etc.</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <span class="c tel"><svg><use href="#tel"/></svg>+224 625 32 60 37</span>
+      <span class="c"><svg><use href="#mail"/></svg>support@moftal.com</span>
+    </footer>
+  </section>
+
+  <!-- ================= VERSO ================= -->
+  <section class="card" aria-label="Verso">
+    <header class="v-head">
+      <div class="logo"><img src="/logo-moftal.svg" alt="Logo Moftal"></div>
+      <div>
+        <h2>Un exemple réel de gestion interne</h2>
+        <p>L'application de l'École Adoul, faite avec Moftal</p>
+      </div>
+    </header>
+
+    <div class="v-body">
+      <div class="phone" aria-label="Aperçu de l'application de l'École Adoul">
+        <div class="screen">
+          <div class="app-bar">
+            <div class="school-logo">EA</div>
+            <div><b>École Adoul</b><span>Gestion de l'école</span></div>
+          </div>
+          <div class="tiles">
+            <div class="tile"><svg><use href="#t-dash"/></svg>Tableau de bord</div>
+            <div class="tile"><svg><use href="#t-users"/></svg>Élèves</div>
+            <div class="tile"><svg><use href="#t-users"/></svg>Personnel</div>
+            <div class="tile"><svg><use href="#t-class"/></svg>Classes</div>
+            <div class="tile"><svg><use href="#t-check"/></svg>Présences</div>
+            <div class="tile"><svg><use href="#t-notes"/></svg>Notes</div>
+            <div class="tile"><svg><use href="#t-doc"/></svg>Bulletins</div>
+            <div class="tile"><svg><use href="#t-money"/></svg>Frais</div>
+            <div class="tile"><svg><use href="#t-plus"/></svg>Inscriptions</div>
+            <div class="tile"><svg><use href="#t-star"/></svg>Avis parents</div>
+          </div>
+          <div class="home-ind"></div>
+        </div>
+      </div>
+
+      <div class="v-side">
+        <h3>Votre école aura sa propre application, à son nom et à son logo.</h3>
+        <ul>
+          <li><svg><use href="#ok2"/></svg>Installée sur le téléphone et l'ordinateur</li>
+          <li><svg><use href="#ok2"/></svg>Toutes les données de l'école au même endroit, sécurisées</li>
+          <li><svg><use href="#ok2"/></svg>Les parents suivent notes, présences et frais</li>
+          <li><svg><use href="#ok2"/></svg>Moins de papier, moins d'oublis</li>
+          <li class="etc" style="color:var(--muted);font-weight:700;font-style:italic"><svg><use href="#more"/></svg>etc.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="contact">
+      <div class="txt">
+        <div class="k">Contactez-nous</div>
+        <div class="phone-n">+224 625 32 60 37</div>
+        <div class="mail"><svg><use href="#mail"/></svg>support@moftal.com</div>
+        <div class="web">moftal.com</div>
+      </div>
+      <div class="qr-box">
+        <svg class="qr" aria-label="QR code moftal.com" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 25" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h25v25H0z"/><path stroke="#0f3d0f" d="M0 0.5h7m4 0h2m1 0h1m3 0h7M0 1.5h1m5 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m5 0h1M0 2.5h1m1 0h3m1 0h1m1 0h1m2 0h1m2 0h1m1 0h1m1 0h1m1 0h3m1 0h1M0 3.5h1m1 0h3m1 0h1m1 0h1m1 0h2m2 0h3m1 0h1m1 0h3m1 0h1M0 4.5h1m1 0h3m1 0h1m2 0h1m1 0h1m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1M0 5.5h1m5 0h1m6 0h2m1 0h1m1 0h1m5 0h1M0 6.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M8 7.5h2m3 0h1m1 0h1M0 8.5h1m5 0h1m1 0h1m1 0h1m1 0h1m1 0h2m1 0h2m2 0h3M0 9.5h2m2 0h1m4 0h1m1 0h1m2 0h2m3 0h5M1 10.5h3m2 0h2m2 0h1m1 0h1m2 0h1m1 0h1m1 0h1m1 0h1m1 0h2M0 11.5h1m2 0h1m3 0h1m1 0h3m2 0h4m1 0h3m2 0h1M3 12.5h2m1 0h3m4 0h2m1 0h1m1 0h2m4 0h1M0 13.5h4m4 0h1m1 0h1m1 0h4m3 0h1m3 0h1M0 14.5h1m1 0h2m2 0h1m1 0h3m2 0h3m1 0h5m1 0h2M0 15.5h1m2 0h1m3 0h1m4 0h3m4 0h1m1 0h2m1 0h1M0 16.5h1m2 0h2m1 0h5m1 0h1m1 0h1m1 0h5m1 0h1M8 17.5h3m5 0h1m3 0h1M0 18.5h7m5 0h3m1 0h1m1 0h1m1 0h1m3 0h1M0 19.5h1m5 0h1m2 0h1m1 0h1m2 0h3m3 0h1M0 20.5h1m1 0h3m1 0h1m2 0h3m3 0h6m1 0h1m1 0h1M0 21.5h1m1 0h3m1 0h1m2 0h1m2 0h2m1 0h4m4 0h2M0 22.5h1m1 0h3m1 0h1m2 0h1m3 0h3m1 0h1m3 0h2m1 0h1M0 23.5h1m5 0h1m3 0h1m1 0h2m2 0h5m3 0h1M0 24.5h7m1 0h2m1 0h3m2 0h3m2 0h1m2 0h1"/></svg>
+
+        <small>MOFTAL.COM</small>
+      </div>
+    </div>
+
+    <p class="hand">À remettre au fondateur ou à la direction de l'école.</p>
+  </section>
+
+</div>
+</body>
+</html>
