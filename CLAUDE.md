@@ -19,6 +19,10 @@ On montre uniquement ce que le modèle montre, rien de plus.
   (section `services` de `frontend/src/pages/AdminDashboard.tsx`) et le choix de formule
   dans `frontend/src/pages/InscriptionPro.tsx`.
 - Même secteur + même formule = même page, pour tous les comptes.
+- **Gestion Interne = l'application propre du professionnel** : son logo partout
+  (`TenantLogo` dans `frontend/src/components/GestionBrand.tsx`), jamais le logo Moftal,
+  sauf sur le bouton « Retour sur Moftal » (`MoftalMark` + `goToMoftal`), seul chemin vers le site.
+  Le code identifiant de l'établissement n'apparaît que dans Paramètres (`TenantCodeCard`).
 
 ## 2. Toujours enregistrer les données dans la base de données
 
