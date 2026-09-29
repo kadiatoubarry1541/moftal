@@ -253,7 +253,7 @@ router.get('/:tenantCode/attendance', authenticate, verifyMember, async (req, re
 router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const { records } = req.body; // [{ student_id, statut }]
-  const date = new Date().toISOString().slice(0, 10);
+  const date = req.body.date || new Date().toISOString().slice(0, 10);
   for (const r of records || []) {
     await sequelize.query(
       `INSERT INTO madrasa_attendance (tenant_code, student_id, date_presence, statut)
@@ -288,6 +288,14 @@ router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) 
     { replacements: { tc, sid: student_id, mat: matiere || 'Coran', note: parseFloat(note) || 0, nm: parseFloat(note_max) || 20, per: periode || 'Trim 1', srt: sourate || '', com: commentaire || '' } }
   );
   res.json({ grade: rows[0] });
+});
+
+router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
+  await sequelize.query(
+    `DELETE FROM madrasa_grades WHERE id = :id AND tenant_code = :tc`,
+    { replacements: { id: req.params.id, tc: req.params.tenantCode } }
+  );
+  res.json({ success: true });
 });
 
 // ── Frais ─────────────────────────────────────────────────────────────────────

@@ -296,6 +296,10 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   const [installing, setInstalling] = useState(false);
   const [isInsidePWA, setIsInsidePWA] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  // "Accepté" ne garantit pas que l'icône soit posée sur l'écran d'accueil : sur beaucoup
+  // de téléphones Android (Tecno, Infinix, Itel, Xiaomi, Samsung…) elle part dans le
+  // tiroir d'applications, ou le navigateur n'a pas la permission de créer des raccourcis.
+  const [showIconHelp, setShowIconHelp] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
 
@@ -360,6 +364,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       if (outcome === "accepted") {
         if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
         setInstalled(true);
+        setShowIconHelp(true);
       }
     } finally {
       setPrompt(null);
@@ -371,10 +376,11 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   if (installed) {
     return (
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
+        <button onClick={() => setShowIconHelp(true)} title="L'icône n'apparaît pas ?" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#f0fdf4", color: "#166534", border: "1.5px solid #bbf7d0", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
           <span style={{ fontSize: 15 }}>✅</span> Application installée
-        </div>
+        </button>
         <BackToMoftalBadge />
+        {showIconHelp && <IconHelpSheet name={name} onClose={() => setShowIconHelp(false)} />}
       </div>
     );
   }
@@ -395,6 +401,37 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
           📲 Appuyez sur l'icône d'installation dans la barre du navigateur
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Aide : l'icône n'apparaît pas après l'installation ─────────────────────
+
+function IconHelpSheet({ name, onClose }: { name?: string; onClose: () => void }) {
+  const steps = isIOS()
+    ? [
+        "Balayez l'écran d'accueil vers la gauche : l'icône est peut-être sur une autre page.",
+        "Sinon, dans Safari : bouton Partager → « Sur l'écran d'accueil » → Ajouter.",
+      ]
+    : [
+        "Ouvrez le tiroir d'applications (balayez l'écran vers le haut) : l'icône y est souvent rangée. Appuyez longuement dessus et glissez-la sur l'écran d'accueil.",
+        "Réglages du téléphone → Applications → Chrome → Autorisations → activez « Raccourcis sur l'écran d'accueil » (Tecno, Infinix, Itel, Xiaomi, Oppo…).",
+        "Samsung : appui long sur l'écran d'accueil → Paramètres → activez « Ajouter les nouvelles applis à l'écran d'accueil ».",
+        "Puis rouvrez cette page dans Chrome et appuyez de nouveau sur Installer (menu ⋮ → « Installer l'application »).",
+      ];
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "24px 20px 32px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", textAlign: "left" }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>✅ {name || "L'application"} est installée</div>
+        <div style={{ fontSize: 13, color: "#64748b", marginBottom: 14 }}>Vous ne voyez pas l'icône sur l'écran d'accueil ?</div>
+        {steps.map((t, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 24, height: 24, borderRadius: 6, background: "#1a8f1a", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
+            <span style={{ fontSize: 13, color: "#374151", lineHeight: 1.45 }}>{t}</span>
+          </div>
+        ))}
+        <button onClick={onClose} style={{ width: "100%", marginTop: 10, padding: "13px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>J'ai compris</button>
+      </div>
     </div>
   );
 }

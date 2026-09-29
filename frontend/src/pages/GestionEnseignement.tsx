@@ -125,14 +125,15 @@ export default function GestionEnseignement({ mode }: Props) {
     setSection(s); setSearch(""); setNiveauFilter("");
     if (window.innerWidth < 768) setCollapsed(true);
     const loadG = () => get(`/${groupEP}`).then(d => setGroupes(d[groupEP] || []));
+    if (s === "dashboard")   { get("/dashboard").then(d => d && !d.message && setStats(d)); }
     if (s === "apprenants")  { get("/students").then(d => d.students && setStudents(d.students)); loadG(); }
     if (s === "staff")       { get("/staff").then(d => d.staff && setStaff(d.staff)); }
     if (s === "groupes")     { loadG(); get("/staff").then(d => d.staff && setStaff(d.staff)); }
     if (s === "presences")   { loadG(); get("/students").then(d => d.students && setStudents(d.students)); }
     if (s === "notes")       { get("/grades").then(d => d.grades && setGrades(d.grades)); get("/students").then(d => d.students && setStudents(d.students)); }
     if (s === "frais")       { get("/fees").then(d => d.fees && setFees(d.fees)); get("/students").then(d => d.students && setStudents(d.students)); }
-    if (s === "bulletins")   { if (isMadrasa) get("/bulletins").then(d => d.bulletins && setBulletins(d.bulletins)); }
-  }, [get, groupEP, isMadrasa]);
+    if (s === "bulletins")   { get("/bulletins").then(d => d.bulletins && setBulletins(d.bulletins)); }
+  }, [get, groupEP]);
 
   const loadAttendance = useCallback((date: string, groupId: string) => {
     if (!groupId) return;
@@ -140,7 +141,7 @@ export default function GestionEnseignement({ mode }: Props) {
     if (!g) return;
     get(`/attendance?date=${date}`).then(d => {
       const existing: any[] = d.attendance || [];
-      const gs = students.filter(s => s.niveau === g.niveau && s.is_active !== false);
+      const gs = students.filter(s => (String(s.classroom_id) === String(g.id) || s.niveau === g.niveau) && s.is_active !== false);
       setAttendance(gs.map(s => {
         const rec = existing.find(r => r.student_id === s.id);
         return rec ? { student_id: s.id, prenom: s.prenom, nom: s.nom, statut: rec.statut }
@@ -181,11 +182,12 @@ export default function GestionEnseignement({ mode }: Props) {
         if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast("Frais ajouté"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "save-presence") {
-        await post("/attendance", { records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
-        setModal(null); showToast("Présences enregistrées");
+        const d = await post("/attendance", { date: attendDate, classroom_id: selectedGroup || undefined, records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
+        if (d.success) { setModal(null); showToast("Présences enregistrées"); }
+        else showToast(d.message || "Erreur", false);
       } else if (modal === "gen-bulletin") {
         if (!form.periode) { showToast("Période obligatoire", false); return; }
-        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || "2025-2026", publish: !!form.publish });
+        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || "2025-2026", annee_scolaire: form.annee || "2025-2026", publish: !!form.publish });
         if (d.success) { showToast(`${d.generated} bulletin(s) généré(s)`); setModal(null); get("/bulletins").then(b => b.bulletins && setBulletins(b.bulletins)); }
         else showToast(d.message || "Erreur", false);
       }
@@ -480,7 +482,7 @@ export default function GestionEnseignement({ mode }: Props) {
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.2)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.1)";}}>
             🌐 {!collapsed && "Voir la vitrine"}
           </button>
-          <button onClick={()=>navigate(-1 as any)} title={collapsed?"Retour":undefined}
+          <button onClick={()=>{ if (window.history.length > 1) navigate(-1 as any); else navigate("/gestion-interne"); }} title={collapsed?"Retour":undefined}
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "rgba(200,240,200,0.4)", fontSize: 12, justifyContent: collapsed?"center":"flex-start" }}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="white";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color="rgba(200,240,200,0.4)";}}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
@@ -521,7 +523,7 @@ export default function GestionEnseignement({ mode }: Props) {
             {section === "groupes"     && <button onClick={()=>{setModal("add-groupe");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Créer {V.groupe.toLowerCase()}</button>}
             {section === "notes"       && <button onClick={()=>{setModal("add-note");setForm({matiere:V.matieres[0],periode:"Trim 1"});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter note</button>}
             {section === "frais"       && <button onClick={()=>{setModal("add-frais");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ Ajouter frais</button>}
-            {section === "bulletins" && isMadrasa && <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>⚙ Générer bulletins</button>}
+            {section === "bulletins" && <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>⚙ Générer bulletins</button>}
           </div>
         </div>
 
@@ -778,7 +780,7 @@ export default function GestionEnseignement({ mode }: Props) {
                           <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:"#f1f5f9",color:"#475569",borderRadius:20,fontSize:11 }}>{g.periode||"—"}</span></td>
                           <td style={{ padding:"11px 16px",color:"#94a3b8",fontSize:12 }}>{g.commentaire||"—"}</td>
                           <td style={{ padding:"11px 16px" }}>
-                            <button onClick={async()=>{ if(confirm("Supprimer cette note ?")){await del(`/grades/${g.id}`);setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast("Note supprimée"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Suppr.</button>
+                            <button onClick={async()=>{ if(confirm("Supprimer cette note ?")){const d=await del(`/grades/${g.id}`); if(d.success){setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast("Note supprimée");} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Suppr.</button>
                           </td>
                         </tr>
                       );
@@ -824,7 +826,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 14px" }}><span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:f.est_paye?"#f0fdf0":"#fef2f2",color:f.est_paye?"#1a8f1a":"#dc2626" }}>{f.est_paye?"✓ Payé":"Impayé"}</span></td>
                         <td style={{ padding:"11px 14px" }}>
                           {!f.est_paye && (
-                            <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
+                            <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} else showToast(d.message||"Erreur",false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
                           )}
                         </td>
                       </tr>
@@ -838,17 +840,11 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── BULLETINS ── */}
           {section === "bulletins" && (
             <div style={{ animation:"fadeIn 0.2s ease" }}>
-              {!isMadrasa ? (
-                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center" }}>
-                  <div style={{ fontSize:48,marginBottom:12 }}>🚧</div>
-                  <div style={{ fontSize:14,fontWeight:600,color:"#0f172a",marginBottom:6 }}>Bulletins — Bientôt disponible</div>
-                  <div style={{ fontSize:13,color:"#94a3b8" }}>La génération de bulletins pour les écoles sera disponible prochainement.</div>
-                </div>
-              ) : bulletins.length===0 ? (
+              {bulletins.length===0 ? (
                 <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center" }}>
                   <div style={{ fontSize:48,marginBottom:12 }}>📋</div>
                   <div style={{ fontSize:14,fontWeight:600,color:"#0f172a",marginBottom:6 }}>Aucun bulletin généré</div>
-                  <div style={{ fontSize:13,color:"#94a3b8",marginBottom:20 }}>Saisissez des notes puis générez les bulletins de progression islamique.</div>
+                  <div style={{ fontSize:13,color:"#94a3b8",marginBottom:20 }}>Saisissez des notes puis générez les bulletins{isMadrasa ? " de progression islamique" : ""}.</div>
                   <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ padding:"9px 20px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>⚙ Générer maintenant</button>
                 </div>
               ) : (

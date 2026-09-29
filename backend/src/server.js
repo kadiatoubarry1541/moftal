@@ -1760,6 +1760,13 @@ async function initAllTables() {
     await sequelize.query(`ALTER TABLE "professional_accounts" ADD COLUMN IF NOT EXISTS "granted_to_sub_admin" BOOLEAN DEFAULT false;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "numero_h" VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "parent_numero_h" VARCHAR(50);`).catch(() => {});
+    // Colonnes lues/écrites par la page Gestion École (niveau de l'élève, spécialité du prof,
+    // échéance des frais, statut présent/absent/retard) — absentes des tables d'origine.
+    await sequelize.query(`ALTER TABLE "school_students" ADD COLUMN IF NOT EXISTS "niveau" VARCHAR(100);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "school_staff" ADD COLUMN IF NOT EXISTS "specialite" VARCHAR(255);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "school_staff" ADD COLUMN IF NOT EXISTS "numero_h" VARCHAR(50);`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "school_fees" ADD COLUMN IF NOT EXISTS "echeance" DATE;`).catch(() => {});
+    await sequelize.query(`ALTER TABLE "school_attendance" ADD COLUMN IF NOT EXISTS "statut" VARCHAR(20);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "address"      TEXT;`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "phone"        VARCHAR(50);`).catch(() => {});
     await sequelize.query(`ALTER TABLE "management_tenants" ADD COLUMN IF NOT EXISTS "email"        VARCHAR(255);`).catch(() => {});

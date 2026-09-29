@@ -56,14 +56,25 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
   try {
     const code = req.params.tenantCode;
     const q = (sql, rep) => sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT }).then(r => r[0]).catch(() => ({ c: 0, t: 0 }));
-    const [stu, sta, cls, fees, recent] = await Promise.all([
+    const today = new Date().toISOString().split('T')[0];
+    const [stu, sta, cls, fees, present, collected, unpaid, recent] = await Promise.all([
       q(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code AND statut='actif'`, { code }),
       q(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
       q(`SELECT COALESCE(SUM(montant-montant_paye),0) as t FROM school_fees WHERE tenant_code=:code AND est_paye=false`, { code }),
+      q(`SELECT COUNT(*) as c FROM school_attendance WHERE tenant_code=:code AND date_presence=:today AND COALESCE(statut, CASE WHEN est_present THEN 'present' ELSE 'absent' END)='present'`, { code, today }),
+      q(`SELECT COALESCE(SUM(montant_paye),0) as t FROM school_fees WHERE tenant_code=:code AND date_paiement>=date_trunc('month',CURRENT_DATE)`, { code }),
+      q(`SELECT COUNT(*) as c FROM school_fees WHERE tenant_code=:code AND est_paye=false`, { code }),
       sequelize.query(`SELECT * FROM school_students WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 6`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);
-    res.json({ success: true, stats: { students: +(stu.c||0), staff: +(sta.c||0), classrooms: +(cls.c||0), feesPending: +(fees.t||0) }, recentStudents: recent });
+    // Clés à plat (totalStudents…) = celles lues par la page de gestion ; "stats" gardé pour compatibilité.
+    res.json({
+      success: true,
+      totalStudents: +(stu.c||0), totalStaff: +(sta.c||0), totalClassrooms: +(cls.c||0),
+      presentToday: +(present.c||0), feesCollected: +(collected.t||0), unpaidFees: +(unpaid.c||0),
+      stats: { students: +(stu.c||0), staff: +(sta.c||0), classrooms: +(cls.c||0), feesPending: +(fees.t||0) },
+      recentStudents: recent,
+    });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -83,13 +94,14 @@ router.get('/:tenantCode/students', authenticate, verifyTenant, async (req, res)
 
 router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id } = req.body;
+    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, niveau, numero_h, parent_numero_h } = req.body;
+    if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
     const code = req.params.tenantCode;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
     const [rows] = await sequelize.query(
-      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat) RETURNING *`,
-      { replacements: { code, nom, prenom, dob: date_naissance || null, sexe, tel: telephone_parent, parent: nom_parent, adr: adresse, cid: classroom_id || null, mat }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule,niveau,numero_h,parent_numero_h) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat,:niveau,:nh,:pnh) RETURNING *`,
+      { replacements: { code, nom, prenom, dob: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, mat, niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, student: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -97,10 +109,10 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
 
 router.put('/:tenantCode/students/:id', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, statut } = req.body;
+    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, statut, niveau } = req.body;
     await sequelize.query(
-      `UPDATE school_students SET nom=:nom,prenom=:prenom,date_naissance=:dob,sexe=:sexe,telephone_parent=:tel,nom_parent=:parent,adresse=:adr,classroom_id=:cid,statut=:statut WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, dob: date_naissance || null, sexe, tel: telephone_parent, parent: nom_parent, adr: adresse, cid: classroom_id || null, statut: statut || 'actif', id: req.params.id, code: req.params.tenantCode } }
+      `UPDATE school_students SET nom=COALESCE(:nom,nom),prenom=COALESCE(:prenom,prenom),date_naissance=:dob,sexe=:sexe,telephone_parent=:tel,nom_parent=:parent,adresse=:adr,classroom_id=:cid,statut=:statut,niveau=COALESCE(:niveau,niveau) WHERE id=:id AND tenant_code=:code`,
+      { replacements: { nom: nom || null, prenom: prenom || null, dob: date_naissance || null, sexe: sexe || null, tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, statut: statut || 'actif', niveau: niveau || null, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -124,13 +136,14 @@ router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =>
 
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, role, matieres, telephone, email } = req.body;
+    const { nom, prenom, role, matieres, specialite, telephone, email, numero_h } = req.body;
+    if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
     const code = req.params.tenantCode;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `PROF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const [rows] = await sequelize.query(
-      `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,telephone,email,matricule) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:tel,:email,:mat) RETURNING *`,
-      { replacements: { code, nom, prenom, role, mats: JSON.stringify(matieres || []), tel: telephone, email, mat }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,specialite,telephone,email,numero_h,matricule) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:spec,:tel,:email,:nh,:mat) RETURNING *`,
+      { replacements: { code, nom, prenom, role: role || 'Professeur', mats: JSON.stringify(matieres || (specialite ? [specialite] : [])), spec: specialite || null, tel: telephone || null, email: email || null, nh: numero_h || null, mat }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, staff: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -148,7 +161,15 @@ router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, 
 router.get('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT c.*,s.nom as prof_nom,s.prenom as prof_prenom,COUNT(st.id)::int as nb_eleves FROM school_classrooms c LEFT JOIN school_staff s ON c.professeur_principal_id=s.id LEFT JOIN school_students st ON st.classroom_id=c.id AND st.statut='actif' WHERE c.tenant_code=:code GROUP BY c.id,s.nom,s.prenom ORDER BY c.nom`,
+      // Un élève compte dans une classe s'il y est rattaché, ou à défaut s'il a le même niveau
+      // (le formulaire élève ne demande que le niveau — même logique que l'appel des présences).
+      `SELECT c.*,c.professeur_principal_id as professeur_id,s.nom as prof_nom,s.prenom as prof_prenom,
+              COUNT(DISTINCT st.id)::int as nb_eleves, COUNT(DISTINCT st.id)::int as student_count
+       FROM school_classrooms c
+       LEFT JOIN school_staff s ON c.professeur_principal_id=s.id
+       LEFT JOIN school_students st ON st.tenant_code=c.tenant_code AND st.statut='actif'
+            AND (st.classroom_id=c.id OR (st.classroom_id IS NULL AND st.niveau=c.niveau))
+       WHERE c.tenant_code=:code GROUP BY c.id,s.nom,s.prenom ORDER BY c.nom`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, classrooms: rows });
@@ -157,12 +178,14 @@ router.get('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, re
 
 router.post('/:tenantCode/classrooms', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, niveau, capacite, professeur_principal_id } = req.body;
+    const { nom, niveau, capacite, professeur_principal_id, professeur_id } = req.body;
+    if (!nom) return res.status(400).json({ success: false, message: 'Nom obligatoire.' });
     const [rows] = await sequelize.query(
       `INSERT INTO school_classrooms (tenant_code,nom,niveau,capacite,professeur_principal_id) VALUES(:code,:nom,:niveau,:cap,:prof) RETURNING *`,
-      { replacements: { code: req.params.tenantCode, nom, niveau, cap: capacite || 30, prof: professeur_principal_id || null }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code: req.params.tenantCode, nom, niveau: niveau || null, cap: capacite || 30, prof: professeur_principal_id || professeur_id || null }, type: sequelize.QueryTypes.INSERT }
     );
-    res.json({ success: true, classroom: rows[0] });
+    const classroom = rows[0];
+    res.json({ success: true, classroom: classroom && { ...classroom, professeur_id: classroom.professeur_principal_id, student_count: 0 } });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -179,10 +202,13 @@ router.get('/:tenantCode/attendance', authenticate, verifyTenant, async (req, re
   try {
     const { date, classroom_id } = req.query;
     const d = date || new Date().toISOString().split('T')[0];
-    let q = `SELECT a.*,s.nom,s.prenom,s.numero_matricule FROM school_attendance a LEFT JOIN school_students s ON a.student_id=s.id WHERE a.tenant_code=:code AND a.date_presence=:date`;
+    let q = `SELECT a.*,COALESCE(a.statut, CASE WHEN a.est_present THEN 'present' ELSE 'absent' END) as statut,
+                    s.nom,s.prenom,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule
+             FROM school_attendance a LEFT JOIN school_students s ON a.student_id=s.id
+             WHERE a.tenant_code=:code AND a.date_presence=:date`;
     if (classroom_id) q += ` AND a.classroom_id=:cid`;
     const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, date: d, cid: classroom_id || null }, type: sequelize.QueryTypes.SELECT });
-    res.json({ success: true, records: rows, date: d });
+    res.json({ success: true, attendance: rows, records: rows, date: d });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -190,12 +216,15 @@ router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, r
   try {
     const { records, classroom_id } = req.body;
     const code = req.params.tenantCode;
-    const date = new Date().toISOString().split('T')[0];
-    await sequelize.query(`DELETE FROM school_attendance WHERE tenant_code=:code AND date_presence=:date AND classroom_id=:cid`, { replacements: { code, date, cid: classroom_id } });
+    const date = req.body.date || new Date().toISOString().split('T')[0];
     for (const r of records || []) {
+      // statut = present | absent | retard (envoyé par la page) ; est_present gardé pour l'ancien format
+      const statut = r.statut || (r.est_present === false ? 'absent' : 'present');
+      // Un seul enregistrement par élève et par jour : on remplace l'appel précédent
+      await sequelize.query(`DELETE FROM school_attendance WHERE tenant_code=:code AND date_presence=:date AND student_id=:sid`, { replacements: { code, date, sid: r.student_id } });
       await sequelize.query(
-        `INSERT INTO school_attendance (tenant_code,student_id,classroom_id,date_presence,est_present,motif_absence) VALUES(:code,:sid,:cid,:date,:present,:motif)`,
-        { replacements: { code, sid: r.student_id, cid: classroom_id, date, present: r.est_present !== false, motif: r.motif_absence || null } }
+        `INSERT INTO school_attendance (tenant_code,student_id,classroom_id,date_presence,est_present,statut,motif_absence) VALUES(:code,:sid,:cid,:date,:present,:statut,:motif)`,
+        { replacements: { code, sid: r.student_id, cid: classroom_id || null, date, present: statut !== 'absent', statut, motif: r.motif_absence || null } }
       );
     }
     res.json({ success: true });
@@ -207,10 +236,11 @@ router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, r
 router.get('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) => {
   try {
     const { student_id, classroom_id, periode } = req.query;
-    let q = `SELECT g.*,s.nom,s.prenom FROM school_grades g LEFT JOIN school_students s ON g.student_id=s.id WHERE g.tenant_code=:code`;
+    let q = `SELECT g.*,s.nom,s.prenom,s.nom as student_nom,s.prenom as student_prenom FROM school_grades g LEFT JOIN school_students s ON g.student_id=s.id WHERE g.tenant_code=:code`;
     if (student_id) q += ` AND g.student_id=:sid`;
     if (classroom_id) q += ` AND g.classroom_id=:cid`;
     if (periode) q += ` AND g.periode=:periode`;
+    q += ` ORDER BY g.created_at DESC`;
     const rows = await sequelize.query(q, { replacements: { code: req.params.tenantCode, sid: student_id, cid: classroom_id, periode }, type: sequelize.QueryTypes.SELECT });
     res.json({ success: true, grades: rows });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -219,11 +249,21 @@ router.get('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) =
 router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) => {
   try {
     const { student_id, classroom_id, matiere, note, note_max, coefficient, periode, commentaire } = req.body;
+    if (!student_id || !matiere) return res.status(400).json({ success: false, message: 'Élève et matière obligatoires.' });
+    const code = req.params.tenantCode;
     const [rows] = await sequelize.query(
       `INSERT INTO school_grades (tenant_code,student_id,classroom_id,matiere,note,note_max,coefficient,periode,commentaire) VALUES(:code,:sid,:cid,:mat,:note,:nmax,:coeff,:periode,:comm) RETURNING *`,
-      { replacements: { code: req.params.tenantCode, sid: student_id, cid: classroom_id || null, mat: matiere, note, nmax: note_max || 20, coeff: coefficient || 1, periode, comm: commentaire }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, sid: student_id, cid: classroom_id || null, mat: matiere, note: note ?? null, nmax: note_max || 20, coeff: coefficient || 1, periode: periode || null, comm: commentaire || null }, type: sequelize.QueryTypes.INSERT }
     );
-    res.json({ success: true, grade: rows[0] });
+    const [stu] = await sequelize.query(`SELECT nom,prenom FROM school_students WHERE id=:sid LIMIT 1`, { replacements: { sid: student_id }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, grade: { ...rows[0], student_nom: stu?.nom, student_prenom: stu?.prenom } });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await sequelize.query(`DELETE FROM school_grades WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -232,7 +272,7 @@ router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) 
 router.get('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT f.*,s.nom,s.prenom,s.numero_matricule FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
+      `SELECT f.*,s.nom,s.prenom,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, fees: rows });
@@ -241,21 +281,24 @@ router.get('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => 
 
 router.post('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { student_id, montant, type_frais, periode } = req.body;
+    const { student_id, montant, type_frais, periode, echeance } = req.body;
+    if (!student_id || !montant) return res.status(400).json({ success: false, message: 'Élève et montant obligatoires.' });
     const [rows] = await sequelize.query(
-      `INSERT INTO school_fees (tenant_code,student_id,montant,type_frais,periode) VALUES(:code,:sid,:montant,:type,:periode) RETURNING *`,
-      { replacements: { code: req.params.tenantCode, sid: student_id, montant, type: type_frais, periode }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_fees (tenant_code,student_id,montant,type_frais,periode,echeance) VALUES(:code,:sid,:montant,:type,:periode,:ech) RETURNING *`,
+      { replacements: { code: req.params.tenantCode, sid: student_id, montant, type: type_frais || null, periode: periode || null, ech: echeance || null }, type: sequelize.QueryTypes.INSERT }
     );
-    res.json({ success: true, fee: rows[0] });
+    const [stu] = await sequelize.query(`SELECT nom,prenom FROM school_students WHERE id=:sid LIMIT 1`, { replacements: { sid: student_id }, type: sequelize.QueryTypes.SELECT });
+    res.json({ success: true, fee: { ...rows[0], student_nom: stu?.nom, student_prenom: stu?.prenom } });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { montant_paye } = req.body;
+    // Sans montant précis ("Encaisser"), on encaisse la totalité du frais
+    const mp = req.body?.montant_paye ?? null;
     await sequelize.query(
-      `UPDATE school_fees SET montant_paye=:mp,est_paye=(:mp>=montant),date_paiement=CURRENT_DATE WHERE id=:id AND tenant_code=:code`,
-      { replacements: { mp: montant_paye, id: req.params.id, code: req.params.tenantCode } }
+      `UPDATE school_fees SET montant_paye=COALESCE(:mp,montant),est_paye=(COALESCE(:mp,montant)>=montant),date_paiement=CURRENT_DATE WHERE id=:id AND tenant_code=:code`,
+      { replacements: { mp, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -378,7 +421,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
 router.get('/:tenantCode/bulletins', authenticate, verifyTenant, async (req, res) => {
   try {
     const { periode, student_id } = req.query;
-    let q = `SELECT b.*,s.nom,s.prenom,s.numero_matricule,c.nom as classe FROM school_bulletins b LEFT JOIN school_students s ON b.student_id=s.id LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE b.tenant_code=:code`;
+    let q = `SELECT b.*,s.nom,s.prenom,s.nom as student_nom,s.prenom as student_prenom,s.niveau,s.numero_matricule,c.nom as classe FROM school_bulletins b LEFT JOIN school_students s ON b.student_id=s.id LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE b.tenant_code=:code`;
     if (periode)    q += ` AND b.periode=:periode`;
     if (student_id) q += ` AND b.student_id=:sid`;
     q += ` ORDER BY s.nom`;
@@ -389,7 +432,9 @@ router.get('/:tenantCode/bulletins', authenticate, verifyTenant, async (req, res
 
 router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { periode, annee_scolaire, publish = false } = req.body;
+    const { periode, publish = false } = req.body;
+    const annee_scolaire = req.body.annee_scolaire || req.body.annee;
+    if (!periode) return res.status(400).json({ success: false, message: 'Période obligatoire.' });
     const code = req.params.tenantCode;
     const students = await sequelize.query(
       `SELECT * FROM school_students WHERE tenant_code=:code AND statut='actif'`,

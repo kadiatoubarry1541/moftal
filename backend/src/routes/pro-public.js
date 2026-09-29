@@ -63,7 +63,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code AND statut='actif'`, { code }),
           q1(`SELECT COUNT(*) as c FROM school_classrooms WHERE tenant_code=:code`, { code }),
-          q(`SELECT nom,prenom,role,matiere FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY role,nom LIMIT 12`, { code }),
+          q(`SELECT nom,prenom,role,specialite AS matiere FROM school_staff WHERE tenant_code=:code AND is_active=true ORDER BY role,nom LIMIT 12`, { code }),
         ]);
         return res.json({ success: true, stats: { staff: +(staffCnt.c||0), students: +(stuCnt.c||0), classes: +(clsCnt.c||0) }, staff });
       }
