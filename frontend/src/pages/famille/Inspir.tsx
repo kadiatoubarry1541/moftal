@@ -43,10 +43,10 @@ type MediaType = 'video' | 'audio' | 'image';
 type PostType = MediaType | 'text';
 type FeedFilter = 'tout' | MediaType;
 
-const MEDIA_TYPES: { id: MediaType; label: string; icon: string; desc: string }[] = [
-  { id: 'video', label: 'Vidéo', icon: '🎬', desc: 'max 10 secondes' },
-  { id: 'image', label: 'Photo', icon: '📷', desc: 'JPG, PNG, WEBP' },
-  { id: 'audio', label: 'Audio', icon: '🎵', desc: 'max 3 minutes' },
+const MEDIA_TYPES: { id: MediaType; label: string; icon: string }[] = [
+  { id: 'video', label: 'Vidéo', icon: '🎬' },
+  { id: 'image', label: 'Photo', icon: '📷' },
+  { id: 'audio', label: 'Audio', icon: '🎵' },
 ];
 
 const FEED_FILTERS: { id: FeedFilter; label: string }[] = [
@@ -115,7 +115,7 @@ export default function Inspir() {
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('information');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
-  const [videoMode, setVideoMode] = useState<'record' | 'upload'>('record');
+  const [showComposer, setShowComposer] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [audioTimer, setAudioTimer] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -363,7 +363,7 @@ export default function Inspir() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.success) { resetForm(); await loadPosts(); }
+        if (data.success) { resetForm(); setShowComposer(false); await loadPosts(); }
         else alert("Erreur lors de la publication.");
       } else {
         const err = await res.json().catch(() => ({}));
@@ -446,100 +446,58 @@ export default function Inspir() {
 
       <div className="max-w-3xl mx-auto px-4 py-5 space-y-5">
 
-        {/* ── Pourquoi Inspir ── */}
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm text-amber-900 leading-relaxed">
-            <strong>🤝 Inspir sert à nous rappeler ce que l'autre attend de nous.</strong>{' '}
-            Publiez ici uniquement le bien que l'on doit faire pour ses parents, son mari ou sa femme, et ses enfants :
-            un conseil, un bon exemple, un geste qui fait du bien. Pas de dispute, pas de moquerie — seulement ce qui fait grandir.
-          </p>
-        </div>
-
         {/* ════════════ FIL : vidéos, photos et audio ensemble ════════════ */}
         {view === 'fil' && (
           <>
-            {/* Publier */}
+            {/* Publier : un seul bouton, le formulaire s'ouvre au clic */}
+            {!showComposer ? (
+              <button onClick={() => setShowComposer(true)}
+                className="w-full py-3 rounded-xl font-bold text-sm text-white shadow-sm"
+                style={{ background: 'linear-gradient(135deg,#2563eb,#1e40af)' }}>
+                ✦ Publier
+              </button>
+            ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold text-gray-800 text-sm">
-                  ✦ Publier{sectionTab !== 'tout' || sections.length === 1 ? ` · ${SECTION_INFO[targetSection].pour.toLowerCase()}` : ''}
-                </h3>
-                <select value={category} onChange={e => setCategory(e.target.value)}
-                  className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white text-gray-700">
-                  {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-
-              {sectionTab === 'tout' && sections.length > 1 && (
-                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-                  Pour qui ?
+                {sectionTab === 'tout' && sections.length > 1 ? (
                   <select value={publishSection} onChange={e => setPublishSection(e.target.value as Section)}
                     className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white text-gray-800">
                     {sections.map(sec => <option key={sec} value={sec}>{SECTION_INFO[sec].icon} {SECTION_INFO[sec].pour}</option>)}
                   </select>
-                </label>
-              )}
+                ) : (
+                  <span className="text-sm font-semibold text-gray-700">{SECTION_INFO[targetSection].icon} {SECTION_INFO[targetSection].pour}</span>
+                )}
+                <button onClick={() => { resetForm(); setShowComposer(false); }}
+                  className="text-gray-400 hover:text-gray-600 text-lg px-2" aria-label="Fermer">✕</button>
+              </div>
 
-              {/* Choix du type : un seul endroit pour vidéo, photo et audio */}
               <div className="grid grid-cols-3 gap-2">
                 {MEDIA_TYPES.map(t => (
                   <button key={t.id} onClick={() => { if (publishType !== t.id) { resetForm(); setPublishType(t.id); } }}
-                    className={`flex flex-col items-center py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                    className={`flex items-center justify-center gap-1 py-2 rounded-xl border text-xs font-bold transition-all ${
                       publishType === t.id ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-100 text-gray-500 hover:bg-gray-50'
                     }`}>
-                    <span className="text-xl">{t.icon}</span>
-                    {t.label}
-                    <span className="text-[10px] font-normal text-gray-400">{t.desc}</span>
+                    <span>{t.icon}</span>{t.label}
                   </button>
                 ))}
               </div>
 
               <textarea value={content} onChange={e => setContent(e.target.value)}
-                placeholder="Dites quelque chose sur votre publication (facultatif)…"
-                rows={2}
+                placeholder="Légende (facultatif)"
+                rows={1}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
 
               {/* Vidéo */}
               {publishType === 'video' && (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <button onClick={() => { setVideoMode('record'); setMediaFile(null); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${videoMode === 'record' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                      🎥 Enregistrer
-                    </button>
-                    <button onClick={() => { setVideoMode('upload'); setMediaFile(null); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${videoMode === 'upload' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                      📂 Importer
-                    </button>
+                mediaFile ? (
+                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-200">
+                    <span className="text-green-700 text-sm font-semibold">✅ Vidéo prête</span>
+                    <button onClick={() => setMediaFile(null)} className="text-red-400 text-xs ml-auto">✕ Refaire</button>
                   </div>
-                  {videoMode === 'record' ? (
-                    mediaFile ? (
-                      <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-200">
-                        <span className="text-green-700 text-sm font-semibold">✅ Vidéo prête</span>
-                        <button onClick={() => setMediaFile(null)} className="text-red-400 text-xs ml-auto">✕ Refaire</button>
-                      </div>
-                    ) : (
-                      <VideoRecorder maxDuration={10}
-                        onVideoRecorded={blob => setMediaFile(new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' }))} />
-                    )
-                  ) : (
-                    <input type="file" accept="video/*"
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const vid = document.createElement('video');
-                        vid.preload = 'metadata';
-                        vid.onloadedmetadata = () => {
-                          URL.revokeObjectURL(vid.src);
-                          if (vid.duration > 10) { alert('La vidéo ne doit pas dépasser 10 secondes.'); e.target.value = ''; return; }
-                          setMediaFile(file);
-                        };
-                        vid.src = URL.createObjectURL(file);
-                      }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50"
-                    />
-                  )}
-                </div>
+                ) : (
+                  <VideoRecorder maxDuration={10} hideHint
+                    onVideoRecorded={blob => setMediaFile(new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' }))} />
+                )
               )}
 
               {/* Audio */}
@@ -549,7 +507,7 @@ export default function Inspir() {
                     <div className="flex flex-wrap gap-2 items-center">
                       <button onClick={startRecording}
                         className="px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors flex items-center gap-2">
-                        🎤 Enregistrer (max 3 min)
+                        🎤 Enregistrer
                       </button>
                       <span className="text-gray-400 text-xs">ou</span>
                       <input type="file" accept="audio/*"
@@ -601,7 +559,6 @@ export default function Inspir() {
                     <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all">
                       <span className="text-4xl mb-2">📷</span>
                       <span className="text-sm font-semibold text-gray-600">Choisir une photo</span>
-                      <span className="text-xs text-gray-400">JPG, PNG, GIF, WEBP</span>
                       <input type="file" accept="image/*" className="hidden"
                         onChange={e => { const f = e.target.files?.[0]; if (f) setMediaFile(f); }} />
                     </label>
@@ -615,6 +572,7 @@ export default function Inspir() {
                 {sending ? 'Publication en cours...' : '✦ Publier'}
               </button>
             </div>
+            )}
 
             {/* Filtres du fil (comme les puces de YouTube) */}
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>

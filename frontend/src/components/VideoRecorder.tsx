@@ -3,9 +3,11 @@ import { useState, useRef, useEffect } from 'react'
 interface VideoRecorderProps {
   onVideoRecorded: (videoBlob: Blob) => void
   maxDuration?: number
+  /** Masque le bandeau d'explication (« Enregistrez une courte vidéo… »). */
+  hideHint?: boolean
 }
 
-export function VideoRecorder({ onVideoRecorded, maxDuration = 30 }: VideoRecorderProps) {
+export function VideoRecorder({ onVideoRecorded, maxDuration = 30, hideHint = false }: VideoRecorderProps) {
   const [error, setError] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -118,10 +120,12 @@ export function VideoRecorder({ onVideoRecorded, maxDuration = 30 }: VideoRecord
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ padding: '14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', fontSize: '0.9rem', color: '#1e40af', lineHeight: '1.5' }}>
-        Enregistrez une courte vidéo de présentation.<br />
-        <strong>Durée maximum : {maxDuration} secondes.</strong>
-      </div>
+      {!hideHint && (
+        <div style={{ padding: '14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', fontSize: '0.9rem', color: '#1e40af', lineHeight: '1.5' }}>
+          Enregistrez une courte vidéo de présentation.<br />
+          <strong>Durée maximum : {maxDuration} secondes.</strong>
+        </div>
+      )}
 
       {/* Filmer directement */}
       <input
