@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import { config } from '../../config.js';
 
 // NumeroH des comptes administrateurs spéciaux
@@ -47,17 +48,28 @@ async function findUserFollowingAlias(numeroH) {
 // pas à jour, 100 % ensuite). Toute autre action demande d'abord de mettre son
 // profil à jour.
 const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications', '/api/professionals/register'];
-// Le professionnel gère l'identité de SON établissement (logo, nom, contact,
-// profil public) même si son profil personnel n'est pas encore complété : ces
-// données appartiennent à l'établissement, pas au NuméroH provisoire (et elles
-// suivent automatiquement quand le vrai NuméroH est attribué).
-const PROVISIONAL_ALLOWED_PRO_ROUTES = [
-  /^\/api\/[a-z]+-mgmt\/[^/?]+\/settings(\?|$)/,          // Paramètres de la gestion (logo…)
-  /^\/api\/pro-vitrine\/[^/?]+\/publish-info(\?|$)/,     // Modifier le profil public
-  /^\/api\/professionals\/[^/?]+\/ensure-tenant(\?|$)/,  // Ouvrir sa gestion interne
-  /^\/api\/professionals\/\d+(\?|$)/,                     // Logo depuis l'Espace Pro
-  /^\/api\/professionals\/tenant-icon-png\/[^/?]+(\?|$)/, // Icône de l'app de la gestion
+// Espace professionnel : une fois son établissement créé ET approuvé par l'admin,
+// le pro utilise 100 % de sa gestion interne (tout modifier, ajouter, payer son
+// abonnement…) même si son profil personnel n'est pas encore complété. Ces données
+// sont celles de l'établissement ; si son NuméroH provisoire est remplacé plus tard,
+// tout suit automatiquement (complete-profile met à jour toutes les colonnes).
+const PROVISIONAL_PRO_SPACE_ROUTES = [
+  /^\/api\/[a-z]+-mgmt\//,             // toutes les gestions internes (école, clinique…)
+  /^\/api\/pro-vitrine\//,             // profil public, publications
+  /^\/api\/professionals\//,           // compte pro, logo, icône d'app, clients
+  /^\/api\/pro-members/,                // membres
+  /^\/api\/appointments/,               // rendez-vous
+  /^\/api\/withdrawal-requests/,        // retraits Moftal Pay
+  /^\/api\/payment\//,                 // abonnement de la gestion
+  /^\/api\/education/,                  // outils de la gestion école
 ];
+
+async function ownsApprovedProAccount(numeroH) {
+  try {
+    const n = await ProfessionalAccount.count({ where: { ownerNumeroH: numeroH, status: 'approved', isActive: true } });
+    return n > 0;
+  } catch { return false; }
+}
 
 // Alias pour authenticateToken (compatibilité)
 export const authenticateToken = async (req, res, next) => {
@@ -114,7 +126,8 @@ export const authenticate = async (req, res, next) => {
       // identifiant provisoire.
       if (isProvisionalNumeroH(user.numeroH) && req.method !== 'GET'
           && !PROVISIONAL_ALLOWED_PATHS.some((p) => (req.originalUrl || '').startsWith(p))
-          && !PROVISIONAL_ALLOWED_PRO_ROUTES.some((r) => r.test(req.originalUrl || ''))) {
+          && !(PROVISIONAL_PRO_SPACE_ROUTES.some((r) => r.test(req.originalUrl || ''))
+               && await ownsApprovedProAccount(user.numeroH))) {
         return res.status(403).json({
           success: false,
           code: 'PROFILE_INCOMPLETE',
