@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 
 const BASE = (code: string) => `/api/madrasa-mgmt/${code}`;
@@ -440,11 +441,10 @@ export default function GestionMadrasa() {
 
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${TEAL},#22d3ee)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>📖</div>
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="📖" size={36} style={{ background: "rgba(255,255,255,0.15)" }} />
           {!collapsed && (
             <div style={{ overflow: "hidden" }}>
               <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 165 }}>{tenant.name}</p>
-              <p style={{ fontSize: 10, color: "rgba(125,211,252,0.7)", margin: 0, fontFamily: "monospace" }}>{tenantCode}</p>
             </div>
           )}
         </div>
@@ -467,12 +467,12 @@ export default function GestionMadrasa() {
 
         {/* Footer */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: 8, flexShrink: 0 }}>
-          <button onClick={() => navigate(-1 as any)} title={collapsed ? "Retour" : undefined}
+          <button onClick={() => goToMoftal(navigate)} title={collapsed ? "Retour sur Moftal" : undefined}
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "rgba(186,230,253,0.4)", fontSize: 12, justifyContent: collapsed ? "center" : "flex-start" }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "white"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "rgba(186,230,253,0.4)"; }}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
-            {!collapsed && "Retour plateforme"}
+            <MoftalMark />
+            {!collapsed && "Retour sur Moftal"}
           </button>
           <button onClick={() => setCollapsed(!collapsed)}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "5px 0", border: "none", background: "transparent", color: `rgba(8,145,178,0.4)`, cursor: "pointer", fontSize: 11, marginTop: 4 }}>

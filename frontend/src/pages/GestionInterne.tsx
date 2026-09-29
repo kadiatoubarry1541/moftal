@@ -1137,7 +1137,6 @@ export default function GestionInterne() {
                             {a.subscriptionStatus === 'never_paid' && !accesGI?.aAcces && (
                               <span style={{ padding:"1px 8px", background:"#fffbeb", color:"#b45309", borderRadius:20, fontSize:11, fontWeight:600 }}>Essai terminé</span>
                             )}
-                            {a.tenant_code && <span style={{ fontFamily:"monospace", fontSize:11, color:"#94a3b8" }}>{a.tenant_code}</span>}
                           </div>
                         </div>
                         <div style={{ color:info.color, fontSize:13, fontWeight:600, flexShrink:0 }}>Gérer ›</div>

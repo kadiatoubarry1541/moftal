@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import { getSessionUser } from "../utils/auth";
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -213,13 +214,13 @@ export default function GestionIslamique({ mode }: Props) {
       {/* Header */}
       <div style={{ background:M.gradient, borderRadius:16, padding:"20px 24px", marginBottom:24, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-          <div style={{ width:52, height:52, borderRadius:14, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>{M.icon}</div>
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback={M.icon} size={52} radius={14} style={{ background: "rgba(255,255,255,0.2)" }} />
           <div>
             <div style={{ fontWeight:800, fontSize:20, color:"white" }}>{tenant?.name || M.label}</div>
-            <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", marginTop:3 }}>{tenantCode} · {M.label}</div>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", marginTop:3 }}>{M.label}</div>
           </div>
         </div>
-        <button onClick={() => navigate("/gestion-interne")} style={{ padding:"8px 16px", background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600 }}>← Retour</button>
+        <button onClick={() => goToMoftal(navigate)} title="Retour sur Moftal" style={{ display:"inline-flex", alignItems:"center", gap:6, whiteSpace:"nowrap", padding:"8px 16px", background:"rgba(255,255,255,0.18)", color:"white", border:"1px solid rgba(255,255,255,0.3)", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600 }}><MoftalMark /> Moftal</button>
       </div>
 
       {/* Tabs */}

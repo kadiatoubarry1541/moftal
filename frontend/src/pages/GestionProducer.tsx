@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 
 const BASE = (code: string) => `/api/producer-mgmt/${code}`;
@@ -216,18 +217,14 @@ export default function GestionProducer() {
       {/* HEADER */}
       <div style={{ background: GRADIENT, borderRadius: 16, padding: "24px 28px", marginBottom: 24, color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {tenant?.logo_url ? (
-            <img src={tenant.logo_url} alt="" style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover", flexShrink: 0, background: "rgba(255,255,255,0.15)" }} />
-          ) : (
-            <span style={{ fontSize: 40, flexShrink: 0 }}>🏭</span>
-          )}
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🏭" size={48} radius={12} style={{ background: "rgba(255,255,255,0.15)" }} />
           <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tenant?.name || "Entreprise de Production"}</h1>
             <p style={{ margin: 0, opacity: 0.85, fontSize: 14 }}>Gestion Interne — Producteur</p>
           </div>
           <div style={{ display: "flex", gap: 8, marginLeft: "auto", flexShrink: 0 }}>
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={COLOR} />
-            <button className="gestion-btn-secondary" onClick={() => navigate("/gestion-interne")} style={{ ...btn("rgba(255,255,255,0.2)"), fontSize: 13 }}>← Mes espaces</button>
+            <button onClick={() => goToMoftal(navigate)} title="Retour sur Moftal" style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap", ...btn("rgba(255,255,255,0.2)"), fontSize: 13 }}><MoftalMark /> Moftal</button>
           </div>
         </div>
       </div>

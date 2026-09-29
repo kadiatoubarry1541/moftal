@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 
 interface Props { mode: "school" | "madrasa"; }
@@ -585,11 +586,10 @@ export default function GestionEnseignement({ mode }: Props) {
       {/* ── SIDEBAR ── */}
       <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 244, flexShrink: 0, transition: "width 0.25s ease", background: V.gradient, borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, left: 0, height: "100vh", zIndex: 50 } : {}) }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>{V.emoji}</div>
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback={V.emoji} size={36} style={{ background: "rgba(255,255,255,0.15)" }} />
           {!collapsed && (
             <div style={{ overflow: "hidden" }}>
               <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 165 }}>{tenant.name}</p>
-              <p style={{ fontSize: 10, color: "rgba(200,240,200,0.7)", margin: 0, fontFamily: "monospace" }}>{tenantCode}</p>
             </div>
           )}
         </div>
@@ -614,11 +614,11 @@ export default function GestionEnseignement({ mode }: Props) {
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.2)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.1)";}}>
             🌐 {!collapsed && "Voir la vitrine"}
           </button>
-          <button onClick={()=>navigate(-1 as any)} title={collapsed?"Retour":undefined}
+          <button onClick={()=>goToMoftal(navigate)} title={collapsed?"Retour sur Moftal":undefined}
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "rgba(200,240,200,0.4)", fontSize: 12, justifyContent: collapsed?"center":"flex-start" }}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="white";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color="rgba(200,240,200,0.4)";}}>
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 17l-5-5m0 0l5-5m-5 5h12" /></svg>
-            {!collapsed && "Retour plateforme"}
+            <MoftalMark />
+            {!collapsed && "Retour sur Moftal"}
           </button>
           <button onClick={()=>setCollapsed(!collapsed)} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "5px 0", border: "none", background: "transparent", color: `${V.color}80`, cursor: "pointer", fontSize: 11, marginTop: 4 }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={collapsed?"M9 5l7 7-7 7":"M15 19l-7-7 7-7"} /></svg>
@@ -1149,6 +1149,7 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── PARAMÈTRES ── */}
           {section === "settings" && (
             <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
+              <TenantCodeCard code={tenantCode} />
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "24px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Logo</h3>
                 <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
