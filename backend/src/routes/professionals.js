@@ -148,7 +148,7 @@ router.get('/verifier-nom', authenticate, async (req, res) => {
       return res.json({ success: true, disponible: false, message: 'Nom vide.' });
     }
     const existant = await ProfessionalAccount.findOne({
-      where: { name: { [Op.iLike]: nom.trim() }, status: { [Op.ne]: 'rejected' } }
+      where: { name: { [Op.iLike]: nom.trim() }, status: { [Op.ne]: 'rejected' }, isActive: true }
     });
     if (existant) {
       return res.json({
@@ -192,7 +192,7 @@ router.post('/register', authenticate, async (req, res) => {
     // ── Vérification : le nom doit être unique (insensible à la casse) ──────────
     const nomNettoye = name.trim();
     const nomExistant = await ProfessionalAccount.findOne({
-      where: { name: { [Op.iLike]: nomNettoye }, status: { [Op.ne]: 'rejected' } }
+      where: { name: { [Op.iLike]: nomNettoye }, status: { [Op.ne]: 'rejected' }, isActive: true }
     });
     if (nomExistant) {
       return res.status(409).json({
@@ -975,8 +975,17 @@ router.delete('/admin/:id', authenticate, requireAdmin, async (req, res) => {
     if (!account) {
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     }
+    // Suppression par l'admin : le compte disparaît partout (listes, espace du pro),
+    // sa gestion interne et son site client sont désactivés, et son nom redevient
+    // libre. Les données restent en base (rien n'est détruit définitivement).
     await account.update({ isActive: false });
-    res.json({ success: true, message: 'Compte supprimé' });
+    if (account.tenant_code) {
+      await sequelize.query(
+        `UPDATE management_tenants SET is_active = false WHERE tenant_code = :code`,
+        { replacements: { code: account.tenant_code } }
+      );
+    }
+    res.json({ success: true, message: `Compte « ${account.name} » supprimé` });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }

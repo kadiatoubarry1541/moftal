@@ -424,6 +424,28 @@ export default function AdminDashboard() {
     }
   };
 
+  // Supprimer un compte professionnel (admin) : il disparaît partout, sa gestion
+  // interne et son site client sont désactivés, son nom redevient libre.
+  const handleDeletePro = async (id: string, name: string) => {
+    if (!window.confirm(`Supprimer le compte professionnel « ${name} » ?\n\nIl disparaîtra des listes, son espace, sa gestion interne et son site client seront fermés.`)) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/professionals/admin/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        loadPendingPros();
+        loadAllPros(proFilter);
+      } else {
+        alert(data.message || "La suppression a échoué.");
+      }
+    } catch {
+      alert("Erreur de connexion : le compte n'a pas été supprimé.");
+    }
+  };
+
   const loadPageAdmins = async () => {
     setPageAdminsLoading(true);
     try {
@@ -1344,6 +1366,13 @@ export default function AdminDashboard() {
                           );
                         })()}
                         {pro.status === "rejected" && <span className="px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-full">Rejeté</span>}
+                        <button
+                          onClick={() => handleDeletePro(pro.id, pro.name)}
+                          className="min-h-[36px] px-3 py-1.5 bg-white hover:bg-red-50 text-red-700 border border-red-300 text-xs font-semibold rounded-lg transition-colors"
+                          title="Supprimer ce compte professionnel"
+                        >
+                          🗑️ Supprimer
+                        </button>
                       </div>
                     </div>
                   ))}
