@@ -34,3 +34,7 @@ On montre uniquement ce que le modèle montre, rien de plus.
 - Jamais de mot de passe en clair dans `localStorage`.
 - Un compte créé avec seulement téléphone + mot de passe est un vrai compte en base
   (NuméroH provisoire `TMP-…`) et apparaît dans l'espace admin.
+- Un pro dont l'établissement est **approuvé par l'admin** utilise 100 % de son espace pro
+  (gestion interne, profil public, logo, abonnement…) même si son profil personnel n'est pas
+  complété : jamais de blocage « Encore une petite étape » dans sa gestion
+  (`PROVISIONAL_PRO_SPACE_ROUTES` dans `backend/src/middleware/auth.js`).
