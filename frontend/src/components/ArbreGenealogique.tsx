@@ -61,7 +61,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([])
   const [newDoc, setNewDoc] = useState({ type: 'naissance', description: '', annee: '' })
   const [showAddDoc, setShowAddDoc] = useState(false)
-  const [zoom, setZoom] = useState(0.25)
+  const [zoom, setZoom] = useState(0.4)
   const [showZoomMenu, setShowZoomMenu] = useState(false)
   const zoomMenuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -1016,7 +1016,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             >↺ Normal</button>
             <button
               type="button"
-              onClick={() => setZoom(0.25)}
+              onClick={() => setZoom(0.4)}
               className="shrink-0 h-9 px-3 rounded-full border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 shadow-sm active:bg-blue-100"
             >🔍 Vue globale</button>
           </div>

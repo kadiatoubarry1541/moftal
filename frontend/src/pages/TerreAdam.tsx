@@ -743,19 +743,6 @@ export default function TerreAdam() {
                             />
                           </div>
 
-                          {/* Accès aux outils du quartier (Caisse, Livre, Règles,
-                              Preuves de résidence, liste des membres) — la messagerie
-                              elle-même se trouve désormais dans le bouton flottant. */}
-                          <button
-                            type="button"
-                            onClick={() => setShowQuartierMenu(true)}
-                            className="flex items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 hover:bg-gray-50 transition-colors"
-                          >
-                            <span className="flex items-center gap-2 font-semibold text-gray-700 text-sm">
-                              🧰 {t('terre_adam.view_group_info')}
-                            </span>
-                            <span className="text-gray-400">›</span>
-                          </button>
                         </div>
                       )}
                       </div>
