@@ -307,6 +307,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 }) {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
+  // true = on tourne DANS l'app installée de cette gestion (certitude)
+  const [dansLApp, setDansLApp] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [isInsidePWA, setIsInsidePWA] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -318,44 +320,45 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
     setIsInsidePWA(standalone);
+    // L'app d'une gestion s'ouvre sur gestions.moftal.com ; en mode app sur
+    // moftal.com, c'est l'app Moftal principale, pas celle de la gestion.
+    const h = window.location.hostname;
+    const appGestion = standalone && (h.startsWith("gestions.") || !/moftal\.com$/.test(h));
+    setDansLApp(appGestion);
 
-    const alreadyInstalled = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
-    setInstalled(alreadyInstalled);
-    // Pas de reconcileInstalledFlag ici : le manifest de chaque tenant est généré
-    // dynamiquement (URL différente selon l'origine/le startUrl), donc getInstalledRelatedApps()
-    // ne peut pas s'y référencer de façon fiable. On se fie uniquement à la réapparition
-    // d'un beforeinstallprompt (juste en dessous) pour détecter une désinstallation.
-
+    // Le navigateur propose l'installation → l'app N'EST PAS installée
     const existing = (window as any).__pwaGestionPrompt;
-    if (existing) setPrompt(existing);
+    if (existing) {
+      setPrompt(existing);
+      if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
+    }
+    const noteLocale = STORAGE_KEY ? localStorage.getItem(STORAGE_KEY) === "1" : false;
+    setInstalled(appGestion || (noteLocale && !existing));
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
       (window as any).__pwaGestionPrompt = e;
       setPrompt(e as BeforeInstallPromptEvent);
-      // Le navigateur propose d'installer → il ne considère pas cette espace comme
-      // installé (ex: désinstallé depuis la dernière visite). On corrige l'état local.
       if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
       setInstalled(false);
     };
     const onReady = () => {
       const p = (window as any).__pwaGestionPrompt;
-      if (p) setPrompt(p);
-    };
-    const onInstalled = () => {
-      if (STORAGE_KEY) localStorage.setItem(STORAGE_KEY, "1");
-      setInstalled(true);
-      setPrompt(null);
-      (window as any).__pwaGestionPrompt = null;
+      if (p) {
+        setPrompt(p);
+        if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY);
+        setInstalled(false);
+      }
     };
 
+    // (Plus d'écoute de « appinstalled » ici : cet événement arrive aussi quand on
+    // installe l'app Moftal principale, ce qui marquait à tort la gestion installée.
+    // L'installation n'est notée que si l'utilisateur accepte NOTRE demande.)
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("pwa-prompt-ready", onReady);
-    window.addEventListener("appinstalled", onInstalled);
     return () => {
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("pwa-prompt-ready", onReady);
-      window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
 
@@ -382,11 +385,28 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
     }
   };
 
-  if (installed) {
+  if (installed && dansLApp) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#166534" }}>
         ✅ Application installée
       </span>
+    );
+  }
+  if (installed) {
+    // Installée d'après ce téléphone, mais on est dans le navigateur : on le dit
+    // sans l'affirmer, et on laisse la possibilité de réinstaller.
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#166534" }}>
+          ✅ Installée sur ce téléphone — ouvrez-la depuis votre écran d'accueil.
+        </span>
+        <button
+          onClick={() => { if (STORAGE_KEY) localStorage.removeItem(STORAGE_KEY); setInstalled(false); }}
+          style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, color: "#2563eb", fontSize: 12, textDecoration: "underline", cursor: "pointer" }}
+        >
+          Elle n'est pas sur l'écran d'accueil ? L'installer
+        </button>
+      </div>
     );
   }
 
