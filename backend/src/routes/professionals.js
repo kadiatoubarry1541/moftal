@@ -797,9 +797,11 @@ router.get('/admin/tenants', authenticate, requireAdmin, async (req, res) => {
 router.get('/admin/all', authenticate, requireAdminOrSectorAdmin, async (req, res) => {
   try {
     const { type, status } = req.query;
-    const where = { isActive: true };
+    // « desactives » : comptes désactivés (ancienne suppression), pour pouvoir
+    // les supprimer définitivement depuis l'admin
+    const where = { isActive: status !== 'desactives' };
     if (type) where.type = type;
-    if (status) where.status = status;
+    if (status && status !== 'desactives') where.status = status;
     if (req.managedSectors && req.managedSectors.length > 0) {
       const types = getProTypesForSectors(req.managedSectors);
       where.type = types.length === 1 ? types[0] : { [Op.in]: types };
@@ -1073,6 +1075,84 @@ router.delete('/admin/:id', authenticate, requireAdmin, async (req, res) => {
     res.json({ success: true, message: `Compte « ${account.name} » supprimé` });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// DELETE /api/professionals/admin/:id/definitif — suppression DÉFINITIVE (admin)
+// Le compte pro, sa gestion interne et toutes ses données (patients, élèves,
+// ventes, publications, rendez-vous, membres, portefeuille…) sont effacés de la
+// base, comme s'il n'avait jamais existé ; son nom redevient libre.
+// Les tables concernées sont trouvées dans la base elle-même (colonne tenant_code
+// ou identifiant du compte) : une gestion ajoutée plus tard est couverte aussi.
+// Tout se fait en une transaction : en cas d'erreur, rien n'est supprimé.
+router.delete('/admin/:id/definitif', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte introuvable (déjà supprimé ?).' });
+    const code = account.tenant_code || null;
+    if (code && code.startsWith('DEMO-')) {
+      return res.status(400).json({ success: false, message: 'Les espaces de démonstration ne peuvent pas être supprimés.' });
+    }
+
+    // Argent Moftal Pay encore dû au pro : on prévient avant de l'effacer
+    const [wallet] = await sequelize.query(
+      `SELECT solde FROM professional_wallets WHERE pro_account_id = :id LIMIT 1`,
+      { replacements: { id: account.id }, type: sequelize.QueryTypes.SELECT }
+    ).catch(() => []);
+    const solde = +(wallet?.solde || 0);
+    if (solde > 0 && req.query.confirmerSolde !== '1') {
+      return res.status(409).json({ success: false, solde, message: `Ce compte a encore ${solde.toLocaleString('fr-FR')} GNF sur son portefeuille Moftal Pay.` });
+    }
+
+    const colonnes = await sequelize.query(
+      `SELECT table_name, column_name FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND column_name IN ('tenant_code', 'professional_account_id', 'pro_account_id')
+         AND table_name NOT IN ('professional_accounts', 'management_tenants')`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+
+    // Ordre : une table qui en référence une autre (rendez-vous → patient) est
+    // vidée avant elle, sinon PostgreSQL refuse la suppression.
+    const liens = await sequelize.query(
+      `SELECT conrelid::regclass::text AS enfant, confrelid::regclass::text AS parent
+       FROM pg_constraint WHERE contype = 'f' AND conrelid <> confrelid`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    const tables = [...new Set(colonnes.map(c => c.table_name))];
+    const restantes = new Set(tables);
+    const ordre = [];
+    while (restantes.size) {
+      const libres = [...restantes].filter(t => !liens.some(l => l.parent === t && l.enfant !== t && restantes.has(l.enfant)));
+      const lot = libres.length ? libres : [...restantes]; // cycle : on garde l'ordre restant
+      for (const t of lot) { ordre.push(t); restantes.delete(t); }
+    }
+    colonnes.sort((a, b) => ordre.indexOf(a.table_name) - ordre.indexOf(b.table_name));
+
+    const supprimees = {};
+    await sequelize.transaction(async (transaction) => {
+      for (const { table_name, column_name } of colonnes) {
+        const valeur = column_name === 'tenant_code' ? code : account.id;
+        if (!valeur) continue;
+        const [, meta] = await sequelize.query(
+          `DELETE FROM "${table_name}" WHERE "${column_name}"::text = :valeur`,
+          { replacements: { valeur: String(valeur) }, transaction }
+        );
+        const n = meta?.rowCount || 0;
+        if (n) supprimees[table_name] = (supprimees[table_name] || 0) + n;
+      }
+      await sequelize.query(
+        `DELETE FROM management_tenants WHERE professional_account_id::text = :id${code ? ' OR tenant_code = :code' : ''}`,
+        { replacements: { id: String(account.id), code }, transaction }
+      );
+      await account.destroy({ transaction });
+    });
+
+    console.log(`🗑️ Compte pro supprimé définitivement : « ${account.name} » (${account.id}) par ${req.userId}`, supprimees);
+    res.json({ success: true, message: `« ${account.name} » a été supprimé définitivement. Son nom est de nouveau libre.`, supprimees });
+  } catch (error) {
+    console.error('Suppression définitive compte pro:', error);
+    res.status(500).json({ success: false, message: `Suppression impossible, rien n'a été effacé : ${error.message}` });
   }
 });
 

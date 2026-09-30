@@ -424,22 +424,42 @@ export default function AdminDashboard() {
     }
   };
 
-  // Supprimer un compte professionnel (admin) : il disparaît partout, sa gestion
-  // interne et son site client sont désactivés, son nom redevient libre.
+  // Supprimer DÉFINITIVEMENT un compte professionnel (admin) : le compte, sa
+  // gestion interne et toutes ses données sont effacés de la base, il disparaît
+  // de l'espace de la personne et son nom redevient libre. Irréversible : on fait
+  // retaper le nom pour éviter une erreur de clic.
   const handleDeletePro = async (id: string, name: string) => {
-    if (!window.confirm(`Supprimer le compte professionnel « ${name} » ?\n\nIl disparaîtra des listes, son espace, sa gestion interne et son site client seront fermés.`)) return;
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/api/professionals/admin/${id}`, {
+    const saisi = window.prompt(
+      `SUPPRESSION DÉFINITIVE de « ${name} »\n\n` +
+      `Le compte, sa gestion interne, sa vitrine et TOUTES ses données (clients, patients, élèves, ventes, rendez-vous, publications…) seront effacés de la base. ` +
+      `Il disparaîtra de l'espace de la personne et le nom redeviendra libre.\n\nCette action est irréversible.\n\nPour confirmer, tapez le nom du compte :`
+    );
+    if (saisi === null) return;
+    if (saisi.trim().toLowerCase() !== (name || "").trim().toLowerCase()) {
+      alert("Le nom tapé ne correspond pas : rien n'a été supprimé.");
+      return;
+    }
+    const token = localStorage.getItem("token");
+    const supprimer = async (confirmerSolde: boolean) => {
+      const res = await fetch(`${API_BASE}/api/professionals/admin/${id}/definitif${confirmerSolde ? "?confirmerSolde=1" : ""}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json().catch(() => ({}));
+      return { res, data: await res.json().catch(() => ({})) };
+    };
+    try {
+      let { res, data } = await supprimer(false);
+      // Argent encore sur le portefeuille Moftal Pay : deuxième confirmation
+      if (res.status === 409 && data.solde) {
+        if (!window.confirm(`${data.message}\n\nCet argent sera effacé avec le compte. Supprimer quand même ?`)) return;
+        ({ res, data } = await supprimer(true));
+      }
       if (res.ok && data.success) {
+        alert(data.message || "Compte supprimé définitivement.");
         loadPendingPros();
         loadAllPros(proFilter);
       } else {
-        alert(data.message || "La suppression a échoué.");
+        alert(data.message || "La suppression a échoué : rien n'a été effacé.");
       }
     } catch {
       alert("Erreur de connexion : le compte n'a pas été supprimé.");
@@ -1150,7 +1170,7 @@ export default function AdminDashboard() {
                   >
                     🔍 Vérifier expirations
                   </button>
-                  {["pending", "approved", "rejected", "all"].map((f) => (
+                  {["pending", "approved", "rejected", "all", "desactives"].map((f) => (
                     <button
                       key={f}
                       onClick={() => {
@@ -1167,6 +1187,8 @@ export default function AdminDashboard() {
                         ? "Approuvés"
                         : f === "rejected"
                         ? "Rejetés"
+                        : f === "desactives"
+                        ? "Désactivés"
                         : "Tous"}
                     </button>
                   ))}
@@ -1369,9 +1391,9 @@ export default function AdminDashboard() {
                         <button
                           onClick={() => handleDeletePro(pro.id, pro.name)}
                           className="min-h-[36px] px-3 py-1.5 bg-white hover:bg-red-50 text-red-700 border border-red-300 text-xs font-semibold rounded-lg transition-colors"
-                          title="Supprimer ce compte professionnel"
+                          title="Supprimer définitivement ce compte professionnel et toutes ses données"
                         >
-                          🗑️ Supprimer
+                          🗑️ Supprimer définitivement
                         </button>
                       </div>
                     </div>
