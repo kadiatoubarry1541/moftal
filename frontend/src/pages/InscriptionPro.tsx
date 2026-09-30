@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LogoPicker from "../components/LogoPicker";
 import { normaliserLogo } from "../utils/logoImage";
@@ -208,6 +208,20 @@ export default function InscriptionPro() {
   };
   const [justificatifFileName, setJustificatifFileName] = useState("");
   const [showLogoPicker, setShowLogoPicker] = useState(false);
+  // Logo en place à l'ouverture du générateur (rendu si on annule)
+  const logoAvantPicker = useRef("");
+  // Seule la dernière conversion compte (le générateur envoie chaque modification)
+  const logoPickerSeq = useRef(0);
+  const appliquerLogoGenere = (dataUrl: string) => {
+    const seq = ++logoPickerSeq.current;
+    normaliserLogo(dataUrl)
+      .then(logo => {
+        if (seq !== logoPickerSeq.current) return;
+        setForm(f => ({ ...f, mediaUrl: logo }));
+        setError(e => (e.includes("logo") ? "" : e));
+      })
+      .catch(err => { if (seq === logoPickerSeq.current) setError(err.message); });
+  };
 
   // Types Échanges qui nécessitent un sous-secteur
   const NEEDS_SUBSECTOR = ["vendor", "supplier", "producer"];
@@ -537,6 +551,7 @@ export default function InscriptionPro() {
                     const file = e.target.files?.[0];
                     if (!file) { setForm(f => ({ ...f, mediaUrl: "" })); return; }
                     setError("");
+                    logoPickerSeq.current++; // un fichier importé remplace le logo généré
                     // Converti en PNG 512 px : aperçu garanti, et icône d'app valable sur tous les téléphones
                     normaliserLogo(file)
                       .then(logo => setForm(f => ({ ...f, mediaUrl: logo })))
@@ -547,7 +562,10 @@ export default function InscriptionPro() {
                 {selectedType && (
                   <button
                     type="button"
-                    onClick={() => setShowLogoPicker(v => !v)}
+                    onClick={() => {
+                      if (!showLogoPicker) logoAvantPicker.current = form.mediaUrl;
+                      setShowLogoPicker(v => !v);
+                    }}
                     className="min-h-[44px] px-4 py-2.5 rounded-lg border-2 border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-semibold whitespace-nowrap transition-colors"
                   >
                     🎨 Choisir un logo
@@ -568,12 +586,16 @@ export default function InscriptionPro() {
                   color={LOGO_COLORS[selectedType] || "#f59e0b"}
                   defaultText={form.name.trim() || PRO_TYPES.find(pt => pt.id === selectedType)?.label || ""}
                   matchText={form.description}
-                  onCancel={() => setShowLogoPicker(false)}
+                  onCancel={() => {
+                    // Annuler : on remet le logo qu'il y avait avant d'ouvrir le générateur
+                    logoPickerSeq.current++;
+                    setForm(f => ({ ...f, mediaUrl: logoAvantPicker.current }));
+                    setShowLogoPicker(false);
+                  }}
+                  onChange={appliquerLogoGenere}
                   onConfirm={dataUrl => {
                     setShowLogoPicker(false);
-                    normaliserLogo(dataUrl)
-                      .then(logo => setForm(f => ({ ...f, mediaUrl: logo })))
-                      .catch(err => setError(err.message));
+                    appliquerLogoGenere(dataUrl);
                   }}
                 />
               )}
@@ -583,7 +605,7 @@ export default function InscriptionPro() {
                     <img src={form.mediaUrl} alt="Aperçu logo" className="w-full h-full object-contain" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-green-700">✅ Logo chargé</p>
+                    <p className="text-xs font-semibold text-green-700">✅ {showLogoPicker ? "Logo retenu — il suit vos modifications" : "Logo chargé"}</p>
                     <p className="text-xs text-gray-500">Voici comment votre icône apparaîtra sur l'écran d'accueil</p>
                   </div>
                 </div>
@@ -829,6 +851,8 @@ export default function InscriptionPro() {
             )}
           </div>
 
+          {/* L'erreur aussi à côté du bouton : sur téléphone, le haut du formulaire n'est pas visible */}
+          {error && <div className="mt-6 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm font-semibold">⚠️ {error}</div>}
           <button type="submit" disabled={loading}
             className={`mt-6 w-full min-h-[44px] px-6 py-3 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors shadow-sm ${
               selectedType === "restaurant" ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"
