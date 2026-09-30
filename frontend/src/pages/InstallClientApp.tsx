@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DynamicAppManifest from "../components/DynamicAppManifest";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -160,11 +161,7 @@ export default function InstallClientApp() {
               style={{ background: `linear-gradient(135deg, ${typeInfo.color}, ${typeInfo.color}cc)` }}
             >
               <div className="w-24 h-24 rounded-2xl overflow-hidden bg-white/20 backdrop-blur mx-auto mb-4 flex items-center justify-center shadow-lg border-4 border-white/40">
-                {pro.photo ? (
-                  <img src={pro.photo} alt="Logo" className="w-full h-full object-contain" />
-                ) : (
-                  <span className="text-5xl">{typeInfo.icon}</span>
-                )}
+                <LogoEtablissement src={pro.photo} name={pro.name} color={typeInfo.color} fontSize={44} />
               </div>
               <h1 className="text-white font-bold text-xl leading-tight">{pro.name}</h1>
               <p className="text-white/80 text-sm mt-1">{typeInfo.icon} {typeInfo.label}</p>

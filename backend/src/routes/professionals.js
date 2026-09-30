@@ -14,6 +14,7 @@ import {
 } from '../utils/sectorAdmin.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -105,8 +106,8 @@ async function finalizeApproval(account, approverUserId) {
     const prefix = prefixMap[account.type] || 'PRO';
     tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
     await sequelize.query(
-      `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
-      { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
+      `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, logo_url) VALUES (:code, :type, :name, :owner, :logo) ON CONFLICT (tenant_code) DO NOTHING`,
+      { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH, logo: account.photo || null } }
     );
   }
 
@@ -134,6 +135,9 @@ async function finalizeApproval(account, approverUserId) {
     isTrial: true,
     ...(tenantCode ? { tenant_code: tenantCode } : {})
   });
+
+  // Logo (et contacts) choisis à l'inscription → gestion interne et site client
+  if (tenantCode) await fillTenantsFromAccounts(tenantCode).catch(() => {});
 
   return account;
 }
@@ -172,6 +176,12 @@ router.post('/register', authenticate, async (req, res) => {
 
     if (!type || !name) {
       return res.status(400).json({ success: false, message: 'Type et nom requis' });
+    }
+    // Le logo est obligatoire : c'est lui qui représente l'établissement partout
+    // (gestion, site client, listes, icône de l'app installée).
+    const logo = typeof photo === 'string' ? photo.trim() : '';
+    if (!/^data:image\//.test(logo) && !/^https?:\/\//.test(logo)) {
+      return res.status(400).json({ success: false, message: 'Le logo de votre établissement est obligatoire.', champ: 'photo' });
     }
 
     const validTypes = [
@@ -214,7 +224,7 @@ router.post('/register', authenticate, async (req, res) => {
       email: email || '',
       services: services || [],
       specialties: specialties || [],
-      photo: photo || null,
+      photo: logo,
       justificatifDocument: (justificatifDocument && String(justificatifDocument).trim()) || null,
       planType: planType === 'full' ? 'full' : 'visibility',
       ownerNumeroH: req.userId,
@@ -738,14 +748,15 @@ router.put('/:id', authenticate, async (req, res) => {
       email: email !== undefined ? email : account.email,
       services: services !== undefined ? services : account.services,
       specialties: specialties !== undefined ? specialties : account.specialties,
-      photo: photo !== undefined ? photo : account.photo,
+      // Le logo est obligatoire : une valeur vide ne l'efface pas
+      photo: photo ? photo : account.photo,
       billingInfo: billingInfo !== undefined ? billingInfo : account.billingInfo
     });
 
     // Synchroniser management_tenants pour que la vitrine publique soit à jour
     if (account.tenant_code) {
       await sequelize.query(
-        `UPDATE management_tenants SET name=:name, description=:desc, address=:addr, phone=:phone, email=:email, logo_url=:logo WHERE tenant_code=:code`,
+        `UPDATE management_tenants SET name=:name, description=:desc, address=:addr, phone=:phone, email=:email, logo_url=COALESCE(NULLIF(:logo, ''), logo_url) WHERE tenant_code=:code`,
         { replacements: { name: account.name, desc: account.description || '', addr: account.address || '', phone: account.phone || '', email: account.email || '', logo: account.photo || null, code: account.tenant_code } }
       ).catch(() => {});
     }

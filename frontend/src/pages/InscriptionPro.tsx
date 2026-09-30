@@ -238,7 +238,14 @@ export default function InscriptionPro() {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
     if (!form.phone.trim()) { setError("Le numéro de téléphone est obligatoire."); return; }
-    // Seul le téléphone est obligatoire (avec le type de compte) : la formule,
+    // Le logo est obligatoire : il représente l'établissement partout (gestion,
+    // site client, listes, icône de l'app installée).
+    if (!form.mediaUrl.trim()) {
+      setError("Le logo de votre établissement est obligatoire : importez votre logo ou cliquez sur « Choisir un logo ».");
+      document.getElementById("champ-logo")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    // Le téléphone et le logo sont obligatoires (avec le type de compte) : la formule,
     // l'email, le nom, le justificatif et le
     // niveau d'échanges sont facultatifs à l'inscription et pourront être
     // complétés plus tard depuis le profil, pour ne pas alourdir l'inscription.
@@ -304,7 +311,7 @@ export default function InscriptionPro() {
           country: form.country.trim(),
           phone: form.phone.trim(),
           email: form.email.trim(),
-          photo: form.mediaUrl.trim() || undefined,
+          photo: form.mediaUrl.trim(),
           justificatifDocument: form.justificatifDocument.trim() || undefined,
           services,
           specialties,
@@ -517,9 +524,9 @@ export default function InscriptionPro() {
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-400"
                 placeholder={selectedType === "restaurant" ? "Décrivez votre restaurant, ambiance, spécialités..." : "Décrivez votre activité..."} />
             </div>
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2" id="champ-logo">
               <label className={labelCls}>
-                Logo de votre établissement <span className="text-gray-400 font-normal">(optionnel)</span>
+                Logo de votre établissement <span className="text-red-500">*</span>
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                 📲 Ce logo sera l'icône de votre app sur les téléphones (le vôtre et celui de vos clients). Carré recommandé.
@@ -547,9 +554,12 @@ export default function InscriptionPro() {
                   </button>
                 )}
               </div>
+              {!form.mediaUrl && error.includes("logo") && (
+                <p className="mt-1.5 text-sm font-semibold text-red-600">{error}</p>
+              )}
               {!form.mediaUrl && (
                 <p className="mt-1.5 text-xs text-gray-400">
-                  Pas encore de logo ? Cliquez sur « Choisir un logo » : vous pourrez en prendre un tout fait puis le modifier (texte, taille) en attendant de créer le vôtre.
+                  Obligatoire. Pas encore de logo ? Cliquez sur « Choisir un logo » : vous pourrez en prendre un tout fait puis le modifier (texte, taille) en attendant de créer le vôtre.
                 </p>
               )}
               {selectedType && showLogoPicker && (

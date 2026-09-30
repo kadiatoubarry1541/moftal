@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { sortByProximity, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
 import { GESTION_VITRINE_PATHS } from "../utils/gestionVitrines";
+import LogoEtablissement from "./LogoEtablissement";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -166,11 +167,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
             <div key={t.tenant_code} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800 overflow-hidden hover:shadow-lg transition-shadow flex">
               <div className="flex flex-col items-stretch w-32 sm:w-40 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
                 <div className="relative w-full h-28 sm:h-32 bg-gray-100 dark:bg-gray-700">
-                  {t.logo_url ? (
-                    <img src={t.logo_url} alt={t.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">{icon}</div>
-                  )}
+                  <LogoEtablissement src={t.logo_url} name={t.name} type={t.type} fontSize={40} />
                 </div>
                 <button
                   onClick={() => navigate(`/${vitrinePath}/${t.tenant_code}`)}
@@ -217,17 +214,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                 {/* ── COLONNE GAUCHE : PHOTO + BOUTON RDV ── */}
                 <div className="flex flex-col items-stretch w-32 sm:w-40 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
                   <div className="relative w-full h-28 sm:h-32 bg-gray-100 dark:bg-gray-700">
-                    {pro.photo ? (
-                      <img
-                        src={pro.photo}
-                        alt={pro.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">
-                        {type === "clinic" ? "🏥" : type === "school" ? "🎓" : type === "security_agency" ? "🛡️" : type === "journalist" ? "📰" : type === "supplier" ? "📦" : type === "scientist" ? "🔬" : type === "ngo" ? "🤝" : "🏢"}
-                      </div>
-                    )}
+                    <LogoEtablissement src={pro.photo} name={pro.name} type={pro.type || type} fontSize={40} />
                   </div>
                   <button
                     onClick={() => navigate(`/rendez-vous/${pro.id}`)}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -189,13 +190,14 @@ export default function PrendreRendezVous() {
         {/* Fiche établissement avant la prise de rendez-vous */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md ring-1 ring-gray-200 dark:ring-gray-700 p-5 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
-            {account.photo && (
+            {account.photo && (account.photo.startsWith("data:video") || account.photo.endsWith(".mp4") || account.photo.endsWith(".webm")) ? (
               <div className="sm:w-40 w-full">
-                {account.photo.startsWith("data:video") || account.photo.endsWith(".mp4") || account.photo.endsWith(".webm") ? (
-                  <video src={account.photo} className="w-full h-32 object-cover rounded-xl bg-black" controls />
-                ) : (
-                  <img src={account.photo} alt={account.name} className="w-full h-32 object-cover rounded-xl" />
-                )}
+                <video src={account.photo} className="w-full h-32 object-cover rounded-xl bg-black" controls />
+              </div>
+            ) : (
+              // Logo de l'établissement, en entier
+              <div className="sm:w-40 w-full h-32 rounded-xl overflow-hidden ring-1 ring-gray-200 dark:ring-gray-700">
+                <LogoEtablissement src={account.photo} name={account.name} type={account.type} fontSize={44} />
               </div>
             )}
             <div className="flex-1 space-y-1 text-sm">

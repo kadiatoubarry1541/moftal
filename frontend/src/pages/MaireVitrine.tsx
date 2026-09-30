@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
@@ -122,7 +123,7 @@ export default function MaireVitrine() {
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
-              {mairie.logo_url ? <img src={mairie.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} /> : "🏛️"}
+              <LogoEtablissement src={mairie.logo_url} name={mairie.name} fontSize={18} />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 16, color: "white", lineHeight: 1.1 }}>{mairie.name}</div>
@@ -157,7 +158,7 @@ export default function MaireVitrine() {
         <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 720, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
           <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.15)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, border: "2px solid rgba(255,255,255,0.3)" }}>
-            {mairie.logo_url ? <img src={mairie.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 20 }} /> : "🏛️"}
+            <LogoEtablissement src={mairie.logo_url} name={mairie.name} fontSize={40} />
           </div>
           <div style={{ display: "inline-block", background: "rgba(255,255,255,0.15)", borderRadius: 20, padding: "4px 16px", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 16 }}>
             Service Public · État Civil
@@ -398,7 +399,7 @@ export default function MaireVitrine() {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-              {mairie.logo_url ? <img src={mairie.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} /> : "🏛️"}
+              <LogoEtablissement src={mairie.logo_url} name={mairie.name} fontSize={18} />
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{mairie.name}</span>
           </div>

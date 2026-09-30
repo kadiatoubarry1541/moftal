@@ -29,7 +29,8 @@ export function TenantLogo({ tenantCode, logoUrl, fallback, size = 40, radius = 
   }
   return (
     <div style={{ ...box, background: "white" }}>
-      <img src={src} alt="Logo" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      {/* Le logo en entier, jamais coupé */}
+      <img src={src} alt="Logo" onError={() => setFailed(true)} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
     </div>
   );
 }

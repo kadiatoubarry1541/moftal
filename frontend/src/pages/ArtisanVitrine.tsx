@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 const COLOR     = "#92400e";
@@ -64,9 +65,7 @@ export default function ArtisanVitrine() {
         <div style={{ maxWidth:900, margin:"0 auto" }}>
           <button onClick={() => navigate(-1 as any)} style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"none", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontSize:13, fontWeight:600, marginBottom:20 }}>← Retour</button>
           <div style={{ display:"flex", alignItems:"center", gap:20 }}>
-            {artisan.logo_url
-              ? <img src={artisan.logo_url} alt="logo" style={{ width:72, height:72, borderRadius:14, objectFit:"cover", border:"3px solid rgba(255,255,255,0.3)" }} />
-              : <div style={{ width:72, height:72, borderRadius:14, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36 }}>🔧</div>}
+            <div style={{ width:72, height:72, borderRadius:14, overflow:"hidden", flexShrink:0, border:"3px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.2)" }}><LogoEtablissement src={artisan.logo_url} name={artisan.name} fontSize={34} /></div>
             <div>
               <h1 style={{ margin:0, color:"white", fontSize:26, fontWeight:800 }}>{artisan.name}</h1>
               <div style={{ color:"rgba(255,255,255,0.8)", fontSize:14, marginTop:4 }}>Artisan</div>
