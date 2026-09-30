@@ -67,8 +67,17 @@ if (process.env.DATABASE_URL) {
 // Un champ facultatif laissé vide dans un formulaire arrive « undefined » :
 // Sequelize refuse alors toute la requête (« Named replacement … has no entry »)
 // et l'enregistrement échoue. On l'enregistre simplement comme vide (NULL).
+// Sequelize ne reconnaît pas une valeur « :nom » collée à un opérateur
+// (stock-:qty, total+:m, 5*:x…) : la requête part avec « :qty » brut et
+// PostgreSQL la refuse (« syntax error at or near ":" »). Des ventes, crédits,
+// stocks et achats échouaient ainsi. On ajoute l'espace manquant (les
+// conversions « ::type » ne sont pas touchées).
+const OPERATEUR_COLLE = /([-+*/%|<])(:[A-Za-z_])/g;
 const queryOriginale = sequelize.query.bind(sequelize);
 sequelize.query = (sql, options) => {
+  if (typeof sql === 'string' && options?.replacements && !Array.isArray(options.replacements)) {
+    sql = sql.replace(OPERATEUR_COLLE, '$1 $2');
+  }
   const rep = options?.replacements;
   if (rep && typeof rep === 'object' && !Array.isArray(rep) && Object.values(rep).includes(undefined)) {
     const propres = {};
