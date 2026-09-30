@@ -300,7 +300,7 @@ export default function GestionEnseignement({ mode }: Props) {
         if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast("Frais ajouté"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "save-presence") {
-        const d = await post("/attendance", { records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
+        const d = await post("/attendance", { date: attendDate, records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
         if (d.success) { setModal(null); showToast("Présences enregistrées"); }
         else showToast(d.message || "Les présences n'ont pas été enregistrées", false);
       } else if (modal === "gen-bulletin") {

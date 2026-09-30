@@ -301,7 +301,8 @@ router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, r
     const { records, classroom_id } = req.body;
     if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ success: false, message: 'Aucune présence à enregistrer.' });
     const code = req.params.tenantCode;
-    const date = new Date().toISOString().split('T')[0];
+    // Date choisie dans la page (appel d'un autre jour), sinon aujourd'hui
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') ? req.body.date : new Date().toISOString().split('T')[0];
     // Un seul enregistrement par élève et par jour : le nouvel appel remplace l'ancien
     await sequelize.transaction(async (t) => {
       for (const r of records) {
