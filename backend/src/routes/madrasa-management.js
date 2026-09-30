@@ -118,7 +118,7 @@ router.get('/:tenantCode/director-profile', authenticate, verifyMember, async (r
   try {
     const [rows] = await sequelize.query(
       `SELECT u.numero_h, u.prenom,
-              COALESCE(u.nom_famille, u."nomFamille", '') AS nom_famille,
+              COALESCE(u.nom_famille, '') AS nom_famille,
               u.photo
        FROM management_tenants mt
        JOIN users u ON u.numero_h = mt.owner_numero_h
@@ -353,7 +353,7 @@ router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, 
 // ── Membres (accès app par numeroH) ──────────────────────────────────────────
 router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) => {
   const [members] = await sequelize.query(
-    `SELECT m.*, u.prenom || ' ' || u.nom AS nom_display
+    `SELECT m.*, COALESCE(u.prenom || ' ' || u.nom_famille, m.nom_display) AS nom_display
      FROM madrasa_members m
      LEFT JOIN users u ON u.numero_h = m.numero_h
      WHERE m.tenant_code = :tc AND m.is_active = true ORDER BY m.role, m.created_at`,

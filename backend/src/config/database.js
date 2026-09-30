@@ -64,6 +64,20 @@ if (process.env.DATABASE_URL) {
 });
 }
 
+// Un champ facultatif laissé vide dans un formulaire arrive « undefined » :
+// Sequelize refuse alors toute la requête (« Named replacement … has no entry »)
+// et l'enregistrement échoue. On l'enregistre simplement comme vide (NULL).
+const queryOriginale = sequelize.query.bind(sequelize);
+sequelize.query = (sql, options) => {
+  const rep = options?.replacements;
+  if (rep && typeof rep === 'object' && !Array.isArray(rep) && Object.values(rep).includes(undefined)) {
+    const propres = {};
+    for (const [cle, valeur] of Object.entries(rep)) propres[cle] = valeur === undefined ? null : valeur;
+    options = { ...options, replacements: propres };
+  }
+  return queryOriginale(sql, options);
+};
+
 // Fonction pour tester la connexion
 const connectDB = async () => {
   try {

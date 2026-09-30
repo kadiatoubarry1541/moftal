@@ -47,9 +47,9 @@ router.get('/my-memberships', authenticate, async (req, res) => {
 router.get('/:proAccountId/members', authenticate, verifyOwner, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT m.*, u.prenom, u.nom, u.photo
+      `SELECT m.*, u.prenom, u.nom_famille AS nom, u.photo
        FROM professional_account_members m
-       LEFT JOIN users u ON m.numero_h = u."numeroH"
+       LEFT JOIN users u ON m.numero_h = u.numero_h
        WHERE m.professional_account_id = :id AND m.is_active = true
        ORDER BY m.created_at DESC`,
       { replacements: { id: req.params.proAccountId }, type: sequelize.QueryTypes.SELECT }
@@ -63,7 +63,7 @@ router.post('/:proAccountId/members', authenticate, verifyOwner, async (req, res
     const { numeroH, role } = req.body;
     const id = req.params.proAccountId;
     const [user] = await sequelize.query(
-      `SELECT "numeroH", prenom, nom FROM users WHERE "numeroH"=:n LIMIT 1`,
+      `SELECT numero_h AS "numeroH", prenom, nom_famille AS nom FROM users WHERE numero_h=:n LIMIT 1`,
       { replacements: { n: numeroH }, type: sequelize.QueryTypes.SELECT }
     );
     if (!user) return res.status(404).json({ success: false, message: `Aucun utilisateur avec le numéroH : ${numeroH}` });
