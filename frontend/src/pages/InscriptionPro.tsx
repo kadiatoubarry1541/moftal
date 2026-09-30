@@ -807,8 +807,9 @@ export default function InscriptionPro() {
                 <span className="text-gray-400 font-normal">(optionnel, à ajouter plus tard si besoin)</span>
               </label>
               {REQUIRES_JUSTIFICATIF.includes(selectedType) && (
-                <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">
-                  💡 Recommandé pour ce type de compte : accélère la validation par l'administration.
+                // Un conseil, pas une erreur : couleur neutre
+                <p className="text-xs text-blue-700 dark:text-blue-300 mb-1">
+                  💡 Conseil : ce document aide l'équipe Moftal à vérifier votre établissement et à le publier plus vite. Vous pouvez aussi l'envoyer plus tard.
                 </p>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
