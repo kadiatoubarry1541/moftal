@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
 import { getAllLocationsForGroups } from "../utils/worldGeography";
+import { compressImage } from "../utils/compressImage";
 
 interface UserData {
   numeroH: string;
@@ -231,15 +232,19 @@ export default function EditProfileModal({
   };
 
   // Fonction pour appeler l'API (essaie URL directe, puis proxy Vite)
+  // Une coupure réseau (fréquente sur mobile) → on réessaie une fois.
   const apiFetch = async (path: string, options: RequestInit): Promise<Response> => {
     const directUrl = `${config.API_BASE_URL || "http://localhost:5002/api"}${path}`;
     try {
-      const res = await fetch(directUrl, options);
-      return res;
+      return await fetch(directUrl, options);
     } catch {
-      // Si l'appel direct échoue, essayer via le proxy Vite (/api)
-      const proxyUrl = `/api${path}`;
-      return fetch(proxyUrl, options);
+      await new Promise((r) => setTimeout(r, 1000));
+      const retryUrl = directUrl.startsWith("/api") ? directUrl : `/api${path}`;
+      try {
+        return await fetch(retryUrl, options);
+      } catch {
+        return fetch(directUrl, options);
+      }
     }
   };
 
@@ -267,7 +272,7 @@ export default function EditProfileModal({
       // 1. Mettre à jour la photo si une nouvelle a été choisie
       if (photoFile) {
         const photoFormData = new FormData();
-        photoFormData.append("photo", photoFile);
+        photoFormData.append("photo", await compressImage(photoFile));
         photoFormData.append("numeroH", formData.numeroH);
 
         const photoResponse = await apiFetch("/auth/profile/photo", {
@@ -312,14 +317,14 @@ export default function EditProfileModal({
 
       if (vitrinePhoto1File) {
         const fd = new FormData();
-        fd.append("photo", vitrinePhoto1File);
+        fd.append("photo", await compressImage(vitrinePhoto1File));
         fd.append("numeroH", formData.numeroH);
         const r = await apiFetch("/auth/profile/vitrine-photo1", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
         if (r.ok) { const d = await r.json(); uploadedVitrinePhoto1Url = d.photoUrl || uploadedVitrinePhoto1Url; }
       }
       if (vitrinePhoto2File) {
         const fd = new FormData();
-        fd.append("photo", vitrinePhoto2File);
+        fd.append("photo", await compressImage(vitrinePhoto2File));
         fd.append("numeroH", formData.numeroH);
         const r = await apiFetch("/auth/profile/vitrine-photo2", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
         if (r.ok) { const d = await r.json(); uploadedVitrinePhoto2Url = d.photoUrl || uploadedVitrinePhoto2Url; }
@@ -332,62 +337,69 @@ export default function EditProfileModal({
         if (r.ok) { const d = await r.json(); uploadedVitrineVideoUrl = d.videoUrl || uploadedVitrineVideoUrl; }
       }
 
-      // 3. Mettre à jour les informations textuelles
+      // 3. Mettre à jour les informations textuelles — seulement si l'une
+      // d'elles a changé : un profil mis à jour avec la seule photo est valide.
+      const textFields = {
+        numeroH: formData.numeroH,
+        prenom: formData.prenom,
+        nomFamille: formData.nomFamille,
+        email: formData.email,
+        telephone: formData.telephone || formData.tel1,
+        tel1: formData.telephone || formData.tel1,
+        genre: formData.genre,
+        dateNaissance: formData.dateNaissance,
+        age: formData.age,
+        generation: formData.generation,
+        ethnie: formData.ethnie,
+        region: formData.region,
+        pays: formData.pays,
+        nationalite: formData.nationalite,
+        religion: formData.religion,
+        activite1: formData.activite1,
+        activite2: formData.activite2,
+        activite3: formData.activite3,
+        specialite: formData.specialite,
+        statutMatrimonial: formData.statutMatrimonial,
+        lieu1: formData.lieu1,
+        lieu2: formData.lieu2,
+        lieu3: formData.lieu3,
+        sousPrefecture: formData.sousPrefecture,
+        numeroHPere: formData.numeroHPere,
+        numeroHMere: formData.numeroHMere,
+        languesAutre: formData.languesAutre,
+        handicap: formData.handicap,
+      };
+      const originalTel = userData?.telephone || userData?.tel1;
+      const textChanged = Object.entries(textFields).some(([k, v]) => {
+        const before = k === "telephone" || k === "tel1" ? originalTel : (userData as any)?.[k];
+        return (v ?? "") !== (before ?? "");
+      });
+
       let serverUser: any = {};
-      try {
+      if (textChanged || preuveFile) {
+        const preuve = preuveFile
+          ? await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (ev) => resolve(ev.target?.result as string);
+              reader.readAsDataURL(preuveFile);
+            })
+          : undefined;
         const response = await apiFetch("/auth/profile", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({
-            numeroH: formData.numeroH,
-            prenom: formData.prenom,
-            nomFamille: formData.nomFamille,
-            email: formData.email,
-            telephone: formData.telephone || formData.tel1,
-            tel1: formData.telephone || formData.tel1,
-            genre: formData.genre,
-            dateNaissance: formData.dateNaissance,
-            age: formData.age,
-            generation: formData.generation,
-            ethnie: formData.ethnie,
-            region: formData.region,
-            pays: formData.pays,
-            nationalite: formData.nationalite,
-            religion: formData.religion,
-            activite1: formData.activite1,
-            activite2: formData.activite2,
-            activite3: formData.activite3,
-            specialite: formData.specialite,
-            statutMatrimonial: formData.statutMatrimonial,
-            lieu1: formData.lieu1,
-            lieu2: formData.lieu2,
-            lieu3: formData.lieu3,
-            sousPrefecture: formData.sousPrefecture,
-            numeroHPere: formData.numeroHPere,
-            numeroHMere: formData.numeroHMere,
-            languesAutre: formData.languesAutre,
-            handicap: formData.handicap,
-            ...(preuveFile ? await (async () => {
-              const reader = new FileReader()
-              return new Promise<{ preuve: string }>((resolve) => {
-                reader.onload = (e) => resolve({ preuve: e.target?.result as string })
-                reader.readAsDataURL(preuveFile)
-              })
-            })() : {}),
-          }),
+          body: JSON.stringify({ ...textFields, ...(preuve ? { preuve } : {}) }),
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          serverUser = (data && data.user) ? data.user : {};
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            (data && data.message) ||
+              (photoFile ? "La photo est enregistrée, mais les autres informations n'ont pas pu l'être." : "Erreur lors de la mise à jour du profil")
+          );
         }
-      } catch {
-        // Si la mise à jour du profil échoue mais que la photo a été uploadée,
-        // on continue quand même pour sauvegarder la photo dans le localStorage
-        console.warn("Mise à jour du profil texte échouée, mais on continue avec la photo");
+        serverUser = (data && data.user) ? data.user : {};
       }
 
       // 4. Construire l'utilisateur final
@@ -431,8 +443,8 @@ export default function EditProfileModal({
       setTimeout(() => onClose(), 1500);
     } catch (err: any) {
       const msg = err.message || "";
-      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-        setError("Impossible de joindre le serveur. Vérifiez que le backend est démarré sur le port 5002.");
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("Load failed")) {
+        setError("La connexion a été coupée pendant l'envoi. Vérifiez votre connexion internet puis réessayez.");
       } else {
         setError(msg || "Une erreur est survenue");
       }

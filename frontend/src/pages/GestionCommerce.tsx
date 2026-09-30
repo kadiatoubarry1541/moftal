@@ -147,115 +147,133 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   }
 
   async function loadProducts() {
-    const r = await fetch(`${b(tenantCode!)}/products`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/products`, "GET");
     if (d.success) setProducts(d.products || []);
   }
   async function loadSales() {
-    const r = await fetch(`${b(tenantCode!)}/sales`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/sales`, "GET");
     if (d.success) setSales(d.sales || []);
   }
   async function loadClients() {
-    const r = await fetch(`${b(tenantCode!)}/clients`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/clients`, "GET");
     if (d.success) setClients(d.clients || []);
   }
   async function loadExpenses() {
-    const r = await fetch(`${b(tenantCode!)}/expenses`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/expenses`, "GET");
     if (d.success) setExpenses(d.expenses || []);
   }
   async function loadSuppliers() {
-    const r = await fetch(`${b(tenantCode!)}/suppliers`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/suppliers`, "GET");
     if (d.success) setSuppliers(d.suppliers || []);
   }
   async function loadPurchases() {
-    const r = await fetch(`${b(tenantCode!)}/purchases`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/purchases`, "GET");
     if (d.success) setPurchases(d.purchases || []);
   }
+  // Envoie au serveur et renvoie toujours une réponse lisible. En cas d'échec,
+  // on prévient et le formulaire reste ouvert : rien n'est perdu en silence.
+  async function envoyer(chemin: string, method: string, body?: any): Promise<any> {
+    try {
+      const r = await fetch(`${b(tenantCode!)}${chemin}`, { method, headers: auth(), ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
+      return await r.json().catch(() => ({ success: false, message: `Erreur du serveur (${r.status}).` }));
+    } catch {
+      return { success: false, message: "Connexion coupée : rien n'a été enregistré. Réessayez." };
+    }
+  }
+  function echec(d: any) { alert(d?.message || "Erreur : rien n'a été enregistré."); }
+
   async function saveSupplier() {
     if (!supForm.nom) return;
     setSaving(true);
-    await fetch(`${b(tenantCode!)}/suppliers`, { method: "POST", headers: auth(), body: JSON.stringify(supForm) });
-    setSaving(false); setShowAddSupplier(false); setSupForm({ nom: "", telephone: "", adresse: "" });
+    const d = await envoyer("/suppliers", "POST", supForm);
+    setSaving(false);
+    if (!d.success) return echec(d);
+    setShowAddSupplier(false); setSupForm({ nom: "", telephone: "", adresse: "" });
     loadSuppliers();
   }
   async function deleteSupplier(id: number) {
     if (!confirm("Supprimer ce fournisseur ?")) return;
-    await fetch(`${b(tenantCode!)}/suppliers/${id}`, { method: "DELETE", headers: auth() });
+    const d = await envoyer(`/suppliers/${id}`, "DELETE");
+    if (!d.success) return echec(d);
     loadSuppliers();
   }
   async function savePurchase() {
     if (!purForm.product_id || !purForm.quantite) return;
     setSaving(true);
-    await fetch(`${b(tenantCode!)}/purchases`, { method: "POST", headers: auth(), body: JSON.stringify({ ...purForm, quantite: +purForm.quantite, prix_unitaire: +purForm.prix_unitaire || 0 }) });
-    setSaving(false); setShowNewPurchase(false); setPurForm({ supplier_id: "", product_id: "", quantite: "1", prix_unitaire: "" });
+    const d = await envoyer("/purchases", "POST", { ...purForm, quantite: +purForm.quantite, prix_unitaire: +purForm.prix_unitaire || 0 });
+    setSaving(false);
+    if (!d.success) return echec(d);
+    setShowNewPurchase(false); setPurForm({ supplier_id: "", product_id: "", quantite: "1", prix_unitaire: "" });
     loadPurchases(); loadProducts();
   }
   async function loadStaff() {
-    const r = await fetch(`${b(tenantCode!)}/staff`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/staff`, "GET");
     if (d.success) setStaff(d.staff || []);
   }
   async function loadReviews() {
-    const r = await fetch(`${b(tenantCode!)}/reviews`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/reviews`, "GET");
     if (d.success) setReviews(d.reviews || []);
   }
   async function saveStaff() {
     if (!stForm.nom) return;
     setSaving(true);
-    const url = editStaff ? `${b(tenantCode!)}/staff/${editStaff.id}` : `${b(tenantCode!)}/staff`;
-    const method = editStaff ? "PUT" : "POST";
-    await fetch(url, { method, headers: auth(), body: JSON.stringify(stForm) });
-    setSaving(false); setShowAddStaff(false); setEditStaff(null);
+    const d = await envoyer(editStaff ? `/staff/${editStaff.id}` : "/staff", editStaff ? "PUT" : "POST", stForm);
+    setSaving(false);
+    if (!d.success) return echec(d);
+    setShowAddStaff(false); setEditStaff(null);
     setStForm({ nom: "", telephone: "", role: "Caissier", numero_h: "" });
     loadStaff();
   }
   async function deleteStaff(id: number) {
     if (!confirm("Retirer ce membre du personnel ?")) return;
-    await fetch(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() });
+    const d = await envoyer(`/staff/${id}`, "DELETE");
+    if (!d.success) return echec(d);
     loadStaff();
   }
   async function approveReview(id: number) {
-    await fetch(`${b(tenantCode!)}/reviews/${id}`, { method: "PUT", headers: auth(), body: JSON.stringify({ statut: "approuve" }) });
+    const d = await envoyer(`/reviews/${id}`, "PUT", { statut: "approuve" });
+    if (!d.success) return echec(d);
     setReviews(rs => rs.map(r => r.id === id ? { ...r, statut: "approuve" } : r));
   }
   async function deleteReview(id: number) {
     if (!confirm("Supprimer cet avis ?")) return;
-    await fetch(`${b(tenantCode!)}/reviews/${id}`, { method: "DELETE", headers: auth() });
+    const d = await envoyer(`/reviews/${id}`, "DELETE");
+    if (!d.success) return echec(d);
     setReviews(rs => rs.filter(r => r.id !== id));
   }
 
   async function saveProduct() {
     if (!pForm.nom || !pForm.prix_vente) return;
     setSaving(true);
-    const url = editProduct ? `${b(tenantCode!)}/products/${editProduct.id}` : `${b(tenantCode!)}/products`;
-    const method = editProduct ? "PUT" : "POST";
-    await fetch(url, { method, headers: auth(), body: JSON.stringify({ ...pForm, prix_vente: +pForm.prix_vente, prix_achat: +pForm.prix_achat, stock: +pForm.stock, stock_min: +pForm.stock_min }) });
-    setSaving(false); setShowAddProduct(false); setEditProduct(null);
+    const d = await envoyer(editProduct ? `/products/${editProduct.id}` : "/products", editProduct ? "PUT" : "POST",
+      { ...pForm, prix_vente: +pForm.prix_vente, prix_achat: +pForm.prix_achat || 0, stock: +pForm.stock || 0, stock_min: +pForm.stock_min || 0 });
+    setSaving(false);
+    if (!d.success) return echec(d);
+    setShowAddProduct(false); setEditProduct(null);
     setPForm({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce", code_barre: "", photo_url: "" });
     loadProducts();
   }
   async function updateStock(id: number, delta: number) {
-    await fetch(`${b(tenantCode!)}/products/${id}/stock`, { method: "PUT", headers: auth(), body: JSON.stringify({ delta }) });
+    const res = await envoyer(`/products/${id}/stock`, "PUT", { delta });
+    if (!res.success) return echec(res);
     loadProducts();
-    const r = await fetch(`${b(tenantCode!)}/dashboard`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/dashboard`, "GET");
     if (d.success) setDash(d);
   }
   async function saveSale() {
     const items = sForm.items.filter(i => i.nom && i.prix_unitaire);
     if (!items.length) return;
+    // Vente à crédit : il faut savoir à qui
+    if (sForm.est_credit && !sForm.client_nom.trim()) { alert("Indiquez le nom du client pour une vente à crédit."); return; }
     setSaving(true);
     const brut = items.reduce((s, i) => s + +i.prix_unitaire * +i.quantite, 0);
     const net = Math.max(0, brut - (+sForm.remise || 0));
-    const body: any = { ...sForm, remise: +sForm.remise || 0, items: items.map(i => ({ ...i, prix_unitaire: +i.prix_unitaire, quantite: +i.quantite })), montant_recu: sForm.montant_recu ? +sForm.montant_recu : net };
-    await fetch(`${b(tenantCode!)}/sales`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    setSaving(false); setShowNewSale(false); setBarcodeInput("");
+    const body: any = { ...sForm, remise: +sForm.remise || 0, items: items.map(i => ({ ...i, prix_unitaire: +i.prix_unitaire, quantite: +i.quantite })), montant_recu: sForm.montant_recu !== "" ? +sForm.montant_recu : (sForm.est_credit ? 0 : net) };
+    const d = await envoyer("/sales", "POST", body);
+    setSaving(false);
+    // Vente refusée ou connexion coupée : on garde le panier pour réessayer
+    if (!d.success) return echec(d);
+    setShowNewSale(false); setBarcodeInput("");
     setSForm({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", remise: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] });
     loadSales(); loadAll(); loadProducts();
   }
@@ -275,28 +293,33 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   async function saveClient() {
     if (!cForm.nom) return;
     setSaving(true);
-    await fetch(`${b(tenantCode!)}/clients`, { method: "POST", headers: auth(), body: JSON.stringify(cForm) });
-    setSaving(false); setShowAddClient(false); setCForm({ nom: "", telephone: "", adresse: "" });
+    const d = await envoyer("/clients", "POST", cForm);
+    setSaving(false);
+    if (!d.success) return echec(d);
+    setShowAddClient(false); setCForm({ nom: "", telephone: "", adresse: "" });
     loadClients();
   }
   async function payCredit(id: number) {
     const m = prompt("Montant à rembourser (GNF) :");
     if (!m) return;
-    await fetch(`${b(tenantCode!)}/clients/${id}/pay-credit`, { method: "PUT", headers: auth(), body: JSON.stringify({ montant: +m }) });
+    if (!(+m > 0)) { alert("Montant invalide."); return; }
+    const d = await envoyer(`/clients/${id}/pay-credit`, "PUT", { montant: +m });
+    if (!d.success) return echec(d);
     loadClients();
   }
   async function saveExpense() {
     if (!eForm.description || !eForm.montant) return;
     setSaving(true);
-    const url = editExpense ? `${b(tenantCode!)}/expenses/${editExpense.id}` : `${b(tenantCode!)}/expenses`;
-    const method = editExpense ? "PUT" : "POST";
-    await fetch(url, { method, headers: auth(), body: JSON.stringify(eForm) });
-    setSaving(false); setShowAddExpense(false); setEditExpense(null); setEForm({ description: "", montant: "", categorie: "Transport" });
+    const d = await envoyer(editExpense ? `/expenses/${editExpense.id}` : "/expenses", editExpense ? "PUT" : "POST", eForm);
+    setSaving(false);
+    if (!d.success) return echec(d);
+    setShowAddExpense(false); setEditExpense(null); setEForm({ description: "", montant: "", categorie: "Transport" });
     loadExpenses(); loadAll();
   }
   async function deleteExpense(id: number) {
     if (!confirm("Supprimer cette dépense ?")) return;
-    await fetch(`${b(tenantCode!)}/expenses/${id}`, { method: "DELETE", headers: auth() });
+    const d = await envoyer(`/expenses/${id}`, "DELETE");
+    if (!d.success) return echec(d);
     loadExpenses(); loadAll();
   }
   async function importProductsCsv(file: File) {
@@ -311,41 +334,40 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       nom: r[iNom], categorie: iCat >= 0 ? r[iCat] : "", prix_vente: iPv >= 0 ? r[iPv] : 0, prix_achat: iPa >= 0 ? r[iPa] : 0,
       stock: iStk >= 0 ? r[iStk] : 0, stock_min: iSmin >= 0 ? r[iSmin] : 5, unite: iU >= 0 ? r[iU] : "pièce",
     })).filter(p => p.nom);
-    const res = await fetch(`${b(tenantCode!)}/products/import`, { method: "POST", headers: auth(), body: JSON.stringify({ products }) });
-    const d = await res.json();
+    const d = await envoyer("/products/import", "POST", { products });
     if (d.success) { alert(`${d.count} article(s) importé(s) avec succès.`); loadProducts(); }
     else alert(d.message || "Erreur lors de l'import.");
   }
   async function deleteProduct(id: number) {
     if (!confirm("Supprimer cet article ? Il disparaîtra de votre catalogue et de la vitrine.")) return;
-    await fetch(`${b(tenantCode!)}/products/${id}`, { method: "DELETE", headers: auth() });
+    const d = await envoyer(`/products/${id}`, "DELETE");
+    if (!d.success) return echec(d);
     loadProducts();
   }
   async function openMovements(product: any) {
     setMovementsFor(product);
-    const r = await fetch(`${b(tenantCode!)}/products/${product.id}/movements`, { headers: auth() });
-    const d = await r.json();
+    const d = await envoyer(`/products/${product.id}/movements`, "GET");
     if (d.success) setMovements(d.movements || []);
   }
   async function saveClientEdit() {
     if (!editClient?.nom) return;
     setSaving(true);
-    await fetch(`${b(tenantCode!)}/clients/${editClient.id}`, { method: "PUT", headers: auth(), body: JSON.stringify(editClient) });
-    setSaving(false); setEditClient(null);
+    const d = await envoyer(`/clients/${editClient.id}`, "PUT", editClient);
+    setSaving(false);
+    if (!d.success) return echec(d);
+    setEditClient(null);
     loadClients();
   }
   async function deleteClient(id: number) {
     if (!confirm("Supprimer ce client ?")) return;
-    const r = await fetch(`${b(tenantCode!)}/clients/${id}`, { method: "DELETE", headers: auth() });
-    const d = await r.json();
-    if (!d.success) { alert(d.message || "Erreur"); return; }
+    const d = await envoyer(`/clients/${id}`, "DELETE");
+    if (!d.success) return echec(d);
     loadClients();
   }
   async function cancelSale(id: number) {
     if (!confirm("Annuler cette vente ? Le stock sera restauré et le crédit client ajusté.")) return;
-    const r = await fetch(`${b(tenantCode!)}/sales/${id}`, { method: "DELETE", headers: auth() });
-    const d = await r.json();
-    if (!d.success) { alert(d.message || "Erreur"); return; }
+    const d = await envoyer(`/sales/${id}`, "DELETE");
+    if (!d.success) return echec(d);
     loadSales(); loadAll(); loadProducts();
   }
   function printSaleReceipt(s: any) {
@@ -385,9 +407,9 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
   async function saveSettings() {
     setSettingsSaving(true);
     try {
-      const r = await fetch(`${b(tenantCode!)}/settings`, { method: "PUT", headers: auth(), body: JSON.stringify(settingsForm) });
-      const d = await r.json();
-      if (d.success) setTenant(d.tenant);
+      const d = await envoyer("/settings", "PUT", settingsForm);
+      if (d.success) { setTenant(d.tenant); alert("Paramètres enregistrés."); }
+      else echec(d);
     } finally { setSettingsSaving(false); }
   }
 
@@ -455,7 +477,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#f8fafc", borderRadius: 10, padding: 4, overflowX: "auto" }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ flex: 1, minWidth: 80, padding: "8px 4px", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 700 : 500, background: tab === t.id ? "white" : "transparent", color: tab === t.id ? COLOR : "#64748b", boxShadow: tab === t.id ? "0 1px 4px rgba(0,0,0,0.1)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
+            style={{ flex: "1 0 auto", minWidth: 80, padding: "8px 10px", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 700 : 500, background: tab === t.id ? "white" : "transparent", color: tab === t.id ? COLOR : "#64748b", boxShadow: tab === t.id ? "0 1px 4px rgba(0,0,0,0.1)" : "none", transition: "all 0.15s", whiteSpace: "nowrap" }}>
             {t.icon} {t.label}
           </button>
         ))}

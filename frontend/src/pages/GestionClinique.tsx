@@ -408,6 +408,8 @@ export default function GestionClinique() {
         if (d.success) { setInvoices(p => [d.invoice, ...p]); setModal(null); setForm({}); showToast("Facture créée"); }
         else showToast(d.message || "Erreur", false);
       }
+    } catch {
+      showToast("Connexion coupée : rien n'a été enregistré. Réessayez.", false);
     } finally { setSaving(false); }
   };
 
@@ -781,7 +783,7 @@ export default function GestionClinique() {
                               const d = await get(`/records?patient_id=${p.id}`);
                               if (d.success) setHistoryRecords(d.records);
                             }} style={{ color: TEAL_DARK, background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📈 Historique</button>
-                            <button onClick={async () => { if (confirm(`Supprimer le dossier de ${p.prenom} ${p.nom} ?`)) { await del(`/patients/${p.id}`); setPatients(ps => ps.filter(x => x.id !== p.id)); showToast("Patient supprimé"); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
+                            <button onClick={async () => { if (confirm(`Supprimer le dossier de ${p.prenom} ${p.nom} ?`)) { const d = await del(`/patients/${p.id}`); if (d.success) { setPatients(ps => ps.filter(x => x.id !== p.id)); showToast("Patient supprimé"); } else showToast(d.message || "Erreur", false); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
                           </div>
                         </td>
                       </tr>
@@ -818,7 +820,7 @@ export default function GestionClinique() {
                       {s.email      && <div>✉ {s.email}</div>}
                       {s.matricule  && <div style={{ fontFamily: "monospace", color: "#94a3b8", fontSize: 11 }}>{s.matricule}</div>}
                     </div>
-                    <button onClick={async () => { if (confirm(`Retirer ${s.prenom} ${s.nom} du personnel ?`)) { await del(`/staff/${s.id}`); setStaff(ss => ss.filter(x => x.id !== s.id)); showToast("Personnel retiré"); }}} style={{ marginTop: 14, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, padding: "4px 10px" }}>Retirer</button>
+                    <button onClick={async () => { if (confirm(`Retirer ${s.prenom} ${s.nom} du personnel ?`)) { const d = await del(`/staff/${s.id}`); if (d.success) { setStaff(ss => ss.filter(x => x.id !== s.id)); showToast("Personnel retiré"); } else showToast(d.message || "Erreur", false); }}} style={{ marginTop: 14, color: "#ef4444", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, padding: "4px 10px" }}>Retirer</button>
                   </div>
                 );
               })}
@@ -867,8 +869,9 @@ export default function GestionClinique() {
                               else showToast(d.message || "Erreur", false);
                             }} style={{ padding: "6px 12px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>Créer RDV</button>
                             <button onClick={async () => {
-                              await put(`/appointment-requests/${r.id}/reject`, {});
-                              setAppointmentRequests(rs => rs.map(x => x.id === r.id ? { ...x, statut: "rejetee" } : x));
+                              const d = await put(`/appointment-requests/${r.id}/reject`, {});
+                              if (d.success) setAppointmentRequests(rs => rs.map(x => x.id === r.id ? { ...x, statut: "rejetee" } : x));
+                              else showToast(d.message || "Erreur", false);
                             }} style={{ padding: "6px 12px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Rejeter</button>
                           </div>
                         ) : (
@@ -922,13 +925,13 @@ export default function GestionClinique() {
                         <td style={{ padding: "11px 16px" }}>
                           <div style={{ display: "flex", gap: 4 }}>
                             {a.statut !== "confirmed" && a.statut !== "done" && (
-                              <button onClick={async () => { await put(`/appointments/${a.id}`, { statut: "confirmed" }); setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "confirmed" } : x)); showToast("RDV confirmé"); }} style={{ padding: "4px 8px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Confirmer</button>
+                              <button onClick={async () => { const d = await put(`/appointments/${a.id}`, { statut: "confirmed" }); if (d.success) { setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "confirmed" } : x)); showToast("RDV confirmé"); } else showToast(d.message || "Erreur", false); }} style={{ padding: "4px 8px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Confirmer</button>
                             )}
                             {a.statut === "confirmed" && (
-                              <button onClick={async () => { await put(`/appointments/${a.id}`, { statut: "done" }); setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "done" } : x)); showToast("RDV terminé"); }} style={{ padding: "4px 8px", background: "#eff6ff", color: "#0369a1", border: "1px solid #bfdbfe", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Terminé</button>
+                              <button onClick={async () => { const d = await put(`/appointments/${a.id}`, { statut: "done" }); if (d.success) { setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "done" } : x)); showToast("RDV terminé"); } else showToast(d.message || "Erreur", false); }} style={{ padding: "4px 8px", background: "#eff6ff", color: "#0369a1", border: "1px solid #bfdbfe", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Terminé</button>
                             )}
                             {a.statut !== "cancelled" && a.statut !== "done" && (
-                              <button onClick={async () => { await put(`/appointments/${a.id}`, { statut: "cancelled" }); setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "cancelled" } : x)); showToast("RDV annulé"); }} style={{ padding: "4px 8px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Annuler</button>
+                              <button onClick={async () => { const d = await put(`/appointments/${a.id}`, { statut: "cancelled" }); if (d.success) { setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "cancelled" } : x)); showToast("RDV annulé"); } else showToast(d.message || "Erreur", false); }} style={{ padding: "4px 8px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Annuler</button>
                             )}
                           </div>
                         </td>
@@ -1075,7 +1078,7 @@ export default function GestionClinique() {
                             : <span style={{ color: "#94a3b8" }}>—</span>}
                         </td>
                         <td style={{ padding: "11px 16px" }}>
-                          <button onClick={async () => { if (confirm("Supprimer cette entrée du carnet de vaccination ?")) { await del(`/vaccinations/${v.id}`); setVaccinations(vs => vs.filter(x => x.id !== v.id)); showToast("Entrée supprimée"); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
+                          <button onClick={async () => { if (confirm("Supprimer cette entrée du carnet de vaccination ?")) { const d = await del(`/vaccinations/${v.id}`); if (d.success) { setVaccinations(vs => vs.filter(x => x.id !== v.id)); showToast("Entrée supprimée"); } else showToast(d.message || "Erreur", false); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Supprimer</button>
                         </td>
                       </tr>
                     );
@@ -1147,7 +1150,7 @@ export default function GestionClinique() {
                         <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: occupe ? "#fef2f2" : "#f0fdf0", color: occupe ? "#ef4444" : "#1a8f1a" }}>{occupe ? "Occupé" : "Libre"}</span>
                         {!occupe && (
                           <div style={{ marginTop: 8 }}>
-                            <button onClick={async () => { if (confirm(`Supprimer ${b.numero} ?`)) { await del(`/beds/${b.id}`); setBeds(bs => bs.filter(x => x.id !== b.id)); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
+                            <button onClick={async () => { if (confirm(`Supprimer ${b.numero} ?`)) { const d = await del(`/beds/${b.id}`); if (d.success) { setBeds(bs => bs.filter(x => x.id !== b.id)); } else showToast(d.message || "Erreur", false); }}} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
                           </div>
                         )}
                       </div>
@@ -1183,9 +1186,9 @@ export default function GestionClinique() {
                       </div>
                       <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                         {r.statut === "en_attente" && (
-                          <button onClick={async () => { await put(`/reviews/${r.id}`, { statut: "approuve" }); setReviews(rs => rs.map(x => x.id === r.id ? { ...x, statut: "approuve" } : x)); }} style={{ padding: "5px 12px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approuver</button>
+                          <button onClick={async () => { const d = await put(`/reviews/${r.id}`, { statut: "approuve" }); if (d.success) { setReviews(rs => rs.map(x => x.id === r.id ? { ...x, statut: "approuve" } : x)); } else showToast(d.message || "Erreur", false); }} style={{ padding: "5px 12px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Approuver</button>
                         )}
-                        <button onClick={async () => { if (confirm("Supprimer cet avis ?")) { await del(`/reviews/${r.id}`); setReviews(rs => rs.filter(x => x.id !== r.id)); }}} style={{ padding: "5px 12px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
+                        <button onClick={async () => { if (confirm("Supprimer cet avis ?")) { const d = await del(`/reviews/${r.id}`); if (d.success) { setReviews(rs => rs.filter(x => x.id !== r.id)); } else showToast(d.message || "Erreur", false); }}} style={{ padding: "5px 12px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
                       </div>
                       {r.statut === "en_attente" && <span style={{ padding: "2px 8px", background: "#fffbeb", color: "#d97706", borderRadius: 20, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>En attente</span>}
                     </div>
@@ -1422,7 +1425,7 @@ export default function GestionClinique() {
                             <td style={{ padding: "11px 14px" }}>
                               <div style={{ display: "flex", gap: 6 }}>
                                 <button onClick={() => { setForm({ ...m }); setModal("edit-stock"); }} style={{ padding: "4px 10px", background: "#eff6ff", color: "#0369a1", border: "1px solid #bfdbfe", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Modifier</button>
-                                <button onClick={async () => { if (confirm(`Supprimer ${m.nom} du stock ?`)) { await del(`/pharmacy/stock/${m.id}`); reloadPharmacy(); showToast("Médicament supprimé"); }}} style={{ padding: "4px 10px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
+                                <button onClick={async () => { if (confirm(`Supprimer ${m.nom} du stock ?`)) { const d = await del(`/pharmacy/stock/${m.id}`); if (d.success) { reloadPharmacy(); showToast("Médicament supprimé"); } else showToast(d.message || "Erreur", false); }}} style={{ padding: "4px 10px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Supprimer</button>
                               </div>
                             </td>
                           </tr>

@@ -1874,7 +1874,7 @@ async function initAllTables() {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "madrasa_students" (
         "id"               SERIAL PRIMARY KEY,
-        "tenant_code"      VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"      VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "prenom"           VARCHAR(100) NOT NULL,
         "nom"              VARCHAR(100) NOT NULL,
         "date_naissance"   DATE,
@@ -1889,7 +1889,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "madrasa_staff" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "prenom"      VARCHAR(100) NOT NULL,
         "nom"         VARCHAR(100) NOT NULL,
         "role"        VARCHAR(50) DEFAULT 'Enseignant',
@@ -1900,7 +1900,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "madrasa_halaqas" (
         "id"            SERIAL PRIMARY KEY,
-        "tenant_code"   VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"   VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"           VARCHAR(100) NOT NULL,
         "niveau"        VARCHAR(50) DEFAULT 'Iqra',
         "capacite"      INTEGER DEFAULT 20,
@@ -1909,7 +1909,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "madrasa_attendance" (
         "id"            SERIAL PRIMARY KEY,
-        "tenant_code"   VARCHAR(30) NOT NULL,
+        "tenant_code"   VARCHAR(50) NOT NULL,
         "student_id"    INTEGER NOT NULL REFERENCES "madrasa_students"("id") ON DELETE CASCADE,
         "date_presence" DATE NOT NULL DEFAULT CURRENT_DATE,
         "statut"        VARCHAR(20) DEFAULT 'present',
@@ -1917,7 +1917,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "madrasa_grades" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL,
+        "tenant_code" VARCHAR(50) NOT NULL,
         "student_id"  INTEGER NOT NULL REFERENCES "madrasa_students"("id") ON DELETE CASCADE,
         "matiere"     VARCHAR(100) DEFAULT 'Coran',
         "note"        NUMERIC(5,2) DEFAULT 0,
@@ -1929,7 +1929,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "madrasa_fees" (
         "id"            SERIAL PRIMARY KEY,
-        "tenant_code"   VARCHAR(30) NOT NULL,
+        "tenant_code"   VARCHAR(50) NOT NULL,
         "student_id"    INTEGER NOT NULL REFERENCES "madrasa_students"("id") ON DELETE CASCADE,
         "type_frais"    VARCHAR(100) DEFAULT 'Frais mensuels',
         "montant"       INTEGER NOT NULL,
@@ -1940,7 +1940,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "madrasa_members" (
         "id"                SERIAL PRIMARY KEY,
-        "tenant_code"       VARCHAR(30) NOT NULL,
+        "tenant_code"       VARCHAR(50) NOT NULL,
         "numero_h"          VARCHAR(30) NOT NULL,
         "role"              VARCHAR(30) DEFAULT 'apprenant',
         "linked_student_id" INTEGER REFERENCES "madrasa_students"("id") ON DELETE SET NULL,
@@ -1951,7 +1951,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "madrasa_bulletins" (
         "id"               SERIAL PRIMARY KEY,
-        "tenant_code"      VARCHAR(30) NOT NULL,
+        "tenant_code"      VARCHAR(50) NOT NULL,
         "student_id"       INTEGER NOT NULL REFERENCES "madrasa_students"("id") ON DELETE CASCADE,
         "periode"          VARCHAR(50) NOT NULL,
         "annee_scolaire"   VARCHAR(20),
@@ -1968,7 +1968,7 @@ async function initAllTables() {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "retailer_products" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"         VARCHAR(200) NOT NULL,
         "categorie"   VARCHAR(100) DEFAULT '',
         "prix_vente"  INTEGER NOT NULL DEFAULT 0,
@@ -1981,7 +1981,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "retailer_sales" (
         "id"            SERIAL PRIMARY KEY,
-        "tenant_code"   VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"   VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "client_nom"    VARCHAR(200) DEFAULT 'Client',
         "type_paiement" VARCHAR(30) DEFAULT 'especes',
         "total"         INTEGER NOT NULL DEFAULT 0,
@@ -1992,7 +1992,7 @@ async function initAllTables() {
       CREATE TABLE IF NOT EXISTS "retailer_sale_items" (
         "id"            SERIAL PRIMARY KEY,
         "sale_id"       INTEGER NOT NULL REFERENCES "retailer_sales"("id") ON DELETE CASCADE,
-        "tenant_code"   VARCHAR(30) NOT NULL,
+        "tenant_code"   VARCHAR(50) NOT NULL,
         "nom"           VARCHAR(200) NOT NULL,
         "product_id"    INTEGER REFERENCES "retailer_products"("id") ON DELETE SET NULL,
         "prix_unitaire" INTEGER NOT NULL DEFAULT 0,
@@ -2001,7 +2001,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "retailer_clients" (
         "id"           SERIAL PRIMARY KEY,
-        "tenant_code"  VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"  VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"          VARCHAR(200) NOT NULL,
         "telephone"    VARCHAR(50) DEFAULT '',
         "adresse"      VARCHAR(200) DEFAULT '',
@@ -2012,7 +2012,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "retailer_expenses" (
         "id"           SERIAL PRIMARY KEY,
-        "tenant_code"  VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"  VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "description"  VARCHAR(300) NOT NULL,
         "montant"      INTEGER NOT NULL DEFAULT 0,
         "categorie"    VARCHAR(100) DEFAULT 'Autre',
@@ -2030,7 +2030,7 @@ async function initAllTables() {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "beauty_services" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"         VARCHAR(200) NOT NULL,
         "categorie"   VARCHAR(100) DEFAULT 'Général',
         "prix"        INTEGER NOT NULL DEFAULT 0,
@@ -2041,7 +2041,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "beauty_staff" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"         VARCHAR(100) NOT NULL,
         "prenom"      VARCHAR(100) DEFAULT '',
         "poste"       VARCHAR(100) DEFAULT 'Coiffeur/se',
@@ -2053,7 +2053,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "beauty_bookings" (
         "id"                SERIAL PRIMARY KEY,
-        "tenant_code"       VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"       VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "client_nom"        VARCHAR(200) NOT NULL,
         "client_telephone"  VARCHAR(50) DEFAULT '',
         "service_id"        INTEGER REFERENCES "beauty_services"("id") ON DELETE SET NULL,
@@ -2066,7 +2066,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "beauty_clients" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"         VARCHAR(200) NOT NULL,
         "telephone"   VARCHAR(50) DEFAULT '',
         "email"       VARCHAR(200) DEFAULT '',
@@ -2077,7 +2077,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "beauty_announcements" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "titre"       VARCHAR(300) NOT NULL,
         "contenu"     TEXT NOT NULL,
         "type"        VARCHAR(50) DEFAULT 'general',
@@ -2092,7 +2092,7 @@ async function initAllTables() {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "artisan_services" (
         "id"                SERIAL PRIMARY KEY,
-        "tenant_code"       VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"       VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"               VARCHAR(200) NOT NULL,
         "categorie"         VARCHAR(100) DEFAULT 'Général',
         "prix_base"         INTEGER DEFAULT 0,
@@ -2103,7 +2103,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "artisan_clients" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"         VARCHAR(200) NOT NULL,
         "telephone"   VARCHAR(50) DEFAULT '',
         "adresse"     VARCHAR(200) DEFAULT '',
@@ -2114,7 +2114,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "artisan_interventions" (
         "id"           SERIAL PRIMARY KEY,
-        "tenant_code"  VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"  VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "client_id"    INTEGER REFERENCES "artisan_clients"("id") ON DELETE SET NULL,
         "service_id"   INTEGER REFERENCES "artisan_services"("id") ON DELETE SET NULL,
         "titre"        VARCHAR(300) NOT NULL,
@@ -2131,7 +2131,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "artisan_announcements" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "titre"       VARCHAR(300) NOT NULL,
         "contenu"     TEXT NOT NULL,
         "type"        VARCHAR(50) DEFAULT 'general',
@@ -2146,7 +2146,7 @@ async function initAllTables() {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "producer_products" (
         "id"            SERIAL PRIMARY KEY,
-        "tenant_code"   VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"   VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"           VARCHAR(200) NOT NULL,
         "categorie"     VARCHAR(100) DEFAULT 'Général',
         "unite"         VARCHAR(30) DEFAULT 'kg',
@@ -2158,7 +2158,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "producer_lots" (
         "id"                SERIAL PRIMARY KEY,
-        "tenant_code"       VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"       VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "product_id"        INTEGER REFERENCES "producer_products"("id") ON DELETE SET NULL,
         "quantite_prevue"   NUMERIC(12,2) NOT NULL DEFAULT 0,
         "quantite_produite" NUMERIC(12,2) DEFAULT 0,
@@ -2171,7 +2171,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "producer_orders" (
         "id"                     SERIAL PRIMARY KEY,
-        "tenant_code"            VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"            VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "client_nom"             VARCHAR(200) NOT NULL,
         "client_telephone"       VARCHAR(50) DEFAULT '',
         "product_id"             INTEGER REFERENCES "producer_products"("id") ON DELETE SET NULL,
@@ -2185,7 +2185,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "producer_staff" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"         VARCHAR(100) NOT NULL,
         "prenom"      VARCHAR(100) DEFAULT '',
         "poste"       VARCHAR(100) DEFAULT 'Ouvrier',
@@ -2196,7 +2196,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "producer_announcements" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "titre"       VARCHAR(300) NOT NULL,
         "contenu"     TEXT NOT NULL,
         "type"        VARCHAR(50) DEFAULT 'general',
@@ -2333,7 +2333,7 @@ async function initAllTables() {
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS "transport_vehicles" (
         "id"             SERIAL PRIMARY KEY,
-        "tenant_code"    VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"    VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "immatriculation" VARCHAR(50) NOT NULL,
         "type_vehicule"  VARCHAR(50) DEFAULT 'voiture',
         "marque"         VARCHAR(100),
@@ -2345,7 +2345,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "transport_drivers" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "nom"         VARCHAR(100) NOT NULL,
         "prenom"      VARCHAR(100),
         "telephone"   VARCHAR(50),
@@ -2358,7 +2358,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "transport_trips" (
         "id"              SERIAL PRIMARY KEY,
-        "tenant_code"     VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"     VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "lieu_depart"     VARCHAR(200) NOT NULL,
         "lieu_arrivee"    VARCHAR(200) NOT NULL,
         "date_depart"     DATE NOT NULL,
@@ -2374,7 +2374,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "transport_bookings" (
         "id"               SERIAL PRIMARY KEY,
-        "tenant_code"      VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"      VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "trip_id"          INTEGER REFERENCES "transport_trips"("id") ON DELETE SET NULL,
         "client_nom"       VARCHAR(200) NOT NULL,
         "client_telephone" VARCHAR(50),
@@ -2386,7 +2386,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "transport_announcements" (
         "id"          SERIAL PRIMARY KEY,
-        "tenant_code" VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code" VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "titre"       VARCHAR(200) NOT NULL,
         "contenu"     TEXT NOT NULL,
         "type"        VARCHAR(50) DEFAULT 'general',
@@ -2394,7 +2394,7 @@ async function initAllTables() {
       );
       CREATE TABLE IF NOT EXISTS "transport_deliveries" (
         "id"               SERIAL PRIMARY KEY,
-        "tenant_code"      VARCHAR(30) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
+        "tenant_code"      VARCHAR(50) NOT NULL REFERENCES "management_tenants"("tenant_code") ON DELETE CASCADE,
         "client_nom"       VARCHAR(200) NOT NULL,
         "client_telephone" VARCHAR(50),
         "adresse_collecte" VARCHAR(300) NOT NULL,
@@ -2568,6 +2568,26 @@ async function initAllTables() {
     console.log('✅ Tenants DEMO seedés dans management_tenants');
   } catch (err) {
     console.warn('⚠️ initAllTables [demo-seed]:', err.message);
+  }
+
+  // ── Code d'établissement : « MDS-GN- » + identifiant du compte = 43 à 46
+  //    caractères. Des tables (madrasa, transport, artisan, beauté, producteur,
+  //    vendeur…) ont été créées avec 30 : tout enregistrement y échouait. On les
+  //    élargit à 50, comme management_tenants (sans perte de données). ─────────
+  try {
+    const colonnes = await sequelize.query(
+      `SELECT table_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND column_name = 'tenant_code'
+         AND data_type = 'character varying' AND character_maximum_length < 50`,
+      { type: sequelize.QueryTypes.SELECT }
+    );
+    for (const { table_name } of colonnes) {
+      await sequelize.query(`ALTER TABLE "${table_name}" ALTER COLUMN "tenant_code" TYPE VARCHAR(50)`)
+        .catch((e) => console.warn(`⚠️ tenant_code ${table_name}:`, e.message));
+    }
+    if (colonnes.length) console.log(`✅ tenant_code élargi à 50 caractères : ${colonnes.length} table(s)`);
+  } catch (err) {
+    console.warn('⚠️ initAllTables [tenant_code]:', err.message);
   }
 
   // ── Gestion interne : compléter les infos vides (email, téléphone, logo…) avec

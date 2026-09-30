@@ -356,11 +356,15 @@ router.post('/:tenantCode/sales', authenticate, verifyTenant, async (req, res) =
     await ensureCommerceExtras();
     const { client_nom, items, type_paiement, montant_recu, est_credit, notes, remise } = req.body;
     const code = req.params.tenantCode;
+    if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ success: false, message: 'Ajoutez au moins un article.' });
+    if (est_credit && !String(client_nom || '').trim()) return res.status(400).json({ success: false, message: 'Nom du client obligatoire pour une vente à crédit.' });
     const brut = (items || []).reduce((s, i) => s + (+i.prix_unitaire || 0) * (+i.quantite || 1), 0);
     const total = Math.max(0, brut - (+remise || 0));
+    // Argent reçu : ce qui est saisi ; sinon tout (vente comptant) ou rien (crédit)
+    const recu = montant_recu !== undefined && montant_recu !== null && montant_recu !== '' ? Math.max(0, +montant_recu || 0) : (est_credit ? 0 : total);
     const [rows] = await sequelize.query(
       `INSERT INTO commerce_sales (tenant_code,client_nom,total,montant_recu,type_paiement,est_credit,notes,items,remise) VALUES(:code,:nom,:total,:recu,:type,:credit,:notes,:items::jsonb,:remise) RETURNING *`,
-      { replacements: { code, nom: client_nom || 'Client', total, recu: montant_recu || total, type: type_paiement || 'especes', credit: !!est_credit, notes: notes || null, items: JSON.stringify(items || []), remise: remise || 0 }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, nom: String(client_nom || '').trim() || 'Client', total, recu, type: type_paiement || 'especes', credit: !!est_credit, notes: notes || null, items: JSON.stringify(items || []), remise: remise || 0 }, type: sequelize.QueryTypes.INSERT }
     );
     // Déduire le stock pour chaque produit
     for (const item of items || []) {
@@ -373,15 +377,20 @@ router.post('/:tenantCode/sales', authenticate, verifyTenant, async (req, res) =
       }
     }
     // Mettre à jour le crédit client si vente à crédit
-    if (est_credit && client_nom) {
-      await sequelize.query(
-        `INSERT INTO commerce_clients (tenant_code,nom,credit_total) VALUES(:code,:nom,:total) ON CONFLICT DO NOTHING`,
-        { replacements: { code, nom: client_nom, total } }
-      ).catch(() => {});
-      await sequelize.query(
-        `UPDATE commerce_clients SET credit_total=credit_total+:total WHERE tenant_code=:code AND nom=:nom`,
-        { replacements: { code, nom: client_nom, total: total - (montant_recu || 0) } }
-      ).catch(() => {});
+    // Vente à crédit : la dette (total - reçu) s'ajoute à la fiche du client,
+    // créée une seule fois (avant : une nouvelle fiche à chaque vente)
+    if (est_credit) {
+      const nomClient = String(client_nom).trim();
+      const dette = Math.max(0, total - recu);
+      const [existant] = await sequelize.query(
+        `SELECT id FROM commerce_clients WHERE tenant_code=:code AND LOWER(TRIM(nom))=LOWER(:nom) ORDER BY id LIMIT 1`,
+        { replacements: { code, nom: nomClient }, type: sequelize.QueryTypes.SELECT }
+      );
+      if (existant) {
+        await sequelize.query(`UPDATE commerce_clients SET credit_total=COALESCE(credit_total,0)+:dette WHERE id=:id`, { replacements: { dette, id: existant.id } });
+      } else {
+        await sequelize.query(`INSERT INTO commerce_clients (tenant_code,nom,credit_total) VALUES(:code,:nom,:dette)`, { replacements: { code, nom: nomClient, dette } });
+      }
     }
     res.json({ success: true, sale: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -407,9 +416,10 @@ router.delete('/:tenantCode/sales/:id', authenticate, verifyTenant, async (req, 
     if (sale.est_credit && sale.client_nom) {
       const creditPart = (+sale.total || 0) - (+sale.montant_recu || 0);
       await sequelize.query(
-        `UPDATE commerce_clients SET credit_total=GREATEST(0,credit_total-:m) WHERE tenant_code=:code AND nom=:nom`,
+        `UPDATE commerce_clients SET credit_total=GREATEST(0,credit_total-:m)
+         WHERE id=(SELECT id FROM commerce_clients WHERE tenant_code=:code AND LOWER(TRIM(nom))=LOWER(TRIM(:nom)) ORDER BY id LIMIT 1)`,
         { replacements: { m: creditPart, code, nom: sale.client_nom } }
-      ).catch(() => {});
+      );
     }
     await sequelize.query(`UPDATE commerce_sales SET annulee=true WHERE id=:id`, { replacements: { id: req.params.id } });
     res.json({ success: true });

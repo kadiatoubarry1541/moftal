@@ -15,6 +15,19 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 
 const router = express.Router();
 
+// Plusieurs routes n'ont pas de try/catch : avec Express 4, une erreur de base
+// y devient un rejet non géré qui arrête tout le serveur. On renvoie une erreur
+// propre à la place.
+for (const methode of ['get', 'post', 'put', 'delete']) {
+  const originale = router[methode].bind(router);
+  router[methode] = (chemin, ...handlers) => originale(chemin, ...handlers.map(h =>
+    (req, res, next) => Promise.resolve(h(req, res, next)).catch(err => {
+      if (res.headersSent) return next(err);
+      res.status(500).json({ success: false, message: err.message });
+    })
+  ));
+}
+
 // ─── Middleware : vérifier que l'utilisateur est directeur / propriétaire ──────
 async function verifyTenant(req, res, next) {
   const { tenantCode } = req.params;
@@ -118,7 +131,7 @@ router.get('/:tenantCode/director-profile', authenticate, verifyMember, async (r
   try {
     const [rows] = await sequelize.query(
       `SELECT u.numero_h, u.prenom,
-              COALESCE(u.nom_famille, u."nomFamille", '') AS nom_famille,
+              COALESCE(u.nom_famille, '') AS nom_famille,
               u.photo
        FROM management_tenants mt
        JOIN users u ON u.numero_h = mt.owner_numero_h
@@ -185,10 +198,16 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
 
 router.put('/:tenantCode/students/:id', authenticate, verifyTenant, async (req, res) => {
   const { tenantCode: tc, id } = req.params;
-  const { niveau } = req.body;
+  const { prenom, nom, date_naissance, sexe, telephone_parent, niveau, numero_h, parent_numero_h } = req.body;
+  // Modifier la fiche entière (avant : seul le niveau était gardé)
   await sequelize.query(
-    `UPDATE madrasa_students SET niveau = COALESCE(:niveau, niveau), updated_at = NOW() WHERE id = :id AND tenant_code = :tc`,
-    { replacements: { niveau: niveau || null, id, tc } }
+    `UPDATE madrasa_students SET
+       prenom = COALESCE(:prenom, prenom), nom = COALESCE(:nom, nom),
+       date_naissance = :dn, sexe = COALESCE(:sexe, sexe), telephone_parent = :tel,
+       niveau = COALESCE(:niveau, niveau), numero_h = :nh, parent_numero_h = :pnh, updated_at = NOW()
+     WHERE id = :id AND tenant_code = :tc`,
+    { replacements: { prenom: prenom || null, nom: nom || null, dn: date_naissance ? String(date_naissance).slice(0, 10) : null, sexe: sexe || null,
+      tel: telephone_parent || '', niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, id, tc } }
   );
   res.json({ success: true });
 });
@@ -220,6 +239,18 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh: numero_h || null } }
   );
   res.json({ staff: rows[0] });
+});
+
+router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
+  const { prenom, nom, role, specialite, telephone, numero_h } = req.body;
+  if (!prenom || !nom) return res.status(400).json({ success: false, message: 'Prénom et nom requis.' });
+  await sequelize.query(
+    `UPDATE madrasa_staff SET prenom = :prenom, nom = :nom, role = COALESCE(:role, role), specialite = COALESCE(:spec, specialite),
+       telephone = :tel, numero_h = :nh
+     WHERE id = :id AND tenant_code = :tc`,
+    { replacements: { prenom, nom, role: role || null, spec: specialite || null, tel: telephone || '', nh: numero_h || null, id: req.params.id, tc: req.params.tenantCode } }
+  );
+  res.json({ success: true });
 });
 
 router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
@@ -255,6 +286,17 @@ router.post('/:tenantCode/halaqas', authenticate, verifyTenant, async (req, res)
   res.json({ halaqa: rows[0] });
 });
 
+router.put('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req, res) => {
+  const { nom, niveau, capacite, enseignant_id } = req.body;
+  if (!nom) return res.status(400).json({ success: false, message: 'Nom requis.' });
+  await sequelize.query(
+    `UPDATE madrasa_halaqas SET nom = :nom, niveau = COALESCE(:niveau, niveau), capacite = :cap, enseignant_id = :eid
+     WHERE id = :id AND tenant_code = :tc`,
+    { replacements: { nom, niveau: niveau || null, cap: capacite || 20, eid: enseignant_id || null, id: req.params.id, tc: req.params.tenantCode } }
+  );
+  res.json({ success: true });
+});
+
 router.delete('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req, res) => {
   await sequelize.query(
     `DELETE FROM madrasa_halaqas WHERE id = :id AND tenant_code = :tc`,
@@ -280,7 +322,9 @@ router.get('/:tenantCode/attendance', authenticate, verifyMember, async (req, re
 router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const { records } = req.body; // [{ student_id, statut }]
-  const date = new Date().toISOString().slice(0, 10);
+  if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ success: false, message: 'Aucune présence à enregistrer.' });
+  // Date choisie dans la page (appel d'un autre jour), sinon aujourd'hui
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.body.date || '') ? req.body.date : new Date().toISOString().slice(0, 10);
   for (const r of records || []) {
     await sequelize.query(
       `INSERT INTO madrasa_attendance (tenant_code, student_id, date_presence, statut)
@@ -315,6 +359,26 @@ router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) 
     { replacements: { tc, sid: student_id, mat: matiere || 'Coran', note: parseFloat(note) || 0, nm: parseFloat(note_max) || 20, per: periode || 'Trim 1', srt: sourate || '', com: commentaire || '' } }
   );
   res.json({ grade: rows[0] });
+});
+
+router.put('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
+  const { matiere, note, note_max, periode, sourate, commentaire } = req.body;
+  if (note === undefined || note === null || note === '' || Number.isNaN(+note)) return res.status(400).json({ success: false, message: 'Note requise.' });
+  await sequelize.query(
+    `UPDATE madrasa_grades SET matiere = COALESCE(:mat, matiere), note = :note, note_max = :nm, periode = COALESCE(:per, periode),
+       sourate = :srt, commentaire = :com
+     WHERE id = :id AND tenant_code = :tc`,
+    { replacements: { mat: matiere || null, note: parseFloat(note), nm: parseFloat(note_max) || 20, per: periode || null, srt: sourate || '', com: commentaire || '', id: req.params.id, tc: req.params.tenantCode } }
+  );
+  res.json({ success: true });
+});
+
+router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
+  await sequelize.query(
+    `DELETE FROM madrasa_grades WHERE id = :id AND tenant_code = :tc`,
+    { replacements: { id: req.params.id, tc: req.params.tenantCode } }
+  );
+  res.json({ success: true });
 });
 
 // ── Frais ─────────────────────────────────────────────────────────────────────
@@ -353,7 +417,7 @@ router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, 
 // ── Membres (accès app par numeroH) ──────────────────────────────────────────
 router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) => {
   const [members] = await sequelize.query(
-    `SELECT m.*, u.prenom || ' ' || u.nom AS nom_display
+    `SELECT m.*, COALESCE(u.prenom || ' ' || u.nom_famille, m.nom_display) AS nom_display
      FROM madrasa_members m
      LEFT JOIN users u ON u.numero_h = m.numero_h
      WHERE m.tenant_code = :tc AND m.is_active = true ORDER BY m.role, m.created_at`,

@@ -46,6 +46,13 @@ function printBulletin(b: any, orgName: string, color: string) {
 
 const PERIODES = ["Trim 1", "Trim 2", "Trim 3", "Sem 1", "Sem 2", "Annuel"];
 
+// Année scolaire en cours : elle commence en septembre
+function anneeScolaireEnCours() {
+  const d = new Date();
+  const y = d.getFullYear();
+  return d.getMonth() >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+}
+
 const inp = "w-full border rounded-lg px-3 py-2 text-sm focus:outline-none";
 const inpSt = { borderColor: "#e2e8f0", color: "#0f172a" };
 const lbl = { fontSize: 11, fontWeight: 600 as const, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.04em" };
@@ -293,14 +300,17 @@ export default function GestionEnseignement({ mode }: Props) {
         if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast("Frais ajouté"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "save-presence") {
-        await post("/attendance", { records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
-        setModal(null); showToast("Présences enregistrées");
+        const d = await post("/attendance", { date: attendDate, records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
+        if (d.success) { setModal(null); showToast("Présences enregistrées"); }
+        else showToast(d.message || "Les présences n'ont pas été enregistrées", false);
       } else if (modal === "gen-bulletin") {
         if (!form.periode) { showToast("Période obligatoire", false); return; }
-        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || "2025-2026", publish: !!form.publish });
+        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || anneeScolaireEnCours(), publish: !!form.publish });
         if (d.success) { showToast(`${d.generated} bulletin(s) généré(s)`); setModal(null); get("/bulletins").then(b => b.bulletins && setBulletins(b.bulletins)); }
         else showToast(d.message || "Erreur", false);
       }
+    } catch {
+      showToast("Connexion coupée : rien n'a été enregistré. Réessayez.", false);
     } finally { setSaving(false); }
   };
 
@@ -564,7 +574,7 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>Année scolaire</label>
-              <input value={form.annee||"2025-2026"} onChange={e=>setForm((f:any)=>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
+              <input value={form.annee||anneeScolaireEnCours()} onChange={e=>setForm((f:any)=>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
             </div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
@@ -792,7 +802,7 @@ export default function GestionEnseignement({ mode }: Props) {
                               if (d.success) showToast(d.user ? `Parent relié (${d.user.prenom} ${d.user.nom})` : (d.message || "Parent relié"));
                               else showToast(d.message || "Erreur", false);
                             }} style={{ color:"#7c3aed",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>👪 Lier parent</button>
-                            <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){await del(`/students/${s.id}`);setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
+                            <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){const d=await del(`/students/${s.id}`); if(d.success){setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)");} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
                           </div>
                         </td>
                       </tr>
@@ -827,7 +837,7 @@ export default function GestionEnseignement({ mode }: Props) {
                       </div>
                       <div style={{ display:"flex", gap:12, marginTop:12 }}>
                         <button onClick={()=>{ setForm({ ...s }); setModal("add-staff"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
-                        <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){await del(`/staff/${s.id}`);setStaff(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
+                        <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){const d=await del(`/staff/${s.id}`); if(d.success){setStaff(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)");} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
                       </div>
                     </div>
                   ))}
@@ -875,7 +885,7 @@ export default function GestionEnseignement({ mode }: Props) {
                           {!isMadrasa && (
                             <button onClick={()=>{ setForm({ id: g.id, nom: g.nom, emploi_du_temps: Array.isArray(g.emploi_du_temps) ? g.emploi_du_temps : [] }); setModal("edit-schedule"); }} style={{ color:"#0369a1",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>📅 Emploi du temps</button>
                           )}
-                          <button onClick={async()=>{ if(confirm(`Supprimer ${g.nom} ?`)){await del(`/${groupEP}/${g.id}`);setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(V.groupe+" supprimée"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Supprimer</button>
+                          <button onClick={async()=>{ if(confirm(`Supprimer ${g.nom} ?`)){const d=await del(`/${groupEP}/${g.id}`); if(d.success){setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(V.groupe+" supprimée");} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Supprimer</button>
                         </div>
                       </div>
                     );
@@ -999,7 +1009,7 @@ export default function GestionEnseignement({ mode }: Props) {
                           <td style={{ padding:"11px 16px" }}>
                             <div style={{ display:"flex", gap:10 }}>
                               <button onClick={()=>{ setForm({ ...g }); setModal("add-note"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modif.</button>
-                              <button onClick={async()=>{ if(confirm("Supprimer cette note ?")){await del(`/grades/${g.id}`);setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast("Note supprimée"); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Suppr.</button>
+                              <button onClick={async()=>{ if(confirm("Supprimer cette note ?")){const d=await del(`/grades/${g.id}`); if(d.success){setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast("Note supprimée");} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Suppr.</button>
                             </div>
                           </td>
                         </tr>
@@ -1124,7 +1134,7 @@ export default function GestionEnseignement({ mode }: Props) {
                     {r.statut==="nouvelle" ? (
                       <div style={{ display:"flex",gap:6,flexShrink:0 }}>
                         <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/convert`,{}); if(d.success){setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"converti"}:x));showToast(V.apprenant+" créé(e)");} }} style={{ padding:"6px 12px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:700 }}>Inscrire</button>
-                        <button onClick={async()=>{ await put(`/enroll-requests/${r.id}/reject`,{}); setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"rejetee"}:x)); }} style={{ padding:"6px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600 }}>Rejeter</button>
+                        <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/reject`,{}); if(d.success) setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"rejetee"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"6px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600 }}>Rejeter</button>
                       </div>
                     ) : (
                       <span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:r.statut==="converti"?"#f0fdf0":"#fef2f2",color:r.statut==="converti"?"#1a8f1a":"#ef4444",flexShrink:0 }}>{r.statut==="converti"?"✓ Inscrit(e)":"Rejetée"}</span>
@@ -1156,8 +1166,8 @@ export default function GestionEnseignement({ mode }: Props) {
                         {r.commentaire && <p style={{ fontSize:13,color:"#475569",marginTop:8 }}>{r.commentaire}</p>}
                       </div>
                       <div style={{ display:"flex",gap:6,flexShrink:0 }}>
-                        {r.statut==="en_attente" && <button onClick={async()=>{ await put(`/reviews/${r.id}`,{statut:"approuve"}); setReviews(rs=>rs.map((x:any)=>x.id===r.id?{...x,statut:"approuve"}:x)); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Approuver</button>}
-                        <button onClick={async()=>{ if(confirm("Supprimer cet avis ?")){await del(`/reviews/${r.id}`);setReviews(rs=>rs.filter((x:any)=>x.id!==r.id));} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Supprimer</button>
+                        {r.statut==="en_attente" && <button onClick={async()=>{ const d=await put(`/reviews/${r.id}`,{statut:"approuve"}); if(d.success) setReviews(rs=>rs.map((x:any)=>x.id===r.id?{...x,statut:"approuve"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Approuver</button>}
+                        <button onClick={async()=>{ if(confirm("Supprimer cet avis ?")){const d=await del(`/reviews/${r.id}`); if(d.success) setReviews(rs=>rs.filter((x:any)=>x.id!==r.id)); else showToast(d.message||"Erreur",false);} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Supprimer</button>
                       </div>
                     </div>
                   </div>
