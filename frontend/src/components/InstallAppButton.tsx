@@ -47,6 +47,28 @@ function isIOS() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
+function isAndroid() {
+  return /Android/i.test(navigator.userAgent);
+}
+
+// Lien Android qui rouvre la page actuelle dans Chrome lui-même. Une gestion ouverte
+// depuis l'app Moftal (ou depuis WhatsApp, Facebook…) s'affiche dans une fenêtre
+// intégrée (croix ✕ en haut) où le téléphone ne propose jamais l'installation :
+// seul un vrai onglet Chrome peut installer l'app de la gestion. La session est
+// transmise (comme depuis Moftal) pour ne pas avoir à se reconnecter.
+function lienOuvrirDansChrome() {
+  const { host, pathname, search } = window.location;
+  const params = new URLSearchParams(search);
+  const t = localStorage.getItem("token");
+  const s = localStorage.getItem("session_user");
+  if (t) params.set("_t", t);
+  if (s) params.set("_s", s);
+  const q = params.toString();
+  const cible = `${host}${pathname}${q ? `?${q}` : ""}`;
+  const secours = encodeURIComponent(`https://${host}${pathname}`);
+  return `intent://${cible}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${secours};end`;
+}
+
 // Vérifie auprès du navigateur (Chrome/Edge/Android uniquement — API absente sur
 // iOS Safari et Firefox) si l'app est toujours réellement installée. Si le drapeau
 // local dit "installée" mais que le navigateur ne la voit plus, on le corrige pour
@@ -318,16 +340,15 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   // true = le téléphone confirme que l'app est sur l'écran d'accueil
   const [dejaSurEcran, setDejaSurEcran] = useState(false);
   const [installing, setInstalling] = useState(false);
-  const [isInsidePWA, setIsInsidePWA] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
+  const android = isAndroid();
 
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
-    setIsInsidePWA(standalone);
     // L'app d'une gestion s'ouvre sur gestions.moftal.com ; en mode app sur
     // moftal.com, c'est l'app Moftal principale, pas celle de la gestion.
     // Une gestion ouverte depuis l'app Moftal s'affiche dans la fenêtre de Moftal
@@ -395,8 +416,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   const handleInstall = async () => {
     if (!prompt) {
-      // Prompt pas encore prêt : ouvrir un nouvel onglet pour forcer Chrome à proposer l'install
-      if (isInsidePWA) { window.open(window.location.href, '_blank'); return; }
+      // Le téléphone ne propose pas l'installation ici (fenêtre intégrée, ou pas
+      // encore prêt) : on explique comment faire, avec le bouton « Ouvrir dans Chrome ».
       setShowToast(v => !v);
       return;
     }
@@ -442,10 +463,27 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       </button>
       {showToast && (
         <div style={{ flexBasis: "100%", marginTop: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#334155", lineHeight: 1.6 }}>
-          <strong>Le téléphone n'a pas ouvert l'installation.</strong> Faites-le à la main :
+          {android && (
+            <>
+              <strong>Pour installer, ouvrez cette page dans Chrome.</strong>
+              <div style={{ margin: "4px 0 8px" }}>
+                Ici (fenêtre avec une croix ✕ en haut), le téléphone ne permet pas d'installer.
+              </div>
+              <a
+                href={lienOuvrirDansChrome()}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: themeColor, color: "white", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 8 }}
+              >
+                🌐 Ouvrir dans Chrome
+              </a>
+              <div>Puis, dans Chrome, revenez dans Paramètres et appuyez à nouveau sur « Installer l'application ».</div>
+              <div style={{ marginTop: 8, fontWeight: 700 }}>Si rien ne s'ouvre :</div>
+            </>
+          )}
+          {!android && <strong>Le téléphone n'a pas ouvert l'installation. Faites-le à la main :</strong>}
           <div>1. Menu <strong>⋮</strong> du navigateur (en haut à droite)</div>
-          <div>2. « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
-          <div>3. Confirmez. L'icône avec votre logo apparaît sur l'écran d'accueil.</div>
+          {android && <div>2. Si vous voyez « <strong>Ouvrir dans Chrome</strong> », choisissez-le, puis rouvrez le menu <strong>⋮</strong></div>}
+          <div>{android ? "3" : "2"}. « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
+          <div>{android ? "4" : "3"}. Confirmez. L'icône avec votre logo apparaît sur l'écran d'accueil.</div>
           <div style={{ marginTop: 4, color: "#64748b" }}>Si le menu dit « Ouvrir l'application », elle est déjà installée : cherchez-la dans la liste de vos applications.</div>
         </div>
       )}
