@@ -241,7 +241,8 @@ router.post('/:tenantCode/appointments', authenticate, verifyTenant, async (req,
 router.put('/:tenantCode/appointments/:id', authenticate, verifyTenant, async (req, res) => {
   try {
     const { statut, notes } = req.body;
-    await sequelize.query(`UPDATE clinic_appointments_mgmt SET statut=:statut,notes=:notes WHERE id=:id AND tenant_code=:code`, { replacements: { statut, notes, id: req.params.id, code: req.params.tenantCode } });
+    // Changer le statut ne doit pas effacer les notes déjà écrites
+    await sequelize.query(`UPDATE clinic_appointments_mgmt SET statut=COALESCE(:statut,statut),notes=COALESCE(:notes,notes) WHERE id=:id AND tenant_code=:code`, { replacements: { statut: statut || null, notes: notes ?? null, id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -507,7 +508,9 @@ router.put('/:tenantCode/invoices/:id', authenticate, verifyTenant, async (req, 
       statut = paye <= 0 ? 'impaye' : paye >= total ? 'paye' : 'partiel';
       await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,montant_paye=:paye,mode_paiement=:mode WHERE id=:id AND tenant_code=:code`, { replacements: { statut, paye, mode: mode_paiement || 'especes', id: req.params.id, code } });
     } else {
-      await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,mode_paiement=:mode,montant_paye=CASE WHEN :statut='paye' THEN total ELSE montant_paye END WHERE id=:id AND tenant_code=:code`, { replacements: { statut, mode: mode_paiement || 'especes', id: req.params.id, code } });
+      // Facture réglée : le montant payé devient le total
+      const montantPaye = statut === 'paye' ? 'total' : 'montant_paye';
+      await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,mode_paiement=:mode,montant_paye=${montantPaye} WHERE id=:id AND tenant_code=:code`, { replacements: { statut, mode: mode_paiement || 'especes', id: req.params.id, code } });
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
