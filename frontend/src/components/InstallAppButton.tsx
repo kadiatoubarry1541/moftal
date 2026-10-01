@@ -47,6 +47,30 @@ function isIOS() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
+function isAndroid() {
+  return /Android/i.test(navigator.userAgent);
+}
+
+// Lien Android qui rouvre la page actuelle dans Chrome lui-même. Une gestion ouverte
+// depuis l'app Moftal (ou depuis WhatsApp, Facebook…) s'affiche dans une fenêtre
+// intégrée (croix ✕ en haut) où le téléphone ne propose jamais l'installation :
+// seul un vrai onglet Chrome peut installer l'app de la gestion. La session est
+// transmise (comme depuis Moftal) pour ne pas avoir à se reconnecter.
+function lienOuvrirDansChrome() {
+  const { host, pathname, search } = window.location;
+  const params = new URLSearchParams(search);
+  const t = localStorage.getItem("token");
+  const s = localStorage.getItem("session_user");
+  if (t) params.set("_t", t);
+  if (s) params.set("_s", s);
+  // À l'arrivée dans Chrome, la gestion affiche directement l'installation
+  params.set("installer", "1");
+  const q = params.toString();
+  const cible = `${host}${pathname}${q ? `?${q}` : ""}`;
+  const secours = encodeURIComponent(`https://${host}${pathname}`);
+  return `intent://${cible}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${secours};end`;
+}
+
 // Vérifie auprès du navigateur (Chrome/Edge/Android uniquement — API absente sur
 // iOS Safari et Firefox) si l'app est toujours réellement installée. Si le drapeau
 // local dit "installée" mais que le navigateur ne la voit plus, on le corrige pour
@@ -101,7 +125,12 @@ export default function InstallAppButton({ name, logoUrl, themeColor, color, lab
   // MODE 2 — GESTION INTERNE : installer l'espace de gestion du professionnel
   // ══════════════════════════════════════════════════════════════════════════
   const couleur = themeColor || color || "#1d4ed8";
-  if (variant !== "settings") return <ProBrandPublisher name={name} logoUrl={logoUrl} color={couleur} />;
+  if (variant !== "settings") return (
+    <>
+      <ProBrandPublisher name={name} logoUrl={logoUrl} color={couleur} />
+      <InstallationALArrivee name={name} logoUrl={logoUrl} themeColor={couleur} />
+    </>
+  );
   return <GestionInstallButton name={name} logoUrl={logoUrl} themeColor={couleur} label={label} />;
 }
 
@@ -115,6 +144,102 @@ function ProBrandPublisher({ name, logoUrl, color }: { name?: string; logoUrl?: 
   }, [name, logoUrl, color]);
   useEffect(() => () => setProBrand(null), []);
   return null;
+}
+
+// Arrivée dans Chrome par « Ouvrir dans Chrome » (?installer=1) : au lieu de
+// laisser le pro sur l'accueil de sa gestion, on lui présente tout de suite
+// l'installation de son application. (Le téléphone exige un appui pour installer.)
+function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; logoUrl?: string; themeColor: string }) {
+  const [ouvert, setOuvert] = useState(false);
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [etat, setEtat] = useState<"" | "installation" | "installee" | "manuel">("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("installer") !== "1") return;
+    params.delete("installer");
+    const q = params.toString();
+    window.history.replaceState(window.history.state, "", window.location.pathname + (q ? `?${q}` : "") + window.location.hash);
+    setOuvert(true);
+
+    const existing = (window as any).__pwaGestionPrompt;
+    if (existing) setPrompt(existing);
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      (window as any).__pwaGestionPrompt = e;
+      setPrompt(e as BeforeInstallPromptEvent);
+    };
+    const onReady = () => {
+      const p = (window as any).__pwaGestionPrompt;
+      if (p) setPrompt(p);
+    };
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("pwa-prompt-ready", onReady);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("pwa-prompt-ready", onReady);
+    };
+  }, []);
+
+  if (!ouvert) return null;
+
+  const installer = async () => {
+    setEtat("installation");
+    // Chrome peut mettre quelques secondes à proposer l'installation après l'ouverture
+    let p = prompt || (window as any).__pwaGestionPrompt as BeforeInstallPromptEvent | null;
+    for (let i = 0; !p && i < 10; i++) {
+      await new Promise(r => setTimeout(r, 400));
+      p = (window as any).__pwaGestionPrompt;
+    }
+    if (!p) { setEtat("manuel"); return; }
+    try {
+      await p.prompt();
+      const { outcome } = await p.userChoice;
+      if (outcome === "accepted") {
+        const key = getTenantStorageKey();
+        if (key) localStorage.setItem(key, "1");
+        setEtat("installee");
+      } else setEtat("");
+    } catch {
+      setEtat("manuel");
+    } finally {
+      setPrompt(null);
+      (window as any).__pwaGestionPrompt = null;
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setOuvert(false); }}>
+      <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", textAlign: "left" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+          {logoUrl
+            ? <img src={logoUrl} alt="" style={{ width: 56, height: 56, borderRadius: 12, objectFit: "contain", background: "#fff", border: "1px solid #e2e8f0" }} />
+            : <div style={{ width: 56, height: 56, borderRadius: 12, background: themeColor, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, fontWeight: 800 }}>{((name || "").trim()[0] || "•").toUpperCase()}</div>}
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Installer {name || "l'application"}</div>
+            <div style={{ fontSize: 13, color: "#64748b" }}>L'icône apparaîtra sur votre écran d'accueil</div>
+          </div>
+        </div>
+        {etat === "installee" ? (
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.</p>
+        ) : etat === "manuel" ? (
+          <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
+            <div>1. Appuyez sur le menu <strong>⋮</strong> de Chrome (en haut à droite)</div>
+            <div>2. Choisissez « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
+            <div>3. Confirmez.</div>
+            <div style={{ marginTop: 4, color: "#64748b" }}>Si le menu dit « Ouvrir l'application », elle est déjà installée : cherchez-la dans vos applications.</div>
+          </div>
+        ) : (
+          <button onClick={installer} disabled={etat === "installation"} style={{ width: "100%", padding: 14, background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10, opacity: etat === "installation" ? 0.75 : 1 }}>
+            {etat === "installation" ? "⏳ Installation…" : "📲 Installer maintenant"}
+          </button>
+        )}
+        <button onClick={() => setOuvert(false)} style={{ width: "100%", padding: 12, background: "#f1f5f9", color: "#334155", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+          {etat === "installee" ? "Fermer" : "Plus tard"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ─── Bouton installation app principale (page d'accueil) ────────────────────
@@ -318,16 +443,15 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   // true = le téléphone confirme que l'app est sur l'écran d'accueil
   const [dejaSurEcran, setDejaSurEcran] = useState(false);
   const [installing, setInstalling] = useState(false);
-  const [isInsidePWA, setIsInsidePWA] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
   const STORAGE_KEY = getTenantStorageKey();
+  const android = isAndroid();
 
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
-    setIsInsidePWA(standalone);
     // L'app d'une gestion s'ouvre sur gestions.moftal.com ; en mode app sur
     // moftal.com, c'est l'app Moftal principale, pas celle de la gestion.
     // Une gestion ouverte depuis l'app Moftal s'affiche dans la fenêtre de Moftal
@@ -395,8 +519,8 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   const handleInstall = async () => {
     if (!prompt) {
-      // Prompt pas encore prêt : ouvrir un nouvel onglet pour forcer Chrome à proposer l'install
-      if (isInsidePWA) { window.open(window.location.href, '_blank'); return; }
+      // Le téléphone ne propose pas l'installation ici (fenêtre intégrée, ou pas
+      // encore prêt) : on explique comment faire, avec le bouton « Ouvrir dans Chrome ».
       setShowToast(v => !v);
       return;
     }
@@ -442,10 +566,27 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       </button>
       {showToast && (
         <div style={{ flexBasis: "100%", marginTop: 8, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#334155", lineHeight: 1.6 }}>
-          <strong>Le téléphone n'a pas ouvert l'installation.</strong> Faites-le à la main :
+          {android && (
+            <>
+              <strong>Pour installer, ouvrez cette page dans Chrome.</strong>
+              <div style={{ margin: "4px 0 8px" }}>
+                Ici (fenêtre avec une croix ✕ en haut), le téléphone ne permet pas d'installer.
+              </div>
+              <a
+                href={lienOuvrirDansChrome()}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: themeColor, color: "white", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 8 }}
+              >
+                🌐 Ouvrir dans Chrome
+              </a>
+              <div>Chrome s'ouvre et propose tout de suite d'installer l'application.</div>
+              <div style={{ marginTop: 8, fontWeight: 700 }}>Si rien ne s'ouvre :</div>
+            </>
+          )}
+          {!android && <strong>Le téléphone n'a pas ouvert l'installation. Faites-le à la main :</strong>}
           <div>1. Menu <strong>⋮</strong> du navigateur (en haut à droite)</div>
-          <div>2. « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
-          <div>3. Confirmez. L'icône avec votre logo apparaît sur l'écran d'accueil.</div>
+          {android && <div>2. Si vous voyez « <strong>Ouvrir dans Chrome</strong> », choisissez-le, puis rouvrez le menu <strong>⋮</strong></div>}
+          <div>{android ? "3" : "2"}. « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
+          <div>{android ? "4" : "3"}. Confirmez. L'icône avec votre logo apparaît sur l'écran d'accueil.</div>
           <div style={{ marginTop: 4, color: "#64748b" }}>Si le menu dit « Ouvrir l'application », elle est déjà installée : cherchez-la dans la liste de vos applications.</div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LogoPicker from "../components/LogoPicker";
 import { normaliserLogo } from "../utils/logoImage";
@@ -208,6 +208,20 @@ export default function InscriptionPro() {
   };
   const [justificatifFileName, setJustificatifFileName] = useState("");
   const [showLogoPicker, setShowLogoPicker] = useState(false);
+  // Logo en place à l'ouverture du générateur (rendu si on annule)
+  const logoAvantPicker = useRef("");
+  // Seule la dernière conversion compte (le générateur envoie chaque modification)
+  const logoPickerSeq = useRef(0);
+  const appliquerLogoGenere = (dataUrl: string) => {
+    const seq = ++logoPickerSeq.current;
+    normaliserLogo(dataUrl)
+      .then(logo => {
+        if (seq !== logoPickerSeq.current) return;
+        setForm(f => ({ ...f, mediaUrl: logo }));
+        setError(e => (e.includes("logo") ? "" : e));
+      })
+      .catch(err => { if (seq === logoPickerSeq.current) setError(err.message); });
+  };
 
   // Types Échanges qui nécessitent un sous-secteur
   const NEEDS_SUBSECTOR = ["vendor", "supplier", "producer"];
@@ -238,7 +252,14 @@ export default function InscriptionPro() {
     e.preventDefault();
     if (!selectedType) { setError("Veuillez choisir un type de compte."); return; }
     if (!form.phone.trim()) { setError("Le numéro de téléphone est obligatoire."); return; }
-    // Seul le téléphone est obligatoire (avec le type de compte) : la formule,
+    // Le logo est obligatoire : il représente l'établissement partout (gestion,
+    // site client, listes, icône de l'app installée).
+    if (!form.mediaUrl.trim()) {
+      setError("Le logo de votre établissement est obligatoire : importez votre logo ou cliquez sur « Choisir un logo ».");
+      document.getElementById("champ-logo")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    // Le téléphone et le logo sont obligatoires (avec le type de compte) : la formule,
     // l'email, le nom, le justificatif et le
     // niveau d'échanges sont facultatifs à l'inscription et pourront être
     // complétés plus tard depuis le profil, pour ne pas alourdir l'inscription.
@@ -304,7 +325,7 @@ export default function InscriptionPro() {
           country: form.country.trim(),
           phone: form.phone.trim(),
           email: form.email.trim(),
-          photo: form.mediaUrl.trim() || undefined,
+          photo: form.mediaUrl.trim(),
           justificatifDocument: form.justificatifDocument.trim() || undefined,
           services,
           specialties,
@@ -334,8 +355,8 @@ export default function InscriptionPro() {
           <div className="text-6xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Inscription envoyée !</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Votre demande est en attente de validation par l'administrateur.
-            Vous recevrez une notification dès qu'elle sera approuvée.
+            Votre établissement est enregistré. Vous recevrez une notification
+            dès que votre espace professionnel sera prêt.
           </p>
           {validationPercent < 100 && (
             <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-left">
@@ -377,8 +398,8 @@ export default function InscriptionPro() {
           <div className="flex-1 min-w-0">
             <div className="font-extrabold text-lg leading-tight">Lancez votre service sur Moftal</div>
             <div className="text-sm text-orange-100 mt-0.5">
-              Remplissez ce formulaire pour proposer votre activité. Votre compte sera visible dès validation par l'administration,
-              et toutes les informations utiles vous attendront dans votre tableau de bord.
+              Remplissez ce formulaire, choisissez votre logo, puis validez : toutes les informations utiles
+              vous attendront dans votre tableau de bord.
             </div>
           </div>
         </div>
@@ -517,9 +538,9 @@ export default function InscriptionPro() {
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-400"
                 placeholder={selectedType === "restaurant" ? "Décrivez votre restaurant, ambiance, spécialités..." : "Décrivez votre activité..."} />
             </div>
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2" id="champ-logo">
               <label className={labelCls}>
-                Logo de votre établissement <span className="text-gray-400 font-normal">(optionnel)</span>
+                Logo de votre établissement <span className="text-red-500">*</span>
               </label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                 📲 Ce logo sera l'icône de votre app sur les téléphones (le vôtre et celui de vos clients). Carré recommandé.
@@ -530,6 +551,7 @@ export default function InscriptionPro() {
                     const file = e.target.files?.[0];
                     if (!file) { setForm(f => ({ ...f, mediaUrl: "" })); return; }
                     setError("");
+                    logoPickerSeq.current++; // un fichier importé remplace le logo généré
                     // Converti en PNG 512 px : aperçu garanti, et icône d'app valable sur tous les téléphones
                     normaliserLogo(file)
                       .then(logo => setForm(f => ({ ...f, mediaUrl: logo })))
@@ -540,16 +562,22 @@ export default function InscriptionPro() {
                 {selectedType && (
                   <button
                     type="button"
-                    onClick={() => setShowLogoPicker(v => !v)}
+                    onClick={() => {
+                      if (!showLogoPicker) logoAvantPicker.current = form.mediaUrl;
+                      setShowLogoPicker(v => !v);
+                    }}
                     className="min-h-[44px] px-4 py-2.5 rounded-lg border-2 border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-semibold whitespace-nowrap transition-colors"
                   >
                     🎨 Choisir un logo
                   </button>
                 )}
               </div>
+              {!form.mediaUrl && error.includes("logo") && (
+                <p className="mt-1.5 text-sm font-semibold text-red-600">{error}</p>
+              )}
               {!form.mediaUrl && (
                 <p className="mt-1.5 text-xs text-gray-400">
-                  Pas encore de logo ? Cliquez sur « Choisir un logo » : vous pourrez en prendre un tout fait puis le modifier (texte, taille) en attendant de créer le vôtre.
+                  Obligatoire. Pas encore de logo ? Cliquez sur « Choisir un logo » : vous pourrez en prendre un tout fait puis le modifier (texte, taille) en attendant de créer le vôtre.
                 </p>
               )}
               {selectedType && showLogoPicker && (
@@ -558,12 +586,16 @@ export default function InscriptionPro() {
                   color={LOGO_COLORS[selectedType] || "#f59e0b"}
                   defaultText={form.name.trim() || PRO_TYPES.find(pt => pt.id === selectedType)?.label || ""}
                   matchText={form.description}
-                  onCancel={() => setShowLogoPicker(false)}
+                  onCancel={() => {
+                    // Annuler : on remet le logo qu'il y avait avant d'ouvrir le générateur
+                    logoPickerSeq.current++;
+                    setForm(f => ({ ...f, mediaUrl: logoAvantPicker.current }));
+                    setShowLogoPicker(false);
+                  }}
+                  onChange={appliquerLogoGenere}
                   onConfirm={dataUrl => {
                     setShowLogoPicker(false);
-                    normaliserLogo(dataUrl)
-                      .then(logo => setForm(f => ({ ...f, mediaUrl: logo })))
-                      .catch(err => setError(err.message));
+                    appliquerLogoGenere(dataUrl);
                   }}
                 />
               )}
@@ -573,7 +605,7 @@ export default function InscriptionPro() {
                     <img src={form.mediaUrl} alt="Aperçu logo" className="w-full h-full object-contain" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-green-700">✅ Logo chargé</p>
+                    <p className="text-xs font-semibold text-green-700">✅ {showLogoPicker ? "Logo retenu — il suit vos modifications" : "Logo chargé"}</p>
                     <p className="text-xs text-gray-500">Voici comment votre icône apparaîtra sur l'écran d'accueil</p>
                   </div>
                 </div>
@@ -775,8 +807,9 @@ export default function InscriptionPro() {
                 <span className="text-gray-400 font-normal">(optionnel, à ajouter plus tard si besoin)</span>
               </label>
               {REQUIRES_JUSTIFICATIF.includes(selectedType) && (
-                <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">
-                  💡 Recommandé pour ce type de compte : accélère la validation par l'administration.
+                // Un conseil, pas une erreur : couleur neutre
+                <p className="text-xs text-blue-700 dark:text-blue-300 mb-1">
+                  💡 Conseil : ce document prouve votre activité et rassure vos futurs clients. Vous pouvez aussi l'ajouter plus tard.
                 </p>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -819,11 +852,16 @@ export default function InscriptionPro() {
             )}
           </div>
 
+          <p className="mt-6 text-sm text-gray-600 dark:text-gray-300">
+            Vérifiez votre logo et vos informations, puis validez votre inscription.
+          </p>
+          {/* L'erreur aussi à côté du bouton : sur téléphone, le haut du formulaire n'est pas visible */}
+          {error && <div className="mt-6 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm font-semibold">⚠️ {error}</div>}
           <button type="submit" disabled={loading}
             className={`mt-6 w-full min-h-[44px] px-6 py-3 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors shadow-sm ${
               selectedType === "restaurant" ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"
             }`}>
-            {loading ? "Envoi en cours..." : "Envoyer ma demande d'inscription"}
+            {loading ? "Envoi en cours..." : "✅ Valider mon inscription"}
           </button>
         </form>
       </div>

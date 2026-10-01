@@ -2,6 +2,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -96,7 +97,7 @@ export default function JournalisteVitrine() {
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.1)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {media.logo_url ? <img src={media.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 22 }}>📰</span>}
+              <LogoEtablissement src={media.logo_url} name={media.name} fontSize={22} />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "white", letterSpacing: "0.02em" }}>{media.name}</div>
@@ -116,7 +117,7 @@ export default function JournalisteVitrine() {
         <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
           <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.1)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid rgba(255,255,255,0.2)" }}>
-            {media.logo_url ? <img src={media.logo_url} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 46 }}>📰</span>}
+            <LogoEtablissement src={media.logo_url} name={media.name} fontSize={46} />
           </div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "white", margin: "0 0 16px", fontFamily: "'Georgia', serif", letterSpacing: "-0.5px" }}>{media.name}</h1>
           <p style={{ fontSize: 17, color: "rgba(255,255,255,0.8)", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px", fontFamily: "system-ui" }}>

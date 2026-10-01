@@ -172,7 +172,8 @@ router.put('/:id/publish-info', authenticate, async (req, res) => {
       email: email !== undefined ? email : account.email,
       services: services !== undefined ? services : account.services,
       specialties: specialties !== undefined ? specialties : account.specialties,
-      photo: photo !== undefined ? photo : account.photo
+      // Le logo est obligatoire : une valeur vide ne l'efface pas
+      photo: photo ? photo : account.photo
     });
 
     // Auto-créer le tenant_code si le compte n'en a pas encore (tous les types sont couverts)
@@ -183,8 +184,8 @@ router.put('/:id/publish-info', authenticate, async (req, res) => {
       tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
       await account.update({ tenant_code: tenantCode });
       await sequelize.query(
-        `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
-        { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
+        `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, logo_url) VALUES (:code, :type, :name, :owner, :logo) ON CONFLICT (tenant_code) DO NOTHING`,
+        { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH, logo: account.photo || null } }
       ).catch(() => {});
     }
 

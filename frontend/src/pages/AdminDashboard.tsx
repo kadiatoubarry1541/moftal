@@ -6,12 +6,15 @@ import { AdminWalletPro } from "../components/AdminWalletPro";
 import { getSessionUser, isAdmin, isMasterAdmin } from "../utils/auth";
 import { getStats, getAllUsers, getAllFamilies, getMySectors, getPageAdmins, addPageAdmin, removePageAdmin, type SectorInfo } from "../utils/adminApi";
 import { config } from "../config/api";
+import LogoEtablissement from "../components/LogoEtablissement";
+import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 
 interface ProfessionalAccount {
   id: string;
   type: string;
   name: string;
+  photo?: string | null; // logo de l'établissement
   description: string;
   address: string;
   city: string;
@@ -101,6 +104,8 @@ export default function AdminDashboard() {
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [pendingPros, setPendingPros] = useState<ProfessionalAccount[]>([]);
   const [allPros, setAllPros] = useState<ProfessionalAccount[]>([]);
+  // Compte pro dont l'admin modifie le nom et le logo
+  const [identiteAModifier, setIdentiteAModifier] = useState<ProfessionalAccount | null>(null);
   const [proFilter, setProFilter] = useState<string>("pending");
   const [couples, setCouples] = useState<CoupleLink[]>([]);
   const [couplesLoading, setCouplesLoading] = useState(false);
@@ -1261,7 +1266,15 @@ export default function AdminDashboard() {
                 <div className="space-y-3">
                   {(proFilter === "pending" ? pendingPros : allPros).map((pro) => (
                     <div key={pro.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                      <div className="text-3xl">{typeLabels[pro.type]?.icon || "📄"}</div>
+                      <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden ring-1 ring-gray-200">
+                          <LogoEtablissement src={pro.photo} name={pro.name} type={pro.type} fontSize={26} />
+                        </div>
+                        <button type="button" onClick={() => setIdentiteAModifier(pro)}
+                          className="text-[11px] font-semibold text-blue-700 hover:underline whitespace-nowrap">
+                          ✏️ Nom / logo
+                        </button>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-bold text-gray-900 flex items-center gap-2 flex-wrap">
                           {pro.name}
@@ -2295,6 +2308,18 @@ export default function AdminDashboard() {
           {/* ========== MOFTAL PAY (G7 uniquement) ========== */}
           {adminSection === "moftal-pay" && isSuperAdmin7(userData) && (
             <MoftalPayAdminSection token={localStorage.getItem('token') || ''} apiBase={API_BASE} />
+          )}
+
+          {identiteAModifier && (
+            <AdminModifierIdentitePro
+              pro={identiteAModifier}
+              onClose={() => setIdentiteAModifier(null)}
+              onSaved={({ id, name, photo }) => {
+                const maj = (l: ProfessionalAccount[]) => l.map(p => (p.id === id ? { ...p, name, photo } : p));
+                setAllPros(maj);
+                setPendingPros(maj);
+              }}
+            />
           )}
 
         </div>

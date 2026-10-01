@@ -2,6 +2,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API = (config.API_BASE_URL || "").replace(/\/api\/?$/, "") || "http://localhost:5002";
 
@@ -77,11 +78,7 @@ export default function FournisseurVitrine() {
             ← Retour
           </button>
           <div style={{ display:"flex", alignItems:"center", gap:20 }}>
-            {supplier.logo_url ? (
-              <img src={supplier.logo_url} alt="logo" style={{ width:72, height:72, borderRadius:14, objectFit:"cover", border:"3px solid rgba(255,255,255,0.3)" }} />
-            ) : (
-              <div style={{ width:72, height:72, borderRadius:14, background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:36 }}>🚚</div>
-            )}
+            <div style={{ width:72, height:72, borderRadius:14, overflow:"hidden", flexShrink:0, border:"3px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.2)" }}><LogoEtablissement src={supplier.logo_url} name={supplier.name} fontSize={34} /></div>
             <div>
               <h1 style={{ margin:0, color:"white", fontSize:26, fontWeight:800 }}>{supplier.name}</h1>
               <div style={{ color:"rgba(255,255,255,0.8)", fontSize:14, marginTop:4 }}>Fournisseur / Grossiste</div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { sortByProximity, proximityScore, getUserGeoContext, proximityLabel, requestGPS, type UserGeoContext } from "../utils/proximity";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -261,17 +262,7 @@ export default function ListeProfessionnels() {
 
                   {/* ── PHOTO ── */}
                   <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-700 flex-shrink-0">
-                    {pro.photo ? (
-                      <img
-                        src={pro.photo}
-                        alt={pro.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">
-                        {getTypeIcon(pro.type)}
-                      </div>
-                    )}
+                    <LogoEtablissement src={pro.photo} name={pro.name} type={pro.type} fontSize={56} />
                     {/* Badge type */}
                     <span className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-full shadow-sm">
                       {TYPES.find(t => t.id === pro.type)?.icon} {TYPES.find(t => t.id === pro.type)?.label}
@@ -439,7 +430,7 @@ export default function ListeProfessionnels() {
                     return (
                       <div key={pro.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
                         <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-700 flex-shrink-0">
-                          {pro.photo ? <img src={pro.photo} alt={pro.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">{getTypeIcon(pro.type)}</div>}
+                          <LogoEtablissement src={pro.photo} name={pro.name} type={pro.type} fontSize={56} />
                           <span className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-full shadow-sm">{TYPES.find(t => t.id === pro.type)?.icon} {TYPES.find(t => t.id === pro.type)?.label}</span>
                           {prox && <span className="absolute top-2 right-2 px-2 py-0.5 text-white text-xs font-semibold rounded-full shadow-sm" style={{ backgroundColor: prox.color }}>{prox.text}</span>}
                         </div>
@@ -484,7 +475,7 @@ export default function ListeProfessionnels() {
               return (
                 <div key={pro.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
                   <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-700 flex-shrink-0">
-                    {pro.photo ? <img src={pro.photo} alt={pro.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-5xl opacity-30">{getTypeIcon(pro.type)}</div>}
+                    <LogoEtablissement src={pro.photo} name={pro.name} type={pro.type} fontSize={56} />
                     <span className="absolute top-2 left-2 px-2 py-0.5 bg-white/90 dark:bg-gray-800/90 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-full shadow-sm">{TYPES.find(t => t.id === pro.type)?.icon} {TYPES.find(t => t.id === pro.type)?.label}</span>
                     {prox && <span className="absolute top-2 right-2 px-2 py-0.5 text-white text-xs font-semibold rounded-full shadow-sm" style={{ backgroundColor: prox.color }}>{prox.text}</span>}
                   </div>

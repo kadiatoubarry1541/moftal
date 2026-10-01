@@ -66,7 +66,7 @@ router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res)
     await sequelize.query(
       `UPDATE management_tenants SET
         name          = COALESCE(:name, name),
-        logo_url      = CASE WHEN :hasLogo THEN :logo ELSE logo_url END,
+        logo_url      = COALESCE(NULLIF(:logo, ''), logo_url),
         address       = :address,
         phone         = :phone,
         email         = :email,

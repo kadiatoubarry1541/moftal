@@ -247,7 +247,7 @@ interface Draft {
 }
 
 export default function LogoPicker({
-  typeId, color, defaultText, matchText, onCancel, onConfirm,
+  typeId, color, defaultText, matchText, onCancel, onConfirm, onChange,
 }: {
   typeId: string;
   color: string;
@@ -256,6 +256,9 @@ export default function LogoPicker({
   matchText?: string;
   onCancel: () => void;
   onConfirm: (dataUrl: string) => void;
+  /** Appelé à chaque modification : le logo affiché est aussitôt celui retenu
+   *  (sur téléphone, on ne voit pas toujours le bouton « Utiliser ce logo »). */
+  onChange?: (dataUrl: string) => void;
 }) {
   const [tpl, setTpl] = useState<LogoTemplateId>("icon_text");
   const [text, setText] = useState(defaultText);
@@ -372,6 +375,16 @@ export default function LogoPicker({
      fontFamily, twoLines, strokeWidth, shadow, iconOffsetX, iconOffsetY, textOffsetX, textOffsetY]
   );
   const preview = useMemo(() => svgToDataUrl(previewSvg), [previewSvg]);
+
+  // Le logo choisi (ou modifié) est retenu tout de suite, sans attendre
+  // « Utiliser ce logo ». Petit délai : pas de calcul à chaque cran d'un curseur.
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  useEffect(() => {
+    if (loadingLibrary || !onChangeRef.current) return;
+    const t = setTimeout(() => onChangeRef.current?.(preview), 300);
+    return () => clearTimeout(t);
+  }, [preview, loadingLibrary]);
 
   const surfaceColor = tpl === "icon" || tpl === "icon_text" || tpl === "banner" ? brandColor : "#ffffff";
   const effectiveTextColor = textColor || (tpl === "icon" || tpl === "icon_text" || tpl === "banner" ? "#ffffff" : brandColor);

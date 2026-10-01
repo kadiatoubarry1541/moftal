@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getDeviseUtilisateur, formaterMontant, type DeviseInfo } from '../utils/currency';
 import { ReçuTransaction } from '../components/ReçuTransaction';
 import PaymentModal from '../components/PaymentModal';
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5002';
 
@@ -558,7 +559,7 @@ export default function CompteFamille() {
                             onClick={() => { setProSelectionne(pro); setProResults([]); }}
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 text-left transition-colors">
                             <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center text-lg">
-                              {pro.photo ? <img src={pro.photo} className="w-full h-full object-cover" alt="" /> : '🏥'}
+                              <LogoEtablissement src={pro.photo} name={pro.name} type="clinic" fontSize={16} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-bold text-gray-800 truncate">{pro.name}</p>
@@ -578,7 +579,7 @@ export default function CompteFamille() {
                     {proSelectionne && (
                       <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
                         <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-white flex items-center justify-center text-xl">
-                          {proSelectionne.photo ? <img src={proSelectionne.photo} className="w-full h-full object-cover" alt="" /> : '🏥'}
+                          <LogoEtablissement src={proSelectionne.photo} name={proSelectionne.name} type="clinic" fontSize={18} />
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-black text-blue-900">{proSelectionne.name}</p>

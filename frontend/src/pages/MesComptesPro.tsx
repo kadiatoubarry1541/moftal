@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
 import { VerifiedBadge } from "../components/VerifiedBadge";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -9,6 +10,7 @@ interface ProAccount {
   id: string;
   type: string;
   name: string;
+  photo?: string | null; // logo de l'établissement
   description: string;
   city: string;
   status: string;
@@ -262,9 +264,9 @@ export default function MesComptesPro() {
                   className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-4 sm:p-5"
                 >
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    {/* Icône */}
-                    <div className={`w-14 h-14 rounded-2xl ${badgeClass} flex items-center justify-center text-3xl flex-shrink-0`}>
-                      {typeInfo.icon}
+                    {/* Logo de l'établissement */}
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 ring-1 ring-gray-200 dark:ring-gray-700">
+                      <LogoEtablissement src={acc.photo} name={acc.name} type={acc.type} fontSize={26} />
                     </div>
 
                     {/* Info principale */}

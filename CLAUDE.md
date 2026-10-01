@@ -23,6 +23,11 @@ On montre uniquement ce que le modèle montre, rien de plus.
   (`TenantLogo` dans `frontend/src/components/GestionBrand.tsx`), jamais le logo Moftal,
   sauf sur le bouton « Retour sur Moftal » (`MoftalMark` + `goToMoftal`), seul chemin vers le site.
   Le code identifiant de l'établissement n'apparaît que dans Paramètres (`TenantCodeCard`).
+- **Logo obligatoire** : choisi à l'inscription, enregistré en base (`professional_accounts.photo`
+  = `management_tenants.logo_url`) et affiché partout où il y a une place de logo — gestion,
+  site vitrine, listes, rendez-vous — en entier (`LogoEtablissement`,
+  `frontend/src/components/LogoEtablissement.tsx`). Jamais d'emoji ou d'avatar à sa place ;
+  une valeur vide n'efface jamais un logo enregistré.
 
 ## 2. Toujours enregistrer les données dans la base de données
 

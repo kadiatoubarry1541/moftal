@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
 import { getAllLocationsForGroups } from "../utils/worldGeography";
@@ -51,12 +52,39 @@ interface EditProfileModalProps {
   onUpdate: (updatedData: UserData) => void;
 }
 
+// Champ d'identité (date de naissance, génération, ethnie, région, pays) : ils forment
+// le NuméroH, donc ne se modifient plus une fois saisis — mais un champ resté vide
+// doit pouvoir être rempli.
+function ChampIdentite({ label, type, value, verrouille, onChange }: {
+  label: string; type: string; value: string; verrouille: boolean; onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {verrouille ? "(non modifiable)" : <span className="text-xs text-amber-600 font-normal">(à renseigner — non modifiable ensuite)</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        readOnly={verrouille}
+        onChange={(e) => onChange(e.target.value)}
+        className={verrouille
+          ? "w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
+          : "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"}
+      />
+    </div>
+  );
+}
+
 export default function EditProfileModal({
   open,
   onClose,
   userData,
   onUpdate,
 }: EditProfileModalProps) {
+  const navigate = useNavigate();
+  // Identifiant provisoire « TMP-… » : compte créé avec seulement téléphone + mot de passe
+  const profilProvisoire = Boolean(userData?.numeroH?.startsWith("TMP-"));
   const [formData, setFormData] = useState<UserData | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -615,6 +643,23 @@ export default function EditProfileModal({
             )}
           </div>
 
+          {/* Compte créé avec seulement téléphone + mot de passe : pays, région, ethnie,
+              génération, date de naissance… se renseignent dans « Compléter mon profil »
+              (qui attribue le vrai NuméroH), pas ici. */}
+          {profilProvisoire && (
+            <div className="mb-4 p-4 rounded-xl border-2 border-amber-300 bg-amber-50">
+              <p className="text-sm font-bold text-amber-900">Votre profil n'est pas encore complété</p>
+              <p className="text-xs text-amber-800 mt-1">
+                Renseignez votre pays, votre région, votre ethnie, votre date de naissance… (1 minute).
+                Vous recevrez alors votre NuméroH définitif.
+              </p>
+              <button type="button" onClick={() => { onClose(); navigate("/vivant/completer"); }}
+                className="mt-3 w-full min-h-[44px] px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold">
+                ✏️ Compléter mon profil
+              </button>
+            </div>
+          )}
+
           {/* Informations personnelles */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -707,17 +752,10 @@ export default function EditProfileModal({
                 <option value="AUTRE">Autre</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date de naissance (non modifiable)
-              </label>
-              <input
-                type="date"
-                value={formData.dateNaissance || ""}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
-              />
-            </div>
+            {!profilProvisoire && (
+              <ChampIdentite label="Date de naissance" type="date" verrouille={Boolean(userData?.dateNaissance)}
+                value={formData.dateNaissance || ""} onChange={(v) => handleInputChange("dateNaissance", v)} />
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Âge
@@ -729,50 +767,22 @@ export default function EditProfileModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Génération (non modifiable)
-              </label>
-              <input
-                type="text"
-                value={formData.generation || ""}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ethnie (non modifiable)
-              </label>
-              <input
-                type="text"
-                value={formData.ethnie || ""}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Région (non modifiable)
-              </label>
-              <input
-                type="text"
-                value={formData.region || ""}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pays (non modifiable)
-              </label>
-              <input
-                type="text"
-                value={formData.pays || ""}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
-              />
-            </div>
+            {!profilProvisoire && (
+              <ChampIdentite label="Génération" type="text" verrouille={Boolean(userData?.generation)}
+                value={formData.generation || ""} onChange={(v) => handleInputChange("generation", v)} />
+            )}
+            {!profilProvisoire && (
+              <ChampIdentite label="Ethnie" type="text" verrouille={Boolean(userData?.ethnie)}
+                value={formData.ethnie || ""} onChange={(v) => handleInputChange("ethnie", v)} />
+            )}
+            {!profilProvisoire && (
+              <ChampIdentite label="Région" type="text" verrouille={Boolean(userData?.region)}
+                value={formData.region || ""} onChange={(v) => handleInputChange("region", v)} />
+            )}
+            {!profilProvisoire && (
+              <ChampIdentite label="Pays" type="text" verrouille={Boolean(userData?.pays)}
+                value={formData.pays || ""} onChange={(v) => handleInputChange("pays", v)} />
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nationalité

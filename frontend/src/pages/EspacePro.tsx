@@ -7,6 +7,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import InstallAppButton from "../components/InstallAppButton";
 import { AddPersonModal } from "../components/AddPersonModal";
 import { normaliserLogo } from "../utils/logoImage";
+import LogoEtablissement from "../components/LogoEtablissement";
 
 interface ProAccount {
   id: string;
@@ -2174,11 +2175,7 @@ export default function EspacePro() {
               <div className="p-5">
                 <div className="flex items-center gap-5">
                   <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center border border-gray-200 dark:border-gray-600">
-                    {account.photo ? (
-                      <img src={account.photo} alt="Logo" className="w-full h-full object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }} />
-                    ) : (
-                      <span className="text-4xl">{typeInfo.icon}</span>
-                    )}
+                    <LogoEtablissement src={account.photo} name={account.name} type={account.type} fontSize={36} />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">PNG, JPG ou SVG. Mise à jour instantanée partout (gestion, site, application).</p>
@@ -2555,11 +2552,7 @@ export default function EspacePro() {
                 {/* Logo */}
                 <div className="flex flex-col sm:flex-row items-center gap-5">
                   <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center shadow-inner border border-gray-200 dark:border-gray-600">
-                    {account.photo ? (
-                      <img src={account.photo} alt="Logo" className="w-full h-full object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }} />
-                    ) : (
-                      <span className="text-5xl">{typeInfo.icon}</span>
-                    )}
+                    <LogoEtablissement src={account.photo} name={account.name} type={account.type} fontSize={44} />
                   </div>
                   <div className="flex-1 w-full">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Logo de l'établissement</p>

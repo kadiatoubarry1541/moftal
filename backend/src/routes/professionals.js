@@ -14,6 +14,7 @@ import {
 } from '../utils/sectorAdmin.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -105,8 +106,8 @@ async function finalizeApproval(account, approverUserId) {
     const prefix = prefixMap[account.type] || 'PRO';
     tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
     await sequelize.query(
-      `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h) VALUES (:code, :type, :name, :owner) ON CONFLICT (tenant_code) DO NOTHING`,
-      { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH } }
+      `INSERT INTO management_tenants (tenant_code, type, name, owner_numero_h, logo_url) VALUES (:code, :type, :name, :owner, :logo) ON CONFLICT (tenant_code) DO NOTHING`,
+      { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH, logo: account.photo || null } }
     );
   }
 
@@ -134,6 +135,9 @@ async function finalizeApproval(account, approverUserId) {
     isTrial: true,
     ...(tenantCode ? { tenant_code: tenantCode } : {})
   });
+
+  // Logo (et contacts) choisis à l'inscription → gestion interne et site client
+  if (tenantCode) await fillTenantsFromAccounts(tenantCode).catch(() => {});
 
   return account;
 }
@@ -172,6 +176,12 @@ router.post('/register', authenticate, async (req, res) => {
 
     if (!type || !name) {
       return res.status(400).json({ success: false, message: 'Type et nom requis' });
+    }
+    // Le logo est obligatoire : c'est lui qui représente l'établissement partout
+    // (gestion, site client, listes, icône de l'app installée).
+    const logo = typeof photo === 'string' ? photo.trim() : '';
+    if (!/^data:image\//.test(logo) && !/^https?:\/\//.test(logo)) {
+      return res.status(400).json({ success: false, message: 'Le logo de votre établissement est obligatoire.', champ: 'photo' });
     }
 
     const validTypes = [
@@ -214,7 +224,7 @@ router.post('/register', authenticate, async (req, res) => {
       email: email || '',
       services: services || [],
       specialties: specialties || [],
-      photo: photo || null,
+      photo: logo,
       justificatifDocument: (justificatifDocument && String(justificatifDocument).trim()) || null,
       planType: planType === 'full' ? 'full' : 'visibility',
       ownerNumeroH: req.userId,
@@ -234,7 +244,7 @@ router.post('/register', authenticate, async (req, res) => {
         ? 'Compte créé et publié.'
         : validated.ownerProfileIncomplete
           ? 'Compte créé : il est validé à 60 %. Mettez votre profil à jour pour le passer à 100 %.'
-          : 'Inscription envoyée. En attente de validation par l\'administrateur.',
+          : 'Inscription enregistrée. Vous recevrez une notification dès que votre espace professionnel sera prêt.',
       validationPercent: validated.validationPercent,
       account: validated
     });
@@ -738,14 +748,15 @@ router.put('/:id', authenticate, async (req, res) => {
       email: email !== undefined ? email : account.email,
       services: services !== undefined ? services : account.services,
       specialties: specialties !== undefined ? specialties : account.specialties,
-      photo: photo !== undefined ? photo : account.photo,
+      // Le logo est obligatoire : une valeur vide ne l'efface pas
+      photo: photo ? photo : account.photo,
       billingInfo: billingInfo !== undefined ? billingInfo : account.billingInfo
     });
 
     // Synchroniser management_tenants pour que la vitrine publique soit à jour
     if (account.tenant_code) {
       await sequelize.query(
-        `UPDATE management_tenants SET name=:name, description=:desc, address=:addr, phone=:phone, email=:email, logo_url=:logo WHERE tenant_code=:code`,
+        `UPDATE management_tenants SET name=:name, description=:desc, address=:addr, phone=:phone, email=:email, logo_url=COALESCE(NULLIF(:logo, ''), logo_url) WHERE tenant_code=:code`,
         { replacements: { name: account.name, desc: account.description || '', addr: account.address || '', phone: account.phone || '', email: account.email || '', logo: account.photo || null, code: account.tenant_code } }
       ).catch(() => {});
     }
@@ -1085,6 +1096,46 @@ router.delete('/admin/:id', authenticate, requireAdmin, async (req, res) => {
 // Les tables concernées sont trouvées dans la base elle-même (colonne tenant_code
 // ou identifiant du compte) : une gestion ajoutée plus tard est couverte aussi.
 // Tout se fait en une transaction : en cas d'erreur, rien n'est supprimé.
+// PUT /api/professionals/admin/:id/identite — l'admin modifie le nom et/ou le logo
+// d'un compte pro (comptes créés pour des personnes éloignées). Le changement suit
+// partout : compte pro, gestion interne, site vitrine, icône de l'app.
+router.put('/admin/:id/identite', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    const logo = typeof req.body.photo === 'string' ? req.body.photo.trim() : '';
+    if (!name && !logo) {
+      return res.status(400).json({ success: false, message: 'Indiquez un nom ou un logo.' });
+    }
+    if (logo && !/^data:image\//.test(logo) && !/^https?:\/\//.test(logo)) {
+      return res.status(400).json({ success: false, message: 'Logo invalide : choisissez une image.' });
+    }
+    if (name && name.toLowerCase() !== String(account.name || '').toLowerCase()) {
+      const pris = await ProfessionalAccount.findOne({
+        where: { name: { [Op.iLike]: name }, status: { [Op.ne]: 'rejected' }, isActive: true, id: { [Op.ne]: account.id } }
+      });
+      if (pris) {
+        return res.status(409).json({ success: false, message: `Le nom "${name}" est déjà utilisé par un autre établissement.` });
+      }
+    }
+
+    await account.update({ ...(name ? { name } : {}), ...(logo ? { photo: logo } : {}) });
+    if (account.tenant_code) {
+      await sequelize.query(
+        `UPDATE management_tenants SET name = COALESCE(NULLIF(:name, ''), name), logo_url = COALESCE(NULLIF(:logo, ''), logo_url)
+         WHERE tenant_code = :code`,
+        { replacements: { name, logo, code: account.tenant_code } }
+      );
+    }
+    res.json({ success: true, message: 'Nom et logo enregistrés.', account: sanitizeAccountForPublic(account) });
+  } catch (e) {
+    console.error('admin identite pro:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.delete('/admin/:id/definitif', authenticate, requireAdmin, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
