@@ -244,7 +244,7 @@ router.post('/register', authenticate, async (req, res) => {
         ? 'Compte créé et publié.'
         : validated.ownerProfileIncomplete
           ? 'Compte créé : il est validé à 60 %. Mettez votre profil à jour pour le passer à 100 %.'
-          : 'Inscription envoyée. En attente de validation par l\'administrateur.',
+          : 'Inscription enregistrée. Vous recevrez une notification dès que votre espace professionnel sera prêt.',
       validationPercent: validated.validationPercent,
       account: validated
     });
@@ -1096,6 +1096,46 @@ router.delete('/admin/:id', authenticate, requireAdmin, async (req, res) => {
 // Les tables concernées sont trouvées dans la base elle-même (colonne tenant_code
 // ou identifiant du compte) : une gestion ajoutée plus tard est couverte aussi.
 // Tout se fait en une transaction : en cas d'erreur, rien n'est supprimé.
+// PUT /api/professionals/admin/:id/identite — l'admin modifie le nom et/ou le logo
+// d'un compte pro (comptes créés pour des personnes éloignées). Le changement suit
+// partout : compte pro, gestion interne, site vitrine, icône de l'app.
+router.put('/admin/:id/identite', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    const logo = typeof req.body.photo === 'string' ? req.body.photo.trim() : '';
+    if (!name && !logo) {
+      return res.status(400).json({ success: false, message: 'Indiquez un nom ou un logo.' });
+    }
+    if (logo && !/^data:image\//.test(logo) && !/^https?:\/\//.test(logo)) {
+      return res.status(400).json({ success: false, message: 'Logo invalide : choisissez une image.' });
+    }
+    if (name && name.toLowerCase() !== String(account.name || '').toLowerCase()) {
+      const pris = await ProfessionalAccount.findOne({
+        where: { name: { [Op.iLike]: name }, status: { [Op.ne]: 'rejected' }, isActive: true, id: { [Op.ne]: account.id } }
+      });
+      if (pris) {
+        return res.status(409).json({ success: false, message: `Le nom "${name}" est déjà utilisé par un autre établissement.` });
+      }
+    }
+
+    await account.update({ ...(name ? { name } : {}), ...(logo ? { photo: logo } : {}) });
+    if (account.tenant_code) {
+      await sequelize.query(
+        `UPDATE management_tenants SET name = COALESCE(NULLIF(:name, ''), name), logo_url = COALESCE(NULLIF(:logo, ''), logo_url)
+         WHERE tenant_code = :code`,
+        { replacements: { name, logo, code: account.tenant_code } }
+      );
+    }
+    res.json({ success: true, message: 'Nom et logo enregistrés.', account: sanitizeAccountForPublic(account) });
+  } catch (e) {
+    console.error('admin identite pro:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 router.delete('/admin/:id/definitif', authenticate, requireAdmin, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);

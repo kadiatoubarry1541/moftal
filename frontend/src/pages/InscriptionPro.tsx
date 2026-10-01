@@ -355,8 +355,8 @@ export default function InscriptionPro() {
           <div className="text-6xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Inscription envoyée !</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Votre demande est en attente de validation par l'administrateur.
-            Vous recevrez une notification dès qu'elle sera approuvée.
+            Votre établissement est enregistré. Vous recevrez une notification
+            dès que votre espace professionnel sera prêt.
           </p>
           {validationPercent < 100 && (
             <div className="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-left">
@@ -398,8 +398,8 @@ export default function InscriptionPro() {
           <div className="flex-1 min-w-0">
             <div className="font-extrabold text-lg leading-tight">Lancez votre service sur Moftal</div>
             <div className="text-sm text-orange-100 mt-0.5">
-              Remplissez ce formulaire pour proposer votre activité. Votre compte sera visible dès validation par l'administration,
-              et toutes les informations utiles vous attendront dans votre tableau de bord.
+              Remplissez ce formulaire, choisissez votre logo, puis validez : toutes les informations utiles
+              vous attendront dans votre tableau de bord.
             </div>
           </div>
         </div>
@@ -809,7 +809,7 @@ export default function InscriptionPro() {
               {REQUIRES_JUSTIFICATIF.includes(selectedType) && (
                 // Un conseil, pas une erreur : couleur neutre
                 <p className="text-xs text-blue-700 dark:text-blue-300 mb-1">
-                  💡 Conseil : ce document aide l'équipe Moftal à vérifier votre établissement et à le publier plus vite. Vous pouvez aussi l'envoyer plus tard.
+                  💡 Conseil : ce document prouve votre activité et rassure vos futurs clients. Vous pouvez aussi l'ajouter plus tard.
                 </p>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -852,13 +852,16 @@ export default function InscriptionPro() {
             )}
           </div>
 
+          <p className="mt-6 text-sm text-gray-600 dark:text-gray-300">
+            Vérifiez votre logo et vos informations, puis validez votre inscription.
+          </p>
           {/* L'erreur aussi à côté du bouton : sur téléphone, le haut du formulaire n'est pas visible */}
           {error && <div className="mt-6 p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm font-semibold">⚠️ {error}</div>}
           <button type="submit" disabled={loading}
             className={`mt-6 w-full min-h-[44px] px-6 py-3 disabled:bg-gray-400 text-white font-semibold rounded-lg transition-colors shadow-sm ${
               selectedType === "restaurant" ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"
             }`}>
-            {loading ? "Envoi en cours..." : "Envoyer ma demande d'inscription"}
+            {loading ? "Envoi en cours..." : "✅ Valider mon inscription"}
           </button>
         </form>
       </div>
