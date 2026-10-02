@@ -15,6 +15,7 @@ import { SalesIcon } from "./components/icons/SalesIcon";
 import { useProBrand } from "./components/proBrand";
 import { TenantLogo } from "./components/GestionBrand";
 import { FitText } from "./components/FitText";
+import { InvitationInstallerMoftal } from "./components/InstallAppButton";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
@@ -387,6 +388,7 @@ function App() {
     <GestionPaymentGate />
     <OfflineStatusBar />
     <ProfileCompletionPrompt />
+    {isLoggedIn && !isFullscreenPage && <InvitationInstallerMoftal />}
     <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-dvh' : ''}${isHome ? ' h-dvh overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine, et sur les
           pages qui n'ont rien à y afficher (Famille/Terre ADAM/Échanges/Services ont
