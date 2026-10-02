@@ -14,6 +14,7 @@ import { FavorisDropdown, FavorisDropdownItem } from "./components/FavorisDropdo
 import { SalesIcon } from "./components/icons/SalesIcon";
 import { useProBrand } from "./components/proBrand";
 import { TenantLogo } from "./components/GestionBrand";
+import { FitText } from "./components/FitText";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
 import { Home } from "./pages/Home";
@@ -413,8 +414,9 @@ function App() {
                   className="flex-1 min-w-0 h-[90px] overflow-hidden flex items-center gap-2 px-2 py-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
                 >
                   {/* Même carte pour tous les comptes (modèle = ce que voit l'admin) :
-                      photo ronde 78px, hauteur fixe, nom sur une ligne chacun —
-                      un nom long ou des logos attribués ne grandissent jamais la carte. */}
+                      photo ronde 78px, hauteur fixe, nom sur une ligne chacun en entier
+                      (écrit plus petit s'il est long, jamais coupé) — un nom long ou des
+                      logos attribués ne grandissent jamais la carte. */}
                   {(() => {
                     const photoUrl = getPhotoUrl(
                       currentUser.photo || currentUser.manPhoto || currentUser.familyPhoto
@@ -431,15 +433,15 @@ function App() {
                     );
                   })()}
                   <div className="min-w-0 flex-1 self-start pt-0.5">
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
+                    <FitText maxSize={14} className="font-bold text-gray-900 dark:text-gray-100 leading-tight">
                       {currentUser.prenom}
-                    </p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
+                    </FitText>
+                    <FitText maxSize={14} className="font-bold text-gray-900 dark:text-gray-100 leading-tight">
                       {currentUser.nomFamille}
-                    </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">
+                    </FitText>
+                    <FitText maxSize={10} className="text-gray-500 dark:text-gray-400 font-mono">
                       {getNumeroHForDisplay(currentUser.numeroH, true, false)}
-                    </p>
+                    </FitText>
                   </div>
                   {profileLogos.length > 0 && (
                     <div className="flex flex-col items-center gap-0.5 flex-shrink-0" title="Logos attribués">
