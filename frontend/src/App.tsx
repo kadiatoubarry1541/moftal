@@ -410,53 +410,56 @@ function App() {
               {isAccueilConnecte && currentUser && (
                 <button
                   onClick={() => navigate("/moi/profil")}
-                  className="flex-1 min-w-0 flex items-center gap-2 px-2 py-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
+                  className="flex-1 min-w-0 h-[90px] overflow-hidden flex items-center gap-2 px-2 py-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
                 >
+                  {/* Même carte pour tous les comptes (modèle = ce que voit l'admin) :
+                      photo ronde 78px, hauteur fixe, nom sur une ligne chacun —
+                      un nom long ou des logos attribués ne grandissent jamais la carte. */}
                   {(() => {
                     const photoUrl = getPhotoUrl(
                       currentUser.photo || currentUser.manPhoto || currentUser.familyPhoto
                     );
-                    return photoUrl ? (
-                      <img
-                        src={photoUrl}
-                        alt="Photo de profil"
-                        className="w-[78px] h-[78px] rounded-full object-cover border-2 border-emerald-400 flex-shrink-0"
-                        onError={(e) => { (e.target as HTMLImageElement).src = DefaultAvatar; }}
-                      />
-                    ) : (
-                      <img src={DefaultAvatar} alt="Avatar" className="w-[78px] h-[78px] rounded-full flex-shrink-0" />
+                    return (
+                      <span className="w-[78px] h-[78px] rounded-full overflow-hidden flex-shrink-0 block">
+                        <img
+                          src={photoUrl || DefaultAvatar}
+                          alt="Photo de profil"
+                          className="w-full h-full object-cover block"
+                          onError={(e) => { (e.target as HTMLImageElement).src = DefaultAvatar; }}
+                        />
+                      </span>
                     );
                   })()}
-                  <div className="min-w-0 self-start pt-0.5">
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight break-words">
+                  <div className="min-w-0 flex-1 self-start pt-0.5">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
                       {currentUser.prenom}
                     </p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight break-words">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight truncate">
                       {currentUser.nomFamille}
                     </p>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono break-words">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-mono truncate">
                       {getNumeroHForDisplay(currentUser.numeroH, true, false)}
                     </p>
-                    {profileLogos.length > 0 && (
-                      <div className="flex items-center gap-1 mt-1" title="Logos attribués">
-                        {profileLogos.slice(0, 3).map(ul => (
-                          <span
-                            key={ul.id}
-                            title={ul.logo.name}
-                            className="w-6 h-6 flex items-center justify-center rounded-full text-xs flex-shrink-0"
-                            style={{ background: `${ul.logo.color}22`, border: `1.5px solid ${ul.logo.color}` }}
-                          >
-                            {ul.logo.icon}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
+                  {profileLogos.length > 0 && (
+                    <div className="flex flex-col items-center gap-0.5 flex-shrink-0" title="Logos attribués">
+                      {profileLogos.slice(0, 3).map(ul => (
+                        <span
+                          key={ul.id}
+                          title={ul.logo.name}
+                          className="w-6 h-6 flex items-center justify-center rounded-full text-xs flex-shrink-0"
+                          style={{ background: `${ul.logo.color}22`, border: `1.5px solid ${ul.logo.color}` }}
+                        >
+                          {ul.logo.icon}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {isMasterAdmin(currentUser) && (
                     <span
                       role="button"
                       onClick={(e) => { e.stopPropagation(); navigate("/admin"); }}
-                      className="ml-auto w-8 h-8 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm transition-colors flex-shrink-0"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm transition-colors flex-shrink-0"
                       aria-label="Administration"
                     >
                       👑
