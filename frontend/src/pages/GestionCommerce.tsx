@@ -26,7 +26,7 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 }
 function parseCsv(text: string): string[][] {
   const sep = text.includes(";") ? ";" : ",";
-  return text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim()).map(line => {
+  return text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim()).map(line => {
     const cells: string[] = [];
     let cur = "", inQuotes = false;
     for (let i = 0; i < line.length; i++) {

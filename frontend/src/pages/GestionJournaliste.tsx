@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/journalist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -89,14 +90,14 @@ export default function GestionJournaliste() {
   async function addReporter() {
     if (!rForm.nom.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/reporters`, { method: "POST", headers: auth(), body: JSON.stringify(rForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/reporters`, { method: "POST", headers: auth(), body: JSON.stringify(rForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddReporter(false);
     setRForm({ nom: "", prenom: "", telephone: "", numero_h: "", specialite: "Général", role: "journaliste" });
     loadReporters(); loadAll();
   }
   async function deleteReporter(id: number) {
     if (!confirm("Retirer ce journaliste ?")) return;
-    await fetch(`${BASE(tenantCode!)}/reporters/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/reporters/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadReporters(); loadAll();
   }
 
@@ -105,46 +106,46 @@ export default function GestionJournaliste() {
     setSaving(true);
     const sel = reporters.find((r: any) => String(r.id) === aForm.reporter_id);
     const payload = { ...aForm, reporter_nom: sel ? `${sel.nom} ${sel.prenom||""}`.trim() : aForm.reporter_nom };
-    await fetch(`${BASE(tenantCode!)}/articles`, { method: "POST", headers: auth(), body: JSON.stringify(payload) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/articles`, { method: "POST", headers: auth(), body: JSON.stringify(payload) }))) { setSaving(false); return; }
     setSaving(false); setShowAddArticle(false);
     setAForm({ reporter_id: "", reporter_nom: "", titre: "", contenu: "", categorie: "Actualité", statut: "brouillon", date_pub: new Date().toISOString().split("T")[0] });
     loadArticles(); loadAll();
   }
   async function updateStatutArticle(id: number, statut: string) {
-    await fetch(`${BASE(tenantCode!)}/articles/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/articles/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadArticles(); loadAll();
   }
   async function deleteArticle(id: number) {
     if (!confirm("Supprimer cet article ?")) return;
-    await fetch(`${BASE(tenantCode!)}/articles/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/articles/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadArticles(); loadAll();
   }
 
   async function addSubscriber() {
     if (!sForm.nom.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/subscribers`, { method: "POST", headers: auth(), body: JSON.stringify(sForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/subscribers`, { method: "POST", headers: auth(), body: JSON.stringify(sForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddSub(false);
     setSForm({ nom: "", telephone: "", email: "", type_abo: "gratuit" });
     loadSubscribers(); loadAll();
   }
   async function deleteSubscriber(id: number) {
     if (!confirm("Retirer cet abonné ?")) return;
-    await fetch(`${BASE(tenantCode!)}/subscribers/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/subscribers/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadSubscribers(); loadAll();
   }
 
   async function addAnn() {
     if (!annForm.titre.trim() || !annForm.contenu.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(annForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(annForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddAnn(false);
     setAnnForm({ titre: "", contenu: "", type: "general" });
     loadAnnouncements(); loadAll();
   }
   async function deleteAnn(id: number) {
     if (!confirm("Supprimer cette annonce ?")) return;
-    await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnouncements(); loadAll();
   }
 

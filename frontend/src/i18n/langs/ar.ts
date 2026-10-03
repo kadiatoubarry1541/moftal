@@ -663,7 +663,7 @@ const ar: Record<string, string> = {
   'header.my_spaces': 'فضاءاتي',
 
   // تذييل الصفحة
-  'footer.copy': '© 2025 Moftal',
+  'footer.copy': '© {year} Moftal',
   'footer.tagline': "معاً من أجل أبناء آدم",
   'footer.system': "نظام التسجيل الأسري",
   'footer.conditions': "شروط الاستخدام",

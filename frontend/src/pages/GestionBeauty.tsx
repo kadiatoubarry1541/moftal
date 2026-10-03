@@ -5,6 +5,7 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/beauty-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -105,7 +106,7 @@ export default function GestionBeauty() {
 
   async function deleteService(id: number) {
     if (!confirm("Supprimer ce service ?")) return;
-    await fetch(`${b(tenantCode!)}/services/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/services/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadServices();
   }
 
@@ -119,7 +120,7 @@ export default function GestionBeauty() {
   }
 
   async function patchBooking(id: number, statut: string) {
-    await fetch(`${b(tenantCode!)}/bookings/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/bookings/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadBookings(); loadAll();
   }
 
@@ -134,7 +135,7 @@ export default function GestionBeauty() {
 
   async function deleteStaff(id: number) {
     if (!confirm("Retirer ce membre du personnel ?")) return;
-    await fetch(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadStaff(); loadAll();
   }
 

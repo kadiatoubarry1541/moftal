@@ -5,6 +5,7 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/retailer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -146,7 +147,7 @@ export default function GestionVendeur() {
   }
 
   async function adjustStock(productId: number, delta: number) {
-    await fetch(`${b(tenantCode!)}/products/${productId}/stock`, { method: "PUT", headers: auth(), body: JSON.stringify({ delta }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/products/${productId}/stock`, { method: "PUT", headers: auth(), body: JSON.stringify({ delta }) }))) { return; }
     loadProducts();
   }
 

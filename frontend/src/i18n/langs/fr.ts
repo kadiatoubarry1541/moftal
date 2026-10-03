@@ -663,7 +663,7 @@ const fr: Record<string, string> = {
   'header.my_spaces': 'Mes espaces',
 
   // Footer
-  'footer.copy': '© 2025 Moftal',
+  'footer.copy': '© {year} Moftal',
   'footer.tagline': "Ensemble pour les enfants d'Adam",
   'footer.system': "Système d'enregistrement généalogique",
   'footer.conditions': "Conditions d'Utilisation",

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import { getSessionUser } from "../utils/auth";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
@@ -138,7 +139,7 @@ export default function GestionIslamique({ mode }: Props) {
     return d;
   }
   async function del(path: string) {
-    await fetch(`${BASE(tenantCode!)}/${path}`, { method:"DELETE", headers:auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/${path}`, { method:"DELETE", headers:auth() }))) { return; }
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────

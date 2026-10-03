@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/imam-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -101,7 +102,7 @@ export default function GestionImam() {
   async function addImam() {
     if (!iForm.nom.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/imams`, { method: "POST", headers: auth(), body: JSON.stringify(iForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/imams`, { method: "POST", headers: auth(), body: JSON.stringify(iForm) }))) { setSaving(false); return; }
     setSaving(false);
     setShowAddImam(false);
     setIForm({ nom: "", prenom: "", telephone: "", numero_h: "", specialite: "Général", mosquee: "" });
@@ -111,7 +112,7 @@ export default function GestionImam() {
 
   async function deleteImam(id: number) {
     if (!confirm("Retirer cet imam du réseau ?")) return;
-    await fetch(`${BASE(tenantCode!)}/imams/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/imams/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadImams();
     loadAll();
   }
@@ -119,7 +120,7 @@ export default function GestionImam() {
   async function addPredication() {
     if (!pForm.titre.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/predications`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/predications`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) }))) { setSaving(false); return; }
     setSaving(false);
     setShowAddPred(false);
     setPForm({ imam_id: "", imam_nom: "", titre: "", type_pred: "khutba", date_pred: new Date().toISOString().split("T")[0], mosquee: "", notes: "" });
@@ -129,7 +130,7 @@ export default function GestionImam() {
 
   async function deletePredication(id: number) {
     if (!confirm("Supprimer cette prédication ?")) return;
-    await fetch(`${BASE(tenantCode!)}/predications/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/predications/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadPredications();
     loadAll();
   }
@@ -137,7 +138,7 @@ export default function GestionImam() {
   async function addMosque() {
     if (!mForm.nom.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/mosques`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/mosques`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) }))) { setSaving(false); return; }
     setSaving(false);
     setShowAddMosque(false);
     setMForm({ nom: "", adresse: "", responsable: "", telephone: "" });
@@ -147,7 +148,7 @@ export default function GestionImam() {
 
   async function deleteMosque(id: number) {
     if (!confirm("Retirer cette mosquée ?")) return;
-    await fetch(`${BASE(tenantCode!)}/mosques/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/mosques/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadMosques();
     loadAll();
   }
@@ -155,7 +156,7 @@ export default function GestionImam() {
   async function addAnnouncement() {
     if (!aForm.titre.trim() || !aForm.contenu.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) }))) { setSaving(false); return; }
     setSaving(false);
     setShowAddAnn(false);
     setAForm({ titre: "", contenu: "", type: "general" });
@@ -165,7 +166,7 @@ export default function GestionImam() {
 
   async function deleteAnn(id: number) {
     if (!confirm("Supprimer cette annonce ?")) return;
-    await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnouncements();
     loadAll();
   }

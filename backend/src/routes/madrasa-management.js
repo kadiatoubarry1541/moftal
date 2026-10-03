@@ -12,8 +12,16 @@ import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
+import { attraperErreursAsync } from '../utils/routerAsync.js';
 
-const router = express.Router();
+const router = attraperErreursAsync(express.Router());
+
+// Année scolaire en cours (elle commence en septembre) : « 2026-2027 », etc.
+function anneeScolaireCourante() {
+  const d = new Date();
+  const debut = d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+  return `${debut}-${debut + 1}`;
+}
 
 // Plusieurs routes n'ont pas de try/catch : avec Express 4, une erreur de base
 // y devient un rejet non géré qui arrête tout le serveur. On renvoie une erreur
@@ -562,7 +570,7 @@ router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async
        ON CONFLICT (tenant_code, student_id, periode) DO UPDATE
        SET moyenne_generale = EXCLUDED.moyenne_generale, mention = EXCLUDED.mention,
            is_published = EXCLUDED.is_published, published_at = EXCLUDED.published_at`,
-      { replacements: { tc, sid: s.id, per: periode, ann: annee || '2025-2026', moy: moyenne, men: mention, pub: !!publish, pat: publish ? new Date() : null } }
+      { replacements: { tc, sid: s.id, per: periode, ann: annee || anneeScolaireCourante(), moy: moyenne, men: mention, pub: !!publish, pat: publish ? new Date() : null } }
     );
 
     if (publish) {

@@ -2764,7 +2764,12 @@ app.use('/api', limiter);
 
 // Middleware pour parser le JSON
 // Limite élevée pour enregistrement vivant (photo + vidéo en base64)
-app.use(express.json({ limit: '200mb' }));
+// rawBody : texte exact reçu, nécessaire pour vérifier la signature des
+// notifications de paiement Djomy (le JSON re-sérialisé peut différer).
+app.use(express.json({
+  limit: '200mb',
+  verify: (req, _res, buf) => { if (req.originalUrl?.startsWith('/api/djomy/webhook')) req.rawBody = buf.toString('utf8'); }
+}));
 app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // Servir les fichiers uploads (photos, vidéos)

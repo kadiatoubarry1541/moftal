@@ -177,9 +177,11 @@ export default function GestionEcole() {
         if (d.success) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast("Frais ajouté"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "save-attendance") {
-        await post("/attendance", { records: attendance, classroom_id: parseInt(selectedClass) });
-        setModal(null); showToast("Présences enregistrées");
+        const d = await post("/attendance", { records: attendance, classroom_id: parseInt(selectedClass) });
+        if (d.success) { setModal(null); showToast("Présences enregistrées"); }
+        else showToast(d.message || "Les présences n'ont pas été enregistrées", false);
       }
+    } catch { showToast("Erreur de connexion : rien n'a été enregistré", false);
     } finally { setSaving(false); }
   };
 
@@ -682,11 +684,13 @@ export default function GestionEcole() {
                             <button onClick={async () => {
                               const mp = prompt(`Montant payé (sur ${fmtMoney(f.montant)}) :`);
                               if (mp && !isNaN(+mp)) {
-                                const d = await put(`/fees/${f.id}/pay`, { montant_paye: parseFloat(mp) });
-                                if (d.success || true) {
-                                  const newPaid = parseFloat(mp);
-                                  setFees(fs => fs.map((x: any) => x.id === f.id ? { ...x, montant_paye: newPaid, est_paye: newPaid >= x.montant } : x));
+                                const d = await put(`/fees/${f.id}/pay`, { montant_paye: parseFloat(mp) }).catch(() => ({ success: false }));
+                                if (d.success) {
+                                  // Valeurs renvoyées par le serveur (ce qui est vraiment en base)
+                                  setFees(fs => fs.map((x: any) => x.id === f.id ? { ...x, ...(d.fee || { montant_paye: parseFloat(mp), est_paye: parseFloat(mp) >= x.montant }) } : x));
                                   showToast("Paiement enregistré");
+                                } else {
+                                  showToast(d.message || "Le paiement n'a pas été enregistré", false);
                                 }
                               }
                             }} style={{ padding: "5px 10px", background: "#1a8f1a", color: "white", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>

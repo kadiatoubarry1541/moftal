@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/mosque-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -114,35 +115,35 @@ export default function GestionMosquee() {
   async function saveMember() {
     if (!mForm.nom) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddMember(false); setMForm({ nom: "", prenom: "", telephone: "", numero_h: "", role: "fidèle" });
     loadMembers();
   }
 
   async function deleteMember(id: number) {
     if (!confirm("Retirer ce membre ?")) return;
-    await fetch(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadMembers();
   }
 
   async function saveAnnouncement() {
     if (!aForm.titre || !aForm.contenu) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" });
     loadAnnouncements();
   }
 
   async function deleteAnnouncement(id: number) {
     if (!confirm("Supprimer cette annonce ?")) return;
-    await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnouncements();
   }
 
   async function saveDonation() {
     if (!dForm.montant) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify({ ...dForm, montant: +dForm.montant }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify({ ...dForm, montant: +dForm.montant }) }))) { setSaving(false); return; }
     setSaving(false); setShowAddDon(false); setDForm({ donateur_nom: "", montant: "", type_don: "sadaqa" });
     loadDonations(); loadDashboard();
   }
@@ -150,7 +151,7 @@ export default function GestionMosquee() {
   async function saveQuranStudent() {
     if (!qForm.nom) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/quran-students`, { method: "POST", headers: auth(), body: JSON.stringify(qForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/quran-students`, { method: "POST", headers: auth(), body: JSON.stringify(qForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddStudent(false); setQForm({ nom: "", prenom: "", niveau_coran: "Débutant", telephone_parent: "", enseignant_id: "" });
     loadQuranStudents();
   }
@@ -184,7 +185,7 @@ export default function GestionMosquee() {
 
   async function deletePredication(id: number) {
     if (!confirm("Supprimer cette prédication ?")) return;
-    await fetch(`${BASE(tenantCode!)}/predications/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/predications/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadPredications();
   }
 
@@ -199,21 +200,21 @@ export default function GestionMosquee() {
 
   async function deletePartenaire(id: number) {
     if (!confirm("Retirer cette mosquée partenaire ?")) return;
-    await fetch(`${BASE(tenantCode!)}/partenaires/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/partenaires/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadPartenaires();
   }
 
   async function saveImam() {
     if (!iForm.nom) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/imams`, { method: "POST", headers: auth(), body: JSON.stringify({ ...iForm, rang: editingRang }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/imams`, { method: "POST", headers: auth(), body: JSON.stringify({ ...iForm, rang: editingRang }) }))) { setSaving(false); return; }
     setSaving(false); setShowAddImam(false); setIForm({ nom: "", prenom: "", telephone: "", numero_h: "", rang: 1 });
     loadImams();
   }
 
   async function removeImam(rang: number) {
     if (!confirm(`Retirer le Cheikh Imam ${rang} ?`)) return;
-    await fetch(`${BASE(tenantCode!)}/imams/${rang}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/imams/${rang}`, { method: "DELETE", headers: auth() }))) { return; }
     loadImams();
   }
 

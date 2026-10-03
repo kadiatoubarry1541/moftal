@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -95,7 +96,7 @@ export default function GestionReseau() {
 
   async function deleteMembre(id: number) {
     if (!confirm("Retirer ce membre ?")) return;
-    await fetch(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadMembres();
   }
 
@@ -109,13 +110,13 @@ export default function GestionReseau() {
   }
 
   async function updateStatutProjet(id: number, statut: string) {
-    await fetch(`${BASE(tenantCode!)}/projets/${id}/statut`, { method: "PUT", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projets/${id}/statut`, { method: "PUT", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadProjets(); loadDashboard();
   }
 
   async function deleteProjet(id: number) {
     if (!confirm("Supprimer ce projet ?")) return;
-    await fetch(`${BASE(tenantCode!)}/projets/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projets/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadProjets();
   }
 
@@ -139,7 +140,7 @@ export default function GestionReseau() {
 
   async function deleteAnnonce(id: number) {
     if (!confirm("Supprimer cette annonce ?")) return;
-    await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnonces();
   }
 

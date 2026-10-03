@@ -6,6 +6,13 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 
+// Année scolaire en cours (elle commence en septembre) : « 2026-2027 », etc.
+function anneeScolaireCourante() {
+  const d = new Date();
+  const debut = d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1;
+  return `${debut}-${debut + 1}`;
+}
+
 const BASE = (code: string) => `/api/madrasa-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
@@ -159,14 +166,16 @@ export default function GestionMadrasa() {
         if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast("Frais ajouté"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "save-presence") {
-        await post("/attendance", { records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
-        setModal(null); showToast("Présences enregistrées");
+        const d = await post("/attendance", { records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
+        if (d.success) { setModal(null); showToast("Présences enregistrées"); }
+        else showToast(d.message || "Les présences n'ont pas été enregistrées", false);
       } else if (modal === "gen-bulletin") {
         if (!form.periode) { showToast("Période obligatoire", false); return; }
-        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || "2025-2026", publish: !!form.publish });
+        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || anneeScolaireCourante(), publish: !!form.publish });
         if (d.success) { showToast(`${d.generated} bulletin(s) généré(s)`); setModal(null); get("/bulletins").then(b => b.bulletins && setBulletins(b.bulletins)); }
         else showToast(d.message || "Erreur", false);
       }
+    } catch { showToast("Erreur de connexion : rien n'a été enregistré", false);
     } finally { setSaving(false); }
   };
 
@@ -391,7 +400,7 @@ export default function GestionMadrasa() {
             </div>
             <div>
               <label style={{ ...labelSt, display: "block", marginBottom: 4 }}>Année</label>
-              <input value={form.annee || "2025-2026"} onChange={e => setForm((f: any) => ({ ...f, annee: e.target.value }))} className={inp} style={inpSt} />
+              <input value={form.annee || anneeScolaireCourante()} onChange={e => setForm((f: any) => ({ ...f, annee: e.target.value }))} className={inp} style={inpSt} />
             </div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>

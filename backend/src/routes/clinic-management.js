@@ -3,8 +3,9 @@ import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { attraperErreursAsync } from '../utils/routerAsync.js';
 
-const router = express.Router();
+const router = attraperErreursAsync(express.Router());
 
 export async function ensureStaffExtraColumns() {
   await sequelize.query(`ALTER TABLE clinic_staff ADD COLUMN IF NOT EXISTS numero_h VARCHAR(50);`);

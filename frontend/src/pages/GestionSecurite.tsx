@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/security-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -83,11 +84,11 @@ export default function GestionSecurite() {
   };
 
   const del = async (url: string) => {
-    await fetch(url, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(url, { method: "DELETE", headers: auth() }))) { return; }
   };
 
   const patchStatut = async (url: string, statut: string) => {
-    await fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
   };
 
   const handleAddAgent = async () => {

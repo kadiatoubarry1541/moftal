@@ -11,8 +11,9 @@
 import express from 'express';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { attraperErreursAsync } from '../utils/routerAsync.js';
 
-const router = express.Router();
+const router = attraperErreursAsync(express.Router());
 
 // ── Inscription / profil imam ─────────────────────────────────────────────────
 

@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `${config.API_BASE_URL}/scientist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -82,7 +83,7 @@ export default function GestionScientifique() {
 
   async function addMember() {
     if (!mForm.nom.trim()) return; setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddMember(false); setMForm({ nom: "", prenom: "", telephone: "", numero_h: "", titre: "Chercheur", domaine: "", institution: "" });
     loadMembers(); loadAll();
   }
@@ -91,7 +92,7 @@ export default function GestionScientifique() {
   async function addPublication() {
     if (!pForm.titre.trim()) return; setSaving(true);
     const sel = members.find((m: any) => String(m.id) === pForm.auteur_id);
-    await fetch(`${BASE(tenantCode!)}/publications`, { method: "POST", headers: auth(), body: JSON.stringify({ ...pForm, auteur_nom: sel ? `${sel.nom} ${sel.prenom||""}`.trim() : pForm.auteur_nom }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/publications`, { method: "POST", headers: auth(), body: JSON.stringify({ ...pForm, auteur_nom: sel ? `${sel.nom} ${sel.prenom||""}`.trim() : pForm.auteur_nom }) }))) { setSaving(false); return; }
     setSaving(false); setShowAddPub(false); setPForm({ auteur_id: "", auteur_nom: "", titre: "", type_pub: "article", domaine: "", statut: "en_cours", date_pub: new Date().toISOString().split("T")[0], resume: "" });
     loadPublications(); loadAll();
   }
@@ -100,7 +101,7 @@ export default function GestionScientifique() {
 
   async function addProject() {
     if (!prjForm.titre.trim()) return; setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/projects`, { method: "POST", headers: auth(), body: JSON.stringify(prjForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects`, { method: "POST", headers: auth(), body: JSON.stringify(prjForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddProject(false); setPrjForm({ titre: "", description: "", responsable: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", budget: "" });
     loadProjects(); loadAll();
   }
@@ -109,7 +110,7 @@ export default function GestionScientifique() {
 
   async function addAnn() {
     if (!aForm.titre.trim() || !aForm.contenu.trim()) return; setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" });
     loadAnnouncements(); loadAll();
   }

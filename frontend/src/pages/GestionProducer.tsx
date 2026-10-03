@@ -5,6 +5,7 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/producer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -110,13 +111,13 @@ export default function GestionProducer() {
   }
 
   async function adjustStock(id: number, delta: number) {
-    await fetch(`${b(tenantCode!)}/products/${id}/stock`, { method: "PATCH", headers: auth(), body: JSON.stringify({ delta }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/products/${id}/stock`, { method: "PATCH", headers: auth(), body: JSON.stringify({ delta }) }))) { return; }
     loadProducts();
   }
 
   async function deleteProd(id: number) {
     if (!confirm("Supprimer ce produit ?")) return;
-    await fetch(`${b(tenantCode!)}/products/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/products/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadProducts(); loadAll();
   }
 
@@ -136,7 +137,7 @@ export default function GestionProducer() {
       if (q === null) return;
       qte = q;
     }
-    await fetch(`${b(tenantCode!)}/lots/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut, quantite_produite: qte }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/lots/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut, quantite_produite: qte }) }))) { return; }
     loadLots(); loadAll();
   }
 
@@ -150,7 +151,7 @@ export default function GestionProducer() {
   }
 
   async function patchOrder(id: number, statut: string) {
-    await fetch(`${b(tenantCode!)}/orders/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/orders/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadOrders(); loadAll();
   }
 
@@ -165,7 +166,7 @@ export default function GestionProducer() {
 
   async function deleteStaff(id: number) {
     if (!confirm("Retirer ce membre ?")) return;
-    await fetch(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadStaff(); loadAll();
   }
 

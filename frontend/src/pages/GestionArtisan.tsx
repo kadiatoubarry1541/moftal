@@ -5,6 +5,7 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/artisan-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -111,7 +112,7 @@ export default function GestionArtisan() {
   async function patchIntervention(id: number, statut: string, cout_reel?: string) {
     const body: any = { statut };
     if (cout_reel !== undefined) body.cout_reel = cout_reel;
-    await fetch(`${b(tenantCode!)}/interventions/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify(body) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/interventions/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }))) { return; }
     loadInterventions(); loadAll();
   }
 
@@ -132,7 +133,7 @@ export default function GestionArtisan() {
 
   async function deleteService(id: number) {
     if (!confirm("Supprimer ce service ?")) return;
-    await fetch(`${b(tenantCode!)}/services/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/services/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadServices();
   }
 

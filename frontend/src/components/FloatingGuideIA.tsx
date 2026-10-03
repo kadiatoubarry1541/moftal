@@ -144,7 +144,7 @@ const SITE_KNOWLEDGE = [
       'durée abonnement', 'renouveler', 'expiration', 'moftal pay', 'paiement',
       'payer', 'tarif', 'prix', 'cout', 'coût', 'combien', 'frais'
     ],
-    response: `**Moftal Pay — Système de Paiement** 💰\n\n**Activation de l'Arbre Généalogique :**\n💰 **100 000 GNF = 5 ans** d'accès complet\n\nOptions de durée disponibles :\n| Durée | Prix |\n|-------|------|\n| 5 ans | 100 000 GNF |\n| 10 ans | 200 000 GNF |\n| 15 ans | 300 000 GNF |\n| 20 ans | 400 000 GNF |\n\n⚠️ L'abonnement est **renouvelable** (PAS à vie)\n\n**Autres tarifs :**\n🏥 **Compte Professionnel Standard** : 500 000 GNF/an\n❤️ **ONG/Associations** : 10 000 GNF/an (tarif humanitaire spécial)\n🎓 **Professeur IA** : 5 000 GNF/mois ou 50 000 GNF/an\n\n**Wallet Pro :**\n→ Disponible pour les comptes Santé (clinic) et Alimentation (supplier)\n→ Les autres types : "Bientôt disponible"\n\n🔒 Les paiements réels sont gérés par Lengopay (externe au site)`,
+    response: `**Moftal Pay — Système de Paiement** 💰\n\n**Activation de l'Arbre Généalogique :**\n💰 **100 000 GNF = 5 ans** d'accès complet\n\nOptions de durée disponibles :\n| Durée | Prix |\n|-------|------|\n| 5 ans | 100 000 GNF |\n| 10 ans | 200 000 GNF |\n| 15 ans | 300 000 GNF |\n| 20 ans | 400 000 GNF |\n\n⚠️ L'abonnement est **renouvelable** (PAS à vie)\n\n**Autres tarifs :**\n🏥 **Comptes Professionnels** (prix par mois, Afrique) :\n→ Visibilité + Rendez-vous : 10 000 GNF (petits secteurs) · 20 000 GNF (écoles, cliniques, fournisseurs, entreprises)\n→ Visibilité + Gestion Interne : 15 000 GNF · 30 000 GNF\n→ 3 mois d'essai gratuit après approbation · hors Afrique : prix doublés\n❤️ **ONG/Associations** : 10 000 GNF/an (tarif humanitaire spécial)\n🎓 **Professeur IA** : 5 000 GNF/mois ou 50 000 GNF/an\n\n**Wallet Pro :**\n→ Disponible pour les comptes Santé (clinic) et Alimentation (supplier)\n→ Les autres types : "Bientôt disponible"\n\n🔒 Les paiements réels sont gérés par Djomy (Orange Money, MTN MoMo, carte)`,
     links: [{ label: 'Mon Compte', path: '/compte' }, { label: 'Inscription Pro', path: '/inscription-pro' }]
   },
 
@@ -225,7 +225,7 @@ const SITE_KNOWLEDGE = [
       'association', 'benevole', 'bénévole', 'charité', 'charite', 'bénévolat',
       'benevolat', 'soutien', 'entraide', 'collecte'
     ],
-    response: `**La Page Solidarité** ❤️\n\nEspace dédié à l'entraide et à la solidarité communautaire :\n\n**Ce que vous pouvez faire :**\n🤝 Trouver des ONG et associations enregistrées sur Moftal\n💝 Faire des dons ou demander de l'aide\n🌍 Participer à des actions humanitaires et communautaires\n👥 Rejoindre des associations de bénévoles\n\n**Tarif spécial ONG :**\n💰 **10 000 GNF/an** (tarif humanitaire préférentiel)\n→ Au lieu de 500 000 GNF/an pour les autres pro\n\n**Comment créer un compte ONG :**\n→ Inscription Professionnelle → Type "Solidarité" (ONG)`,
+    response: `**La Page Solidarité** ❤️\n\nEspace dédié à l'entraide et à la solidarité communautaire :\n\n**Ce que vous pouvez faire :**\n🤝 Trouver des ONG et associations enregistrées sur Moftal\n💝 Faire des dons ou demander de l'aide\n🌍 Participer à des actions humanitaires et communautaires\n👥 Rejoindre des associations de bénévoles\n\n**Tarif spécial ONG :**\n💰 **10 000 GNF/an** (tarif humanitaire préférentiel)\n→ Au lieu du tarif normal des comptes professionnels\n\n**Comment créer un compte ONG :**\n→ Inscription Professionnelle → Type "Solidarité" (ONG)`,
     links: [{ label: 'Page Solidarité', path: '/solidarite' }, { label: 'Inscription ONG', path: '/inscription-pro' }]
   },
 
@@ -409,7 +409,7 @@ const SITE_KNOWLEDGE = [
       'paiement securise', 'paiement sécurisé', 'comment payer', 'moyen de paiement',
       'mobile money', 'orange money', 'mtn money', 'wave', 'virement'
     ],
-    response: `**Comment fonctionne le paiement sur Moftal ?** 💳\n\n**Djomy — Partenaire de paiement :**\n→ Toutes les transactions réelles sont gérées par **Djomy**\n→ Système sécurisé, argent réel\n→ Accepte les moyens de paiement locaux\n\n**Moyens de paiement acceptés :**\n📱 Orange Money, MTN MoMo\n💳 Carte bancaire (Visa/Mastercard)\n\n**Tarifs Moftal :**\n🌳 Arbre 5 ans : 100 000 GNF\n🎓 Professeur IA : 5 000 GNF/mois ou 50 000 GNF/an\n💼 Compte Pro standard : 500 000 GNF/an\n❤️ ONG : 10 000 GNF/an`,
+    response: `**Comment fonctionne le paiement sur Moftal ?** 💳\n\n**Djomy — Partenaire de paiement :**\n→ Toutes les transactions réelles sont gérées par **Djomy**\n→ Système sécurisé, argent réel\n→ Accepte les moyens de paiement locaux\n\n**Moyens de paiement acceptés :**\n📱 Orange Money, MTN MoMo\n💳 Carte bancaire (Visa/Mastercard)\n\n**Tarifs Moftal :**\n🌳 Arbre 5 ans : 100 000 GNF\n🎓 Professeur IA : 5 000 GNF/mois ou 50 000 GNF/an\n💼 **Comptes Professionnels** (prix par mois, Afrique) :\n→ Visibilité + Rendez-vous : 10 000 GNF (petits secteurs) · 20 000 GNF (écoles, cliniques, fournisseurs, entreprises)\n→ Visibilité + Gestion Interne : 15 000 GNF · 30 000 GNF\n→ 3 mois d'essai gratuit après approbation · hors Afrique : prix doublés\n❤️ ONG : 10 000 GNF/an`,
     links: [{ label: 'Mon Compte', path: '/compte' }]
   },
 

@@ -5,6 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/ngo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -106,32 +107,32 @@ export default function GestionNgo() {
   async function addMember() {
     if (!mForm.nom.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddMember(false);
     setMForm({ nom: "", prenom: "", telephone: "", numero_h: "", role: "bénévole", competence: "" });
     loadMembers(); loadAll();
   }
   async function deleteMember(id: number) {
     if (!confirm("Retirer ce membre ?")) return;
-    await fetch(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadMembers(); loadAll();
   }
 
   async function addProject() {
     if (!pForm.titre.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/projects`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddProject(false);
     setPForm({ titre: "", description: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", budget: "" });
     loadProjects(); loadAll();
   }
   async function updateStatut(id: number, statut: string) {
-    await fetch(`${BASE(tenantCode!)}/projects/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadProjects(); loadAll();
   }
   async function deleteProject(id: number) {
     if (!confirm("Supprimer ce projet ?")) return;
-    await fetch(`${BASE(tenantCode!)}/projects/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadProjects(); loadAll();
   }
 
@@ -140,28 +141,28 @@ export default function GestionNgo() {
     setSaving(true);
     const sel = projects.find((p: any) => String(p.id) === dForm.projet_id);
     const payload = { ...dForm, projet_titre: sel ? sel.titre : dForm.projet_titre };
-    await fetch(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify(payload) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify(payload) }))) { setSaving(false); return; }
     setSaving(false); setShowAddDon(false);
     setDForm({ donateur_nom: "", montant: "", type_don: "financier", projet_id: "", projet_titre: "", date_don: new Date().toISOString().split("T")[0] });
     loadDonations(); loadAll();
   }
   async function deleteDonation(id: number) {
     if (!confirm("Supprimer ce don ?")) return;
-    await fetch(`${BASE(tenantCode!)}/donations/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/donations/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadDonations(); loadAll();
   }
 
   async function addAnn() {
     if (!aForm.titre.trim() || !aForm.contenu.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddAnn(false);
     setAForm({ titre: "", contenu: "", type: "general" });
     loadAnnouncements(); loadAll();
   }
   async function deleteAnn(id: number) {
     if (!confirm("Supprimer cette annonce ?")) return;
-    await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnouncements(); loadAll();
   }
 
