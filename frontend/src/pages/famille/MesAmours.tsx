@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import jsQR from 'jsqr';
 import QrScanner from 'qr-scanner';
-import { getNumeroHForDisplay } from '../../utils/auth';
+import { getNumeroHForDisplay, getPhotoUrl } from '../../utils/auth';
 import { isContactPickerSupported, pickContactPhones } from '../../utils/contactPicker';
 import ProfileBadge from '../../components/ProfileBadge';
 import { useI18n } from '../../i18n/useI18n';
@@ -81,6 +81,8 @@ interface MesAmoursStory {
   photos: string[];
   videos: string[];
   publishedAt: string;
+  // Photo de profil de l'auteur (cercle) — différente de l'image publiée
+  authorPhoto?: string | null;
 }
 
 export interface MesAmoursHandle {
@@ -908,23 +910,30 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               className="flex-1 min-w-0 flex gap-2 overflow-x-auto"
             >
               {stories.map((story) => {
-                const mediaUrl = (story.photos && story.photos[0]) || (story.videos && story.videos[0]) || '';
+                // Comme Facebook : l'image/vidéo publiée remplit la carte,
+                // le cercle montre la photo de profil de l'auteur.
+                const photoUrl = story.photos?.[0] || '';
+                const videoUrl = !photoUrl ? (story.videos?.[0] || '') : '';
+                const avatarUrl = getPhotoUrl(story.authorPhoto || undefined);
                 return (
                   <button
                     key={story.id}
                     type="button"
                     onClick={() => setViewingStory(story)}
                     title={story.authorName}
-                    className="relative flex-shrink-0 w-[calc((100%-16px)/3)] h-[120px] rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm overflow-hidden"
+                    className="relative flex-shrink-0 w-[calc((100%-16px)/3)] h-[120px] rounded-xl border border-gray-200 bg-gray-100 transition-opacity active:opacity-80 shadow-sm overflow-hidden"
                   >
-                    <span className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full overflow-hidden bg-gray-100 border-2 border-white shadow flex items-center justify-center text-xs text-gray-400 leading-none">
-                      {mediaUrl ? (
-                        <img src={mediaUrl} alt={story.authorName} className="w-full h-full object-cover" />
+                    {photoUrl && <img src={photoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                    {videoUrl && <video src={videoUrl} muted playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />}
+                    <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
+                    <span className="absolute top-1.5 left-1.5 w-9 h-9 rounded-full overflow-hidden bg-emerald-600 border-[3px] border-emerald-500 shadow flex items-center justify-center text-sm font-bold text-white leading-none">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={story.authorName} className="w-full h-full object-cover" />
                       ) : (
-                        (story.authorName || '?')[0]
+                        (story.authorName || '?')[0].toUpperCase()
                       )}
                     </span>
-                    <span className="absolute bottom-2 left-2 right-2 text-xs font-bold text-gray-900 text-left truncate">{story.authorName}</span>
+                    <span className="absolute bottom-2 left-2 right-2 text-xs font-bold text-white text-left truncate">{story.authorName}</span>
                   </button>
                 );
               })}
@@ -1070,13 +1079,23 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4" onClick={() => setViewingStory(null)}>
           <div className="max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-white font-semibold text-sm">{viewingStory.authorName}</p>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-9 h-9 rounded-full overflow-hidden bg-emerald-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                  {getPhotoUrl(viewingStory.authorPhoto || undefined) ? (
+                    <img src={getPhotoUrl(viewingStory.authorPhoto || undefined)} alt={viewingStory.authorName} className="w-full h-full object-cover" />
+                  ) : (
+                    (viewingStory.authorName || '?')[0].toUpperCase()
+                  )}
+                </span>
+                <p className="text-white font-semibold text-sm truncate">{viewingStory.authorName}</p>
+              </div>
               <button onClick={() => setViewingStory(null)} className="text-white text-2xl leading-none">&times;</button>
             </div>
             <div className="rounded-xl overflow-hidden bg-black">
               {(() => {
                 const mediaUrl = (viewingStory.photos && viewingStory.photos[0]) || (viewingStory.videos && viewingStory.videos[0]) || '';
-                const isVideo = mediaUrl?.toLowerCase().match(/\.mp4$|\.webm$|\.ogg$/);
+                // Les vidéos sont enregistrées en « data:video/… » (sans extension .mp4)
+                const isVideo = !viewingStory.photos?.[0] && !!viewingStory.videos?.[0];
                 if (!mediaUrl) return <p className="text-white text-center p-8">{t('amitie.story_no_media')}</p>;
                 return isVideo ? (
                   <video src={mediaUrl} className="w-full max-h-[70vh] object-contain" controls autoPlay />
