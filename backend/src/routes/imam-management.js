@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
 
 const router = express.Router();
 
@@ -232,6 +233,18 @@ router.delete('/:tenantCode/quran-students/:id', authenticate, verifyTenant, asy
     await sequelize.query(`UPDATE imam_network_quran_students SET statut='inactif' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'imams': { table: 'imam_network_imams', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'specialite', 'mosquee'] },
+  'predications': { table: 'imam_network_predications', colonnes: ['imam_id', 'imam_nom', 'titre', 'type_pred', 'date_pred', 'mosquee', 'notes'] },
+  'mosques': { table: 'imam_network_mosques', colonnes: ['nom', 'adresse', 'responsable', 'telephone'] },
+  'announcements': { table: 'imam_network_announcements', colonnes: ['titre', 'contenu', 'type'] },
+  'members': { table: 'imam_network_members', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'role'] },
+  'donations': { table: 'imam_network_donations', colonnes: ['donateur_nom', 'montant', 'type_don'] },
+  'quran-students': { table: 'imam_network_quran_students', colonnes: ['nom', 'prenom', 'niveau_coran', 'telephone_parent'] },
 });
 
 export default router;

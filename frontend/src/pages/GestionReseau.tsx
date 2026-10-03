@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
 
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -25,6 +26,7 @@ const STATUT_COLORS: Record<string, string> = { en_cours: "#2563eb", terminé: "
 const COT_TYPES = ["mensuelle", "trimestrielle", "annuelle", "ponctuelle"];
 
 export default function GestionReseau() {
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -288,6 +290,7 @@ export default function GestionReseau() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ padding: "2px 10px", background: BLUE_BG, color: BLUE, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{m.role}</span>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "role", "email"], onSaved: () => { loadMembres(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deleteMembre(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Retirer</button>
                 </div>
               </div>
@@ -358,6 +361,7 @@ export default function GestionReseau() {
                     <select value={p.statut} onChange={e => updateStatutProjet(p.id, e.target.value)} style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer", outline: "none" }}>
                       {STATUTS.map(s => <option key={s} value={s}>{STATUT_LABELS[s]}</option>)}
                     </select>
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/projets/${p.id}`, item: p, colonnes: ["titre", "description", "statut", "date_debut", "date_fin", "responsable"], onSaved: () => { loadProjets(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                     <button onClick={() => deleteProjet(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>✕</button>
                   </div>
                 </div>
@@ -463,6 +467,7 @@ export default function GestionReseau() {
               <div key={a.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{a.titre}</div>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnonces(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deleteAnnonce(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Supprimer</button>
                 </div>
                 <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.5 }}>{a.contenu}</div>
@@ -476,6 +481,7 @@ export default function GestionReseau() {
           </div>
         </div>
       )}
+      {edition && <ModifierFiche {...edition} couleur={BLUE} onClose={() => setEdition(null)} />}
     </div>
   );
 }

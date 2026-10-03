@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
 
 const BASE = (code: string) => `/api/supplier-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -25,6 +26,7 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 export default function GestionFournisseur() {
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -83,13 +85,9 @@ export default function GestionFournisseur() {
     return d;
   };
 
-  const del = async (url: string) => {
-    if (!(await envoyerGestion(url, { method: "DELETE", headers: auth() }))) { return; }
-  };
+  const del = (url: string) => envoyerGestion(url, { method: "DELETE", headers: auth() });
 
-  const patchStatut = async (url: string, statut: string) => {
-    if (!(await envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
-  };
+  const patchStatut = (url: string, statut: string) => envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
 
   const handleAddProduct = async () => {
     if (!prForm.nom) return;
@@ -302,7 +300,8 @@ export default function GestionFournisseur() {
                       <td style={{ padding: "10px 12px", fontWeight: 700, color: p.stock > 0 ? "#156315" : "#be123c" }}>{p.stock}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.unite || "—"}</td>
                       <td style={{ padding: "10px 12px" }}>
-                        <button onClick={async () => { await del(`${BASE(tenantCode!)}/products/${p.id}`); setProducts(ps => ps.filter(x => x.id !== p.id)); }}
+                        <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/products/${p.id}`, item: p, colonnes: ["nom", "categorie", "prix_gros", "prix_detail", "stock", "unite"], onSaved: (it: any) => setProducts((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                        <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/products/${p.id}`))) return; setProducts(ps => ps.filter(x => x.id !== p.id)); }}
                           style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                           Retirer
                         </button>
@@ -351,7 +350,8 @@ export default function GestionFournisseur() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: CYAN_BG, color: CYAN, padding: "3px 10px", borderRadius: 6, border: `1px solid ${CYAN_BORDER}` }}>{c.type_client}</span>
-                  <button onClick={async () => { await del(`${BASE(tenantCode!)}/clients/${c.id}`); setClients(cs => cs.filter(x => x.id !== c.id)); }}
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "type_client"], onSaved: (it: any) => setClients((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/clients/${c.id}`))) return; setClients(cs => cs.filter(x => x.id !== c.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
                   </button>
@@ -407,7 +407,7 @@ export default function GestionFournisseur() {
                     <div style={{ fontWeight: 800, fontSize: 16, color: CYAN }}>{(o.montant_total || 0).toLocaleString("fr-FR")} GNF</div>
                     <select
                       value={o.statut}
-                      onChange={async e => { await patchStatut(`${BASE(tenantCode!)}/orders/${o.id}/statut`, e.target.value); setOrders(os => os.map(x => x.id === o.id ? { ...x, statut: e.target.value } : x)); }}
+                      onChange={async e => { if (!(await patchStatut(`${BASE(tenantCode!)}/orders/${o.id}/statut`, e.target.value))) return; setOrders(os => os.map(x => x.id === o.id ? { ...x, statut: e.target.value } : x)); }}
                       style={{ marginTop: 6, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12, cursor: "pointer" }}>
                       <option value="en_attente">En attente</option>
                       <option value="en_cours">En cours</option>
@@ -415,7 +415,8 @@ export default function GestionFournisseur() {
                       <option value="annulee">Annulée</option>
                     </select>
                     <br />
-                    <button onClick={async () => { await del(`${BASE(tenantCode!)}/orders/${o.id}`); setOrders(os => os.filter(x => x.id !== o.id)); }}
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/orders/${o.id}`, item: o, colonnes: ["client_nom", "client_id", "montant_total", "statut", "date_commande", "notes"], onSaved: (it: any) => setOrders((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/orders/${o.id}`))) return; setOrders(os => os.filter(x => x.id !== o.id)); }}
                       style={{ marginTop: 6, padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                       Supprimer
                     </button>
@@ -461,7 +462,8 @@ export default function GestionFournisseur() {
                     <span>{fmtDate(a.created_at)}</span>
                   </div>
                 </div>
-                <button onClick={async () => { await del(`${BASE(tenantCode!)}/announcements/${a.id}`); setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it: any) => setAnnouncements((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/announcements/${a.id}`))) return; setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                   style={{ marginLeft: 12, padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Archiver
                 </button>
@@ -470,6 +472,7 @@ export default function GestionFournisseur() {
           ))}
         </div>
       )}
+      {edition && <ModifierFiche {...edition} couleur={CYAN} onClose={() => setEdition(null)} />}
     </div>
   );
 }

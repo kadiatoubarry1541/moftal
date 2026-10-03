@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
 
 const BASE = (code: string) => `/api/mosque-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -19,6 +20,7 @@ const GREEN = "#1a8f1a";
 const GREEN_BG = "#f0fdf0";
 
 export default function GestionMosquee() {
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -404,6 +406,7 @@ export default function GestionMosquee() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ padding: "2px 10px", background: GREEN_BG, color: GREEN, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{m.role}</span>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "role"], onSaved: () => { loadMembers(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deleteMember(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Retirer</button>
                 </div>
               </div>
@@ -450,6 +453,7 @@ export default function GestionMosquee() {
               <div key={a.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{a.titre}</div>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deleteAnnouncement(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Supprimer</button>
                 </div>
                 <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.5 }}>{a.contenu}</div>
@@ -727,6 +731,7 @@ export default function GestionMosquee() {
                       {p.sourate && <span style={{ fontSize: 12, color: "#7c3aed" }}>📖 {p.sourate}</span>}
                     </div>
                   </div>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/predications/${p.id}`, item: p, colonnes: ["titre", "type", "contenu", "sourate", "date_pred"], onSaved: () => { loadPredications(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deletePredication(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Supprimer</button>
                 </div>
                 {p.contenu && <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, marginTop: 8, paddingTop: 8, borderTop: "1px solid #f1f5f9" }}>{p.contenu}</div>}
@@ -784,6 +789,7 @@ export default function GestionMosquee() {
                 </div>
                 {p.imam_nom && <div style={{ fontSize: 13, color: "#334155", marginBottom: 4 }}>👨‍✈️ Imam : {p.imam_nom}</div>}
                 {p.telephone && <div style={{ fontSize: 12, color: "#64748b" }}>📞 {p.telephone}</div>}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/partenaires/${p.id}`, item: p, colonnes: ["nom_mosquee", "ville", "imam_nom", "telephone"], onSaved: () => { loadPartenaires(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                 <button onClick={() => deletePartenaire(p.id)} style={{ marginTop: 10, background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, width: "100%" }}>Retirer</button>
               </div>
             ))}
@@ -798,6 +804,7 @@ export default function GestionMosquee() {
         </div>
       )}
 
+      {edition && <ModifierFiche {...edition} couleur={GREEN} onClose={() => setEdition(null)} />}
     </div>
   );
 }

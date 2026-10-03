@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
 
 const BASE = (code: string) => `/api/ngo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -27,6 +28,7 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 export default function GestionNgo() {
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -359,6 +361,7 @@ export default function GestionNgo() {
                     </div>
                   </div>
                   {m.numero_h && <span style={{ fontFamily: "monospace", fontSize: 11, background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: 6 }}>{m.numero_h}</span>}
+                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "role", "competence"], onSaved: () => { loadMembers(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
                   {userIsAdmin && <button onClick={() => deleteMember(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
                 </div>
               ))}
@@ -407,6 +410,7 @@ export default function GestionNgo() {
                         <select value={p.statut} onChange={e => updateStatut(p.id, e.target.value)} style={{ padding: "3px 8px", border: `1px solid ${sc.color}33`, borderRadius: 8, fontSize: 12, color: sc.color, background: sc.bg, fontWeight: 600, cursor: "pointer" }}>
                           <option value="planifie">Planifié</option><option value="en_cours">En cours</option><option value="termine">Terminé</option><option value="suspendu">Suspendu</option>
                         </select>
+                        {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/projects/${p.id}`, item: p, colonnes: ["titre", "description", "statut", "date_debut", "date_fin", "budget"], onSaved: () => { loadProjects(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
                         {userIsAdmin && <button onClick={() => deleteProject(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
                       </div>
                     </div>
@@ -469,6 +473,7 @@ export default function GestionNgo() {
                     </div>
                   </div>
                   <span style={{ padding: "2px 10px", background: ROSE_BG, color: ROSE, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{d.type_don}</span>
+                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/donations/${d.id}`, item: d, colonnes: ["donateur_nom", "montant", "type_don", "projet_id", "projet_titre", "date_don"], onSaved: () => { loadDonations(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
                   {userIsAdmin && <button onClick={() => deleteDonation(d.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
                 </div>
               ))}
@@ -513,6 +518,7 @@ export default function GestionNgo() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ padding: "2px 10px", background: ROSE_BG, color: ROSE, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{a.type}</span>
+                      {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
                       {userIsAdmin && <button onClick={() => deleteAnn(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
                     </div>
                   </div>
@@ -524,6 +530,7 @@ export default function GestionNgo() {
         )}
 
       </div>
+      {edition && <ModifierFiche {...edition} couleur={ROSE} onClose={() => setEdition(null)} />}
     </div>
   );
 }

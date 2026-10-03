@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
 
 const BASE = (code: string) => `/api/journalist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -26,6 +27,7 @@ const STATUT_ARTICLE: Record<string, { bg: string; color: string; label: string 
 };
 
 export default function GestionJournaliste() {
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -348,6 +350,7 @@ export default function GestionJournaliste() {
                     </div>
                   </div>
                   {r.numero_h && <span style={{ fontFamily: "monospace", fontSize: 11, background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: 6 }}>{r.numero_h}</span>}
+                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/reporters/${r.id}`, item: r, colonnes: ["nom", "prenom", "telephone", "numero_h", "specialite", "role"], onSaved: () => { loadReporters(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
                   {userIsAdmin && <button onClick={() => deleteReporter(r.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
                 </div>
               ))}
@@ -407,6 +410,7 @@ export default function GestionJournaliste() {
                         <select value={a.statut} onChange={e => updateStatutArticle(a.id, e.target.value)} style={{ padding: "3px 8px", border: `1px solid ${sc.color}33`, borderRadius: 8, fontSize: 12, color: sc.color, background: sc.bg, fontWeight: 600, cursor: "pointer" }}>
                           <option value="brouillon">Brouillon</option><option value="revision">En révision</option><option value="publie">Publié</option><option value="archive">Archivé</option>
                         </select>
+                        {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/articles/${a.id}`, item: a, colonnes: ["reporter_id", "reporter_nom", "titre", "contenu", "categorie", "statut", "date_pub"], onSaved: () => { loadArticles(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
                         {userIsAdmin && <button onClick={() => deleteArticle(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
                       </div>
                     </div>
@@ -461,6 +465,7 @@ export default function GestionJournaliste() {
                     </div>
                   </div>
                   <span style={{ padding: "2px 10px", background: RED_BG, color: RED, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{s.type_abo}</span>
+                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/subscribers/${s.id}`, item: s, colonnes: ["nom", "telephone", "email", "type_abo"], onSaved: () => { loadSubscribers(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
                   {userIsAdmin && <button onClick={() => deleteSubscriber(s.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
                 </div>
               ))}
@@ -505,6 +510,7 @@ export default function GestionJournaliste() {
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <span style={{ padding: "2px 10px", background: RED_BG, color: RED, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{a.type}</span>
+                      {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
                       {userIsAdmin && <button onClick={() => deleteAnn(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
                     </div>
                   </div>
@@ -516,6 +522,7 @@ export default function GestionJournaliste() {
         )}
 
       </div>
+      {edition && <ModifierFiche {...edition} couleur={RED} onClose={() => setEdition(null)} />}
     </div>
   );
 }

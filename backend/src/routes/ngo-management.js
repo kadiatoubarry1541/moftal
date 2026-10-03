@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
 
 const router = express.Router();
 
@@ -163,6 +164,15 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     await sequelize.query(`UPDATE ngo_announcements SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.UPDATE });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'members': { table: 'ngo_members', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'role', 'competence'] },
+  'projects': { table: 'ngo_projects', colonnes: ['titre', 'description', 'statut', 'date_debut', 'date_fin', 'budget'] },
+  'donations': { table: 'ngo_donations', colonnes: ['donateur_nom', 'montant', 'type_don', 'projet_id', 'projet_titre', 'date_don'] },
+  'announcements': { table: 'ngo_announcements', colonnes: ['titre', 'contenu', 'type'] },
 });
 
 export default router;

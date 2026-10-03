@@ -5,6 +5,8 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import ModifierFiche from "../components/ModifierFiche";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/enterprise-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -25,6 +27,7 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 export default function GestionEntreprise() {
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
@@ -82,8 +85,8 @@ export default function GestionEntreprise() {
     setSaving(false);
     return d;
   };
-  const del = async (url: string) => { await fetch(url, { method: "DELETE", headers: auth() }); };
-  const patchStatut = async (url: string, statut: string) => { await fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }); };
+  const del = (url: string) => envoyerGestion(url, { method: "DELETE", headers: auth() });
+  const patchStatut = (url: string, statut: string) => envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
 
   const reload = (resource: string, setter: (v: any[]) => void, key: string) => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -298,7 +301,8 @@ export default function GestionEntreprise() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: INDIGO_BG, color: INDIGO, padding: "3px 10px", borderRadius: 6, border: `1px solid ${INDIGO_BORDER}` }}>{e.poste}</span>
-                  <button onClick={async () => { await del(`${BASE(tenantCode!)}/employees/${e.id}`); setEmployees(es => es.filter(x => x.id !== e.id)); }}
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/employees/${e.id}`, item: e, colonnes: ["nom", "prenom", "telephone", "numero_h", "poste", "departement"], onSaved: (it: any) => setEmployees((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/employees/${e.id}`))) return; setEmployees(es => es.filter(x => x.id !== e.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
                   </button>
@@ -338,7 +342,8 @@ export default function GestionEntreprise() {
                   {c.adresse && <div style={{ fontSize: 12, color: "#64748b" }}>📍 {c.adresse}</div>}
                   {c.secteur && <div style={{ fontSize: 12, color: "#64748b" }}>🏭 {c.secteur}</div>}
                 </div>
-                <button onClick={async () => { await del(`${BASE(tenantCode!)}/clients/${c.id}`); setClients(cs => cs.filter(x => x.id !== c.id)); }}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "secteur"], onSaved: (it: any) => setClients((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/clients/${c.id}`))) return; setClients(cs => cs.filter(x => x.id !== c.id)); }}
                   style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Retirer
                 </button>
@@ -401,7 +406,7 @@ export default function GestionEntreprise() {
                     <div style={{ fontWeight: 800, fontSize: 16, color: INDIGO, marginBottom: 6 }}>{(c.budget || 0).toLocaleString("fr-FR")} GNF</div>
                     <select
                       value={c.statut}
-                      onChange={async e => { await patchStatut(`${BASE(tenantCode!)}/contracts/${c.id}/statut`, e.target.value); setContracts(cs => cs.map(x => x.id === c.id ? { ...x, statut: e.target.value } : x)); }}
+                      onChange={async e => { if (!(await patchStatut(`${BASE(tenantCode!)}/contracts/${c.id}/statut`, e.target.value))) return; setContracts(cs => cs.map(x => x.id === c.id ? { ...x, statut: e.target.value } : x)); }}
                       style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12, cursor: "pointer" }}>
                       <option value="planifie">Planifié</option>
                       <option value="en_cours">En cours</option>
@@ -410,7 +415,8 @@ export default function GestionEntreprise() {
                       <option value="annule">Annulé</option>
                     </select>
                     <br />
-                    <button onClick={async () => { await del(`${BASE(tenantCode!)}/contracts/${c.id}`); setContracts(cs => cs.filter(x => x.id !== c.id)); }}
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/contracts/${c.id}`, item: c, colonnes: ["titre", "client_nom", "client_id", "budget", "statut", "date_debut", "date_fin", "description"], onSaved: (it: any) => setContracts((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/contracts/${c.id}`))) return; setContracts(cs => cs.filter(x => x.id !== c.id)); }}
                       style={{ marginTop: 6, padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                       Supprimer
                     </button>
@@ -456,7 +462,8 @@ export default function GestionEntreprise() {
                     <span>{fmtDate(a.created_at)}</span>
                   </div>
                 </div>
-                <button onClick={async () => { await del(`${BASE(tenantCode!)}/announcements/${a.id}`); setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it: any) => setAnnouncements((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/announcements/${a.id}`))) return; setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                   style={{ marginLeft: 12, padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Archiver
                 </button>
@@ -465,6 +472,7 @@ export default function GestionEntreprise() {
           ))}
         </div>
       )}
+      {edition && <ModifierFiche {...edition} couleur={INDIGO} onClose={() => setEdition(null)} />}
     </div>
   );
 }

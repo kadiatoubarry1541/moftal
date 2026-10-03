@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
 
 const router = express.Router();
 
@@ -146,6 +147,15 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     await sequelize.query(`UPDATE reseau_announcements SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'members': { table: 'reseau_members', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'role', 'email'] },
+  'projets': { table: 'reseau_projets', colonnes: ['titre', 'description', 'statut', 'date_debut', 'date_fin', 'responsable'] },
+  'cotisations': { table: 'reseau_cotisations', colonnes: ['membre_nom', 'montant', 'type_cot', 'periode', 'est_paye', 'date_paiement'] },
+  'announcements': { table: 'reseau_announcements', colonnes: ['titre', 'contenu', 'type'] },
 });
 
 export default router;

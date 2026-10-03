@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
 
 const router = express.Router();
 
@@ -300,6 +301,18 @@ router.post('/quartier-managers', authenticate, async (req, res) => {
     );
     res.json({ success: true, manager: mgr });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'members': { table: 'mosque_members', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'role'] },
+  'announcements': { table: 'mosque_announcements', colonnes: ['titre', 'contenu', 'type'] },
+  'donations': { table: 'mosque_donations', colonnes: ['donateur_nom', 'montant', 'type_don'] },
+  'quran-students': { table: 'mosque_quran_students', colonnes: ['nom', 'prenom', 'niveau_coran', 'telephone_parent', 'enseignant_id'] },
+  'imams': { table: 'mosque_imams', colonnes: ['rang', 'nom', 'prenom', 'telephone', 'numero_h'] },
+  'predications': { table: 'mosque_predications', colonnes: ['titre', 'type', 'contenu', 'sourate', 'date_pred'] },
+  'partenaires': { table: 'mosque_partenaires', colonnes: ['nom_mosquee', 'ville', 'imam_nom', 'telephone'] },
 });
 
 export default router;
