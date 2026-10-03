@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/imam-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -246,6 +247,7 @@ export default function GestionImam() {
         {/* ── DASHBOARD ── */}
         {tab === "dashboard" && dash && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BoutonRapport base={`/api/imam-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={VIOLET} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 14, marginBottom: 28 }}>
               {[
                 { label: "Imams actifs",       value: dash.totalImams,         emoji: "🕋", color: VIOLET },

@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/artisan-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -221,6 +222,7 @@ export default function GestionArtisan() {
       {/* DASHBOARD */}
       {tab === "dashboard" && (
         <div>
+          <BoutonRapport base={`/api/artisan-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={COLOR} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 14, marginBottom: 24 }}>
             {[
               { label: "Services proposés",   val: dash?.totalServices || 0,          emoji: "⚙️" },

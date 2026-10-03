@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import { BoutonRapport } from "../components/RapportMois";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -693,6 +694,7 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (
             <div style={{ display:"flex",flexDirection:"column",gap:20,animation:"fadeIn 0.2s ease" }}>
+              <BoutonRapport base={`${config.API_BASE_URL}/${apiName}/${tenantCode}`} etablissement={tenant || undefined} couleur={V.color} />
               {/* KPI Cards */}
               <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14 }}>
                 {[

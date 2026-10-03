@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRoutesModifier } from '../utils/routeModifier.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -156,6 +157,12 @@ ajouterRoutesModifier(router, [authenticate, verifyTenant], {
   'projets': { table: 'reseau_projets', colonnes: ['titre', 'description', 'statut', 'date_debut', 'date_fin', 'responsable'] },
   'cotisations': { table: 'reseau_cotisations', colonnes: ['membre_nom', 'montant', 'type_cot', 'periode', 'est_paye', 'date_paiement'] },
   'announcements': { table: 'reseau_announcements', colonnes: ['titre', 'contenu', 'type'] },
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Cotisations payées', table: 'reseau_cotisations', montant: 'montant', date: 'COALESCE(date_paiement, created_at)', where: 'est_paye' }],
 });
 
 export default router;

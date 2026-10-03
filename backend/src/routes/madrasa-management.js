@@ -13,6 +13,7 @@ import { authenticate } from '../middleware/auth.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -617,6 +618,12 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
     }
   }
   res.json({ success: true });
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Frais encaissés', table: 'madrasa_fees', montant: 'montant', date: 'date_paiement', where: 'est_paye' }],
 });
 
 export default router;

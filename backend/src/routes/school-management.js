@@ -5,6 +5,7 @@ import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -712,6 +713,12 @@ router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req
     await sequelize.query(`DELETE FROM school_reviews WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Frais encaissés', table: 'school_fees', montant: 'montant_paye', date: 'date_paiement', where: 'montant_paye > 0' }],
 });
 
 export default router;

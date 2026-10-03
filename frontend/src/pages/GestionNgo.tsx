@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/ngo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -239,6 +240,7 @@ export default function GestionNgo() {
         {/* ── DASHBOARD ── */}
         {tab === "dashboard" && dash && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeIn 0.2s ease" }}>
+            <BoutonRapport base={`/api/ngo-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={ROSE} />
 
             {/* KPIs */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>

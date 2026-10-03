@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRoutesModifier } from '../utils/routeModifier.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -245,6 +246,12 @@ ajouterRoutesModifier(router, [authenticate, verifyTenant], {
   'members': { table: 'imam_network_members', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'role'] },
   'donations': { table: 'imam_network_donations', colonnes: ['donateur_nom', 'montant', 'type_don'] },
   'quran-students': { table: 'imam_network_quran_students', colonnes: ['nom', 'prenom', 'niveau_coran', 'telephone_parent'] },
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Dons reçus', table: 'imam_network_donations', montant: 'montant', date: 'COALESCE(date_don, created_at)' }],
 });
 
 export default router;

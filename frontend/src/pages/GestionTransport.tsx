@@ -6,6 +6,7 @@ import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
@@ -212,6 +213,7 @@ export default function GestionTransport() {
         {/* ── DASHBOARD ── */}
         {!loading && tab === "dashboard" && dash && (
           <div>
+            <BoutonRapport base={`${config.API_BASE_URL}/transport-mgmt/${code}`} etablissement={tenant || undefined} couleur={BLUE} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 16, marginBottom: 28 }}>
               {[
                 { label: "Véhicules actifs",         val: dash.vehiculesActifs,        icon: "🚌" },

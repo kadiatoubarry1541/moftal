@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRoutesModifier } from '../utils/routeModifier.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -173,6 +174,12 @@ ajouterRoutesModifier(router, [authenticate, verifyTenant], {
   'projects': { table: 'ngo_projects', colonnes: ['titre', 'description', 'statut', 'date_debut', 'date_fin', 'budget'] },
   'donations': { table: 'ngo_donations', colonnes: ['donateur_nom', 'montant', 'type_don', 'projet_id', 'projet_titre', 'date_don'] },
   'announcements': { table: 'ngo_announcements', colonnes: ['titre', 'contenu', 'type'] },
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Dons reçus', table: 'ngo_donations', montant: 'montant', date: 'COALESCE(date_don, created_at)' }],
 });
 
 export default router;

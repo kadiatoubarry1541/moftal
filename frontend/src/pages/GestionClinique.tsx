@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../component
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -599,6 +600,7 @@ export default function GestionClinique() {
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <BoutonRapport base={`/api/clinic-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={TEAL} />
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button onClick={async () => {
                   const d = await get("/patients");

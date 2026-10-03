@@ -8,6 +8,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -233,6 +234,14 @@ router.post('/:tenantCode/expenses', authenticate, verifyTenant, async (req, res
     );
     res.json({ success: true, expense: row });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Ventes', table: 'retailer_sales', montant: 'total', date: 'date_vente', where: 'NOT COALESCE(est_credit,false)' },
+             { label: 'Ventes à crédit', table: 'retailer_sales', montant: 'total', date: 'date_vente', where: 'COALESCE(est_credit,false)' }],
+  depenses: [{ label: 'Dépenses', table: 'retailer_expenses', montant: 'montant', date: 'date_depense' }],
 });
 
 export default router;

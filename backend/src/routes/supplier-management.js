@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRoutesModifier } from '../utils/routeModifier.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -144,6 +145,12 @@ ajouterRoutesModifier(router, [authenticate, verifyTenant], {
   'clients': { table: 'supplier_clients', colonnes: ['nom', 'telephone', 'adresse', 'type_client'] },
   'orders': { table: 'supplier_orders', colonnes: ['client_nom', 'client_id', 'montant_total', 'statut', 'date_commande', 'notes'] },
   'announcements': { table: 'supplier_announcements', colonnes: ['titre', 'contenu', 'type'] },
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Commandes', table: 'supplier_orders', montant: 'montant_total', date: 'COALESCE(date_commande, created_at)', where: "statut <> 'annule'" }],
 });
 
 export default router;
