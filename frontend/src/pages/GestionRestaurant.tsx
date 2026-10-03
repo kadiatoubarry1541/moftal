@@ -276,7 +276,7 @@ export default function GestionRestaurant() {
               <button onClick={async () => {
                 if (!dForm.nom || !dForm.prix) return;
                 const d = await post(`${BASE(tenantCode!)}/dishes`, { ...dForm, prix: +dForm.prix });
-                if (d.success) { setShowAddDish(false); setDForm({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(d => d.success && setDishes(d.dishes || [])); }
+                if (d.success) { setShowAddDish(false); setDForm({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(d => d.success && setDishes(d.dishes || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
@@ -330,7 +330,7 @@ export default function GestionRestaurant() {
               <button onClick={async () => {
                 if (!tForm.numero) return;
                 const d = await post(`${BASE(tenantCode!)}/tables`, { ...tForm, capacite: +tForm.capacite });
-                if (d.success) { setShowAddTable(false); setTForm({ numero: "", capacite: "4", zone: "Salle" }); reloadTables(); }
+                if (d.success) { setShowAddTable(false); setTForm({ numero: "", capacite: "4", zone: "Salle" }); reloadTables(); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
@@ -404,7 +404,7 @@ export default function GestionRestaurant() {
                 const items = oForm.items.filter(i => i.nom && i.prix);
                 if (!items.length) return;
                 const d = await post(`${BASE(tenantCode!)}/orders`, { ...oForm, items: items.map(i => ({ ...i, prix: +i.prix, quantite: +i.quantite })), table_id: oForm.table_id || null });
-                if (d.success) { setShowAddOrder(false); setOForm({ table_id: "", table_num: "", type_service: "sur_place", type_paiement: "especes", notes: "", items: [{ dish_id: "", nom: "", prix: "", quantite: "1" }] }); reloadOrders(); reloadDash(); reloadTables(); }
+                if (d.success) { setShowAddOrder(false); setOForm({ table_id: "", table_num: "", type_service: "sur_place", type_paiement: "especes", notes: "", items: [{ dish_id: "", nom: "", prix: "", quantite: "1" }] }); reloadOrders(); reloadDash(); reloadTables(); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Valider la commande"}</button>
             </div>
           )}
@@ -461,7 +461,7 @@ export default function GestionRestaurant() {
               <button onClick={async () => {
                 if (!sForm.nom) return;
                 const d = await post(`${BASE(tenantCode!)}/staff`, { ...sForm, salaire: +sForm.salaire || 0 });
-                if (d.success) { setShowAddStaff(false); setSForm({ nom: "", prenom: "", poste: "Serveur", telephone: "", salaire: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/staff`, { headers: h }).then(r => r.json()).then(d => d.success && setStaff(d.staff || [])); }
+                if (d.success) { setShowAddStaff(false); setSForm({ nom: "", prenom: "", poste: "Serveur", telephone: "", salaire: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/staff`, { headers: h }).then(r => r.json()).then(d => d.success && setStaff(d.staff || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
@@ -501,7 +501,7 @@ export default function GestionRestaurant() {
               <button onClick={async () => {
                 if (!anForm.titre || !anForm.contenu) return;
                 const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-                if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); }
+                if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={{ ...btn(ORANGE), marginTop: 10 }}>{saving ? "Publication…" : "Publier"}</button>
             </div>
           )}

@@ -94,25 +94,25 @@ export default function GestionFournisseur() {
   const handleAddProduct = async () => {
     if (!prForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/products`, { ...prForm, prix_gros: +prForm.prix_gros, prix_detail: +prForm.prix_detail, stock: +prForm.stock });
-    if (d.success) { setShowAddProduct(false); setPrForm({ nom: "", categorie: "", prix_gros: "", prix_detail: "", stock: "", unite: "unité" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/products`, { headers: h }).then(r => r.json()).then(d => d.success && setProducts(d.products || [])); }
+    if (d.success) { setShowAddProduct(false); setPrForm({ nom: "", categorie: "", prix_gros: "", prix_detail: "", stock: "", unite: "unité" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/products`, { headers: h }).then(r => r.json()).then(d => d.success && setProducts(d.products || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddClient = async () => {
     if (!clForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/clients`, clForm);
-    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", type_client: "revendeur" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/clients`, { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || [])); }
+    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", type_client: "revendeur" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/clients`, { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddOrder = async () => {
     if (!orForm.montant_total) return;
     const d = await post(`${BASE(tenantCode!)}/orders`, { ...orForm, montant_total: +orForm.montant_total });
-    if (d.success) { setShowAddOrder(false); setOrForm({ client_nom: "", client_id: "", montant_total: "", statut: "en_attente", date_commande: new Date().toISOString().split("T")[0], notes: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/orders`, { headers: h }).then(r => r.json()).then(d => d.success && setOrders(d.orders || [])); }
+    if (d.success) { setShowAddOrder(false); setOrForm({ client_nom: "", client_id: "", montant_total: "", statut: "en_attente", date_commande: new Date().toISOString().split("T")[0], notes: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/orders`, { headers: h }).then(r => r.json()).then(d => d.success && setOrders(d.orders || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddAnn = async () => {
     if (!anForm.titre || !anForm.contenu) return;
     const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); }
+    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   if (loading) return (

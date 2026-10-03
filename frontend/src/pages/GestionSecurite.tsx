@@ -94,25 +94,25 @@ export default function GestionSecurite() {
   const handleAddAgent = async () => {
     if (!agForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/agents`, agForm);
-    if (d.success) { setShowAddAgent(false); setAgForm({ nom: "", prenom: "", telephone: "", numero_h: "", grade: "Agent", zone: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/agents`, { headers: h }).then(r => r.json()).then(d => d.success && setAgents(d.agents || [])); }
+    if (d.success) { setShowAddAgent(false); setAgForm({ nom: "", prenom: "", telephone: "", numero_h: "", grade: "Agent", zone: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/agents`, { headers: h }).then(r => r.json()).then(d => d.success && setAgents(d.agents || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddMission = async () => {
     if (!msForm.titre) return;
     const d = await post(`${BASE(tenantCode!)}/missions`, msForm);
-    if (d.success) { setShowAddMission(false); setMsForm({ agent_id: "", agent_nom: "", titre: "", client_nom: "", lieu: "", date_debut: new Date().toISOString().split("T")[0], date_fin: "", statut: "en_cours", notes: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/missions`, { headers: h }).then(r => r.json()).then(d => d.success && setMissions(d.missions || [])); }
+    if (d.success) { setShowAddMission(false); setMsForm({ agent_id: "", agent_nom: "", titre: "", client_nom: "", lieu: "", date_debut: new Date().toISOString().split("T")[0], date_fin: "", statut: "en_cours", notes: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/missions`, { headers: h }).then(r => r.json()).then(d => d.success && setMissions(d.missions || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddClient = async () => {
     if (!clForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/clients`, clForm);
-    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", type_contrat: "ponctuel" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/clients`, { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || [])); }
+    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", type_contrat: "ponctuel" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/clients`, { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddAnn = async () => {
     if (!anForm.titre || !anForm.contenu) return;
     const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); }
+    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   if (loading) return (

@@ -180,7 +180,7 @@ export default function GestionMosquee() {
     const r = await fetch(`${BASE(tenantCode!)}/predications`, { method: "POST", headers: auth(), body: JSON.stringify(predForm) });
     const d = await r.json();
     setSaving(false);
-    if (d.success) { setShowAddPred(false); setPredForm({ titre: "", type: "khutba", sourate: "", contenu: "", date_pred: new Date().toISOString().slice(0, 10) }); loadPredications(); }
+    if (d.success) { setShowAddPred(false); setPredForm({ titre: "", type: "khutba", sourate: "", contenu: "", date_pred: new Date().toISOString().slice(0, 10) }); loadPredications(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function deletePredication(id: number) {
@@ -195,7 +195,7 @@ export default function GestionMosquee() {
     const r = await fetch(`${BASE(tenantCode!)}/partenaires`, { method: "POST", headers: auth(), body: JSON.stringify(partForm) });
     const d = await r.json();
     setSaving(false);
-    if (d.success) { setShowAddPart(false); setPartForm({ nom_mosquee: "", ville: "", imam_nom: "", telephone: "" }); loadPartenaires(); }
+    if (d.success) { setShowAddPart(false); setPartForm({ nom_mosquee: "", ville: "", imam_nom: "", telephone: "" }); loadPartenaires(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function deletePartenaire(id: number) {

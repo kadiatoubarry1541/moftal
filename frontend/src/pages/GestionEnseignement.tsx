@@ -1057,7 +1057,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 14px" }}>
                           <div style={{ display:"flex", gap:6 }}>
                             {!f.est_paye && (
-                              <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
+                              <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} else showToast(d.message || "Erreur : rien n'a été enregistré", false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
                             )}
                             {f.est_paye && (
                               <button onClick={() => printFeeReceipt(f, tenant?.name || "", V.color)} style={{ padding:"5px 10px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>🖨 Reçu</button>
@@ -1107,7 +1107,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         </div>
                         <div style={{ display:"flex", gap:8, marginTop:12 }}>
                           {!b.is_published && (
-                            <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x:any)=>x.id===b.id?{...x,is_published:true}:x));showToast("Bulletin publié");} }} style={{ flex:1,padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>Publier & notifier</button>
+                            <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x:any)=>x.id===b.id?{...x,is_published:true}:x));showToast("Bulletin publié");} else showToast(d.message || "Erreur : rien n'a été enregistré", false); }} style={{ flex:1,padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>Publier & notifier</button>
                           )}
                           <button onClick={() => printBulletin(b, tenant?.name || "", V.color)} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>🖨</button>
                         </div>
@@ -1133,7 +1133,7 @@ export default function GestionEnseignement({ mode }: Props) {
                     </div>
                     {r.statut==="nouvelle" ? (
                       <div style={{ display:"flex",gap:6,flexShrink:0 }}>
-                        <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/convert`,{}); if(d.success){setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"converti"}:x));showToast(V.apprenant+" créé(e)");} }} style={{ padding:"6px 12px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:700 }}>Inscrire</button>
+                        <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/convert`,{}); if(d.success){setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"converti"}:x));showToast(V.apprenant+" créé(e)");} else showToast(d.message || "Erreur : rien n'a été enregistré", false); }} style={{ padding:"6px 12px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:700 }}>Inscrire</button>
                         <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/reject`,{}); if(d.success) setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"rejetee"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"6px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600 }}>Rejeter</button>
                       </div>
                     ) : (

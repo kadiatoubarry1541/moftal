@@ -137,13 +137,13 @@ export default function GestionMairie() {
   const fetchTenant = useCallback(async () => {
     const r = await fetch(`${BASE(tenantCode!)}/info`, { headers: auth() });
     const d = await r.json();
-    if (d.success) { setTenant(d.tenant); setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", logo_url: d.tenant.logo_url || "" }); }
+    if (d.success) { setTenant(d.tenant); setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", logo_url: d.tenant.logo_url || "" }); } else showToast(d.message || "Erreur : rien n'a été enregistré", false);
   }, [tenantCode]);
 
   const fetchDashboard = useCallback(async () => {
     const r = await fetch(`${BASE(tenantCode!)}/dashboard`, { headers: auth() });
     const d = await r.json();
-    if (d.success) { setStats(d.stats); setRecentMariages(d.recentMariages || []); }
+    if (d.success) { setStats(d.stats); setRecentMariages(d.recentMariages || []); } else showToast(d.message || "Erreur : rien n'a été enregistré", false);
     setLoading(false);
   }, [tenantCode]);
 

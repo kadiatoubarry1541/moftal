@@ -93,22 +93,22 @@ export default function GestionEntreprise() {
   const handleAddEmployee = async () => {
     if (!emForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/employees`, emForm);
-    if (d.success) { setShowAddEmployee(false); setEmForm({ nom: "", prenom: "", telephone: "", numero_h: "", poste: "Employé", departement: "" }); reload("employees", setEmployees, "employees"); }
+    if (d.success) { setShowAddEmployee(false); setEmForm({ nom: "", prenom: "", telephone: "", numero_h: "", poste: "Employé", departement: "" }); reload("employees", setEmployees, "employees"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
   const handleAddClient = async () => {
     if (!clForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/clients`, clForm);
-    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", secteur: "" }); reload("clients", setClients, "clients"); }
+    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", secteur: "" }); reload("clients", setClients, "clients"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
   const handleAddContract = async () => {
     if (!ctForm.titre) return;
     const d = await post(`${BASE(tenantCode!)}/contracts`, { ...ctForm, budget: +ctForm.budget });
-    if (d.success) { setShowAddContract(false); setCtForm({ titre: "", client_nom: "", budget: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", description: "" }); reload("contracts", setContracts, "contracts"); }
+    if (d.success) { setShowAddContract(false); setCtForm({ titre: "", client_nom: "", budget: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", description: "" }); reload("contracts", setContracts, "contracts"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
   const handleAddAnn = async () => {
     if (!anForm.titre || !anForm.contenu) return;
     const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); reload("announcements", setAnnouncements, "announcements"); }
+    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); reload("announcements", setAnnouncements, "announcements"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   if (loading) return (

@@ -8,9 +8,15 @@ import InstallAppButton from "../components/InstallAppButton";
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
 
+// Ne lève jamais d'exception : en cas d'échec, renvoie { success: false, message }
 async function api(path: string, opts: RequestInit = {}) {
-  const r = await fetch(`${config.API_BASE_URL}/transport-mgmt${path}`, { ...opts, headers: { ...h(), ...(opts.headers || {}) } });
-  return r.json();
+  try {
+    const r = await fetch(`${config.API_BASE_URL}/transport-mgmt${path}`, { ...opts, headers: { ...h(), ...(opts.headers || {}) } });
+    const d = await r.json().catch(() => ({}));
+    return r.ok ? d : { success: false, ...d, message: d.message || `Erreur du serveur (${r.status}).` };
+  } catch {
+    return { success: false, message: "Connexion coupée : rien n'a été enregistré. Réessayez." };
+  }
 }
 
 type Tab = "dashboard" | "vehicles" | "drivers" | "trips" | "bookings" | "deliveries" | "announcements";
@@ -76,8 +82,8 @@ export default function GestionTransport() {
     if (r.success) { flash("Véhicule ajouté ✓"); setVForm({ immatriculation: "", type_vehicule: "voiture", marque: "", capacite: "4", driver_id: "", description: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchVehicle = async (id: number, statut: string) => { await api(`/${code}/vehicles/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
-  const deleteVehicle = async (id: number) => { if (!confirm("Supprimer ?")) return; await api(`/${code}/vehicles/${id}`, { method: "DELETE" }); loadAll(); };
+  const patchVehicle = async (id: number, statut: string) => { const r = await api(`/${code}/vehicles/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
+  const deleteVehicle = async (id: number) => { if (!confirm("Supprimer ?")) return; const r = await api(`/${code}/vehicles/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // DRIVERS
   const addDriver = async () => {
@@ -86,8 +92,8 @@ export default function GestionTransport() {
     if (r.success) { flash("Chauffeur ajouté ✓"); setDForm({ nom: "", prenom: "", telephone: "", permis: "", type_permis: "B", salaire: "", notes: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchDriver = async (id: number, statut: string) => { await api(`/${code}/drivers/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
-  const deleteDriver = async (id: number) => { if (!confirm("Supprimer ?")) return; await api(`/${code}/drivers/${id}`, { method: "DELETE" }); loadAll(); };
+  const patchDriver = async (id: number, statut: string) => { const r = await api(`/${code}/drivers/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
+  const deleteDriver = async (id: number) => { if (!confirm("Supprimer ?")) return; const r = await api(`/${code}/drivers/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // TRIPS
   const addTrip = async () => {
@@ -96,8 +102,8 @@ export default function GestionTransport() {
     if (r.success) { flash("Trajet ajouté ✓"); setTForm({ lieu_depart: "", lieu_arrivee: "", date_depart: "", heure_depart: "", prix: "", places_total: "4", driver_id: "", vehicle_id: "", notes: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchTrip = async (id: number, statut: string) => { await api(`/${code}/trips/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
-  const deleteTrip = async (id: number) => { if (!confirm("Supprimer ?")) return; await api(`/${code}/trips/${id}`, { method: "DELETE" }); loadAll(); };
+  const patchTrip = async (id: number, statut: string) => { const r = await api(`/${code}/trips/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
+  const deleteTrip = async (id: number) => { if (!confirm("Supprimer ?")) return; const r = await api(`/${code}/trips/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // BOOKINGS
   const addBooking = async () => {
@@ -106,7 +112,7 @@ export default function GestionTransport() {
     if (r.success) { flash("Réservation ajoutée ✓"); setBForm({ trip_id: "", client_nom: "", client_telephone: "", places: "1", montant: "", notes: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchBooking = async (id: number, statut: string) => { await api(`/${code}/bookings/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
+  const patchBooking = async (id: number, statut: string) => { const r = await api(`/${code}/bookings/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // DELIVERIES
   const addDelivery = async () => {
@@ -115,8 +121,8 @@ export default function GestionTransport() {
     if (r.success) { flash("Livraison créée ✓"); setLivForm({ client_nom: "", client_telephone: "", adresse_collecte: "", adresse_livraison: "", description: "", poids: "", montant: "", driver_id: "", vehicle_id: "", notes: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchDelivery = async (id: number, statut: string) => { await api(`/${code}/deliveries/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
-  const deleteDelivery = async (id: number) => { if (!confirm("Supprimer ?")) return; await api(`/${code}/deliveries/${id}`, { method: "DELETE" }); loadAll(); };
+  const patchDelivery = async (id: number, statut: string) => { const r = await api(`/${code}/deliveries/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
+  const deleteDelivery = async (id: number) => { if (!confirm("Supprimer ?")) return; const r = await api(`/${code}/deliveries/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // ANNOUNCEMENTS
   const addAnnouncement = async () => {
@@ -125,7 +131,7 @@ export default function GestionTransport() {
     if (r.success) { flash("Annonce publiée ✓"); setAForm({ titre: "", contenu: "", type: "general" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const deleteAnnouncement = async (id: number) => { await api(`/${code}/announcements/${id}`, { method: "DELETE" }); loadAll(); };
+  const deleteAnnouncement = async (id: number) => { const r = await api(`/${code}/announcements/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "dashboard",     label: "Tableau de bord", icon: "📊" },

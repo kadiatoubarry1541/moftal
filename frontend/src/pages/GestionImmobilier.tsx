@@ -265,7 +265,7 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!prForm.nom) return;
                 const d = await post(`${BASE(tenantCode!)}/properties`, { ...prForm, surface: prForm.surface ? +prForm.surface : null, nb_pieces: prForm.nb_pieces ? +prForm.nb_pieces : null, loyer_mensuel: +prForm.loyer_mensuel || 0 });
-                if (d.success) { setShowAddProp(false); setPrForm({ nom: "", type_bien: "appartement", adresse: "", ville: "", surface: "", nb_pieces: "", loyer_mensuel: "", charges: "", description: "" }); reloadTab("properties"); }
+                if (d.success) { setShowAddProp(false); setPrForm({ nom: "", type_bien: "appartement", adresse: "", ville: "", surface: "", nb_pieces: "", loyer_mensuel: "", charges: "", description: "" }); reloadTab("properties"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
@@ -324,7 +324,7 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!ltForm.nom) return;
                 const d = await post(`${BASE(tenantCode!)}/tenants`, { ...ltForm, loyer: +ltForm.loyer || 0, caution: +ltForm.caution || 0, property_id: ltForm.property_id || null });
-                if (d.success) { setShowAddTenant(false); setLtForm({ nom: "", prenom: "", telephone: "", email: "", cni: "", property_id: "", date_entree: new Date().toISOString().split("T")[0], loyer: "", caution: "" }); reloadTab("tenants"); }
+                if (d.success) { setShowAddTenant(false); setLtForm({ nom: "", prenom: "", telephone: "", email: "", cni: "", property_id: "", date_entree: new Date().toISOString().split("T")[0], loyer: "", caution: "" }); reloadTab("tenants"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(AMBER)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
@@ -380,7 +380,7 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!pyForm.montant) return;
                 const d = await post(`${BASE(tenantCode!)}/payments`, { ...pyForm, montant: +pyForm.montant, tenant_id: pyForm.tenant_id || null, property_id: pyForm.property_id || null });
-                if (d.success) { setShowAddPayment(false); setPyForm({ tenant_id: "", property_id: "", montant: "", mois_concerne: new Date().toISOString().slice(0, 7), type_paiement: "especes", statut: "paye", notes: "" }); reloadTab("payments"); }
+                if (d.success) { setShowAddPayment(false); setPyForm({ tenant_id: "", property_id: "", montant: "", mois_concerne: new Date().toISOString().slice(0, 7), type_paiement: "especes", statut: "paye", notes: "" }); reloadTab("payments"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(AMBER)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
@@ -432,7 +432,7 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!mtForm.titre) return;
                 const d = await post(`${BASE(tenantCode!)}/maintenance`, { ...mtForm, property_id: mtForm.property_id || null, cout_estime: +mtForm.cout_estime || 0 });
-                if (d.success) { setShowAddMaint(false); setMtForm({ property_id: "", titre: "", description: "", type_intervention: "reparation", priorite: "normale", cout_estime: "" }); reloadTab("maintenance"); }
+                if (d.success) { setShowAddMaint(false); setMtForm({ property_id: "", titre: "", description: "", type_intervention: "reparation", priorite: "normale", cout_estime: "" }); reloadTab("maintenance"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
@@ -487,7 +487,7 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!anForm.titre || !anForm.contenu) return;
                 const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-                if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); reloadTab("announcements"); }
+                if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); reloadTab("announcements"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Publication…" : "Publier"}</button>
             </div>
           )}

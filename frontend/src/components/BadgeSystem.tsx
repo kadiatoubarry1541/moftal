@@ -31,7 +31,7 @@ interface Logo {
   name: string;
   description: string;
   imageUrl: string;
-  category: 'organization' | 'event' | 'achievement' | 'custom';
+  category: 'organization' | 'event' | 'achievement' | 'custom' | 'education';
   isActive: boolean;
   createdBy: string;
   createdAt: string;

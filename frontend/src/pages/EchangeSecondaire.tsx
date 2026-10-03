@@ -94,7 +94,6 @@ export default function EchangeSecondaire() {
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [activeStyleTab, setActiveStyleTab] = useState<'tous'|'femme'|'homme'|'enfant'|'chaussures'|'sacs'|'bijoux'|'beaute'|'textile'|'vehicules'|'machines'>('tous');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
   const navigate = useNavigate();
@@ -586,15 +585,6 @@ export default function EchangeSecondaire() {
               <DevenirVendeurButton secteur="secondaire" />
             )}
           </div>
-          {isAdmin && (
-            <button
-              onClick={() => setSelectedSupplier({} as Supplier)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all flex items-center gap-2 shrink-0 text-sm font-semibold"
-            >
-              <span>⚙️</span>
-              <span>{t('echange_secondaire.manage_suppliers_btn')}</span>
-            </button>
-          )}
         </div>
       </div>
 

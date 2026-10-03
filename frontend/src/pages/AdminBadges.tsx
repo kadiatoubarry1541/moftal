@@ -383,7 +383,7 @@ export default function AdminBadges() {
         return;
       }
       
-      setUserData(user);
+      setUserData(user as unknown as UserData);
     // Charger toutes les données en parallèle pour améliorer les performances
     Promise.all([
       loadBadges(),

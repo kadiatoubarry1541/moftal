@@ -149,7 +149,7 @@ router.get('/:tenantCode/director-profile', authenticate, verifyMember, async (r
     );
     if (!rows.length) return res.status(404).json({ message: 'Directeur introuvable.' });
     const d = rows[0];
-    res.json({
+    res.json({ success: true,
       numero_h:  d.numero_h,
       nom:       `${d.prenom || ''} ${d.nom_famille || ''}`.trim(),
       photo:     d.photo || null,
@@ -171,7 +171,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       qr(`SELECT COALESCE(SUM(montant),0) AS frais_mois FROM madrasa_fees WHERE tenant_code=:tc AND est_paye=true AND date_paiement>=date_trunc('month',CURRENT_DATE)`, { tc }),
       qr(`SELECT COUNT(*) AS impaye_count FROM madrasa_fees WHERE tenant_code=:tc AND est_paye=false`, { tc }),
     ]);
-    res.json({ totalStudents: +(r1.total_etudiants||0), totalStaff: +(r2.total_enseignants||0),
+    res.json({ success: true, totalStudents: +(r1.total_etudiants||0), totalStaff: +(r2.total_enseignants||0),
       totalHalaqas: +(r3.total_halaqas||0), presentToday: +(r4.presents_today||0),
       feesCollected: +(r5.frais_mois||0), unpaidFees: +(r6.impaye_count||0) });
   } catch (err) { res.status(500).json({ message: err.message }); }
@@ -187,7 +187,7 @@ router.get('/:tenantCode/students', authenticate, verifyMember, async (req, res)
      ORDER BY nom, prenom`,
     { replacements: { tc, s: `%${search}%` } }
   );
-  res.json({ students });
+  res.json({ success: true, students });
 });
 
 router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res) => {
@@ -200,7 +200,7 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
        VALUES (:tc, :prenom, :nom, :dn, :sexe, :tel, :niveau, :nh, :pnh) RETURNING *`,
       { replacements: { tc, prenom, nom, dn: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || '', niveau: niveau || 'Iqra', nh: numero_h || null, pnh: parent_numero_h || null } }
     );
-    res.json({ student: rows[0] });
+    res.json({ success: true, student: rows[0] });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
@@ -234,7 +234,7 @@ router.get('/:tenantCode/staff', authenticate, verifyMember, async (req, res) =>
     `SELECT * FROM madrasa_staff WHERE tenant_code = :tc ORDER BY nom`,
     { replacements: { tc: req.params.tenantCode } }
   );
-  res.json({ staff });
+  res.json({ success: true, staff });
 });
 
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
@@ -246,7 +246,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
      VALUES (:tc, :prenom, :nom, :role, :spec, :tel, :nh) RETURNING *`,
     { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh: numero_h || null } }
   );
-  res.json({ staff: rows[0] });
+  res.json({ success: true, staff: rows[0] });
 });
 
 router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
@@ -279,7 +279,7 @@ router.get('/:tenantCode/halaqas', authenticate, verifyMember, async (req, res) 
      GROUP BY h.id ORDER BY h.nom`,
     { replacements: { tc: req.params.tenantCode } }
   );
-  res.json({ halaqas });
+  res.json({ success: true, halaqas });
 });
 
 router.post('/:tenantCode/halaqas', authenticate, verifyTenant, async (req, res) => {
@@ -291,7 +291,7 @@ router.post('/:tenantCode/halaqas', authenticate, verifyTenant, async (req, res)
      VALUES (:tc, :nom, :niveau, :cap, :eid) RETURNING *`,
     { replacements: { tc, nom, niveau: niveau || 'Iqra', cap: capacite || 20, eid: enseignant_id || null } }
   );
-  res.json({ halaqa: rows[0] });
+  res.json({ success: true, halaqa: rows[0] });
 });
 
 router.put('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req, res) => {
@@ -324,7 +324,7 @@ router.get('/:tenantCode/attendance', authenticate, verifyMember, async (req, re
      WHERE a.tenant_code = :tc AND a.date_presence = :date ORDER BY s.nom`,
     { replacements: { tc, date } }
   );
-  res.json({ attendance });
+  res.json({ success: true, attendance });
 });
 
 router.post('/:tenantCode/attendance', authenticate, verifyTenant, async (req, res) => {
@@ -354,7 +354,7 @@ router.get('/:tenantCode/grades', authenticate, verifyMember, async (req, res) =
      WHERE g.tenant_code = :tc ORDER BY g.created_at DESC`,
     { replacements: { tc } }
   );
-  res.json({ grades });
+  res.json({ success: true, grades });
 });
 
 router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) => {
@@ -366,7 +366,7 @@ router.post('/:tenantCode/grades', authenticate, verifyTenant, async (req, res) 
      VALUES (:tc, :sid, :mat, :note, :nm, :per, :srt, :com) RETURNING *`,
     { replacements: { tc, sid: student_id, mat: matiere || 'Coran', note: parseFloat(note) || 0, nm: parseFloat(note_max) || 20, per: periode || 'Trim 1', srt: sourate || '', com: commentaire || '' } }
   );
-  res.json({ grade: rows[0] });
+  res.json({ success: true, grade: rows[0] });
 });
 
 router.put('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req, res) => {
@@ -399,7 +399,7 @@ router.get('/:tenantCode/fees', authenticate, verifyMember, async (req, res) => 
      WHERE f.tenant_code = :tc ORDER BY f.created_at DESC`,
     { replacements: { tc } }
   );
-  res.json({ fees });
+  res.json({ success: true, fees });
 });
 
 router.post('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
@@ -411,7 +411,7 @@ router.post('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) =>
      VALUES (:tc, :sid, :type, :montant, :ech) RETURNING *`,
     { replacements: { tc, sid: student_id, type: type_frais || 'Frais mensuels', montant: parseInt(montant), ech: echeance || null } }
   );
-  res.json({ fee: rows[0] });
+  res.json({ success: true, fee: rows[0] });
 });
 
 router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, res) => {
@@ -431,7 +431,7 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
      WHERE m.tenant_code = :tc AND m.is_active = true ORDER BY m.role, m.created_at`,
     { replacements: { tc: req.params.tenantCode } }
   );
-  res.json({ members });
+  res.json({ success: true, members });
 });
 
 router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, res) => {
@@ -468,7 +468,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
   const role = req.memberRole;
 
   if (role === 'directeur' || role === 'enseignant') {
-    return res.json({ role, message: 'Accès directeur/enseignant — utilisez le tableau de bord complet.' });
+    return res.json({ success: true, role, message: 'Accès directeur/enseignant — utilisez le tableau de bord complet.' });
   }
 
   // Trouver l'étudiant lié
@@ -515,7 +515,7 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
     }
   }
 
-  res.json({ role, student, grades, fees, member });
+  res.json({ success: true, role, student, grades, fees, member });
 });
 
 // ── Bulletins de progression ───────────────────────────────────────────────────
@@ -530,7 +530,7 @@ router.get('/:tenantCode/bulletins', authenticate, verifyMember, async (req, res
      ORDER BY b.periode, s.nom`,
     { replacements: { tc, per: periode } }
   );
-  res.json({ bulletins });
+  res.json({ success: true, bulletins });
 });
 
 router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async (req, res) => {

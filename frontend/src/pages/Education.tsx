@@ -46,6 +46,9 @@ interface Professor {
   isActive: boolean;
   isAvailable: boolean;
   ratings: number;
+  // Renvoyés par le serveur (modèle Professor)
+  specialty?: string;
+  bio?: string;
   reviews: any[];
   createdBy: string;
 }

@@ -357,7 +357,7 @@ export const Header: React.FC<BaseProps & { level: 1 | 2 | 3 | 4 }> = ({
 }) => {
   const headerStyle = COMPONENT_STYLES.header[`h${level}`];
 
-  const Component = `h${level}` as keyof JSX.IntrinsicElements;
+  const Component = `h${level}` as keyof React.JSX.IntrinsicElements;
 
   return React.createElement(
     Component,

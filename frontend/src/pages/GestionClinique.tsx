@@ -225,7 +225,7 @@ export default function GestionClinique() {
       .catch(e => setError("Impossible de joindre le serveur : " + (e?.message || e)))
       .finally(() => setLoading(false));
     get("/dashboard")
-      .then(d => { if (d.success) { setStats(d.stats); setRecentPatients(d.recentPatients || []); } })
+      .then(d => { if (d.success) { setStats(d.stats); setRecentPatients(d.recentPatients || []); } else showToast(d.message || "Erreur : rien n'a été enregistré", false); })
       .catch(() => {});
     get("/pharmacy/stats").then(d => d.success && setPharmacyStats(d.stats)).catch(() => {});
   }, [get, navigate, tenantCode]);
@@ -1120,7 +1120,7 @@ export default function GestionClinique() {
                           {enCours ? (
                             <button onClick={async () => {
                               const d = await put(`/admissions/${a.id}/discharge`, {});
-                              if (d.success) { loadSection("hospitalisation"); showToast("Patient sorti, lit libéré"); }
+                              if (d.success) { loadSection("hospitalisation"); showToast("Patient sorti, lit libéré"); } else showToast(d.message || "Erreur : rien n'a été enregistré", false);
                             }} style={{ padding: "6px 14px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                               Enregistrer la sortie
                             </button>
@@ -1298,7 +1298,7 @@ export default function GestionClinique() {
                               {!isPaid && (
                                 <button onClick={async () => {
                                   const d = await put(`/invoices/${f.id}`, { statut: "paye", mode_paiement: f.mode_paiement || "especes" });
-                                  if (d.success) { setInvoices(inv => inv.map(x => x.id === f.id ? { ...x, statut: "paye", montant_paye: x.total } : x)); showToast("Facture marquée payée"); }
+                                  if (d.success) { setInvoices(inv => inv.map(x => x.id === f.id ? { ...x, statut: "paye", montant_paye: x.total } : x)); showToast("Facture marquée payée"); } else showToast(d.message || "Erreur : rien n'a été enregistré", false);
                                 }} style={{ padding: "4px 10px", background: "#f0fdf0", color: "#1a8f1a", border: "1px solid #bbf7bb", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                                   Payée
                                 </button>

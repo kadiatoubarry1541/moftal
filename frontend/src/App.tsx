@@ -173,8 +173,6 @@ const LieuResidence2 = lazy(() => import("./pages/LieuResidence2"));
 const LieuResidence3 = lazy(() => import("./pages/LieuResidence3"));
 const AdminGovernments = lazy(() => import("./pages/AdminGovernments"));
 const GestionImam = lazy(() => import("./pages/GestionImam"));
-const GestionMadrasa = lazy(() => import("./pages/GestionMadrasa"));
-const GestionEcole = lazy(() => import("./pages/GestionEcole"));
 const Commerce = lazy(() => import("./pages/Commerce"));
 const Entreprise = lazy(() => import("./pages/Entreprise"));
 const Fournisseurs = lazy(() => import("./pages/Fournisseurs"));
