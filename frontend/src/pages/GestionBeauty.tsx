@@ -9,6 +9,7 @@ import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
+import { envoyerRappel, dateTexte } from "../utils/rappelWhatsApp";
 
 const BASE = (code: string) => `/api/beauty-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -352,6 +353,7 @@ export default function GestionBeauty() {
                     </div>
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <span style={{ background: st.bg, color: st.color, padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
+                      {(bk.statut === "en_attente" || bk.statut === "confirme") && <button onClick={() => envoyerRappel(bk.client_telephone, `Bonjour ${bk.client_nom || ""}, ${tenant?.name || "le salon"} vous rappelle votre rendez-vous ${bk.service_nom ? `(${bk.service_nom}) ` : ""}le ${dateTexte(bk.date_rdv)}${bk.heure_rdv ? ` à ${bk.heure_rdv}` : ""}. À bientôt !`)} style={{ fontSize: 11, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#15803d", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>📲 Rappel</button>}
                       <button onClick={() => imprimerRecu({
                         titre: "Reçu de prestation", numero: bk.id, date: bk.date_rdv, etablissement: tenant || {}, couleur: COLOR,
                         client: bk.client_nom, clientTelephone: bk.client_telephone,

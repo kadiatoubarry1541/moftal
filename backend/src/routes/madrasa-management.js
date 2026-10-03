@@ -394,7 +394,7 @@ router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req,
 router.get('/:tenantCode/fees', authenticate, verifyMember, async (req, res) => {
   const tc = req.params.tenantCode;
   const [fees] = await sequelize.query(
-    `SELECT f.*, s.prenom AS student_prenom, s.nom AS student_nom
+    `SELECT f.*, s.prenom AS student_prenom, s.nom AS student_nom, s.telephone_parent
      FROM madrasa_fees f
      JOIN madrasa_students s ON s.id = f.student_id
      WHERE f.tenant_code = :tc ORDER BY f.created_at DESC`,

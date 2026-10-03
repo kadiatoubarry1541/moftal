@@ -7,6 +7,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
+import { envoyerRappel, gnfTexte } from "../utils/rappelWhatsApp";
 
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
@@ -435,6 +436,7 @@ export default function GestionTransport() {
                       </td>
                       <td style={{ padding: "10px 14px", fontSize: 11, color: "#94a3b8" }}>
                         {b.created_at?.slice(0, 10)}
+                        {b.statut !== "annule" && <button onClick={() => envoyerRappel(b.client_telephone, `Bonjour ${b.client_nom || ""}, ${tenant?.name || "votre transporteur"} vous rappelle votre voyage${b.lieu_depart ? ` ${b.lieu_depart} → ${b.lieu_arrivee}` : ""}${b.date_depart ? ` le ${new Date(b.date_depart).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}` : ""} (${b.places || 1} place(s)${+b.montant ? `, ${gnfTexte(b.montant)}` : ""}). Bon voyage !`)} style={{ display: "block", marginTop: 4, fontSize: 11, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#15803d", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>📲 Rappel</button>}
                         <button onClick={() => imprimerRecu({
                           titre: "Billet de voyage", numero: b.id, date: b.created_at, etablissement: tenant || {}, couleur: BLUE,
                           client: b.client_nom, clientTelephone: b.client_telephone,

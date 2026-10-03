@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { BoutonRapport } from "../components/RapportMois";
+import { envoyerRappel, dateTexte } from "../utils/rappelWhatsApp";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -933,6 +934,9 @@ export default function GestionClinique() {
                             )}
                             {a.statut === "confirmed" && (
                               <button onClick={async () => { const d = await put(`/appointments/${a.id}`, { statut: "done" }); if (d.success) { setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "done" } : x)); showToast("RDV terminé"); } else showToast(d.message || "Erreur", false); }} style={{ padding: "4px 8px", background: "#eff6ff", color: "#0369a1", border: "1px solid #bfdbfe", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Terminé</button>
+                            )}
+                            {a.statut !== "cancelled" && a.statut !== "done" && (
+                              <button onClick={() => envoyerRappel(a.p_tel, `Bonjour ${a.p_prenom || ""}, ${tenant?.name || "la clinique"} vous rappelle votre rendez-vous le ${dateTexte(a.date_rdv)}${a.heure ? ` à ${a.heure}` : ""}${a.s_nom ? ` avec ${a.s_prenom || ""} ${a.s_nom}` : ""}. Merci de prévenir en cas d'empêchement.`)} style={{ padding:"5px 10px",background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>📲 Rappel</button>
                             )}
                             {a.statut !== "cancelled" && a.statut !== "done" && (
                               <button onClick={async () => { const d = await put(`/appointments/${a.id}`, { statut: "cancelled" }); if (d.success) { setAppointments(as => as.map(x => x.id === a.id ? { ...x, statut: "cancelled" } : x)); showToast("RDV annulé"); } else showToast(d.message || "Erreur", false); }} style={{ padding: "4px 8px", background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Annuler</button>

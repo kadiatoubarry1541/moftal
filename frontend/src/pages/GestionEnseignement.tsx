@@ -9,6 +9,7 @@ import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import { BoutonRapport } from "../components/RapportMois";
+import { envoyerRappel, gnfTexte, dateTexte } from "../utils/rappelWhatsApp";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -1059,6 +1060,9 @@ export default function GestionEnseignement({ mode }: Props) {
                           <div style={{ display:"flex", gap:6 }}>
                             {!f.est_paye && (
                               <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} else showToast(d.message || "Erreur : rien n'a été enregistré", false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
+                            )}
+                            {!f.est_paye && (
+                              <button onClick={() => envoyerRappel(f.telephone_parent, `Bonjour, ${tenant?.name || "l'établissement"} vous rappelle que ${f.type_frais || "les frais"} de ${`${f.student_prenom || ""} ${f.student_nom || ""}`.trim()} (${gnfTexte(+f.montant - (+f.montant_paye || 0))} restant à payer)${f.echeance ? ` sont à régler avant le ${dateTexte(f.echeance)}` : " restent à régler"}. Merci.`)} style={{ padding:"5px 10px",background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>📲 Rappel</button>
                             )}
                             {f.est_paye && (
                               <button onClick={() => printFeeReceipt(f, tenant, V.color)} style={{ padding:"5px 10px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>🖨 Reçu</button>

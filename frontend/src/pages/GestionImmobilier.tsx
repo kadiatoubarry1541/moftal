@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
+import { envoyerRappel, gnfTexte } from "../utils/rappelWhatsApp";
 
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -403,6 +404,7 @@ export default function GestionImmobilier() {
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#1a8f1a" }}>{fmtMoney(p.montant)}</div>
+                    {p.statut !== "paye" && <button onClick={() => envoyerRappel(p.locataire_tel, `Bonjour ${[p.locataire_prenom, p.locataire_nom].filter(Boolean).join(" ")}, ${tenant?.name || "votre agence"} vous rappelle le loyer de ${p.mois_concerne || "ce mois"}${p.property_nom ? ` (${p.property_nom})` : ""} : ${gnfTexte(p.montant)}. Merci de régulariser dès que possible.`)} style={{ display: "block", marginLeft: "auto", marginBottom: 4, fontSize: 11, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#15803d", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>📲 Rappel</button>}
                     <button onClick={() => imprimerRecu({
                       titre: p.statut === "paye" ? "Quittance de loyer" : "Reçu de paiement", numero: p.id, date: p.date_paiement, etablissement: tenant || {}, couleur: AMBER,
                       client: [p.locataire_nom, p.locataire_prenom].filter(Boolean).join(" ") || "Locataire",

@@ -147,7 +147,7 @@ router.delete('/:tenantCode/tenants/:id', authenticate, verifyTenant, async (req
 router.get('/:tenantCode/payments', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT p.*, t.nom as locataire_nom, t.prenom as locataire_prenom, pr.nom as property_nom FROM immo_payments p LEFT JOIN immo_tenants t ON p.tenant_id=t.id LEFT JOIN immo_properties pr ON p.property_id=pr.id WHERE p.tenant_code=:code ORDER BY p.date_paiement DESC LIMIT 100`,
+      `SELECT p.*, t.nom as locataire_nom, t.prenom as locataire_prenom, t.telephone as locataire_tel, pr.nom as property_nom FROM immo_payments p LEFT JOIN immo_tenants t ON p.tenant_id=t.id LEFT JOIN immo_properties pr ON p.property_id=pr.id WHERE p.tenant_code=:code ORDER BY p.date_paiement DESC LIMIT 100`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, payments: rows });

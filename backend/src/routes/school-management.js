@@ -395,7 +395,7 @@ router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req,
 router.get('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT f.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
+      `SELECT f.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,s.telephone_parent FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, fees: rows });
