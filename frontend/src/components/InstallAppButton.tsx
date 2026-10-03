@@ -108,6 +108,30 @@ export function BackToMoftalBadge() {
   );
 }
 
+// ─── Message automatique « Installez l'application » ────────────────────────
+// Proposé tout seul au plus 2 fois (une fois par visite), puis plus jamais :
+// l'installation reste ensuite disponible dans les Paramètres (gestion) ou
+// dans le panneau des notifications (Moftal). Jamais proposé une fois installée.
+const MAX_INVITATIONS = 2;
+
+function invitationPossible(cle: string) {
+  try {
+    if (sessionStorage.getItem(`${cle}_vue`) === "1") return false;
+    return Number(localStorage.getItem(cle) || 0) < MAX_INVITATIONS;
+  } catch { return false; }
+}
+
+function noterInvitation(cle: string) {
+  try {
+    sessionStorage.setItem(`${cle}_vue`, "1");
+    localStorage.setItem(cle, String(Number(localStorage.getItem(cle) || 0) + 1));
+  } catch { /* ignore */ }
+}
+
+function estEnModeApp() {
+  return window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+}
+
 // ─── Composant ──────────────────────────────────────────────────────────────
 
 export default function InstallAppButton({ name, logoUrl, themeColor, color, label, variant = "icon" }: Props = {}) {
@@ -155,12 +179,24 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
   const [etat, setEtat] = useState<"" | "installation" | "installee" | "manuel">("");
 
   useEffect(() => {
+    let minuterie: ReturnType<typeof setTimeout> | undefined;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("installer") !== "1") return;
-    params.delete("installer");
-    const q = params.toString();
-    window.history.replaceState(window.history.state, "", window.location.pathname + (q ? `?${q}` : "") + window.location.hash);
-    setOuvert(true);
+    if (params.get("installer") === "1") {
+      params.delete("installer");
+      const q = params.toString();
+      window.history.replaceState(window.history.state, "", window.location.pathname + (q ? `?${q}` : "") + window.location.hash);
+      setOuvert(true);
+    } else {
+      // Arrivée normale dans la gestion : on propose l'installation tout seul
+      // (2 fois au plus), sauf si l'app de cette gestion est déjà installée.
+      const cleInstallee = getTenantStorageKey();
+      const cleInvitation = cleInstallee ? `installInvite_${cleInstallee}` : null;
+      let depuisMoftal = false;
+      try { depuisMoftal = sessionStorage.getItem("gestionOuverteDepuisMoftal") === "1"; } catch { /* ignore */ }
+      const dejaInstallee = (estEnModeApp() && !depuisMoftal) || (cleInstallee && localStorage.getItem(cleInstallee) === "1");
+      if (!cleInvitation || dejaInstallee || !invitationPossible(cleInvitation)) return;
+      minuterie = setTimeout(() => { noterInvitation(cleInvitation); setOuvert(true); }, 2500);
+    }
 
     const existing = (window as any).__pwaGestionPrompt;
     if (existing) setPrompt(existing);
@@ -176,6 +212,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("pwa-prompt-ready", onReady);
     return () => {
+      if (minuterie) clearTimeout(minuterie);
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("pwa-prompt-ready", onReady);
     };
@@ -224,6 +261,11 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
           <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.</p>
         ) : etat === "manuel" ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
+            {isAndroid() && (
+              <a href={lienOuvrirDansChrome()} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: themeColor, color: "white", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 8 }}>
+                🌐 Ouvrir dans Chrome
+              </a>
+            )}
             <div>1. Appuyez sur le menu <strong>⋮</strong> de Chrome (en haut à droite)</div>
             <div>2. Choisissez « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
             <div>3. Confirmez.</div>
@@ -231,6 +273,89 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
           </div>
         ) : (
           <button onClick={installer} disabled={etat === "installation"} style={{ width: "100%", padding: 14, background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10, opacity: etat === "installation" ? 0.75 : 1 }}>
+            {etat === "installation" ? "⏳ Installation…" : "📲 Installer maintenant"}
+          </button>
+        )}
+        <button onClick={() => setOuvert(false)} style={{ width: "100%", padding: 12, background: "#f1f5f9", color: "#334155", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+          {etat === "installee" ? "Fermer" : "Plus tard"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Message automatique : installer l'application Moftal ───────────────────
+// Affiché tout seul à l'utilisateur connecté (2 fois au plus), sans qu'il ait à
+// ouvrir les notifications. Ensuite, le bouton reste dans le panneau des notifications.
+export function InvitationInstallerMoftal() {
+  const [ouvert, setOuvert] = useState(false);
+  const [etat, setEtat] = useState<"" | "installation" | "installee" | "manuel">("");
+
+  useEffect(() => {
+    if (isGestionPage() || estEnModeApp() || localStorage.getItem("mainAppInstalled") === "1") return;
+    const cle = "installInvite_moftal";
+    if (!invitationPossible(cle)) return;
+    const minuterie = setTimeout(() => { noterInvitation(cle); setOuvert(true); }, 2500);
+    const onInstalled = () => setOuvert(false);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => { clearTimeout(minuterie); window.removeEventListener("appinstalled", onInstalled); };
+  }, []);
+
+  if (!ouvert) return null;
+
+  const installer = async () => {
+    setEtat("installation");
+    let p = (window as any).__pwaInstallPrompt as BeforeInstallPromptEvent | null;
+    for (let i = 0; !p && i < 10; i++) {
+      await new Promise(r => setTimeout(r, 400));
+      p = (window as any).__pwaInstallPrompt;
+    }
+    if (!p) { setEtat("manuel"); return; }
+    try {
+      await p.prompt();
+      const { outcome } = await p.userChoice;
+      if (outcome === "accepted") {
+        localStorage.setItem("mainAppInstalled", "1");
+        setEtat("installee");
+      } else setEtat("");
+    } catch {
+      setEtat("manuel");
+    } finally {
+      (window as any).__pwaInstallPrompt = null;
+    }
+  };
+
+  const ios = isIOS();
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setOuvert(false); }}>
+      <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", textAlign: "left" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+          <img src="/logo-moftal.svg" alt="" style={{ width: 56, height: 56, borderRadius: 12 }} />
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Installer l'application Moftal</div>
+            <div style={{ fontSize: 13, color: "#64748b" }}>Gratuite — l'icône apparaîtra sur votre écran d'accueil</div>
+          </div>
+        </div>
+        {etat === "installee" ? (
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.</p>
+        ) : etat === "manuel" || (ios && etat === "") ? (
+          <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
+            {ios ? (
+              <>
+                <div>1. Appuyez sur le bouton <strong>Partager ⎙</strong> en bas de Safari</div>
+                <div>2. Choisissez « <strong>Sur l'écran d'accueil</strong> »</div>
+                <div>3. Appuyez sur <strong>Ajouter</strong>.</div>
+              </>
+            ) : (
+              <>
+                <div>1. Ouvrez le menu <strong>⋮</strong> du navigateur</div>
+                <div>2. Choisissez « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
+                <div>3. Confirmez.</div>
+              </>
+            )}
+          </div>
+        ) : (
+          <button onClick={installer} disabled={etat === "installation"} style={{ width: "100%", padding: 14, background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10, opacity: etat === "installation" ? 0.75 : 1 }}>
             {etat === "installation" ? "⏳ Installation…" : "📲 Installer maintenant"}
           </button>
         )}
