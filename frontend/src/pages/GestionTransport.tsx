@@ -5,6 +5,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
@@ -27,10 +28,12 @@ const BLUE_LIGHT = "#eff6ff";
 const BLUE_BORDER = "#bfdbfe";
 
 export default function GestionTransport() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const code = tenantCode!;
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -247,6 +250,7 @@ export default function GestionTransport() {
         {/* ── VEHICLES ── */}
         {!loading && tab === "vehicles" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Ajouter un véhicule</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -271,7 +275,7 @@ export default function GestionTransport() {
                 </thead>
                 <tbody>
                   {vehicles.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: 30, color: "#94a3b8" }}>Aucun véhicule</td></tr>}
-                  {vehicles.map(v => (
+                  {filtrer(vehicles, recherche).map(v => (
                     <tr key={v.id} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 14px", fontWeight: 600 }}>{v.immatriculation}</td>
                       <td style={{ padding: "10px 14px", fontSize: 13 }}>{v.type_vehicule}</td>
@@ -295,6 +299,7 @@ export default function GestionTransport() {
         {/* ── DRIVERS ── */}
         {!loading && tab === "drivers" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Ajouter un chauffeur</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -317,7 +322,7 @@ export default function GestionTransport() {
                 </thead>
                 <tbody>
                   {drivers.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 30, color: "#94a3b8" }}>Aucun chauffeur</td></tr>}
-                  {drivers.map(d => (
+                  {filtrer(drivers, recherche).map(d => (
                     <tr key={d.id} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 14px", fontWeight: 600 }}>{d.nom} {d.prenom}</td>
                       <td style={{ padding: "10px 14px", fontSize: 13 }}>{d.telephone || "—"}</td>
@@ -340,6 +345,7 @@ export default function GestionTransport() {
         {/* ── TRIPS ── */}
         {!loading && tab === "trips" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Nouveau trajet</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -363,7 +369,7 @@ export default function GestionTransport() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {trips.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucun trajet</div>}
-              {trips.map(t => (
+              {filtrer(trips, recherche).map(t => (
                 <div key={t.id} style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>📍 {t.lieu_depart} → {t.lieu_arrivee}</div>
@@ -391,6 +397,7 @@ export default function GestionTransport() {
         {/* ── BOOKINGS ── */}
         {!loading && tab === "bookings" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Nouvelle réservation</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -413,7 +420,7 @@ export default function GestionTransport() {
                 </thead>
                 <tbody>
                   {bookings.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 30, color: "#94a3b8" }}>Aucune réservation</td></tr>}
-                  {bookings.map(b => (
+                  {filtrer(bookings, recherche).map(b => (
                     <tr key={b.id} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 14px", fontWeight: 600 }}>{b.client_nom}<br /><span style={{ fontSize: 11, color: "#64748b" }}>{b.client_telephone}</span></td>
                       <td style={{ padding: "10px 14px", fontSize: 13 }}>{b.lieu_depart ? `${b.lieu_depart} → ${b.lieu_arrivee}` : "—"}</td>
@@ -445,6 +452,7 @@ export default function GestionTransport() {
         {/* ── LIVRAISONS ── */}
         {!loading && tab === "deliveries" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>📦 Nouvelle livraison</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -485,7 +493,7 @@ export default function GestionTransport() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {deliveries.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune livraison enregistrée</div>}
-              {deliveries.map(liv => (
+              {filtrer(deliveries, recherche).map(liv => (
                 <div key={liv.id} style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: "14px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
                     <div style={{ flex: 1 }}>
@@ -522,6 +530,7 @@ export default function GestionTransport() {
         {/* ── ANNOUNCEMENTS ── */}
         {!loading && tab === "announcements" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Nouvelle annonce</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -535,7 +544,7 @@ export default function GestionTransport() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {announcements.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune annonce</div>}
-              {announcements.map(a => (
+              {filtrer(announcements, recherche).map(a => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: "14px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>

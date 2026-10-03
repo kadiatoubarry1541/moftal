@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/supplier-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -26,6 +27,7 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 export default function GestionFournisseur() {
+  const [recherche, setRecherche] = useState("");
   const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
@@ -33,6 +35,7 @@ export default function GestionFournisseur() {
   const userIsAdmin = isAdmin(user);
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -261,6 +264,7 @@ export default function GestionFournisseur() {
       {/* ── PRODUITS ── */}
       {tab === "products" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📦 Produits ({products.length})</h2>
             <button onClick={() => setShowAddProduct(!showAddProduct)} style={btn(CYAN)}>{showAddProduct ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -291,7 +295,7 @@ export default function GestionFournisseur() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map(p => (
+                  {filtrer(products, recherche).map(p => (
                     <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 12px", fontWeight: 600, color: "#0f172a" }}>{p.nom}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.categorie || "—"}</td>
@@ -318,6 +322,7 @@ export default function GestionFournisseur() {
       {/* ── CLIENTS / REVENDEURS ── */}
       {tab === "clients" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🤝 Clients / Revendeurs ({clients.length})</h2>
             <button onClick={() => setShowAddClient(!showAddClient)} style={btn(CYAN)}>{showAddClient ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -340,7 +345,7 @@ export default function GestionFournisseur() {
           )}
           {clients.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun client enregistré</div>
-          ) : clients.map(c => (
+          ) : filtrer(clients, recherche).map(c => (
             <div key={c.id} style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -365,6 +370,7 @@ export default function GestionFournisseur() {
       {/* ── COMMANDES ── */}
       {tab === "orders" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📋 Commandes ({orders.length})</h2>
             <button onClick={() => setShowAddOrder(!showAddOrder)} style={btn(CYAN)}>{showAddOrder ? "✕ Annuler" : "+ Nouvelle commande"}</button>
@@ -390,7 +396,7 @@ export default function GestionFournisseur() {
           )}
           {orders.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune commande enregistrée</div>
-          ) : orders.map(o => {
+          ) : filtrer(orders, recherche).map(o => {
             const sc = STATUT_COLORS[o.statut] || { bg: "#f1f5f9", color: "#64748b", label: o.statut };
             return (
               <div key={o.id} style={card}>
@@ -431,6 +437,7 @@ export default function GestionFournisseur() {
       {/* ── ANNONCES ── */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📢 Annonces ({announcements.length})</h2>
             <button onClick={() => setShowAddAnn(!showAddAnn)} style={btn(CYAN)}>{showAddAnn ? "✕ Annuler" : "+ Publier"}</button>
@@ -451,7 +458,7 @@ export default function GestionFournisseur() {
           )}
           {announcements.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune annonce publiée</div>
-          ) : announcements.map(a => (
+          ) : filtrer(announcements, recherche).map(a => (
             <div key={a.id} style={{ ...card, borderLeft: `4px solid ${CYAN}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>

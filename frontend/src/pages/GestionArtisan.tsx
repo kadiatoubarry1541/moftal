@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/artisan-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -35,11 +36,13 @@ const PRIORITE: Record<string, { color: string; label: string }> = {
 };
 
 export default function GestionArtisan() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab]                       = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant]                 = useState<any>(null);
   const [dash, setDash]                     = useState<any>(null);
   const [interventions, setInterventions]   = useState<any[]>([]);
@@ -261,6 +264,7 @@ export default function GestionArtisan() {
       {/* INTERVENTIONS */}
       {tab === "interventions" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>🔧 Interventions</h2>
             <button onClick={() => { setShowAddInt(true); if (!services.length) loadServices(); if (!clients.length) loadClients(); }} style={btn(COLOR)}>+ Nouvelle</button>
@@ -305,7 +309,7 @@ export default function GestionArtisan() {
             </div>
           )}
           {interventions.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucune intervention.</p>}
-          {interventions.map(int => {
+          {filtrer(interventions, recherche).map(int => {
             const st = STATUT_INT[int.statut] || STATUT_INT.en_attente;
             const pr = PRIORITE[int.priorite] || PRIORITE.normale;
             return (
@@ -350,6 +354,7 @@ export default function GestionArtisan() {
       {/* SERVICES */}
       {tab === "services" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>⚙️ Services proposés</h2>
             <button onClick={() => setShowAddSvc(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -375,7 +380,7 @@ export default function GestionArtisan() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {services.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun service encore.</p>}
-            {services.map(s => (
+            {filtrer(services, recherche).map(s => (
               <div key={s.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
@@ -396,6 +401,7 @@ export default function GestionArtisan() {
       {/* CLIENTS */}
       {tab === "clients" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>👤 Clients</h2>
             <button onClick={() => setShowAddCli(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -416,7 +422,7 @@ export default function GestionArtisan() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {clients.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun client encore.</p>}
-            {clients.map(c => (
+            {filtrer(clients, recherche).map(c => (
               <div key={c.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 600 }}>{c.nom}</div>
                 {c.telephone && <div style={{ fontSize: 13, color: "#64748b" }}>📞 {c.telephone}</div>}
@@ -431,6 +437,7 @@ export default function GestionArtisan() {
       {/* ANNONCES */}
       {tab === "announcements" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📣 Annonces</h2>
             <button onClick={() => setShowAddAnn(true)} style={btn(COLOR)}>+ Publier</button>
@@ -453,7 +460,7 @@ export default function GestionArtisan() {
             </div>
           )}
           {announcements.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucune annonce.</p>}
-          {announcements.map(a => (
+          {filtrer(announcements, recherche).map(a => (
             <div key={a.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginBottom: 10 }}>
               <div style={{ fontWeight: 600 }}>{a.titre}</div>
               <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{a.contenu}</div>

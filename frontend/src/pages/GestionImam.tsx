@@ -1,12 +1,13 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/imam-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -20,13 +21,17 @@ const VIOLET_BG = "#f5f3ff";
 const VIOLET_BORDER = "#ede9fe";
 
 export default function GestionImam() {
+  const [recherche, setRecherche] = useState("");
   const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
-  const userIsAdmin = isAdmin(user);
+  // Seuls le propriétaire de l'établissement et l'admin entrent dans cette
+  // gestion (verifyTenant côté serveur) : tous deux gèrent les fiches.
+  const peutGerer = !!user;
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [imams, setImams] = useState<any[]>([]);
@@ -285,6 +290,7 @@ export default function GestionImam() {
         {/* ── IMAMS ── */}
         {tab === "imams" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Imams du réseau ({imams.length})</h2>
               <button onClick={() => setShowAddImam(true)} style={btnPrimary}>+ Ajouter un imam</button>
@@ -315,7 +321,7 @@ export default function GestionImam() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {imams.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun imam enregistré</div>}
-              {imams.map((imam: any) => (
+              {filtrer(imams, recherche).map((imam: any) => (
                 <div key={imam.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: VIOLET_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🕋</div>
                   <div style={{ flex: 1 }}>
@@ -325,8 +331,8 @@ export default function GestionImam() {
                     </div>
                   </div>
                   {imam.numero_h && <span style={{ fontFamily: "monospace", fontSize: 11, background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: 6 }}>{imam.numero_h}</span>}
-                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/imams/${imam.id}`, item: imam, colonnes: ["nom", "prenom", "telephone", "numero_h", "specialite", "mosquee"], onSaved: () => { loadImams(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                  {userIsAdmin && <button onClick={() => deleteImam(imam.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
+                  {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/imams/${imam.id}`, item: imam, colonnes: ["nom", "prenom", "telephone", "numero_h", "specialite", "mosquee"], onSaved: () => { loadImams(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                  {peutGerer && <button onClick={() => deleteImam(imam.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
                 </div>
               ))}
             </div>
@@ -336,6 +342,7 @@ export default function GestionImam() {
         {/* ── PRÉDICATIONS ── */}
         {tab === "predications" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Prédications ({predications.length})</h2>
               <button onClick={() => setShowAddPred(true)} style={btnPrimary}>+ Ajouter</button>
@@ -372,7 +379,7 @@ export default function GestionImam() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {predications.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucune prédication enregistrée</div>}
-              {predications.map((p: any) => (
+              {filtrer(predications, recherche).map((p: any) => (
                 <div key={p.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: VIOLET_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📢</div>
                   <div style={{ flex: 1 }}>
@@ -382,8 +389,8 @@ export default function GestionImam() {
                     </div>
                   </div>
                   <span style={{ padding: "2px 10px", background: VIOLET_BG, color: VIOLET, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{p.type_pred}</span>
-                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/predications/${p.id}`, item: p, colonnes: ["imam_id", "imam_nom", "titre", "type_pred", "date_pred", "mosquee", "notes"], onSaved: () => { loadPredications(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                  {userIsAdmin && <button onClick={() => deletePredication(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
+                  {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/predications/${p.id}`, item: p, colonnes: ["imam_id", "imam_nom", "titre", "type_pred", "date_pred", "mosquee", "notes"], onSaved: () => { loadPredications(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                  {peutGerer && <button onClick={() => deletePredication(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
                 </div>
               ))}
             </div>
@@ -393,6 +400,7 @@ export default function GestionImam() {
         {/* ── MOSQUÉES ── */}
         {tab === "mosques" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Mosquées partenaires ({mosques.length})</h2>
               <button onClick={() => setShowAddMosque(true)} style={btnPrimary}>+ Ajouter</button>
@@ -416,7 +424,7 @@ export default function GestionImam() {
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
               {mosques.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8", gridColumn: "1/-1" }}>Aucune mosquée partenaire</div>}
-              {mosques.map((m: any) => (
+              {filtrer(mosques, recherche).map((m: any) => (
                 <div key={m.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                     <div style={{ width: 38, height: 38, borderRadius: 8, background: VIOLET_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🕌</div>
@@ -425,8 +433,8 @@ export default function GestionImam() {
                   {m.adresse && <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>📍 {m.adresse}</div>}
                   {m.responsable && <div style={{ fontSize: 12, color: "#64748b", marginBottom: 4 }}>👤 {m.responsable}</div>}
                   {m.telephone && <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>📞 {m.telephone}</div>}
-                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/mosques/${m.id}`, item: m, colonnes: ["nom", "adresse", "responsable", "telephone"], onSaved: () => { loadMosques(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                  {userIsAdmin && <button onClick={() => deleteMosque(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%" }}>Retirer</button>}
+                  {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/mosques/${m.id}`, item: m, colonnes: ["nom", "adresse", "responsable", "telephone"], onSaved: () => { loadMosques(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                  {peutGerer && <button onClick={() => deleteMosque(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, width: "100%" }}>Retirer</button>}
                 </div>
               ))}
             </div>
@@ -436,6 +444,7 @@ export default function GestionImam() {
         {/* ── ANNONCES ── */}
         {tab === "announcements" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Annonces ({announcements.length})</h2>
               <button onClick={() => setShowAddAnn(true)} style={btnPrimary}>+ Publier une annonce</button>
@@ -463,7 +472,7 @@ export default function GestionImam() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {announcements.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucune annonce publiée</div>}
-              {announcements.map((a: any) => (
+              {filtrer(announcements, recherche).map((a: any) => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${VIOLET_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                     <div>
@@ -472,8 +481,8 @@ export default function GestionImam() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ padding: "2px 10px", background: VIOLET_BG, color: VIOLET, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{a.type}</span>
-                      {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                      {userIsAdmin && <button onClick={() => deleteAnn(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
+                      {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                      {peutGerer && <button onClick={() => deleteAnn(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
                     </div>
                   </div>
                   <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6 }}>{a.contenu}</div>

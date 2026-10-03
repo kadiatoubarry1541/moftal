@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -26,12 +27,14 @@ const STATUT_COLORS: Record<string, string> = { en_cours: "#2563eb", terminé: "
 const COT_TYPES = ["mensuelle", "trimestrielle", "annuelle", "ponctuelle"];
 
 export default function GestionReseau() {
+  const [recherche, setRecherche] = useState("");
   const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [membres, setMembres] = useState<any[]>([]);
@@ -251,6 +254,7 @@ export default function GestionReseau() {
       {/* ── MEMBRES ── */}
       {tab === "membres" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Membres ({membres.length})</div>
             <button onClick={() => setShowAddMembre(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
@@ -279,7 +283,7 @@ export default function GestionReseau() {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {membres.map(m => (
+            {filtrer(membres, recherche).map(m => (
               <div key={m.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 38, height: 38, borderRadius: "50%", background: BLUE_BG, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: BLUE, fontSize: 14, flexShrink: 0 }}>{m.nom?.charAt(0)}</div>
@@ -303,6 +307,7 @@ export default function GestionReseau() {
       {/* ── PROJETS ── */}
       {tab === "projets" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Projets ({projets.length})</div>
             <button onClick={() => setShowAddProjet(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Nouveau projet</button>
@@ -345,7 +350,7 @@ export default function GestionReseau() {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {projets.map(p => (
+            {filtrer(projets, recherche).map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", borderLeft: `3px solid ${STATUT_COLORS[p.statut] || BLUE}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ flex: 1 }}>
@@ -381,6 +386,7 @@ export default function GestionReseau() {
       {/* ── COTISATIONS ── */}
       {tab === "cotisations" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Cotisations ({cotisations.length})</div>
@@ -418,7 +424,7 @@ export default function GestionReseau() {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {cotisations.map(c => (
+            {filtrer(cotisations, recherche).map(c => (
               <div key={c.id} style={{ background: "white", borderRadius: 10, padding: "12px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{c.membre_nom || "Anonyme"}</div>
@@ -435,6 +441,7 @@ export default function GestionReseau() {
       {/* ── ANNONCES ── */}
       {tab === "annonces" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Annonces ({annonces.length})</div>
             <button onClick={() => setShowAddAnn(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Publier</button>
@@ -463,7 +470,7 @@ export default function GestionReseau() {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {annonces.map(a => (
+            {filtrer(annonces, recherche).map(a => (
               <div key={a.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{a.titre}</div>

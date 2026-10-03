@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
@@ -33,7 +33,9 @@ export default function GestionScientifique() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
-  const userIsAdmin = isAdmin(user);
+  // Seuls le propriétaire de l'établissement et l'admin entrent dans cette
+  // gestion (verifyTenant côté serveur) : tous deux gèrent les fiches.
+  const peutGerer = !!user;
 
   const [tab, setTab] = useState<Tab>("dashboard");
   const [tenant, setTenant] = useState<any>(null);
@@ -286,8 +288,8 @@ export default function GestionScientifique() {
                     <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>{m.domaine} {m.institution ? `· ${m.institution}` : ""} {m.telephone ? `· ${m.telephone}` : ""}</div>
                   </div>
                   {m.numero_h && <span style={{ fontFamily:"monospace", fontSize:11, background:"#f1f5f9", color:"#64748b", padding:"2px 8px", borderRadius:6 }}>{m.numero_h}</span>}
-                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "titre", "domaine", "institution"], onSaved: () => { loadMembers(); loadAll(); loadPublications(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                  {userIsAdmin && <button onClick={() => deleteMember(m.id)} style={{ background:"#fee2e2", color:"#dc2626", border:"none", borderRadius:6, padding:"5px 10px", cursor:"pointer", fontSize:12, fontWeight:600 }}>Retirer</button>}
+                  {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "titre", "domaine", "institution"], onSaved: () => { loadMembers(); loadAll(); loadPublications(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                  {peutGerer && <button onClick={() => deleteMember(m.id)} style={{ background:"#fee2e2", color:"#dc2626", border:"none", borderRadius:6, padding:"5px 10px", cursor:"pointer", fontSize:12, fontWeight:600 }}>Retirer</button>}
                 </div>
               ))}
             </div>
@@ -330,8 +332,8 @@ export default function GestionScientifique() {
                         <select value={p.statut} onChange={e => updatePubStatut(p.id, e.target.value)} style={{ padding:"3px 8px", border:`1px solid ${sc.color}33`, borderRadius:8, fontSize:12, color:sc.color, background:sc.bg, fontWeight:600, cursor:"pointer" }}>
                           <option value="en_cours">En cours</option><option value="soumis">Soumis</option><option value="publie">Publié</option><option value="rejete">Rejeté</option>
                         </select>
-                        {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/publications/${p.id}`, item: p, colonnes: ["auteur_id", "auteur_nom", "titre", "type_pub", "domaine", "statut", "date_pub", "resume"], onSaved: () => { loadPublications(); loadAll(); loadProjects(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                        {userIsAdmin && <button onClick={() => deletePub(p.id)} style={{ background:"#fee2e2", color:"#dc2626", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontSize:12 }}>Suppr.</button>}
+                        {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/publications/${p.id}`, item: p, colonnes: ["auteur_id", "auteur_nom", "titre", "type_pub", "domaine", "statut", "date_pub", "resume"], onSaved: () => { loadPublications(); loadAll(); loadProjects(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                        {peutGerer && <button onClick={() => deletePub(p.id)} style={{ background:"#fee2e2", color:"#dc2626", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontSize:12 }}>Suppr.</button>}
                       </div>
                     </div>
                     <div style={{ fontSize:12, color:"#64748b", marginBottom:4 }}>
@@ -382,8 +384,8 @@ export default function GestionScientifique() {
                         <select value={p.statut} onChange={e => updatePrjStatut(p.id, e.target.value)} style={{ padding:"3px 8px", border:`1px solid ${sc.color}33`, borderRadius:8, fontSize:12, color:sc.color, background:sc.bg, fontWeight:600, cursor:"pointer" }}>
                           <option value="planifie">Planifié</option><option value="en_cours">En cours</option><option value="termine">Terminé</option><option value="suspendu">Suspendu</option>
                         </select>
-                        {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/projects/${p.id}`, item: p, colonnes: ["titre", "description", "responsable", "statut", "date_debut", "date_fin", "budget"], onSaved: () => { loadProjects(); loadAll(); loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                        {userIsAdmin && <button onClick={() => deleteProject(p.id)} style={{ background:"#fee2e2", color:"#dc2626", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontSize:12 }}>Suppr.</button>}
+                        {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/projects/${p.id}`, item: p, colonnes: ["titre", "description", "responsable", "statut", "date_debut", "date_fin", "budget"], onSaved: () => { loadProjects(); loadAll(); loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                        {peutGerer && <button onClick={() => deleteProject(p.id)} style={{ background:"#fee2e2", color:"#dc2626", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontSize:12 }}>Suppr.</button>}
                       </div>
                     </div>
                     {p.description && <div style={{ fontSize:13, color:"#374151", marginBottom:6 }}>{p.description}</div>}
@@ -423,7 +425,7 @@ export default function GestionScientifique() {
                     <div><div style={{ fontWeight:700, color:"#0f172a", fontSize:15 }}>{a.titre}</div><div style={{ fontSize:11, color:"#94a3b8" }}>{fmtDate(a.created_at)}</div></div>
                     <div style={{ display:"flex", gap:8 }}>
                       <span style={{ padding:"2px 10px", background:INDIGO_BG, color:INDIGO, borderRadius:20, fontSize:11, fontWeight:600 }}>{a.type}</span>
-                      {userIsAdmin && <button onClick={() => deleteAnn(a.id)} style={{ background:"#fee2e2", color:"#dc2626", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontSize:12 }}>Suppr.</button>}
+                      {peutGerer && <button onClick={() => deleteAnn(a.id)} style={{ background:"#fee2e2", color:"#dc2626", border:"none", borderRadius:6, padding:"4px 10px", cursor:"pointer", fontSize:12 }}>Suppr.</button>}
                     </div>
                   </div>
                   <div style={{ fontSize:13, color:"#374151", lineHeight:1.6 }}>{a.contenu}</div>

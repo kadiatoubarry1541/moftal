@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/retailer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -22,11 +23,13 @@ const GRADIENT  = "linear-gradient(135deg,#0891b2,#06b6d4)";
 const CATS_EXP  = ["Transport", "Loyer", "Électricité", "Eau", "Emballage", "Réparation", "Approvisionnement", "Autre"];
 
 export default function GestionVendeur() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab]               = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant]         = useState<any>(null);
   const [dash, setDash]             = useState<any>(null);
   const [products, setProducts]     = useState<any[]>([]);
@@ -251,6 +254,7 @@ export default function GestionVendeur() {
       {/* PRODUITS */}
       {tab === "products" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>🛒 Produits en vente</h2>
             <button onClick={() => { setEditProduct(null); setPForm({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce" }); setShowAddProduct(true); }} style={btn(COLOR)}>+ Ajouter</button>
@@ -279,7 +283,7 @@ export default function GestionVendeur() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
             {products.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun produit encore.</p>}
-            {products.map(p => (
+            {filtrer(products, recherche).map(p => (
               <div key={p.id} style={{ background: "white", border: p.stock <= p.stock_min ? "1px solid #fca5a5" : "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
@@ -306,6 +310,7 @@ export default function GestionVendeur() {
       {/* VENTES */}
       {tab === "sales" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>💰 Ventes</h2>
             <button onClick={() => setShowNewSale(true)} style={btn(COLOR)}>+ Nouvelle vente</button>
@@ -357,7 +362,7 @@ export default function GestionVendeur() {
           )}
           <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
             {sales.length === 0 && <p style={{ padding: 16, color: "#94a3b8", fontStyle: "italic" }}>Aucune vente enregistrée.</p>}
-            {sales.map(s => (
+            {filtrer(sales, recherche).map(s => (
               <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderBottom: "1px solid #f1f5f9", fontSize: 14 }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{s.client_nom || "Client"}</div>
@@ -381,6 +386,7 @@ export default function GestionVendeur() {
       {/* CLIENTS */}
       {tab === "clients" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>👤 Clients</h2>
             <button onClick={() => setShowAddClient(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -400,7 +406,7 @@ export default function GestionVendeur() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
             {clients.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun client encore.</p>}
-            {clients.map(c => (
+            {filtrer(clients, recherche).map(c => (
               <div key={c.id} style={{ background: "white", border: c.credit_total > 0 ? "1px solid #fca5a5" : "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 600 }}>{c.nom}</div>
                 {c.telephone && <div style={{ fontSize: 13, color: "#64748b" }}>📞 {c.telephone}</div>}
@@ -420,6 +426,7 @@ export default function GestionVendeur() {
       {/* DÉPENSES */}
       {tab === "expenses" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📋 Dépenses</h2>
             <button onClick={() => setShowAddExpense(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -443,7 +450,7 @@ export default function GestionVendeur() {
           )}
           <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
             {expenses.length === 0 && <p style={{ padding: 16, color: "#94a3b8", fontStyle: "italic" }}>Aucune dépense enregistrée.</p>}
-            {expenses.map(e => (
+            {filtrer(expenses, recherche).map(e => (
               <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #f1f5f9", fontSize: 14 }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{e.description}</div>

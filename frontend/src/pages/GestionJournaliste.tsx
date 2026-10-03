@@ -1,12 +1,13 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/journalist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -27,13 +28,17 @@ const STATUT_ARTICLE: Record<string, { bg: string; color: string; label: string 
 };
 
 export default function GestionJournaliste() {
+  const [recherche, setRecherche] = useState("");
   const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
-  const userIsAdmin = isAdmin(user);
+  // Seuls le propriétaire de l'établissement et l'admin entrent dans cette
+  // gestion (verifyTenant côté serveur) : tous deux gèrent les fiches.
+  const peutGerer = !!user;
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [reporters, setReporters] = useState<any[]>([]);
@@ -306,6 +311,7 @@ export default function GestionJournaliste() {
         {/* ── JOURNALISTES ── */}
         {tab === "reporters" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Journalistes & rédacteurs ({reporters.length})</h2>
               <button onClick={() => setShowAddReporter(true)} style={btnPrimary}>+ Ajouter</button>
@@ -339,7 +345,7 @@ export default function GestionJournaliste() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {reporters.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun journaliste enregistré</div>}
-              {reporters.map((r: any) => (
+              {filtrer(reporters, recherche).map((r: any) => (
                 <div key={r.id} style={{ background: "white", border: `1px solid ${RED_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: RED_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📰</div>
                   <div style={{ flex: 1 }}>
@@ -350,8 +356,8 @@ export default function GestionJournaliste() {
                     </div>
                   </div>
                   {r.numero_h && <span style={{ fontFamily: "monospace", fontSize: 11, background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: 6 }}>{r.numero_h}</span>}
-                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/reporters/${r.id}`, item: r, colonnes: ["nom", "prenom", "telephone", "numero_h", "specialite", "role"], onSaved: () => { loadReporters(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                  {userIsAdmin && <button onClick={() => deleteReporter(r.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
+                  {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/reporters/${r.id}`, item: r, colonnes: ["nom", "prenom", "telephone", "numero_h", "specialite", "role"], onSaved: () => { loadReporters(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                  {peutGerer && <button onClick={() => deleteReporter(r.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
                 </div>
               ))}
             </div>
@@ -361,6 +367,7 @@ export default function GestionJournaliste() {
         {/* ── ARTICLES ── */}
         {tab === "articles" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Articles ({articles.length})</h2>
               <button onClick={() => setShowAddArticle(true)} style={btnPrimary}>+ Nouvel article</button>
@@ -400,7 +407,7 @@ export default function GestionJournaliste() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {articles.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun article enregistré</div>}
-              {articles.map((a: any) => {
+              {filtrer(articles, recherche).map((a: any) => {
                 const sc = STATUT_ARTICLE[a.statut] || STATUT_ARTICLE.brouillon;
                 return (
                   <div key={a.id} style={{ background: "white", border: `1px solid ${RED_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
@@ -410,8 +417,8 @@ export default function GestionJournaliste() {
                         <select value={a.statut} onChange={e => updateStatutArticle(a.id, e.target.value)} style={{ padding: "3px 8px", border: `1px solid ${sc.color}33`, borderRadius: 8, fontSize: 12, color: sc.color, background: sc.bg, fontWeight: 600, cursor: "pointer" }}>
                           <option value="brouillon">Brouillon</option><option value="revision">En révision</option><option value="publie">Publié</option><option value="archive">Archivé</option>
                         </select>
-                        {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/articles/${a.id}`, item: a, colonnes: ["reporter_id", "reporter_nom", "titre", "contenu", "categorie", "statut", "date_pub"], onSaved: () => { loadArticles(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                        {userIsAdmin && <button onClick={() => deleteArticle(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
+                        {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/articles/${a.id}`, item: a, colonnes: ["reporter_id", "reporter_nom", "titre", "contenu", "categorie", "statut", "date_pub"], onSaved: () => { loadArticles(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                        {peutGerer && <button onClick={() => deleteArticle(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
                       </div>
                     </div>
                     <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>
@@ -429,6 +436,7 @@ export default function GestionJournaliste() {
         {/* ── ABONNÉS ── */}
         {tab === "subscribers" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Abonnés ({subscribers.length})</h2>
               <button onClick={() => setShowAddSub(true)} style={btnPrimary}>+ Ajouter un abonné</button>
@@ -455,7 +463,7 @@ export default function GestionJournaliste() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {subscribers.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun abonné enregistré</div>}
-              {subscribers.map((s: any) => (
+              {filtrer(subscribers, recherche).map((s: any) => (
                 <div key={s.id} style={{ background: "white", border: `1px solid ${RED_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: RED_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>👤</div>
                   <div style={{ flex: 1 }}>
@@ -465,8 +473,8 @@ export default function GestionJournaliste() {
                     </div>
                   </div>
                   <span style={{ padding: "2px 10px", background: RED_BG, color: RED, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{s.type_abo}</span>
-                  {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/subscribers/${s.id}`, item: s, colonnes: ["nom", "telephone", "email", "type_abo"], onSaved: () => { loadSubscribers(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                  {userIsAdmin && <button onClick={() => deleteSubscriber(s.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
+                  {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/subscribers/${s.id}`, item: s, colonnes: ["nom", "telephone", "email", "type_abo"], onSaved: () => { loadSubscribers(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                  {peutGerer && <button onClick={() => deleteSubscriber(s.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
                 </div>
               ))}
             </div>
@@ -476,6 +484,7 @@ export default function GestionJournaliste() {
         {/* ── ANNONCES ── */}
         {tab === "announcements" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Annonces ({announcements.length})</h2>
               <button onClick={() => setShowAddAnn(true)} style={btnPrimary}>+ Publier</button>
@@ -501,7 +510,7 @@ export default function GestionJournaliste() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {announcements.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucune annonce publiée</div>}
-              {announcements.map((a: any) => (
+              {filtrer(announcements, recherche).map((a: any) => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${RED_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                     <div>
@@ -510,8 +519,8 @@ export default function GestionJournaliste() {
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       <span style={{ padding: "2px 10px", background: RED_BG, color: RED, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{a.type}</span>
-                      {userIsAdmin && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
-                      {userIsAdmin && <button onClick={() => deleteAnn(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
+                      {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                      {peutGerer && <button onClick={() => deleteAnn(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
                     </div>
                   </div>
                   <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6 }}>{a.contenu}</div>

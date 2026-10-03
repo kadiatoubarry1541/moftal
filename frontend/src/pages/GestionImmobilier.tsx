@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -32,11 +33,13 @@ const PRIORITE: Record<string, { bg: string; color: string }> = {
 };
 
 export default function GestionImmobilier() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [properties, setProperties] = useState<any[]>([]);
@@ -244,6 +247,7 @@ export default function GestionImmobilier() {
       {/* ── BIENS ── */}
       {tab === "properties" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🏠 Biens immobiliers ({properties.length})</h2>
             <button onClick={() => setShowAddProp(!showAddProp)} style={btn(AMBER)}>{showAddProp ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -272,7 +276,7 @@ export default function GestionImmobilier() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {properties.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun bien enregistré</div> :
-              properties.map(p => {
+              filtrer(properties, recherche).map(p => {
                 const sc = STATUT_PROP[p.statut] || { bg: "#f8fafc", color: "#64748b", label: p.statut };
                 return (
                   <div key={p.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
@@ -302,6 +306,7 @@ export default function GestionImmobilier() {
       {/* ── LOCATAIRES ── */}
       {tab === "tenants" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>👤 Locataires ({tenants.length})</h2>
             <button onClick={() => setShowAddTenant(!showAddTenant)} style={btn(AMBER)}>{showAddTenant ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -331,7 +336,7 @@ export default function GestionImmobilier() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {tenants.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun locataire enregistré</div> :
-              tenants.map(t => (
+              filtrer(tenants, recherche).map(t => (
                 <div key={t.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
@@ -352,6 +357,7 @@ export default function GestionImmobilier() {
       {/* ── PAIEMENTS LOYERS ── */}
       {tab === "payments" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>💰 Paiements de loyers ({payments.length})</h2>
             <button onClick={() => setShowAddPayment(!showAddPayment)} style={btn(AMBER)}>{showAddPayment ? "✕ Annuler" : "+ Encaisser"}</button>
@@ -387,7 +393,7 @@ export default function GestionImmobilier() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {payments.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun paiement enregistré</div> :
-              payments.map(p => (
+              filtrer(payments, recherche).map(p => (
                 <div key={p.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 10, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14, color: "#0f172a" }}>{p.locataire_nom || "—"}{p.locataire_prenom ? ` ${p.locataire_prenom}` : ""}</div>
@@ -413,6 +419,7 @@ export default function GestionImmobilier() {
       {/* ── MAINTENANCE ── */}
       {tab === "maintenance" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🔧 Maintenance ({maintenance.length})</h2>
             <button onClick={() => setShowAddMaint(!showAddMaint)} style={btn(AMBER)}>{showAddMaint ? "✕ Annuler" : "+ Signaler"}</button>
@@ -446,7 +453,7 @@ export default function GestionImmobilier() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {maintenance.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune intervention signalée</div> :
-              maintenance.map(m => {
+              filtrer(maintenance, recherche).map(m => {
                 const pr = PRIORITE[m.priorite] || { bg: "#f8fafc", color: "#64748b" };
                 return (
                   <div key={m.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
@@ -479,6 +486,7 @@ export default function GestionImmobilier() {
       {/* ── ANNONCES ── */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📢 Annonces ({announcements.length})</h2>
             <button onClick={() => setShowAddAnn(!showAddAnn)} style={btn(AMBER)}>{showAddAnn ? "✕ Annuler" : "+ Publier"}</button>
@@ -501,7 +509,7 @@ export default function GestionImmobilier() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {announcements.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune annonce publiée</div> :
-              announcements.map(a => (
+              filtrer(announcements, recherche).map(a => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>

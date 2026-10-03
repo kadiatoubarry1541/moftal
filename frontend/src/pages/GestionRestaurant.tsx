@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/restaurant-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -32,11 +33,13 @@ const TABLE_STATUS: Record<string, { bg: string; color: string; label: string }>
 };
 
 export default function GestionRestaurant() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [dishes, setDishes] = useState<any[]>([]);
@@ -256,6 +259,7 @@ export default function GestionRestaurant() {
       {/* ── MENU / PLATS ── */}
       {tab === "dishes" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🍽️ Menu ({dishes.length} plats)</h2>
             <button onClick={() => setShowAddDish(!showAddDish)} style={btn(ORANGE)}>{showAddDish ? "✕ Annuler" : "+ Ajouter plat"}</button>
@@ -283,7 +287,7 @@ export default function GestionRestaurant() {
           )}
           {/* Group by category */}
           {CATEGORIES.map(cat => {
-            const catDishes = dishes.filter(d => d.categorie === cat);
+            const catDishes = filtrer(dishes, recherche).filter(d => d.categorie === cat);
             if (catDishes.length === 0) return null;
             return (
               <div key={cat} style={{ marginBottom: 20 }}>
@@ -317,6 +321,7 @@ export default function GestionRestaurant() {
       {/* ── TABLES ── */}
       {tab === "tables" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🪑 Tables ({tables.length})</h2>
             <button onClick={() => setShowAddTable(!showAddTable)} style={btn(ORANGE)}>{showAddTable ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -337,7 +342,7 @@ export default function GestionRestaurant() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12 }}>
             {tables.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8", gridColumn: "1/-1" }}>Aucune table enregistrée</div> :
-              tables.map(t => {
+              filtrer(tables, recherche).map(t => {
                 const sc = TABLE_STATUS[t.statut] || { bg: "#f8fafc", color: "#64748b", label: t.statut };
                 return (
                   <div key={t.id} style={{ background: "white", border: `2px solid ${t.statut === "occupee" ? "#fca5a5" : t.statut === "reservee" ? "#93c5fd" : "#86efac"}`, borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
@@ -358,6 +363,7 @@ export default function GestionRestaurant() {
       {/* ── COMMANDES ── */}
       {tab === "orders" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📋 Commandes ({orders.length})</h2>
             <button onClick={() => setShowAddOrder(!showAddOrder)} style={btn(ORANGE)}>{showAddOrder ? "✕ Annuler" : "+ Nouvelle commande"}</button>
@@ -411,7 +417,7 @@ export default function GestionRestaurant() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {orders.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune commande enregistrée</div> :
-              orders.map(o => {
+              filtrer(orders, recherche).map(o => {
                 const sc = ORDER_STATUS[o.statut] || { bg: "#f8fafc", color: "#64748b", label: o.statut };
                 const items: any[] = typeof o.items === "string" ? JSON.parse(o.items) : (o.items || []);
                 return (
@@ -450,6 +456,7 @@ export default function GestionRestaurant() {
       {/* ── ÉQUIPE ── */}
       {tab === "staff" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>👨‍🍳 Équipe ({staff.length})</h2>
             <button onClick={() => setShowAddStaff(!showAddStaff)} style={btn(ORANGE)}>{showAddStaff ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -474,7 +481,7 @@ export default function GestionRestaurant() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {staff.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun membre d'équipe</div> :
-              staff.map(s => (
+              filtrer(staff, recherche).map(s => (
                 <div key={s.id} style={{ background: "white", border: `1px solid ${ORANGE_BORDER}`, borderRadius: 10, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{s.prenom ? `${s.prenom} ${s.nom}` : s.nom}</div>
@@ -492,6 +499,7 @@ export default function GestionRestaurant() {
       {/* ── ANNONCES ── */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📢 Annonces ({announcements.length})</h2>
             <button onClick={() => setShowAddAnn(!showAddAnn)} style={btn(ORANGE)}>{showAddAnn ? "✕ Annuler" : "+ Publier"}</button>
@@ -514,7 +522,7 @@ export default function GestionRestaurant() {
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {announcements.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune annonce</div> :
-              announcements.map(a => (
+              filtrer(announcements, recherche).map(a => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${ORANGE_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>

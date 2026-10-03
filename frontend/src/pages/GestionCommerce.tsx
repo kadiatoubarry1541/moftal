@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -64,11 +65,13 @@ const ROLE_PERMISSIONS: Record<string, Tab[]> = {
 interface Props { mode?: "commerce" | "vendeur" }
 
 export default function GestionCommerce({ mode = "commerce" }: Props) {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -531,6 +534,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* ── ARTICLES / PRODUITS ── */}
       {tab === "products" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Articles / Produits ({products.length})</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -585,7 +589,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 12 }}>
-            {products.map(p => (
+            {filtrer(products, recherche).map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 12, padding: 16, border: `1px solid ${p.stock <= p.stock_min ? "#fca5a5" : "#f1f5f9"}`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 {p.photo_url && (
                   <div style={{ width: "100%", height: 100, borderRadius: 8, overflow: "hidden", marginBottom: 10, background: "#f8fafc" }}>
@@ -616,6 +620,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* ── VENTES ── */}
       {tab === "sales" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Ventes ({sales.length})</div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -692,7 +697,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {sales.map(s => (
+            {filtrer(sales, recherche).map(s => (
               <div key={s.id} style={{ background: s.annulee ? "#f8fafc" : "white", opacity: s.annulee ? 0.6 : 1, borderRadius: 10, padding: "14px 16px", border: `1px solid ${s.est_credit && !s.annulee ? "#fca5a5" : "#f1f5f9"}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{s.client_nom || "Client"} {s.annulee && <span style={{ fontSize: 11, color: "#ef4444", fontWeight: 600 }}>· Annulée</span>}</div>
@@ -718,6 +723,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* ── CLIENTS ── */}
       {tab === "clients" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Clients ({clients.length})</div>
             <button onClick={() => setShowAddClient(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
@@ -760,7 +766,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {clients.map(c => (
+            {filtrer(clients, recherche).map(c => (
               <div key={c.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: `1px solid ${c.credit_total > 0 ? "#fca5a5" : "#f1f5f9"}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{c.nom}</div>
@@ -793,6 +799,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* ── DÉPENSES ── */}
       {tab === "expenses" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 18 }}>🛒</span>
             <span style={{ fontSize: 13, color: "#92400e", fontWeight: 600 }}>Dépenses de la boutique — Vente en Détail incluse (loyer, transport, approvisionnement…)</span>
@@ -832,7 +839,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {expenses.map(e => (
+            {filtrer(expenses, recherche).map(e => (
               <div key={e.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #fee2e2", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{e.description}</div>
@@ -853,6 +860,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* ── FOURNISSEURS & ACHATS ── */}
       {tab === "suppliers" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Fournisseurs ({suppliers.length})</div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -917,7 +925,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
-            {suppliers.map(s => (
+            {filtrer(suppliers, recherche).map(s => (
               <div key={s.id} style={{ background: "white", borderRadius: 10, padding: "12px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{s.nom}</div>
@@ -931,7 +939,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
 
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Historique des achats</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {purchases.map(p => (
+            {filtrer(purchases, recherche).map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 10, padding: "10px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                 <div>
                   <b>{p.product_nom}</b> × {p.quantite} {p.supplier_nom ? `· ${p.supplier_nom}` : ""}
@@ -948,6 +956,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* ── PERSONNEL / VENDEURS ── */}
       {tab === "staff" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Personnel ({staff.length})</div>
             <button onClick={() => setShowAddStaff(true)} style={{ padding: "8px 16px", background: COLOR, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
@@ -985,7 +994,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {staff.map(s => (
+            {filtrer(staff, recherche).map(s => (
               <div key={s.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{s.nom}</div>
@@ -1005,9 +1014,10 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
       {/* ── AVIS CLIENTS ── */}
       {tab === "avis" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Avis clients ({reviews.length})</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {reviews.map(r => (
+            {filtrer(reviews, recherche).map(r => (
               <div key={r.id} style={{ background: "white", borderRadius: 12, border: "1px solid #f1f5f9", padding: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, flexWrap: "wrap" }}>
                   <div>
@@ -1098,7 +1108,7 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
               <div style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>Aucun mouvement enregistré.</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {movements.map((m, i) => (
+                {filtrer(movements, recherche).map((m, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f1f5f9", fontSize: 13 }}>
                     <div>
                       <div style={{ fontWeight: 600, textTransform: "capitalize" }}>{m.reason.replace(/_/g, " ")}</div>

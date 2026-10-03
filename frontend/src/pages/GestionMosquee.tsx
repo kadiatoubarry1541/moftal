@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/mosque-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -20,12 +21,14 @@ const GREEN = "#1a8f1a";
 const GREEN_BG = "#f0fdf0";
 
 export default function GestionMosquee() {
+  const [recherche, setRecherche] = useState("");
   const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -368,6 +371,7 @@ export default function GestionMosquee() {
       {/* MEMBRES */}
       {tab === "members" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Membres ({members.length})</div>
             <button onClick={() => setShowAddMember(true)} style={{ padding: "8px 16px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
@@ -398,7 +402,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {members.map(m => (
+            {filtrer(members, recherche).map(m => (
               <div key={m.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{m.prenom ? `${m.prenom} ${m.nom}` : m.nom}</div>
@@ -419,6 +423,7 @@ export default function GestionMosquee() {
       {/* ANNONCES */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Annonces ({announcements.length})</div>
             <button onClick={() => setShowAddAnn(true)} style={{ padding: "8px 16px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Publier</button>
@@ -449,7 +454,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {announcements.map(a => (
+            {filtrer(announcements, recherche).map(a => (
               <div key={a.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{a.titre}</div>
@@ -471,6 +476,7 @@ export default function GestionMosquee() {
       {/* DONATIONS */}
       {tab === "donations" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Dons ({donations.length})</div>
             <button onClick={() => setShowAddDon(true)} style={{ padding: "8px 16px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Enregistrer</button>
@@ -503,7 +509,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {donations.map(d => (
+            {filtrer(donations, recherche).map(d => (
               <div key={d.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{d.donateur_nom || "Anonyme"}</div>
@@ -520,6 +526,7 @@ export default function GestionMosquee() {
       {/* ÉLÈVES CORAN */}
       {tab === "quran" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Élèves Coran ({quranStudents.length})</div>
             <button onClick={() => setShowAddStudent(true)} style={{ padding: "8px 16px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Inscrire</button>
@@ -554,7 +561,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
-            {quranStudents.map(s => (
+            {filtrer(quranStudents, recherche).map(s => (
               <div key={s.id} style={{ background: "white", borderRadius: 10, padding: 16, border: "1px solid #f1f5f9" }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{s.prenom ? `${s.prenom} ${s.nom}` : s.nom}</div>
                 <div style={{ marginTop: 6 }}>
@@ -572,6 +579,7 @@ export default function GestionMosquee() {
       {/* ── Onglet IMAMS ─────────────────────────────────────────────────────── */}
       {tab === "imams" && (
         <div style={{ padding: "0 16px 32px" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Cheikh Imams ({imams.length}/3)</div>
@@ -677,6 +685,7 @@ export default function GestionMosquee() {
       {/* PRÉDICATIONS */}
       {tab === "predications" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Prédications & Khutbas ({predications.length})</div>
@@ -720,7 +729,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {predications.map(p => (
+            {filtrer(predications, recherche).map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", borderLeft: `3px solid ${GREEN}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <div>
@@ -751,6 +760,7 @@ export default function GestionMosquee() {
       {/* MOSQUÉES PARTENAIRES */}
       {tab === "partenaires" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Mosquées partenaires ({partenaires.length})</div>
@@ -778,7 +788,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
-            {partenaires.map(p => (
+            {filtrer(partenaires, recherche).map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                   <div style={{ width: 40, height: 40, borderRadius: "50%", background: GREEN_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🕌</div>

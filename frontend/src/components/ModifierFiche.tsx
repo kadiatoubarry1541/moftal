@@ -39,7 +39,8 @@ export default function ModifierFiche({ titre, url, item, colonnes, couleur = "#
   onClose: () => void;
   onSaved: (item: Record<string, any>) => void;
 }) {
-  const champs = colonnes.filter(c => !c.endsWith("_id") && c !== "est_paye");
+  // Le statut se change avec son propre sélecteur (valeurs fixes) : pas ici.
+  const champs = colonnes.filter(c => !c.endsWith("_id") && c !== "est_paye" && c !== "statut");
   const [form, setForm] = useState<Record<string, any>>(() =>
     Object.fromEntries(champs.map(c => {
       const v = item[c];
@@ -62,7 +63,7 @@ export default function ModifierFiche({ titre, url, item, colonnes, couleur = "#
   const inp = { width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" as const };
   return (
     <div onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 10050, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div style={{ background: "white", borderRadius: 14, padding: 22, width: "100%", maxWidth: 480, maxHeight: "88vh", overflowY: "auto" }}>
         <h3 style={{ margin: "0 0 14px", fontSize: 17, fontWeight: 800, color: "#0f172a" }}>✏️ {titre}</h3>
         {champs.map(c => (

@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/beauty-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -29,11 +30,13 @@ const BOOKING_STATUS: Record<string, { bg: string; color: string; label: string 
 };
 
 export default function GestionBeauty() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab]                       = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant]                 = useState<any>(null);
   const [dash, setDash]                     = useState<any>(null);
   const [services, setServices]             = useState<any[]>([]);
@@ -255,6 +258,7 @@ export default function GestionBeauty() {
       {/* SERVICES */}
       {tab === "services" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>✂️ Services proposés</h2>
             <button onClick={() => setShowAddService(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -280,7 +284,7 @@ export default function GestionBeauty() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {services.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun service encore.</p>}
-            {services.map(s => (
+            {filtrer(services, recherche).map(s => (
               <div key={s.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
@@ -300,6 +304,7 @@ export default function GestionBeauty() {
       {/* RENDEZ-VOUS */}
       {tab === "bookings" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📅 Rendez-vous</h2>
             <button onClick={() => setShowAddBooking(true)} style={btn(COLOR)}>+ Nouveau RDV</button>
@@ -333,7 +338,7 @@ export default function GestionBeauty() {
           )}
           <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
             {bookings.length === 0 && <p style={{ padding: 16, color: "#94a3b8", fontStyle: "italic" }}>Aucun rendez-vous.</p>}
-            {bookings.map(bk => {
+            {filtrer(bookings, recherche).map(bk => {
               const st = BOOKING_STATUS[bk.statut] || BOOKING_STATUS.en_attente;
               return (
                 <div key={bk.id} style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9" }}>
@@ -382,6 +387,7 @@ export default function GestionBeauty() {
       {/* PERSONNEL */}
       {tab === "staff" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>👩‍🦱 Personnel</h2>
             <button onClick={() => setShowAddStaff(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -408,7 +414,7 @@ export default function GestionBeauty() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {staff.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun personnel encore.</p>}
-            {staff.map(s => (
+            {filtrer(staff, recherche).map(s => (
               <div key={s.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
@@ -429,6 +435,7 @@ export default function GestionBeauty() {
       {/* CLIENTS */}
       {tab === "clients" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>👤 Clients fidèles</h2>
             <button onClick={() => setShowAddClient(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -449,7 +456,7 @@ export default function GestionBeauty() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {clients.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun client enregistré.</p>}
-            {clients.map(c => (
+            {filtrer(clients, recherche).map(c => (
               <div key={c.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 600 }}>{c.nom}</div>
                 {c.telephone && <div style={{ fontSize: 13, color: "#64748b" }}>📞 {c.telephone}</div>}
@@ -464,6 +471,7 @@ export default function GestionBeauty() {
       {/* ANNONCES */}
       {tab === "announcements" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📣 Annonces</h2>
             <button onClick={() => setShowAddAnn(true)} style={btn(COLOR)}>+ Publier</button>
@@ -486,7 +494,7 @@ export default function GestionBeauty() {
             </div>
           )}
           {announcements.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucune annonce.</p>}
-          {announcements.map(a => (
+          {filtrer(announcements, recherche).map(a => (
             <div key={a.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginBottom: 10 }}>
               <div style={{ fontWeight: 600 }}>{a.titre}</div>
               <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{a.contenu}</div>
