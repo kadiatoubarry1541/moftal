@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import { imprimerRecu } from "../utils/imprimerRecu";
 
 const BASE = (code: string) => `/api/producer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -425,7 +426,16 @@ export default function GestionProducer() {
                     <div style={{ fontSize: 13, color: COLOR, fontWeight: 700 }}>{fmtMoney(ord.montant_total)}</div>
                     {ord.date_livraison_prevue && <div style={{ fontSize: 12, color: "#94a3b8" }}>Livraison prévue: {fmtDate(ord.date_livraison_prevue)}</div>}
                   </div>
-                  <span style={{ background: st.bg, color: st.color, padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", marginLeft: 12 }}>{st.label}</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", marginLeft: 12 }}>
+                    <span style={{ background: st.bg, color: st.color, padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{st.label}</span>
+                    <button onClick={() => imprimerRecu({
+                      titre: ord.statut === "livre" ? "Bon de livraison" : "Bon de commande", numero: ord.id, date: ord.date_livraison || ord.created_at,
+                      etablissement: tenant || {}, couleur: COLOR, client: ord.client_nom, clientTelephone: ord.client_telephone,
+                      details: ord.date_livraison_prevue ? [{ label: "Livraison prévue", valeur: fmtDate(ord.date_livraison_prevue) }] : [],
+                      lignes: [{ libelle: ord.produit_nom || "Produit", quantite: ord.quantite, prixUnitaire: +ord.quantite ? Math.round((+ord.montant_total || 0) / +ord.quantite) : undefined, montant: +ord.montant_total || 0 }],
+                      total: +ord.montant_total || 0, note: ord.notes,
+                    })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 {ord.statut === "livre" ? "Bon de livraison" : "Bon de commande"}</button>
+                  </div>
                 </div>
                 {ord.statut !== "livre" && ord.statut !== "annule" && (
                   <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>

@@ -126,7 +126,7 @@ router.put('/:tenantCode/products/:id/stock', authenticate, verifyTenant, async 
 router.get('/:tenantCode/sales', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT * FROM retailer_sales WHERE tenant_code=:code ORDER BY date_vente DESC LIMIT 100`,
+      `SELECT s.*, COALESCE((SELECT json_agg(json_build_object('nom',i.nom,'quantite',i.quantite,'prix_unitaire',i.prix_unitaire) ORDER BY i.id) FROM retailer_sale_items i WHERE i.sale_id=s.id), '[]') AS items FROM retailer_sales s WHERE s.tenant_code=:code ORDER BY s.date_vente DESC LIMIT 100`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, sales: rows });

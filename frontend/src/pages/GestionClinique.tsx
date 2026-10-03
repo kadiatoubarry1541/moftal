@@ -88,12 +88,14 @@ const TEAL_DARK = "#156315";
 
 // ── PRINT FUNCTIONS ──────────────────────────────────────────────────────────
 
-function printPrescription(p: any, clinicName: string) {
+const logoHtml = (url?: string | null) => url ? `<img src="${/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:12px">` : "";
+
+function printPrescription(p: any, clinicName: string, logoUrl?: string | null) {
   const meds: any[] = Array.isArray(p.medicaments) ? p.medicaments : [];
   const date = p.date_prescription || p.created_at;
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Ordonnance ${p.numero_ordo}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1a8f1a;padding-bottom:20px;margin-bottom:24px}.clinic-title{font-size:22px;font-weight:700;color:#1a8f1a}.ordo-num{background:#f0fdfa;border:1px solid #99f6e4;padding:5px 14px;border-radius:20px;font-family:monospace;font-size:13px;color:#156315}.s-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;margin-top:20px}.pat-box{background:#f8fafc;border-radius:8px;padding:14px;border-left:4px solid #1a8f1a}.pat-name{font-size:17px;font-weight:700}.diag{background:#fffbeb;border-radius:6px;padding:12px;border-left:3px solid #fbbf24;font-size:13px;color:#475569}.med-item{display:flex;align-items:center;padding:9px 14px;background:#f8fafc;border-radius:6px;margin-bottom:7px;border-left:3px solid #1a8f1a;font-size:13px}.footer{margin-top:60px;display:flex;justify-content:flex-end}.sig{width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;font-size:12px;color:#64748b;text-align:center}@media print{@page{margin:20px}}</style></head><body>
-<div class="header"><div><div class="clinic-title">✚ ${clinicName}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Espace médical · Soins &amp; Consultations</div></div><div style="text-align:right"><div class="ordo-num">N° ${p.numero_ordo}</div><div style="font-size:12px;color:#64748b;margin-top:6px">Le ${new Date(date).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div></div></div>
+<div class="header"><div><div class="clinic-title">${logoHtml(logoUrl)}${clinicName}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Espace médical · Soins &amp; Consultations</div></div><div style="text-align:right"><div class="ordo-num">N° ${p.numero_ordo}</div><div style="font-size:12px;color:#64748b;margin-top:6px">Le ${new Date(date).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div></div></div>
 <div class="s-label" style="margin-top:0">Patient</div><div class="pat-box"><div class="pat-name">${p.p_prenom||""} ${p.p_nom||""}</div></div>
 ${p.diagnostic?`<div class="s-label">Diagnostic</div><div class="diag">${p.diagnostic}</div>`:""}
 <div class="s-label">Médicaments prescrits</div>
@@ -105,13 +107,13 @@ ${p.notes?`<div class="s-label">Notes</div><p style="font-size:12px;color:#64748
   if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
 }
 
-function printInvoice(f: any, clinicName: string) {
+function printInvoice(f: any, clinicName: string, logoUrl?: string | null) {
   const lignes: any[] = Array.isArray(f.lignes) ? f.lignes : [];
   const isPaid = f.statut === "paye";
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Facture ${f.numero_facture}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}.clinic-title{font-size:22px;font-weight:700;color:#1a8f1a}table{width:100%;border-collapse:collapse;margin:20px 0}thead tr{background:#1a8f1a;color:white}th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}tbody tr:nth-child(even){background:#f8fafc}td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f1f5f9}.tr-total{background:#f0fdfa!important;font-weight:700}.pat-box{background:#f8fafc;border-radius:8px;padding:14px;margin-bottom:20px}.badge{display:inline-block;padding:5px 14px;border-radius:20px;font-weight:700;font-size:12px;background:${isPaid?"#f0fdf0":"#fffbeb"};color:${isPaid?"#1a8f1a":"#d97706"}}@media print{@page{margin:20px}}</style>
 </head><body>
-<div class="header"><div><div class="clinic-title">✚ ${clinicName}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Espace médical · Facturation</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;color:#0f172a">FACTURE</div><div style="font-family:monospace;font-size:15px;color:#156315;margin:4px 0">${f.numero_facture}</div><div style="font-size:12px;color:#64748b">Le ${new Date(f.date_facture||f.created_at).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div><div style="margin-top:8px"><span class="badge">${isPaid?"✓ Payé":"⏳ En attente"}</span></div></div></div>
+<div class="header"><div><div class="clinic-title">${logoHtml(logoUrl)}${clinicName}</div><div style="font-size:12px;color:#64748b;margin-top:4px">Espace médical · Facturation</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;color:#0f172a">FACTURE</div><div style="font-family:monospace;font-size:15px;color:#156315;margin:4px 0">${f.numero_facture}</div><div style="font-size:12px;color:#64748b">Le ${new Date(f.date_facture||f.created_at).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div><div style="margin-top:8px"><span class="badge">${isPaid?"✓ Payé":"⏳ En attente"}</span></div></div></div>
 <div class="pat-box"><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Facturé à</div><div style="font-size:17px;font-weight:700">${f.p_prenom||""} ${f.p_nom||"Patient anonyme"}</div>${f.s_nom?`<div style="font-size:12px;color:#64748b;margin-top:2px">Médecin : Dr. ${f.s_prenom||""} ${f.s_nom}</div>`:""}</div>
 <table><thead><tr><th style="width:50%">Description</th><th style="text-align:center">Qté</th><th style="text-align:right">Prix unit.</th><th style="text-align:right">Sous-total</th></tr></thead><tbody>
 ${lignes.map((l:any)=>`<tr><td>${l.description}</td><td style="text-align:center">${l.quantite}</td><td style="text-align:right">${(+l.prix_unitaire||0).toLocaleString("fr-FR")} GNF</td><td style="text-align:right;font-weight:600">${((+l.prix_unitaire||0)*(+l.quantite||1)).toLocaleString("fr-FR")} GNF</td></tr>`).join("")}
@@ -961,7 +963,7 @@ export default function GestionClinique() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ padding: "3px 10px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 20, fontSize: 11, fontWeight: 600, fontFamily: "monospace" }}>N° {p.numero_ordo}</span>
-                      <button onClick={() => printPrescription(p, tenant.name)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", background: "#f0fdfa", color: TEAL_DARK, border: `1px solid #99f6e4`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                      <button onClick={() => printPrescription(p, tenant.name, tenant.logo_url)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", background: "#f0fdfa", color: TEAL_DARK, border: `1px solid #99f6e4`, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                         <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                         Imprimer
                       </button>
@@ -1291,7 +1293,7 @@ export default function GestionClinique() {
                           <td style={{ padding: "11px 16px", color: "#64748b" }}>{fmtDate(f.date_facture || f.created_at)}</td>
                           <td style={{ padding: "11px 16px" }}>
                             <div style={{ display: "flex", gap: 6 }}>
-                              <button onClick={() => printInvoice(f, tenant.name)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "#f0fdfa", color: TEAL_DARK, border: "1px solid #99f6e4", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
+                              <button onClick={() => printInvoice(f, tenant.name, tenant.logo_url)} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px", background: "#f0fdfa", color: TEAL_DARK, border: "1px solid #99f6e4", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                                 <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                                 PDF
                               </button>

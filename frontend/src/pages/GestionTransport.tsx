@@ -4,6 +4,7 @@ import { config } from "../config/api";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { imprimerRecu } from "../utils/imprimerRecu";
 
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
@@ -423,7 +424,16 @@ export default function GestionTransport() {
                           {["en_attente","confirme","annule"].map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </td>
-                      <td style={{ padding: "10px 14px", fontSize: 11, color: "#94a3b8" }}>{b.created_at?.slice(0, 10)}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 11, color: "#94a3b8" }}>
+                        {b.created_at?.slice(0, 10)}
+                        <button onClick={() => imprimerRecu({
+                          titre: "Billet de voyage", numero: b.id, date: b.created_at, etablissement: tenant || {}, couleur: BLUE,
+                          client: b.client_nom, clientTelephone: b.client_telephone,
+                          details: [...(b.lieu_depart ? [{ label: "Trajet", valeur: `${b.lieu_depart} → ${b.lieu_arrivee}` }] : []), ...(b.date_depart ? [{ label: "Départ", valeur: new Date(b.date_depart).toLocaleString("fr-FR") }] : [])],
+                          lignes: [{ libelle: "Place(s)", quantite: b.places, prixUnitaire: b.places ? Math.round((+b.montant || 0) / +b.places) : undefined, montant: +b.montant || 0 }],
+                          total: +b.montant || 0, note: b.notes,
+                        })} style={{ display: "block", marginTop: 4, fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Billet</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import { imprimerRecu } from "../utils/imprimerRecu";
 
 const BASE = (code: string) => `/api/retailer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -362,7 +363,15 @@ export default function GestionVendeur() {
                   <div style={{ fontWeight: 600 }}>{s.client_nom || "Client"}</div>
                   <div style={{ fontSize: 12, color: "#64748b" }}>{fmtDate(s.date_vente)} · {s.type_paiement} {s.est_credit && "· crédit"}</div>
                 </div>
-                <div style={{ fontWeight: 700, color: COLOR }}>{fmtMoney(s.total)}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ fontWeight: 700, color: COLOR }}>{fmtMoney(s.total)}</div>
+                  <button onClick={() => imprimerRecu({
+                    titre: "Reçu de vente", numero: s.id, date: s.date_vente, etablissement: tenant || {}, couleur: COLOR,
+                    client: s.client_nom || "Client",
+                    lignes: (s.items || []).map((i: any) => ({ libelle: i.nom, quantite: i.quantite, prixUnitaire: i.prix_unitaire, montant: +i.prix_unitaire * +i.quantite })),
+                    total: s.total, paye: s.est_credit ? 0 : s.total, modePaiement: s.est_credit ? `${s.type_paiement} (crédit)` : s.type_paiement,
+                  })} style={{ padding: "5px 10px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#475569" }}>🖨 Reçu</button>
+                </div>
               </div>
             ))}
           </div>

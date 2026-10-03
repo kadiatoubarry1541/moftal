@@ -5,6 +5,7 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { imprimerRecu } from "../utils/imprimerRecu";
 
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -89,8 +90,8 @@ export default function GestionImmobilier() {
     const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
     const d = await r.json(); setSaving(false); return d;
   };
-  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() });
-  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) });
+  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
+  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
 
   const reloadTab = (t: Tab) => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -394,6 +395,13 @@ export default function GestionImmobilier() {
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#1a8f1a" }}>{fmtMoney(p.montant)}</div>
+                    <button onClick={() => imprimerRecu({
+                      titre: p.statut === "paye" ? "Quittance de loyer" : "Reçu de paiement", numero: p.id, date: p.date_paiement, etablissement: tenant || {}, couleur: AMBER,
+                      client: [p.locataire_nom, p.locataire_prenom].filter(Boolean).join(" ") || "Locataire",
+                      details: [{ label: "Bien loué", valeur: p.property_nom || "—" }, { label: "Période", valeur: p.mois_concerne || "—" }],
+                      lignes: [{ libelle: `Loyer ${p.mois_concerne || ""}`.trim(), montant: p.montant }],
+                      total: p.montant, paye: p.statut === "paye" ? p.montant : null, modePaiement: p.type_paiement, note: p.notes,
+                    })} style={{ display: "block", marginLeft: "auto", marginBottom: 4, fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 {p.statut === "paye" ? "Quittance" : "Reçu"}</button>
                     <span style={{ fontSize: 10, fontWeight: 600, background: p.statut === "paye" ? "#f0fdf0" : "#fffbeb", color: p.statut === "paye" ? "#1a8f1a" : "#b45309", padding: "2px 8px", borderRadius: 6 }}>{p.statut}</span>
                   </div>
                 </div>

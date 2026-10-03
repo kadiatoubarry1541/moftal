@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import { imprimerRecu } from "../utils/imprimerRecu";
 
 const BASE = (code: string) => `/api/artisan-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -321,7 +322,16 @@ export default function GestionArtisan() {
                     <div style={{ fontSize: 12, color: "#94a3b8" }}>Estimé: {fmtMoney(int.cout_estime)} · Réel: {fmtMoney(int.cout_reel)}</div>
                     {int.description && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, fontStyle: "italic" }}>{int.description}</div>}
                   </div>
-                  <span style={{ background: st.bg, color: st.color, padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", marginLeft: 12 }}>{st.label}</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", marginLeft: 12 }}>
+                    <span style={{ background: st.bg, color: st.color, padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{st.label}</span>
+                    <button onClick={() => imprimerRecu({
+                      titre: int.statut === "terminee" ? "Facture d'intervention" : "Devis d'intervention", numero: int.id, date: int.date_fin || int.date_debut || int.created_at,
+                      etablissement: tenant || {}, couleur: COLOR, client: int.client_nom, clientTelephone: int.client_telephone,
+                      details: [...(int.adresse ? [{ label: "Adresse", valeur: int.adresse }] : []), ...(int.service_nom ? [{ label: "Service", valeur: int.service_nom }] : [])],
+                      lignes: [{ libelle: int.titre + (int.description ? ` — ${int.description}` : ""), montant: +int.cout_reel || +int.cout_estime || 0 }],
+                      total: +int.cout_reel || +int.cout_estime || 0, note: int.notes,
+                    })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 {int.statut === "terminee" ? "Facture" : "Devis"}</button>
+                  </div>
                 </div>
                 {(int.statut === "en_attente" || int.statut === "confirmee" || int.statut === "en_cours") && (
                   <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>

@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../component
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
+import { imprimerRecu } from "../utils/imprimerRecu";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -17,24 +18,22 @@ type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
 
-function printFeeReceipt(f: any, orgName: string, color: string) {
-  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Reçu ${f.id}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.amount{font-size:28px;font-weight:800;color:${color};text-align:center;padding:20px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
-<div class="header"><div class="title">🎓 ${orgName}</div><div style="text-align:right;font-size:12px;color:#64748b">Le ${new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}</div></div>
-<h2 style="margin-bottom:16px">Reçu de paiement</h2>
-<div class="box"><strong>${f.student_prenom || ""} ${f.student_nom || ""}</strong><br><span style="color:#64748b;font-size:13px">${f.type_frais || ""}</span></div>
-<div class="amount">${(+f.montant || 0).toLocaleString("fr-FR")} GNF</div>
-${f.echeance ? `<p style="font-size:13px;color:#64748b">Échéance : ${new Date(f.echeance).toLocaleDateString("fr-FR")}</p>` : ""}
-<div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">Signature & Cachet</div></div>
-</body></html>`;
-  const w = window.open("", "_blank", "width=800,height=900");
-  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+function printFeeReceipt(f: any, tenant: any, color: string) {
+  imprimerRecu({
+    titre: "Reçu de paiement", numero: f.id, date: f.date_paiement || new Date(), etablissement: tenant || {}, couleur: color,
+    client: `${f.student_prenom || ""} ${f.student_nom || ""}`.trim(),
+    details: f.echeance ? [{ label: "Échéance", valeur: new Date(f.echeance).toLocaleDateString("fr-FR") }] : [],
+    lignes: [{ libelle: f.type_frais || "Frais de scolarité", montant: +f.montant || 0 }],
+    total: +f.montant || 0, paye: f.montant_paye != null ? +f.montant_paye : (f.est_paye ? +f.montant : 0),
+  });
 }
 
-function printBulletin(b: any, orgName: string, color: string) {
+const logoHtml = (url?: string | null) => url ? `<img src="${/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:12px">` : "";
+
+function printBulletin(b: any, orgName: string, color: string, logoUrl?: string | null) {
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bulletin ${b.student_nom}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.moy{font-size:36px;font-weight:800;color:${color};text-align:center;padding:24px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
-<div class="header"><div class="title">🎓 ${orgName}</div><div style="text-align:right;font-size:12px;color:#64748b">${b.periode} — ${b.annee_scolaire || ""}</div></div>
+<div class="header"><div class="title">${logoHtml(logoUrl)}${orgName}</div><div style="text-align:right;font-size:12px;color:#64748b">${b.periode} — ${b.annee_scolaire || ""}</div></div>
 <h2 style="margin-bottom:16px">Bulletin de progression</h2>
 <div class="box"><strong>${b.student_prenom || ""} ${b.student_nom || ""}</strong><br><span style="color:#64748b;font-size:13px">${b.niveau || b.classe || ""}</span></div>
 <div class="moy">${b.moyenne_generale}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${b.mention || ""}</div></div>
@@ -1060,7 +1059,7 @@ export default function GestionEnseignement({ mode }: Props) {
                               <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast("Paiement enregistré");} else showToast(d.message || "Erreur : rien n'a été enregistré", false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>Encaisser</button>
                             )}
                             {f.est_paye && (
-                              <button onClick={() => printFeeReceipt(f, tenant?.name || "", V.color)} style={{ padding:"5px 10px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>🖨 Reçu</button>
+                              <button onClick={() => printFeeReceipt(f, tenant, V.color)} style={{ padding:"5px 10px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>🖨 Reçu</button>
                             )}
                           </div>
                         </td>
@@ -1109,7 +1108,7 @@ export default function GestionEnseignement({ mode }: Props) {
                           {!b.is_published && (
                             <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x:any)=>x.id===b.id?{...x,is_published:true}:x));showToast("Bulletin publié");} else showToast(d.message || "Erreur : rien n'a été enregistré", false); }} style={{ flex:1,padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>Publier & notifier</button>
                           )}
-                          <button onClick={() => printBulletin(b, tenant?.name || "", V.color)} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>🖨</button>
+                          <button onClick={() => printBulletin(b, tenant?.name || "", V.color, tenant?.logo_url)} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>🖨</button>
                         </div>
                       </div>
                     );

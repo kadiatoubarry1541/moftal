@@ -6,6 +6,7 @@ import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import { imprimerRecu } from "../utils/imprimerRecu";
 
 const BASE = (code: string) => `/api/beauty-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -342,7 +343,16 @@ export default function GestionBeauty() {
                       <div style={{ fontSize: 13, color: "#64748b" }}>{bk.service_nom || "Service"} · {fmtDate(bk.date_rdv)} {bk.heure_rdv}</div>
                       {bk.staff_nom && <div style={{ fontSize: 12, color: "#64748b" }}>👩‍🦱 {bk.staff_nom}</div>}
                     </div>
-                    <span style={{ background: st.bg, color: st.color, padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ background: st.bg, color: st.color, padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
+                      <button onClick={() => imprimerRecu({
+                        titre: "Reçu de prestation", numero: bk.id, date: bk.date_rdv, etablissement: tenant || {}, couleur: COLOR,
+                        client: bk.client_nom, clientTelephone: bk.client_telephone,
+                        details: [{ label: "Rendez-vous", valeur: `${fmtDate(bk.date_rdv)} ${bk.heure_rdv || ""}`.trim() }, ...(bk.staff_nom ? [{ label: "Réalisé par", valeur: bk.staff_nom }] : [])],
+                        lignes: [{ libelle: bk.service_nom || "Prestation", montant: bk.service_prix || 0 }],
+                        total: bk.service_prix || 0, note: bk.notes,
+                      })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Reçu</button>
+                    </div>
                   </div>
                   {bk.statut === "en_attente" && (
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>

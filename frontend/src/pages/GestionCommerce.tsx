@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../component
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
+import { imprimerRecu } from "../utils/imprimerRecu";
 
 const BASE = (code: string) => `/api/commerce-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -371,29 +372,12 @@ export default function GestionCommerce({ mode = "commerce" }: Props) {
     loadSales(); loadAll(); loadProducts();
   }
   function printSaleReceipt(s: any) {
-    const w = window.open("", "_blank");
-    if (!w) return;
-    const items = (s.items || []).map((i: any) => `<tr><td>${i.nom}</td><td style="text-align:center">${i.quantite}</td><td style="text-align:right">${fmtMoney(+i.prix_unitaire)}</td><td style="text-align:right">${fmtMoney(+i.prix_unitaire * +i.quantite)}</td></tr>`).join("");
-    w.document.write(`
-      <html><head><title>Reçu ${s.id}</title><style>
-        body{font-family:Arial,sans-serif;padding:24px;color:#0f172a}
-        h1{font-size:18px;margin:0 0 4px}
-        table{width:100%;border-collapse:collapse;margin-top:16px}
-        th,td{padding:6px 4px;border-bottom:1px solid #e2e8f0;font-size:13px}
-        .total{font-weight:700;font-size:15px}
-      </style></head><body>
-        <h1>${tenant?.name || "Boutique"}</h1>
-        <div style="font-size:12px;color:#64748b">Reçu de vente #${s.id} · ${fmtDate(s.date_vente)}</div>
-        <div style="margin-top:10px;font-size:13px">Client : <b>${s.client_nom || "Client"}</b></div>
-        <table><thead><tr><th style="text-align:left">Article</th><th>Qté</th><th style="text-align:right">P.U.</th><th style="text-align:right">Total</th></tr></thead>
-        <tbody>${items}</tbody></table>
-        ${+s.remise > 0 ? `<div style="text-align:right;font-size:12px;color:#94a3b8">Remise : -${fmtMoney(+s.remise)}</div>` : ""}
-        <div style="text-align:right;margin-top:12px" class="total">Total : ${fmtMoney(s.total)}</div>
-        <div style="text-align:right;font-size:12px;color:#64748b">Reçu : ${fmtMoney(s.montant_recu)} · Mode : ${s.type_paiement}</div>
-        <div style="margin-top:24px;text-align:center;font-size:11px;color:#94a3b8">Merci pour votre achat</div>
-      </body></html>
-    `);
-    w.document.close(); w.print();
+    imprimerRecu({
+      titre: "Reçu de vente", numero: s.id, date: s.date_vente, etablissement: tenant || {}, couleur: COLOR,
+      client: s.client_nom || "Client",
+      lignes: (s.items || []).map((i: any) => ({ libelle: i.nom, quantite: i.quantite, prixUnitaire: i.prix_unitaire, montant: +i.prix_unitaire * +i.quantite })),
+      remise: s.remise, total: s.total, paye: s.montant_recu, modePaiement: s.est_credit ? `${s.type_paiement} (crédit)` : s.type_paiement,
+    });
   }
   // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
