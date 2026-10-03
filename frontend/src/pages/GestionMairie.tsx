@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../component
 import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/mairie-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -136,13 +137,13 @@ export default function GestionMairie() {
   const fetchTenant = useCallback(async () => {
     const r = await fetch(`${BASE(tenantCode!)}/info`, { headers: auth() });
     const d = await r.json();
-    if (d.success) { setTenant(d.tenant); setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", logo_url: d.tenant.logo_url || "" }); }
+    if (d.success) { setTenant(d.tenant); setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", logo_url: d.tenant.logo_url || "" }); } else showToast(d.message || "Erreur : rien n'a été enregistré", false);
   }, [tenantCode]);
 
   const fetchDashboard = useCallback(async () => {
     const r = await fetch(`${BASE(tenantCode!)}/dashboard`, { headers: auth() });
     const d = await r.json();
-    if (d.success) { setStats(d.stats); setRecentMariages(d.recentMariages || []); }
+    if (d.success) { setStats(d.stats); setRecentMariages(d.recentMariages || []); } else showToast(d.message || "Erreur : rien n'a été enregistré", false);
     setLoading(false);
   }, [tenantCode]);
 
@@ -229,13 +230,13 @@ export default function GestionMairie() {
   };
 
   const changeStatutMariage = async (id: number, statut: string) => {
-    await fetch(`${BASE(tenantCode!)}/mariages/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/mariages/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     fetchMariages(); fetchDashboard();
   };
 
   const deleteMariage = async (id: number) => {
     if (!confirm("Supprimer ce dossier ?")) return;
-    await fetch(`${BASE(tenantCode!)}/mariages/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/mariages/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     fetchMariages(); fetchDashboard();
   };
 
@@ -256,13 +257,13 @@ export default function GestionMairie() {
   };
 
   const changeStatutNaissance = async (id: number, statut: string) => {
-    await fetch(`${BASE(tenantCode!)}/naissances/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/naissances/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     fetchNaissances(); fetchDashboard();
   };
 
   const deleteNaissance = async (id: number) => {
     if (!confirm("Supprimer cette déclaration ?")) return;
-    await fetch(`${BASE(tenantCode!)}/naissances/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/naissances/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     fetchNaissances(); fetchDashboard();
   };
 
@@ -283,13 +284,13 @@ export default function GestionMairie() {
   };
 
   const changeStatutDeces = async (id: number, statut: string) => {
-    await fetch(`${BASE(tenantCode!)}/deces/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/deces/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     fetchDeces(); fetchDashboard();
   };
 
   const deleteDeces = async (id: number) => {
     if (!confirm("Supprimer cette déclaration ?")) return;
-    await fetch(`${BASE(tenantCode!)}/deces/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/deces/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     fetchDeces(); fetchDashboard();
   };
 
@@ -310,13 +311,13 @@ export default function GestionMairie() {
   };
 
   const changeStatutResidence = async (id: number, statut: string) => {
-    await fetch(`${BASE(tenantCode!)}/residences/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/residences/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     fetchResidences();
   };
 
   const deleteResidence = async (id: number) => {
     if (!confirm("Supprimer ce dossier ?")) return;
-    await fetch(`${BASE(tenantCode!)}/residences/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/residences/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     fetchResidences();
   };
 
@@ -338,7 +339,7 @@ export default function GestionMairie() {
 
   const deleteChef = async (id: number) => {
     if (!confirm("Supprimer ce chef de quartier ?")) return;
-    await fetch(`${BASE(tenantCode!)}/chefs-quartier/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/chefs-quartier/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     fetchChefsQuartier();
   };
 
@@ -384,7 +385,7 @@ export default function GestionMairie() {
 
   const deleteAgent = async (id: number) => {
     if (!confirm("Supprimer cet agent ?")) return;
-    await fetch(`${BASE(tenantCode!)}/agents/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/agents/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     fetchAgents();
   };
 

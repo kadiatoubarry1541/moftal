@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -575,6 +576,16 @@ router.post('/:tenantCode/purchases', authenticate, verifyTenant, async (req, re
     await logStockMovement(code, product_id, +quantite, 'achat_fournisseur');
     res.json({ success: true, purchase: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Ventes encaissées', table: 'commerce_sales', montant: 'montant_recu', date: 'date_vente' }],
+  depenses: [
+    { label: 'Dépenses', table: 'commerce_expenses', montant: 'montant', date: 'date_depense' },
+    { label: 'Achats fournisseurs', table: 'commerce_purchases', montant: 'total', date: 'created_at' },
+  ],
 });
 
 export default router;

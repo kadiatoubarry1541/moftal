@@ -292,7 +292,7 @@ export default function LieuResidence2() {
         </div>
         {groups.length > 0 && (
           <div className="mb-4 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
-            ✅ Vous êtes automatiquement dans le groupe <strong>{groups[0]?.title || userLieu2}</strong>.
+            ✅ Vous êtes automatiquement dans le groupe <strong>{groups[0]?.name || userLieu2}</strong>.
           </div>
         )}
         

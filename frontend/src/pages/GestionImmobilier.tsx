@@ -5,6 +5,10 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
+import { envoyerRappel, gnfTexte } from "../utils/rappelWhatsApp";
 
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -31,11 +35,13 @@ const PRIORITE: Record<string, { bg: string; color: string }> = {
 };
 
 export default function GestionImmobilier() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [properties, setProperties] = useState<any[]>([]);
@@ -89,8 +95,8 @@ export default function GestionImmobilier() {
     const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
     const d = await r.json(); setSaving(false); return d;
   };
-  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() });
-  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) });
+  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
+  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
 
   const reloadTab = (t: Tab) => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -165,6 +171,7 @@ export default function GestionImmobilier() {
       {/* ── DASHBOARD ── */}
       {tab === "dashboard" && dash && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BoutonRapport base={`/api/immo-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={AMBER} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14, marginBottom: 20 }}>
             {[
               { label: "Biens au total", value: dash.totalProperties ?? 0, color: "#b45309", bg: "#fffbeb",
@@ -243,6 +250,7 @@ export default function GestionImmobilier() {
       {/* ── BIENS ── */}
       {tab === "properties" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🏠 Biens immobiliers ({properties.length})</h2>
             <button onClick={() => setShowAddProp(!showAddProp)} style={btn(AMBER)}>{showAddProp ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -265,13 +273,13 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!prForm.nom) return;
                 const d = await post(`${BASE(tenantCode!)}/properties`, { ...prForm, surface: prForm.surface ? +prForm.surface : null, nb_pieces: prForm.nb_pieces ? +prForm.nb_pieces : null, loyer_mensuel: +prForm.loyer_mensuel || 0 });
-                if (d.success) { setShowAddProp(false); setPrForm({ nom: "", type_bien: "appartement", adresse: "", ville: "", surface: "", nb_pieces: "", loyer_mensuel: "", charges: "", description: "" }); reloadTab("properties"); }
+                if (d.success) { setShowAddProp(false); setPrForm({ nom: "", type_bien: "appartement", adresse: "", ville: "", surface: "", nb_pieces: "", loyer_mensuel: "", charges: "", description: "" }); reloadTab("properties"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {properties.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun bien enregistré</div> :
-              properties.map(p => {
+              filtrer(properties, recherche).map(p => {
                 const sc = STATUT_PROP[p.statut] || { bg: "#f8fafc", color: "#64748b", label: p.statut };
                 return (
                   <div key={p.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
@@ -301,6 +309,7 @@ export default function GestionImmobilier() {
       {/* ── LOCATAIRES ── */}
       {tab === "tenants" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>👤 Locataires ({tenants.length})</h2>
             <button onClick={() => setShowAddTenant(!showAddTenant)} style={btn(AMBER)}>{showAddTenant ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -324,13 +333,13 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!ltForm.nom) return;
                 const d = await post(`${BASE(tenantCode!)}/tenants`, { ...ltForm, loyer: +ltForm.loyer || 0, caution: +ltForm.caution || 0, property_id: ltForm.property_id || null });
-                if (d.success) { setShowAddTenant(false); setLtForm({ nom: "", prenom: "", telephone: "", email: "", cni: "", property_id: "", date_entree: new Date().toISOString().split("T")[0], loyer: "", caution: "" }); reloadTab("tenants"); }
+                if (d.success) { setShowAddTenant(false); setLtForm({ nom: "", prenom: "", telephone: "", email: "", cni: "", property_id: "", date_entree: new Date().toISOString().split("T")[0], loyer: "", caution: "" }); reloadTab("tenants"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(AMBER)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {tenants.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun locataire enregistré</div> :
-              tenants.map(t => (
+              filtrer(tenants, recherche).map(t => (
                 <div key={t.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
@@ -351,6 +360,7 @@ export default function GestionImmobilier() {
       {/* ── PAIEMENTS LOYERS ── */}
       {tab === "payments" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>💰 Paiements de loyers ({payments.length})</h2>
             <button onClick={() => setShowAddPayment(!showAddPayment)} style={btn(AMBER)}>{showAddPayment ? "✕ Annuler" : "+ Encaisser"}</button>
@@ -380,13 +390,13 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!pyForm.montant) return;
                 const d = await post(`${BASE(tenantCode!)}/payments`, { ...pyForm, montant: +pyForm.montant, tenant_id: pyForm.tenant_id || null, property_id: pyForm.property_id || null });
-                if (d.success) { setShowAddPayment(false); setPyForm({ tenant_id: "", property_id: "", montant: "", mois_concerne: new Date().toISOString().slice(0, 7), type_paiement: "especes", statut: "paye", notes: "" }); reloadTab("payments"); }
+                if (d.success) { setShowAddPayment(false); setPyForm({ tenant_id: "", property_id: "", montant: "", mois_concerne: new Date().toISOString().slice(0, 7), type_paiement: "especes", statut: "paye", notes: "" }); reloadTab("payments"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(AMBER)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {payments.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun paiement enregistré</div> :
-              payments.map(p => (
+              filtrer(payments, recherche).map(p => (
                 <div key={p.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 10, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14, color: "#0f172a" }}>{p.locataire_nom || "—"}{p.locataire_prenom ? ` ${p.locataire_prenom}` : ""}</div>
@@ -394,6 +404,14 @@ export default function GestionImmobilier() {
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#1a8f1a" }}>{fmtMoney(p.montant)}</div>
+                    {p.statut !== "paye" && <button onClick={() => envoyerRappel(p.locataire_tel, `Bonjour ${[p.locataire_prenom, p.locataire_nom].filter(Boolean).join(" ")}, ${tenant?.name || "votre agence"} vous rappelle le loyer de ${p.mois_concerne || "ce mois"}${p.property_nom ? ` (${p.property_nom})` : ""} : ${gnfTexte(p.montant)}. Merci de régulariser dès que possible.`)} style={{ display: "block", marginLeft: "auto", marginBottom: 4, fontSize: 11, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#15803d", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>📲 Rappel</button>}
+                    <button onClick={() => imprimerRecu({
+                      titre: p.statut === "paye" ? "Quittance de loyer" : "Reçu de paiement", numero: p.id, date: p.date_paiement, etablissement: tenant || {}, couleur: AMBER,
+                      client: [p.locataire_nom, p.locataire_prenom].filter(Boolean).join(" ") || "Locataire",
+                      details: [{ label: "Bien loué", valeur: p.property_nom || "—" }, { label: "Période", valeur: p.mois_concerne || "—" }],
+                      lignes: [{ libelle: `Loyer ${p.mois_concerne || ""}`.trim(), montant: p.montant }],
+                      total: p.montant, paye: p.statut === "paye" ? p.montant : null, modePaiement: p.type_paiement, note: p.notes,
+                    })} style={{ display: "block", marginLeft: "auto", marginBottom: 4, fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 {p.statut === "paye" ? "Quittance" : "Reçu"}</button>
                     <span style={{ fontSize: 10, fontWeight: 600, background: p.statut === "paye" ? "#f0fdf0" : "#fffbeb", color: p.statut === "paye" ? "#1a8f1a" : "#b45309", padding: "2px 8px", borderRadius: 6 }}>{p.statut}</span>
                   </div>
                 </div>
@@ -405,6 +423,7 @@ export default function GestionImmobilier() {
       {/* ── MAINTENANCE ── */}
       {tab === "maintenance" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🔧 Maintenance ({maintenance.length})</h2>
             <button onClick={() => setShowAddMaint(!showAddMaint)} style={btn(AMBER)}>{showAddMaint ? "✕ Annuler" : "+ Signaler"}</button>
@@ -432,13 +451,13 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!mtForm.titre) return;
                 const d = await post(`${BASE(tenantCode!)}/maintenance`, { ...mtForm, property_id: mtForm.property_id || null, cout_estime: +mtForm.cout_estime || 0 });
-                if (d.success) { setShowAddMaint(false); setMtForm({ property_id: "", titre: "", description: "", type_intervention: "reparation", priorite: "normale", cout_estime: "" }); reloadTab("maintenance"); }
+                if (d.success) { setShowAddMaint(false); setMtForm({ property_id: "", titre: "", description: "", type_intervention: "reparation", priorite: "normale", cout_estime: "" }); reloadTab("maintenance"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {maintenance.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune intervention signalée</div> :
-              maintenance.map(m => {
+              filtrer(maintenance, recherche).map(m => {
                 const pr = PRIORITE[m.priorite] || { bg: "#f8fafc", color: "#64748b" };
                 return (
                   <div key={m.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
@@ -471,6 +490,7 @@ export default function GestionImmobilier() {
       {/* ── ANNONCES ── */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📢 Annonces ({announcements.length})</h2>
             <button onClick={() => setShowAddAnn(!showAddAnn)} style={btn(AMBER)}>{showAddAnn ? "✕ Annuler" : "+ Publier"}</button>
@@ -487,13 +507,13 @@ export default function GestionImmobilier() {
               <button onClick={async () => {
                 if (!anForm.titre || !anForm.contenu) return;
                 const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-                if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); reloadTab("announcements"); }
+                if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); reloadTab("announcements"); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={{ ...btn(AMBER), marginTop: 10 }}>{saving ? "Publication…" : "Publier"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {announcements.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune annonce publiée</div> :
-              announcements.map(a => (
+              filtrer(announcements, recherche).map(a => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${AMBER_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>

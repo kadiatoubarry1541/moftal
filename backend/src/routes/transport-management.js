@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -283,6 +284,15 @@ router.delete('/:tenantCode/deliveries/:id', authenticate, verifyTenant, async (
     await sequelize.query(`DELETE FROM transport_deliveries WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [
+    { label: 'Réservations', table: 'transport_bookings', montant: 'montant', date: 'created_at', where: "statut <> 'annule'" },
+    { label: 'Livraisons', table: 'transport_deliveries', montant: 'montant', date: 'created_at', where: "statut <> 'annule'" },
+  ],
 });
 
 export default router;

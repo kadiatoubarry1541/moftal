@@ -665,7 +665,7 @@ const pul: Record<string, string> = {
   'header.my_spaces': 'Fanɗe am',
 
   // Footer
-  'footer.copy': '© 2025 Moftal',
+  'footer.copy': '© {year} Moftal',
   'footer.tagline': "Tawi e iyiɗe Aadama",
   'footer.system': "Teelte njobdi e ɓe",
   'footer.conditions': "Laawol huutoraade",

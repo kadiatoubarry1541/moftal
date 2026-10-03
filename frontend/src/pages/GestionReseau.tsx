@@ -5,6 +5,10 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/reseau-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -24,11 +28,14 @@ const STATUT_COLORS: Record<string, string> = { en_cours: "#2563eb", terminé: "
 const COT_TYPES = ["mensuelle", "trimestrielle", "annuelle", "ponctuelle"];
 
 export default function GestionReseau() {
+  const [recherche, setRecherche] = useState("");
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [membres, setMembres] = useState<any[]>([]);
@@ -90,12 +97,12 @@ export default function GestionReseau() {
     const r = await fetch(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) });
     const d = await r.json();
     setSaving(false);
-    if (d.success) { setShowAddMembre(false); setMForm({ nom: "", prenom: "", telephone: "", email: "", numero_h: "", role: "membre" }); loadMembres(); }
+    if (d.success) { setShowAddMembre(false); setMForm({ nom: "", prenom: "", telephone: "", email: "", numero_h: "", role: "membre" }); loadMembres(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function deleteMembre(id: number) {
     if (!confirm("Retirer ce membre ?")) return;
-    await fetch(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadMembres();
   }
 
@@ -105,17 +112,17 @@ export default function GestionReseau() {
     const r = await fetch(`${BASE(tenantCode!)}/projets`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
     const d = await r.json();
     setSaving(false);
-    if (d.success) { setShowAddProjet(false); setPForm({ titre: "", description: "", responsable: "", date_debut: "", date_fin: "", statut: "en_cours" }); loadProjets(); }
+    if (d.success) { setShowAddProjet(false); setPForm({ titre: "", description: "", responsable: "", date_debut: "", date_fin: "", statut: "en_cours" }); loadProjets(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function updateStatutProjet(id: number, statut: string) {
-    await fetch(`${BASE(tenantCode!)}/projets/${id}/statut`, { method: "PUT", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projets/${id}/statut`, { method: "PUT", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadProjets(); loadDashboard();
   }
 
   async function deleteProjet(id: number) {
     if (!confirm("Supprimer ce projet ?")) return;
-    await fetch(`${BASE(tenantCode!)}/projets/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projets/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadProjets();
   }
 
@@ -125,7 +132,7 @@ export default function GestionReseau() {
     const r = await fetch(`${BASE(tenantCode!)}/cotisations`, { method: "POST", headers: auth(), body: JSON.stringify({ ...cForm, montant: +cForm.montant }) });
     const d = await r.json();
     setSaving(false);
-    if (d.success) { setShowAddCot(false); setCForm({ membre_nom: "", montant: "", type_cot: "mensuelle", periode: "" }); loadCotisations(); loadDashboard(); }
+    if (d.success) { setShowAddCot(false); setCForm({ membre_nom: "", montant: "", type_cot: "mensuelle", periode: "" }); loadCotisations(); loadDashboard(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function saveAnnonce() {
@@ -134,12 +141,12 @@ export default function GestionReseau() {
     const r = await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) });
     const d = await r.json();
     setSaving(false);
-    if (d.success) { setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" }); loadAnnonces(); }
+    if (d.success) { setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" }); loadAnnonces(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function deleteAnnonce(id: number) {
     if (!confirm("Supprimer cette annonce ?")) return;
-    await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnonces();
   }
 
@@ -216,6 +223,7 @@ export default function GestionReseau() {
       {/* ── DASHBOARD ── */}
       {tab === "dashboard" && dash && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BoutonRapport base={`/api/reseau-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={BLUE} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12, marginBottom: 24 }}>
             {[
               { label: "Membres",         value: dash.totalMembers,       icon: "👥", color: BLUE },
@@ -248,6 +256,7 @@ export default function GestionReseau() {
       {/* ── MEMBRES ── */}
       {tab === "membres" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Membres ({membres.length})</div>
             <button onClick={() => setShowAddMembre(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
@@ -276,7 +285,7 @@ export default function GestionReseau() {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {membres.map(m => (
+            {filtrer(membres, recherche).map(m => (
               <div key={m.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 38, height: 38, borderRadius: "50%", background: BLUE_BG, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: BLUE, fontSize: 14, flexShrink: 0 }}>{m.nom?.charAt(0)}</div>
@@ -287,6 +296,7 @@ export default function GestionReseau() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ padding: "2px 10px", background: BLUE_BG, color: BLUE, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{m.role}</span>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "role", "email"], onSaved: () => { loadMembres(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deleteMembre(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Retirer</button>
                 </div>
               </div>
@@ -299,6 +309,7 @@ export default function GestionReseau() {
       {/* ── PROJETS ── */}
       {tab === "projets" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Projets ({projets.length})</div>
             <button onClick={() => setShowAddProjet(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Nouveau projet</button>
@@ -341,7 +352,7 @@ export default function GestionReseau() {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {projets.map(p => (
+            {filtrer(projets, recherche).map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", borderLeft: `3px solid ${STATUT_COLORS[p.statut] || BLUE}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ flex: 1 }}>
@@ -357,6 +368,7 @@ export default function GestionReseau() {
                     <select value={p.statut} onChange={e => updateStatutProjet(p.id, e.target.value)} style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer", outline: "none" }}>
                       {STATUTS.map(s => <option key={s} value={s}>{STATUT_LABELS[s]}</option>)}
                     </select>
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/projets/${p.id}`, item: p, colonnes: ["titre", "description", "statut", "date_debut", "date_fin", "responsable"], onSaved: () => { loadProjets(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                     <button onClick={() => deleteProjet(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>✕</button>
                   </div>
                 </div>
@@ -376,6 +388,7 @@ export default function GestionReseau() {
       {/* ── COTISATIONS ── */}
       {tab === "cotisations" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Cotisations ({cotisations.length})</div>
@@ -413,7 +426,7 @@ export default function GestionReseau() {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {cotisations.map(c => (
+            {filtrer(cotisations, recherche).map(c => (
               <div key={c.id} style={{ background: "white", borderRadius: 10, padding: "12px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{c.membre_nom || "Anonyme"}</div>
@@ -430,6 +443,7 @@ export default function GestionReseau() {
       {/* ── ANNONCES ── */}
       {tab === "annonces" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Annonces ({annonces.length})</div>
             <button onClick={() => setShowAddAnn(true)} style={{ padding: "8px 16px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Publier</button>
@@ -458,10 +472,11 @@ export default function GestionReseau() {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {annonces.map(a => (
+            {filtrer(annonces, recherche).map(a => (
               <div key={a.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{a.titre}</div>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnonces(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deleteAnnonce(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Supprimer</button>
                 </div>
                 <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.5 }}>{a.contenu}</div>
@@ -475,6 +490,7 @@ export default function GestionReseau() {
           </div>
         </div>
       )}
+      {edition && <ModifierFiche {...edition} couleur={BLUE} onClose={() => setEdition(null)} />}
     </div>
   );
 }

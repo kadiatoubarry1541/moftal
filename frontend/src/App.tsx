@@ -166,7 +166,6 @@ const Activite2 = lazy(() => import("./pages/Activite2"));
 const Activite3 = lazy(() => import("./pages/Activite3"));
 const GuideEntrepreneur = lazy(() => import("./pages/GuideEntrepreneur"));
 const Reflechissons = lazy(() => import("./pages/Reflechissons"));
-const Donations = lazy(() => import("./pages/Donations").then(m => ({ default: m.Donations })));
 const InscriptionFormation = lazy(() => import("./pages/InscriptionFormation"));
 const Pays = lazy(() => import("./pages/Pays"));
 const LieuResidence1 = lazy(() => import("./pages/LieuResidence1"));
@@ -174,8 +173,6 @@ const LieuResidence2 = lazy(() => import("./pages/LieuResidence2"));
 const LieuResidence3 = lazy(() => import("./pages/LieuResidence3"));
 const AdminGovernments = lazy(() => import("./pages/AdminGovernments"));
 const GestionImam = lazy(() => import("./pages/GestionImam"));
-const GestionMadrasa = lazy(() => import("./pages/GestionMadrasa"));
-const GestionEcole = lazy(() => import("./pages/GestionEcole"));
 const Commerce = lazy(() => import("./pages/Commerce"));
 const Entreprise = lazy(() => import("./pages/Entreprise"));
 const Fournisseurs = lazy(() => import("./pages/Fournisseurs"));
@@ -694,7 +691,8 @@ function App() {
           <Route path="/foi" element={<Navigate to="/" replace />} />
           <Route path="/solidarite" element={<Solidarite />} />
           <Route path="/dons" element={<Navigate to="/" replace />} />
-          <Route path="/donations" element={<Donations />} />
+          {/* Ancienne page de dons (gardée seulement dans le téléphone) : retirée, comme /dons */}
+          <Route path="/donations" element={<Navigate to="/" replace />} />
           <Route path="/zaka" element={<ZakaMuslimOnly />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/badges" element={<AdminBadges />} />
@@ -884,7 +882,7 @@ function App() {
               <span style={{ background: "white", borderRadius: 4, padding: 1.5, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
                 <img src="/logo-moftal.svg" alt="" width={9} height={9} style={{ display: "block", objectFit: "contain" }} />
               </span>
-              {t('footer.copy').replace('©', '').trim()}
+              {t('footer.copy').replace('{year}', String(new Date().getFullYear())).replace('©', '').trim()}
             </span>
             {" · "}{t('footer.tagline')}
             <br />

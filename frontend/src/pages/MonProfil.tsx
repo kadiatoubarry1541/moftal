@@ -162,7 +162,7 @@ export default function MonProfil() {
 
   if (!userData) return null;
 
-  const canSeeAdminPanel = isMasterAdmin(userData);
+  const canSeeAdminPanel = isMasterAdmin(userData as Parameters<typeof isMasterAdmin>[0]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -434,7 +434,7 @@ export default function MonProfil() {
       <EditProfileModal
         open={showEditProfile}
         onClose={() => setShowEditProfile(false)}
-        userData={userData}
+        userData={userData as React.ComponentProps<typeof EditProfileModal>["userData"]}
         onUpdate={(updatedData) => {
           // Mettre à jour l'état local immédiatement
           setUserData(updatedData);

@@ -8,6 +8,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -198,6 +199,12 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     await sequelize.query(`DELETE FROM beauty_announcements WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Prestations terminées', table: 'beauty_bookings bb JOIN beauty_services bs ON bb.service_id=bs.id', alias: 'bb', montant: 'bs.prix', date: 'bb.date_rdv', where: "bb.statut = 'termine'" }],
 });
 
 export default router;

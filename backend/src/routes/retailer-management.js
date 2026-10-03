@@ -8,6 +8,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -113,6 +114,7 @@ router.put('/:tenantCode/products/:id', authenticate, verifyTenant, async (req, 
 router.put('/:tenantCode/products/:id/stock', authenticate, verifyTenant, async (req, res) => {
   try {
     const { delta } = req.body;
+    if (!Number.isFinite(+delta)) return res.status(400).json({ success: false, message: 'Quantité invalide.' });
     await sequelize.query(
       `UPDATE retailer_products SET stock=GREATEST(0,stock+:delta) WHERE id=:id AND tenant_code=:code`,
       { replacements: { delta: +delta, id: req.params.id, code: req.params.tenantCode } }
@@ -125,7 +127,7 @@ router.put('/:tenantCode/products/:id/stock', authenticate, verifyTenant, async 
 router.get('/:tenantCode/sales', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT * FROM retailer_sales WHERE tenant_code=:code ORDER BY date_vente DESC LIMIT 100`,
+      `SELECT s.*, COALESCE((SELECT json_agg(json_build_object('nom',i.nom,'quantite',i.quantite,'prix_unitaire',i.prix_unitaire) ORDER BY i.id) FROM retailer_sale_items i WHERE i.sale_id=s.id), '[]') AS items FROM retailer_sales s WHERE s.tenant_code=:code ORDER BY s.date_vente DESC LIMIT 100`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, sales: rows });
@@ -232,6 +234,14 @@ router.post('/:tenantCode/expenses', authenticate, verifyTenant, async (req, res
     );
     res.json({ success: true, expense: row });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Ventes', table: 'retailer_sales', montant: 'total', date: 'date_vente', where: 'NOT COALESCE(est_credit,false)' },
+             { label: 'Ventes à crédit', table: 'retailer_sales', montant: 'total', date: 'date_vente', where: 'COALESCE(est_credit,false)' }],
+  depenses: [{ label: 'Dépenses', table: 'retailer_expenses', montant: 'montant', date: 'date_depense' }],
 });
 
 export default router;

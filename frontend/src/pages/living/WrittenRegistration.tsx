@@ -256,7 +256,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
   const generateNumeroH = async (form: WrittenData): Promise<string> => {
     const generation = calculateGeneration(form.dateNaissance)
     // Préfixe NumeroH : génération + continent + pays + région (choisie) + ethnie + famille
-    const { continentCode: c } = form.paysCode ? getContinentAndRegionByCountry(form.paysCode) : { continentCode: 'C1', regionCode: 'R1' }
+    const { continentCode: c } = form.paysCode ? getContinentAndRegionByCountry(form.paysCode) : { continentCode: 'C1' }
     const continentCode = form.continentCode || c
     const paysCode = form.paysCode || 'P1'
     const regionCode = form.regionCode || (form.paysCode ? getContinentAndRegionByCountry(form.paysCode).regionCode : 'R1')

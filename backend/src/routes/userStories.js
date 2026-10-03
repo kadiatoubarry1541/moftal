@@ -37,11 +37,14 @@ router.get('/published', async (req, res) => {
   try {
     const { sectionId, generation, region, country, search, numeroH, limit = 50, offset = 0 } = req.query;
 
+    // Les stories Mes Amours (24h) sont réservées aux amis : jamais dans la
+    // liste publique de l'Histoire de l'Humanité.
     const where = {
-      isPublished: true
+      isPublished: true,
+      sectionId: { [Op.ne]: 'mes_amours_story' }
     };
 
-    if (sectionId) {
+    if (sectionId && sectionId !== 'mes_amours_story') {
       where.sectionId = sectionId;
     }
     if (generation) {
@@ -108,12 +111,13 @@ router.get('/published', async (req, res) => {
 // @access  Public
 router.get('/published/stats', async (_req, res) => {
   try {
+    const publiques = { isPublished: true, sectionId: { [Op.ne]: 'mes_amours_story' } };
     const totalStories = await PublishedStory.count({
-      where: { isPublished: true }
+      where: publiques
     });
 
     const storiesBySection = await PublishedStory.findAll({
-      where: { isPublished: true },
+      where: publiques,
       attributes: [
         'sectionId',
         [sequelize.fn('COUNT', sequelize.col('id')), 'count']
@@ -123,7 +127,7 @@ router.get('/published/stats', async (_req, res) => {
     });
 
     const storiesByGeneration = await PublishedStory.findAll({
-      where: { isPublished: true },
+      where: publiques,
       attributes: [
         'generation',
         [sequelize.fn('COUNT', sequelize.col('id')), 'count']
@@ -341,9 +345,17 @@ router.get('/mes-amours/feed', async (req, res) => {
       order: [['publishedAt', 'DESC']]
     });
 
+    // Photo de profil de chaque auteur (le petit cercle de la story) — à ne pas
+    // confondre avec l'image ou la vidéo publiée, qui remplit la carte.
+    const auteurs = await User.findAll({
+      where: { numeroH: { [Op.in]: [...new Set(stories.map(s => s.numeroH))] } },
+      attributes: ['numeroH', 'photo', 'manPhoto']
+    });
+    const photoAuteur = new Map(auteurs.map(u => [u.numeroH, u.photo || u.manPhoto || null]));
+
     res.json({
       success: true,
-      stories
+      stories: stories.map(s => ({ ...s.toJSON(), authorPhoto: photoAuteur.get(s.numeroH) || null }))
     });
   } catch (error) {
     console.error('Erreur lors de la récupération du feed Mes Amours:', error);

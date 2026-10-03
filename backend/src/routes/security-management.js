@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
     const code = req.params.tenantCode;
     const q = (sql, rep) => sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT }).then(r => r[0]).catch(() => ({ c: 0, t: 0 }));
     const [agents, missions, clients, anns, recent] = await Promise.all([
-      q(`SELECT COUNT(*) as c FROM security_agents WHERE tenant_code=:code AND is_active=true`, { code }),
+      q(`SELECT COUNT(*) as c FROM security_mgmt_agents WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM security_missions WHERE tenant_code=:code AND statut='en_cours'`, { code }),
       q(`SELECT COUNT(*) as c FROM security_clients WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM security_announcements WHERE tenant_code=:code AND is_active=true`, { code }),
@@ -40,19 +41,19 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
 
 // Agents
 router.get('/:tenantCode/agents', authenticate, verifyTenant, async (req, res) => {
-  try { const rows = await sequelize.query(`SELECT * FROM security_agents WHERE tenant_code=:code AND is_active=true ORDER BY nom`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }); res.json({ success: true, agents: rows }); } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+  try { const rows = await sequelize.query(`SELECT * FROM security_mgmt_agents WHERE tenant_code=:code AND is_active=true ORDER BY nom`, { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }); res.json({ success: true, agents: rows }); } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 router.post('/:tenantCode/agents', authenticate, verifyTenant, async (req, res) => {
   try {
     const { nom, prenom, telephone, numero_h, grade, zone } = req.body;
     if (!nom) return res.status(400).json({ success: false, message: 'Nom obligatoire.' });
-    await sequelize.query(`INSERT INTO security_agents (tenant_code,nom,prenom,telephone,numero_h,grade,zone) VALUES (:code,:nom,:prenom,:tel,:nh,:grade,:zone)`,
+    await sequelize.query(`INSERT INTO security_mgmt_agents (tenant_code,nom,prenom,telephone,numero_h,grade,zone) VALUES (:code,:nom,:prenom,:tel,:nh,:grade,:zone)`,
       { replacements: { code: req.params.tenantCode, nom, prenom: prenom||'', tel: telephone||'', nh: numero_h||'', grade: grade||'Agent', zone: zone||'' }, type: sequelize.QueryTypes.INSERT });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 router.delete('/:tenantCode/agents/:id', authenticate, verifyTenant, async (req, res) => {
-  try { await sequelize.query(`UPDATE security_agents SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.UPDATE }); res.json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+  try { await sequelize.query(`UPDATE security_mgmt_agents SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.UPDATE }); res.json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // Missions
@@ -106,6 +107,15 @@ router.post('/:tenantCode/announcements', authenticate, verifyTenant, async (req
 });
 router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, async (req, res) => {
   try { await sequelize.query(`UPDATE security_announcements SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.UPDATE }); res.json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'agents': { table: 'security_mgmt_agents', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'grade', 'zone'] },
+  'missions': { table: 'security_missions', colonnes: ['agent_id', 'agent_nom', 'titre', 'client_nom', 'lieu', 'date_debut', 'date_fin', 'statut', 'notes'] },
+  'clients': { table: 'security_clients', colonnes: ['nom', 'telephone', 'adresse', 'type_contrat'] },
+  'announcements': { table: 'security_announcements', colonnes: ['titre', 'contenu', 'type'] },
 });
 
 export default router;

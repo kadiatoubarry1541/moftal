@@ -5,6 +5,10 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
+import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/producer-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -33,11 +37,13 @@ const STATUT_ORDER: Record<string, { bg: string; color: string; label: string }>
 };
 
 export default function GestionProducer() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab]                     = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant]               = useState<any>(null);
   const [dash, setDash]                   = useState<any>(null);
   const [products, setProducts]           = useState<any[]>([]);
@@ -110,13 +116,13 @@ export default function GestionProducer() {
   }
 
   async function adjustStock(id: number, delta: number) {
-    await fetch(`${b(tenantCode!)}/products/${id}/stock`, { method: "PATCH", headers: auth(), body: JSON.stringify({ delta }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/products/${id}/stock`, { method: "PATCH", headers: auth(), body: JSON.stringify({ delta }) }))) { return; }
     loadProducts();
   }
 
   async function deleteProd(id: number) {
     if (!confirm("Supprimer ce produit ?")) return;
-    await fetch(`${b(tenantCode!)}/products/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/products/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadProducts(); loadAll();
   }
 
@@ -136,7 +142,7 @@ export default function GestionProducer() {
       if (q === null) return;
       qte = q;
     }
-    await fetch(`${b(tenantCode!)}/lots/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut, quantite_produite: qte }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/lots/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut, quantite_produite: qte }) }))) { return; }
     loadLots(); loadAll();
   }
 
@@ -150,7 +156,7 @@ export default function GestionProducer() {
   }
 
   async function patchOrder(id: number, statut: string) {
-    await fetch(`${b(tenantCode!)}/orders/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/orders/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadOrders(); loadAll();
   }
 
@@ -165,7 +171,7 @@ export default function GestionProducer() {
 
   async function deleteStaff(id: number) {
     if (!confirm("Retirer ce membre ?")) return;
-    await fetch(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadStaff(); loadAll();
   }
 
@@ -241,6 +247,7 @@ export default function GestionProducer() {
       {/* DASHBOARD */}
       {tab === "dashboard" && (
         <div>
+          <BoutonRapport base={`/api/producer-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={COLOR} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 14, marginBottom: 24 }}>
             {[
               { label: "Produits",          val: dash?.totalProducts || 0,          emoji: "📦" },
@@ -276,6 +283,7 @@ export default function GestionProducer() {
       {/* PRODUITS */}
       {tab === "products" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📦 Produits fabriqués</h2>
             <button onClick={() => setShowAddProd(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -302,7 +310,7 @@ export default function GestionProducer() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {products.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun produit encore.</p>}
-            {products.map(p => (
+            {filtrer(products, recherche).map(p => (
               <div key={p.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
@@ -327,6 +335,7 @@ export default function GestionProducer() {
       {/* LOTS DE PRODUCTION */}
       {tab === "lots" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>🏭 Lots de production</h2>
             <button onClick={() => { setShowAddLot(true); if (!products.length) loadProducts(); }} style={btn(COLOR)}>+ Nouveau lot</button>
@@ -352,7 +361,7 @@ export default function GestionProducer() {
             </div>
           )}
           {lots.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun lot encore.</p>}
-          {lots.map(lot => {
+          {filtrer(lots, recherche).map(lot => {
             const st = STATUT_LOT[lot.statut] || STATUT_LOT.en_attente;
             return (
               <div key={lot.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginBottom: 10 }}>
@@ -386,6 +395,7 @@ export default function GestionProducer() {
       {/* COMMANDES */}
       {tab === "orders" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📋 Commandes clients</h2>
             <button onClick={() => { setShowAddOrder(true); if (!products.length) loadProducts(); }} style={btn(COLOR)}>+ Nouvelle</button>
@@ -413,7 +423,7 @@ export default function GestionProducer() {
             </div>
           )}
           {orders.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucune commande encore.</p>}
-          {orders.map(ord => {
+          {filtrer(orders, recherche).map(ord => {
             const st = STATUT_ORDER[ord.statut] || STATUT_ORDER.en_attente;
             return (
               <div key={ord.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginBottom: 10 }}>
@@ -424,7 +434,16 @@ export default function GestionProducer() {
                     <div style={{ fontSize: 13, color: COLOR, fontWeight: 700 }}>{fmtMoney(ord.montant_total)}</div>
                     {ord.date_livraison_prevue && <div style={{ fontSize: 12, color: "#94a3b8" }}>Livraison prévue: {fmtDate(ord.date_livraison_prevue)}</div>}
                   </div>
-                  <span style={{ background: st.bg, color: st.color, padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", marginLeft: 12 }}>{st.label}</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", marginLeft: 12 }}>
+                    <span style={{ background: st.bg, color: st.color, padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{st.label}</span>
+                    <button onClick={() => imprimerRecu({
+                      titre: ord.statut === "livre" ? "Bon de livraison" : "Bon de commande", numero: ord.id, date: ord.date_livraison || ord.created_at,
+                      etablissement: tenant || {}, couleur: COLOR, client: ord.client_nom, clientTelephone: ord.client_telephone,
+                      details: ord.date_livraison_prevue ? [{ label: "Livraison prévue", valeur: fmtDate(ord.date_livraison_prevue) }] : [],
+                      lignes: [{ libelle: ord.produit_nom || "Produit", quantite: ord.quantite, prixUnitaire: +ord.quantite ? Math.round((+ord.montant_total || 0) / +ord.quantite) : undefined, montant: +ord.montant_total || 0 }],
+                      total: +ord.montant_total || 0, note: ord.notes,
+                    })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 {ord.statut === "livre" ? "Bon de livraison" : "Bon de commande"}</button>
+                  </div>
                 </div>
                 {ord.statut !== "livre" && ord.statut !== "annule" && (
                   <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
@@ -443,6 +462,7 @@ export default function GestionProducer() {
       {/* PERSONNEL */}
       {tab === "staff" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>👷 Personnel</h2>
             <button onClick={() => setShowAddStaff(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -468,7 +488,7 @@ export default function GestionProducer() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {staff.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun membre du personnel.</p>}
-            {staff.map(s => (
+            {filtrer(staff, recherche).map(s => (
               <div key={s.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
@@ -488,6 +508,7 @@ export default function GestionProducer() {
       {/* ANNONCES */}
       {tab === "announcements" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📣 Annonces</h2>
             <button onClick={() => setShowAddAnn(true)} style={btn(COLOR)}>+ Publier</button>
@@ -510,7 +531,7 @@ export default function GestionProducer() {
             </div>
           )}
           {announcements.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucune annonce.</p>}
-          {announcements.map(a => (
+          {filtrer(announcements, recherche).map(a => (
             <div key={a.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginBottom: 10 }}>
               <div style={{ fontWeight: 600 }}>{a.titre}</div>
               <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{a.contenu}</div>

@@ -5,6 +5,11 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
+import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
+import { envoyerRappel, dateTexte } from "../utils/rappelWhatsApp";
 
 const BASE = (code: string) => `/api/beauty-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -27,11 +32,13 @@ const BOOKING_STATUS: Record<string, { bg: string; color: string; label: string 
 };
 
 export default function GestionBeauty() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab]                       = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant]                 = useState<any>(null);
   const [dash, setDash]                     = useState<any>(null);
   const [services, setServices]             = useState<any[]>([]);
@@ -105,7 +112,7 @@ export default function GestionBeauty() {
 
   async function deleteService(id: number) {
     if (!confirm("Supprimer ce service ?")) return;
-    await fetch(`${b(tenantCode!)}/services/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/services/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadServices();
   }
 
@@ -119,7 +126,7 @@ export default function GestionBeauty() {
   }
 
   async function patchBooking(id: number, statut: string) {
-    await fetch(`${b(tenantCode!)}/bookings/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/bookings/${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadBookings(); loadAll();
   }
 
@@ -134,7 +141,7 @@ export default function GestionBeauty() {
 
   async function deleteStaff(id: number) {
     if (!confirm("Retirer ce membre du personnel ?")) return;
-    await fetch(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${b(tenantCode!)}/staff/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadStaff(); loadAll();
   }
 
@@ -219,6 +226,7 @@ export default function GestionBeauty() {
       {/* DASHBOARD */}
       {tab === "dashboard" && (
         <div>
+          <BoutonRapport base={`/api/beauty-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={COLOR} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 14, marginBottom: 24 }}>
             {[
               { label: "Services actifs",     val: dash?.totalServices || 0,      emoji: "✂️" },
@@ -253,6 +261,7 @@ export default function GestionBeauty() {
       {/* SERVICES */}
       {tab === "services" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>✂️ Services proposés</h2>
             <button onClick={() => setShowAddService(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -278,7 +287,7 @@ export default function GestionBeauty() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {services.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun service encore.</p>}
-            {services.map(s => (
+            {filtrer(services, recherche).map(s => (
               <div key={s.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
@@ -298,6 +307,7 @@ export default function GestionBeauty() {
       {/* RENDEZ-VOUS */}
       {tab === "bookings" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📅 Rendez-vous</h2>
             <button onClick={() => setShowAddBooking(true)} style={btn(COLOR)}>+ Nouveau RDV</button>
@@ -331,7 +341,7 @@ export default function GestionBeauty() {
           )}
           <div style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden" }}>
             {bookings.length === 0 && <p style={{ padding: 16, color: "#94a3b8", fontStyle: "italic" }}>Aucun rendez-vous.</p>}
-            {bookings.map(bk => {
+            {filtrer(bookings, recherche).map(bk => {
               const st = BOOKING_STATUS[bk.statut] || BOOKING_STATUS.en_attente;
               return (
                 <div key={bk.id} style={{ padding: "12px 16px", borderBottom: "1px solid #f1f5f9" }}>
@@ -341,7 +351,17 @@ export default function GestionBeauty() {
                       <div style={{ fontSize: 13, color: "#64748b" }}>{bk.service_nom || "Service"} · {fmtDate(bk.date_rdv)} {bk.heure_rdv}</div>
                       {bk.staff_nom && <div style={{ fontSize: 12, color: "#64748b" }}>👩‍🦱 {bk.staff_nom}</div>}
                     </div>
-                    <span style={{ background: st.bg, color: st.color, padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ background: st.bg, color: st.color, padding: "3px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{st.label}</span>
+                      {(bk.statut === "en_attente" || bk.statut === "confirme") && <button onClick={() => envoyerRappel(bk.client_telephone, `Bonjour ${bk.client_nom || ""}, ${tenant?.name || "le salon"} vous rappelle votre rendez-vous ${bk.service_nom ? `(${bk.service_nom}) ` : ""}le ${dateTexte(bk.date_rdv)}${bk.heure_rdv ? ` à ${bk.heure_rdv}` : ""}. À bientôt !`)} style={{ fontSize: 11, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#15803d", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>📲 Rappel</button>}
+                      <button onClick={() => imprimerRecu({
+                        titre: "Reçu de prestation", numero: bk.id, date: bk.date_rdv, etablissement: tenant || {}, couleur: COLOR,
+                        client: bk.client_nom, clientTelephone: bk.client_telephone,
+                        details: [{ label: "Rendez-vous", valeur: `${fmtDate(bk.date_rdv)} ${bk.heure_rdv || ""}`.trim() }, ...(bk.staff_nom ? [{ label: "Réalisé par", valeur: bk.staff_nom }] : [])],
+                        lignes: [{ libelle: bk.service_nom || "Prestation", montant: bk.service_prix || 0 }],
+                        total: bk.service_prix || 0, note: bk.notes,
+                      })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Reçu</button>
+                    </div>
                   </div>
                   {bk.statut === "en_attente" && (
                     <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
@@ -371,6 +391,7 @@ export default function GestionBeauty() {
       {/* PERSONNEL */}
       {tab === "staff" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>👩‍🦱 Personnel</h2>
             <button onClick={() => setShowAddStaff(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -397,7 +418,7 @@ export default function GestionBeauty() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {staff.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun personnel encore.</p>}
-            {staff.map(s => (
+            {filtrer(staff, recherche).map(s => (
               <div key={s.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
@@ -418,6 +439,7 @@ export default function GestionBeauty() {
       {/* CLIENTS */}
       {tab === "clients" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>👤 Clients fidèles</h2>
             <button onClick={() => setShowAddClient(true)} style={btn(COLOR)}>+ Ajouter</button>
@@ -438,7 +460,7 @@ export default function GestionBeauty() {
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
             {clients.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucun client enregistré.</p>}
-            {clients.map(c => (
+            {filtrer(clients, recherche).map(c => (
               <div key={c.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14 }}>
                 <div style={{ fontWeight: 600 }}>{c.nom}</div>
                 {c.telephone && <div style={{ fontSize: 13, color: "#64748b" }}>📞 {c.telephone}</div>}
@@ -453,6 +475,7 @@ export default function GestionBeauty() {
       {/* ANNONCES */}
       {tab === "announcements" && (
         <div>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>📣 Annonces</h2>
             <button onClick={() => setShowAddAnn(true)} style={btn(COLOR)}>+ Publier</button>
@@ -475,7 +498,7 @@ export default function GestionBeauty() {
             </div>
           )}
           {announcements.length === 0 && <p style={{ color: "#94a3b8", fontStyle: "italic" }}>Aucune annonce.</p>}
-          {announcements.map(a => (
+          {filtrer(announcements, recherche).map(a => (
             <div key={a.id} style={{ background: "white", border: "1px solid #e2e8f0", borderRadius: 10, padding: 14, marginBottom: 10 }}>
               <div style={{ fontWeight: 600 }}>{a.titre}</div>
               <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{a.contenu}</div>

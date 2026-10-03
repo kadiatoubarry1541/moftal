@@ -116,7 +116,7 @@ self.addEventListener('push', (event: PushEvent) => {
   if (!event.data) return
   const data = event.data.json()
   const title = data.title || 'Moftal'
-  const options: NotificationOptions = {
+  const options: NotificationOptions & { renotify?: boolean; vibrate?: number[] } = {
     body: data.message || '',
     icon: '/logo-moftal.svg',
     badge: '/logo-moftal.svg',

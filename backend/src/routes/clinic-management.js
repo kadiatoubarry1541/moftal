@@ -3,8 +3,10 @@ import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { attraperErreursAsync } from '../utils/routerAsync.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
-const router = express.Router();
+const router = attraperErreursAsync(express.Router());
 
 export async function ensureStaffExtraColumns() {
   await sequelize.query(`ALTER TABLE clinic_staff ADD COLUMN IF NOT EXISTS numero_h VARCHAR(50);`);
@@ -907,6 +909,15 @@ router.put('/:tenantCode/appointment-requests/:id/reject', authenticate, verifyT
     await sequelize.query(`UPDATE clinic_appointment_requests SET statut='rejetee' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [
+    { label: 'Paiements enregistrés', table: 'clinic_payments_mgmt', montant: 'montant', date: 'COALESCE(date_paiement, created_at)' },
+    { label: 'Factures encaissées', table: 'clinic_invoices', montant: 'montant_paye', date: 'date_facture' },
+  ],
 });
 
 export default router;

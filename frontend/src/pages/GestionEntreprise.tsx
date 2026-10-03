@@ -5,6 +5,9 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import ModifierFiche from "../components/ModifierFiche";
+import { envoyerGestion } from "../utils/envoyerGestion";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 
 const BASE = (code: string) => `/api/enterprise-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -25,12 +28,15 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 export default function GestionEntreprise() {
+  const [recherche, setRecherche] = useState("");
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
   const userIsAdmin = isAdmin(user);
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -82,8 +88,8 @@ export default function GestionEntreprise() {
     setSaving(false);
     return d;
   };
-  const del = async (url: string) => { await fetch(url, { method: "DELETE", headers: auth() }); };
-  const patchStatut = async (url: string, statut: string) => { await fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }); };
+  const del = (url: string) => envoyerGestion(url, { method: "DELETE", headers: auth() });
+  const patchStatut = (url: string, statut: string) => envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
 
   const reload = (resource: string, setter: (v: any[]) => void, key: string) => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -93,22 +99,22 @@ export default function GestionEntreprise() {
   const handleAddEmployee = async () => {
     if (!emForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/employees`, emForm);
-    if (d.success) { setShowAddEmployee(false); setEmForm({ nom: "", prenom: "", telephone: "", numero_h: "", poste: "Employé", departement: "" }); reload("employees", setEmployees, "employees"); }
+    if (d.success) { setShowAddEmployee(false); setEmForm({ nom: "", prenom: "", telephone: "", numero_h: "", poste: "Employé", departement: "" }); reload("employees", setEmployees, "employees"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
   const handleAddClient = async () => {
     if (!clForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/clients`, clForm);
-    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", secteur: "" }); reload("clients", setClients, "clients"); }
+    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", secteur: "" }); reload("clients", setClients, "clients"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
   const handleAddContract = async () => {
     if (!ctForm.titre) return;
     const d = await post(`${BASE(tenantCode!)}/contracts`, { ...ctForm, budget: +ctForm.budget });
-    if (d.success) { setShowAddContract(false); setCtForm({ titre: "", client_nom: "", budget: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", description: "" }); reload("contracts", setContracts, "contracts"); }
+    if (d.success) { setShowAddContract(false); setCtForm({ titre: "", client_nom: "", budget: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", description: "" }); reload("contracts", setContracts, "contracts"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
   const handleAddAnn = async () => {
     if (!anForm.titre || !anForm.contenu) return;
     const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); reload("announcements", setAnnouncements, "announcements"); }
+    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); reload("announcements", setAnnouncements, "announcements"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   if (loading) return (
@@ -269,6 +275,7 @@ export default function GestionEntreprise() {
       {/* ── EMPLOYÉS ── */}
       {tab === "employees" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>👔 Employés ({employees.length})</h2>
             <button onClick={() => setShowAddEmployee(!showAddEmployee)} style={btn(INDIGO)}>{showAddEmployee ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -288,7 +295,7 @@ export default function GestionEntreprise() {
           )}
           {employees.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun employé enregistré</div>
-          ) : employees.map(e => (
+          ) : filtrer(employees, recherche).map(e => (
             <div key={e.id} style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -298,7 +305,8 @@ export default function GestionEntreprise() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: INDIGO_BG, color: INDIGO, padding: "3px 10px", borderRadius: 6, border: `1px solid ${INDIGO_BORDER}` }}>{e.poste}</span>
-                  <button onClick={async () => { await del(`${BASE(tenantCode!)}/employees/${e.id}`); setEmployees(es => es.filter(x => x.id !== e.id)); }}
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/employees/${e.id}`, item: e, colonnes: ["nom", "prenom", "telephone", "numero_h", "poste", "departement"], onSaved: (it: any) => setEmployees((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/employees/${e.id}`))) return; setEmployees(es => es.filter(x => x.id !== e.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
                   </button>
@@ -312,6 +320,7 @@ export default function GestionEntreprise() {
       {/* ── CLIENTS ── */}
       {tab === "clients" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🤝 Clients ({clients.length})</h2>
             <button onClick={() => setShowAddClient(!showAddClient)} style={btn(INDIGO)}>{showAddClient ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -329,7 +338,7 @@ export default function GestionEntreprise() {
           )}
           {clients.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun client enregistré</div>
-          ) : clients.map(c => (
+          ) : filtrer(clients, recherche).map(c => (
             <div key={c.id} style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -338,7 +347,8 @@ export default function GestionEntreprise() {
                   {c.adresse && <div style={{ fontSize: 12, color: "#64748b" }}>📍 {c.adresse}</div>}
                   {c.secteur && <div style={{ fontSize: 12, color: "#64748b" }}>🏭 {c.secteur}</div>}
                 </div>
-                <button onClick={async () => { await del(`${BASE(tenantCode!)}/clients/${c.id}`); setClients(cs => cs.filter(x => x.id !== c.id)); }}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "secteur"], onSaved: (it: any) => setClients((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/clients/${c.id}`))) return; setClients(cs => cs.filter(x => x.id !== c.id)); }}
                   style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Retirer
                 </button>
@@ -351,6 +361,7 @@ export default function GestionEntreprise() {
       {/* ── CONTRATS / PROJETS ── */}
       {tab === "contracts" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📑 Contrats / Projets ({contracts.length})</h2>
             <button onClick={() => setShowAddContract(!showAddContract)} style={btn(INDIGO)}>{showAddContract ? "✕ Annuler" : "+ Nouveau"}</button>
@@ -383,7 +394,7 @@ export default function GestionEntreprise() {
           )}
           {contracts.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun contrat enregistré</div>
-          ) : contracts.map(c => {
+          ) : filtrer(contracts, recherche).map(c => {
             const sc = STATUT_COLORS[c.statut] || { bg: "#f1f5f9", color: "#64748b", label: c.statut };
             return (
               <div key={c.id} style={card}>
@@ -401,7 +412,7 @@ export default function GestionEntreprise() {
                     <div style={{ fontWeight: 800, fontSize: 16, color: INDIGO, marginBottom: 6 }}>{(c.budget || 0).toLocaleString("fr-FR")} GNF</div>
                     <select
                       value={c.statut}
-                      onChange={async e => { await patchStatut(`${BASE(tenantCode!)}/contracts/${c.id}/statut`, e.target.value); setContracts(cs => cs.map(x => x.id === c.id ? { ...x, statut: e.target.value } : x)); }}
+                      onChange={async e => { if (!(await patchStatut(`${BASE(tenantCode!)}/contracts/${c.id}/statut`, e.target.value))) return; setContracts(cs => cs.map(x => x.id === c.id ? { ...x, statut: e.target.value } : x)); }}
                       style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12, cursor: "pointer" }}>
                       <option value="planifie">Planifié</option>
                       <option value="en_cours">En cours</option>
@@ -410,7 +421,8 @@ export default function GestionEntreprise() {
                       <option value="annule">Annulé</option>
                     </select>
                     <br />
-                    <button onClick={async () => { await del(`${BASE(tenantCode!)}/contracts/${c.id}`); setContracts(cs => cs.filter(x => x.id !== c.id)); }}
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/contracts/${c.id}`, item: c, colonnes: ["titre", "client_nom", "client_id", "budget", "statut", "date_debut", "date_fin", "description"], onSaved: (it: any) => setContracts((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/contracts/${c.id}`))) return; setContracts(cs => cs.filter(x => x.id !== c.id)); }}
                       style={{ marginTop: 6, padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                       Supprimer
                     </button>
@@ -425,6 +437,7 @@ export default function GestionEntreprise() {
       {/* ── ANNONCES ── */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📢 Annonces ({announcements.length})</h2>
             <button onClick={() => setShowAddAnn(!showAddAnn)} style={btn(INDIGO)}>{showAddAnn ? "✕ Annuler" : "+ Publier"}</button>
@@ -445,7 +458,7 @@ export default function GestionEntreprise() {
           )}
           {announcements.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune annonce publiée</div>
-          ) : announcements.map(a => (
+          ) : filtrer(announcements, recherche).map(a => (
             <div key={a.id} style={{ ...card, borderLeft: `4px solid ${INDIGO}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
@@ -456,7 +469,8 @@ export default function GestionEntreprise() {
                     <span>{fmtDate(a.created_at)}</span>
                   </div>
                 </div>
-                <button onClick={async () => { await del(`${BASE(tenantCode!)}/announcements/${a.id}`); setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it: any) => setAnnouncements((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/announcements/${a.id}`))) return; setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                   style={{ marginLeft: 12, padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Archiver
                 </button>
@@ -465,6 +479,7 @@ export default function GestionEntreprise() {
           ))}
         </div>
       )}
+      {edition && <ModifierFiche {...edition} couleur={INDIGO} onClose={() => setEdition(null)} />}
     </div>
   );
 }

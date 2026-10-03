@@ -384,7 +384,7 @@ router.get('/prix-vendeur-echange', authenticate, async (req, res) => {
 /**
  * GET /api/payment/acces-gestion-interne
  * Vérifie si l'utilisateur a accès à la Gestion Interne :
- * - soit dans la période d'essai gratuite (1 mois après approbation du compte)
+ * - soit dans la période d'essai gratuite (3 mois après approbation du compte)
  * - soit a payé à vie (gestion_interne_vie)
  */
 router.get('/acces-gestion-interne', authenticate, async (req, res) => {

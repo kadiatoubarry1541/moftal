@@ -5,6 +5,10 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/mosque-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -18,11 +22,14 @@ const GREEN = "#1a8f1a";
 const GREEN_BG = "#f0fdf0";
 
 export default function GestionMosquee() {
+  const [recherche, setRecherche] = useState("");
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -114,35 +121,35 @@ export default function GestionMosquee() {
   async function saveMember() {
     if (!mForm.nom) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddMember(false); setMForm({ nom: "", prenom: "", telephone: "", numero_h: "", role: "fidèle" });
     loadMembers();
   }
 
   async function deleteMember(id: number) {
     if (!confirm("Retirer ce membre ?")) return;
-    await fetch(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadMembers();
   }
 
   async function saveAnnouncement() {
     if (!aForm.titre || !aForm.contenu) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" });
     loadAnnouncements();
   }
 
   async function deleteAnnouncement(id: number) {
     if (!confirm("Supprimer cette annonce ?")) return;
-    await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnouncements();
   }
 
   async function saveDonation() {
     if (!dForm.montant) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify({ ...dForm, montant: +dForm.montant }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify({ ...dForm, montant: +dForm.montant }) }))) { setSaving(false); return; }
     setSaving(false); setShowAddDon(false); setDForm({ donateur_nom: "", montant: "", type_don: "sadaqa" });
     loadDonations(); loadDashboard();
   }
@@ -150,7 +157,7 @@ export default function GestionMosquee() {
   async function saveQuranStudent() {
     if (!qForm.nom) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/quran-students`, { method: "POST", headers: auth(), body: JSON.stringify(qForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/quran-students`, { method: "POST", headers: auth(), body: JSON.stringify(qForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddStudent(false); setQForm({ nom: "", prenom: "", niveau_coran: "Débutant", telephone_parent: "", enseignant_id: "" });
     loadQuranStudents();
   }
@@ -179,12 +186,12 @@ export default function GestionMosquee() {
     const r = await fetch(`${BASE(tenantCode!)}/predications`, { method: "POST", headers: auth(), body: JSON.stringify(predForm) });
     const d = await r.json();
     setSaving(false);
-    if (d.success) { setShowAddPred(false); setPredForm({ titre: "", type: "khutba", sourate: "", contenu: "", date_pred: new Date().toISOString().slice(0, 10) }); loadPredications(); }
+    if (d.success) { setShowAddPred(false); setPredForm({ titre: "", type: "khutba", sourate: "", contenu: "", date_pred: new Date().toISOString().slice(0, 10) }); loadPredications(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function deletePredication(id: number) {
     if (!confirm("Supprimer cette prédication ?")) return;
-    await fetch(`${BASE(tenantCode!)}/predications/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/predications/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadPredications();
   }
 
@@ -194,26 +201,26 @@ export default function GestionMosquee() {
     const r = await fetch(`${BASE(tenantCode!)}/partenaires`, { method: "POST", headers: auth(), body: JSON.stringify(partForm) });
     const d = await r.json();
     setSaving(false);
-    if (d.success) { setShowAddPart(false); setPartForm({ nom_mosquee: "", ville: "", imam_nom: "", telephone: "" }); loadPartenaires(); }
+    if (d.success) { setShowAddPart(false); setPartForm({ nom_mosquee: "", ville: "", imam_nom: "", telephone: "" }); loadPartenaires(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function deletePartenaire(id: number) {
     if (!confirm("Retirer cette mosquée partenaire ?")) return;
-    await fetch(`${BASE(tenantCode!)}/partenaires/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/partenaires/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadPartenaires();
   }
 
   async function saveImam() {
     if (!iForm.nom) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/imams`, { method: "POST", headers: auth(), body: JSON.stringify({ ...iForm, rang: editingRang }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/imams`, { method: "POST", headers: auth(), body: JSON.stringify({ ...iForm, rang: editingRang }) }))) { setSaving(false); return; }
     setSaving(false); setShowAddImam(false); setIForm({ nom: "", prenom: "", telephone: "", numero_h: "", rang: 1 });
     loadImams();
   }
 
   async function removeImam(rang: number) {
     if (!confirm(`Retirer le Cheikh Imam ${rang} ?`)) return;
-    await fetch(`${BASE(tenantCode!)}/imams/${rang}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/imams/${rang}`, { method: "DELETE", headers: auth() }))) { return; }
     loadImams();
   }
 
@@ -288,6 +295,7 @@ export default function GestionMosquee() {
       {/* DASHBOARD */}
       {tab === "dashboard" && dash && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BoutonRapport base={`/api/mosque-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={GREEN} />
           {/* KPI Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14, marginBottom: 20 }}>
             {[
@@ -365,6 +373,7 @@ export default function GestionMosquee() {
       {/* MEMBRES */}
       {tab === "members" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Membres ({members.length})</div>
             <button onClick={() => setShowAddMember(true)} style={{ padding: "8px 16px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Ajouter</button>
@@ -395,7 +404,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {members.map(m => (
+            {filtrer(members, recherche).map(m => (
               <div key={m.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{m.prenom ? `${m.prenom} ${m.nom}` : m.nom}</div>
@@ -403,6 +412,7 @@ export default function GestionMosquee() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ padding: "2px 10px", background: GREEN_BG, color: GREEN, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{m.role}</span>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "role"], onSaved: () => { loadMembers(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deleteMember(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Retirer</button>
                 </div>
               </div>
@@ -415,6 +425,7 @@ export default function GestionMosquee() {
       {/* ANNONCES */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Annonces ({announcements.length})</div>
             <button onClick={() => setShowAddAnn(true)} style={{ padding: "8px 16px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Publier</button>
@@ -445,10 +456,11 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {announcements.map(a => (
+            {filtrer(announcements, recherche).map(a => (
               <div key={a.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{a.titre}</div>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deleteAnnouncement(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Supprimer</button>
                 </div>
                 <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.5 }}>{a.contenu}</div>
@@ -466,6 +478,7 @@ export default function GestionMosquee() {
       {/* DONATIONS */}
       {tab === "donations" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Dons ({donations.length})</div>
             <button onClick={() => setShowAddDon(true)} style={{ padding: "8px 16px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Enregistrer</button>
@@ -498,7 +511,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {donations.map(d => (
+            {filtrer(donations, recherche).map(d => (
               <div key={d.id} style={{ background: "white", borderRadius: 10, padding: "14px 16px", border: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{d.donateur_nom || "Anonyme"}</div>
@@ -515,6 +528,7 @@ export default function GestionMosquee() {
       {/* ÉLÈVES CORAN */}
       {tab === "quran" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 16 }}>Élèves Coran ({quranStudents.length})</div>
             <button onClick={() => setShowAddStudent(true)} style={{ padding: "8px 16px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>+ Inscrire</button>
@@ -549,7 +563,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
-            {quranStudents.map(s => (
+            {filtrer(quranStudents, recherche).map(s => (
               <div key={s.id} style={{ background: "white", borderRadius: 10, padding: 16, border: "1px solid #f1f5f9" }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>{s.prenom ? `${s.prenom} ${s.nom}` : s.nom}</div>
                 <div style={{ marginTop: 6 }}>
@@ -567,6 +581,7 @@ export default function GestionMosquee() {
       {/* ── Onglet IMAMS ─────────────────────────────────────────────────────── */}
       {tab === "imams" && (
         <div style={{ padding: "0 16px 32px" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Cheikh Imams ({imams.length}/3)</div>
@@ -672,6 +687,7 @@ export default function GestionMosquee() {
       {/* PRÉDICATIONS */}
       {tab === "predications" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Prédications & Khutbas ({predications.length})</div>
@@ -715,7 +731,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {predications.map(p => (
+            {filtrer(predications, recherche).map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", borderLeft: `3px solid ${GREEN}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <div>
@@ -726,6 +742,7 @@ export default function GestionMosquee() {
                       {p.sourate && <span style={{ fontSize: 12, color: "#7c3aed" }}>📖 {p.sourate}</span>}
                     </div>
                   </div>
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/predications/${p.id}`, item: p, colonnes: ["titre", "type", "contenu", "sourate", "date_pred"], onSaved: () => { loadPredications(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                   <button onClick={() => deletePredication(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12 }}>Supprimer</button>
                 </div>
                 {p.contenu && <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, marginTop: 8, paddingTop: 8, borderTop: "1px solid #f1f5f9" }}>{p.contenu}</div>}
@@ -745,6 +762,7 @@ export default function GestionMosquee() {
       {/* MOSQUÉES PARTENAIRES */}
       {tab === "partenaires" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Mosquées partenaires ({partenaires.length})</div>
@@ -772,7 +790,7 @@ export default function GestionMosquee() {
           )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
-            {partenaires.map(p => (
+            {filtrer(partenaires, recherche).map(p => (
               <div key={p.id} style={{ background: "white", borderRadius: 12, padding: 16, border: "1px solid #f1f5f9", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                   <div style={{ width: 40, height: 40, borderRadius: "50%", background: GREEN_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🕌</div>
@@ -783,6 +801,7 @@ export default function GestionMosquee() {
                 </div>
                 {p.imam_nom && <div style={{ fontSize: 13, color: "#334155", marginBottom: 4 }}>👨‍✈️ Imam : {p.imam_nom}</div>}
                 {p.telephone && <div style={{ fontSize: 12, color: "#64748b" }}>📞 {p.telephone}</div>}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/partenaires/${p.id}`, item: p, colonnes: ["nom_mosquee", "ville", "imam_nom", "telephone"], onSaved: () => { loadPartenaires(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
                 <button onClick={() => deletePartenaire(p.id)} style={{ marginTop: 10, background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, width: "100%" }}>Retirer</button>
               </div>
             ))}
@@ -797,6 +816,7 @@ export default function GestionMosquee() {
         </div>
       )}
 
+      {edition && <ModifierFiche {...edition} couleur={GREEN} onClose={() => setEdition(null)} />}
     </div>
   );
 }

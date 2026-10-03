@@ -8,6 +8,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -79,6 +80,7 @@ router.post('/:tenantCode/products', authenticate, verifyTenant, async (req, res
 router.patch('/:tenantCode/products/:id/stock', authenticate, verifyTenant, async (req, res) => {
   try {
     const { delta } = req.body;
+    if (!Number.isFinite(+delta)) return res.status(400).json({ success: false, message: 'Quantité invalide.' });
     await sequelize.query(`UPDATE producer_products SET stock=GREATEST(0,stock+:delta) WHERE id=:id AND tenant_code=:code`, { replacements: { delta:+delta, id:req.params.id, code:req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -213,6 +215,12 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     await sequelize.query(`DELETE FROM producer_announcements WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Commandes livrées', table: 'producer_orders', montant: 'montant_total', date: 'COALESCE(date_livraison, created_at)', where: "statut = 'livre'" }],
 });
 
 export default router;

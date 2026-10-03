@@ -1619,8 +1619,9 @@ async function initAllTables() {
         "is_active"   BOOLEAN DEFAULT true,
         "created_at"  TIMESTAMPTZ DEFAULT NOW()
       );
-      -- Agences de Sécurité
-      CREATE TABLE IF NOT EXISTS "security_agents" (
+      -- Agences de Sécurité — table propre à la gestion interne : « security_agents »
+      -- est déjà prise par l'annuaire public des agents (modèle SecurityAgent).
+      CREATE TABLE IF NOT EXISTS "security_mgmt_agents" (
         "id"          SERIAL PRIMARY KEY,
         "tenant_code" VARCHAR(50) NOT NULL,
         "nom"         VARCHAR(255) NOT NULL,
@@ -1628,6 +1629,7 @@ async function initAllTables() {
         "telephone"   VARCHAR(50),
         "numero_h"    VARCHAR(100),
         "grade"       VARCHAR(100) DEFAULT 'Agent',
+        "specialite"  VARCHAR(255),
         "zone"        VARCHAR(255),
         "is_active"   BOOLEAN DEFAULT true,
         "created_at"  TIMESTAMPTZ DEFAULT NOW()
@@ -2764,7 +2766,12 @@ app.use('/api', limiter);
 
 // Middleware pour parser le JSON
 // Limite élevée pour enregistrement vivant (photo + vidéo en base64)
-app.use(express.json({ limit: '200mb' }));
+// rawBody : texte exact reçu, nécessaire pour vérifier la signature des
+// notifications de paiement Djomy (le JSON re-sérialisé peut différer).
+app.use(express.json({
+  limit: '200mb',
+  verify: (req, _res, buf) => { if (req.originalUrl?.startsWith('/api/djomy/webhook')) req.rawBody = buf.toString('utf8'); }
+}));
 app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // Servir les fichiers uploads (photos, vidéos)

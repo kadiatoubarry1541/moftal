@@ -103,7 +103,7 @@ function showBrowserNotification(notif: Notification) {
     badge: "/logo-moftal.svg",
     tag: notif.id,
     renotify: true
-  });
+  } as NotificationOptions & { renotify?: boolean });
   const path = getNavigationPath(notif.type);
   if (path) n.onclick = () => { window.focus(); n.close(); };
 }

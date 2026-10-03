@@ -2,6 +2,8 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
 
 const router = express.Router();
 
@@ -134,6 +136,21 @@ router.post('/:tenantCode/announcements', authenticate, verifyTenant, async (req
 });
 router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, async (req, res) => {
   try { await sequelize.query(`UPDATE supplier_announcements SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.UPDATE }); res.json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'products': { table: 'supplier_products', colonnes: ['nom', 'categorie', 'prix_gros', 'prix_detail', 'stock', 'unite'] },
+  'clients': { table: 'supplier_clients', colonnes: ['nom', 'telephone', 'adresse', 'type_client'] },
+  'orders': { table: 'supplier_orders', colonnes: ['client_nom', 'client_id', 'montant_total', 'statut', 'date_commande', 'notes'] },
+  'announcements': { table: 'supplier_announcements', colonnes: ['titre', 'contenu', 'type'] },
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Commandes', table: 'supplier_orders', montant: 'montant_total', date: 'COALESCE(date_commande, created_at)', where: "statut <> 'annule'" }],
 });
 
 export default router;

@@ -89,7 +89,6 @@ export default function EchangePrimaire() {
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [showSupplierRegistration, setShowSupplierRegistration] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ExchangeProduct | null>(null);
-  const [selectedSupplier] = useState<Supplier | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'tous'|'cereales'|'legumes'|'fruits'|'animaux'|'poissons'|'plantes'|'huiles'>('tous');
   const [publishMode, setPublishMode] = useState<null | 'ecrit' | 'photo_audio' | 'video'>(null);
 
@@ -541,12 +540,6 @@ export default function EchangePrimaire() {
             <PublierAnnonceButtons onSelect={(mode) => { setShowCreateProduct(true); setPublishMode(mode); }} />
           ) : (
             <DevenirVendeurButton secteur="primaire" />
-          )}
-          {isAdmin && (
-            <button onClick={() => setSelectedSupplier({} as Supplier)}
-              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-semibold">
-              ⚙️
-            </button>
           )}
         </div>
       </div>

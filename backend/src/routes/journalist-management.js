@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
 
 const router = express.Router();
 
@@ -162,6 +163,15 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     await sequelize.query(`UPDATE journalist_announcements SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.UPDATE });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'reporters': { table: 'journalist_reporters', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'specialite', 'role'] },
+  'articles': { table: 'journalist_articles', colonnes: ['reporter_id', 'reporter_nom', 'titre', 'contenu', 'categorie', 'statut', 'date_pub'] },
+  'subscribers': { table: 'journalist_subscribers', colonnes: ['nom', 'telephone', 'email', 'type_abo'] },
+  'announcements': { table: 'journalist_announcements', colonnes: ['titre', 'contenu', 'type'] },
 });
 
 export default router;

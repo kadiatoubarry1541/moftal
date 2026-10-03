@@ -114,7 +114,7 @@ export default function AdminGovernments() {
       return;
     }
     
-    setUserData(user);
+    setUserData(user as unknown as UserData);
     loadGovernments();
     loadUsers();
   }, [navigate]);

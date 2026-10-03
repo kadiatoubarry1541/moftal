@@ -347,31 +347,6 @@ export default function GuineeForestiere() {
     }
   ];
 
-  const createGroup = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/regions/guinee-forestiere/groups`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          ...newGroup,
-          region: 'Guinée forestière',
-          createdBy: userData?.numeroH
-        })
-      });
-      
-      alert('Organisation créé avec succès !');
-      setShowCreateGroup(false);
-      setNewGroup({ name: '', description: '', city: '', district: '' });
-      loadGroups();
-    } catch (error: any) {
-      console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de la création du Organisation');
-    }
-  };
 
   const joinGroup = async (groupId: string) => {
     try {
@@ -503,12 +478,6 @@ export default function GuineeForestiere() {
 
         {/* Actions */}
         <div className="flex gap-4 mb-6 flex-wrap">
-          <button
-            onClick={() => setShowCreateGroup(true)}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
-          >
-            ➕ Créer un Organisation
-          </button>
           <button
             onClick={() => setShowEventForm(true)}
             className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center gap-2"
