@@ -113,6 +113,7 @@ router.put('/:tenantCode/products/:id', authenticate, verifyTenant, async (req, 
 router.put('/:tenantCode/products/:id/stock', authenticate, verifyTenant, async (req, res) => {
   try {
     const { delta } = req.body;
+    if (!Number.isFinite(+delta)) return res.status(400).json({ success: false, message: 'Quantité invalide.' });
     await sequelize.query(
       `UPDATE retailer_products SET stock=GREATEST(0,stock+:delta) WHERE id=:id AND tenant_code=:code`,
       { replacements: { delta: +delta, id: req.params.id, code: req.params.tenantCode } }
