@@ -1619,8 +1619,9 @@ async function initAllTables() {
         "is_active"   BOOLEAN DEFAULT true,
         "created_at"  TIMESTAMPTZ DEFAULT NOW()
       );
-      -- Agences de Sécurité
-      CREATE TABLE IF NOT EXISTS "security_agents" (
+      -- Agences de Sécurité — table propre à la gestion interne : « security_agents »
+      -- est déjà prise par l'annuaire public des agents (modèle SecurityAgent).
+      CREATE TABLE IF NOT EXISTS "security_mgmt_agents" (
         "id"          SERIAL PRIMARY KEY,
         "tenant_code" VARCHAR(50) NOT NULL,
         "nom"         VARCHAR(255) NOT NULL,
@@ -1628,6 +1629,7 @@ async function initAllTables() {
         "telephone"   VARCHAR(50),
         "numero_h"    VARCHAR(100),
         "grade"       VARCHAR(100) DEFAULT 'Agent',
+        "specialite"  VARCHAR(255),
         "zone"        VARCHAR(255),
         "is_active"   BOOLEAN DEFAULT true,
         "created_at"  TIMESTAMPTZ DEFAULT NOW()
