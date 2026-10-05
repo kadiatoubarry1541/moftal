@@ -1,3 +1,4 @@
+import MesLieuxDeTravail from "../components/MesLieuxDeTravail";
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -708,6 +709,7 @@ export default function GestionInterne() {
 
         <div style={{ borderTop:"1.5px solid #e2e8f0", marginBottom: tab === "activite" ? 6 : 16 }} />
 
+        <MesLieuxDeTravail />
         <TabButtons />
 
         {tab === "pro" && <>

@@ -5,6 +5,10 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/security-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -24,12 +28,15 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 export default function GestionSecurite() {
+  const [recherche, setRecherche] = useState("");
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
   const userIsAdmin = isAdmin(user);
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [agents, setAgents] = useState<any[]>([]);
@@ -82,36 +89,32 @@ export default function GestionSecurite() {
     return d;
   };
 
-  const del = async (url: string) => {
-    await fetch(url, { method: "DELETE", headers: auth() });
-  };
+  const del = (url: string) => envoyerGestion(url, { method: "DELETE", headers: auth() });
 
-  const patchStatut = async (url: string, statut: string) => {
-    await fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
-  };
+  const patchStatut = (url: string, statut: string) => envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
 
   const handleAddAgent = async () => {
     if (!agForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/agents`, agForm);
-    if (d.success) { setShowAddAgent(false); setAgForm({ nom: "", prenom: "", telephone: "", numero_h: "", grade: "Agent", zone: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/agents`, { headers: h }).then(r => r.json()).then(d => d.success && setAgents(d.agents || [])); }
+    if (d.success) { setShowAddAgent(false); setAgForm({ nom: "", prenom: "", telephone: "", numero_h: "", grade: "Agent", zone: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/agents`, { headers: h }).then(r => r.json()).then(d => d.success && setAgents(d.agents || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddMission = async () => {
     if (!msForm.titre) return;
     const d = await post(`${BASE(tenantCode!)}/missions`, msForm);
-    if (d.success) { setShowAddMission(false); setMsForm({ agent_id: "", agent_nom: "", titre: "", client_nom: "", lieu: "", date_debut: new Date().toISOString().split("T")[0], date_fin: "", statut: "en_cours", notes: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/missions`, { headers: h }).then(r => r.json()).then(d => d.success && setMissions(d.missions || [])); }
+    if (d.success) { setShowAddMission(false); setMsForm({ agent_id: "", agent_nom: "", titre: "", client_nom: "", lieu: "", date_debut: new Date().toISOString().split("T")[0], date_fin: "", statut: "en_cours", notes: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/missions`, { headers: h }).then(r => r.json()).then(d => d.success && setMissions(d.missions || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddClient = async () => {
     if (!clForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/clients`, clForm);
-    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", type_contrat: "ponctuel" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/clients`, { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || [])); }
+    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", type_contrat: "ponctuel" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/clients`, { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddAnn = async () => {
     if (!anForm.titre || !anForm.contenu) return;
     const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); }
+    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   if (loading) return (
@@ -178,6 +181,7 @@ export default function GestionSecurite() {
       {/* ── DASHBOARD ── */}
       {tab === "dashboard" && dash && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BoutonRapport base={`/api/security-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={SLATE} rapport={false} />
           {/* KPI Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14, marginBottom: 20 }}>
             {[
@@ -257,6 +261,7 @@ export default function GestionSecurite() {
       {/* ── AGENTS ── */}
       {tab === "agents" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>👮 Agents ({agents.length})</h2>
             <button onClick={() => setShowAddAgent(!showAddAgent)} style={btn(SLATE)}>{showAddAgent ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -282,7 +287,7 @@ export default function GestionSecurite() {
           )}
           {agents.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun agent enregistré</div>
-          ) : agents.map(a => (
+          ) : filtrer(agents, recherche).map(a => (
             <div key={a.id} style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -292,7 +297,8 @@ export default function GestionSecurite() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: SLATE_BG, color: SLATE, padding: "3px 10px", borderRadius: 6, border: `1px solid ${SLATE_BORDER}` }}>{a.grade}</span>
-                  <button onClick={async () => { await del(`${BASE(tenantCode!)}/agents/${a.id}`); setAgents(as => as.filter(x => x.id !== a.id)); }}
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/agents/${a.id}`, item: a, colonnes: ["nom", "prenom", "telephone", "numero_h", "grade", "zone"], onSaved: (it: any) => setAgents((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/agents/${a.id}`))) return; setAgents(as => as.filter(x => x.id !== a.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
                   </button>
@@ -306,6 +312,7 @@ export default function GestionSecurite() {
       {/* ── MISSIONS ── */}
       {tab === "missions" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🎯 Missions ({missions.length})</h2>
             <button onClick={() => setShowAddMission(!showAddMission)} style={btn(SLATE)}>{showAddMission ? "✕ Annuler" : "+ Nouvelle mission"}</button>
@@ -338,7 +345,7 @@ export default function GestionSecurite() {
           )}
           {missions.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune mission enregistrée</div>
-          ) : missions.map(m => {
+          ) : filtrer(missions, recherche).map(m => {
             const sc = STATUT_COLORS[m.statut] || { bg: "#f1f5f9", color: "#64748b", label: m.statut };
             return (
               <div key={m.id} style={card}>
@@ -357,14 +364,15 @@ export default function GestionSecurite() {
                   <div style={{ marginLeft: 12, display: "flex", flexDirection: "column", gap: 6 }}>
                     <select
                       value={m.statut}
-                      onChange={async e => { await patchStatut(`${BASE(tenantCode!)}/missions/${m.id}/statut`, e.target.value); setMissions(ms => ms.map(x => x.id === m.id ? { ...x, statut: e.target.value } : x)); }}
+                      onChange={async e => { if (!(await patchStatut(`${BASE(tenantCode!)}/missions/${m.id}/statut`, e.target.value))) return; setMissions(ms => ms.map(x => x.id === m.id ? { ...x, statut: e.target.value } : x)); }}
                       style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12, cursor: "pointer" }}>
                       <option value="planifiee">Planifiée</option>
                       <option value="en_cours">En cours</option>
                       <option value="terminee">Terminée</option>
                       <option value="annulee">Annulée</option>
                     </select>
-                    <button onClick={async () => { await del(`${BASE(tenantCode!)}/missions/${m.id}`); setMissions(ms => ms.filter(x => x.id !== m.id)); }}
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/missions/${m.id}`, item: m, colonnes: ["agent_id", "agent_nom", "titre", "client_nom", "lieu", "date_debut", "date_fin", "statut", "notes"], onSaved: (it: any) => setMissions((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/missions/${m.id}`))) return; setMissions(ms => ms.filter(x => x.id !== m.id)); }}
                       style={{ padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                       Supprimer
                     </button>
@@ -379,6 +387,7 @@ export default function GestionSecurite() {
       {/* ── CLIENTS ── */}
       {tab === "clients" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🏢 Clients ({clients.length})</h2>
             <button onClick={() => setShowAddClient(!showAddClient)} style={btn(SLATE)}>{showAddClient ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -401,7 +410,7 @@ export default function GestionSecurite() {
           )}
           {clients.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun client enregistré</div>
-          ) : clients.map(c => (
+          ) : filtrer(clients, recherche).map(c => (
             <div key={c.id} style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -411,7 +420,8 @@ export default function GestionSecurite() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: SLATE_BG, color: SLATE, padding: "3px 10px", borderRadius: 6, border: `1px solid ${SLATE_BORDER}` }}>{c.type_contrat}</span>
-                  <button onClick={async () => { await del(`${BASE(tenantCode!)}/clients/${c.id}`); setClients(cs => cs.filter(x => x.id !== c.id)); }}
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "type_contrat"], onSaved: (it: any) => setClients((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/clients/${c.id}`))) return; setClients(cs => cs.filter(x => x.id !== c.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
                   </button>
@@ -425,6 +435,7 @@ export default function GestionSecurite() {
       {/* ── ANNONCES ── */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📢 Annonces ({announcements.length})</h2>
             <button onClick={() => setShowAddAnn(!showAddAnn)} style={btn(SLATE)}>{showAddAnn ? "✕ Annuler" : "+ Publier"}</button>
@@ -445,7 +456,7 @@ export default function GestionSecurite() {
           )}
           {announcements.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune annonce publiée</div>
-          ) : announcements.map(a => (
+          ) : filtrer(announcements, recherche).map(a => (
             <div key={a.id} style={{ ...card, borderLeft: `4px solid ${SLATE}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
@@ -456,7 +467,8 @@ export default function GestionSecurite() {
                     <span>{fmtDate(a.created_at)}</span>
                   </div>
                 </div>
-                <button onClick={async () => { await del(`${BASE(tenantCode!)}/announcements/${a.id}`); setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it: any) => setAnnouncements((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/announcements/${a.id}`))) return; setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                   style={{ marginLeft: 12, padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Archiver
                 </button>
@@ -465,6 +477,7 @@ export default function GestionSecurite() {
           ))}
         </div>
       )}
+      {edition && <ModifierFiche {...edition} couleur={SLATE} onClose={() => setEdition(null)} />}
     </div>
   );
 }

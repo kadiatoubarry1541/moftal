@@ -5,6 +5,9 @@ import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/restaurant-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -31,11 +34,13 @@ const TABLE_STATUS: Record<string, { bg: string; color: string; label: string }>
 };
 
 export default function GestionRestaurant() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [dishes, setDishes] = useState<any[]>([]);
@@ -88,8 +93,8 @@ export default function GestionRestaurant() {
     const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
     const d = await r.json(); setSaving(false); return d;
   };
-  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() });
-  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) });
+  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
+  const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
 
   const reloadDash = () => {
     const h = { Authorization: `Bearer ${localStorage.getItem("token")}` };
@@ -169,6 +174,7 @@ export default function GestionRestaurant() {
       {/* ── DASHBOARD ── */}
       {tab === "dashboard" && dash && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BoutonRapport base={`/api/restaurant-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={ORANGE} />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14, marginBottom: 20 }}>
             {[
               { label: "Plats au menu", value: dash.totalDishes ?? 0, color: "#ea580c", bg: "#fff7ed",
@@ -255,6 +261,7 @@ export default function GestionRestaurant() {
       {/* ── MENU / PLATS ── */}
       {tab === "dishes" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🍽️ Menu ({dishes.length} plats)</h2>
             <button onClick={() => setShowAddDish(!showAddDish)} style={btn(ORANGE)}>{showAddDish ? "✕ Annuler" : "+ Ajouter plat"}</button>
@@ -276,13 +283,13 @@ export default function GestionRestaurant() {
               <button onClick={async () => {
                 if (!dForm.nom || !dForm.prix) return;
                 const d = await post(`${BASE(tenantCode!)}/dishes`, { ...dForm, prix: +dForm.prix });
-                if (d.success) { setShowAddDish(false); setDForm({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(d => d.success && setDishes(d.dishes || [])); }
+                if (d.success) { setShowAddDish(false); setDForm({ nom: "", categorie: "Plat principal", prix: "", description: "", disponible: true }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(d => d.success && setDishes(d.dishes || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
           {/* Group by category */}
           {CATEGORIES.map(cat => {
-            const catDishes = dishes.filter(d => d.categorie === cat);
+            const catDishes = filtrer(dishes, recherche).filter(d => d.categorie === cat);
             if (catDishes.length === 0) return null;
             return (
               <div key={cat} style={{ marginBottom: 20 }}>
@@ -297,7 +304,7 @@ export default function GestionRestaurant() {
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, background: d.disponible ? "#f0fdf0" : "#f1f5f9", color: d.disponible ? "#1a8f1a" : "#94a3b8", padding: "3px 10px", borderRadius: 20, cursor: "pointer" }}
-                          onClick={async () => { await patch(`${BASE(tenantCode!)}/dishes/${d.id}`, { disponible: !d.disponible }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || [])); }}>
+                          onClick={async () => { const r = await patch(`${BASE(tenantCode!)}/dishes/${d.id}`, { disponible: !d.disponible }).catch(() => null); if (!r?.ok) return; const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || [])); }}>
                           {d.disponible ? "✓ Disponible" : "Indisponible"}
                         </span>
                         <button onClick={async () => { await del(`${BASE(tenantCode!)}/dishes/${d.id}`); setDishes(ds => ds.filter(x => x.id !== d.id)); }}
@@ -316,6 +323,7 @@ export default function GestionRestaurant() {
       {/* ── TABLES ── */}
       {tab === "tables" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🪑 Tables ({tables.length})</h2>
             <button onClick={() => setShowAddTable(!showAddTable)} style={btn(ORANGE)}>{showAddTable ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -330,20 +338,20 @@ export default function GestionRestaurant() {
               <button onClick={async () => {
                 if (!tForm.numero) return;
                 const d = await post(`${BASE(tenantCode!)}/tables`, { ...tForm, capacite: +tForm.capacite });
-                if (d.success) { setShowAddTable(false); setTForm({ numero: "", capacite: "4", zone: "Salle" }); reloadTables(); }
+                if (d.success) { setShowAddTable(false); setTForm({ numero: "", capacite: "4", zone: "Salle" }); reloadTables(); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 12 }}>
             {tables.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8", gridColumn: "1/-1" }}>Aucune table enregistrée</div> :
-              tables.map(t => {
+              filtrer(tables, recherche).map(t => {
                 const sc = TABLE_STATUS[t.statut] || { bg: "#f8fafc", color: "#64748b", label: t.statut };
                 return (
                   <div key={t.id} style={{ background: "white", border: `2px solid ${t.statut === "occupee" ? "#fca5a5" : t.statut === "reservee" ? "#93c5fd" : "#86efac"}`, borderRadius: 12, padding: "16px 12px", textAlign: "center" }}>
                     <div style={{ fontSize: 28, marginBottom: 4 }}>🪑</div>
                     <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a" }}>Table {t.numero}</div>
                     <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>{t.zone} · {t.capacite} pers.</div>
-                    <select value={t.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/tables/${t.id}`, { statut: e.target.value }); reloadTables(); }}
+                    <select value={t.statut} onChange={async e => { const r = await patch(`${BASE(tenantCode!)}/tables/${t.id}`, { statut: e.target.value }).catch(() => null); reloadTables(); }}
                       style={{ fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color, border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", width: "100%" }}>
                       {Object.entries(TABLE_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
@@ -357,6 +365,7 @@ export default function GestionRestaurant() {
       {/* ── COMMANDES ── */}
       {tab === "orders" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📋 Commandes ({orders.length})</h2>
             <button onClick={() => setShowAddOrder(!showAddOrder)} style={btn(ORANGE)}>{showAddOrder ? "✕ Annuler" : "+ Nouvelle commande"}</button>
@@ -404,13 +413,13 @@ export default function GestionRestaurant() {
                 const items = oForm.items.filter(i => i.nom && i.prix);
                 if (!items.length) return;
                 const d = await post(`${BASE(tenantCode!)}/orders`, { ...oForm, items: items.map(i => ({ ...i, prix: +i.prix, quantite: +i.quantite })), table_id: oForm.table_id || null });
-                if (d.success) { setShowAddOrder(false); setOForm({ table_id: "", table_num: "", type_service: "sur_place", type_paiement: "especes", notes: "", items: [{ dish_id: "", nom: "", prix: "", quantite: "1" }] }); reloadOrders(); reloadDash(); reloadTables(); }
+                if (d.success) { setShowAddOrder(false); setOForm({ table_id: "", table_num: "", type_service: "sur_place", type_paiement: "especes", notes: "", items: [{ dish_id: "", nom: "", prix: "", quantite: "1" }] }); reloadOrders(); reloadDash(); reloadTables(); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Valider la commande"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {orders.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune commande enregistrée</div> :
-              orders.map(o => {
+              filtrer(orders, recherche).map(o => {
                 const sc = ORDER_STATUS[o.statut] || { bg: "#f8fafc", color: "#64748b", label: o.statut };
                 const items: any[] = typeof o.items === "string" ? JSON.parse(o.items) : (o.items || []);
                 return (
@@ -427,7 +436,13 @@ export default function GestionRestaurant() {
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <div style={{ fontWeight: 800, color: ORANGE, fontSize: 15 }}>{fmtMoney(o.total)}</div>
-                        <select value={o.statut} onChange={async e => { await patch(`${BASE(tenantCode!)}/orders/${o.id}`, { statut: e.target.value }); reloadOrders(); reloadTables(); reloadDash(); }}
+                        <button onClick={() => imprimerRecu({
+                          titre: "Reçu de commande", numero: o.id, date: o.created_at, etablissement: tenant || {}, couleur: ORANGE,
+                          details: [{ label: "Table", valeur: String(o.table_num || "—") }, { label: "Service", valeur: o.type_service === "emporter" ? "À emporter" : "Sur place" }],
+                          lignes: items.map((i: any) => ({ libelle: i.nom, quantite: i.quantite || 1, prixUnitaire: i.prix, montant: (+i.prix || 0) * (+i.quantite || 1) })),
+                          total: o.total, modePaiement: o.type_paiement,
+                        })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Reçu</button>
+                        <select value={o.statut} onChange={async e => { const r = await patch(`${BASE(tenantCode!)}/orders/${o.id}`, { statut: e.target.value }).catch(() => null); reloadOrders(); reloadTables(); reloadDash(); }}
                           style={{ fontSize: 11, border: "1px solid #e2e8f0", borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}>
                           {Object.entries(ORDER_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                         </select>
@@ -443,6 +458,7 @@ export default function GestionRestaurant() {
       {/* ── ÉQUIPE ── */}
       {tab === "staff" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>👨‍🍳 Équipe ({staff.length})</h2>
             <button onClick={() => setShowAddStaff(!showAddStaff)} style={btn(ORANGE)}>{showAddStaff ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -461,13 +477,13 @@ export default function GestionRestaurant() {
               <button onClick={async () => {
                 if (!sForm.nom) return;
                 const d = await post(`${BASE(tenantCode!)}/staff`, { ...sForm, salaire: +sForm.salaire || 0 });
-                if (d.success) { setShowAddStaff(false); setSForm({ nom: "", prenom: "", poste: "Serveur", telephone: "", salaire: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/staff`, { headers: h }).then(r => r.json()).then(d => d.success && setStaff(d.staff || [])); }
+                if (d.success) { setShowAddStaff(false); setSForm({ nom: "", prenom: "", poste: "Serveur", telephone: "", salaire: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/staff`, { headers: h }).then(r => r.json()).then(d => d.success && setStaff(d.staff || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={btn(ORANGE)}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {staff.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun membre d'équipe</div> :
-              staff.map(s => (
+              filtrer(staff, recherche).map(s => (
                 <div key={s.id} style={{ background: "white", border: `1px solid ${ORANGE_BORDER}`, borderRadius: 10, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{s.prenom ? `${s.prenom} ${s.nom}` : s.nom}</div>
@@ -485,6 +501,7 @@ export default function GestionRestaurant() {
       {/* ── ANNONCES ── */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📢 Annonces ({announcements.length})</h2>
             <button onClick={() => setShowAddAnn(!showAddAnn)} style={btn(ORANGE)}>{showAddAnn ? "✕ Annuler" : "+ Publier"}</button>
@@ -501,13 +518,13 @@ export default function GestionRestaurant() {
               <button onClick={async () => {
                 if (!anForm.titre || !anForm.contenu) return;
                 const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-                if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); }
+                if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
               }} disabled={saving} style={{ ...btn(ORANGE), marginTop: 10 }}>{saving ? "Publication…" : "Publier"}</button>
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {announcements.length === 0 ? <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune annonce</div> :
-              announcements.map(a => (
+              filtrer(announcements, recherche).map(a => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${ORANGE_BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>

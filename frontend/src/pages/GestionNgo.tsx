@@ -1,10 +1,14 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/ngo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -26,12 +30,17 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 export default function GestionNgo() {
+  const [recherche, setRecherche] = useState("");
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
-  const userIsAdmin = isAdmin(user);
+  // Seuls le propriétaire de l'établissement et l'admin entrent dans cette
+  // gestion (verifyTenant côté serveur) : tous deux gèrent les fiches.
+  const peutGerer = !!user;
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -106,32 +115,32 @@ export default function GestionNgo() {
   async function addMember() {
     if (!mForm.nom.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddMember(false);
     setMForm({ nom: "", prenom: "", telephone: "", numero_h: "", role: "bénévole", competence: "" });
     loadMembers(); loadAll();
   }
   async function deleteMember(id: number) {
     if (!confirm("Retirer ce membre ?")) return;
-    await fetch(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadMembers(); loadAll();
   }
 
   async function addProject() {
     if (!pForm.titre.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/projects`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddProject(false);
     setPForm({ titre: "", description: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", budget: "" });
     loadProjects(); loadAll();
   }
   async function updateStatut(id: number, statut: string) {
-    await fetch(`${BASE(tenantCode!)}/projects/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) { return; }
     loadProjects(); loadAll();
   }
   async function deleteProject(id: number) {
     if (!confirm("Supprimer ce projet ?")) return;
-    await fetch(`${BASE(tenantCode!)}/projects/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadProjects(); loadAll();
   }
 
@@ -140,28 +149,28 @@ export default function GestionNgo() {
     setSaving(true);
     const sel = projects.find((p: any) => String(p.id) === dForm.projet_id);
     const payload = { ...dForm, projet_titre: sel ? sel.titre : dForm.projet_titre };
-    await fetch(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify(payload) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/donations`, { method: "POST", headers: auth(), body: JSON.stringify(payload) }))) { setSaving(false); return; }
     setSaving(false); setShowAddDon(false);
     setDForm({ donateur_nom: "", montant: "", type_don: "financier", projet_id: "", projet_titre: "", date_don: new Date().toISOString().split("T")[0] });
     loadDonations(); loadAll();
   }
   async function deleteDonation(id: number) {
     if (!confirm("Supprimer ce don ?")) return;
-    await fetch(`${BASE(tenantCode!)}/donations/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/donations/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadDonations(); loadAll();
   }
 
   async function addAnn() {
     if (!aForm.titre.trim() || !aForm.contenu.trim()) return;
     setSaving(true);
-    await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) }))) { setSaving(false); return; }
     setSaving(false); setShowAddAnn(false);
     setAForm({ titre: "", contenu: "", type: "general" });
     loadAnnouncements(); loadAll();
   }
   async function deleteAnn(id: number) {
     if (!confirm("Supprimer cette annonce ?")) return;
-    await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) { return; }
     loadAnnouncements(); loadAll();
   }
 
@@ -231,6 +240,7 @@ export default function GestionNgo() {
         {/* ── DASHBOARD ── */}
         {tab === "dashboard" && dash && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeIn 0.2s ease" }}>
+            <BoutonRapport base={`/api/ngo-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={ROSE} />
 
             {/* KPIs */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
@@ -319,6 +329,7 @@ export default function GestionNgo() {
         {/* ── BÉNÉVOLES ── */}
         {tab === "members" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Bénévoles & membres ({members.length})</h2>
               <button onClick={() => setShowAddMember(true)} style={btnPrimary}>+ Ajouter</button>
@@ -347,7 +358,7 @@ export default function GestionNgo() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {members.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun membre enregistré</div>}
-              {members.map((m: any) => (
+              {filtrer(members, recherche).map((m: any) => (
                 <div key={m.id} style={{ background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: ROSE_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤝</div>
                   <div style={{ flex: 1 }}>
@@ -358,7 +369,8 @@ export default function GestionNgo() {
                     </div>
                   </div>
                   {m.numero_h && <span style={{ fontFamily: "monospace", fontSize: 11, background: "#f1f5f9", color: "#64748b", padding: "2px 8px", borderRadius: 6 }}>{m.numero_h}</span>}
-                  {userIsAdmin && <button onClick={() => deleteMember(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
+                  {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/members/${m.id}`, item: m, colonnes: ["nom", "prenom", "telephone", "numero_h", "role", "competence"], onSaved: () => { loadMembers(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                  {peutGerer && <button onClick={() => deleteMember(m.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>}
                 </div>
               ))}
             </div>
@@ -368,6 +380,7 @@ export default function GestionNgo() {
         {/* ── PROJETS ── */}
         {tab === "projects" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Projets solidaires ({projects.length})</h2>
               <button onClick={() => setShowAddProject(true)} style={btnPrimary}>+ Nouveau projet</button>
@@ -396,7 +409,7 @@ export default function GestionNgo() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun projet enregistré</div>}
-              {projects.map((p: any) => {
+              {filtrer(projects, recherche).map((p: any) => {
                 const sc = STATUT_COLORS[p.statut] || STATUT_COLORS.en_cours;
                 return (
                   <div key={p.id} style={{ background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
@@ -406,7 +419,8 @@ export default function GestionNgo() {
                         <select value={p.statut} onChange={e => updateStatut(p.id, e.target.value)} style={{ padding: "3px 8px", border: `1px solid ${sc.color}33`, borderRadius: 8, fontSize: 12, color: sc.color, background: sc.bg, fontWeight: 600, cursor: "pointer" }}>
                           <option value="planifie">Planifié</option><option value="en_cours">En cours</option><option value="termine">Terminé</option><option value="suspendu">Suspendu</option>
                         </select>
-                        {userIsAdmin && <button onClick={() => deleteProject(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
+                        {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/projects/${p.id}`, item: p, colonnes: ["titre", "description", "statut", "date_debut", "date_fin", "budget"], onSaved: () => { loadProjects(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                        {peutGerer && <button onClick={() => deleteProject(p.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Suppr.</button>}
                       </div>
                     </div>
                     {p.description && <div style={{ fontSize: 13, color: "#374151", marginBottom: 8 }}>{p.description}</div>}
@@ -425,6 +439,7 @@ export default function GestionNgo() {
         {/* ── COLLECTES / DONS ── */}
         {tab === "donations" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Collectes & dons ({donations.length})</h2>
               <button onClick={() => setShowAddDon(true)} style={btnPrimary}>+ Enregistrer un don</button>
@@ -458,7 +473,7 @@ export default function GestionNgo() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {donations.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucun don enregistré</div>}
-              {donations.map((d: any) => (
+              {filtrer(donations, recherche).map((d: any) => (
                 <div key={d.id} style={{ background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 10, background: ROSE_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>💰</div>
                   <div style={{ flex: 1 }}>
@@ -468,7 +483,8 @@ export default function GestionNgo() {
                     </div>
                   </div>
                   <span style={{ padding: "2px 10px", background: ROSE_BG, color: ROSE, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{d.type_don}</span>
-                  {userIsAdmin && <button onClick={() => deleteDonation(d.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
+                  {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/donations/${d.id}`, item: d, colonnes: ["donateur_nom", "montant", "type_don", "projet_id", "projet_titre", "date_don"], onSaved: () => { loadDonations(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                  {peutGerer && <button onClick={() => deleteDonation(d.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
                 </div>
               ))}
             </div>
@@ -478,6 +494,7 @@ export default function GestionNgo() {
         {/* ── ANNONCES ── */}
         {tab === "announcements" && (
           <div style={{ animation: "fadeIn 0.2s ease" }}>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Annonces ({announcements.length})</h2>
               <button onClick={() => setShowAddAnn(true)} style={btnPrimary}>+ Publier</button>
@@ -503,7 +520,7 @@ export default function GestionNgo() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {announcements.length === 0 && <div style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>Aucune annonce publiée</div>}
-              {announcements.map((a: any) => (
+              {filtrer(announcements, recherche).map((a: any) => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 12, padding: "16px 20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                     <div>
@@ -512,7 +529,8 @@ export default function GestionNgo() {
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ padding: "2px 10px", background: ROSE_BG, color: ROSE, borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{a.type}</span>
-                      {userIsAdmin && <button onClick={() => deleteAnn(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
+                      {peutGerer && <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: () => { loadAnnouncements(); loadAll(); } })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>}
+                      {peutGerer && <button onClick={() => deleteAnn(a.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Suppr.</button>}
                     </div>
                   </div>
                   <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6 }}>{a.contenu}</div>
@@ -523,6 +541,7 @@ export default function GestionNgo() {
         )}
 
       </div>
+      {edition && <ModifierFiche {...edition} couleur={ROSE} onClose={() => setEdition(null)} />}
     </div>
   );
 }

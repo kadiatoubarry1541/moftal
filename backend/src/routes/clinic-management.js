@@ -3,8 +3,14 @@ import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { attraperErreursAsync } from '../utils/routerAsync.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
-const router = express.Router();
+const router = attraperErreursAsync(express.Router());
+
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
 
 export async function ensureStaffExtraColumns() {
   await sequelize.query(`ALTER TABLE clinic_staff ADD COLUMN IF NOT EXISTS numero_h VARCHAR(50);`);
@@ -13,7 +19,7 @@ export async function ensureStaffExtraColumns() {
 // Vérifie que le tenant appartient à l'utilisateur connecté (propriétaire, membre du
 // personnel relié à son compte Moftal, ou admin plateforme). req.myRole indique le
 // rôle utilisé côté frontend pour limiter les sections visibles (droits par rôle).
-async function verifyTenant(req, res, next) {
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
   const isAdminUser = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
@@ -908,5 +914,17 @@ router.put('/:tenantCode/appointment-requests/:id/reject', authenticate, verifyT
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [
+    { label: 'Paiements enregistrés', table: 'clinic_payments_mgmt', montant: 'montant', date: 'COALESCE(date_paiement, created_at)' },
+    { label: 'Factures encaissées', table: 'clinic_invoices', montant: 'montant_paye', date: 'date_facture' },
+  ],
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

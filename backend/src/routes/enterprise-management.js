@@ -2,10 +2,15 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
 
-async function verifyTenant(req, res, next) {
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const isAdminUser = !!(req.user?.isMasterAdmin || req.user?.role === 'admin' || req.user?.role === 'super-admin');
   const userNumeroH = req.user?.numeroH || req.userId;
@@ -119,5 +124,17 @@ router.post('/:tenantCode/announcements', authenticate, verifyTenant, async (req
 router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, async (req, res) => {
   try { await sequelize.query(`UPDATE enterprise_announcements SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.UPDATE }); res.json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'employees': { table: 'enterprise_employees', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'poste', 'departement'] },
+  'clients': { table: 'enterprise_clients', colonnes: ['nom', 'telephone', 'adresse', 'secteur'] },
+  'contracts': { table: 'enterprise_contracts', colonnes: ['titre', 'client_nom', 'client_id', 'budget', 'statut', 'date_debut', 'date_fin', 'description'] },
+  'announcements': { table: 'enterprise_announcements', colonnes: ['titre', 'contenu', 'type'] },
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

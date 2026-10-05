@@ -282,12 +282,20 @@ router.get('/status/:transactionId', authenticate, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    const signature = req.headers['x-webhook-signature'] || '';
-    const bodyStr   = Buffer.isBuffer(req.body) ? req.body.toString() : JSON.stringify(req.body);
+    const signature = String(req.headers['x-webhook-signature'] || '');
+    // Texte exact reçu (req.rawBody, voir server.js) : la signature Djomy porte
+    // sur ces octets, pas sur un JSON re-sérialisé.
+    const bodyStr = req.rawBody || (Buffer.isBuffer(req.body) ? req.body.toString() : JSON.stringify(req.body));
 
-    // Vérification de la signature HMAC
+    // Vérification de la signature HMAC — jamais de notification acceptée sans clé
+    if (!DJOMY_CLIENT_SECRET) {
+      console.error('djomy/webhook: DJOMY_CLIENT_SECRET absent, notification refusée');
+      return res.status(503).json({ error: 'Paiement non configuré' });
+    }
     const expectedSig = `v1:${generateHmac(bodyStr, DJOMY_CLIENT_SECRET)}`;
-    if (DJOMY_CLIENT_SECRET && signature !== expectedSig) {
+    const a = Buffer.from(signature);
+    const b = Buffer.from(expectedSig);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
       console.warn('djomy/webhook: signature invalide');
       return res.status(400).json({ error: 'Signature invalide' });
     }
@@ -305,6 +313,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
       if (!payment) {
         console.warn('djomy/webhook: paiement introuvable pour', transactionId, merchantPaymentReference);
+      } else if (paidAmount != null && Number(paidAmount) < Number(payment.amount)) {
+        // Montant payé inférieur au montant dû : on ne débloque rien
+        console.warn(`djomy/webhook: montant insuffisant (${paidAmount} < ${payment.amount}) pour`, transactionId);
       } else {
         await completeIfNeeded(payment);
       }

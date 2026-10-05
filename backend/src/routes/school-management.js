@@ -4,8 +4,15 @@ import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
+import { attraperErreursAsync } from '../utils/routerAsync.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
-const router = express.Router();
+const router = attraperErreursAsync(express.Router());
+
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+const verifyMember = avecAccesEmployes(verifyMemberProprietaire);
 
 async function ensureStaffPhotoColumn() {
   await sequelize.query(`ALTER TABLE school_staff ADD COLUMN IF NOT EXISTS photo_url TEXT;`);
@@ -35,7 +42,7 @@ router.use(async (req, res, next) => {
   next();
 });
 
-async function verifyTenant(req, res, next) {
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
   const isAdminUser = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
@@ -393,7 +400,7 @@ router.delete('/:tenantCode/grades/:id', authenticate, verifyTenant, async (req,
 router.get('/:tenantCode/fees', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT f.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
+      `SELECT f.*,s.nom as student_nom,s.prenom as student_prenom,s.numero_matricule,s.telephone_parent FROM school_fees f LEFT JOIN school_students s ON f.student_id=s.id WHERE f.tenant_code=:code ORDER BY f.created_at DESC`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, fees: rows });
@@ -429,7 +436,7 @@ router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, 
 
 // ─── MIDDLEWARE MEMBRE ────────────────────────────────────────────────────────
 
-async function verifyMember(req, res, next) {
+async function verifyMemberProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   try {
     const [tenant] = await sequelize.query(
@@ -712,5 +719,14 @@ router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Frais encaissés', table: 'school_fees', montant: 'montant_paye', date: 'date_paiement', where: 'montant_paye > 0' }],
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

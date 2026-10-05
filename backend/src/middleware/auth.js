@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import { config } from '../../config.js';
+import { estEmployeDeLaGestion } from '../utils/accesEmployes.js';
 
 // NumeroH des comptes administrateurs spéciaux
 export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
@@ -127,7 +128,10 @@ export const authenticate = async (req, res, next) => {
       if (isProvisionalNumeroH(user.numeroH) && req.method !== 'GET'
           && !PROVISIONAL_ALLOWED_PATHS.some((p) => (req.originalUrl || '').startsWith(p))
           && !(PROVISIONAL_PRO_SPACE_ROUTES.some((r) => r.test(req.originalUrl || ''))
-               && await ownsApprovedProAccount(user.numeroH))) {
+               && await ownsApprovedProAccount(user.numeroH))
+          // Employé ajouté par le propriétaire : il travaille dans cette gestion
+          // même si son propre profil n'est pas encore complété.
+          && !(await estEmployeDeLaGestion(user.numeroH, req.originalUrl))) {
         return res.status(403).json({
           success: false,
           code: 'PROFILE_INCOMPLETE',

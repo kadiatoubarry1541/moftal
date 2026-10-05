@@ -154,9 +154,9 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
 
       case 'security_agency': {
         const [agentCnt, missCnt, agents] = await Promise.all([
-          q1(`SELECT COUNT(*) as c FROM security_agents WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(*) as c FROM security_mgmt_agents WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM security_missions WHERE tenant_code=:code AND statut='en_cours'`, { code }),
-          q(`SELECT nom,prenom,grade,specialite FROM security_agents WHERE tenant_code=:code AND is_active=true ORDER BY grade,nom LIMIT 8`, { code }),
+          q(`SELECT nom,prenom,grade,specialite FROM security_mgmt_agents WHERE tenant_code=:code AND is_active=true ORDER BY grade,nom LIMIT 8`, { code }),
         ]);
         return res.json({ success: true, stats: { agents: +(agentCnt.c||0), missions: +(missCnt.c||0) }, agents });
       }

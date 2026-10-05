@@ -8,10 +8,15 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
 
-async function verifyTenant(req, res, next) {
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
   const isAdminUser = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
@@ -79,6 +84,7 @@ router.post('/:tenantCode/products', authenticate, verifyTenant, async (req, res
 router.patch('/:tenantCode/products/:id/stock', authenticate, verifyTenant, async (req, res) => {
   try {
     const { delta } = req.body;
+    if (!Number.isFinite(+delta)) return res.status(400).json({ success: false, message: 'Quantité invalide.' });
     await sequelize.query(`UPDATE producer_products SET stock=GREATEST(0,stock+:delta) WHERE id=:id AND tenant_code=:code`, { replacements: { delta:+delta, id:req.params.id, code:req.params.tenantCode } });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -214,5 +220,14 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Commandes livrées', table: 'producer_orders', montant: 'montant_total', date: 'COALESCE(date_livraison, created_at)', where: "statut = 'livre'" }],
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

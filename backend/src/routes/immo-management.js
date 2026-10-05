@@ -2,10 +2,15 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
 
-async function verifyTenant(req, res, next) {
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
   const isAdminUser = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
@@ -146,7 +151,7 @@ router.delete('/:tenantCode/tenants/:id', authenticate, verifyTenant, async (req
 router.get('/:tenantCode/payments', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT p.*, t.nom as locataire_nom, t.prenom as locataire_prenom, pr.nom as property_nom FROM immo_payments p LEFT JOIN immo_tenants t ON p.tenant_id=t.id LEFT JOIN immo_properties pr ON p.property_id=pr.id WHERE p.tenant_code=:code ORDER BY p.date_paiement DESC LIMIT 100`,
+      `SELECT p.*, t.nom as locataire_nom, t.prenom as locataire_prenom, t.telephone as locataire_tel, pr.nom as property_nom FROM immo_payments p LEFT JOIN immo_tenants t ON p.tenant_id=t.id LEFT JOIN immo_properties pr ON p.property_id=pr.id WHERE p.tenant_code=:code ORDER BY p.date_paiement DESC LIMIT 100`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, payments: rows });
@@ -227,5 +232,15 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Loyers encaissés', table: 'immo_payments', montant: 'montant', date: 'date_paiement', where: "statut = 'paye'" }],
+  depenses: [{ label: 'Entretien et réparations', table: 'immo_maintenance', montant: 'cout_estime', date: 'created_at' }],
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

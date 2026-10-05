@@ -6,12 +6,13 @@ import FamilyFund from '../models/FamilyFund.js';
 import FamilyFundTransaction from '../models/FamilyFundTransaction.js';
 import { Op } from 'sequelize';
 import { sequelize } from '../../config/database.js';
+import { attraperErreursAsync } from '../utils/routerAsync.js';
 
 // Commission prélevée par la plateforme sur chaque dépôt externe (via Djomy)
 // Les transferts internes (famille → pro) sont GRATUITS — pas de commission
 const TAUX_COMMISSION_PLATEFORME = 0.01; // 1%
 
-const router = express.Router();
+const router = attraperErreursAsync(express.Router());
 
 // ─────────────────────────────────────────
 // GET /api/moftal-pay/mon-moftal-pay-pro

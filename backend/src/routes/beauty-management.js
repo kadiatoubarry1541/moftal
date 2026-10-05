@@ -8,10 +8,15 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
 
-async function verifyTenant(req, res, next) {
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
   const isAdminUser = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
@@ -199,5 +204,14 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Prestations terminées', table: 'beauty_bookings bb JOIN beauty_services bs ON bb.service_id=bs.id', alias: 'bb', montant: 'bs.prix', date: 'bb.date_rdv', where: "bb.statut = 'termine'" }],
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

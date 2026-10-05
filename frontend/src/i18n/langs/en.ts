@@ -663,7 +663,7 @@ const en: Record<string, string> = {
   'header.my_spaces': 'My spaces',
 
   // Footer
-  'footer.copy': '© 2025 Moftal',
+  'footer.copy': '© {year} Moftal',
   'footer.tagline': "Together for Adam's children",
   'footer.system': "Genealogical registration system",
   'footer.conditions': "Terms of Use",

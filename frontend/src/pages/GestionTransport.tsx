@@ -4,13 +4,23 @@ import { config } from "../config/api";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { imprimerRecu } from "../utils/imprimerRecu";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
+import { envoyerRappel, gnfTexte } from "../utils/rappelWhatsApp";
 
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });
 
+// Ne lève jamais d'exception : en cas d'échec, renvoie { success: false, message }
 async function api(path: string, opts: RequestInit = {}) {
-  const r = await fetch(`${config.API_BASE_URL}/transport-mgmt${path}`, { ...opts, headers: { ...h(), ...(opts.headers || {}) } });
-  return r.json();
+  try {
+    const r = await fetch(`${config.API_BASE_URL}/transport-mgmt${path}`, { ...opts, headers: { ...h(), ...(opts.headers || {}) } });
+    const d = await r.json().catch(() => ({}));
+    return r.ok ? d : { success: false, ...d, message: d.message || `Erreur du serveur (${r.status}).` };
+  } catch {
+    return { success: false, message: "Connexion coupée : rien n'a été enregistré. Réessayez." };
+  }
 }
 
 type Tab = "dashboard" | "vehicles" | "drivers" | "trips" | "bookings" | "deliveries" | "announcements";
@@ -20,10 +30,12 @@ const BLUE_LIGHT = "#eff6ff";
 const BLUE_BORDER = "#bfdbfe";
 
 export default function GestionTransport() {
+  const [recherche, setRecherche] = useState("");
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const code = tenantCode!;
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -76,8 +88,8 @@ export default function GestionTransport() {
     if (r.success) { flash("Véhicule ajouté ✓"); setVForm({ immatriculation: "", type_vehicule: "voiture", marque: "", capacite: "4", driver_id: "", description: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchVehicle = async (id: number, statut: string) => { await api(`/${code}/vehicles/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
-  const deleteVehicle = async (id: number) => { if (!confirm("Supprimer ?")) return; await api(`/${code}/vehicles/${id}`, { method: "DELETE" }); loadAll(); };
+  const patchVehicle = async (id: number, statut: string) => { const r = await api(`/${code}/vehicles/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
+  const deleteVehicle = async (id: number) => { if (!confirm("Supprimer ?")) return; const r = await api(`/${code}/vehicles/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // DRIVERS
   const addDriver = async () => {
@@ -86,8 +98,8 @@ export default function GestionTransport() {
     if (r.success) { flash("Chauffeur ajouté ✓"); setDForm({ nom: "", prenom: "", telephone: "", permis: "", type_permis: "B", salaire: "", notes: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchDriver = async (id: number, statut: string) => { await api(`/${code}/drivers/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
-  const deleteDriver = async (id: number) => { if (!confirm("Supprimer ?")) return; await api(`/${code}/drivers/${id}`, { method: "DELETE" }); loadAll(); };
+  const patchDriver = async (id: number, statut: string) => { const r = await api(`/${code}/drivers/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
+  const deleteDriver = async (id: number) => { if (!confirm("Supprimer ?")) return; const r = await api(`/${code}/drivers/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // TRIPS
   const addTrip = async () => {
@@ -96,8 +108,8 @@ export default function GestionTransport() {
     if (r.success) { flash("Trajet ajouté ✓"); setTForm({ lieu_depart: "", lieu_arrivee: "", date_depart: "", heure_depart: "", prix: "", places_total: "4", driver_id: "", vehicle_id: "", notes: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchTrip = async (id: number, statut: string) => { await api(`/${code}/trips/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
-  const deleteTrip = async (id: number) => { if (!confirm("Supprimer ?")) return; await api(`/${code}/trips/${id}`, { method: "DELETE" }); loadAll(); };
+  const patchTrip = async (id: number, statut: string) => { const r = await api(`/${code}/trips/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
+  const deleteTrip = async (id: number) => { if (!confirm("Supprimer ?")) return; const r = await api(`/${code}/trips/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // BOOKINGS
   const addBooking = async () => {
@@ -106,7 +118,7 @@ export default function GestionTransport() {
     if (r.success) { flash("Réservation ajoutée ✓"); setBForm({ trip_id: "", client_nom: "", client_telephone: "", places: "1", montant: "", notes: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchBooking = async (id: number, statut: string) => { await api(`/${code}/bookings/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
+  const patchBooking = async (id: number, statut: string) => { const r = await api(`/${code}/bookings/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // DELIVERIES
   const addDelivery = async () => {
@@ -115,8 +127,8 @@ export default function GestionTransport() {
     if (r.success) { flash("Livraison créée ✓"); setLivForm({ client_nom: "", client_telephone: "", adresse_collecte: "", adresse_livraison: "", description: "", poids: "", montant: "", driver_id: "", vehicle_id: "", notes: "" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const patchDelivery = async (id: number, statut: string) => { await api(`/${code}/deliveries/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); loadAll(); };
-  const deleteDelivery = async (id: number) => { if (!confirm("Supprimer ?")) return; await api(`/${code}/deliveries/${id}`, { method: "DELETE" }); loadAll(); };
+  const patchDelivery = async (id: number, statut: string) => { const r = await api(`/${code}/deliveries/${id}`, { method: "PATCH", body: JSON.stringify({ statut }) }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
+  const deleteDelivery = async (id: number) => { if (!confirm("Supprimer ?")) return; const r = await api(`/${code}/deliveries/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   // ANNOUNCEMENTS
   const addAnnouncement = async () => {
@@ -125,7 +137,7 @@ export default function GestionTransport() {
     if (r.success) { flash("Annonce publiée ✓"); setAForm({ titre: "", contenu: "", type: "general" }); loadAll(); }
     else flash("Erreur : " + r.message);
   };
-  const deleteAnnouncement = async (id: number) => { await api(`/${code}/announcements/${id}`, { method: "DELETE" }); loadAll(); };
+  const deleteAnnouncement = async (id: number) => { const r = await api(`/${code}/announcements/${id}`, { method: "DELETE" }); if (r.success === false) flash("Erreur : " + (r.message || "rien n'a été enregistré")); loadAll(); };
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "dashboard",     label: "Tableau de bord", icon: "📊" },
@@ -202,6 +214,7 @@ export default function GestionTransport() {
         {/* ── DASHBOARD ── */}
         {!loading && tab === "dashboard" && dash && (
           <div>
+            <BoutonRapport base={`${config.API_BASE_URL}/transport-mgmt/${code}`} etablissement={tenant || undefined} couleur={BLUE} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: 16, marginBottom: 28 }}>
               {[
                 { label: "Véhicules actifs",         val: dash.vehiculesActifs,        icon: "🚌" },
@@ -240,6 +253,7 @@ export default function GestionTransport() {
         {/* ── VEHICLES ── */}
         {!loading && tab === "vehicles" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Ajouter un véhicule</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -264,7 +278,7 @@ export default function GestionTransport() {
                 </thead>
                 <tbody>
                   {vehicles.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: 30, color: "#94a3b8" }}>Aucun véhicule</td></tr>}
-                  {vehicles.map(v => (
+                  {filtrer(vehicles, recherche).map(v => (
                     <tr key={v.id} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 14px", fontWeight: 600 }}>{v.immatriculation}</td>
                       <td style={{ padding: "10px 14px", fontSize: 13 }}>{v.type_vehicule}</td>
@@ -288,6 +302,7 @@ export default function GestionTransport() {
         {/* ── DRIVERS ── */}
         {!loading && tab === "drivers" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Ajouter un chauffeur</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -310,7 +325,7 @@ export default function GestionTransport() {
                 </thead>
                 <tbody>
                   {drivers.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 30, color: "#94a3b8" }}>Aucun chauffeur</td></tr>}
-                  {drivers.map(d => (
+                  {filtrer(drivers, recherche).map(d => (
                     <tr key={d.id} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 14px", fontWeight: 600 }}>{d.nom} {d.prenom}</td>
                       <td style={{ padding: "10px 14px", fontSize: 13 }}>{d.telephone || "—"}</td>
@@ -333,6 +348,7 @@ export default function GestionTransport() {
         {/* ── TRIPS ── */}
         {!loading && tab === "trips" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Nouveau trajet</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -356,7 +372,7 @@ export default function GestionTransport() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {trips.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucun trajet</div>}
-              {trips.map(t => (
+              {filtrer(trips, recherche).map(t => (
                 <div key={t.id} style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>📍 {t.lieu_depart} → {t.lieu_arrivee}</div>
@@ -384,6 +400,7 @@ export default function GestionTransport() {
         {/* ── BOOKINGS ── */}
         {!loading && tab === "bookings" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Nouvelle réservation</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -406,7 +423,7 @@ export default function GestionTransport() {
                 </thead>
                 <tbody>
                   {bookings.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: 30, color: "#94a3b8" }}>Aucune réservation</td></tr>}
-                  {bookings.map(b => (
+                  {filtrer(bookings, recherche).map(b => (
                     <tr key={b.id} style={{ borderTop: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 14px", fontWeight: 600 }}>{b.client_nom}<br /><span style={{ fontSize: 11, color: "#64748b" }}>{b.client_telephone}</span></td>
                       <td style={{ padding: "10px 14px", fontSize: 13 }}>{b.lieu_depart ? `${b.lieu_depart} → ${b.lieu_arrivee}` : "—"}</td>
@@ -417,7 +434,17 @@ export default function GestionTransport() {
                           {["en_attente","confirme","annule"].map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </td>
-                      <td style={{ padding: "10px 14px", fontSize: 11, color: "#94a3b8" }}>{b.created_at?.slice(0, 10)}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 11, color: "#94a3b8" }}>
+                        {b.created_at?.slice(0, 10)}
+                        {b.statut !== "annule" && <button onClick={() => envoyerRappel(b.client_telephone, `Bonjour ${b.client_nom || ""}, ${tenant?.name || "votre transporteur"} vous rappelle votre voyage${b.lieu_depart ? ` ${b.lieu_depart} → ${b.lieu_arrivee}` : ""}${b.date_depart ? ` le ${new Date(b.date_depart).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}` : ""} (${b.places || 1} place(s)${+b.montant ? `, ${gnfTexte(b.montant)}` : ""}). Bon voyage !`)} style={{ display: "block", marginTop: 4, fontSize: 11, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#15803d", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>📲 Rappel</button>}
+                        <button onClick={() => imprimerRecu({
+                          titre: "Billet de voyage", numero: b.id, date: b.created_at, etablissement: tenant || {}, couleur: BLUE,
+                          client: b.client_nom, clientTelephone: b.client_telephone,
+                          details: [...(b.lieu_depart ? [{ label: "Trajet", valeur: `${b.lieu_depart} → ${b.lieu_arrivee}` }] : []), ...(b.date_depart ? [{ label: "Départ", valeur: new Date(b.date_depart).toLocaleString("fr-FR") }] : [])],
+                          lignes: [{ libelle: "Place(s)", quantite: b.places, prixUnitaire: b.places ? Math.round((+b.montant || 0) / +b.places) : undefined, montant: +b.montant || 0 }],
+                          total: +b.montant || 0, note: b.notes,
+                        })} style={{ display: "block", marginTop: 4, fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Billet</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -429,6 +456,7 @@ export default function GestionTransport() {
         {/* ── LIVRAISONS ── */}
         {!loading && tab === "deliveries" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>📦 Nouvelle livraison</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -469,7 +497,7 @@ export default function GestionTransport() {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {deliveries.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune livraison enregistrée</div>}
-              {deliveries.map(liv => (
+              {filtrer(deliveries, recherche).map(liv => (
                 <div key={liv.id} style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: "14px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
                     <div style={{ flex: 1 }}>
@@ -506,6 +534,7 @@ export default function GestionTransport() {
         {/* ── ANNOUNCEMENTS ── */}
         {!loading && tab === "announcements" && (
           <div>
+            <BarreRecherche valeur={recherche} onChange={setRecherche} />
             <div style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: 20, marginBottom: 24 }}>
               <h3 style={{ margin: "0 0 16px", color: BLUE }}>Nouvelle annonce</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -519,7 +548,7 @@ export default function GestionTransport() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {announcements.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 40 }}>Aucune annonce</div>}
-              {announcements.map(a => (
+              {filtrer(announcements, recherche).map(a => (
                 <div key={a.id} style={{ background: "white", border: `1px solid ${BLUE_BORDER}`, borderRadius: 12, padding: "14px 18px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>

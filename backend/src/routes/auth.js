@@ -29,37 +29,9 @@ function isReservedGeneration(generation) {
 
 // Toutes les données utilisateur proviennent uniquement de la base de données PostgreSQL.
 
-// Fonction pour créer un utilisateur de test en base (optionnel, au démarrage)
-const loadTestUsers = async () => {
-  try {
-    // Vérifier s'il y a déjà un utilisateur de test
-    const existingTestUser = await User.findByNumeroH('G96C1P2R3E2F1 4');
-    if (existingTestUser) {
-      return;
-    }
-    
-    // Créer un utilisateur de test par défaut
-    const testUser = await User.create({
-      numeroH: 'G96C1P2R3E2F1 4',
-      prenom: 'Test',
-      nomFamille: 'User',
-      email: 'test@example.com',
-      password: '$2a$12$LmABvyZWgvyU8dVt0.Lzueh6bNWJXW7J1oXM5qqYSrTNzJHbNj9jO', // bcrypt hash of 'test123'
-      genre: 'AUTRE',
-      dateNaissance: '1990-01-01',
-      generation: 'G96',
-      isActive: true,
-      isVerified: true,
-      role: 'user'
-    });
-    
-  } catch (error) {
-    console.error('Erreur chargement utilisateurs de test:', error);
-  }
-};
-
-// Charger l'utilisateur de test en base au démarrage (si pas déjà présent)
-loadTestUsers();
+// (Plus aucun compte de test créé automatiquement au démarrage : il avait
+// un mot de passe connu de tous. Les comptes de test existants se suppriment
+// depuis l'espace admin.)
 
 // Fonction pour gérer les confirmations par les parents vivants
 async function handleParentConfirmations(user) {
@@ -1213,7 +1185,7 @@ router.post('/profile/video', authenticate, (req, res) => {
 // @desc    Mettre à jour l'une des 2 photos de la vitrine de profil (badge)
 // @access  Private
 function registerVitrinePhotoRoute(slot) {
-  router.post(`/profile/vitrine-${slot}`, (req, res) => {
+  router.post(`/profile/vitrine-${slot}`, authenticate, (req, res) => {
     upload.single('photo')(req, res, async (multerErr) => {
       if (multerErr) {
         return res.status(400).json({ success: false, message: multerErr.message || 'Erreur lors de l\'upload du fichier' });
@@ -1222,6 +1194,7 @@ function registerVitrinePhotoRoute(slot) {
         const { numeroH } = req.body;
         if (!numeroH) return res.status(400).json({ success: false, message: 'NumeroH requis' });
         if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier fourni' });
+        if (!peutModifierProfil(req, numeroH)) return refusModification(res);
 
         const user = await User.findByNumeroH(numeroH);
         if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });

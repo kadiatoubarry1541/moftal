@@ -4,8 +4,13 @@ import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
+
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
 
 export async function ensureStaffTable() {
   await sequelize.query(`
@@ -26,7 +31,7 @@ export async function ensureStaffTable() {
 // Vérifie que le tenant appartient à l'utilisateur connecté (propriétaire, membre du
 // personnel relié à son compte Moftal, ou admin plateforme). req.myRole indique le
 // rôle utilisé côté frontend pour limiter les sections visibles (droits par rôle).
-async function verifyTenant(req, res, next) {
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
   const isAdminUser = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
@@ -576,5 +581,18 @@ router.post('/:tenantCode/purchases', authenticate, verifyTenant, async (req, re
     res.json({ success: true, purchase: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Ventes encaissées', table: 'commerce_sales', montant: 'montant_recu', date: 'date_vente' }],
+  depenses: [
+    { label: 'Dépenses', table: 'commerce_expenses', montant: 'montant', date: 'date_depense' },
+    { label: 'Achats fournisseurs', table: 'commerce_purchases', montant: 'total', date: 'created_at' },
+  ],
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

@@ -665,7 +665,7 @@ const man: Record<string, string> = {
   'header.my_spaces': 'N fanɔw',
 
   // Footer
-  'footer.copy': '© 2025 Moftal',
+  'footer.copy': '© {year} Moftal',
   'footer.tagline': "Bɛɛ faamu Adama denw ye",
   'footer.system': "Sisteemu ka sigi denbaya",
   'footer.conditions': "Sariyaw",

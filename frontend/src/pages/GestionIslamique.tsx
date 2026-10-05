@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import { getSessionUser } from "../utils/auth";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
@@ -138,7 +139,7 @@ export default function GestionIslamique({ mode }: Props) {
     return d;
   }
   async function del(path: string) {
-    await fetch(`${BASE(tenantCode!)}/${path}`, { method:"DELETE", headers:auth() });
+    if (!(await envoyerGestion(`${BASE(tenantCode!)}/${path}`, { method:"DELETE", headers:auth() }))) { return; }
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -148,37 +149,37 @@ export default function GestionIslamique({ mode }: Props) {
       ? { nom:iForm.nom, prenom:iForm.prenom, telephone:iForm.telephone, numero_h:iForm.numero_h, rang:editingRang }
       : { nom:iForm.nom, prenom:iForm.prenom, telephone:iForm.telephone, numero_h:iForm.numero_h, specialite:iForm.specialite, mosquee:iForm.mosquee };
     const d = await post("imams", body);
-    if (d.success) { setShowAdd(null); setIForm({ nom:"", prenom:"", telephone:"", numero_h:"", rang:1, specialite:"Général", mosquee:"" }); load("imams"); }
+    if (d.success) { setShowAdd(null); setIForm({ nom:"", prenom:"", telephone:"", numero_h:"", rang:1, specialite:"Général", mosquee:"" }); load("imams"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
   async function saveMember() {
     if (!mForm.nom.trim()) return;
     const d = await post("members", mForm);
-    if (d.success) { setShowAdd(null); setMForm({ nom:"", prenom:"", telephone:"", numero_h:"", role:"fidèle" }); load("members"); }
+    if (d.success) { setShowAdd(null); setMForm({ nom:"", prenom:"", telephone:"", numero_h:"", role:"fidèle" }); load("members"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
   async function saveDonation() {
     if (!dForm.montant) return;
     const d = await post("donations", { ...dForm, montant: +dForm.montant });
-    if (d.success) { setShowAdd(null); setDForm({ donateur_nom:"", montant:"", type_don:"sadaqa" }); load("donations"); load("info+dashboard"); }
+    if (d.success) { setShowAdd(null); setDForm({ donateur_nom:"", montant:"", type_don:"sadaqa" }); load("donations"); load("info+dashboard"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
   async function saveQuran() {
     if (!qForm.nom.trim()) return;
     const d = await post("quran-students", qForm);
-    if (d.success) { setShowAdd(null); setQForm({ nom:"", prenom:"", niveau_coran:"Débutant", telephone_parent:"" }); load("quran-students"); }
+    if (d.success) { setShowAdd(null); setQForm({ nom:"", prenom:"", niveau_coran:"Débutant", telephone_parent:"" }); load("quran-students"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
   async function saveAnnouncement() {
     if (!aForm.titre.trim() || !aForm.contenu.trim()) return;
     const d = await post("announcements", aForm);
-    if (d.success) { setShowAdd(null); setAForm({ titre:"", contenu:"", type:"general" }); load("announcements"); }
+    if (d.success) { setShowAdd(null); setAForm({ titre:"", contenu:"", type:"general" }); load("announcements"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
   async function savePredication() {
     if (!pForm.titre.trim()) return;
     const d = await post("predications", pForm);
-    if (d.success) { setShowAdd(null); setPForm({ imam_nom:"", titre:"", type_pred:"khutba", date_pred:new Date().toISOString().split("T")[0], mosquee:"", notes:"" }); load("predications"); }
+    if (d.success) { setShowAdd(null); setPForm({ imam_nom:"", titre:"", type_pred:"khutba", date_pred:new Date().toISOString().split("T")[0], mosquee:"", notes:"" }); load("predications"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
   async function saveMosque() {
     if (!msqForm.nom.trim()) return;
     const d = await post("mosques", msqForm);
-    if (d.success) { setShowAdd(null); setMsqForm({ nom:"", adresse:"", responsable:"", telephone:"" }); load("mosques"); }
+    if (d.success) { setShowAdd(null); setMsqForm({ nom:"", adresse:"", responsable:"", telephone:"" }); load("mosques"); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   // ── Styles ──────────────────────────────────────────────────────────────────

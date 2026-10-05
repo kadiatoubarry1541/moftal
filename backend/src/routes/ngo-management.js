@@ -2,10 +2,16 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
+import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
 
-async function verifyTenant(req, res, next) {
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const isAdminUser = !!(req.user?.isMasterAdmin || req.user?.role === 'admin' || req.user?.role === 'super-admin');
   const userNumeroH = req.user?.numeroH || req.userId;
@@ -164,5 +170,23 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'members': { table: 'ngo_members', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'role', 'competence'] },
+  'projects': { table: 'ngo_projects', colonnes: ['titre', 'description', 'statut', 'date_debut', 'date_fin', 'budget'] },
+  'donations': { table: 'ngo_donations', colonnes: ['donateur_nom', 'montant', 'type_don', 'projet_id', 'projet_titre', 'date_don'] },
+  'announcements': { table: 'ngo_announcements', colonnes: ['titre', 'contenu', 'type'] },
+});
+
+
+// ── Rapport du mois (recettes, dépenses, bénéfice) ──
+ajouterRouteRapport(router, [authenticate, verifyTenant], {
+  recettes: [{ label: 'Dons reçus', table: 'ngo_donations', montant: 'montant', date: 'COALESCE(date_don, created_at)' }],
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

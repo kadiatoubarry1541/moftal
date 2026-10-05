@@ -2,10 +2,15 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
+import { ajouterRoutesModifier } from '../utils/routeModifier.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
 
-async function verifyTenant(req, res, next) {
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const isAdminUser = !!(req.user?.isMasterAdmin || req.user?.role === 'admin' || req.user?.role === 'super-admin');
   const userNumeroH = req.user?.numeroH || req.userId;
@@ -163,5 +168,17 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
+
+
+// ── Modifier une fiche (toutes les ressources ci-dessus) ──
+ajouterRoutesModifier(router, [authenticate, verifyTenant], {
+  'reporters': { table: 'journalist_reporters', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'specialite', 'role'] },
+  'articles': { table: 'journalist_articles', colonnes: ['reporter_id', 'reporter_nom', 'titre', 'contenu', 'categorie', 'statut', 'date_pub'] },
+  'subscribers': { table: 'journalist_subscribers', colonnes: ['nom', 'telephone', 'email', 'type_abo'] },
+  'announcements': { table: 'journalist_announcements', colonnes: ['titre', 'contenu', 'type'] },
+});
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

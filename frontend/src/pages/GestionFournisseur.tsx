@@ -5,6 +5,10 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
+import { envoyerGestion } from "../utils/envoyerGestion";
+import ModifierFiche from "../components/ModifierFiche";
+import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/supplier-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -24,12 +28,15 @@ const STATUT_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 export default function GestionFournisseur() {
+  const [recherche, setRecherche] = useState("");
+  const [edition, setEdition] = useState<any>(null);
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const user = getSessionUser();
   const userIsAdmin = isAdmin(user);
 
   const [tab, setTab] = useState<Tab>("dashboard");
+  useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -82,36 +89,32 @@ export default function GestionFournisseur() {
     return d;
   };
 
-  const del = async (url: string) => {
-    await fetch(url, { method: "DELETE", headers: auth() });
-  };
+  const del = (url: string) => envoyerGestion(url, { method: "DELETE", headers: auth() });
 
-  const patchStatut = async (url: string, statut: string) => {
-    await fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
-  };
+  const patchStatut = (url: string, statut: string) => envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });
 
   const handleAddProduct = async () => {
     if (!prForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/products`, { ...prForm, prix_gros: +prForm.prix_gros, prix_detail: +prForm.prix_detail, stock: +prForm.stock });
-    if (d.success) { setShowAddProduct(false); setPrForm({ nom: "", categorie: "", prix_gros: "", prix_detail: "", stock: "", unite: "unité" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/products`, { headers: h }).then(r => r.json()).then(d => d.success && setProducts(d.products || [])); }
+    if (d.success) { setShowAddProduct(false); setPrForm({ nom: "", categorie: "", prix_gros: "", prix_detail: "", stock: "", unite: "unité" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/products`, { headers: h }).then(r => r.json()).then(d => d.success && setProducts(d.products || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddClient = async () => {
     if (!clForm.nom) return;
     const d = await post(`${BASE(tenantCode!)}/clients`, clForm);
-    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", type_client: "revendeur" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/clients`, { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || [])); }
+    if (d.success) { setShowAddClient(false); setClForm({ nom: "", telephone: "", adresse: "", type_client: "revendeur" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/clients`, { headers: h }).then(r => r.json()).then(d => d.success && setClients(d.clients || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddOrder = async () => {
     if (!orForm.montant_total) return;
     const d = await post(`${BASE(tenantCode!)}/orders`, { ...orForm, montant_total: +orForm.montant_total });
-    if (d.success) { setShowAddOrder(false); setOrForm({ client_nom: "", client_id: "", montant_total: "", statut: "en_attente", date_commande: new Date().toISOString().split("T")[0], notes: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/orders`, { headers: h }).then(r => r.json()).then(d => d.success && setOrders(d.orders || [])); }
+    if (d.success) { setShowAddOrder(false); setOrForm({ client_nom: "", client_id: "", montant_total: "", statut: "en_attente", date_commande: new Date().toISOString().split("T")[0], notes: "" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/orders`, { headers: h }).then(r => r.json()).then(d => d.success && setOrders(d.orders || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   const handleAddAnn = async () => {
     if (!anForm.titre || !anForm.contenu) return;
     const d = await post(`${BASE(tenantCode!)}/announcements`, anForm);
-    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); }
+    if (d.success) { setShowAddAnn(false); setAnForm({ titre: "", contenu: "", type: "general" }); const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || [])); } else alert(d.message || "Erreur : rien n'a été enregistré");
   };
 
   if (loading) return (
@@ -177,6 +180,7 @@ export default function GestionFournisseur() {
       {/* ── DASHBOARD ── */}
       {tab === "dashboard" && dash && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BoutonRapport base={`/api/supplier-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={CYAN} />
           {/* KPI Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 14, marginBottom: 20 }}>
             {[
@@ -262,6 +266,7 @@ export default function GestionFournisseur() {
       {/* ── PRODUITS ── */}
       {tab === "products" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📦 Produits ({products.length})</h2>
             <button onClick={() => setShowAddProduct(!showAddProduct)} style={btn(CYAN)}>{showAddProduct ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -292,7 +297,7 @@ export default function GestionFournisseur() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map(p => (
+                  {filtrer(products, recherche).map(p => (
                     <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "10px 12px", fontWeight: 600, color: "#0f172a" }}>{p.nom}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.categorie || "—"}</td>
@@ -301,7 +306,8 @@ export default function GestionFournisseur() {
                       <td style={{ padding: "10px 12px", fontWeight: 700, color: p.stock > 0 ? "#156315" : "#be123c" }}>{p.stock}</td>
                       <td style={{ padding: "10px 12px", color: "#64748b" }}>{p.unite || "—"}</td>
                       <td style={{ padding: "10px 12px" }}>
-                        <button onClick={async () => { await del(`${BASE(tenantCode!)}/products/${p.id}`); setProducts(ps => ps.filter(x => x.id !== p.id)); }}
+                        <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/products/${p.id}`, item: p, colonnes: ["nom", "categorie", "prix_gros", "prix_detail", "stock", "unite"], onSaved: (it: any) => setProducts((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                        <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/products/${p.id}`))) return; setProducts(ps => ps.filter(x => x.id !== p.id)); }}
                           style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                           Retirer
                         </button>
@@ -318,6 +324,7 @@ export default function GestionFournisseur() {
       {/* ── CLIENTS / REVENDEURS ── */}
       {tab === "clients" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>🤝 Clients / Revendeurs ({clients.length})</h2>
             <button onClick={() => setShowAddClient(!showAddClient)} style={btn(CYAN)}>{showAddClient ? "✕ Annuler" : "+ Ajouter"}</button>
@@ -340,7 +347,7 @@ export default function GestionFournisseur() {
           )}
           {clients.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucun client enregistré</div>
-          ) : clients.map(c => (
+          ) : filtrer(clients, recherche).map(c => (
             <div key={c.id} style={card}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
@@ -350,7 +357,8 @@ export default function GestionFournisseur() {
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, background: CYAN_BG, color: CYAN, padding: "3px 10px", borderRadius: 6, border: `1px solid ${CYAN_BORDER}` }}>{c.type_client}</span>
-                  <button onClick={async () => { await del(`${BASE(tenantCode!)}/clients/${c.id}`); setClients(cs => cs.filter(x => x.id !== c.id)); }}
+                  <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/clients/${c.id}`, item: c, colonnes: ["nom", "telephone", "adresse", "type_client"], onSaved: (it: any) => setClients((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                  <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/clients/${c.id}`))) return; setClients(cs => cs.filter(x => x.id !== c.id)); }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                     Retirer
                   </button>
@@ -364,6 +372,7 @@ export default function GestionFournisseur() {
       {/* ── COMMANDES ── */}
       {tab === "orders" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📋 Commandes ({orders.length})</h2>
             <button onClick={() => setShowAddOrder(!showAddOrder)} style={btn(CYAN)}>{showAddOrder ? "✕ Annuler" : "+ Nouvelle commande"}</button>
@@ -389,7 +398,7 @@ export default function GestionFournisseur() {
           )}
           {orders.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune commande enregistrée</div>
-          ) : orders.map(o => {
+          ) : filtrer(orders, recherche).map(o => {
             const sc = STATUT_COLORS[o.statut] || { bg: "#f1f5f9", color: "#64748b", label: o.statut };
             return (
               <div key={o.id} style={card}>
@@ -406,7 +415,7 @@ export default function GestionFournisseur() {
                     <div style={{ fontWeight: 800, fontSize: 16, color: CYAN }}>{(o.montant_total || 0).toLocaleString("fr-FR")} GNF</div>
                     <select
                       value={o.statut}
-                      onChange={async e => { await patchStatut(`${BASE(tenantCode!)}/orders/${o.id}/statut`, e.target.value); setOrders(os => os.map(x => x.id === o.id ? { ...x, statut: e.target.value } : x)); }}
+                      onChange={async e => { if (!(await patchStatut(`${BASE(tenantCode!)}/orders/${o.id}/statut`, e.target.value))) return; setOrders(os => os.map(x => x.id === o.id ? { ...x, statut: e.target.value } : x)); }}
                       style={{ marginTop: 6, padding: "4px 8px", borderRadius: 6, border: "1px solid #e2e8f0", fontSize: 12, cursor: "pointer" }}>
                       <option value="en_attente">En attente</option>
                       <option value="en_cours">En cours</option>
@@ -414,7 +423,8 @@ export default function GestionFournisseur() {
                       <option value="annulee">Annulée</option>
                     </select>
                     <br />
-                    <button onClick={async () => { await del(`${BASE(tenantCode!)}/orders/${o.id}`); setOrders(os => os.filter(x => x.id !== o.id)); }}
+                    <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/orders/${o.id}`, item: o, colonnes: ["client_nom", "client_id", "montant_total", "statut", "date_commande", "notes"], onSaved: (it: any) => setOrders((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                    <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/orders/${o.id}`))) return; setOrders(os => os.filter(x => x.id !== o.id)); }}
                       style={{ marginTop: 6, padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
                       Supprimer
                     </button>
@@ -429,6 +439,7 @@ export default function GestionFournisseur() {
       {/* ── ANNONCES ── */}
       {tab === "announcements" && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
+          <BarreRecherche valeur={recherche} onChange={setRecherche} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>📢 Annonces ({announcements.length})</h2>
             <button onClick={() => setShowAddAnn(!showAddAnn)} style={btn(CYAN)}>{showAddAnn ? "✕ Annuler" : "+ Publier"}</button>
@@ -449,7 +460,7 @@ export default function GestionFournisseur() {
           )}
           {announcements.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>Aucune annonce publiée</div>
-          ) : announcements.map(a => (
+          ) : filtrer(announcements, recherche).map(a => (
             <div key={a.id} style={{ ...card, borderLeft: `4px solid ${CYAN}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ flex: 1 }}>
@@ -460,7 +471,8 @@ export default function GestionFournisseur() {
                     <span>{fmtDate(a.created_at)}</span>
                   </div>
                 </div>
-                <button onClick={async () => { await del(`${BASE(tenantCode!)}/announcements/${a.id}`); setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
+                <button onClick={() => setEdition({ titre: "Modifier", url: `${BASE(tenantCode!)}/announcements/${a.id}`, item: a, colonnes: ["titre", "contenu", "type"], onSaved: (it: any) => setAnnouncements((xs: any[]) => xs.map(x => x.id === it.id ? { ...x, ...it } : x)) })} style={{ background: "none", border: "1px solid #e2e8f0", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12, color: "#475569", marginRight: 6 }}>✏️ Modifier</button>
+                <button onClick={async () => { if (!(await del(`${BASE(tenantCode!)}/announcements/${a.id}`))) return; setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                   style={{ marginLeft: 12, padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                   Archiver
                 </button>
@@ -469,6 +481,7 @@ export default function GestionFournisseur() {
           ))}
         </div>
       )}
+      {edition && <ModifierFiche {...edition} couleur={CYAN} onClose={() => setEdition(null)} />}
     </div>
   );
 }
