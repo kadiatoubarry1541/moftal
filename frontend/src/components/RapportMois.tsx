@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AccesEmployes from "./AccesEmployes";
 
 // « 📊 Rapport du mois » des gestions internes : recettes, dépenses et
 // bénéfice du mois choisi, comparés au mois précédent, avec impression.
@@ -22,19 +23,29 @@ function evolution(actuel: number, avant: number) {
   return { p, txt: `${p > 0 ? "+" : ""}${p} % par rapport à ${""}` };
 }
 
-export function BoutonRapport({ base, etablissement, couleur = "#1a8f1a" }: {
-  base: string; etablissement?: { name?: string; logo_url?: string | null }; couleur?: string;
+// Barre d'outils en tête du tableau de bord : « 📊 Rapport du mois » et
+// « 👥 Employés » (propriétaire seulement). Un employé voit son niveau d'accès.
+export function BoutonRapport({ base, etablissement, couleur = "#1a8f1a", rapport = true }: {
+  base: string; etablissement?: { name?: string; logo_url?: string | null; acces_employe?: string }; couleur?: string; rapport?: boolean;
 }) {
   const [ouvert, setOuvert] = useState(false);
+  const [employes, setEmployes] = useState(false);
+  const employe = etablissement?.acces_employe;
+  const bouton = { padding: "8px 14px", background: "white", color: couleur, border: `1.5px solid ${couleur}`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer" } as const;
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "flex-end", margin: "0 0 10px" }}>
-        <button onClick={() => setOuvert(true)}
-          style={{ padding: "8px 14px", background: "white", color: couleur, border: `1.5px solid ${couleur}`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-          📊 Rapport du mois
-        </button>
+      <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, flexWrap: "wrap", margin: "0 0 10px" }}>
+        {employe ? (
+          <span style={{ padding: "6px 12px", background: "#f1f5f9", color: "#334155", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+            👤 Accès employé · {employe === "complet" ? "complet" : "limité"}
+          </span>
+        ) : (
+          <button onClick={() => setEmployes(true)} style={bouton}>👥 Employés</button>
+        )}
+        {rapport && employe !== "limite" && <button onClick={() => setOuvert(true)} style={bouton}>📊 Rapport du mois</button>}
       </div>
       {ouvert && <RapportMois base={base} etablissement={etablissement} couleur={couleur} onClose={() => setOuvert(false)} />}
+      {employes && <AccesEmployes base={base} couleur={couleur} onClose={() => setEmployes(false)} />}
     </>
   );
 }

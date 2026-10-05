@@ -4,10 +4,14 @@ import { sequelize } from '../config/database.js';
 import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ajouterRoutesModifier } from '../utils/routeModifier.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = express.Router();
 
-async function verifyTenant(req, res, next) {
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const isAdminUser = !!(req.user?.isMasterAdmin || req.user?.role === 'admin' || req.user?.role === 'super-admin');
   const userNumeroH = req.user?.numeroH || req.userId;
@@ -152,5 +156,8 @@ ajouterRoutesModifier(router, [authenticate, verifyTenant], {
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
   recettes: [{ label: 'Commandes', table: 'supplier_orders', montant: 'montant_total', date: 'COALESCE(date_commande, created_at)', where: "statut <> 'annule'" }],
 });
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

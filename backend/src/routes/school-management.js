@@ -6,8 +6,13 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = attraperErreursAsync(express.Router());
+
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+const verifyMember = avecAccesEmployes(verifyMemberProprietaire);
 
 async function ensureStaffPhotoColumn() {
   await sequelize.query(`ALTER TABLE school_staff ADD COLUMN IF NOT EXISTS photo_url TEXT;`);
@@ -37,7 +42,7 @@ router.use(async (req, res, next) => {
   next();
 });
 
-async function verifyTenant(req, res, next) {
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const role = req.user?.role || '';
   const isAdminUser = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
@@ -431,7 +436,7 @@ router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, 
 
 // ─── MIDDLEWARE MEMBRE ────────────────────────────────────────────────────────
 
-async function verifyMember(req, res, next) {
+async function verifyMemberProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   try {
     const [tenant] = await sequelize.query(
@@ -720,5 +725,8 @@ router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
   recettes: [{ label: 'Frais encaissés', table: 'school_fees', montant: 'montant_paye', date: 'date_paiement', where: 'montant_paye > 0' }],
 });
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;

@@ -15,6 +15,7 @@ import {
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
+import { mesAccesEmploye } from '../utils/accesEmployes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -651,6 +652,17 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
 // ============ ESPACE PROPRIÉTAIRE ============
 
 // GET /api/professionals/my-accounts - Mes comptes professionnels
+// GET /api/professionals/mes-acces-employe — établissements où je travaille
+// (accès donné par leur propriétaire, voir utils/accesEmployes.js)
+router.get('/mes-acces-employe', authenticate, async (req, res) => {
+  try {
+    const rows = await mesAccesEmploye(req.user?.numeroH || req.userId);
+    res.json({ success: true, etablissements: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 router.get('/my-accounts', authenticate, async (req, res) => {
   try {
     const accounts = await ProfessionalAccount.getByOwner(req.userId);

@@ -7,6 +7,7 @@ import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import ModifierFiche from "../components/ModifierFiche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `${config.API_BASE_URL}/scientist-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -168,6 +169,7 @@ export default function GestionScientifique() {
 
         {tab === "dashboard" && dash && (
           <div style={{ display:"flex", flexDirection:"column", gap:20, animation:"fadeIn 0.2s ease" }}>
+            <BoutonRapport base={`${config.API_BASE_URL}/scientist-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={INDIGO} rapport={false} />
 
             {/* KPIs */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr) repeat(2,1fr)", gap:14 }}>

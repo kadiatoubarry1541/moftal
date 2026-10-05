@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { envoyerGestion } from "../utils/envoyerGestion";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/mairie-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -465,6 +466,7 @@ export default function GestionMairie() {
   // ── SECTION: DASHBOARD ────────────────────────────────────────────────────
   const renderDashboard = () => (
     <div>
+      <BoutonRapport base={`/api/mairie-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={BLUE} rapport={false} />
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#0f172a" }}>Tableau de bord</h2>
         <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 13 }}>Vue d'ensemble de l'état civil</p>

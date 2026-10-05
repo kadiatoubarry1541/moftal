@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import ModifierFiche from "../components/ModifierFiche";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
+import { BoutonRapport } from "../components/RapportMois";
 
 const BASE = (code: string) => `/api/enterprise-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -181,6 +182,7 @@ export default function GestionEntreprise() {
       {/* ── DASHBOARD ── */}
       {tab === "dashboard" && dash && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20, animation: "fadeIn 0.2s ease" }}>
+          <BoutonRapport base={`/api/enterprise-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={INDIGO} rapport={false} />
 
           {/* KPIs */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>

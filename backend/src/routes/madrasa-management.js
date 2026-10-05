@@ -14,8 +14,13 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
+import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 
 const router = attraperErreursAsync(express.Router());
+
+// Employés autorisés par le propriétaire (voir utils/accesEmployes.js)
+const verifyTenant = avecAccesEmployes(verifyTenantProprietaire);
+const verifyMember = avecAccesEmployes(verifyMemberProprietaire);
 
 // Année scolaire en cours (elle commence en septembre) : « 2026-2027 », etc.
 function anneeScolaireCourante() {
@@ -38,7 +43,7 @@ for (const methode of ['get', 'post', 'put', 'delete']) {
 }
 
 // ─── Middleware : vérifier que l'utilisateur est directeur / propriétaire ──────
-async function verifyTenant(req, res, next) {
+async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const userId = req.userId;
   const role = req.user?.role || '';
@@ -69,7 +74,7 @@ async function verifyTenant(req, res, next) {
 }
 
 // ─── Middleware : directeur OU membre actif ────────────────────────────────────
-async function verifyMember(req, res, next) {
+async function verifyMemberProprietaire(req, res, next) {
   const { tenantCode } = req.params;
   const userId = req.userId;
   const role = req.user?.role || '';
@@ -625,5 +630,8 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
   recettes: [{ label: 'Frais encaissés', table: 'madrasa_fees', montant: 'montant', date: 'date_paiement', where: 'est_paye' }],
 });
+
+// ── Accès des employés (géré par le propriétaire uniquement) ──
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;
