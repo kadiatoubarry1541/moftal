@@ -260,7 +260,7 @@ export function DeceasedWizard() {
               <div className="col-6"><Field label={t('label.death_place')}><input value={state.lieuDeces||''} onChange={e=>set({ lieuDeces: e.target.value })} /></Field></div>
             </div>
             <div className="actions">
-              <button className="btn" onClick={()=>{ localStorage.setItem('defunt', JSON.stringify(state)); navigate('page-2') }}>{t('btn.next')}</button>
+              <button className="btn" onClick={()=>{ localStorage.setItem('defunt', JSON.stringify(state)); navigate('/defunt/page-2') }}>{t('btn.next')}</button>
             </div>
           </div>
         </div>
@@ -286,7 +286,7 @@ export function DeceasedWizard() {
             </div>
             <div className="actions">
               <button className="btn secondary" onClick={()=>navigate(-1)}>{t('btn.back')}</button>
-              <button className="btn" onClick={()=>{ localStorage.setItem('defunt', JSON.stringify(state)); navigate('page-3') }}>{t('btn.next')}</button>
+              <button className="btn" onClick={()=>{ localStorage.setItem('defunt', JSON.stringify(state)); navigate('/defunt/page-3') }}>{t('btn.next')}</button>
             </div>
           </div>
         </div>
