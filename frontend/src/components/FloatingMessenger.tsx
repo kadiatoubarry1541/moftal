@@ -8,6 +8,7 @@ import { ActivityGroupChat, type ActivityGroupInfo } from './ActivityGroupChat'
 import { findLocationByCode, getLocationGroupTitle } from '../utils/worldGeography'
 import { isActivityBlocked } from '../utils/activityIcons'
 import { ActivityIcon } from './ActivityIconBadge'
+import { chargerMessagesNonLus, marquerConversationLue, EVENEMENT_MESSAGES_LUS, type MessagesNonLus } from '../utils/messagesNonLus'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -115,6 +116,13 @@ interface RawMessage {
   createdAt?: string
 }
 
+// Clé de la conversation côté serveur (/api/unread)
+function cleNonLus(type: ChatType, linkId: string): string {
+  if (type === 'family') return 'family:'
+  if (type === 'parent' || type === 'child') return `pc:${linkId}`
+  return `${type}:${linkId}`
+}
+
 function previewForMessage(m: RawMessage): string {
   const kind = m.messageType || m.type
   if (kind === 'image') return '📷 Photo'
@@ -182,6 +190,29 @@ export function FloatingMessenger() {
   const [loading, setLoading] = useState(false)
   const [starting, setStarting] = useState<string | null>(null)
   const [chat, setChat] = useState<{ type: ChatType; linkId: string; label: string } | null>(null)
+  const [nonLus, setNonLus] = useState<MessagesNonLus>({ total: 0, conversations: {} })
+
+  // Compteur de messages non lus : au chargement, toutes les 30 s, au retour
+  // sur l'application et dès qu'une conversation est lue.
+  useEffect(() => {
+    let actif = true
+    const rafraichir = () => {
+      if (document.visibilityState === 'hidden') return
+      chargerMessagesNonLus().then(n => { if (actif && n) setNonLus(n) })
+    }
+    rafraichir()
+    const minuterie = window.setInterval(rafraichir, 30000)
+    window.addEventListener(EVENEMENT_MESSAGES_LUS, rafraichir)
+    window.addEventListener('focus', rafraichir)
+    document.addEventListener('visibilitychange', rafraichir)
+    return () => {
+      actif = false
+      window.clearInterval(minuterie)
+      window.removeEventListener(EVENEMENT_MESSAGES_LUS, rafraichir)
+      window.removeEventListener('focus', rafraichir)
+      document.removeEventListener('visibilitychange', rafraichir)
+    }
+  }, [])
 
   useEffect(() => {
     const session = localStorage.getItem('session_user')
@@ -417,6 +448,7 @@ export function FloatingMessenger() {
   }
 
   const openConversation = (conv: Conversation) => {
+    marquerConversationLue(cleNonLus(conv.type, conv.linkId))
     setOpen(false)
     setChat({ type: conv.type, linkId: conv.linkId, label: conv.label })
   }
@@ -468,6 +500,14 @@ export function FloatingMessenger() {
         style={{ right: 'max(1rem, env(safe-area-inset-right, 0px))' }}
       >
         💬
+        {nonLus.total > 0 && (
+          <span
+            aria-label={`${nonLus.total} message${nonLus.total > 1 ? 's' : ''} non lu${nonLus.total > 1 ? 's' : ''}`}
+            className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center ring-2 ring-white"
+          >
+            {nonLus.total > 99 ? '99+' : nonLus.total}
+          </span>
+        )}
       </button>
 
       {/* Sélection du destinataire / conversations */}
@@ -485,7 +525,9 @@ export function FloatingMessenger() {
                 <div className="text-center py-8 text-sm text-gray-500">Chargement...</div>
               ) : (
                 <>
-                  {conversations.map(conv => (
+                  {conversations.map(conv => {
+                    const nbNonLus = nonLus.conversations[cleNonLus(conv.type, conv.linkId)] || 0
+                    return (
                     <button
                       key={conv.key}
                       onClick={() => openConversation(conv)}
@@ -499,15 +541,23 @@ export function FloatingMessenger() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 text-sm truncate">{conv.label}</p>
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className={`text-xs truncate ${nbNonLus > 0 ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
                           {conv.lastMessage ? (conv.lastMessageMine ? `Vous : ${conv.lastMessage}` : conv.lastMessage) : 'Dites bonjour 👋'}
                         </p>
                       </div>
-                      {conv.lastMessageAt && (
-                        <span className="text-[11px] text-gray-400 shrink-0 self-start pt-0.5">{formatConvTime(conv.lastMessageAt)}</span>
-                      )}
+                      <div className="flex flex-col items-end gap-1 shrink-0 self-start pt-0.5">
+                        {conv.lastMessageAt && (
+                          <span className={`text-[11px] ${nbNonLus > 0 ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>{formatConvTime(conv.lastMessageAt)}</span>
+                        )}
+                        {nbNonLus > 0 && (
+                          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center">
+                            {nbNonLus > 99 ? '99+' : nbNonLus}
+                          </span>
+                        )}
+                      </div>
                     </button>
-                  ))}
+                    )
+                  })}
 
                   {newContacts.length > 0 && (
                     <div className="p-3 space-y-2">

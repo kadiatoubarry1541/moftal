@@ -34,6 +34,7 @@ import familyTreeRoutes from './routes/familyTree.js';
 import parentChildRoutes from './routes/parentChild.js';
 import siblingRoutes from './routes/sibling.js';
 import coupleRoutes from './routes/couple.js';
+import unreadRoutes from './routes/unread.js';
 import familyCoreRoutes from './routes/familyCore.js';
 import scienceRoutes from './routes/science.js';
 import realityRoutes from './routes/reality.js';
@@ -2800,6 +2801,7 @@ app.use('/api/family-tree', familyTreeRoutes);
 app.use('/api/parent-child', parentChildRoutes);
 app.use('/api/sibling', siblingRoutes);
 app.use('/api/couple', coupleRoutes);
+app.use('/api/unread', unreadRoutes); // messages non lus du bouton 💬
 app.use('/api/family-core', familyCoreRoutes);
 app.use('/api/science', scienceRoutes);
 app.use('/api/reality', realityRoutes);

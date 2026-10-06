@@ -48,7 +48,8 @@ async function findUserFollowingAlias(numeroH) {
 // et créer son compte professionnel (validé à 60 % tant que le profil n'est
 // pas à jour, 100 % ensuite). Toute autre action demande d'abord de mettre son
 // profil à jour.
-const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications', '/api/professionals/register'];
+// (/api/unread : marquer ses messages comme lus — ne crée ni ne modifie aucun contenu)
+const PROVISIONAL_ALLOWED_PATHS = ['/api/auth/', '/api/notifications', '/api/professionals/register', '/api/unread'];
 // Espace professionnel : une fois son établissement créé ET approuvé par l'admin,
 // le pro utilise 100 % de sa gestion interne (tout modifier, ajouter, payer son
 // abonnement…) même si son profil personnel n'est pas encore complété. Ces données

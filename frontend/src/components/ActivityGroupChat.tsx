@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { AudioRecorder } from './AudioRecorder'
 import { hideIncrement } from '../utils/formatNumeroH'
+import { useConversationLue } from '../utils/messagesNonLus'
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '') + '/api'
 
@@ -52,6 +53,7 @@ function renderTextWithLinks(text: string) {
 
 export function ActivityGroupChat({ group, myNumeroH, userData }: { group: ActivityGroupInfo; myNumeroH: string; userData: ActivityUserData }) {
   const [messages, setMessages] = useState<ActivityMessage[]>([])
+  useConversationLue(`activity:${group.id}`, messages.length)
   const [loading, setLoading] = useState(true)
   const [feedFilter, setFeedFilter] = useState<'all' | 'opportunite'>('all')
   const [showCategoryGrid, setShowCategoryGrid] = useState(false)
