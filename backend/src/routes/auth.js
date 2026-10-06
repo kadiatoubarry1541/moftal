@@ -9,7 +9,7 @@ import DeceasedMember from '../models/DeceasedMember.js';
 import FamilyTreeConfirmation from '../models/FamilyTreeConfirmation.js';
 import { FamilyTree } from '../models/additional.js';
 import { addUserToFamilyTree, addDeceasedToFamilyTree } from './familyTree.js';
-import { normalizeNumeroH } from '../utils/numeroH.js';
+import { normalizeNumeroH, prefixeNumeroH, avecNumeroHLibre } from '../utils/numeroH.js';
 import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
@@ -187,7 +187,10 @@ router.post('/register', validateUser, async (req, res) => {
     }
 
     // Extraire les données nécessaires
-    const { numeroH, email, password } = req.body;
+    const { numeroH, password } = req.body;
+    // Sans e-mail : pas d'adresse inventée (« …@example.com ») qui ferait doublon
+    const email = String(req.body.email || '').trim();
+    req.body.email = email && !/@example\.com$/i.test(email) ? email : null;
 
     // Bloquer G0–G90 : générations réservées à l'admin
     const generationDemandee = req.body.generation || 'G1';
@@ -231,16 +234,11 @@ router.post('/register', validateUser, async (req, res) => {
       const registerWork = (async () => {
       // Pour les défunts, pas de compte utilisateur → pas de vérification de doublon
       if (!userData.isDeceased && userData.type !== 'defunt') {
-        const where = email && numeroH
-          ? { [Op.or]: [{ numeroH }, { email }] }
-          : email
-            ? { email }
-            : { numeroH };
-        const existingUser = await User.findOne({ where });
-        if (existingUser) {
+        // Le NuméroH n'est jamais refusé : son numéro d'ordre est attribué plus bas.
+        if (userData.email && await User.findOne({ where: { email: userData.email } })) {
           return res.status(400).json({
             success: false,
-            message: 'Un utilisateur avec ce NumeroH ou cet email existe déjà'
+            message: 'Cette adresse email est déjà associée à un compte existant. Utilisez une autre adresse email.'
           });
         }
       }
@@ -305,8 +303,10 @@ router.post('/register', validateUser, async (req, res) => {
         return res.status(409).json({ success: false, message: 'Ce numéro de téléphone est déjà associé à un compte existant. Utilisez un autre numéro.' });
       }
 
-      // ✅ CRÉER L'UTILISATEUR EN BASE DE DONNÉES
-      const newUser = await User.create(userData);
+      // ✅ CRÉER L'UTILISATEUR EN BASE DE DONNÉES — le numéro d'ordre final du
+      // NuméroH est attribué ici : le dernier numéro de ce préfixe + 1.
+      const newUser = await avecNumeroHLibre(User.sequelize, prefixeNumeroH(numeroH),
+        (numeroLibre) => User.create({ ...userData, numeroH: numeroLibre }));
 
       // Générer le token et préparer la réponse tout de suite
       const token = jwt.sign(
@@ -469,66 +469,73 @@ router.post('/complete-profile', authenticate, [
   if (!errors.isEmpty()) {
     return res.status(400).json({ success: false, message: errors.array()[0].msg, errors: errors.array() });
   }
-  const newNumeroH = String(req.body.numeroH).trim();
-  if (isProvisionalNumeroH(newNumeroH) || isReservedGeneration(req.body.generation)) {
+  // Le téléphone envoie le préfixe (génération, pays, région, ethnie, famille…) ;
+  // le numéro d'ordre final est toujours attribué ici : le dernier + 1.
+  const prefixe = prefixeNumeroH(req.body.numeroH);
+  if (!prefixe || isProvisionalNumeroH(prefixe) || isReservedGeneration(req.body.generation)) {
     return res.status(400).json({ success: false, message: 'NuméroH invalide.' });
-  }
-  if (await User.findByNumeroH(newNumeroH)) {
-    return res.status(409).json({ success: false, message: 'Ce NuméroH existe déjà. Réessayez.' });
   }
 
   // Champs du profil acceptés (jamais le mot de passe, le rôle ni le téléphone de connexion)
   const { password: _pw, confirmPassword: _cpw, role: _role, isAdmin: _ia, numeroH: _n, tel1: _t, telephone: _tel, ...profil } = req.body;
 
-  const t = await User.sequelize.transaction();
+  let numeroFinal;
   try {
-    // Des tables ont une clé étrangère vers users.numero_h : on crée d'abord le
-    // compte avec le vrai NuméroH, on y rattache tout, puis on supprime le compte
-    // provisoire — le tout dans une seule transaction (tout ou rien).
-    const oldRow = await User.findOne({ where: { numeroH: oldNumeroH }, transaction: t });
-    const allowed = Object.keys(User.rawAttributes).filter((k) => !['numeroH', 'password', 'role', 'isAdmin', 'tel1', 'isActive', 'isVerified', 'type', 'createdAt', 'updatedAt'].includes(k));
-    const updates = {};
-    for (const k of allowed) if (profil[k] !== undefined) updates[k] = profil[k];
-    if (!updates.email) updates.email = null;
-    const base = oldRow.get({ plain: true });
-    // Libère téléphone / email (colonnes uniques) sur l'ancien compte
-    await User.sequelize.query('UPDATE users SET tel1 = NULL, email = NULL WHERE numero_h = :ancien',
-      { replacements: { ancien: oldNumeroH }, transaction: t });
-    await User.create({ ...base, ...updates, numeroH: newNumeroH }, { transaction: t });
+    numeroFinal = await avecNumeroHLibre(User.sequelize, prefixe, async (newNumeroH) => {
+      const t = await User.sequelize.transaction();
+      try {
+        // Des tables ont une clé étrangère vers users.numero_h : on crée d'abord le
+        // compte avec le vrai NuméroH, on y rattache tout, puis on supprime le compte
+        // provisoire — le tout dans une seule transaction (tout ou rien).
+        const oldRow = await User.findOne({ where: { numeroH: oldNumeroH }, transaction: t });
+        const allowed = Object.keys(User.rawAttributes).filter((k) => !['numeroH', 'password', 'role', 'isAdmin', 'tel1', 'isActive', 'isVerified', 'type', 'createdAt', 'updatedAt'].includes(k));
+        const updates = {};
+        for (const k of allowed) if (profil[k] !== undefined) updates[k] = profil[k];
+        if (!updates.email) updates.email = null;
+        const base = oldRow.get({ plain: true });
+        // Libère téléphone / email (colonnes uniques) sur l'ancien compte
+        await User.sequelize.query('UPDATE users SET tel1 = NULL, email = NULL WHERE numero_h = :ancien',
+          { replacements: { ancien: oldNumeroH }, transaction: t });
+        await User.create({ ...base, ...updates, numeroH: newNumeroH }, { transaction: t });
 
-    // Remplacer l'identifiant provisoire dans toutes les colonnes « numero_h » des autres tables
-    const cols = await User.sequelize.query(
-      // colonnes nommées « …numero_h… » + toute colonne ayant une clé étrangère vers users
-      `SELECT table_name, column_name FROM information_schema.columns
-       WHERE table_schema = 'public' AND column_name ILIKE '%numero_h%'
-         AND data_type IN ('character varying', 'text') AND table_name <> 'users'
-       UNION
-       SELECT kcu.table_name, kcu.column_name
-       FROM information_schema.referential_constraints rc
-       JOIN information_schema.key_column_usage kcu
-         ON kcu.constraint_name = rc.constraint_name AND kcu.constraint_schema = rc.constraint_schema
-       JOIN information_schema.constraint_column_usage ccu
-         ON ccu.constraint_name = rc.unique_constraint_name AND ccu.constraint_schema = rc.unique_constraint_schema
-       WHERE ccu.table_name = 'users' AND kcu.table_schema = 'public' AND kcu.table_name <> 'users'`,
-      { type: 'SELECT', transaction: t }
-    );
-    for (const c of cols) {
-      await User.sequelize.query(
-        `UPDATE "${c.table_name}" SET "${c.column_name}" = :nouveau WHERE "${c.column_name}" = :ancien`,
-        { replacements: { nouveau: newNumeroH, ancien: oldNumeroH }, transaction: t }
-      );
-    }
-    await User.destroy({ where: { numeroH: oldNumeroH }, transaction: t });
-    // Les sessions ouvertes ailleurs avec l'ancien identifiant suivent le vrai NuméroH
-    await ensureNumeroHAliasTable(t);
-    await User.sequelize.query(
-      `INSERT INTO numero_h_aliases (ancien, nouveau) VALUES (:ancien, :nouveau)
-       ON CONFLICT (ancien) DO UPDATE SET nouveau = EXCLUDED.nouveau`,
-      { replacements: { ancien: oldNumeroH, nouveau: newNumeroH }, transaction: t }
-    );
-    await t.commit();
+        // Remplacer l'identifiant provisoire dans toutes les colonnes « numero_h » des autres tables
+        const cols = await User.sequelize.query(
+          // colonnes nommées « …numero_h… » + toute colonne ayant une clé étrangère vers users
+          `SELECT table_name, column_name FROM information_schema.columns
+           WHERE table_schema = 'public' AND column_name ILIKE '%numero_h%'
+             AND data_type IN ('character varying', 'text') AND table_name <> 'users'
+           UNION
+           SELECT kcu.table_name, kcu.column_name
+           FROM information_schema.referential_constraints rc
+           JOIN information_schema.key_column_usage kcu
+             ON kcu.constraint_name = rc.constraint_name AND kcu.constraint_schema = rc.constraint_schema
+           JOIN information_schema.constraint_column_usage ccu
+             ON ccu.constraint_name = rc.unique_constraint_name AND ccu.constraint_schema = rc.unique_constraint_schema
+           WHERE ccu.table_name = 'users' AND kcu.table_schema = 'public' AND kcu.table_name <> 'users'`,
+          { type: 'SELECT', transaction: t }
+        );
+        for (const c of cols) {
+          await User.sequelize.query(
+            `UPDATE "${c.table_name}" SET "${c.column_name}" = :nouveau WHERE "${c.column_name}" = :ancien`,
+            { replacements: { nouveau: newNumeroH, ancien: oldNumeroH }, transaction: t }
+          );
+        }
+        await User.destroy({ where: { numeroH: oldNumeroH }, transaction: t });
+        // Les sessions ouvertes ailleurs avec l'ancien identifiant suivent le vrai NuméroH
+        await ensureNumeroHAliasTable(t);
+        await User.sequelize.query(
+          `INSERT INTO numero_h_aliases (ancien, nouveau) VALUES (:ancien, :nouveau)
+           ON CONFLICT (ancien) DO UPDATE SET nouveau = EXCLUDED.nouveau`,
+          { replacements: { ancien: oldNumeroH, nouveau: newNumeroH }, transaction: t }
+        );
+        await t.commit();
+        return newNumeroH;
+      } catch (error) {
+        await t.rollback();
+        throw error;
+      }
+    });
   } catch (error) {
-    await t.rollback();
     if (error?.name === 'SequelizeUniqueConstraintError' || error?.parent?.code === '23505') {
       const fields = (error.errors || []).map((e) => e.path).join(', ');
       return res.status(409).json({
@@ -540,10 +547,10 @@ router.post('/complete-profile', authenticate, [
     return res.status(500).json({ success: false, message: 'Erreur serveur lors de la mise à jour du profil.' });
   }
 
-  const updated = await User.findByNumeroH(newNumeroH);
+  const updated = await User.findByNumeroH(numeroFinal);
   const user = { ...updated.dataValues };
   delete user.password;
-  res.json({ success: true, message: 'Profil mis à jour', user, token: signToken(newNumeroH) });
+  res.json({ success: true, message: 'Profil mis à jour', user, token: signToken(numeroFinal) });
 
   // Comme après une inscription complète
   setImmediate(() => {
@@ -923,7 +930,8 @@ router.get('/last-numero', async (req, res) => {
       const users = await User.findAll({
         where: {
           numeroH: {
-            [Op.like]: `${prefix}%`
+            // Exactement ce préfixe, suivi d'un espace (F2 ≠ F21)
+            [Op.like]: `${String(prefix).replace(/[\\%_]/g, '\\$&')} %`
           }
         },
         attributes: ['numeroH']

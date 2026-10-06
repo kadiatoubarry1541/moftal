@@ -313,7 +313,7 @@ export function WrittenRegistration() {
       confirmPassword: normalizedForm.confirmPassword,
       prenom: normalizedForm.prenom,
       nomFamille: effectiveFamille,
-      email: (normalizedForm.email && normalizedForm.email.trim()) ? normalizedForm.email.trim() : `${numeroH}@example.com`,
+      email: normalizedForm.email?.trim() || '',
       religion: normalizedForm.religion?.trim() || '',
       handicap: normalizedForm.handicap || '',
       genre: normalizedForm.genre,
@@ -339,7 +339,8 @@ export function WrittenRegistration() {
           source: 'registration_written',
         }))
         if (result.token) localStorage.setItem('token', result.token)
-        showCredentialsReminder(numeroH, data.password)
+        // NuméroH définitif : celui attribué par le serveur (numéro d'ordre suivant)
+        showCredentialsReminder(user.numeroH || numeroH, data.password)
         navigate('/compte')
         return
       }

@@ -358,7 +358,7 @@ export function VideoRegistration() {
       confirmPassword: normalizedData.confirmPassword,
       prenom: normalizedData.prenom,
       nomFamille: effectiveFamille,
-      email: normalizedData.email?.trim() || `${numeroH}@example.com`,
+      email: normalizedData.email?.trim() || '',
       religion: normalizedData.religion?.trim() || '',
       handicap: normalizedData.handicap || '',
       genre: normalizedData.genre,
@@ -377,15 +377,17 @@ export function VideoRegistration() {
       const saveAndGo = (user: any, source: string) => {
         const userDataWithPassword = { ...user }
         localStorage.setItem('dernier_vivant', JSON.stringify(userDataWithPassword))
+        // NuméroH définitif : celui attribué par le serveur (numéro d'ordre suivant)
+        const numeroFinal = user?.numeroH || numeroH
         localStorage.setItem('session_user', JSON.stringify({
-          numeroH,
+          numeroH: numeroFinal,
           userData: userDataWithPassword,
           token: result?.token || null,
           type: 'vivant',
           source,
         }))
         if (result?.token) localStorage.setItem('token', result.token)
-        showCredentialsReminder(numeroH, normalizedData.password)
+        showCredentialsReminder(numeroFinal, normalizedData.password)
         navigate('/compte')
       }
 
