@@ -6,6 +6,7 @@ import FriendRequest from '../models/FriendRequest.js';
 import FriendMessage from '../models/FriendMessage.js';
 import User from '../models/User.js';
 import { authenticate, ensureNumeroHAliasTable } from '../middleware/auth.js';
+import { normalizeNumeroH } from '../utils/numeroH.js';
 import Notification from '../models/Notification.js';
 import { sequelize } from '../config/database.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
@@ -134,6 +135,31 @@ async function numerosHParTelephones(telephones, exclu) {
   return rows.map((row) => row.numero_h);
 }
 
+/** Compte par e-mail : comparaison exacte, sans tenir compte des majuscules. */
+async function utilisateurParEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e.includes('@')) return null;
+  return User.findOne({ where: { [Op.and]: [sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), e), { isActive: true }] } });
+}
+
+/**
+ * Retrouve la personne à ajouter à partir de ce qui a été saisi : NuméroH,
+ * e-mail ou numéro de téléphone — les trois marchent partout.
+ */
+async function trouverDestinataire(saisie, moi) {
+  const texte = String(saisie || '').trim();
+  if (!texte) return null;
+  if (texte.includes('@')) return utilisateurParEmail(texte);
+  const parNumeroH = await User.findByNumeroH(texte) || await User.findByNumeroH(normalizeNumeroH(texte));
+  if (parNumeroH) return parNumeroH;
+  // Un numéro de téléphone : surtout des chiffres (+, espaces, tirets permis)
+  if (/^[+\d\s().-]+$/.test(texte) && texte.replace(/[^0-9]/g, '').length >= 6) {
+    const [numeroH] = await numerosHParTelephones([texte], moi);
+    return numeroH ? User.findByNumeroH(numeroH) : null;
+  }
+  return null;
+}
+
 /**
  * Demandes d'amitié envoyées à (ou par) un compte provisoire TMP-… qui a depuis
  * reçu son vrai NuméroH : on les rattache au NuméroH actuel, sinon personne ne
@@ -247,7 +273,7 @@ router.post('/send-request', async (req, res) => {
     const { toUser, message } = req.body;
 
     if (!toUser) {
-      return res.status(400).json({ success: false, message: 'NumeroH du destinataire requis' });
+      return res.status(400).json({ success: false, message: 'NuméroH, e-mail ou téléphone du destinataire requis' });
     }
 
     const toUserTrimmed = toUser.trim();
@@ -259,9 +285,9 @@ router.post('/send-request', async (req, res) => {
     // Si on stockait toUserTrimmed tel quel, la requête GET /requests du
     // destinataire — qui compare toUser à son numeroH canonique par égalité
     // stricte — ne la retrouverait jamais : la demande semblerait "perdue".
-    const targetUser = await User.findByNumeroH(toUserTrimmed);
+    const targetUser = await trouverDestinataire(toUserTrimmed, fromUser);
     if (!targetUser) {
-      return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce NumeroH' });
+      return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce NuméroH, cet e-mail ou ce numéro de téléphone' });
     }
     const toUserCanonical = targetUser.numeroH;
 
@@ -460,10 +486,7 @@ router.get('/search-by-email', async (req, res) => {
     if (!email || !email.trim()) {
       return res.status(400).json({ success: false, message: 'Email requis' });
     }
-    const user = await User.findOne({
-      where: { email: { [Op.iLike]: email.trim() }, isActive: true },
-      attributes: ['numeroH', 'prenom', 'nomFamille']
-    });
+    const user = await utilisateurParEmail(email);
     if (!user) {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec cet email' });
     }
