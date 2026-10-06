@@ -7,6 +7,8 @@ import FriendMessage from '../models/FriendMessage.js';
 import User from '../models/User.js';
 import { authenticate, ensureNumeroHAliasTable } from '../middleware/auth.js';
 import { normalizeNumeroH } from '../utils/numeroH.js';
+import jwt from 'jsonwebtoken';
+import { config } from '../../config.js';
 import Notification from '../models/Notification.js';
 import { sequelize } from '../config/database.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
@@ -160,6 +162,13 @@ async function trouverDestinataire(saisie, moi) {
   return null;
 }
 
+// Code protégé d'une suggestion : permet d'inviter quelqu'un sans exposer son
+// NuméroH quand il a choisi de le cacher (treeVisibility).
+const signerSuggestion = (numeroH) => jwt.sign({ s: numeroH }, config.JWT_SECRET, { expiresIn: '30d' });
+function lireSuggestion(ref) {
+  try { return jwt.verify(String(ref), config.JWT_SECRET)?.s || null; } catch { return null; }
+}
+
 /**
  * Demandes d'amitié envoyées à (ou par) un compte provisoire TMP-… qui a depuis
  * reçu son vrai NuméroH : on les rattache au NuméroH actuel, sinon personne ne
@@ -270,7 +279,9 @@ router.get('/requests', async (req, res) => {
 router.post('/send-request', async (req, res) => {
   try {
     const fromUser = req.user.numeroH;
-    const { toUser, message } = req.body;
+    const { message, ref } = req.body;
+    // Invitation depuis « Personnes que vous pourriez connaître » : code protégé
+    const toUser = ref ? lireSuggestion(ref) : req.body.toUser;
 
     if (!toUser) {
       return res.status(400).json({ success: false, message: 'NuméroH, e-mail ou téléphone du destinataire requis' });
@@ -411,6 +422,79 @@ router.post('/respond-request', async (req, res) => {
   } catch (error) {
     console.error('Erreur /friends/respond-request:', error);
     res.status(500).json({ success: false, message: error.message || 'Erreur serveur' });
+  }
+});
+
+// ─── GET /api/friends/suggestions → « Personnes que vous pourriez connaître » ─
+// Les membres inscrits se voient dans Amitié pour s'inviter facilement (comme
+// Facebook). Exclus : soi-même, amis, demandes en cours, comptes provisoires
+// (profil pas encore complété) et comptes désactivés. Les plus proches d'abord :
+// même quartier, même nom de famille, même activité, même région, même pays.
+// Jamais de téléphone ni d'e-mail ; photo et NuméroH selon le choix de chacun.
+router.get('/suggestions', async (req, res) => {
+  try {
+    const me = req.user;
+    const numeroH = me.numeroH;
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 50);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+    const [liens, demandes] = await Promise.all([
+      Friend.findAll({ where: { [Op.or]: [{ userNumeroH: numeroH }, { friendNumeroH: numeroH }] }, attributes: ['userNumeroH', 'friendNumeroH'] }),
+      FriendRequest.findAll({ where: { [Op.or]: [{ fromUser: numeroH }, { toUser: numeroH }], status: 'pending' }, attributes: ['fromUser', 'toUser'] })
+    ]);
+    const exclus = new Set([numeroH]);
+    liens.forEach((f) => exclus.add(f.userNumeroH === numeroH ? f.friendNumeroH : f.userNumeroH));
+    demandes.forEach((d) => exclus.add(d.fromUser === numeroH ? d.toUser : d.fromUser));
+
+    // Score de proximité (colonnes réelles lues dans le modèle)
+    const col = (a) => `"User"."${User.rawAttributes[a].field || a}"`;
+    const norm = (a) => `LOWER(TRIM(COALESCE(${col(a)}, '')))`;
+    const val = (v) => String(v || '').trim().toLowerCase();
+    const parts = [];
+    const mesLieux = [me.lieu1, me.lieu2, me.lieu3].map(val).filter(Boolean);
+    if (mesLieux.length && ['lieu1', 'lieu2', 'lieu3'].every((a) => User.rawAttributes[a])) {
+      const liste = mesLieux.map((l) => sequelize.escape(l)).join(', ');
+      parts.push(`CASE WHEN ${norm('lieu1')} IN (${liste}) OR ${norm('lieu2')} IN (${liste}) OR ${norm('lieu3')} IN (${liste}) THEN 4 ELSE 0 END`);
+    }
+    for (const [attr, poids] of [['nomFamille', 3], ['activite1', 2], ['regionOrigine', 1], ['pays', 1]]) {
+      if (!User.rawAttributes[attr]) continue;
+      const v = val(me[attr]);
+      if (v && !(attr === 'nomFamille' && v === 'membre')) parts.push(`CASE WHEN ${norm(attr)} = ${sequelize.escape(v)} THEN ${poids} ELSE 0 END`);
+    }
+    const score = parts.length ? parts.join(' + ') : '0';
+
+    const users = await User.findAll({
+      where: {
+        numeroH: { [Op.notIn]: [...exclus], [Op.notLike]: 'TMP-%' },
+        isActive: true
+      },
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'activite1', 'lieu1', 'lieu2', 'lieu3', 'treeVisibility'],
+      order: [[sequelize.literal(score), 'DESC'], ['created_at', 'DESC']],
+      limit: limit + 1,
+      offset
+    });
+
+    const mesLieuxSet = new Set(mesLieux);
+    const suggestions = users.slice(0, limit).map((u) => {
+      const vis = u.treeVisibility || 'name_photo_numeroH';
+      const raison = [u.lieu1, u.lieu2, u.lieu3].map(val).some((l) => l && mesLieuxSet.has(l)) ? 'Même quartier'
+        : val(u.nomFamille) && val(u.nomFamille) === val(me.nomFamille) ? 'Même famille'
+        : val(u.activite1) && val(u.activite1) === val(me.activite1) ? 'Même activité'
+        : null;
+      return {
+        ref: signerSuggestion(u.numeroH),
+        numeroH: vis === 'name_photo_numeroH' ? u.numeroH : null,
+        prenom: u.prenom,
+        nomFamille: u.nomFamille,
+        photo: vis === 'name_only' ? null : u.photo || null,
+        activite1: u.activite1 || null,
+        raison
+      };
+    });
+    res.json({ success: true, suggestions, hasMore: users.length > limit });
+  } catch (error) {
+    console.error('Erreur /friends/suggestions:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });
 

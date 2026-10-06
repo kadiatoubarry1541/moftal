@@ -6,6 +6,7 @@ import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay, getPhotoUrl } from '../../utils/auth';
 import { isContactPickerSupported, pickContactPhones } from '../../utils/contactPicker';
 import ProfileBadge from '../../components/ProfileBadge';
+import SuggestionsAmis from '../../components/SuggestionsAmis';
 import { useI18n } from '../../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002';
@@ -1073,6 +1074,9 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
           </div>
         </div>
       </div>
+
+      {/* Membres de Moftal à inviter d'un clic (la recherche reste dans « Ajouter ») */}
+      <SuggestionsAmis />
 
       {/* Visionnage d'une story */}
       {viewingStory && (
