@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getSocket } from '../services/socket'
+import { useConversationLue } from '../utils/messagesNonLus'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -33,6 +34,7 @@ interface Props {
 
 export function ParentChildChat({ linkId, myNumeroH, partnerLabel }: Props) {
   const [messages, setMessages] = useState<ParentChildMessageItem[]>([])
+  useConversationLue(`pc:${linkId}`, messages.length)
   const [loading, setLoading] = useState(true)
   const [newMessage, setNewMessage] = useState('')
   const [category, setCategory] = useState('information')

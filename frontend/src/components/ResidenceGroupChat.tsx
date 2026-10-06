@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { findLocationByCode } from '../utils/worldGeography'
 import { AudioRecorder } from './AudioRecorder'
 import { useI18n } from '../i18n/useI18n'
+import { useConversationLue } from '../utils/messagesNonLus'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 const MAX_VIDEO_SECONDS = 5
@@ -80,6 +81,7 @@ export function ResidenceGroupChat({ group, myNumeroH, userData }: Props) {
 
   const selectedGroup = group
   const [messages, setMessages] = useState<ResidenceMessage[]>([])
+  useConversationLue(`residence:${group.id}`, messages.length)
   const [loading, setLoading] = useState(true)
   const [feedFilter, setFeedFilter] = useState<string>('all')
   const [showCategoryGrid, setShowCategoryGrid] = useState(false)

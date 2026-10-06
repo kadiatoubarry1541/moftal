@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getSocket, disconnectSocket } from '../services/socket'
 import { useI18n } from '../i18n/useI18n'
 import CallModal from './CallModal'
+import { useConversationLue } from '../utils/messagesNonLus'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -62,6 +63,7 @@ export function FamilyGroupChat({ myNumeroH, prenom, nomFamille }: Props) {
   const { t } = useI18n()
 
   const [familyMessages, setFamilyMessages] = useState<FamilyMessage[]>([])
+  useConversationLue('family:', familyMessages.length)
   const [newMessage, setNewMessage] = useState('')
   const [newMessageCategory, setNewMessageCategory] = useState('information')
   const [showCategoryGrid, setShowCategoryGrid] = useState(false)
