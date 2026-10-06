@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
 
 // Compte créé avec seulement téléphone + mot de passe (identifiant provisoire
 // « TMP-… ») : on rappelle de mettre le profil à jour, et quand le serveur
 // refuse une action (code PROFILE_INCOMPLETE) on explique pourquoi.
-
-// Formulaire unique de mise à jour du profil d'un compte provisoire : la bannière
-// ci-dessous et le bouton « Mettre à jour » de l'Identité (MonProfil) ouvrent le même.
-const COMPLETE_PATH = "/vivant/completer";
 
 function isProvisionalSession(): boolean {
   try {
@@ -55,8 +52,9 @@ export default function ProfileCompletionPrompt() {
     return () => { listeners.delete(l); };
   }, []);
 
-  const goComplete = () => { setBlockedMessage(null); navigate(COMPLETE_PATH); };
-  const onCompletePage = pathname.startsWith(COMPLETE_PATH);
+  const goComplete = () => { setBlockedMessage(null); navigate(PAGE_MAJ_PROFIL); };
+  // Sur la page du profil, le formulaire est déjà là : pas de bannière par-dessus
+  const onCompletePage = pathname.startsWith("/moi/profil");
 
   return (
     <>

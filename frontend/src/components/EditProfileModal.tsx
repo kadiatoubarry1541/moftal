@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
-import { getAllLocationsForGroups } from "../utils/worldGeography";
+import { getAllLocationsForGroups, getAllCountries, getRegionsByCountry } from "../utils/worldGeography";
+import { ETHNIES, FAMILLES } from "../utils/constants";
+import { calculateGeneration, genererNumeroH } from "../utils/numeroHIdentite";
 import { compressImage } from "../utils/compressImage";
 import ActiviteChoix from "./ActiviteChoix";
 
@@ -55,8 +57,8 @@ interface EditProfileModalProps {
 // Champ d'identité (date de naissance, génération, ethnie, région, pays) : ils forment
 // le NuméroH, donc ne se modifient plus une fois saisis — mais un champ resté vide
 // doit pouvoir être rempli.
-function ChampIdentite({ label, type, value, verrouille, onChange }: {
-  label: string; type: string; value: string; verrouille: boolean; onChange: (v: string) => void;
+function ChampIdentite({ label, type, value, verrouille, onChange, list }: {
+  label: string; type: string; value: string; verrouille: boolean; onChange: (v: string) => void; list?: string;
 }) {
   return (
     <div>
@@ -67,6 +69,7 @@ function ChampIdentite({ label, type, value, verrouille, onChange }: {
         type={type}
         value={value}
         readOnly={verrouille}
+        list={verrouille ? undefined : list}
         onChange={(e) => onChange(e.target.value)}
         className={verrouille
           ? "w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-lg text-gray-500 cursor-not-allowed"
@@ -95,6 +98,19 @@ export default function EditProfileModal({
   const [vitrineVideoPreview, setVitrineVideoPreview] = useState<string | null>(null);
   const [vitrineVideoError, setVitrineVideoError] = useState<string | null>(null);
   const [preuveFile, setPreuveFile] = useState<File | null>(null);
+  // Compte provisoire (TMP-…, créé avec téléphone + mot de passe) : cette même page
+  // demande aussi les champs qui fabriquent le NuméroH, puis l'attribue.
+  const provisoire = Boolean(userData?.numeroH?.startsWith("TMP-"));
+  const [geo, setGeo] = useState({ paysCode: "", continentCode: "", regionCode: "" });
+  const modalRef = useRef<HTMLDivElement>(null);
+  const countries = useMemo(
+    () => getAllCountries().slice().sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" })),
+    []
+  );
+  const regions = useMemo(
+    () => (geo.paysCode ? getRegionsByCountry(geo.paysCode, geo.continentCode) : []),
+    [geo.paysCode, geo.continentCode]
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -109,7 +125,17 @@ export default function EditProfileModal({
 
   useEffect(() => {
     if (open && userData) {
-      setFormData({ ...userData });
+      // Valeurs de remplissage de l'inscription rapide : on présente des champs vides
+      const brut = userData.numeroH?.startsWith("TMP-");
+      setFormData({
+        ...userData,
+        ...(brut ? {
+          prenom: userData.prenom === "Nouveau" ? "" : userData.prenom,
+          nomFamille: userData.nomFamille === "membre" ? "" : userData.nomFamille,
+          genre: userData.genre === "AUTRE" ? "" : userData.genre,
+        } : {}),
+      });
+      setGeo({ paysCode: "", continentCode: "", regionCode: "" });
       setPhotoPreview(getPhotoUrl(userData.photo));
       setPhotoFile(null);
       setVideoFile(null);
@@ -211,6 +237,59 @@ export default function EditProfileModal({
         } catch { /* ignore */ }
       }
 
+      // 0. Compte provisoire : attribuer d'abord le vrai NuméroH (enregistré en base),
+      // puis la suite (photo, vitrine…) se fait avec ce NuméroH.
+      let numeroH = formData.numeroH;
+      let completedUser: any = null;
+      if (provisoire) {
+        const manque = [
+          !formData.prenom?.trim() && "Prénom",
+          !formData.nomFamille?.trim() && "Nom de famille",
+          !formData.dateNaissance && "Date de naissance",
+          !geo.paysCode && "Pays",
+          !formData.region?.trim() && "Région",
+          !formData.ethnie?.trim() && "Ethnie",
+        ].filter(Boolean);
+        if (manque.length) throw new Error(`À remplir pour recevoir votre NuméroH : ${manque.join(", ")}.`);
+        const nouveauNumeroH = await genererNumeroH({
+          dateNaissance: formData.dateNaissance!,
+          paysCode: geo.paysCode,
+          continentCode: geo.continentCode,
+          regionCode: geo.regionCode,
+          ethnie: formData.ethnie!.trim(),
+          famille: formData.nomFamille.trim(),
+        });
+        // Champs du profil envoyés avec l'identité (jamais le téléphone de connexion)
+        const profil: Record<string, unknown> = {};
+        for (const k of ["genre", "pays", "nationalite", "religion", "handicap", "activite1", "activite2", "activite3",
+          "specialite", "statutMatrimonial", "lieu1", "lieu2", "lieu3", "sousPrefecture", "numeroHPere",
+          "numeroHMere", "languesAutre", "dateNaissance"]) {
+          if (formData[k]) profil[k] = formData[k];
+        }
+        const res = await apiFetch("/auth/complete-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({
+            ...profil,
+            numeroH: nouveauNumeroH,
+            prenom: formData.prenom.trim(),
+            nomFamille: formData.nomFamille.trim(),
+            ethnie: formData.ethnie!.trim(),
+            region: formData.region!.trim(),
+            regionOrigine: formData.region!.trim(),
+            generation: calculateGeneration(formData.dateNaissance!),
+            email: formData.email?.trim() || "",
+          }),
+        });
+        const result = await res.json().catch(() => ({}));
+        if (!res.ok || !result.success) throw new Error(result.message || "Erreur lors de la mise à jour du profil.");
+        numeroH = result.user.numeroH;
+        token = result.token;
+        completedUser = result.user;
+        localStorage.setItem("token", result.token);
+        localStorage.setItem("session_user", JSON.stringify({ numeroH, userData: result.user, token: result.token, type: "vivant", source: "profile_completed" }));
+      }
+
       // Variables locales pour suivre photo et vidéo uploadées
       let uploadedVideoUrl: string | undefined = formData.video as string | undefined;
       let uploadedPhotoUrl: string | undefined = formData.photo;
@@ -219,7 +298,7 @@ export default function EditProfileModal({
       if (photoFile) {
         const photoFormData = new FormData();
         photoFormData.append("photo", await compressImage(photoFile));
-        photoFormData.append("numeroH", formData.numeroH);
+        photoFormData.append("numeroH", numeroH);
 
         const photoResponse = await apiFetch("/auth/profile/photo", {
           method: "POST",
@@ -240,7 +319,7 @@ export default function EditProfileModal({
       if (videoFile) {
         const videoFormData = new FormData();
         videoFormData.append("video", videoFile);
-        videoFormData.append("numeroH", formData.numeroH);
+        videoFormData.append("numeroH", numeroH);
         try {
           const videoResponse = await apiFetch("/auth/profile/video", {
             method: "POST",
@@ -264,21 +343,21 @@ export default function EditProfileModal({
       if (vitrinePhoto1File) {
         const fd = new FormData();
         fd.append("photo", await compressImage(vitrinePhoto1File));
-        fd.append("numeroH", formData.numeroH);
+        fd.append("numeroH", numeroH);
         const r = await apiFetch("/auth/profile/vitrine-photo1", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
         if (r.ok) { const d = await r.json(); uploadedVitrinePhoto1Url = d.photoUrl || uploadedVitrinePhoto1Url; }
       }
       if (vitrinePhoto2File) {
         const fd = new FormData();
         fd.append("photo", await compressImage(vitrinePhoto2File));
-        fd.append("numeroH", formData.numeroH);
+        fd.append("numeroH", numeroH);
         const r = await apiFetch("/auth/profile/vitrine-photo2", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
         if (r.ok) { const d = await r.json(); uploadedVitrinePhoto2Url = d.photoUrl || uploadedVitrinePhoto2Url; }
       }
       if (vitrineVideoFile) {
         const fd = new FormData();
         fd.append("video", vitrineVideoFile);
-        fd.append("numeroH", formData.numeroH);
+        fd.append("numeroH", numeroH);
         const r = await apiFetch("/auth/profile/vitrine-video", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
         if (r.ok) { const d = await r.json(); uploadedVitrineVideoUrl = d.videoUrl || uploadedVitrineVideoUrl; }
       }
@@ -286,7 +365,7 @@ export default function EditProfileModal({
       // 3. Mettre à jour les informations textuelles — seulement si l'une
       // d'elles a changé : un profil mis à jour avec la seule photo est valide.
       const textFields = {
-        numeroH: formData.numeroH,
+        numeroH,
         prenom: formData.prenom,
         nomFamille: formData.nomFamille,
         email: formData.email,
@@ -314,13 +393,15 @@ export default function EditProfileModal({
         languesAutre: formData.languesAutre,
         handicap: formData.handicap,
       };
-      const originalTel = userData?.telephone || userData?.tel1;
+      // Après attribution du NuméroH, on compare au profil tel qu'il vient d'être enregistré
+      const reference: any = completedUser || userData;
+      const originalTel = reference?.telephone || reference?.tel1;
       const textChanged = Object.entries(textFields).some(([k, v]) => {
-        const before = k === "telephone" || k === "tel1" ? originalTel : (userData as any)?.[k];
+        const before = k === "telephone" || k === "tel1" ? originalTel : reference?.[k];
         return (v ?? "") !== (before ?? "");
       });
 
-      let serverUser: any = {};
+      let serverUser: any = completedUser || {};
       if (textChanged || preuveFile) {
         const preuve = preuveFile
           ? await new Promise<string>((resolve) => {
@@ -385,7 +466,12 @@ export default function EditProfileModal({
       window.dispatchEvent(new Event("session-updated"));
 
       setSuccess(true);
-      setTimeout(() => onClose(), 1500);
+      if (completedUser) {
+        alert(`✅ Profil mis à jour !\n\nVotre NuméroH : ${numeroH}\n\nVous pouvez toujours vous connecter avec votre numéro de téléphone.`);
+        onClose();
+      } else {
+        setTimeout(() => onClose(), 1500);
+      }
     } catch (err: any) {
       const msg = err.message || "";
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("Load failed")) {
@@ -393,6 +479,7 @@ export default function EditProfileModal({
       } else {
         setError(msg || "Une erreur est survenue");
       }
+      modalRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setLoading(false);
     }
@@ -406,6 +493,7 @@ export default function EditProfileModal({
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="bg-white rounded-xl shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
@@ -432,6 +520,16 @@ export default function EditProfileModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {provisoire && (
+            <div className="p-4 rounded-xl border-2 border-amber-300 bg-amber-50">
+              <p className="text-sm font-bold text-amber-900">Complétez votre profil pour recevoir votre NuméroH</p>
+              <p className="text-xs text-amber-800 mt-1">
+                Prénom, nom de famille, date de naissance, pays, région et ethnie (marqués *) créent votre
+                NuméroH, votre identifiant dans l'arbre familial. Tout le reste peut être rempli maintenant ou plus tard.
+              </p>
+            </div>
+          )}
+
           {/* Photo de profil */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
@@ -581,6 +679,7 @@ export default function EditProfileModal({
               <input
                 type="text"
                 value={formData.nomFamille || ""}
+                list={provisoire ? "famille-options" : undefined}
                 onChange={(e) => handleInputChange("nomFamille", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
@@ -596,6 +695,11 @@ export default function EditProfileModal({
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {!formData.email && (
+                <p className="text-xs text-amber-700 mt-1">
+                  ⚠️ Sans e-mail, votre compte ne pourra pas être récupéré si vous oubliez votre mot de passe.
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -652,16 +756,66 @@ export default function EditProfileModal({
                 <option value="AUTRE">Autre</option>
               </select>
             </div>
-            <ChampIdentite label="Date de naissance" type="date" verrouille={Boolean(userData?.dateNaissance)}
+            <ChampIdentite label={provisoire ? "Date de naissance *" : "Date de naissance"} type="date" verrouille={Boolean(userData?.dateNaissance)}
               value={formData.dateNaissance || ""} onChange={(v) => handleInputChange("dateNaissance", v)} />
-            <ChampIdentite label="Génération" type="text" verrouille={Boolean(userData?.generation)}
-              value={formData.generation || ""} onChange={(v) => handleInputChange("generation", v)} />
-            <ChampIdentite label="Ethnie" type="text" verrouille={Boolean(userData?.ethnie)}
+            {/* Génération : calculée depuis la date de naissance pour un compte provisoire */}
+            {!provisoire && (
+              <ChampIdentite label="Génération" type="text" verrouille={Boolean(userData?.generation)}
+                value={formData.generation || ""} onChange={(v) => handleInputChange("generation", v)} />
+            )}
+            {provisoire ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pays *</label>
+                  <select
+                    value={geo.paysCode ? `${geo.continentCode}_${geo.paysCode}` : ""}
+                    onChange={(e) => {
+                      const [continentCode, paysCode] = e.target.value ? e.target.value.split("_") : ["", ""];
+                      const pays = countries.find((c) => c.code === paysCode && c.continentCode === continentCode);
+                      setGeo({ paysCode, continentCode, regionCode: pays?.children?.[0]?.code || "" });
+                      setFormData((prev) => prev && ({ ...prev, pays: pays?.name || "", region: "" }));
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">— Choisir un pays —</option>
+                    {countries.map((c) => (
+                      <option key={`${c.continentCode}_${c.code}`} value={`${c.continentCode}_${c.code}`}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Région *</label>
+                  <input
+                    type="text"
+                    list="region-options"
+                    value={formData.region || ""}
+                    disabled={!geo.paysCode}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      const r = regions.find((x) => x.name.toLowerCase() === v.trim().toLowerCase());
+                      if (r) setGeo((g) => ({ ...g, regionCode: r.code }));
+                      handleInputChange("region", v);
+                    }}
+                    placeholder={geo.paysCode ? "Choisissez ou tapez votre région" : "Choisissez d'abord le pays"}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  />
+                  <datalist id="region-options">
+                    {regions.map((x) => <option key={x.code} value={x.name} />)}
+                  </datalist>
+                </div>
+              </>
+            ) : (
+              <>
+                <ChampIdentite label="Pays" type="text" verrouille={Boolean(userData?.pays)}
+                  value={formData.pays || ""} onChange={(v) => handleInputChange("pays", v)} />
+                <ChampIdentite label="Région" type="text" verrouille={Boolean(userData?.region)}
+                  value={formData.region || ""} onChange={(v) => handleInputChange("region", v)} />
+              </>
+            )}
+            <ChampIdentite label={provisoire ? "Ethnie *" : "Ethnie"} type="text" verrouille={Boolean(userData?.ethnie)} list="ethnie-options"
               value={formData.ethnie || ""} onChange={(v) => handleInputChange("ethnie", v)} />
-            <ChampIdentite label="Région" type="text" verrouille={Boolean(userData?.region)}
-              value={formData.region || ""} onChange={(v) => handleInputChange("region", v)} />
-            <ChampIdentite label="Pays" type="text" verrouille={Boolean(userData?.pays)}
-              value={formData.pays || ""} onChange={(v) => handleInputChange("pays", v)} />
+            <datalist id="ethnie-options">{ETHNIES.map((x) => <option key={x} value={x} />)}</datalist>
+            <datalist id="famille-options">{FAMILLES.map((x) => <option key={x} value={x} />)}</datalist>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nationalité
@@ -925,7 +1079,7 @@ export default function EditProfileModal({
               disabled={loading}
               className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Enregistrement..." : "Enregistrer"}
+              {loading ? "Enregistrement..." : provisoire ? "✅ Enregistrer et recevoir mon NuméroH" : "Enregistrer"}
             </button>
           </div>
         </form>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PaymentModal from "../components/PaymentModal";
 import { VerifiedBadge } from "../components/VerifiedBadge";
 import LogoEtablissement from "../components/LogoEtablissement";
+import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -278,7 +279,7 @@ export default function MesComptesPro() {
                             <VerifiedBadge size={16} title="Compte validé à 100 %" /> 100 %
                           </span>
                         ) : (
-                          <button type="button" onClick={() => navigate("/vivant/completer")}
+                          <button type="button" onClick={() => navigate(PAGE_MAJ_PROFIL)}
                             title="Mettez votre profil à jour pour passer à 100 %"
                             className="text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
                             Validé à {acc.validationPercent} % · mettre le profil à jour
