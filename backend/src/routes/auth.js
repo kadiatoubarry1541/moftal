@@ -501,8 +501,13 @@ router.post('/complete-profile', authenticate, [
         // Remplacer l'identifiant provisoire dans toutes les colonnes « numero_h » des autres tables
         const cols = await User.sequelize.query(
           // colonnes nommées « …numero_h… » + toute colonne ayant une clé étrangère vers users
+          // + colonnes d'identifiant au nom différent (demandes d'amitié from_user/to_user,
+          //   created_by…) : un TMP-… est unique, le remplacer ne touche que ce compte.
           `SELECT table_name, column_name FROM information_schema.columns
-           WHERE table_schema = 'public' AND column_name ILIKE '%numero_h%'
+           WHERE table_schema = 'public'
+             AND (column_name ILIKE '%numero_h%' OR column_name ILIKE '%numeroh%'
+                  OR column_name IN ('from_user', 'to_user', 'created_by', 'approved_by', 'granted_by',
+                                     'performed_by', 'uploaded_by', 'recipient', 'recipient_id', 'sender_id', 'shared_from'))
              AND data_type IN ('character varying', 'text') AND table_name <> 'users'
            UNION
            SELECT kcu.table_name, kcu.column_name

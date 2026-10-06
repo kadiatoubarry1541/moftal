@@ -5,7 +5,7 @@ import Friend from '../models/Friend.js';
 import FriendRequest from '../models/FriendRequest.js';
 import FriendMessage from '../models/FriendMessage.js';
 import User from '../models/User.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, ensureNumeroHAliasTable } from '../middleware/auth.js';
 import Notification from '../models/Notification.js';
 import { sequelize } from '../config/database.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
@@ -109,6 +109,57 @@ function isAdmin(user) {
   return !!(user && user.numeroH === 'G7C7P7R7E7F7 7');
 }
 
+/**
+ * Comptes Moftal dont le numéro (tel1 ou tel2) correspond — on compare les chiffres
+ * seulement, sur les 9 derniers (comme la connexion) : « +224 620 00 00 00 »,
+ * « 620-00-00-00 » et « 620000000 » sont le même numéro.
+ */
+async function numerosHParTelephones(telephones, exclu) {
+  const fins = [...new Set(
+    telephones.map((t) => String(t || '').replace(/[^0-9]/g, '')).filter((d) => d.length >= 6).map((d) => d.slice(-9))
+  )].slice(0, 200);
+  if (fins.length === 0) return [];
+  const replacements = { exclu: exclu || '' };
+  const conditions = fins.map((f, i) => {
+    replacements[`f${i}`] = f;
+    return `RIGHT(REGEXP_REPLACE(COALESCE(tel1, ''), '[^0-9]', '', 'g'), LENGTH(:f${i})) = :f${i}
+         OR RIGHT(REGEXP_REPLACE(COALESCE(tel2, ''), '[^0-9]', '', 'g'), LENGTH(:f${i})) = :f${i}`;
+  });
+  const rows = await sequelize.query(
+    `SELECT numero_h FROM users
+     WHERE is_active = true AND numero_h <> :exclu AND (${conditions.join(' OR ')})
+     LIMIT 200`,
+    { replacements, type: 'SELECT' }
+  );
+  return rows.map((row) => row.numero_h);
+}
+
+/**
+ * Demandes d'amitié envoyées à (ou par) un compte provisoire TMP-… qui a depuis
+ * reçu son vrai NuméroH : on les rattache au NuméroH actuel, sinon personne ne
+ * les voit plus. Fait une fois par démarrage du serveur.
+ */
+let reparationDemandes = null;
+function reparerDemandesAnciensIdentifiants() {
+  if (!reparationDemandes) {
+    reparationDemandes = (async () => {
+      try {
+        await ensureNumeroHAliasTable();
+        for (const col of ['to_user', 'from_user']) {
+          await sequelize.query(
+            `UPDATE friend_requests fr SET ${col} = a.nouveau FROM numero_h_aliases a WHERE fr.${col} = a.ancien`
+          );
+        }
+      } catch (err) {
+        console.warn('⚠️ réparation demandes d\'amitié:', err.message);
+        reparationDemandes = null;
+      }
+    })();
+  }
+  return reparationDemandes;
+}
+router.use((req, res, next) => { reparerDemandesAnciensIdentifiants().finally(next); });
+
 // ─── GET /api/friends/list → liste des amis acceptés ─────────────────────────
 router.get('/list', async (req, res) => {
   try {
@@ -165,7 +216,9 @@ router.get('/requests', async (req, res) => {
   try {
     const requests = await FriendRequest.findAll({
       where: { toUser: req.user.numeroH, status: 'pending' },
-      order: [['createdAt', 'DESC']]
+      // Colonne réelle « created_at » (createdAt est renommé dans le modèle) :
+      // trier sur « createdAt » faisait échouer la requête → aucune demande affichée.
+      order: [['created_at', 'DESC']]
     });
 
     // Enrichir avec les infos de l'expéditeur si fromUserName manquant
@@ -343,23 +396,18 @@ router.get('/search-by-phone', async (req, res) => {
     if (!tel || tel.trim().length < 6) {
       return res.status(400).json({ success: false, message: 'Numéro requis (min. 6 chiffres)' });
     }
-    const telClean = tel.trim().replace(/\s+/g, '');
-    const user = await User.findOne({
-      where: {
-        [Op.or]: [
-          { tel1: { [Op.like]: '%' + telClean + '%' } },
-          { tel2: { [Op.like]: '%' + telClean + '%' } }
-        ],
-        isActive: true
-      },
-      attributes: ['numeroH', 'prenom', 'nomFamille']
-    });
-    if (!user) {
+    if (tel.replace(/[^0-9]/g, '').length < 6) {
+      return res.status(400).json({ success: false, message: 'Numéro requis (min. 6 chiffres)' });
+    }
+    const [trouve] = await numerosHParTelephones([tel], req.user.numeroH);
+    if (!trouve) {
+      const moi = await numerosHParTelephones([tel], '');
+      if (moi.includes(req.user.numeroH)) {
+        return res.status(400).json({ success: false, message: "C'est votre propre numéro" });
+      }
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce numéro' });
     }
-    if (user.numeroH === req.user.numeroH) {
-      return res.status(400).json({ success: false, message: "C'est votre propre numéro" });
-    }
+    const user = await User.findByNumeroH(trouve);
     res.json({ success: true, user: { numeroH: user.numeroH, prenom: user.prenom, nomFamille: user.nomFamille } });
   } catch (error) {
     console.error('Erreur /friends/search-by-phone:', error);
@@ -373,19 +421,11 @@ router.post('/match-phones', async (req, res) => {
   try {
     const numeroH = req.user.numeroH;
     const phones = Array.isArray(req.body?.phones) ? req.body.phones : [];
-    const cleaned = [...new Set(
-      phones.map(p => String(p || '').trim().replace(/\s+/g, '')).filter(p => p.length >= 6)
-    )].slice(0, 200);
-    if (cleaned.length === 0) return res.json({ success: true, matches: [] });
-
-    const orConditions = cleaned.flatMap(p => [
-      { tel1: { [Op.like]: '%' + p + '%' } },
-      { tel2: { [Op.like]: '%' + p + '%' } }
-    ]);
+    const trouves = await numerosHParTelephones(phones, numeroH);
+    if (trouves.length === 0) return res.json({ success: true, matches: [] });
     const users = await User.findAll({
-      where: { [Op.or]: orConditions, isActive: true, numeroH: { [Op.ne]: numeroH } },
-      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo'],
-      limit: 200
+      where: { numeroH: { [Op.in]: trouves } },
+      attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
     });
 
     // Exclut ceux déjà amis ou avec une demande en attente (rien à "ajouter" pour eux) —
