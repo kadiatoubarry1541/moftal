@@ -22,6 +22,7 @@ export default function SuggestionsAmis() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
   const [envoyees, setEnvoyees] = useState<Record<string, "envoi" | "ok" | string>>({});
+  const [photosCassees, setPhotosCassees] = useState<Record<string, true>>({});
 
   const charger = useCallback(async (offset: number) => {
     setChargement(true);
@@ -78,12 +79,13 @@ export default function SuggestionsAmis() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {suggestions.map((s) => {
             const etat = envoyees[s.ref];
-            const photo = getPhotoUrl(s.photo);
+            const photo = photosCassees[s.ref] ? null : getPhotoUrl(s.photo);
             return (
               <div key={s.ref} className="border border-gray-100 rounded-xl overflow-hidden flex flex-col">
                 <div className="aspect-square bg-emerald-50 flex items-center justify-center">
                   {photo ? (
-                    <img src={photo} alt={`${s.prenom} ${s.nomFamille}`} className="w-full h-full object-cover" loading="lazy" />
+                    <img src={photo} alt="" className="w-full h-full object-cover" loading="lazy"
+                      onError={() => setPhotosCassees((c) => ({ ...c, [s.ref]: true }))} />
                   ) : (
                     <span className="text-4xl font-bold text-emerald-600">{(s.prenom || "?").charAt(0).toUpperCase()}</span>
                   )}

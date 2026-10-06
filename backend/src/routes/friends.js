@@ -5,7 +5,7 @@ import Friend from '../models/Friend.js';
 import FriendRequest from '../models/FriendRequest.js';
 import FriendMessage from '../models/FriendMessage.js';
 import User from '../models/User.js';
-import { authenticate, ensureNumeroHAliasTable } from '../middleware/auth.js';
+import { authenticate, ensureNumeroHAliasTable, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import { normalizeNumeroH } from '../utils/numeroH.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config.js';
@@ -113,6 +113,26 @@ function isAdmin(user) {
 }
 
 /**
+ * Comptes de l'administration : secrets, jamais montrés ni trouvables par les
+ * membres (suggestions, recherches par nom / téléphone / e-mail / NuméroH).
+ * Rôle admin, NuméroH maîtres, ou NuméroH de génération réservée G0–G90
+ * (aucun vivant ne peut l'avoir : les vivants sont en G96).
+ */
+const ROLES_ADMIN = ['admin', 'super-admin', 'superadmin', 'administrator'];
+const RESERVE_RE = /^G([0-9]|[1-8][0-9]|90)C/i;
+function estCompteAdmin(u) {
+  if (!u) return false;
+  return ROLES_ADMIN.includes(String(u.role || '').toLowerCase())
+    || MASTER_ADMIN_NUMEROS.includes(u.numeroH)
+    || RESERVE_RE.test(String(u.numeroH || ''));
+}
+// Même règle en SQL (prefixe = alias de table, ex. '"User".')
+const sansComptesAdmin = (prefixe = '') => `NOT (
+  LOWER(COALESCE(${prefixe}role, 'user')) IN (${ROLES_ADMIN.map((x) => `'${x}'`).join(', ')})
+  OR ${prefixe}numero_h IN (${MASTER_ADMIN_NUMEROS.map((x) => `'${x}'`).join(', ')})
+  OR ${prefixe}numero_h ~* '^G([0-9]|[1-8][0-9]|90)C')`;
+
+/**
  * Comptes Moftal dont le numéro (tel1 ou tel2) correspond — on compare les chiffres
  * seulement, sur les 9 derniers (comme la connexion) : « +224 620 00 00 00 »,
  * « 620-00-00-00 » et « 620000000 » sont le même numéro.
@@ -130,7 +150,7 @@ async function numerosHParTelephones(telephones, exclu) {
   });
   const rows = await sequelize.query(
     `SELECT numero_h FROM users
-     WHERE is_active = true AND numero_h <> :exclu AND (${conditions.join(' OR ')})
+     WHERE is_active = true AND numero_h <> :exclu AND ${sansComptesAdmin()} AND (${conditions.join(' OR ')})
      LIMIT 200`,
     { replacements, type: 'SELECT' }
   );
@@ -141,19 +161,19 @@ async function numerosHParTelephones(telephones, exclu) {
 async function utilisateurParEmail(email) {
   const e = String(email || '').trim().toLowerCase();
   if (!e.includes('@')) return null;
-  return User.findOne({ where: { [Op.and]: [sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), e), { isActive: true }] } });
+  return User.findOne({ where: { [Op.and]: [sequelize.where(sequelize.fn('LOWER', sequelize.col('email')), e), { isActive: true }, sequelize.literal(sansComptesAdmin('"User".'))] } });
 }
 
 /**
  * Retrouve la personne à ajouter à partir de ce qui a été saisi : NuméroH,
  * e-mail ou numéro de téléphone — les trois marchent partout.
  */
-async function trouverDestinataire(saisie, moi) {
+async function trouverDestinataire(saisie, moi, moiUser) {
   const texte = String(saisie || '').trim();
   if (!texte) return null;
   if (texte.includes('@')) return utilisateurParEmail(texte);
   const parNumeroH = await User.findByNumeroH(texte) || await User.findByNumeroH(normalizeNumeroH(texte));
-  if (parNumeroH) return parNumeroH;
+  if (parNumeroH) return estCompteAdmin(parNumeroH) && !estCompteAdmin(moiUser) ? null : parNumeroH;
   // Un numéro de téléphone : surtout des chiffres (+, espaces, tirets permis)
   if (/^[+\d\s().-]+$/.test(texte) && texte.replace(/[^0-9]/g, '').length >= 6) {
     const [numeroH] = await numerosHParTelephones([texte], moi);
@@ -296,7 +316,7 @@ router.post('/send-request', async (req, res) => {
     // Si on stockait toUserTrimmed tel quel, la requête GET /requests du
     // destinataire — qui compare toUser à son numeroH canonique par égalité
     // stricte — ne la retrouverait jamais : la demande semblerait "perdue".
-    const targetUser = await trouverDestinataire(toUserTrimmed, fromUser);
+    const targetUser = await trouverDestinataire(toUserTrimmed, fromUser, req.user);
     if (!targetUser) {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce NuméroH, cet e-mail ou ce numéro de téléphone' });
     }
@@ -466,7 +486,8 @@ router.get('/suggestions', async (req, res) => {
     const users = await User.findAll({
       where: {
         numeroH: { [Op.notIn]: [...exclus], [Op.notLike]: 'TMP-%' },
-        isActive: true
+        isActive: true,
+        [Op.and]: [sequelize.literal(sansComptesAdmin('"User".'))]
       },
       attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'activite1', 'lieu1', 'lieu2', 'lieu3', 'treeVisibility'],
       order: [[sequelize.literal(score), 'DESC'], ['created_at', 'DESC']],
@@ -595,7 +616,7 @@ router.get('/search-by-name', async (req, res) => {
     const andClauses = [];
     if (prenom?.trim()) andClauses.push({ prenom: { [Op.iLike]: '%' + prenom.trim() + '%' } });
     if (nom?.trim()) andClauses.push({ nomFamille: { [Op.iLike]: '%' + nom.trim() + '%' } });
-    where[Op.and] = andClauses;
+    where[Op.and] = [...andClauses, sequelize.literal(sansComptesAdmin('"User".'))];
     const users = await User.findAll({
       where,
       attributes: ['numeroH', 'prenom', 'nomFamille'],
@@ -647,7 +668,7 @@ router.get('/quartier-contacts', async (req, res) => {
     if (memberNumeroHs.length === 0) return res.json({ success: true, contacts: [] });
 
     const users = await User.findAll({
-      where: { numeroH: { [Op.in]: memberNumeroHs } },
+      where: { numeroH: { [Op.in]: memberNumeroHs }, [Op.and]: [sequelize.literal(sansComptesAdmin('"User".'))] },
       attributes: ['numeroH', 'prenom', 'nomFamille', 'photo']
     });
     res.json({ success: true, contacts: users });
@@ -666,7 +687,7 @@ router.get('/activity-contacts', async (req, res) => {
     if (!activite1) return res.json({ success: true, contacts: [] });
 
     const users = await User.findAll({
-      where: { activite1, numeroH: { [Op.ne]: numeroH } },
+      where: { activite1, numeroH: { [Op.ne]: numeroH }, [Op.and]: [sequelize.literal(sansComptesAdmin('"User".'))] },
       attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'activite1'],
       limit: 100
     });
