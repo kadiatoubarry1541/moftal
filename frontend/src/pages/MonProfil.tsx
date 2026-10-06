@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import IdentiteModal from "../components/IdentiteModal";
 import EditProfileModal from "../components/EditProfileModal";
@@ -56,7 +56,9 @@ export default function MonProfil() {
   const [userLogos, setUserLogos] = useState<UserLogo[]>([]);
   const [memberships, setMemberships] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [showEditProfile, setShowEditProfile] = useState(false);
+  // ?modifier=1 : page unique « Mettre à jour mon profil » (bannière, espaces pro…)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showEditProfile, setShowEditProfile] = useState(() => searchParams.get("modifier") === "1");
   const [showAdmin, setShowAdmin] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const navigate = useNavigate();
@@ -98,6 +100,10 @@ export default function MonProfil() {
       // Silencieux — on garde les données localStorage si le serveur est injoignable
     }
   };
+
+  useEffect(() => {
+    if (searchParams.get("modifier") === "1") setShowEditProfile(true);
+  }, [searchParams]);
 
   useEffect(() => {
     loadUserData();
@@ -433,7 +439,10 @@ export default function MonProfil() {
 
       <EditProfileModal
         open={showEditProfile}
-        onClose={() => setShowEditProfile(false)}
+        onClose={() => {
+          setShowEditProfile(false);
+          if (searchParams.has("modifier")) setSearchParams({}, { replace: true });
+        }}
         userData={userData as React.ComponentProps<typeof EditProfileModal>["userData"]}
         onUpdate={(updatedData) => {
           // Mettre à jour l'état local immédiatement

@@ -8,7 +8,7 @@ class FriendRequest extends Model {
         toUser: numeroH,
         status: 'pending'
       },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
   }
 }

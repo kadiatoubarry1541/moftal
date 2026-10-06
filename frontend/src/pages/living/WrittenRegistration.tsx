@@ -6,6 +6,8 @@ import { uploadForRegistration } from '../../utils/uploadMedia'
 import { getAllCountries, getRegionsByCountry, getContinentAndRegionByCountry, getPrefecturesByRegion, WORLD_GEOGRAPHY } from '../../utils/worldGeography'
 import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
 import { getCountryGeoLabels } from '../../utils/countryGeoStructure'
+import ActiviteChoix from '../../components/ActiviteChoix'
+import { calculateGeneration, genererNumeroH } from '../../utils/numeroHIdentite'
 
 interface WrittenData {
   numeroHPere: string
@@ -26,10 +28,8 @@ interface WrittenData {
   ethnie: string
   famille: string
   // Champs libres quand l'utilisateur choisit "Autre"
-  activite1Autre?: string
   ethnieAutre?: string
   familleAutre?: string
-  activiteDescription?: string
   activiteDoc?: File | null
   activitePreuve?: File | null
   specialite?: string              // Spécialité dans l'activité principale
@@ -54,11 +54,7 @@ interface WrittenData {
   numeroH?: string
 }
 
-// mode="complete" : mise à jour du profil d'un compte créé avec seulement
-// téléphone + mot de passe. On ne redemande ni téléphone ni mot de passe ;
-// seuls les champs qui fabriquent le NuméroH restent obligatoires.
-export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' | 'complete' } = {}) {
-  const isComplete = mode === 'complete'
+export function WrittenRegistration() {
   const [data, setData] = useState<WrittenData>({
     numeroHPere: '',
     numeroHMere: '',
@@ -77,10 +73,8 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
     quartierCode: '',
     ethnie: '',
     famille: '',
-    activite1Autre: '',
     ethnieAutre: '',
     familleAutre: '',
-    activiteDescription: '',
     activiteDoc: null,
     activitePreuve: null,
     specialite: '',
@@ -150,22 +144,11 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
     if (paysComplete) setPaysSectionExpanded(false)
   }
 
-  const calculateGeneration = (dateNaissance: string): string => {
-    if (!dateNaissance) return ''
-    const birthDate = new Date(dateNaissance)
-    const birthYear = birthDate.getFullYear()
-    const anneeDepart = -4003
-    const ecart = birthYear - anneeDepart
-    const generationIndex = Math.floor(ecart / 63) + 1
-    const generationNumber = Math.max(1, Math.min(200, generationIndex))
-    return `G${generationNumber}`
-  }
 
   const validateRequiredFields = (): boolean => {
     const errors = new Set<string>()
 
-    const hasCustomActivite =
-      data.activite1 === 'Autre' ? !!(data.activite1Autre && data.activite1Autre.trim()) : !!data.activite1
+    const hasCustomActivite = !!data.activite1.trim()
     const hasEthnie =
       data.ethnie === 'Autre' ? !!(data.ethnieAutre && data.ethnieAutre.trim()) : !!data.ethnie
     const hasFamille =
@@ -173,14 +156,6 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
 
     if (!data.paysCode) errors.add('paysCode')
     if (!(data.region && data.region.trim())) errors.add('region')
-    if (isComplete) {
-      if (!hasEthnie) errors.add('ethnie')
-      if (!hasFamille) errors.add('famille')
-      if (!data.prenom) errors.add('prenom')
-      if (!data.dateNaissance) errors.add('dateNaissance')
-      setValidationErrors(errors)
-      return errors.size === 0
-    }
     if (!(data.prefecture && data.prefecture.trim())) errors.add('prefecture')
     if (!(data.sousPrefecture && data.sousPrefecture.trim())) errors.add('sousPrefecture')
     if (!(data.quartier && data.quartier.trim())) errors.add('quartier')
@@ -253,41 +228,6 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
     }))
   }
 
-  const generateNumeroH = async (form: WrittenData): Promise<string> => {
-    const generation = calculateGeneration(form.dateNaissance)
-    // Préfixe NumeroH : génération + continent + pays + région (choisie) + ethnie + famille
-    const { continentCode: c } = form.paysCode ? getContinentAndRegionByCountry(form.paysCode) : { continentCode: 'C1' }
-    const continentCode = form.continentCode || c
-    const paysCode = form.paysCode || 'P1'
-    const regionCode = form.regionCode || (form.paysCode ? getContinentAndRegionByCountry(form.paysCode).regionCode : 'R1')
-
-    const ethnieEntry = ETHNIE_CODES.find((e) => e.label === form.ethnie)
-    const familleEntry = FAMILLE_CODES.find((f) => f.label === form.famille)
-
-    const generateAutoCode = (name: string, prefix: string, existingCodes: string[]): string => {
-      if (!name) return prefix + '999'
-      const existingNums = existingCodes
-        .filter((c) => c.startsWith(prefix))
-        .map((c) => {
-          const numStr = c.substring(prefix.length)
-          const num = parseInt(numStr, 10)
-          return isNaN(num) ? 0 : num
-        })
-        .filter((n) => n > 0)
-      const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1
-      return prefix + nextNum.toString()
-    }
-
-    const ethnieCode =
-      ethnieEntry?.code || generateAutoCode(form.ethnie, 'E', ETHNIE_CODES.map((e) => e.code))
-    const familleCode =
-      familleEntry?.code ||
-      generateAutoCode(form.famille, 'F', FAMILLE_CODES.map((f) => f.code))
-
-    const prefix = `${generation}${continentCode}${paysCode}${regionCode}${ethnieCode}${familleCode}`
-    const { generateUniqueNumeroH } = await import('../../utils/numeroHGenerator')
-    return await generateUniqueNumeroH(prefix)
-  }
 
   const showCredentialsReminder = (numeroH: string, password: string) => {
     if (!numeroH || !password || hasShownReminder) return
@@ -313,10 +253,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
     setLoading(true)
 
     // Normaliser les champs \"Autre\" pour l'activité, l'ethnie et la famille
-    const effectiveActivite1 =
-      data.activite1 === 'Autre' && data.activite1Autre?.trim()
-        ? data.activite1Autre.trim()
-        : data.activite1
+    const effectiveActivite1 = data.activite1.trim()
     const effectiveEthnie =
       data.ethnie === 'Autre' && data.ethnieAutre?.trim()
         ? data.ethnieAutre.trim()
@@ -333,7 +270,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
       famille: effectiveFamille
     }
 
-    const numeroH = await generateNumeroH(normalizedForm)
+    const numeroH = await genererNumeroH(normalizedForm)
 
     const { continentCode: infContinentCode } = normalizedForm.paysCode ? getContinentAndRegionByCountry(normalizedForm.paysCode) : { continentCode: 'C1' }
     const continentName = WORLD_GEOGRAPHY.find((c) => c.code === (normalizedForm.continentCode || infContinentCode))?.name || ''
@@ -376,7 +313,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
       confirmPassword: normalizedForm.confirmPassword,
       prenom: normalizedForm.prenom,
       nomFamille: effectiveFamille,
-      email: (normalizedForm.email && normalizedForm.email.trim()) ? normalizedForm.email.trim() : `${numeroH}@example.com`,
+      email: normalizedForm.email?.trim() || '',
       religion: normalizedForm.religion?.trim() || '',
       handicap: normalizedForm.handicap || '',
       genre: normalizedForm.genre,
@@ -385,32 +322,6 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
       activitePreuve: activitePreuveBase64,
       activiteDoc: activiteDocBase64,
       lieu1: (normalizedForm.quartier && normalizedForm.quartier.trim()) || normalizedForm.lieu1 || ''
-    }
-
-    if (isComplete) {
-      try {
-        const { password: _pw, confirmPassword: _cpw, telephone: _tel, ...profil } = completeData as any
-        const res = await fetch(`${config.API_BASE_URL}/auth/complete-profile`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-          body: JSON.stringify({
-            ...profil,
-            generation: calculateGeneration(normalizedForm.dateNaissance),
-            email: (normalizedForm.email && normalizedForm.email.trim()) || ''
-          })
-        })
-        const result = await res.json()
-        if (!result.success) { alert(result.message || 'Erreur lors de la mise à jour du profil.'); return }
-        localStorage.setItem('token', result.token)
-        localStorage.setItem('session_user', JSON.stringify({ numeroH: result.user.numeroH, userData: result.user, token: result.token, type: 'vivant', source: 'profile_completed' }))
-        alert(`✅ Profil mis à jour !\n\nVotre NuméroH : ${result.user.numeroH}\n\nVous pouvez toujours vous connecter avec votre numéro de téléphone.`)
-        window.location.href = '/compte'
-      } catch {
-        alert('Erreur de connexion. Vérifiez votre connexion et réessayez.')
-      } finally {
-        setLoading(false)
-      }
-      return
     }
 
     // Le compte n'existe que s'il est enregistré dans la base : jamais de
@@ -428,7 +339,8 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
           source: 'registration_written',
         }))
         if (result.token) localStorage.setItem('token', result.token)
-        showCredentialsReminder(numeroH, data.password)
+        // NuméroH définitif : celui attribué par le serveur (numéro d'ordre suivant)
+        showCredentialsReminder(user.numeroH || numeroH, data.password)
         navigate('/compte')
         return
       }
@@ -456,27 +368,19 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
   // ── Déclencheurs progressifs ──────────────────────────────────────────────
   const ethnieFilled = !!(data.ethnie && (data.ethnie !== 'Autre' || data.ethnieAutre?.trim()))
   const familleFilled = !!(data.famille && (data.famille !== 'Autre' || data.familleAutre?.trim()))
-  const activiteFilled = !!(data.activite1 && (data.activite1 !== 'Autre' || data.activite1Autre?.trim()))
-  const identiteOK = ethnieFilled && familleFilled && (activiteFilled || isComplete)
-  const coordonneesOK = !!(data.prenom && (data.telephone || isComplete))
+  const activiteFilled = !!data.activite1.trim()
+  const identiteOK = ethnieFilled && familleFilled && activiteFilled
+  const coordonneesOK = !!(data.prenom && data.telephone)
 
   // Calcul indicateur d'étapes
   const totalSteps = 4
   const step1Done = !!data.dateNaissance
-  const step2Done = step1Done && !!data.paysCode && !!(data.region?.trim()) && (isComplete || (!!(data.prefecture?.trim()) && !!(data.sousPrefecture?.trim()) && !!(data.quartier?.trim())))
+  const step2Done = step1Done && !!data.paysCode && !!(data.region?.trim()) && !!(data.prefecture?.trim()) && !!(data.sousPrefecture?.trim()) && !!(data.quartier?.trim())
   const step3Done = step2Done && identiteOK && coordonneesOK
-  const step4Done = step3Done && (isComplete || (!!data.email && !!data.password && data.password === data.confirmPassword && data.password.length >= 6))
+  const step4Done = step3Done && !!data.email && !!data.password && data.password === data.confirmPassword && data.password.length >= 6
   const currentStep = step4Done ? 4 : step3Done ? 3 : step2Done ? 2 : 1
 
   const missingFields: string[] = []
-  if (isComplete) {
-    if (!data.dateNaissance) missingFields.push('Date de naissance')
-    if (!data.paysCode) missingFields.push('Pays')
-    if (!(data.region && data.region.trim())) missingFields.push(geoLabels.level1.label)
-    if (!ethnieFilled) missingFields.push('Ethnie')
-    if (!familleFilled) missingFields.push('Nom de famille')
-    if (!data.prenom) missingFields.push('Prénom')
-  } else {
   if (!data.dateNaissance) missingFields.push('Date de naissance')
   if (!data.paysCode) missingFields.push('Pays')
   if (!(data.region && data.region.trim())) missingFields.push(geoLabels.level1.label)
@@ -499,7 +403,6 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
   if (data.password && data.password.length < 6) {
     missingFields.push('Le mot de passe doit contenir au moins 6 caractères')
   }
-  }
   const isDisabled = missingFields.length > 0
 
   // Labels des étapes
@@ -507,19 +410,13 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
 
   return (
     <div className="stack">
-      <button onClick={() => navigate(isComplete ? '/compte' : '/vivant')} className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors text-sm font-medium w-fit bg-transparent border-none cursor-pointer p-0">
+      <button onClick={() => navigate('/vivant')} className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors text-sm font-medium w-fit bg-transparent border-none cursor-pointer p-0">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         Retour
       </button>
-      <h2>{isComplete ? '✏️ Mettre mon profil à jour' : 'Inscription par écrit'}</h2>
-      {isComplete && (
-        <p className="text-sm text-gray-600 -mt-2">
-          Ces informations créent votre <strong>NuméroH</strong> (votre identifiant dans l'arbre familial).
-          Seuls les champs marqués * sont obligatoires ; le reste peut être complété plus tard.
-        </p>
-      )}
+      <h2>Inscription par écrit</h2>
 
       {/* ── Barre de progression ── */}
       <div className="mb-4">
@@ -751,11 +648,11 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
             <div className="col-12">
               <div className="field">
                 <label>Activité principale *</label>
-                <select
+                <ActiviteChoix
                   value={data.activite1}
-                  onChange={(e) => {
-                    setData((prev) => ({ ...prev, activite1: e.target.value, activite1Autre: '', activiteDescription: '', activiteDoc: null }))
-                    if (e.target.value) {
+                  onChange={(v) => {
+                    setData((prev) => ({ ...prev, activite1: v }))
+                    if (v.trim()) {
                       setValidationErrors((prev) => {
                         const next = new Set(prev)
                         next.delete('activite1')
@@ -763,79 +660,9 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
                       })
                     }
                   }}
-                  required
-                  className={getFieldClassName('activite1', !!data.activite1)}
-                >
-                  <option value="">— Choisir une activité —</option>
-                  <option value="Agriculture">Agriculture</option>
-                  <option value="Élevage">Élevage</option>
-                  <option value="Pêche">Pêche</option>
-                  <option value="Commerce">Commerce</option>
-                  <option value="Artisanat">Artisanat</option>
-                  <option value="Transport">Transport</option>
-                  <option value="Enseignement">Enseignement</option>
-                  <option value="Santé">Santé</option>
-                  <option value="Administration">Administration</option>
-                  <option value="Informatique">Informatique</option>
-                  <option value="Construction">Construction</option>
-                  <option value="Mécanique">Mécanique</option>
-                  <option value="Restauration">Restauration</option>
-                  <option value="Coiffure">Coiffure</option>
-                  <option value="Couture">Couture</option>
-                  <option value="Menuiserie">Menuiserie</option>
-                  <option value="Électricité">Électricité</option>
-                  <option value="Plomberie">Plomberie</option>
-                  <option value="Sécurité">Sécurité</option>
-                  <option value="Banque/Finance">Banque/Finance</option>
-                  <option value="Télécommunications">Télécommunications</option>
-                  <option value="Journalisme">Journalisme</option>
-                  <option value="Étudiant">Étudiant</option>
-                  <option value="Sans emploi">Sans emploi</option>
-                  <option value="Retraité">Retraité</option>
-                  <option value="Autre">✏️ Autre (je saisis mon activité)</option>
-                </select>
-
-
-                {/* Sous-champs quand "Autre" est sélectionné */}
-                {data.activite1 === 'Autre' && (
-                  <div className="mt-3 space-y-3" style={{ borderLeft: '3px solid #3b82f6', paddingLeft: '0.75rem' }}>
-                    {/* Nom de l'activité (obligatoire) */}
-                    <div>
-                      <input
-                        type="text"
-                        value={data.activite1Autre || ''}
-                        onChange={(e) => {
-                          setData((prev) => ({ ...prev, activite1Autre: e.target.value }))
-                          if (e.target.value.trim()) {
-                            setValidationErrors((prev) => {
-                              const next = new Set(prev)
-                              next.delete('activite1')
-                              return next
-                            })
-                          }
-                        }}
-                        placeholder="Nom de votre activité (ex. Designer UX, Coach sportif…)"
-                        className={getFieldClassName('activite1', !!(data.activite1Autre?.trim()))}
-                      />
-                    </div>
-
-                    {/* Description facultative */}
-                    <div>
-                      <textarea
-                        value={data.activiteDescription || ''}
-                        onChange={(e) => setData((prev) => ({ ...prev, activiteDescription: e.target.value }))}
-                        rows={2}
-                        className="w-full px-3 py-2 border rounded-lg border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="Description facultative : diplômes, certifications, expérience…"
-                      />
-                    </div>
-
-                  </div>
-                )}
-
-                {data.activite1 && data.activite1 !== 'Autre' && (
-                  <small className="text-green-600">✓ Activité : {data.activite1}</small>
-                )}
+                  placeholder="— Choisir une activité —"
+                  className={getFieldClassName('activite1', !!data.activite1.trim())}
+                />
 
               </div>
             </div>
@@ -944,7 +771,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
                 />
               </div>
             </div>
-            {!isComplete && <div className="col-6">
+            <div className="col-6">
               <div className="field">
                 <label>Téléphone *</label>
                 <input
@@ -964,7 +791,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
                   className={getFieldClassName('telephone', !!data.telephone)}
                 />
               </div>
-            </div>}
+            </div>
           </div>
         )}
 
@@ -976,7 +803,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
             <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
               <div className="col-6">
                 <div className="field">
-                  <label>{isComplete ? 'E-mail (conseillé)' : 'E-mail *'}</label>
+                  <label>E-mail *</label>
                   <input
                     type="email"
                     value={data.email}
@@ -991,20 +818,14 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
                       }
                     }}
                     placeholder="Email"
-                    required={!isComplete}
+                    required
                     className={getFieldClassName('email', !!data.email)}
                   />
-                  {isComplete && (
-                    <small className="block mt-1 text-amber-700">
-                      ⚠️ Sans email, votre compte ne pourra pas être récupéré si vous oubliez votre mot de passe
-                      (le numéro de téléphone seul ne suffit pas).
-                    </small>
-                  )}
                 </div>
               </div>
               <div className="col-6">
                 <div className="field">
-                  <label>{isComplete ? 'Religion (facultatif)' : 'Religion *'}</label>
+                  <label>Religion *</label>
                   <input
                     value={data.religion}
                     onChange={(e) => {
@@ -1027,9 +848,9 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
         )}
 
         {/* ══ SECTION 10 – Après email : Mot de passe + Photo ══ */}
-        {(isComplete ? coordonneesOK : !!data.email) && (
+        {!!data.email && (
           <>
-            {!isComplete && <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
+            <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
               <div className="col-6">
                 <div className="field">
                   <label>Mot de passe *</label>
@@ -1107,12 +928,12 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
                   </div>
                 </div>
               )}
-            </div>}
+            </div>
 
             <div className="row">
               <div className="col-12">
                 <div className="field">
-                  <label>{isComplete ? 'Photo de profil (facultatif)' : 'Photo de profil *'}</label>
+                  <label>Photo de profil *</label>
                   <div className={`photo-upload-section${validationErrors.has('photo') ? ' border-2 border-red-500 rounded-lg p-1' : ''}`}>
                     {data.photoPreview ? (
                       <div className="photo-preview">
@@ -1154,7 +975,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
                   ? 'Remplir les champs obligatoires'
                   : loading
                   ? 'Envoi en cours…'
-                  : isComplete ? '✅ Mettre mon profil à jour' : '✅ Envoyer'}
+                  : '✅ Envoyer'}
               </button>
             </div>
           </>

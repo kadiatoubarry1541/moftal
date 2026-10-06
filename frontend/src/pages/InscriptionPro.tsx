@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LogoPicker from "../components/LogoPicker";
 import { normaliserLogo } from "../utils/logoImage";
+import { PAGE_MAJ_PROFIL } from "../utils/profilPage";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -367,7 +368,7 @@ export default function InscriptionPro() {
               <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
                 Pour le reste, mettez votre profil à jour : votre compte passera automatiquement à 100 %.
               </p>
-              <button onClick={() => navigate("/vivant/completer")} className="mt-3 w-full min-h-[44px] px-4 py-2 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600">
+              <button onClick={() => navigate(PAGE_MAJ_PROFIL)} className="mt-3 w-full min-h-[44px] px-4 py-2 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600">
                 ✏️ Mettre mon profil à jour
               </button>
             </div>
