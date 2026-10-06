@@ -172,7 +172,7 @@ const pul: Record<string, string> = {
   'amitie.add_friend.tab_qr': '📷 QR',
   'amitie.add_friend.tab_ecrit': '✍️ Winndugol',
   'amitie.add_friend.tab_video': '🎬 Widewoo',
-  'amitie.add_friend.numeroh_placeholder': 'Ex: H-2024-XXXX',
+  'amitie.add_friend.numeroh_placeholder': 'NuméroH, e-mail ou téléphone',
   'amitie.add_friend.message_placeholder': 'Ɓataake jokkondiral...',
   'amitie.add_friend.import_contacts_btn': 'Naatnu immorde e kontak am',
   'amitie.add_friend.search_btn': 'Yiylo',

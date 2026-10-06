@@ -172,7 +172,7 @@ const man: Record<string, string> = {
   'amitie.add_friend.tab_qr': '📷 QR',
   'amitie.add_friend.tab_ecrit': '✍️ Sɛbɛn',
   'amitie.add_friend.tab_video': '🎬 Vidéo',
-  'amitie.add_friend.numeroh_placeholder': 'Ex: H-2024-XXXX',
+  'amitie.add_friend.numeroh_placeholder': 'NuméroH, e-mail ou téléphone',
   'amitie.add_friend.message_placeholder': 'Inivitasiyon bataki...',
   'amitie.add_friend.import_contacts_btn': 'Ka bɔ n ka kontaktiw kɔnɔ',
   'amitie.add_friend.search_btn': 'Ɲini',
