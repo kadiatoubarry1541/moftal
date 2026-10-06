@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getPhotoUrl } from "../utils/auth";
 import { getAllLocationsForGroups } from "../utils/worldGeography";
 import { compressImage } from "../utils/compressImage";
+import ActiviteChoix from "./ActiviteChoix";
 
 interface UserData {
   numeroH: string;
@@ -82,9 +82,6 @@ export default function EditProfileModal({
   userData,
   onUpdate,
 }: EditProfileModalProps) {
-  const navigate = useNavigate();
-  // Identifiant provisoire « TMP-… » : compte créé avec seulement téléphone + mot de passe
-  const profilProvisoire = Boolean(userData?.numeroH?.startsWith("TMP-"));
   const [formData, setFormData] = useState<UserData | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -109,85 +106,6 @@ export default function EditProfileModal({
   const vitrineVideoInputRef = useRef<HTMLInputElement>(null);
   const allQuartiers = useMemo(() => getAllLocationsForGroups('quartier'), []);
   const allSousPrefectures = useMemo(() => getAllLocationsForGroups('sous_prefecture'), []);
-
-  const ACTIVITY_OPTIONS = [
-    // ── Santé & Médecine ──
-    "Santé",
-    "Médecin",
-    "Infirmier/Infirmière",
-    "Pharmacien",
-    "Sage-femme",
-    "Dentiste",
-    "Psychologue/Thérapeute",
-    "Kiné/Physiothérapeute",
-    "Vétérinaire",
-    "Opticien",
-    // ── Éducation ──
-    "Élève",
-    "Étudiant",
-    "Enseignement",
-    "Professeur/Formateur",
-    "Chercheur/Scientifique",
-    // ── Droit, Finance & Admin ──
-    "Administration",
-    "Avocat/Juriste",
-    "Comptable/Auditeur",
-    "Économiste",
-    "Banque/Finance",
-    "Assurance",
-    "Agent immobilier",
-    "Notaire/Huissier",
-    // ── Numérique & Tech ──
-    "Informatique",
-    "Développeur/Programmeur",
-    "Graphiste/Designer",
-    "Cybersécurité",
-    "Télécommunications",
-    // ── BTP & Artisanat ──
-    "Construction",
-    "Maçonnerie",
-    "Menuiserie",
-    "Électricité",
-    "Plomberie",
-    "Soudure/Métallurgie",
-    "Climatisation/Froid",
-    "Peinture en bâtiment",
-    "Carrelage",
-    "Mécanique",
-    "Artisanat",
-    "Couture",
-    // ── Commerce & Échanges ──
-    "Commerce",
-    "Import/Export",
-    "Marketing/Communication",
-    "Transport",
-    "Logistique",
-    "Journalisme",
-    "Sécurité",
-    // ── Alimentation ──
-    "Agriculture",
-    "Maraîchage",
-    "Élevage",
-    "Pêche",
-    "Boulangerie/Pâtisserie",
-    "Restauration",
-    "Agroalimentaire",
-    // ── Services ──
-    "Coiffure",
-    "Hôtellerie/Tourisme",
-    "Photographie/Vidéo",
-    "Sport/Coach sportif",
-    "Ingénierie",
-    "Architecture",
-    "Environnement/Écologie",
-    "Travail social",
-    "Imam/Prédicateur",
-    "Traducteur/Interprète",
-    // ── Statut ──
-    "Sans emploi",
-    "Retraité",
-    "Autre",
-  ];
 
   useEffect(() => {
     if (open && userData) {
@@ -376,7 +294,6 @@ export default function EditProfileModal({
         tel1: formData.telephone || formData.tel1,
         genre: formData.genre,
         dateNaissance: formData.dateNaissance,
-        age: formData.age,
         generation: formData.generation,
         ethnie: formData.ethnie,
         region: formData.region,
@@ -643,23 +560,6 @@ export default function EditProfileModal({
             )}
           </div>
 
-          {/* Compte créé avec seulement téléphone + mot de passe : pays, région, ethnie,
-              génération, date de naissance… se renseignent dans « Compléter mon profil »
-              (qui attribue le vrai NuméroH), pas ici. */}
-          {profilProvisoire && (
-            <div className="mb-4 p-4 rounded-xl border-2 border-amber-300 bg-amber-50">
-              <p className="text-sm font-bold text-amber-900">Votre profil n'est pas encore complété</p>
-              <p className="text-xs text-amber-800 mt-1">
-                Renseignez votre pays, votre région, votre ethnie, votre date de naissance… (1 minute).
-                Vous recevrez alors votre NuméroH définitif.
-              </p>
-              <button type="button" onClick={() => { onClose(); navigate("/vivant/completer"); }}
-                className="mt-3 w-full min-h-[44px] px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold">
-                ✏️ Compléter mon profil
-              </button>
-            </div>
-          )}
-
           {/* Informations personnelles */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -752,37 +652,16 @@ export default function EditProfileModal({
                 <option value="AUTRE">Autre</option>
               </select>
             </div>
-            {!profilProvisoire && (
-              <ChampIdentite label="Date de naissance" type="date" verrouille={Boolean(userData?.dateNaissance)}
-                value={formData.dateNaissance || ""} onChange={(v) => handleInputChange("dateNaissance", v)} />
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Âge
-              </label>
-              <input
-                type="number"
-                value={formData.age || ""}
-                onChange={(e) => handleInputChange("age", parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            {!profilProvisoire && (
-              <ChampIdentite label="Génération" type="text" verrouille={Boolean(userData?.generation)}
-                value={formData.generation || ""} onChange={(v) => handleInputChange("generation", v)} />
-            )}
-            {!profilProvisoire && (
-              <ChampIdentite label="Ethnie" type="text" verrouille={Boolean(userData?.ethnie)}
-                value={formData.ethnie || ""} onChange={(v) => handleInputChange("ethnie", v)} />
-            )}
-            {!profilProvisoire && (
-              <ChampIdentite label="Région" type="text" verrouille={Boolean(userData?.region)}
-                value={formData.region || ""} onChange={(v) => handleInputChange("region", v)} />
-            )}
-            {!profilProvisoire && (
-              <ChampIdentite label="Pays" type="text" verrouille={Boolean(userData?.pays)}
-                value={formData.pays || ""} onChange={(v) => handleInputChange("pays", v)} />
-            )}
+            <ChampIdentite label="Date de naissance" type="date" verrouille={Boolean(userData?.dateNaissance)}
+              value={formData.dateNaissance || ""} onChange={(v) => handleInputChange("dateNaissance", v)} />
+            <ChampIdentite label="Génération" type="text" verrouille={Boolean(userData?.generation)}
+              value={formData.generation || ""} onChange={(v) => handleInputChange("generation", v)} />
+            <ChampIdentite label="Ethnie" type="text" verrouille={Boolean(userData?.ethnie)}
+              value={formData.ethnie || ""} onChange={(v) => handleInputChange("ethnie", v)} />
+            <ChampIdentite label="Région" type="text" verrouille={Boolean(userData?.region)}
+              value={formData.region || ""} onChange={(v) => handleInputChange("region", v)} />
+            <ChampIdentite label="Pays" type="text" verrouille={Boolean(userData?.pays)}
+              value={formData.pays || ""} onChange={(v) => handleInputChange("pays", v)} />
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nationalité
@@ -830,18 +709,12 @@ export default function EditProfileModal({
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Activité principale</label>
-                <select
+                <ActiviteChoix
                   value={formData.activite1 || ""}
-                  onChange={(e) => handleInputChange("activite1", e.target.value)}
+                  onChange={(v) => handleInputChange("activite1", v)}
+                  placeholder="Sélectionner une activité"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Sélectionner une activité</option>
-                  {ACTIVITY_OPTIONS.map((act) => (
-                    <option key={act} value={act}>
-                      {act}
-                    </option>
-                  ))}
-                </select>
+                />
                 {/* Spécialité — apparaît dès qu'une activité est choisie */}
                 {formData.activite1 && (
                   <div className="mt-2">
@@ -926,33 +799,21 @@ export default function EditProfileModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Activité 2 (optionnel)</label>
-                <select
+                <ActiviteChoix
                   value={formData.activite2 || ""}
-                  onChange={(e) => handleInputChange("activite2", e.target.value)}
+                  onChange={(v) => handleInputChange("activite2", v)}
+                  placeholder="Ajouter une 2e activité..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Ajouter une 2e activité...</option>
-                  {ACTIVITY_OPTIONS.map((act) => (
-                    <option key={act} value={act}>
-                      {act}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Activité 3 (optionnel)</label>
-                <select
+                <ActiviteChoix
                   value={formData.activite3 || ""}
-                  onChange={(e) => handleInputChange("activite3", e.target.value)}
+                  onChange={(v) => handleInputChange("activite3", v)}
+                  placeholder="Ajouter une 3e activité..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Ajouter une 3e activité...</option>
-                  {ACTIVITY_OPTIONS.map((act) => (
-                    <option key={act} value={act}>
-                      {act}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Quartier / lieu de résidence 1</label>

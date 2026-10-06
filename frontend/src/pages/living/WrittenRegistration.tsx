@@ -6,6 +6,7 @@ import { uploadForRegistration } from '../../utils/uploadMedia'
 import { getAllCountries, getRegionsByCountry, getContinentAndRegionByCountry, getPrefecturesByRegion, WORLD_GEOGRAPHY } from '../../utils/worldGeography'
 import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
 import { getCountryGeoLabels } from '../../utils/countryGeoStructure'
+import ActiviteChoix from '../../components/ActiviteChoix'
 
 interface WrittenData {
   numeroHPere: string
@@ -26,10 +27,8 @@ interface WrittenData {
   ethnie: string
   famille: string
   // Champs libres quand l'utilisateur choisit "Autre"
-  activite1Autre?: string
   ethnieAutre?: string
   familleAutre?: string
-  activiteDescription?: string
   activiteDoc?: File | null
   activitePreuve?: File | null
   specialite?: string              // Spécialité dans l'activité principale
@@ -77,10 +76,8 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
     quartierCode: '',
     ethnie: '',
     famille: '',
-    activite1Autre: '',
     ethnieAutre: '',
     familleAutre: '',
-    activiteDescription: '',
     activiteDoc: null,
     activitePreuve: null,
     specialite: '',
@@ -164,8 +161,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
   const validateRequiredFields = (): boolean => {
     const errors = new Set<string>()
 
-    const hasCustomActivite =
-      data.activite1 === 'Autre' ? !!(data.activite1Autre && data.activite1Autre.trim()) : !!data.activite1
+    const hasCustomActivite = !!data.activite1.trim()
     const hasEthnie =
       data.ethnie === 'Autre' ? !!(data.ethnieAutre && data.ethnieAutre.trim()) : !!data.ethnie
     const hasFamille =
@@ -313,10 +309,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
     setLoading(true)
 
     // Normaliser les champs \"Autre\" pour l'activité, l'ethnie et la famille
-    const effectiveActivite1 =
-      data.activite1 === 'Autre' && data.activite1Autre?.trim()
-        ? data.activite1Autre.trim()
-        : data.activite1
+    const effectiveActivite1 = data.activite1.trim()
     const effectiveEthnie =
       data.ethnie === 'Autre' && data.ethnieAutre?.trim()
         ? data.ethnieAutre.trim()
@@ -456,7 +449,7 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
   // ── Déclencheurs progressifs ──────────────────────────────────────────────
   const ethnieFilled = !!(data.ethnie && (data.ethnie !== 'Autre' || data.ethnieAutre?.trim()))
   const familleFilled = !!(data.famille && (data.famille !== 'Autre' || data.familleAutre?.trim()))
-  const activiteFilled = !!(data.activite1 && (data.activite1 !== 'Autre' || data.activite1Autre?.trim()))
+  const activiteFilled = !!data.activite1.trim()
   const identiteOK = ethnieFilled && familleFilled && (activiteFilled || isComplete)
   const coordonneesOK = !!(data.prenom && (data.telephone || isComplete))
 
@@ -750,12 +743,12 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
           <div className="row" style={{ animation: 'fadeInDown 0.3s ease' }}>
             <div className="col-12">
               <div className="field">
-                <label>Activité principale *</label>
-                <select
+                <label>{isComplete ? 'Activité principale' : 'Activité principale *'}</label>
+                <ActiviteChoix
                   value={data.activite1}
-                  onChange={(e) => {
-                    setData((prev) => ({ ...prev, activite1: e.target.value, activite1Autre: '', activiteDescription: '', activiteDoc: null }))
-                    if (e.target.value) {
+                  onChange={(v) => {
+                    setData((prev) => ({ ...prev, activite1: v }))
+                    if (v.trim()) {
                       setValidationErrors((prev) => {
                         const next = new Set(prev)
                         next.delete('activite1')
@@ -763,79 +756,9 @@ export function WrittenRegistration({ mode = 'register' }: { mode?: 'register' |
                       })
                     }
                   }}
-                  required
-                  className={getFieldClassName('activite1', !!data.activite1)}
-                >
-                  <option value="">— Choisir une activité —</option>
-                  <option value="Agriculture">Agriculture</option>
-                  <option value="Élevage">Élevage</option>
-                  <option value="Pêche">Pêche</option>
-                  <option value="Commerce">Commerce</option>
-                  <option value="Artisanat">Artisanat</option>
-                  <option value="Transport">Transport</option>
-                  <option value="Enseignement">Enseignement</option>
-                  <option value="Santé">Santé</option>
-                  <option value="Administration">Administration</option>
-                  <option value="Informatique">Informatique</option>
-                  <option value="Construction">Construction</option>
-                  <option value="Mécanique">Mécanique</option>
-                  <option value="Restauration">Restauration</option>
-                  <option value="Coiffure">Coiffure</option>
-                  <option value="Couture">Couture</option>
-                  <option value="Menuiserie">Menuiserie</option>
-                  <option value="Électricité">Électricité</option>
-                  <option value="Plomberie">Plomberie</option>
-                  <option value="Sécurité">Sécurité</option>
-                  <option value="Banque/Finance">Banque/Finance</option>
-                  <option value="Télécommunications">Télécommunications</option>
-                  <option value="Journalisme">Journalisme</option>
-                  <option value="Étudiant">Étudiant</option>
-                  <option value="Sans emploi">Sans emploi</option>
-                  <option value="Retraité">Retraité</option>
-                  <option value="Autre">✏️ Autre (je saisis mon activité)</option>
-                </select>
-
-
-                {/* Sous-champs quand "Autre" est sélectionné */}
-                {data.activite1 === 'Autre' && (
-                  <div className="mt-3 space-y-3" style={{ borderLeft: '3px solid #3b82f6', paddingLeft: '0.75rem' }}>
-                    {/* Nom de l'activité (obligatoire) */}
-                    <div>
-                      <input
-                        type="text"
-                        value={data.activite1Autre || ''}
-                        onChange={(e) => {
-                          setData((prev) => ({ ...prev, activite1Autre: e.target.value }))
-                          if (e.target.value.trim()) {
-                            setValidationErrors((prev) => {
-                              const next = new Set(prev)
-                              next.delete('activite1')
-                              return next
-                            })
-                          }
-                        }}
-                        placeholder="Nom de votre activité (ex. Designer UX, Coach sportif…)"
-                        className={getFieldClassName('activite1', !!(data.activite1Autre?.trim()))}
-                      />
-                    </div>
-
-                    {/* Description facultative */}
-                    <div>
-                      <textarea
-                        value={data.activiteDescription || ''}
-                        onChange={(e) => setData((prev) => ({ ...prev, activiteDescription: e.target.value }))}
-                        rows={2}
-                        className="w-full px-3 py-2 border rounded-lg border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="Description facultative : diplômes, certifications, expérience…"
-                      />
-                    </div>
-
-                  </div>
-                )}
-
-                {data.activite1 && data.activite1 !== 'Autre' && (
-                  <small className="text-green-600">✓ Activité : {data.activite1}</small>
-                )}
+                  placeholder="— Choisir une activité —"
+                  className={getFieldClassName('activite1', !!data.activite1.trim())}
+                />
 
               </div>
             </div>

@@ -426,7 +426,10 @@ export default function MonProfil() {
         onClose={() => setOpen(false)}
         onEditProfile={() => {
           setOpen(false);
-          setShowEditProfile(true);
+          // Compte provisoire (téléphone + mot de passe) : même formulaire que la
+          // bannière « Mettez votre profil à jour » — il attribue le NuméroH.
+          if (String(userData?.numeroH || "").startsWith("TMP-")) navigate("/vivant/completer");
+          else setShowEditProfile(true);
         }}
         freshUserData={userData}
       />

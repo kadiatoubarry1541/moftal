@@ -5,6 +5,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 // « TMP-… ») : on rappelle de mettre le profil à jour, et quand le serveur
 // refuse une action (code PROFILE_INCOMPLETE) on explique pourquoi.
 
+// Formulaire unique de mise à jour du profil d'un compte provisoire : la bannière
+// ci-dessous et le bouton « Mettre à jour » de l'Identité (MonProfil) ouvrent le même.
 const COMPLETE_PATH = "/vivant/completer";
 
 function isProvisionalSession(): boolean {

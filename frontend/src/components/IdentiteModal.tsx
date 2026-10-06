@@ -281,10 +281,6 @@ export default function IdentiteModal({
                   <div>{userData!.dateNaissance || "—"}</div>
                 </div>
                 <div>
-                  <div className="font-semibold">Âge</div>
-                  <div>{userData!.age ?? "—"}</div>
-                </div>
-                <div>
                   <div className="font-semibold">Téléphone</div>
                   <div>{userData!.telephone || userData!.tel1 || "—"}</div>
                 </div>

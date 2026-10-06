@@ -12,6 +12,7 @@ import {
 } from '../../utils/worldGeography'
 import { getCountryGeoLabels } from '../../utils/countryGeoStructure'
 import { ETHNIE_CODES, FAMILLE_CODES, ETHNIES, FAMILLES } from '../../utils/constants'
+import ActiviteChoix from '../../components/ActiviteChoix'
 
 interface VideoData {
   numeroHPere: string
@@ -31,10 +32,8 @@ interface VideoData {
   quartierCode: string
   ethnie: string
   famille: string
-  activite1Autre?: string
   ethnieAutre?: string
   familleAutre?: string
-  activiteDescription?: string
   activiteDoc?: File | null
   activitePreuve?: File | null
   specialite?: string
@@ -79,10 +78,8 @@ export function VideoRegistration() {
     quartierCode: '',
     ethnie: '',
     famille: '',
-    activite1Autre: '',
     ethnieAutre: '',
     familleAutre: '',
-    activiteDescription: '',
     activiteDoc: null,
     activitePreuve: null,
     specialite: '',
@@ -172,10 +169,7 @@ export function VideoRegistration() {
     videoData.famille === 'Autre'
       ? !!(videoData.familleAutre && videoData.familleAutre.trim())
       : !!videoData.famille
-  const activiteFilled =
-    videoData.activite1 === 'Autre'
-      ? !!(videoData.activite1Autre && videoData.activite1Autre.trim())
-      : !!videoData.activite1
+  const activiteFilled = !!videoData.activite1.trim()
   const identiteOK = ethnieFilled && familleFilled && activiteFilled
   const coordonneesOK = identiteOK && !!videoData.prenom && !!videoData.telephone
 
@@ -299,10 +293,7 @@ export function VideoRegistration() {
 
     setLoading(true)
 
-    const effectiveActivite1 =
-      videoData.activite1 === 'Autre' && videoData.activite1Autre?.trim()
-        ? videoData.activite1Autre.trim()
-        : videoData.activite1
+    const effectiveActivite1 = videoData.activite1.trim()
     const effectiveEthnie =
       videoData.ethnie === 'Autre' && videoData.ethnieAutre?.trim()
         ? videoData.ethnieAutre.trim()
@@ -667,69 +658,15 @@ export function VideoRegistration() {
               <div className="col-12">
                 <div className="field">
                   <label>Activité principale *</label>
-                  <select
+                  <ActiviteChoix
                     value={videoData.activite1}
-                    onChange={(e) => {
-                      setVideoData((prev) => ({ ...prev, activite1: e.target.value, activite1Autre: '', activiteDescription: '', activiteDoc: null }))
-                      if (e.target.value) setValidationErrors((prev) => { const n = new Set(prev); n.delete('activite1'); return n })
+                    onChange={(v) => {
+                      setVideoData((prev) => ({ ...prev, activite1: v }))
+                      if (v.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('activite1'); return n })
                     }}
-                    required
-                    className={getFieldClassName('activite1', !!videoData.activite1)}
-                  >
-                    <option value="">— Choisir une activité —</option>
-                    <option value="Agriculture">Agriculture</option>
-                    <option value="Élevage">Élevage</option>
-                    <option value="Pêche">Pêche</option>
-                    <option value="Commerce">Commerce</option>
-                    <option value="Artisanat">Artisanat</option>
-                    <option value="Transport">Transport</option>
-                    <option value="Enseignement">Enseignement</option>
-                    <option value="Santé">Santé</option>
-                    <option value="Administration">Administration</option>
-                    <option value="Informatique">Informatique</option>
-                    <option value="Construction">Construction</option>
-                    <option value="Mécanique">Mécanique</option>
-                    <option value="Restauration">Restauration</option>
-                    <option value="Coiffure">Coiffure</option>
-                    <option value="Couture">Couture</option>
-                    <option value="Menuiserie">Menuiserie</option>
-                    <option value="Électricité">Électricité</option>
-                    <option value="Plomberie">Plomberie</option>
-                    <option value="Sécurité">Sécurité</option>
-                    <option value="Banque/Finance">Banque/Finance</option>
-                    <option value="Télécommunications">Télécommunications</option>
-                    <option value="Journalisme">Journalisme</option>
-                    <option value="Étudiant">Étudiant</option>
-                    <option value="Sans emploi">Sans emploi</option>
-                    <option value="Retraité">Retraité</option>
-                    <option value="Autre">✏️ Autre (je saisis mon activité)</option>
-                  </select>
-
-                  {videoData.activite1 === 'Autre' && (
-                    <div className="mt-3 space-y-3" style={{ borderLeft: '3px solid #3b82f6', paddingLeft: '0.75rem' }}>
-                      <input
-                        type="text"
-                        value={videoData.activite1Autre || ''}
-                        onChange={(e) => {
-                          setVideoData((prev) => ({ ...prev, activite1Autre: e.target.value }))
-                          if (e.target.value.trim()) setValidationErrors((prev) => { const n = new Set(prev); n.delete('activite1'); return n })
-                        }}
-                        placeholder="Nom de votre activité"
-                        className={getFieldClassName('activite1', !!(videoData.activite1Autre?.trim()))}
-                      />
-                      <textarea
-                        value={videoData.activiteDescription || ''}
-                        onChange={(e) => setVideoData((prev) => ({ ...prev, activiteDescription: e.target.value }))}
-                        rows={2}
-                        className="w-full px-3 py-2 border rounded-lg border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        placeholder="Description facultative : diplômes, certifications, expérience…"
-                      />
-                    </div>
-                  )}
-
-                  {videoData.activite1 && videoData.activite1 !== 'Autre' && (
-                    <small className="text-green-600">✓ Activité : {videoData.activite1}</small>
-                  )}
+                    placeholder="— Choisir une activité —"
+                    className={getFieldClassName('activite1', !!videoData.activite1.trim())}
+                  />
                 </div>
               </div>
             </div>
