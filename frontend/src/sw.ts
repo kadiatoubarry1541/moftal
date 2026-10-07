@@ -28,13 +28,14 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         const client = event.clientId ? await self.clients.get(event.clientId) : null
         const clientPath = client ? new URL(client.url).pathname : ''
 
-        const gestionMatch = clientPath.match(/^\/gestion-[^/]+\/([^/]+)/)
+        const gestionMatch = clientPath.match(/^(\/gestion-[^/]+\/([^/]+))/)
         const proMatch = clientPath.match(/^\/espace-pro\/([^/]+)/)
 
         if (gestionMatch) {
-          const tenantCode = gestionMatch[1]
+          const tenantCode = gestionMatch[2]
+          // Racine de la gestion seulement : une seule identité d'application par établissement
           const res = await fetch(
-            `${API_BASE}/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodeURIComponent(clientPath)}`
+            `${API_BASE}/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodeURIComponent(gestionMatch[1])}`
           )
           if (res.ok) return res
         } else if (proMatch) {

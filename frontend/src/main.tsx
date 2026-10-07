@@ -10,6 +10,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
 import { installOfflineSync } from "./utils/offlineSync";
+import { noterLancementApp, appPlayInstallee } from "./utils/appMoftalInstallee";
 
 // Supprimer les anciennes données de test qui stockaient des mots de passe en clair
 const keysToClean = [
@@ -66,13 +67,17 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
+// Moftal installée depuis le Play Store ou depuis le site : noté pour ne jamais
+// proposer d'installer une deuxième fois la même application sur ce téléphone.
+noterLancementApp();
+
 // Swapper le manifest AVANT que React monte — Chrome doit voir le bon manifest dès le chargement
 // pour déclencher beforeinstallprompt avec la bonne identité (app principale OU gestion spécifique)
 const _manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
 const _pathname = window.location.pathname;
 
 const _proPathMatch = _pathname.match(/^\/espace-pro\/([^/]+)/);
-const _gestionMatch = _pathname.match(/^\/gestion-[^/]+\/([^/]+)/);
+const _gestionMatch = _pathname.match(/^(\/gestion-[^/]+\/([^/]+))/);
 
 const _pageOrigin = encodeURIComponent(window.location.origin);
 
@@ -81,8 +86,9 @@ if (_proPathMatch && _manifestLink) {
   _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/${_proPathMatch[1]}?origin=${_pageOrigin}`);
 } else if (_gestionMatch && _manifestLink) {
   // Pages Gestion (/gestion-clinique/:code etc.) → manifest same-origin via proxy /api/
-  const _encodedStart = encodeURIComponent(_pathname);
-  _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/by-tenant/${_gestionMatch[1]}?startUrl=${_encodedStart}&origin=${_pageOrigin}`);
+  // Toujours la racine de la gestion : une seule identité d'application par établissement
+  const _encodedStart = encodeURIComponent(_gestionMatch[1]);
+  _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/by-tenant/${_gestionMatch[2]}?startUrl=${_encodedStart}&origin=${_pageOrigin}`);
 }
 
 // Capturer le prompt d'installation PWA le plus tôt possible (avant montage React)
@@ -93,7 +99,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
   const isGestionPage = _gestionMatch || _proPathMatch;
   if (isGestionPage) {
     (window as any).__pwaGestionPrompt = e;
-  } else {
+  } else if (!appPlayInstallee()) {
+    // App du Play Store déjà sur ce téléphone : pas de deuxième installation
     (window as any).__pwaInstallPrompt = e;
   }
   window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));

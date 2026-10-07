@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getSocket } from "../services/socket";
 import InstallAppButton from "./InstallAppButton";
+import { appPlayInstallee } from "../utils/appMoftalInstallee";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -114,7 +115,7 @@ function isMainAppInstalled(): boolean {
   const standalone =
     window.matchMedia("(display-mode: standalone)").matches ||
     (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-  return standalone || localStorage.getItem("mainAppInstalled") === "1";
+  return standalone || localStorage.getItem("mainAppInstalled") === "1" || !!appPlayInstallee();
 }
 
 export default function NotificationBell() {

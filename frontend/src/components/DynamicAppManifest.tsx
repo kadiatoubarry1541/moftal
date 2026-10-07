@@ -37,10 +37,11 @@ export default function DynamicAppManifest({
     }
 
     // Pages Gestion (/gestion-clinique/:code, /gestion-ecole/:code, etc.)
-    const gestionMatch = startUrl.match(/^\/gestion-[^/]+\/([^/]+)/);
+    const gestionMatch = startUrl.match(/^(\/gestion-[^/]+\/([^/?#]+))/);
     if (gestionMatch) {
-      const tenantCode = gestionMatch[1];
-      const encodedStart = encodeURIComponent(startUrl);
+      const tenantCode = gestionMatch[2];
+      // Racine de la gestion seulement : une seule identité d'application par établissement
+      const encodedStart = encodeURIComponent(gestionMatch[1]);
       link.setAttribute("href", `/api/professionals/pro-manifest/by-tenant/${tenantCode}?startUrl=${encodedStart}&origin=${pageOrigin}`);
       return () => { if (originalHref) link.setAttribute("href", originalHref); };
     }

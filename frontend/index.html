@@ -29,7 +29,7 @@
           var link = document.getElementById('pwa-manifest');
           var origin = encodeURIComponent(window.location.origin);
           var proMatch = p.match(/^\/espace-pro\/([^/]+)/);
-          var gestionMatch = p.match(/^\/gestion-[^/]+\/([^/]+)/);
+          var gestionMatch = p.match(/^(\/gestion-[^/]+\/([^/]+))/);
           if (p.startsWith('/info-wallou')) {
             link.href = '/manifest-info-moftal.webmanifest';
           } else if (p.startsWith('/professeur-ia')) {
@@ -37,7 +37,8 @@
           } else if (proMatch) {
             link.href = '/api/professionals/pro-manifest/' + proMatch[1] + '?origin=' + origin;
           } else if (gestionMatch) {
-            link.href = '/api/professionals/pro-manifest/by-tenant/' + gestionMatch[1] + '?startUrl=' + encodeURIComponent(p) + '&origin=' + origin;
+            // Racine de la gestion seulement : une seule identité d'application par établissement
+            link.href = '/api/professionals/pro-manifest/by-tenant/' + gestionMatch[2] + '?startUrl=' + encodeURIComponent(gestionMatch[1]) + '&origin=' + origin;
           }
         } catch(e) {}
       })();
