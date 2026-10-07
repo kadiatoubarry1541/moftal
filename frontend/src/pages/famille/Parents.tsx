@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
+import { RejoindreMaFiche } from '../../components/FicheEnfantActions'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -391,6 +392,8 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
       <div className={`bg-white rounded-xl shadow-sm border border-slate-200 px-5 py-3 mb-4 flex items-center justify-between gap-3 ${focused ? 'hidden' : ''}`}>
         <h2 className="text-lg font-bold text-slate-800">👨‍👩‍👦 Mes Parents</h2>
       </div>
+
+      <RejoindreMaFiche onDone={loadMyParents} />
 
       {pendingInvitations.length > 0 && (
         <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 mb-4">

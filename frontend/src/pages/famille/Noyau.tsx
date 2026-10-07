@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react
 import { getPhotoUrl, getSessionUser, isAdmin } from '../../utils/auth'
 import { AudioRecorder } from '../../components/AudioRecorder'
 import { VideoRecorder } from '../../components/VideoRecorder'
+import AjouterEnfantModal from '../../components/AjouterEnfantModal'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -418,6 +419,8 @@ export default function Noyau() {
   const [data, setData] = useState<Record<TabKey, NoyauData>>({ mine: EMPTY, pere: EMPTY, mere: EMPTY })
   const [activeTab, setActiveTab] = useState<TabKey | null>(null)
   const [showModal, setShowModal] = useState(false)
+  // Ajouter un enfant (même sans compte Moftal : bébé, mineur, décédé)
+  const [ajoutEnfant, setAjoutEnfant] = useState(false)
   const [demoEntries, setDemoEntries] = useState<LivreEntry[]>(DEMO_ENTRIES)
 
   const user = useMemo(() => getSessionUser(), [])
@@ -531,6 +534,13 @@ export default function Noyau() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white dark:from-gray-900 dark:to-gray-900">
+      {ajoutEnfant && (
+        <AjouterEnfantModal
+          user={user}
+          onClose={() => setAjoutEnfant(false)}
+          onSaved={(m) => { setAjoutEnfant(false); alert(m); load() }}
+        />
+      )}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-6 sm:px-6">
         <div className="max-w-3xl mx-auto flex items-start justify-between gap-3">
           <div>
@@ -599,13 +609,13 @@ export default function Noyau() {
                 <div>
                   <GroupHeader
                     title={plural(kids.length, 'Mon enfant', 'Mes enfants')}
-                    onAdd={() => setOpenGallery({ kind: 'enfant', member: null })}
-                    addLabel="+ Lier un enfant" />
+                    onAdd={() => setAjoutEnfant(true)}
+                    addLabel="+ Ajouter un enfant" />
                   {kids.length ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {kids.map(k => (
                         <MemberCard key={k.member.numeroH} member={k.member}
-                          badge={k.status === 'pending' ? 'En attente de confirmation' : undefined}
+                          badge={k.status === 'pending' ? 'En attente de confirmation' : k.member.numeroH.startsWith('ENF-') ? 'Sans compte' : undefined}
                           onOpen={() => setOpenGallery({ kind: 'enfant', member: k.member })} />
                       ))}
                     </div>
