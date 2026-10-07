@@ -72,7 +72,7 @@ const _manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLink
 const _pathname = window.location.pathname;
 
 const _proPathMatch = _pathname.match(/^\/espace-pro\/([^/]+)/);
-const _gestionMatch = _pathname.match(/^\/gestion-[^/]+\/([^/]+)/);
+const _gestionMatch = _pathname.match(/^(\/gestion-[^/]+\/([^/]+))/);
 
 const _pageOrigin = encodeURIComponent(window.location.origin);
 
@@ -81,8 +81,9 @@ if (_proPathMatch && _manifestLink) {
   _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/${_proPathMatch[1]}?origin=${_pageOrigin}`);
 } else if (_gestionMatch && _manifestLink) {
   // Pages Gestion (/gestion-clinique/:code etc.) → manifest same-origin via proxy /api/
-  const _encodedStart = encodeURIComponent(_pathname);
-  _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/by-tenant/${_gestionMatch[1]}?startUrl=${_encodedStart}&origin=${_pageOrigin}`);
+  // Toujours la racine de la gestion : une seule identité d'application par établissement
+  const _encodedStart = encodeURIComponent(_gestionMatch[1]);
+  _manifestLink.setAttribute('href', `/api/professionals/pro-manifest/by-tenant/${_gestionMatch[2]}?startUrl=${_encodedStart}&origin=${_pageOrigin}`);
 }
 
 // Capturer le prompt d'installation PWA le plus tôt possible (avant montage React)

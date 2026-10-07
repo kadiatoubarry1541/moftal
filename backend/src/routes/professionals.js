@@ -570,7 +570,13 @@ router.put('/tenant-icon-png/:tenantCode', authenticate, async (req, res) => {
 router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
   try {
     const { tenantCode } = req.params;
-    const relativeStart = req.query.startUrl || `/gestion-interne`;
+    // Identité FIXE de l'application de cet établissement : toujours la racine
+    // /gestion-<type>/<code>, quelle que soit la page où l'on installe. Sinon
+    // installer depuis /gestion-x/CODE puis /gestion-x/CODE/patients donnait deux
+    // identités différentes → la même gestion installée deux fois.
+    const demande = String(req.query.startUrl || '');
+    const racine = demande.match(/^\/gestion-[^/?#]+\/[^/?#]+/);
+    const relativeStart = racine ? racine[0] : `/gestion-interne`;
     const pageOrigin = req.query.origin ? decodeURIComponent(req.query.origin) : '';
     const startUrl = pageOrigin ? `${pageOrigin}${relativeStart}` : relativeStart;
     // Scope spécifique à cet établissement — évite le conflit avec le scope "/" de l'app Moftal principale
@@ -636,7 +642,7 @@ router.get('/pro-manifest/by-tenant/:tenantCode', async (req, res) => {
       // (navigator.getInstalledRelatedApps) : l'URL doit être celle du manifest.
       prefer_related_applications: false,
       related_applications: pageOrigin
-        ? [{ platform: 'webapp', url: `${pageOrigin}${req.originalUrl}` }]
+        ? [{ platform: 'webapp', url: `${pageOrigin}/api/professionals/pro-manifest/by-tenant/${encodeURIComponent(tenantCode)}?startUrl=${encodeURIComponent(relativeStart)}&origin=${encodeURIComponent(pageOrigin)}` }]
         : [],
     };
 
