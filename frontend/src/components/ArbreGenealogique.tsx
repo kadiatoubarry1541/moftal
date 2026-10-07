@@ -7,6 +7,7 @@ import { InvitationManager } from '../utils/invitationManager'
 import type { Invitation } from '../types/invitation.ts'
 import { useI18n } from '../i18n/useI18n'
 import { InvitationsReceived } from './InvitationsReceived'
+import AjouterEnfantModal from './AjouterEnfantModal'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -39,6 +40,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   const { t } = useI18n()
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([])
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
+  const [ajoutEnfant, setAjoutEnfant] = useState(false)
   const [generationFilter, setGenerationFilter] = useState<string>('all')
   const [showStats, setShowStats] = useState(false)
   const [showAddMemberForm, setShowAddMemberForm] = useState(false)
@@ -168,6 +170,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           nomFamille: p.nomFamille,
           genre: p.genre,
           dateNaissance: p.dateNaissance,
+          dateDeces: p.dateDeces || undefined,
           photo: p.photo,
           relation,
           generation,
@@ -175,6 +178,16 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         })
 
         const newMembers: FamilyMember[] = []
+
+        // Mes enfants réels (liens actifs), y compris les enfants sans compte
+        // ajoutés par un parent (bébé, mineur, enfant décédé) — enregistrés en base.
+        try {
+          const resKids = await fetch(`${API_BASE}/api/parent-child/children-of/${encodeURIComponent(userData.numeroH)}`, { headers })
+          const dataKids = await resKids.json()
+          for (const kid of ((dataKids.success ? dataKids.children : []) || [])) {
+            newMembers.push({ ...toMember(kid, 'enfant', 'G2', 'real-enfant'), parentId: `user-${userData.numeroH}` })
+          }
+        } catch { /* ignore */ }
         // Ids des silhouettes locales à retirer précisément (une branche à la fois —
         // jamais toute une génération, sinon une branche encore non confirmée perdrait
         // sa silhouette alors qu'aucune vraie donnée ne la remplace).
@@ -625,6 +638,8 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
   // Ouvre le formulaire d'ajout avec la relation pré-remplie
   const openAddForm = (relation: string) => {
+    // Enfant : fiche simple (prénom, photo…), même sans compte Moftal
+    if (relation === 'enfant') { setAjoutEnfant(true); return }
     setShowAddMemberForm(true)
     setAddMemberType('vivant')
     setNewMember(prev => ({ ...prev, relation: relation as any }))
@@ -656,7 +671,9 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
     const w = 160, h = 70
     const cx = x + 26, cy = y + h / 2
     const displayName = (prenom || '—').length > 13 ? (prenom || '—').substring(0, 12) + '…' : (prenom || '—')
-    const displayNum = (numeroH || '').length > 13 ? (numeroH || '').substring(0, 12) : (numeroH || '')
+    // Enfant sans compte (fiche « ENF-… ») : pas de NuméroH à afficher
+    const displayNum = (numeroH || '').startsWith('ENF-') ? 'Sans compte'
+      : (numeroH || '').length > 13 ? (numeroH || '').substring(0, 12) : (numeroH || '')
     return (
       <g style={{ cursor: onClick ? 'pointer' : undefined }} onClick={onClick}>
         {renderNodeShape(genre, x, y, w, h, color, 3, 'white')}
@@ -714,6 +731,14 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
   return (
     <div className="arbre-genealogique">
+
+      {ajoutEnfant && (
+        <AjouterEnfantModal
+          user={userData as any}
+          onClose={() => setAjoutEnfant(false)}
+          onSaved={(m) => { setAjoutEnfant(false); alert(m); window.location.reload() }}
+        />
+      )}
 
       {/* ══ BANNIÈRE INVITATIONS EN ATTENTE ══ */}
       {pendingInvitations.length > 0 && (

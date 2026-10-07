@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import CoupleLink from '../models/CoupleLink.js';
 import ParentChildLink from '../models/ParentChildLink.js';
 import FamilyCoreEntry from '../models/FamilyCoreEntry.js';
+import { fichesParNumero, ficheCommeMembre } from '../services/enfantsSansCompte.js';
 
 const router = express.Router();
 router.use(authenticate);
@@ -15,7 +16,8 @@ const mapMember = (u) => ({
   photo: u.photo || null,
   genre: u.genre,
   type: u.type,
-  dateDeces: u.dateDeces || null
+  dateDeces: u.dateDeces || null,
+  ...(u.sansCompte ? { sansCompte: true } : {})
 });
 
 const mapEntry = (e) => ({
@@ -37,9 +39,12 @@ const mapEntry = (e) => ({
 async function buildNoyauComposition(founder) {
   const childLinks = await ParentChildLink.getMyChildren(founder.numeroH);
   const childNumeroHs = childLinks.map((l) => l.childNumeroH);
-  const children = childNumeroHs.length
+  const comptes = childNumeroHs.length
     ? await User.findAll({ where: { numeroH: childNumeroHs } })
     : [];
+  // Enfants sans compte (fiches ENF-… ajoutées par un parent) : aussi dans le noyau
+  const fiches = await fichesParNumero(childNumeroHs).catch(() => new Map());
+  const children = [...comptes, ...[...fiches.values()].map((f) => ficheCommeMembre(f))];
 
   let wives = [];
   let status = 'actif';

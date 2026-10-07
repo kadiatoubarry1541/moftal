@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
+import AjouterEnfantModal from '../../components/AjouterEnfantModal'
+import { FicheEnfantActions, AnnulerFusionFiche } from '../../components/FicheEnfantActions'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -25,8 +27,20 @@ interface ChildLink {
     dateNaissance?: string
     photo?: string
     genre?: string
+    // Enfant sans compte (fiche ajoutée par un parent)
+    sansCompte?: boolean
+    estVivant?: boolean
+    dateDeces?: string | null
+    ficheId?: string
+    quartierNaissance?: string | null
+    extraitNumero?: string | null
+    extraitCommune?: string | null
+    extraitAnnee?: string | null
+    autreParentNom?: string | null
   }
   activitiesCount?: number
+  sansCompte?: boolean
+  ficheFusionneeId?: string
 }
 
 interface PendingSent {
@@ -64,6 +78,9 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showPersonModal, setShowPersonModal] = useState(false)
+  // « + Ajouter » : enfant sans compte (bébé, mineur, décédé) ou enfant qui a déjà un compte
+  const [choixAjout, setChoixAjout] = useState(false)
+  const [ajoutSansCompte, setAjoutSansCompte] = useState(false)
   const [newLink, setNewLink] = useState({
     codeLiaison: '',
     childNumeroH: '',
@@ -445,12 +462,39 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
           <h2 className="text-lg font-bold text-slate-800">🧒 Mes Enfants</h2>
         </div>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => { if (showAddForm) setShowAddForm(false); else setChoixAjout(true) }}
           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors text-sm"
         >
           {showAddForm ? '✕ Annuler' : '+ Ajouter'}
         </button>
       </div>
+
+      {choixAjout && (
+        <div className="fixed inset-0 z-[110] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setChoixAjout(false)}>
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-800">Ajouter un enfant</h3>
+            <button type="button" onClick={() => { setChoixAjout(false); setAjoutSansCompte(true) }}
+              className="w-full text-left p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50 hover:border-emerald-400">
+              <p className="font-bold text-emerald-800">👶 Mon enfant n'a pas de compte</p>
+              <p className="text-xs text-emerald-700 mt-0.5">Bébé, enfant mineur ou enfant décédé : prénom, photo… il apparaît tout de suite dans votre arbre.</p>
+            </button>
+            <button type="button" onClick={() => { setChoixAjout(false); setShowAddForm(true) }}
+              className="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-slate-400">
+              <p className="font-bold text-slate-800">🔗 Mon enfant a déjà un compte Moftal</p>
+              <p className="text-xs text-slate-500 mt-0.5">Avec son NuméroH, son téléphone ou son e-mail. Il confirme le lien.</p>
+            </button>
+            <button type="button" onClick={() => setChoixAjout(false)} className="w-full py-2.5 rounded-xl bg-slate-100 text-slate-600 font-semibold">Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {ajoutSansCompte && (
+        <AjouterEnfantModal
+          user={user}
+          onClose={() => setAjoutSansCompte(false)}
+          onSaved={(m) => { setAjoutSansCompte(false); alert(m); loadMyChildren() }}
+        />
+      )}
 
       {showPersonModal && (
         <AddPersonModal
@@ -590,9 +634,9 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
 
       {children.length === 0 && !showAddForm && !userIsAdmin ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <p className="text-slate-500 mb-4">Aucun enfant lié. Ajoutez un enfant avec votre code de liaison, son NumeroH et son numéro maternité.</p>
+          <p className="text-slate-500 mb-4">Aucun enfant pour l'instant. Ajoutez vos enfants, même un bébé ou un enfant qui n'a pas de compte.</p>
           <button
-            onClick={() => setShowAddForm(true)}
+            onClick={() => setChoixAjout(true)}
             className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg"
           >
             + Ajouter votre premier enfant
@@ -626,29 +670,43 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
                   className="w-full text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-2xl">
-                      {link.child?.genre === 'FEMME' ? '👧' : '👦'}
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-2xl overflow-hidden flex-shrink-0">
+                      {link.child?.photo
+                        ? <img src={link.child.photo} alt="" className="w-full h-full object-cover" />
+                        : (link.child?.genre === 'FEMME' ? '👧' : '👦')}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-800">
                         {link.child ? `${link.child.prenom} ${link.child.nomFamille}` : link.childNumeroH}
+                        {link.child?.estVivant === false && <span className="ml-1 text-slate-400" title="Décédé(e)">🕊️</span>}
                       </p>
-                      <p className="text-sm text-slate-500">{getNumeroHForDisplay(link.childNumeroH, false)}</p>
+                      {link.sansCompte
+                        ? <p className="text-xs"><span className="inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold">Sans compte</span>{link.child?.dateNaissance && <span className="ml-1 text-slate-400">né·e en {link.child.dateNaissance.slice(0, 4)}</span>}</p>
+                        : <p className="text-sm text-slate-500">{getNumeroHForDisplay(link.childNumeroH, false)}</p>}
                       {link.numeroMaternite && (
                         <p className="text-xs text-slate-400">Maternité: {link.numeroMaternite}</p>
                       )}
                     </div>
                   </div>
                 </button>
-                <div className="mt-2 flex justify-end">
-                  <button
-                    onClick={() => handleLeaveLink(link.id)}
-                    disabled={submitting}
-                    className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
-                  >
-                    Quitter la liaison
-                  </button>
-                </div>
+                {link.sansCompte && link.child?.ficheId ? (
+                  <FicheEnfantActions
+                    fiche={{ ...link.child, ficheId: link.child.ficheId }}
+                    user={user}
+                    onChange={loadMyChildren}
+                  />
+                ) : (
+                  <div className="mt-2 flex items-center justify-end gap-3 flex-wrap">
+                    {link.ficheFusionneeId && <AnnulerFusionFiche ficheId={link.ficheFusionneeId} onChange={loadMyChildren} />}
+                    <button
+                      onClick={() => handleLeaveLink(link.id)}
+                      disabled={submitting}
+                      className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+                    >
+                      Quitter la liaison
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

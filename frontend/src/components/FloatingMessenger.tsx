@@ -405,7 +405,8 @@ export function FloatingMessenger() {
 
       if (childrenRes?.success) {
         (childrenRes.children || []).forEach((c: RelativeItem) => {
-          if (!c.child) return
+          // Enfant sans compte (fiche ajoutée par un parent) : pas de messagerie
+          if (!c.child || c.child.numeroH.startsWith('ENF-')) return
           base.push({ key: `child-${c.id}`, type: 'child', linkId: c.id, numeroH: c.child.numeroH, label: `${c.child.prenom || ''} ${c.child.nomFamille || ''}`.trim(), photo: c.child.photo, icon: ICONS.child })
         })
       }
