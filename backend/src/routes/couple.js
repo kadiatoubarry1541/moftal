@@ -12,6 +12,7 @@ import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
+import { notifierNouveauMessage } from '../services/notificationMessages.js';
 
 // Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
 // redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
@@ -847,6 +848,7 @@ router.post('/messages', async (req, res) => {
     const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
     const io = getIO();
     if (io) io.to(`couple-${linkId}`).emit('couple-message', msgData);
+    notifierNouveauMessage({ destinataires: [link.husbandNumeroH, link.wifeNumeroH, link.numeroH1, link.numeroH2], expediteur: user, convKey: `couple:${linkId}`, message: msg });
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {
     console.error('Erreur envoi message couple:', error);
@@ -892,6 +894,7 @@ router.post('/messages/upload', uploadCouple.single('media'), async (req, res) =
     const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
     const io = getIO();
     if (io) io.to(`couple-${linkId}`).emit('couple-message', msgData);
+    notifierNouveauMessage({ destinataires: [link.husbandNumeroH, link.wifeNumeroH, link.numeroH1, link.numeroH2], expediteur: user, convKey: `couple:${linkId}`, message: msg });
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {
     console.error('Erreur upload message couple:', error);

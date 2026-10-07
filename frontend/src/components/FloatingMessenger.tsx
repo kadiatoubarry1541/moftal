@@ -243,8 +243,17 @@ export function FloatingMessenger() {
     let actif = true
     const rafraichir = () => {
       if (document.visibilityState === 'hidden') return
-      chargerMessagesNonLus().then(n => { if (actif && n) setNonLus(n) })
+      chargerMessagesNonLus().then(n => {
+        if (!actif || !n) return
+        setNonLus(n)
+        // Même chiffre sur l'icône de l'application installée (comme WhatsApp)
+        const nav = navigator as Navigator & { setAppBadge?: (c?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
+        ;(n.total > 0 ? nav.setAppBadge?.(n.total) : nav.clearAppBadge?.())?.catch(() => {})
+      })
     }
+    // Nouveau message reçu pendant que l'application est ouverte (notification)
+    const surMessageSW = (e: MessageEvent) => { if (e.data?.type === 'nouveau-message') rafraichir() }
+    navigator.serviceWorker?.addEventListener('message', surMessageSW)
     rafraichir()
     const minuterie = window.setInterval(rafraichir, 30000)
     window.addEventListener(EVENEMENT_MESSAGES_LUS, rafraichir)
@@ -256,6 +265,7 @@ export function FloatingMessenger() {
       window.removeEventListener(EVENEMENT_MESSAGES_LUS, rafraichir)
       window.removeEventListener('focus', rafraichir)
       document.removeEventListener('visibilitychange', rafraichir)
+      navigator.serviceWorker?.removeEventListener('message', surMessageSW)
     }
   }, [])
 
@@ -491,6 +501,18 @@ export function FloatingMessenger() {
     await Promise.all([loadConversations(userData), loadContacts()])
     setLoading(false)
   }
+
+  // Ouverture depuis une notification de message (/compte?messages=1)
+  useEffect(() => {
+    if (!userData) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('messages') !== '1') return
+    params.delete('messages')
+    const reste = params.toString()
+    window.history.replaceState(window.history.state, '', window.location.pathname + (reste ? `?${reste}` : '') + window.location.hash)
+    openPicker()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.numeroH])
 
   const openConversation = (conv: Conversation) => {
     marquerConversationLue(cleNonLus(conv.type, conv.linkId))

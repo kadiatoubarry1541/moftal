@@ -9,6 +9,7 @@ import { sequelize } from '../config/database.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
+import { notifierNouveauMessage } from '../services/notificationMessages.js';
 
 const router = express.Router();
 
@@ -283,6 +284,7 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
     }
     
     const message = await ResidenceMessage.create(messageData);
+    notifierNouveauMessage({ destinataires: group.members || [], expediteur: req.user, convKey: `residence:${group.id}`, message, groupe: group.title || group.name || 'Quartier' });
     
     const user = await User.findOne({ where: { numero_h: req.user.numeroH } });
     

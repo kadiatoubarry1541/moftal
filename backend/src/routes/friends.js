@@ -19,6 +19,7 @@ import { FamilyTree } from '../models/additional.js';
 import CoupleLink from '../models/CoupleLink.js';
 import ParentChildLink from '../models/ParentChildLink.js';
 import ResidenceGroup from '../models/ResidenceGroup.js';
+import { notifierNouveauMessage } from '../services/notificationMessages.js';
 
 // Upload en mémoire — jamais sur le disque du serveur — puis envoyé vers le stockage cloud.
 const uploadFriendMedia = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -852,6 +853,7 @@ router.post('/messages', async (req, res) => {
     const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
     const io = getIO();
     if (io) io.to(`friend-${linkId}`).emit('friend-message', msgData);
+    notifierNouveauMessage({ destinataires: [friend.userNumeroH, friend.friendNumeroH], expediteur: user, convKey: `friend:${linkId}`, message: msg });
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {
     console.error('Erreur envoi message ami:', error);
@@ -895,6 +897,7 @@ router.post('/messages/upload', uploadFriendMedia.single('media'), async (req, r
     const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
     const io = getIO();
     if (io) io.to(`friend-${linkId}`).emit('friend-message', msgData);
+    notifierNouveauMessage({ destinataires: [friend.userNumeroH, friend.friendNumeroH], expediteur: user, convKey: `friend:${linkId}`, message: msg });
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {
     console.error('Erreur upload message ami:', error);

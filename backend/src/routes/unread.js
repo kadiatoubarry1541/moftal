@@ -135,22 +135,29 @@ async function compterFamille(familyName, me) {
   return row?.n ? { 'family:': row.n } : {};
 }
 
+/** Non-lus de toutes les conversations de la personne (aussi utilisé pour le
+ *  chiffre sur l'icône de l'application, envoyé avec chaque notification). */
+export async function compterNonLus(user) {
+  await ensureReadsTable();
+  const me = user.numeroH;
+  const c = await mesConversations(user);
+  const parts = await Promise.all([
+    compterTete('friend_messages', 'friend', c.friend, me),
+    compterTete('couple_messages', 'couple', c.couple, me),
+    compterTete('parent_child_messages', 'pc', c.pc, me),
+    compterGroupes('residence_messages', 'residence', c.residence, me),
+    compterGroupes('activity_messages', 'activity', c.activity, me),
+    compterFamille(c.familyName, me)
+  ].map((p) => p.catch((err) => { console.warn('⚠️ unread:', err.message); return {}; })));
+  const conversations = Object.assign({}, ...parts);
+  const total = Object.values(conversations).reduce((s, n) => s + n, 0);
+  return { total, conversations };
+}
+
 // ─── GET /api/unread → { total, conversations: { "friend:<id>": 2, … } } ─────
 router.get('/', async (req, res) => {
   try {
-    await ensureReadsTable();
-    const me = req.user.numeroH;
-    const c = await mesConversations(req.user);
-    const parts = await Promise.all([
-      compterTete('friend_messages', 'friend', c.friend, me),
-      compterTete('couple_messages', 'couple', c.couple, me),
-      compterTete('parent_child_messages', 'pc', c.pc, me),
-      compterGroupes('residence_messages', 'residence', c.residence, me),
-      compterGroupes('activity_messages', 'activity', c.activity, me),
-      compterFamille(c.familyName, me)
-    ].map((p) => p.catch((err) => { console.warn('⚠️ unread:', err.message); return {}; })));
-    const conversations = Object.assign({}, ...parts);
-    const total = Object.values(conversations).reduce((s, n) => s + n, 0);
+    const { total, conversations } = await compterNonLus(req.user);
     res.json({ success: true, total, conversations });
   } catch (error) {
     console.error('Erreur /unread:', error);
