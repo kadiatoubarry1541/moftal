@@ -1496,7 +1496,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
         </div>
       )}
 
-      {/* Modal d'informations d'ami — autres membres : nom, NumeroH et photo uniquement */}
+      {/* Modal d'informations d'ami — nom complet, NuméroH (sans le compteur), activité et les 2 photos du profil */}
       {showInfoModal && selectedFriend && (() => {
         const isCurrentUser = userData?.numeroH && String(selectedFriend.numeroH).trim() === String(userData.numeroH).trim();
         return (
@@ -1513,9 +1513,20 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                     {selectedFriend.prenom} {selectedFriend.nomFamille}
                   </h4>
                   <p className="text-sm text-gray-600">{getNumeroHForDisplay(selectedFriend.numeroH, isCurrentUser)}</p>
+                  {selectedFriend.activite1 && (
+                    <p className="text-sm text-emerald-700 font-medium mt-0.5">{selectedFriend.activite1}</p>
+                  )}
                 </div>
               </div>
 
+              {(selectedFriend.vitrinePhoto1 || selectedFriend.vitrinePhoto2) && (
+                <div className="grid grid-cols-2 gap-2">
+                  {[selectedFriend.vitrinePhoto1, selectedFriend.vitrinePhoto2].filter(Boolean).map((p) => (
+                    <img key={p as string} src={getPhotoUrl(p) || ''} alt="" className="w-full object-cover rounded-xl bg-gray-100" style={{ height: 144 }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  ))}
+                </div>
+              )}
 
               {isCurrentUser && (
                 <>
