@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { setProBrand } from "./proBrand";
 import { synchroniserIconeApp } from "../utils/appIcon";
+import { appPlayInstallee, appSiteInstallee, estDansAppPlay, lienOuvrirAppPlay } from "../utils/appMoftalInstallee";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -292,7 +293,8 @@ export function InvitationInstallerMoftal() {
   const [etat, setEtat] = useState<"" | "installation" | "installee" | "manuel">("");
 
   useEffect(() => {
-    if (isGestionPage() || estEnModeApp() || localStorage.getItem("mainAppInstalled") === "1") return;
+    // Jamais si Moftal est déjà sur le téléphone (app du site OU du Play Store)
+    if (isGestionPage() || estEnModeApp() || localStorage.getItem("mainAppInstalled") === "1" || appPlayInstallee()) return;
     const cle = "installInvite_moftal";
     if (!invitationPossible(cle)) return;
     const minuterie = setTimeout(() => { noterInvitation(cle); setOuvert(true); }, 2500);
@@ -416,6 +418,32 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
   }, []);
 
   const [showHelpCard, setShowHelpCard] = useState(false);
+
+  // Moftal déjà installée depuis le Play Store sur ce téléphone : on propose de
+  // l'OUVRIR, jamais d'installer une deuxième fois la même application.
+  const pkgPlay = appPlayInstallee();
+  if (pkgPlay && !installed) {
+    return (
+      <a
+        href={lienOuvrirAppPlay(pkgPlay)}
+        title="Ouvrir l'application Moftal"
+        aria-label="Ouvrir l'application Moftal"
+        style={isBanner
+          ? { display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 16px", background: "#f0fdf4", borderBottom: "1px solid #f0f0f0", textDecoration: "none" }
+          : { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, minWidth: 44, minHeight: 44, background: "#1a8f1a", color: "white", borderRadius: "50%", fontSize: 20, textDecoration: "none", boxShadow: "0 4px 14px rgba(26,143,26,0.35)" }}
+      >
+        {isBanner ? (
+          <>
+            <span style={{ fontSize: 22 }}>📱</span>
+            <span>
+              <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#166534" }}>Ouvrir l'application Moftal</span>
+              <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>Déjà installée sur ce téléphone</span>
+            </span>
+          </>
+        ) : "📱"}
+      </a>
+    );
+  }
 
   if (installed) {
     if (!isBanner) return null;
@@ -722,6 +750,49 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
         </div>
       )}
       <style>{`@keyframes moftal-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+
+// ─── Moftal installée deux fois sur le même téléphone ───────────────────────
+// (installations faites avant cette vérification) : on le dit une fois, avec la
+// marche à suivre — une application ne peut pas en supprimer une autre.
+export function AvertissementDoubleInstallation() {
+  const [ouvert, setOuvert] = useState(false);
+  useEffect(() => {
+    if (isGestionPage() || !estEnModeApp()) return;
+    const double = estDansAppPlay() ? appSiteInstallee() : !!appPlayInstallee();
+    if (!double) return;
+    try {
+      const vu = Number(localStorage.getItem("moftalDoubleVu") || 0);
+      if (Date.now() - vu < 30 * 24 * 3600 * 1000) return;
+    } catch { return; }
+    const t = setTimeout(() => setOuvert(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+  if (!ouvert) return null;
+  const fermer = () => { try { localStorage.setItem("moftalDoubleVu", String(Date.now())); } catch { /* */ } setOuvert(false); };
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) fermer(); }}>
+      <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 32px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <img src="/logo-moftal.svg" alt="" style={{ width: 52, height: 52, borderRadius: 12 }} />
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Moftal est installée deux fois</div>
+        </div>
+        <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: "0 0 10px" }}>
+          Ce téléphone a deux icônes Moftal (celle du Play Store et celle du site). Une seule suffit :
+          vos données sont les mêmes dans les deux.
+        </p>
+        <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 14 }}>
+          <div>1. Sur l'écran d'accueil, <strong>appuyez longuement</strong> sur l'une des deux icônes Moftal</div>
+          <div>2. Choisissez « <strong>Désinstaller</strong> » (ou « Supprimer »)</div>
+          <div>3. Gardez l'autre — <strong>de préférence celle du Play Store</strong>, mise à jour automatiquement.</div>
+        </div>
+        <button onClick={fermer} style={{ width: "100%", padding: 14, background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+          J'ai compris
+        </button>
+      </div>
     </div>
   );
 }
