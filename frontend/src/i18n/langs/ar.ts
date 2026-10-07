@@ -385,6 +385,7 @@ const ar: Record<string, string> = {
   'mosquee.intro_line2': 'صفِّ حسب المدينة أو الحي أو البلد، ثم انقر على «أخذ موعد» للتواصل معهم.',
   'mosquee.section_desc': 'مساجد وأئمة متاحون لمرافقة المجتمع في حياته الروحية.',
   'profile_badge.title': 'واجهة الملف الشخصي',
+  'profile_badge.chip': 'الواجهة',
   'profile_badge.empty': 'هذا العضو لم يملأ واجهة ملفه الشخصي بعد.',
   'profile_badge.activity_label': 'النشاط',
   'identite.vitrine_title': 'واجهتي (شارة الملف الشخصي)',

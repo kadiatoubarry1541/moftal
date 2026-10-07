@@ -385,6 +385,7 @@ const fr: Record<string, string> = {
   'mosquee.intro_line2': 'Filtrez par ville, quartier ou pays, puis cliquez sur « Prendre rendez-vous » pour les contacter.',
   'mosquee.section_desc': 'Mosquées et imams disponibles pour accompagner la communauté dans sa vie spirituelle.',
   'profile_badge.title': 'Vitrine de profil',
+  'profile_badge.chip': 'Vitrine',
   'profile_badge.empty': "Ce membre n'a pas encore rempli sa vitrine de profil.",
   'profile_badge.activity_label': 'Activité',
   'identite.vitrine_title': 'Ma vitrine (badge de profil)',

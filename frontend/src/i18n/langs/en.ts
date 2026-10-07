@@ -385,6 +385,7 @@ const en: Record<string, string> = {
   'mosquee.intro_line2': 'Filter by city, neighborhood or country, then click "Book an appointment" to contact them.',
   'mosquee.section_desc': 'Mosques and imams available to support the community in its spiritual life.',
   'profile_badge.title': 'Profile showcase',
+  'profile_badge.chip': 'Showcase',
   'profile_badge.empty': "This member hasn't filled in their profile showcase yet.",
   'profile_badge.activity_label': 'Activity',
   'identite.vitrine_title': 'My showcase (profile badge)',

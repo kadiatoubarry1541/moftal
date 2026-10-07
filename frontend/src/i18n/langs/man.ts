@@ -385,6 +385,7 @@ const man: Record<string, string> = {
   'mosquee.intro_line2': "I bɛ se ka woloso dugu, quartier walima jamana fɛ, o kɔ i ye « Waati bɔsi » digi walasa ka minɛ u la.",
   'mosquee.section_desc': 'Misiriw ni iman mɔgɔw bɛ sɔrɔ ka jama dɛmɛ u ka diinɛ ɲɛnamaya na.',
   'profile_badge.title': 'Mɔgɔ ka kunnafoni jirali',
+  'profile_badge.chip': 'Jirali',
   'profile_badge.empty': "Nin mɛmburu ma a ka kunnafoni jirali dafa fɔlɔ.",
   'profile_badge.activity_label': 'Baara',
   'identite.vitrine_title': 'N ka kunnafoni jirali (bɔtɔn)',

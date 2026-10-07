@@ -6,6 +6,7 @@ import QrScanner from 'qr-scanner';
 import { getNumeroHForDisplay, getPhotoUrl } from '../../utils/auth';
 import { isContactPickerSupported, pickContactPhones } from '../../utils/contactPicker';
 import ProfileBadge from '../../components/ProfileBadge';
+import PhotoProfil from '../../components/PhotoProfil';
 import SuggestionsAmis from '../../components/SuggestionsAmis';
 import { useI18n } from '../../i18n/useI18n';
 
@@ -1025,15 +1026,17 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                 className="border border-gray-100 rounded-xl p-3 sm:p-4 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors"
               >
                 <div className="relative shrink-0">
-                  <img
-                    src={friend.profilePicture || '/api/placeholder/48/48'}
-                    alt={`${friend.prenom} ${friend.nomFamille}`}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
+                  <PhotoProfil photo={friend.profilePicture} prenom={friend.prenom} nomFamille={friend.nomFamille} className="w-12 h-12" />
                   {friend.isOnline && (
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                   )}
-                  <div className="absolute -top-1 -right-1">
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{friend.prenom} {friend.nomFamille}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <p className="text-xs text-gray-500">
+                      {friend.isOnline ? <span className="text-green-600">{t('amitie.online')}</span> : t('amitie.friend_status')}
+                    </p>
                     <ProfileBadge
                       numeroH={friend.numeroH}
                       prenom={friend.prenom}
@@ -1044,12 +1047,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                       vitrineVideo={friend.vitrineVideo}
                     />
                   </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{friend.prenom} {friend.nomFamille}</p>
-                  <p className="text-xs text-gray-500">
-                    {friend.isOnline ? <span className="text-green-600">{t('amitie.online')}</span> : t('amitie.friend_status')}
-                  </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
@@ -1510,11 +1507,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
             </h3>
             <div className="space-y-4">
               <div className="flex items-center">
-                <img
-                  src={selectedFriend.profilePicture || '/api/placeholder/60/60'}
-                  alt={`${selectedFriend.prenom} ${selectedFriend.nomFamille}`}
-                  className="w-16 h-16 rounded-full object-cover mr-4"
-                />
+                <PhotoProfil photo={selectedFriend.profilePicture} prenom={selectedFriend.prenom} nomFamille={selectedFriend.nomFamille} className="w-16 h-16 mr-4 shrink-0 text-xl" />
                 <div>
                   <h4 className="font-semibold text-gray-900">
                     {selectedFriend.prenom} {selectedFriend.nomFamille}
@@ -1523,9 +1516,6 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
                 </div>
               </div>
 
-              {!isCurrentUser && (
-                <p className="text-sm text-gray-500">Pour l'identification : nom, NumeroH et photo. Les autres informations sont privées.</p>
-              )}
 
               {isCurrentUser && (
                 <>

@@ -1470,9 +1470,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                       <span className="label">NumeroH:</span>
                       <span className="value">{getNumeroHForDisplay(selectedMember.numeroH, isCurrentUser)}</span>
                     </div>
-                    {!isCurrentUser && (
-                      <p className="text-sm text-gray-500 mt-2">Pour l'identification : nom, NumeroH et photo. Les autres informations sont privées.</p>
-                    )}
                     {isCurrentUser && (
                       <>
                         <div className="info-item">
