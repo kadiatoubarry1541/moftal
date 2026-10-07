@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FriendChat } from './FriendChat'
 import { CoupleChat } from './CoupleChat'
 import { ParentChildChat } from './ParentChildChat'
@@ -191,6 +191,51 @@ export function FloatingMessenger() {
   const [starting, setStarting] = useState<string | null>(null)
   const [chat, setChat] = useState<{ type: ChatType; linkId: string; label: string } | null>(null)
   const [nonLus, setNonLus] = useState<MessagesNonLus>({ total: 0, conversations: {} })
+
+  // Bouton « retour » du téléphone : la messagerie occupe une entrée de
+  // l'historique. Retour depuis une discussion → la liste ; retour depuis la
+  // liste (ou ✕) → la page où l'on était. Jamais l'application fermée.
+  const entreeHistorique = useRef(false)
+  const depuisListe = useRef(false)
+  const toutFermer = useRef(false)
+  const chatOuvert = useRef(false)
+  chatOuvert.current = !!chat
+
+  useEffect(() => {
+    if ((open || chat) && !entreeHistorique.current) {
+      window.history.pushState({ ...(window.history.state || {}), moftalMessenger: true }, '')
+      entreeHistorique.current = true
+    }
+  }, [open, chat])
+
+  useEffect(() => {
+    const surRetour = () => {
+      if (!entreeHistorique.current) return
+      entreeHistorique.current = false
+      if (!toutFermer.current && chatOuvert.current && depuisListe.current) {
+        depuisListe.current = false
+        setChat(null)
+        setOpen(true)
+        return
+      }
+      toutFermer.current = false
+      depuisListe.current = false
+      setChat(null)
+      setOpen(false)
+    }
+    window.addEventListener('popstate', surRetour)
+    return () => window.removeEventListener('popstate', surRetour)
+  }, [])
+
+  const fermerMessagerie = () => {
+    if (entreeHistorique.current) {
+      toutFermer.current = true
+      window.history.back()
+    } else {
+      setChat(null)
+      setOpen(false)
+    }
+  }
 
   // Compteur de messages non lus : au chargement, toutes les 30 s, au retour
   // sur l'application et dès qu'une conversation est lue.
@@ -449,6 +494,7 @@ export function FloatingMessenger() {
 
   const openConversation = (conv: Conversation) => {
     marquerConversationLue(cleNonLus(conv.type, conv.linkId))
+    depuisListe.current = true
     setOpen(false)
     setChat({ type: conv.type, linkId: conv.linkId, label: conv.label })
   }
@@ -464,6 +510,7 @@ export function FloatingMessenger() {
       })
       const data = await res.json()
       if (data.success) {
+        depuisListe.current = true
         setOpen(false)
         setChat({ type: 'friend', linkId: data.linkId, label: `${contact.prenom || ''} ${contact.nomFamille || ''}`.trim() })
       } else {
@@ -513,11 +560,11 @@ export function FloatingMessenger() {
       {/* Sélection du destinataire / conversations */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} aria-hidden />
+          <div className="absolute inset-0 bg-black/40" onClick={fermerMessagerie} aria-hidden />
           <div className="relative bg-white rounded-none sm:rounded-xl shadow-xl w-full h-full sm:h-auto sm:max-h-[85vh] sm:w-[min(96vw,460px)] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0">
               <h3 className="text-base font-semibold">💬 Messages</h3>
-              <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100" onClick={() => setOpen(false)} aria-label="Fermer">✕</button>
+              <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100" onClick={fermerMessagerie} aria-label="Fermer">✕</button>
             </div>
 
             <div className="overflow-y-auto flex-1 min-h-0">
@@ -594,11 +641,11 @@ export function FloatingMessenger() {
 
       {/* Fenêtre de discussion */}
       {chat && userData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4" onClick={() => setChat(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4" onClick={fermerMessagerie}>
           <div className="bg-white rounded-none sm:rounded-lg w-full h-full sm:h-auto sm:max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="bg-violet-600 px-4 py-3 flex items-center justify-between">
               <h3 className="text-white font-bold text-base">💬 {chat.label}</h3>
-              <button onClick={() => setChat(null)} className="text-white/80 hover:text-white text-xl leading-none">✕</button>
+              <button onClick={fermerMessagerie} aria-label="Fermer la discussion" className="text-white/80 hover:text-white text-xl leading-none">✕</button>
             </div>
             <div className="p-3">
               {chat.type === 'friend' && <FriendChat linkId={chat.linkId} myNumeroH={userData.numeroH} partnerLabel={chat.label} />}
