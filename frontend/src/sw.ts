@@ -112,6 +112,17 @@ registerRoute(
 
 // ─── Web Push ────────────────────────────────────────────────────────────────
 
+// Chiffre sur l'icône de l'application (messages non lus), comme WhatsApp
+type NavigateurBadge = { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
+async function majBadgeIcone(nombre: unknown) {
+  if (typeof nombre !== 'number') return
+  const nav = self.navigator as unknown as NavigateurBadge
+  try {
+    if (nombre > 0) await nav.setAppBadge?.(nombre)
+    else await nav.clearAppBadge?.()
+  } catch { /* non pris en charge */ }
+}
+
 self.addEventListener('push', (event: PushEvent) => {
   if (!event.data) return
   const data = event.data.json()
@@ -125,7 +136,15 @@ self.addEventListener('push', (event: PushEvent) => {
     vibrate: [200, 100, 200],
     data: { url: data.url || '/' }
   }
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil((async () => {
+    if (data.type === 'message') {
+      await majBadgeIcone(data.badgeCount)
+      // Application ouverte : le compteur du bouton 💬 se met à jour tout de suite
+      const fenetres = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      fenetres.forEach(c => c.postMessage({ type: 'nouveau-message' }))
+    }
+    await self.registration.showNotification(title, options)
+  })())
 })
 
 self.addEventListener('notificationclick', (event: NotificationEvent) => {

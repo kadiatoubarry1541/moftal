@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { config } from '../../config/api'
 
-// Inscription rapide : numéro de téléphone + mot de passe seulement.
-// Tout le reste (NuméroH, email, photo, quartier…) se fait ensuite avec
+// Inscription rapide : numéro de téléphone OU e-mail + mot de passe.
+// Tout le reste (NuméroH, photo, quartier…) se fait ensuite avec
 // « Mettre mon profil à jour ».
 export function QuickSignup() {
   const navigate = useNavigate()
+  const [mode, setMode] = useState<'telephone' | 'email'>('telephone')
   const [telephone, setTelephone] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [show, setShow] = useState(false)
@@ -16,9 +18,11 @@ export function QuickSignup() {
 
   const digits = telephone.replace(/[^0-9]/g, '')
   const phoneOk = digits.length >= 8
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
+  const identifiantOk = mode === 'telephone' ? phoneOk : emailOk
   const pwOk = password.length >= 6
   const same = password === confirm
-  const canSubmit = phoneOk && pwOk && same && !loading
+  const canSubmit = identifiantOk && pwOk && same && !loading
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,7 +33,9 @@ export function QuickSignup() {
       const res = await fetch(`${config.API_BASE_URL}/auth/register-quick`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telephone: telephone.trim(), password })
+        body: JSON.stringify(mode === 'telephone'
+          ? { telephone: telephone.trim(), password }
+          : { email: email.trim(), password })
       })
       if (res.status === 404) { setError("L'inscription est momentanément indisponible. Réessayez dans quelques minutes."); return }
       const data = await res.json()
@@ -57,13 +63,33 @@ export function QuickSignup() {
         <h1 className="text-2xl font-black text-gray-900 mb-5">Créer mon compte</h1>
 
         <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">📱 Numéro de téléphone</label>
-            <input type="tel" inputMode="tel" autoComplete="tel" value={telephone}
-              onChange={e => setTelephone(e.target.value)} placeholder="Ex : 620 00 00 00"
-              className={`${field} ${telephone && !phoneOk ? 'border-red-400' : 'border-gray-300'}`} />
-            {telephone && !phoneOk && <p className="text-xs text-red-500 mt-1">Numéro trop court.</p>}
+          {/* Téléphone OU e-mail */}
+          <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl" role="tablist">
+            {([['telephone', '📱 Téléphone'], ['email', '✉️ E-mail']] as const).map(([m, label]) => (
+              <button key={m} type="button" role="tab" aria-selected={mode === m}
+                onClick={() => { setMode(m); setError(null) }}
+                className={`py-2.5 rounded-lg text-sm font-bold transition-colors ${mode === m ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500'}`}>
+                {label}
+              </button>
+            ))}
           </div>
+          {mode === 'telephone' ? (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">📱 Numéro de téléphone</label>
+              <input type="tel" inputMode="tel" autoComplete="tel" value={telephone}
+                onChange={e => setTelephone(e.target.value)} placeholder="Ex : 620 00 00 00"
+                className={`${field} ${telephone && !phoneOk ? 'border-red-400' : 'border-gray-300'}`} />
+              {telephone && !phoneOk && <p className="text-xs text-red-500 mt-1">Numéro trop court.</p>}
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">✉️ Adresse e-mail</label>
+              <input type="email" inputMode="email" autoComplete="email" value={email}
+                onChange={e => setEmail(e.target.value)} placeholder="Ex : nom@gmail.com"
+                className={`${field} ${email && !emailOk ? 'border-red-400' : 'border-gray-300'}`} />
+              {email && !emailOk && <p className="text-xs text-red-500 mt-1">Adresse e-mail invalide.</p>}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">🔒 Mot de passe</label>
             <div className="flex gap-2">
@@ -83,9 +109,12 @@ export function QuickSignup() {
             {confirm && !same && <p className="text-xs text-red-500 mt-1">Les mots de passe ne correspondent pas.</p>}
           </div>
 
-          <p className="text-[11px] leading-snug text-amber-700">
-            ⚠️ Mettez ensuite votre profil à jour avec un email : sans email, un compte perdu ne peut pas être récupéré.
-          </p>
+          {/* Seulement sans e-mail : le mot de passe oublié se récupère par e-mail */}
+          {mode === 'telephone' && (
+            <p className="text-[11px] leading-snug text-amber-700">
+              ⚠️ Ajoutez ensuite un e-mail dans votre profil : sans e-mail, un compte perdu ne peut pas être récupéré.
+            </p>
+          )}
 
           {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>}
 

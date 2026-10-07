@@ -13,6 +13,7 @@ import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
 import { getIO } from '../socket.js';
 import { addUserToFamilyTree, MAX_MEMBRES_ARBRE } from './familyTree.js';
+import { notifierNouveauMessage } from '../services/notificationMessages.js';
 
 // Upload en mémoire — jamais sur le disque du serveur (effacé à chaque
 // redémarrage/redéploiement) — puis envoyé vers le stockage cloud.
@@ -889,6 +890,7 @@ router.post('/messages', async (req, res) => {
     const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
     const io = getIO();
     if (io) io.to(`parent-child-${linkId}`).emit('parent-child-message', msgData);
+    notifierNouveauMessage({ destinataires: [link.parentNumeroH, link.childNumeroH], expediteur: user, convKey: `pc:${linkId}`, message: msg });
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {
     console.error('Erreur envoi message parent-enfant:', error);
@@ -934,6 +936,7 @@ router.post('/messages/upload', uploadChild.single('media'), async (req, res) =>
     const msgData = { ...msg.toJSON(), authorName: `${user.prenom} ${user.nomFamille}` };
     const io = getIO();
     if (io) io.to(`parent-child-${linkId}`).emit('parent-child-message', msgData);
+    notifierNouveauMessage({ destinataires: [link.parentNumeroH, link.childNumeroH], expediteur: user, convKey: `pc:${linkId}`, message: msg });
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {
     console.error('Erreur upload message parent-enfant:', error);

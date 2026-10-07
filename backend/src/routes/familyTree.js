@@ -14,6 +14,7 @@ import Notification from '../models/Notification.js';
 import CoupleLink from '../models/CoupleLink.js';
 import { getIO } from '../socket.js';
 import { normalizeNumeroH } from '../utils/numeroH.js';
+import { notifierNouveauMessage, membresFamille } from '../services/notificationMessages.js';
 
 /** Comparaison insensible à la casse pour un NuméroH saisi à la main
  *  (père/mère) — évite qu'une différence de casse ou d'espace empêche
@@ -789,6 +790,7 @@ router.post('/messages', async (req, res) => {
     // Diffuse en temps réel aux membres de la famille connectés
     const io = getIO();
     if (io) io.to(`family-${familyName}`).emit('family-message', msgData);
+    membresFamille(familyName).then((destinataires) => notifierNouveauMessage({ destinataires, expediteur: user, convKey: 'family:', message, groupe: `Famille ${familyName}` })).catch(() => {});
 
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {
@@ -851,6 +853,7 @@ router.post('/messages/upload', uploadFamilyMedia.single('media'), async (req, r
 
     const io = getIO();
     if (io) io.to(`family-${familyName}`).emit('family-message', msgData);
+    membresFamille(familyName).then((destinataires) => notifierNouveauMessage({ destinataires, expediteur: user, convKey: 'family:', message, groupe: `Famille ${familyName}` })).catch(() => {});
 
     res.status(201).json({ success: true, message: msgData });
   } catch (error) {

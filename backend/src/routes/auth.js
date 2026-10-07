@@ -399,12 +399,13 @@ function peutModifierProfil(req, numeroH) {
 const refusModification = (res) => res.status(403).json({ success: false, message: 'Vous ne pouvez modifier que votre propre profil.' });
 
 // @route   POST /api/auth/register-quick
-// @desc    Inscription rapide : numéro de téléphone + mot de passe seulement.
+// @desc    Inscription rapide : numéro de téléphone OU e-mail + mot de passe.
 //          Le compte reçoit un identifiant provisoire (TMP-…) ; le vrai NuméroH,
 //          l'email et le reste arrivent avec la mise à jour du profil.
 // @access  Public
 router.post('/register-quick', [
-  body('telephone').trim().notEmpty().withMessage('Le numéro de téléphone est requis'),
+  body('telephone').optional({ values: 'falsy' }).trim(),
+  body('email').optional({ values: 'falsy' }).trim().isEmail().withMessage('Adresse e-mail invalide'),
   body('password').isLength({ min: 6 }).withMessage('Le mot de passe doit contenir au moins 6 caractères')
 ], async (req, res) => {
   try {
@@ -412,13 +413,23 @@ router.post('/register-quick', [
     if (!errors.isEmpty()) {
       return res.status(400).json({ success: false, message: errors.array()[0].msg, errors: errors.array() });
     }
-    const telephone = String(req.body.telephone).trim();
-    const digits = telephone.replace(/[^0-9]/g, '');
-    if (digits.length < 8) {
-      return res.status(400).json({ success: false, message: 'Numéro de téléphone invalide.' });
+    // Téléphone OU e-mail (au moins l'un des deux)
+    const telephone = String(req.body.telephone || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!telephone && !email) {
+      return res.status(400).json({ success: false, message: 'Indiquez votre numéro de téléphone ou votre e-mail.' });
     }
-    if (await findNumeroHByPhone(digits)) {
-      return res.status(409).json({ success: false, message: 'Ce numéro de téléphone a déjà un compte. Connectez-vous avec ce numéro.' });
+    if (telephone) {
+      const digits = telephone.replace(/[^0-9]/g, '');
+      if (digits.length < 8) {
+        return res.status(400).json({ success: false, message: 'Numéro de téléphone invalide.' });
+      }
+      if (await findNumeroHByPhone(digits)) {
+        return res.status(409).json({ success: false, message: 'Ce numéro de téléphone a déjà un compte. Connectez-vous avec ce numéro.' });
+      }
+    }
+    if (email && await User.findOne({ where: { email: { [Op.iLike]: email.replace(/[\\%_]/g, '\\$&') } } })) {
+      return res.status(409).json({ success: false, message: 'Cette adresse e-mail a déjà un compte. Connectez-vous avec cet e-mail.' });
     }
 
     const numeroH = `${PROVISIONAL_PREFIX}${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -428,7 +439,8 @@ router.post('/register-quick', [
       password: hashedPassword,
       prenom: 'Nouveau',
       nomFamille: 'membre',
-      tel1: telephone,
+      tel1: telephone || null,
+      email: email || null,
       genre: 'AUTRE',
       generation: 'G1',
       type: 'vivant',
@@ -442,7 +454,13 @@ router.post('/register-quick', [
     res.status(201).json({ success: true, message: 'Compte créé', user, token: signToken(numeroH), profileIncomplete: true });
   } catch (error) {
     if (error?.name === 'SequelizeUniqueConstraintError' || error?.parent?.code === '23505') {
-      return res.status(409).json({ success: false, message: 'Ce numéro de téléphone a déjà un compte. Connectez-vous avec ce numéro.' });
+      const champs = (error.errors || []).map((e) => e.path).join(' ');
+      return res.status(409).json({
+        success: false,
+        message: champs.includes('email')
+          ? 'Cette adresse e-mail a déjà un compte. Connectez-vous avec cet e-mail.'
+          : 'Ce numéro de téléphone a déjà un compte. Connectez-vous avec ce numéro.'
+      });
     }
     console.error('Erreur inscription rapide:', error);
     res.status(500).json({ success: false, message: "Erreur serveur lors de l'inscription." });

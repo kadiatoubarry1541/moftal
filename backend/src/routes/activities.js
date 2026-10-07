@@ -5,6 +5,7 @@ import ActivityMessage from '../models/ActivityMessage.js';
 import User from '../models/User.js';
 import { authenticate, isProvisionalNumeroH } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import { notifierNouveauMessage } from '../services/notificationMessages.js';
 
 const router = express.Router();
 
@@ -222,6 +223,7 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
       content: content || '',
       mediaUrl
     });
+    notifierNouveauMessage({ destinataires: group.members || [], expediteur: user, convKey: `activity:${group.id}`, message, groupe: group.name || group.activity || 'Activité' });
     
     // Récupérer le nom de l'auteur
     const author = await User.findOne({ where: { numero_h: user.numeroH } });
