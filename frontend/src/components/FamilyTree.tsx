@@ -202,9 +202,6 @@ export function FamilyTree({ userData }: FamilyTreeProps) {
               <div className="member-details">
                 <h5>{selectedMember.prenom} {selectedMember.nomFamille}</h5>
                 <p><strong>NumeroH:</strong> {getNumeroHForDisplay(selectedMember.numeroH, isCurrentUser)}</p>
-                {!isCurrentUser && (
-                  <p className="text-sm text-gray-500 mt-2">Pour l'identification : nom, NumeroH et photo. Les autres informations sont privées.</p>
-                )}
                 {isCurrentUser && (
                   <>
                     <p><strong>Génération:</strong> {selectedMember.generation}</p>

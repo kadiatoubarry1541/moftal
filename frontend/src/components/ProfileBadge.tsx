@@ -18,11 +18,11 @@ interface Props {
 }
 
 /**
- * Petit badge d'identité affiché dans le coin de la photo de profil sur une
- * carte (comme la couronne d'admin) : au clic, montre l'activité + les 2
+ * Petit bouton rond (icône photos) placé à côté du nom (jamais sur la photo) :
+ * au clic, montre l'activité + les 2
  * photos + la courte vidéo de la vitrine de profil de la personne. Si les 4
- * éléments sont renseignés, un V tricolore (vert / blanc / noir) s'affiche
- * dans le coin du badge.
+ * éléments sont renseignés, un V tricolore s'affiche dans son coin.
+ * Rien n'est affiché si la personne n'a rien mis dans sa vitrine.
  */
 export default function ProfileBadge({
   numeroH, prenom, nomFamille, activite1, vitrinePhoto1, vitrinePhoto2, vitrineVideo, className = ''
@@ -33,6 +33,8 @@ export default function ProfileBadge({
   const hasAnything = !!(activite1 || vitrinePhoto1 || vitrinePhoto2 || vitrineVideo);
   const gradId = `vBadgeGrad-${numeroH.replace(/[^a-zA-Z0-9]/g, '')}`;
 
+  if (!hasAnything) return null;
+
   return (
     <>
       <button
@@ -40,12 +42,16 @@ export default function ProfileBadge({
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
         title={t('profile_badge.title')}
         aria-label={t('profile_badge.title')}
-        className={`relative w-6 h-6 rounded-full bg-white shadow border border-gray-200 flex items-center justify-center text-[11px] flex-shrink-0 ${className}`}
+        className={`relative inline-flex items-center justify-center w-6 h-6 !min-h-0 !min-w-0 p-0 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm hover:brightness-110 flex-shrink-0 transition ${className}`}
       >
-        🪪
+        <svg viewBox="0 0 24 24" width={13} height={13} aria-hidden fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="5" width="18" height="14" rx="3" />
+          <circle cx="9" cy="10" r="1.6" fill="currentColor" stroke="none" />
+          <path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4" />
+        </svg>
         {isComplete && (
-          <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-white border border-gray-300 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" width={9} height={9}>
+          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-white border border-gray-300 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" width={9} height={9} aria-hidden>
               <defs>
                 <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#16a34a" />

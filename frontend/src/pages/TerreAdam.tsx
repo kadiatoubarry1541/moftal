@@ -14,6 +14,7 @@ import LivreQuartier, { type LivreQuartierHandle } from '../components/LivreQuar
 import ReglesLocalite, { type ReglesLocaliteHandle } from '../components/ReglesLocalite';
 import ResidenceProofs, { type ResidenceProofsHandle } from '../components/ResidenceProofs';
 import ProfileBadge from '../components/ProfileBadge';
+import PhotoProfil from '../components/PhotoProfil';
 import DeveloppementGouvernemental from '../components/DeveloppementGouvernemental';
 import { useI18n } from '../i18n/useI18n';
 
@@ -1004,33 +1005,29 @@ export default function TerreAdam() {
                   const prenom = member.prenom as string | undefined;
                   const nomFamille = member.nomFamille as string | undefined;
                   const photo = member.photo as string | undefined;
-                  const initiale = (prenom || '?').charAt(0).toUpperCase();
                   const canViewMemberProofs = isAdmin || (selectedGroup.admin && selectedGroup.admin === userData?.numeroH);
                   return (
                     <div key={index} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                       <div className="bg-emerald-600 px-4 py-3 flex items-center gap-3">
                         <div className="relative w-16 h-16 flex-shrink-0">
-                          <div className="w-16 h-16 rounded-full bg-emerald-200 overflow-hidden flex items-center justify-center text-2xl font-bold text-emerald-800 border-2 border-white">
-                            {photo ? <img src={photo} alt={initiale} className="w-full h-full object-cover" /> : initiale}
-                          </div>
-                          {member.numeroH && (
-                            <div className="absolute -bottom-1 -right-1">
-                              <ProfileBadge
-                                numeroH={member.numeroH}
-                                prenom={prenom}
-                                nomFamille={nomFamille}
-                                activite1={member.activite1}
-                                vitrinePhoto1={member.vitrinePhoto1}
-                                vitrinePhoto2={member.vitrinePhoto2}
-                                vitrineVideo={member.vitrineVideo}
-                              />
-                            </div>
-                          )}
+                          <PhotoProfil photo={photo} prenom={prenom} nomFamille={nomFamille} className="w-16 h-16 text-2xl border-2 border-white" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-bold text-white text-base truncate">{prenom} {nomFamille}</p>
                           {member.numeroH && (
                             <p className="text-emerald-200 text-xs font-mono mt-0.5">{t('terre_adam.numeroh_prefix')} {String(member.numeroH).split(' ')[0]}</p>
+                          )}
+                          {member.numeroH && (
+                            <ProfileBadge
+                              className="mt-1.5"
+                              numeroH={member.numeroH}
+                              prenom={prenom}
+                              nomFamille={nomFamille}
+                              activite1={member.activite1}
+                              vitrinePhoto1={member.vitrinePhoto1}
+                              vitrinePhoto2={member.vitrinePhoto2}
+                              vitrineVideo={member.vitrineVideo}
+                            />
                           )}
                         </div>
                         {canViewMemberProofs && member.numeroH && (

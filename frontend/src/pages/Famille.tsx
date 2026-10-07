@@ -1278,9 +1278,6 @@ export default function Famille() {
                           </div>
                         </>
                       )}
-                      {!isCurrentUser && (
-                        <p className="text-xs text-gray-500">Pour l'identification : nom, NumeroH et photo. Les autres informations sont privées.</p>
-                      )}
                     </div>
                     );
                   })}
