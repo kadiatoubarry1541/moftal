@@ -18,10 +18,10 @@ interface Props {
 }
 
 /**
- * Petite pastille « 🪪 Vitrine » placée à côté du nom (jamais sur la photo) :
+ * Petit bouton rond (icône photos) placé à côté du nom (jamais sur la photo) :
  * au clic, montre l'activité + les 2
  * photos + la courte vidéo de la vitrine de profil de la personne. Si les 4
- * éléments sont renseignés, un V tricolore s'affiche dans la pastille.
+ * éléments sont renseignés, un V tricolore s'affiche dans son coin.
  * Rien n'est affiché si la personne n'a rien mis dans sa vitrine.
  */
 export default function ProfileBadge({
@@ -42,21 +42,26 @@ export default function ProfileBadge({
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
         title={t('profile_badge.title')}
         aria-label={t('profile_badge.title')}
-        className={`inline-flex items-center gap-1 h-6 !min-h-0 !min-w-0 pl-1.5 pr-2 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[11px] font-semibold leading-none flex-shrink-0 transition-colors ${className}`}
+        className={`relative inline-flex items-center justify-center w-6 h-6 !min-h-0 !min-w-0 p-0 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm hover:brightness-110 flex-shrink-0 transition ${className}`}
       >
-        <span aria-hidden className="text-[12px]">🪪</span>
-        {t('profile_badge.chip')}
+        <svg viewBox="0 0 24 24" width={13} height={13} aria-hidden fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="5" width="18" height="14" rx="3" />
+          <circle cx="9" cy="10" r="1.6" fill="currentColor" stroke="none" />
+          <path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 4" />
+        </svg>
         {isComplete && (
-          <svg viewBox="0 0 24 24" width={11} height={11} aria-hidden className="ml-0.5">
-            <defs>
-              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#16a34a" />
-                <stop offset="50%" stopColor="#ffffff" />
-                <stop offset="100%" stopColor="#111827" />
-              </linearGradient>
-            </defs>
-            <path d="M3 4 L12 20 L21 4" fill="none" stroke={`url(#${gradId})`} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-white border border-gray-300 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" width={9} height={9} aria-hidden>
+              <defs>
+                <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#16a34a" />
+                  <stop offset="50%" stopColor="#ffffff" />
+                  <stop offset="100%" stopColor="#111827" />
+                </linearGradient>
+              </defs>
+              <path d="M3 4 L12 20 L21 4" fill="none" stroke={`url(#${gradId})`} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         )}
       </button>
 

@@ -385,7 +385,6 @@ const pul: Record<string, string> = {
   'mosquee.intro_line2': 'Sella e saare, nokku walla leydi, refti ɓami « Ƴeewto sahaa » ngam yiɗtaade e maɓɓe.',
   'mosquee.section_desc': 'Jumaaji e alimaaɓe ngoodi ngam wallude jamaa nguurndam ruuhaani makko.',
   'profile_badge.title': 'Jiytirde profil',
-  'profile_badge.chip': 'Jiytirde',
   'profile_badge.empty': "Jokkiiɗo ɗoo heɓaani heblude jiytirde makko haa jooni.",
   'profile_badge.activity_label': 'Golle',
   'identite.vitrine_title': 'Jiytirde am (bowngal profil)',
