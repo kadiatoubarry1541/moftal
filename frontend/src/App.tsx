@@ -5,6 +5,7 @@ import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
 import { getSessionUser, isAdmin, isMasterAdmin, getPhotoUrl, getNumeroHForDisplay } from "./utils/auth";
 import { config } from "./config/api";
+import { recupererPhotosAnciennes } from "./utils/recuperationPhoto";
 import DefaultAvatar from "./assets/default-avatar.svg";
 import NotificationBell from "./components/NotificationBell";
 import GestionPaymentGate from "./components/GestionPaymentGate";
@@ -273,6 +274,8 @@ function App() {
           const local = getSessionUser();
           const merged = { ...local, ...data.user };
           setCurrentUser(merged);
+          // Ancienne photo restée sur le disque du serveur : on la met en base (copie du téléphone)
+          recupererPhotosAnciennes(data.user);
           // Sauvegarder le nouveau token renouvelé si le backend en fournit un
           if (data.token) {
             localStorage.setItem("token", data.token);
