@@ -8,6 +8,7 @@ import type { Invitation } from '../types/invitation.ts'
 import { useI18n } from '../i18n/useI18n'
 import { InvitationsReceived } from './InvitationsReceived'
 import AjouterEnfantModal from './AjouterEnfantModal'
+import ChampPersonne from './ChampPersonne'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -934,17 +935,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                 >
                   🕊️ Ajouter un défunt
                 </button>
-                <button
-                  type="button"
-                  className="view-btn"
-                  onClick={() => {
-                    setShowAddMemberForm(false)
-                    setAddMemberType(null)
-                    setAjoutEnfant(true)
-                  }}
-                >
-                  👶 Ajouter un enfant (sans NuméroH)
-                </button>
               </div>
             </div>
           </div>
@@ -954,13 +944,11 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>NuméroH du vivant à inviter *</label>
-                  <input
-                    type="text"
+                  <label>Personne à inviter *</label>
+                  <ChampPersonne
                     value={newMember.numeroH}
-                    onChange={(e) => setNewMember({...newMember, numeroH: e.target.value})}
-                    placeholder="NuméroH"
-                    required
+                    onChange={(numeroH) => setNewMember(prev => ({ ...prev, numeroH }))}
+                    onPasDeCompte={() => { setShowAddMemberForm(false); setAddMemberType(null); setAjoutEnfant(true) }}
                   />
                 </div>
 
@@ -978,15 +966,6 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
                     <option value="frere">Frère</option>
                     <option value="soeur">Sœur</option>
                   </select>
-                  {newMember.relation === 'enfant' && (
-                    <button
-                      type="button"
-                      onClick={() => { setShowAddMemberForm(false); setAddMemberType(null); setAjoutEnfant(true) }}
-                      style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: '#047857', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                    >
-                      Votre enfant n'a pas de NuméroH ? Ajoutez-le directement ici
-                    </button>
-                  )}
                   <p style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
                     Frère/Sœur : à utiliser surtout si votre parent commun est décédé
                     (il/elle doit confirmer). Grands-parents, oncles/tantes et cousins

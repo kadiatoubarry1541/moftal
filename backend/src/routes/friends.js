@@ -521,6 +521,27 @@ router.get('/suggestions', async (req, res) => {
 });
 
 // ─── GET /api/friends/:numeroH → amis d'un utilisateur spécifique ────────────
+// GET /api/friends/trouver-personne?q=… — retrouve un compte Moftal avec son
+// NuméroH, son numéro de téléphone OU son e-mail (formulaires d'ajout de la famille).
+router.get('/trouver-personne', async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 3) return res.status(400).json({ success: false, message: 'Saisissez un NuméroH, un téléphone ou un e-mail' });
+    const moiUser = await User.findByNumeroH(req.user.numeroH);
+    const u = await trouverDestinataire(q, req.user.numeroH, moiUser);
+    if (!u || u.isActive === false) {
+      return res.status(404).json({ success: false, message: 'Aucun compte Moftal trouvé avec ce NuméroH, ce téléphone ou cet e-mail' });
+    }
+    if (u.numeroH === req.user.numeroH) {
+      return res.status(400).json({ success: false, message: "C'est votre propre compte" });
+    }
+    res.json({ success: true, user: { numeroH: u.numeroH, prenom: u.prenom, nomFamille: u.nomFamille, photo: u.photo || null, genre: u.genre || null } });
+  } catch (error) {
+    console.error('Erreur /friends/trouver-personne:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 // search-by-phone
 router.get('/search-by-phone', async (req, res) => {
   try {
