@@ -893,6 +893,10 @@ function App() {
             <a href="mailto:support@moftal.com" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
               Contact : support@moftal.com
             </a>
+            {" · "}
+            <a href="tel:+224625326037" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
+              Tél : +224 625 32 60 37
+            </a>
           </p>
           <div className="relative flex justify-center">
             <Link to="/conditions-utilisation" className="text-gray-400 hover:text-white text-[9px] underline transition-colors">
