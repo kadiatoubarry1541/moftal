@@ -78,6 +78,7 @@ import moderationRoutes from './routes/moderation.js';
 import paymentRoutes from './routes/payment.js';
 import uploadRoutes from './routes/upload.js';
 import fichiersRoutes from './routes/fichiers.js';
+import { migrerPhotosDisque } from './services/fichiersBase.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import quartierFundRoutes from './routes/quartierFund.js';
@@ -2765,6 +2766,9 @@ const limiter = rateLimit({
 // Photos enregistrées en base : servies avant la limite de requêtes
 // (une page en affiche beaucoup ; le navigateur les garde en cache)
 app.use('/api/fichiers', fichiersRoutes);
+setTimeout(() => {
+  migrerPhotosDisque(path.join(__dirname, '../uploads')).catch((e) => console.warn('Migration photos:', e.message));
+}, 15000);
 
 // On applique le rate limit uniquement sur les routes API,
 // pas sur les fichiers statiques /uploads

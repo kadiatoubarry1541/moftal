@@ -49,3 +49,37 @@ export async function lireFichier(id) {
   const [row] = await sequelize.query('SELECT mime, donnees FROM fichiers WHERE id = :id', { replacements: { id }, type: QueryTypes.SELECT });
   return row || null;
 }
+
+const MIMES = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif' };
+
+/**
+ * Au démarrage : les photos de profil / vitrine encore sur le disque du serveur
+ * (/uploads/…) sont copiées dans la base. Celles que le disque n'a plus sont
+ * comptées dans le journal (le téléphone du membre peut encore les renvoyer).
+ */
+export async function migrerPhotosDisque(dossierUploads) {
+  const { default: path } = await import('path');
+  await ensureTableFichiers();
+  const lignes = await sequelize.query(
+    `SELECT numero_h, photo, vitrine_photo1, vitrine_photo2 FROM users
+     WHERE photo LIKE '%/uploads/%' OR vitrine_photo1 LIKE '%/uploads/%' OR vitrine_photo2 LIKE '%/uploads/%'`,
+    { type: QueryTypes.SELECT }
+  );
+  let copiees = 0, introuvables = 0;
+  for (const l of lignes) {
+    for (const [col, usage] of [['photo', 'photo-profil'], ['vitrine_photo1', 'vitrine-photo1'], ['vitrine_photo2', 'vitrine-photo2']]) {
+      const v = l[col];
+      if (!v || !v.includes('/uploads/')) continue;
+      const nom = path.basename(v.split('?')[0]);
+      const chemin = path.join(dossierUploads, nom);
+      let buffer;
+      try { buffer = await fs.readFile(chemin); } catch { introuvables++; continue; }
+      const mime = MIMES[path.extname(nom).toLowerCase()] || 'image/jpeg';
+      const url = await enregistrerEnBase({ buffer, mimetype: mime, originalname: nom }, { proprietaire: l.numero_h, usage });
+      await sequelize.query(`UPDATE users SET ${col} = :url WHERE numero_h = :n AND ${col} = :ancien`,
+        { replacements: { url, n: l.numero_h, ancien: v } });
+      copiees++;
+    }
+  }
+  console.log(`🖼️ Photos du disque → base : ${copiees} copiée(s), ${introuvables} introuvable(s) sur le disque.`);
+}
