@@ -375,7 +375,7 @@ const SITE_KNOWLEDGE = [
       'écrire à moftal', 'email support', 'assistance', 'parler a quelqu\'un',
       'reclamation', 'réclamation', 'signaler probleme', 'signaler un probleme'
     ],
-    response: `**Contacter Moftal** 📧\n\nPour toute question, problème ou réclamation, écrivez à :\n\n✉️ **support@moftal.com**\n\nVous trouverez aussi ce contact tout en bas de chaque page, dans le pied de page du site.\n\nSi votre question concerne l'utilisation du site (comment faire quelque chose), je peux souvent vous répondre directement ici — n'hésitez pas à me demander !`,
+    response: `**Contacter Moftal** 📧\n\nPour toute question, problème ou réclamation, écrivez à :\n\n✉️ **support@moftal.com**\n📞 **+224 625 32 60 37**\n\nVous trouverez aussi ce contact tout en bas de chaque page, dans le pied de page du site.\n\nSi votre question concerne l'utilisation du site (comment faire quelque chose), je peux souvent vous répondre directement ici — n'hésitez pas à me demander !`,
     links: []
   },
 
