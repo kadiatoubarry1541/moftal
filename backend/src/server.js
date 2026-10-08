@@ -2959,6 +2959,14 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
     immutable: true,
   }));
 
+  // 3a. Liens Android (Play Store) : /.well-known/assetlinks.json prouve à Google
+  //     que l'application Moftal du Play Store appartient bien à moftal.com.
+  //     express.static ignore les dossiers commençant par « . » : on l'autorise ici.
+  app.use('/.well-known', express.static(path.join(frontendDist, '.well-known'), {
+    dotfiles: 'allow',
+    maxAge: '1h',
+  }));
+
   // 3. Fichiers racine (logo, robots.txt…) : cache court
   app.use(express.static(frontendDist, { maxAge: '1h' }));
 
