@@ -98,6 +98,7 @@ export default function Inspir() {
   const [feedFilter, setFeedFilter] = useState<FeedFilter>('tout');
   const [posts, setPosts] = useState<any[]>([]);
   const [sending, setSending] = useState(false);
+  const [composer, setComposer] = useState(false);
 
   // États Bibliothèque (livres)
   const [aAccesLivres, setAAccesLivres] = useState(false);
@@ -115,7 +116,6 @@ export default function Inspir() {
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('information');
   const [mediaFile, setMediaFile] = useState<File | null>(null);
-  const [videoMode, setVideoMode] = useState<'record' | 'upload'>('record');
   const [isRecording, setIsRecording] = useState(false);
   const [audioTimer, setAudioTimer] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -363,7 +363,7 @@ export default function Inspir() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.success) { resetForm(); await loadPosts(); }
+        if (data.success) { resetForm(); setComposer(false); await loadPosts(); }
         else alert("Erreur lors de la publication.");
       } else {
         const err = await res.json().catch(() => ({}));
@@ -446,39 +446,37 @@ export default function Inspir() {
 
       <div className="max-w-3xl mx-auto px-4 py-5 space-y-5">
 
-        {/* ── Pourquoi Inspir ── */}
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm text-amber-900 leading-relaxed">
-            <strong>🤝 Inspir sert à nous rappeler ce que l'autre attend de nous.</strong>{' '}
-            Publiez ici uniquement le bien que l'on doit faire pour ses parents, son mari ou sa femme, et ses enfants :
-            un conseil, un bon exemple, un geste qui fait du bien. Pas de dispute, pas de moquerie — seulement ce qui fait grandir.
-          </p>
-        </div>
 
         {/* ════════════ FIL : vidéos, photos et audio ensemble ════════════ */}
         {view === 'fil' && (
           <>
-            {/* Publier */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-bold text-gray-800 text-sm">
-                  ✦ Publier{sectionTab !== 'tout' || sections.length === 1 ? ` · ${SECTION_INFO[targetSection].pour.toLowerCase()}` : ''}
-                </h3>
+            {/* Publier : un seul bouton, qui ouvre la fenêtre de publication */}
+            <button onClick={() => { resetForm(); setComposer(true); }}
+              className="w-full py-3 rounded-2xl font-bold text-sm text-white shadow-sm"
+              style={{ background: 'linear-gradient(135deg,#2563eb,#1e40af)' }}>
+              ✦ Publier
+            </button>
+
+            {composer && (
+            <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => !sending && setComposer(false)}>
+            <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-4 space-y-3 max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-gray-900">Nouvelle publication{sectionTab !== 'tout' || sections.length === 1 ? <span className="font-normal text-gray-500"> · {SECTION_INFO[targetSection].pour.toLowerCase()}</span> : null}</h3>
+                <button onClick={() => setComposer(false)} aria-label="Fermer" className="text-gray-400 text-2xl leading-none">×</button>
+              </div>
+
+              <div className="flex gap-2">
+                {sectionTab === 'tout' && sections.length > 1 && (
+                  <select value={publishSection} onChange={e => setPublishSection(e.target.value as Section)}
+                    className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white text-gray-800">
+                    {sections.map(sec => <option key={sec} value={sec}>{SECTION_INFO[sec].icon} {SECTION_INFO[sec].pour}</option>)}
+                  </select>
+                )}
                 <select value={category} onChange={e => setCategory(e.target.value)}
-                  className="px-3 py-1.5 border border-gray-200 rounded-xl text-xs bg-white text-gray-700">
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white text-gray-700">
                   {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
-
-              {sectionTab === 'tout' && sections.length > 1 && (
-                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-                  Pour qui ?
-                  <select value={publishSection} onChange={e => setPublishSection(e.target.value as Section)}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white text-gray-800">
-                    {sections.map(sec => <option key={sec} value={sec}>{SECTION_INFO[sec].icon} {SECTION_INFO[sec].pour}</option>)}
-                  </select>
-                </label>
-              )}
 
               {/* Choix du type : un seul endroit pour vidéo, photo et audio */}
               <div className="grid grid-cols-3 gap-2">
@@ -489,55 +487,26 @@ export default function Inspir() {
                     }`}>
                     <span className="text-xl">{t.icon}</span>
                     {t.label}
-                    <span className="text-[10px] font-normal text-gray-400">{t.desc}</span>
                   </button>
                 ))}
               </div>
 
               <textarea value={content} onChange={e => setContent(e.target.value)}
-                placeholder="Dites quelque chose sur votre publication (facultatif)…"
+                placeholder="Ajouter une description…"
                 rows={2}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
 
               {/* Vidéo */}
               {publishType === 'video' && (
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <button onClick={() => { setVideoMode('record'); setMediaFile(null); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${videoMode === 'record' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                      🎥 Enregistrer
-                    </button>
-                    <button onClick={() => { setVideoMode('upload'); setMediaFile(null); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${videoMode === 'upload' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                      📂 Importer
-                    </button>
-                  </div>
-                  {videoMode === 'record' ? (
-                    mediaFile ? (
-                      <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-200">
-                        <span className="text-green-700 text-sm font-semibold">✅ Vidéo prête</span>
-                        <button onClick={() => setMediaFile(null)} className="text-red-400 text-xs ml-auto">✕ Refaire</button>
-                      </div>
-                    ) : (
-                      <VideoRecorder maxDuration={10}
-                        onVideoRecorded={blob => setMediaFile(new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' }))} />
-                    )
+                  {mediaFile ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-xl border border-green-200">
+                      <span className="text-green-700 text-sm font-semibold">✅ Vidéo prête</span>
+                      <button onClick={() => setMediaFile(null)} className="text-red-400 text-xs ml-auto">✕ Refaire</button>
+                    </div>
                   ) : (
-                    <input type="file" accept="video/*"
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const vid = document.createElement('video');
-                        vid.preload = 'metadata';
-                        vid.onloadedmetadata = () => {
-                          URL.revokeObjectURL(vid.src);
-                          if (vid.duration > 10) { alert('La vidéo ne doit pas dépasser 10 secondes.'); e.target.value = ''; return; }
-                          setMediaFile(file);
-                        };
-                        vid.src = URL.createObjectURL(file);
-                      }}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-gray-50"
-                    />
+                    <VideoRecorder compact maxDuration={10}
+                      onVideoRecorded={blob => setMediaFile(blob instanceof File ? blob : new File([blob], `video-${Date.now()}.webm`, { type: blob.type || 'video/webm' }))} />
                   )}
                 </div>
               )}
@@ -615,6 +584,8 @@ export default function Inspir() {
                 {sending ? 'Publication en cours...' : '✦ Publier'}
               </button>
             </div>
+            </div>
+            )}
 
             {/* Filtres du fil (comme les puces de YouTube) */}
             <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>

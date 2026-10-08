@@ -3,9 +3,11 @@ import { useState, useRef, useEffect } from 'react'
 interface VideoRecorderProps {
   onVideoRecorded: (videoBlob: Blob) => void
   maxDuration?: number
+  // compact : sans le texte d'explication, les deux boutons côte à côte
+  compact?: boolean
 }
 
-export function VideoRecorder({ onVideoRecorded, maxDuration = 30 }: VideoRecorderProps) {
+export function VideoRecorder({ onVideoRecorded, maxDuration = 30, compact = false }: VideoRecorderProps) {
   const [error, setError] = useState<string | null>(null)
   const [validating, setValidating] = useState(false)
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -117,11 +119,13 @@ export function VideoRecorder({ onVideoRecorded, maxDuration = 30 }: VideoRecord
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ padding: '14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', fontSize: '0.9rem', color: '#1e40af', lineHeight: '1.5' }}>
-        Enregistrez une courte vidéo de présentation.<br />
-        <strong>Durée maximum : {maxDuration} secondes.</strong>
-      </div>
+    <div style={compact ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' } : { display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {!compact && (
+        <div style={{ padding: '14px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', fontSize: '0.9rem', color: '#1e40af', lineHeight: '1.5' }}>
+          Enregistrez une courte vidéo de présentation.<br />
+          <strong>Durée maximum : {maxDuration} secondes.</strong>
+        </div>
+      )}
 
       {/* Filmer directement */}
       <input
@@ -139,7 +143,7 @@ export function VideoRecorder({ onVideoRecorded, maxDuration = 30 }: VideoRecord
         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px' }}
       >
         <span style={{ fontSize: '1.3rem' }}>📷</span>
-        Filmer maintenant
+        {compact ? 'Filmer' : 'Filmer maintenant'}
       </button>
 
       {/* Choisir depuis galerie */}
@@ -157,17 +161,17 @@ export function VideoRecorder({ onVideoRecorded, maxDuration = 30 }: VideoRecord
         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px' }}
       >
         <span style={{ fontSize: '1.3rem' }}>🎞️</span>
-        Choisir depuis la galerie
+        {compact ? 'Galerie' : 'Choisir depuis la galerie'}
       </button>
 
       {validating && (
-        <div style={{ textAlign: 'center', color: '#6b7280', fontSize: '0.9rem', padding: '10px' }}>
+        <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#6b7280', fontSize: '0.9rem', padding: '10px' }}>
           Vérification de la vidéo…
         </div>
       )}
 
       {error && (
-        <div style={{ whiteSpace: 'pre-line', padding: '12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#991b1b', fontSize: '0.9rem', lineHeight: '1.6' }}>
+        <div style={{ gridColumn: '1 / -1', whiteSpace: 'pre-line', padding: '12px', background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#991b1b', fontSize: '0.9rem', lineHeight: '1.6' }}>
           {error}
         </div>
       )}
