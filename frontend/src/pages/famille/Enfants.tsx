@@ -3,6 +3,7 @@ import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
 import AjouterEnfantModal from '../../components/AjouterEnfantModal'
+import ChampPersonne from '../../components/ChampPersonne'
 import { FicheEnfantActions, AnnulerFusionFiche } from '../../components/FicheEnfantActions'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
@@ -512,19 +513,18 @@ export default function Enfants({ inline, focusNumeroH }: { inline?: boolean; fo
 
       {showAddForm && (
         <div className="bg-green-50 rounded-xl border border-green-200 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Lier un enfant (seul le NumeroH est obligatoire)</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Lier un enfant qui a un compte Moftal</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                NumeroH de l'enfant <span className="text-red-500">*</span>
+                NuméroH, téléphone ou e-mail de l'enfant <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
+              <div className="flex gap-2 items-start">
+                <ChampPersonne
+                  className="flex-1 min-w-0"
                   value={newLink.childNumeroH}
-                  onChange={(e) => setNewLink({ ...newLink, childNumeroH: e.target.value })}
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  placeholder="Ex: G0C0P0R0E0F0 1"
+                  onChange={(numeroH) => setNewLink(prev => ({ ...prev, childNumeroH: numeroH }))}
+                  onPasDeCompte={() => { setShowAddForm(false); setAjoutSansCompte(true) }}
                 />
                 <button
                   type="button"

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { isAdmin, getNumeroHForDisplay } from '../../utils/auth'
 import { MediaUploader } from '../../components/MediaUploader'
 import { AddPersonModal } from '../../components/AddPersonModal'
+import ChampPersonne from '../../components/ChampPersonne'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -815,20 +816,18 @@ export default function Partenaire({ inline, focusNumeroH }: { inline?: boolean;
       {showLinkForm && (
         <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-6 mb-6">
           <h3 className="text-lg font-semibold text-slate-800 mb-4">
-            Lier {title} (seul le NumeroH est obligatoire)
+            Lier {title}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                NumeroH de {partnerLabel} <span className="text-slate-500">*</span>
+                NuméroH, téléphone ou e-mail de {partnerLabel} <span className="text-slate-500">*</span>
               </label>
               <div className="flex gap-2">
-                <input
-                  type="text"
+                <ChampPersonne
+                  className="flex-1 min-w-0"
                   value={linkForm.partnerNumeroH}
-                  onChange={(e) => setLinkForm({ ...linkForm, partnerNumeroH: e.target.value })}
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  placeholder="Ex: G0C0P0R0E0F0 1"
+                  onChange={(numeroH) => setLinkForm(prev => ({ ...prev, partnerNumeroH: numeroH }))}
                 />
                 <button
                   type="button"

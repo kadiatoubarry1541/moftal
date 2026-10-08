@@ -8,6 +8,7 @@ import type { Invitation } from '../types/invitation.ts'
 import { useI18n } from '../i18n/useI18n'
 import { InvitationsReceived } from './InvitationsReceived'
 import AjouterEnfantModal from './AjouterEnfantModal'
+import ChampPersonne from './ChampPersonne'
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5002').replace(/\/api\/?$/, '');
 
@@ -915,7 +916,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
           <div className="form-grid">
             <div className="form-group">
               <label>Que souhaitez-vous ajouter ?</label>
-              <div className="add-member-type-buttons">
+              <div className="add-member-type-buttons" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 <button
                   type="button"
                   className={`view-btn ${addMemberType === 'vivant' ? 'active' : ''}`}
@@ -943,13 +944,11 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
             <>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>NuméroH du vivant à inviter *</label>
-                  <input
-                    type="text"
+                  <label>Personne à inviter *</label>
+                  <ChampPersonne
                     value={newMember.numeroH}
-                    onChange={(e) => setNewMember({...newMember, numeroH: e.target.value})}
-                    placeholder="NuméroH"
-                    required
+                    onChange={(numeroH) => setNewMember(prev => ({ ...prev, numeroH }))}
+                    onPasDeCompte={() => { setShowAddMemberForm(false); setAddMemberType(null); setAjoutEnfant(true) }}
                   />
                 </div>
 
