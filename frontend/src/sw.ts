@@ -130,8 +130,10 @@ self.addEventListener('push', (event: PushEvent) => {
   const title = data.title || 'Moftal'
   const options: NotificationOptions & { renotify?: boolean; vibrate?: number[] } = {
     body: data.message || '',
-    icon: '/logo-moftal.svg',
-    badge: '/logo-moftal.svg',
+    // Android n'affiche pas les SVG : photo de l'expéditeur (comme Messenger),
+    // sinon l'icône Moftal ; petite icône blanche dans la barre d'état.
+    icon: data.icon || '/icon-moftal-192.png',
+    badge: '/badge-moftal.png',
     tag: data.id || 'moftal-notif',
     renotify: true,
     vibrate: [200, 100, 200],

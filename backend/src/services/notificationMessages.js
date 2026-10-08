@@ -10,6 +10,14 @@ import { compterNonLus } from '../routes/unread.js';
 
 const MAX_AVEC_COMPTEUR = 300; // au-delà (très grand groupe), pas de calcul du chiffre
 
+// Photo de l'expéditeur en adresse complète (la notification s'affiche hors du site)
+const ADRESSE_SERVEUR = (process.env.PUBLIC_API_URL || process.env.RENDER_EXTERNAL_URL || 'https://moftal.com').replace(/\/$/, '');
+function photoAbsolue(photo) {
+  if (!photo || typeof photo !== 'string' || photo.startsWith('data:')) return undefined;
+  if (/^https?:\/\//.test(photo)) return photo;
+  return `${ADRESSE_SERVEUR}${photo.startsWith('/') ? '' : '/'}${photo}`;
+}
+
 function apercu(message) {
   const type = message.messageType || message.type;
   if (type === 'image') return '📷 Photo';
@@ -36,6 +44,7 @@ export function notifierNouveauMessage({ destinataires, expediteur, convKey, mes
       const title = groupe ? `${groupe} · ${nom}` : nom;
       const body = apercu(message);
       const avecCompteur = liste.length <= MAX_AVEC_COMPTEUR;
+      const icon = photoAbsolue(expediteur.photo);
 
       for (const numeroH of liste) {
         const subs = await PushSubscription.getForUser(numeroH).catch(() => []);
@@ -47,7 +56,7 @@ export function notifierNouveauMessage({ destinataires, expediteur, convKey, mes
         }
         const payload = JSON.stringify({
           type: 'message', title, message: body, url: '/compte?messages=1',
-          id: `msg-${convKey}`, badgeCount
+          id: `msg-${convKey}`, badgeCount, icon
         });
         await Promise.allSettled(subs.map(async (sub) => {
           try {

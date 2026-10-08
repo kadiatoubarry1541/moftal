@@ -62,10 +62,15 @@ function relativeTime(dateStr: string): string {
   return `${weeks} sem`;
 }
 
-async function setupPushNotifications() {
+type EtatNotif = "granted" | "default" | "denied" | "unsupported";
+const etatNotifications = (): EtatNotif =>
+  !("Notification" in window) || !("serviceWorker" in navigator) ? "unsupported" : (Notification.permission as EtatNotif);
+
+// demander : seulement après un geste (bouton) — Android ignore une demande automatique
+async function setupPushNotifications(demander = false) {
   if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
   let permission = Notification.permission;
-  if (permission === "default") permission = await Notification.requestPermission();
+  if (permission === "default" && demander) permission = await Notification.requestPermission();
   if (permission !== "granted") return;
   const registration = await navigator.serviceWorker.ready;
   if (!registration.pushManager) return;
@@ -124,6 +129,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   // Messages non lus (bouton 💬) : aussi annoncés dans la cloche
   const [messagesNonLus, setMessagesNonLus] = useState(0);
+  const [etatNotif, setEtatNotif] = useState<EtatNotif>(etatNotifications);
   const [open, setOpen] = useState(false);
   // L'installation de l'application compte comme "1 message en attente" tant
   // qu'elle n'est pas faite — pour qu'on ne la rate jamais, comme un vrai
@@ -163,7 +169,7 @@ export default function NotificationBell() {
     chargerMessages();
     const interval = setInterval(() => { loadUnreadCount(); chargerMessages(); }, 30000);
     window.addEventListener(EVENEMENT_MESSAGES_LUS, chargerMessages);
-    setupPushNotifications();
+    setupPushNotifications(true).finally(() => setEtatNotif(etatNotifications()));
     const socket = getSocket();
     socket.on("new-notification", (notif: Notification) => {
       setNotifications(prev => [notif, ...prev]);
@@ -269,7 +275,8 @@ export default function NotificationBell() {
 
   const newNotifs = notifications.filter(n => !n.isRead);
   const oldNotifs = notifications.filter(n => n.isRead);
-  const displayCount = unreadCount + messagesNonLus + (appInstalled ? 0 : 1);
+  // « Activer les notifications » compte comme 1 en attente, comme l'installation
+  const displayCount = unreadCount + messagesNonLus + (appInstalled ? 0 : 1) + (etatNotif === "default" ? 1 : 0);
 
   return (
     <>
@@ -335,6 +342,23 @@ export default function NotificationBell() {
             )}
           </div>
 
+          {etatNotif === "default" && (
+            <button
+              onClick={() => { setupPushNotifications(true).finally(() => setEtatNotif(etatNotifications())); }}
+              className="flex items-center gap-3 px-5 py-3 bg-blue-50 border-b border-blue-100 text-left hover:bg-blue-100 transition-colors flex-shrink-0"
+            >
+              <span className="text-2xl">🔔</span>
+              <span className="flex-1">
+                <span className="block text-sm font-bold text-blue-900">Activer les notifications</span>
+                <span className="block text-xs text-blue-700">Soyez prévenu(e) de chaque nouveau message, même application fermée</span>
+              </span>
+            </button>
+          )}
+          {etatNotif === "denied" && (
+            <div className="px-5 py-3 bg-amber-50 border-b border-amber-100 text-xs text-amber-900 flex-shrink-0">
+              <strong>🔕 Notifications bloquées sur ce téléphone.</strong> Pour les recevoir : Paramètres du téléphone → Applications → Moftal → Notifications → Autoriser.
+            </div>
+          )}
           {messagesNonLus > 0 && (
             <button
               onClick={() => { setOpen(false); window.dispatchEvent(new Event("ouvrir-messagerie")); }}
