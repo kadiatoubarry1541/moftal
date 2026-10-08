@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { getSocket } from "../services/socket";
 import InstallAppButton from "./InstallAppButton";
 import { appPlayInstallee } from "../utils/appMoftalInstallee";
+import { chargerMessagesNonLus, EVENEMENT_MESSAGES_LUS } from "../utils/messagesNonLus";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 
@@ -121,6 +122,8 @@ function isMainAppInstalled(): boolean {
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  // Messages non lus (bouton 💬) : aussi annoncés dans la cloche
+  const [messagesNonLus, setMessagesNonLus] = useState(0);
   const [open, setOpen] = useState(false);
   // L'installation de l'application compte comme "1 message en attente" tant
   // qu'elle n'est pas faite — pour qu'on ne la rate jamais, comme un vrai
@@ -156,7 +159,10 @@ export default function NotificationBell() {
     const token = localStorage.getItem("token");
     if (!token) return;
     loadNotifications();
-    const interval = setInterval(loadUnreadCount, 30000);
+    const chargerMessages = () => { chargerMessagesNonLus().then(n => { if (n) setMessagesNonLus(n.total); }); };
+    chargerMessages();
+    const interval = setInterval(() => { loadUnreadCount(); chargerMessages(); }, 30000);
+    window.addEventListener(EVENEMENT_MESSAGES_LUS, chargerMessages);
     setupPushNotifications();
     const socket = getSocket();
     socket.on("new-notification", (notif: Notification) => {
@@ -183,7 +189,8 @@ export default function NotificationBell() {
         { duration: 6000, style: { maxWidth: 380, padding: "14px 16px", background: "#fff", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" } }
       );
     });
-    return () => { clearInterval(interval); socket.off("new-notification"); };
+    return () => { clearInterval(interval);
+      window.removeEventListener(EVENEMENT_MESSAGES_LUS, chargerMessages); socket.off("new-notification"); };
   }, []);
 
   useEffect(() => {
@@ -262,7 +269,7 @@ export default function NotificationBell() {
 
   const newNotifs = notifications.filter(n => !n.isRead);
   const oldNotifs = notifications.filter(n => n.isRead);
-  const displayCount = unreadCount + (appInstalled ? 0 : 1);
+  const displayCount = unreadCount + messagesNonLus + (appInstalled ? 0 : 1);
 
   return (
     <>
@@ -327,6 +334,19 @@ export default function NotificationBell() {
               </button>
             )}
           </div>
+
+          {messagesNonLus > 0 && (
+            <button
+              onClick={() => { setOpen(false); window.dispatchEvent(new Event("ouvrir-messagerie")); }}
+              className="flex items-center gap-3 px-5 py-3 bg-emerald-50 border-b border-emerald-100 text-left hover:bg-emerald-100 transition-colors flex-shrink-0"
+            >
+              <span className="w-10 h-10 rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 text-white flex items-center justify-center text-lg flex-shrink-0">💬</span>
+              <span className="flex-1 text-sm font-bold text-emerald-900">
+                {messagesNonLus} nouveau{messagesNonLus > 1 ? "x" : ""} message{messagesNonLus > 1 ? "s" : ""}
+              </span>
+              <span className="text-xs font-semibold text-emerald-700">Ouvrir ›</span>
+            </button>
+          )}
 
           {/* Installer l'application — proposé en haut du panneau plutôt que dans le bandeau du haut */}
           <InstallAppButton variant="banner" />
