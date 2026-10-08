@@ -59,7 +59,7 @@ export default function DynamicAppManifest({
       start_url: startUrl,
       scope: "/",
       display: "standalone",
-      orientation: "portrait",
+      orientation: "any",
       lang: "fr",
       background_color: backgroundColor,
       theme_color: themeColor,

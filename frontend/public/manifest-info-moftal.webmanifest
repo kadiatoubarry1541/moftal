@@ -6,7 +6,7 @@
   "start_url": "/info-wallou",
   "scope": "/info-wallou",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "lang": "fr",
   "background_color": "#ffffff",
   "theme_color": "#1d4ed8",

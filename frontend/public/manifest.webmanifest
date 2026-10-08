@@ -5,7 +5,7 @@
   "description": "La plateforme Moftal — famille, santé, éducation et solidarité.",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "lang": "fr",
   "background_color": "#ffffff",
   "theme_color": "#065f46",
