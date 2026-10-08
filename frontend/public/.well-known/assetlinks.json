@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.moftal.twa",
+      "sha256_cert_fingerprints": [
+        "E4:C7:8A:26:21:3C:52:97:22:47:0F:43:61:74:5A:84:74:CC:6F:BD:08:49:A9:3C:C8:0C:81:97:CC:0C:C6:C6"
+      ]
+    }
+  }
+]
