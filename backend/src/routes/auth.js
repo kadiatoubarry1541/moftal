@@ -13,6 +13,7 @@ import { normalizeNumeroH, prefixeNumeroH, avecNumeroHLibre } from '../utils/num
 import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
+import { urlDurable } from '../services/stockageDurable.js';
 import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 
@@ -1157,7 +1158,7 @@ router.post('/profile/photo', authenticate, (req, res) => {
         });
       }
 
-      const photoUrl = `/uploads/${req.file.filename}`;
+      const photoUrl = await urlDurable(req.file, 'profils');
 
       await user.update({ photo: photoUrl });
 
@@ -1197,7 +1198,7 @@ router.post('/profile/video', authenticate, (req, res) => {
       const user = await User.findByNumeroH(numeroH);
       if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
-      const videoUrl = `/uploads/${req.file.filename}`;
+      const videoUrl = await urlDurable(req.file, 'profils');
       await user.update({ video: videoUrl });
 
       const userWithoutPassword = { ...user.dataValues };
@@ -1230,7 +1231,7 @@ function registerVitrinePhotoRoute(slot) {
         const user = await User.findByNumeroH(numeroH);
         if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
-        const photoUrl = `/uploads/${req.file.filename}`;
+        const photoUrl = await urlDurable(req.file, 'vitrines');
         const field = slot === 'photo1' ? 'vitrinePhoto1' : 'vitrinePhoto2';
         await user.update({ [field]: photoUrl });
 
@@ -1265,7 +1266,7 @@ router.post('/profile/vitrine-video', authenticate, (req, res) => {
       const user = await User.findByNumeroH(numeroH);
       if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
-      const videoUrl = `/uploads/${req.file.filename}`;
+      const videoUrl = await urlDurable(req.file, 'vitrines');
       await user.update({ vitrineVideo: videoUrl });
 
       const userWithoutPassword = { ...user.dataValues };

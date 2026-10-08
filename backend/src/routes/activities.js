@@ -5,6 +5,7 @@ import ActivityMessage from '../models/ActivityMessage.js';
 import User from '../models/User.js';
 import { authenticate, isProvisionalNumeroH } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
+import { urlDurable } from '../services/stockageDurable.js';
 import { notifierNouveauMessage } from '../services/notificationMessages.js';
 
 const router = express.Router();
@@ -211,7 +212,7 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
     // Gérer le fichier média si présent
     let mediaUrl = null;
     if (req.file) {
-      mediaUrl = `/uploads/${req.file.filename}`;
+      mediaUrl = await urlDurable(req.file, 'activites');
     }
     
     // Créer le message
