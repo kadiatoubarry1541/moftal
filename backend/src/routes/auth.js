@@ -14,6 +14,7 @@ import ActivityGroup from '../models/ActivityGroup.js';
 import { config } from '../../config.js';
 import upload from '../middleware/upload.js';
 import { urlDurable } from '../services/stockageDurable.js';
+import { enregistrerEnBase } from '../services/fichiersBase.js';
 import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
 
@@ -1158,7 +1159,7 @@ router.post('/profile/photo', authenticate, (req, res) => {
         });
       }
 
-      const photoUrl = await urlDurable(req.file, 'profils');
+      const photoUrl = await enregistrerEnBase(req.file, { proprietaire: numeroH, usage: 'photo-profil' });
 
       await user.update({ photo: photoUrl });
 
@@ -1231,7 +1232,7 @@ function registerVitrinePhotoRoute(slot) {
         const user = await User.findByNumeroH(numeroH);
         if (!user) return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
 
-        const photoUrl = await urlDurable(req.file, 'vitrines');
+        const photoUrl = await enregistrerEnBase(req.file, { proprietaire: numeroH, usage: `vitrine-${slot}` });
         const field = slot === 'photo1' ? 'vitrinePhoto1' : 'vitrinePhoto2';
         await user.update({ [field]: photoUrl });
 
