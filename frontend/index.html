@@ -9,6 +9,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="color-scheme" content="only light" />
+    <!-- Samsung Internet assombrit lui-même les sites (mode sombre du téléphone),
+         sauf ceux qui déclarent gérer le sombre (« light dark »). On le déclare pour
+         lui seul ; le contenu reste dessiné en clair (body : only light, index.css).
+         Chrome garde « only light », qu'il respecte. -->
+    <script>
+      if (/SamsungBrowser/i.test(navigator.userAgent)) {
+        document.querySelector('meta[name="color-scheme"]').setAttribute('content', 'light dark');
+        document.documentElement.classList.add('samsung-internet');
+      }
+    </script>
     <meta name="robots" content="index, follow" />
 
     <!-- Favicon -->
