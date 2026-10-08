@@ -297,7 +297,7 @@ export default function EditProfileModal({
       // 1. Mettre à jour la photo si une nouvelle a été choisie
       if (photoFile) {
         const photoFormData = new FormData();
-        photoFormData.append("photo", await compressImage(photoFile));
+        photoFormData.append("photo", await compressImage(photoFile, 1024, 0.82));
         photoFormData.append("numeroH", numeroH);
 
         const photoResponse = await apiFetch("/auth/profile/photo", {
@@ -320,19 +320,14 @@ export default function EditProfileModal({
         const videoFormData = new FormData();
         videoFormData.append("video", videoFile);
         videoFormData.append("numeroH", numeroH);
-        try {
-          const videoResponse = await apiFetch("/auth/profile/video", {
-            method: "POST",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            body: videoFormData,
-          });
-          if (videoResponse.ok) {
-            const videoData = await videoResponse.json();
-            uploadedVideoUrl = videoData.videoUrl || uploadedVideoUrl;
-          }
-        } catch {
-          // Si upload vidéo échoue, on garde l'ancienne URL
-        }
+        const videoResponse = await apiFetch("/auth/profile/video", {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: videoFormData,
+        });
+        const videoData = await videoResponse.json().catch(() => ({}));
+        if (!videoResponse.ok) throw new Error(videoData.message || "La vidéo n'a pas pu être enregistrée. Réessayez.");
+        uploadedVideoUrl = videoData.videoUrl || uploadedVideoUrl;
       }
 
       // 2bis. Vitrine du profil (badge) : 2 photos + 1 courte vidéo
@@ -342,24 +337,30 @@ export default function EditProfileModal({
 
       if (vitrinePhoto1File) {
         const fd = new FormData();
-        fd.append("photo", await compressImage(vitrinePhoto1File));
+        fd.append("photo", await compressImage(vitrinePhoto1File, 1024, 0.82));
         fd.append("numeroH", numeroH);
         const r = await apiFetch("/auth/profile/vitrine-photo1", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
-        if (r.ok) { const d = await r.json(); uploadedVitrinePhoto1Url = d.photoUrl || uploadedVitrinePhoto1Url; }
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.message || "Une photo de la vitrine n'a pas pu être enregistrée. Réessayez.");
+        uploadedVitrinePhoto1Url = d.photoUrl || uploadedVitrinePhoto1Url;
       }
       if (vitrinePhoto2File) {
         const fd = new FormData();
-        fd.append("photo", await compressImage(vitrinePhoto2File));
+        fd.append("photo", await compressImage(vitrinePhoto2File, 1024, 0.82));
         fd.append("numeroH", numeroH);
         const r = await apiFetch("/auth/profile/vitrine-photo2", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
-        if (r.ok) { const d = await r.json(); uploadedVitrinePhoto2Url = d.photoUrl || uploadedVitrinePhoto2Url; }
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.message || "Une photo de la vitrine n'a pas pu être enregistrée. Réessayez.");
+        uploadedVitrinePhoto2Url = d.photoUrl || uploadedVitrinePhoto2Url;
       }
       if (vitrineVideoFile) {
         const fd = new FormData();
         fd.append("video", vitrineVideoFile);
         fd.append("numeroH", numeroH);
         const r = await apiFetch("/auth/profile/vitrine-video", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
-        if (r.ok) { const d = await r.json(); uploadedVitrineVideoUrl = d.videoUrl || uploadedVitrineVideoUrl; }
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.message || "La vidéo de la vitrine n'a pas pu être enregistrée. Réessayez.");
+        uploadedVitrineVideoUrl = d.videoUrl || uploadedVitrineVideoUrl;
       }
 
       // 3. Mettre à jour les informations textuelles — seulement si l'une

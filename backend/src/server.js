@@ -77,6 +77,7 @@ import iaRoutes from './routes/ia.js';
 import moderationRoutes from './routes/moderation.js';
 import paymentRoutes from './routes/payment.js';
 import uploadRoutes from './routes/upload.js';
+import fichiersRoutes from './routes/fichiers.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import quartierFundRoutes from './routes/quartierFund.js';
@@ -2760,6 +2761,10 @@ const limiter = rateLimit({
     message: 'Trop de requêtes, veuillez réessayer plus tard'
   }
 });
+
+// Photos enregistrées en base : servies avant la limite de requêtes
+// (une page en affiche beaucoup ; le navigateur les garde en cache)
+app.use('/api/fichiers', fichiersRoutes);
 
 // On applique le rate limit uniquement sur les routes API,
 // pas sur les fichiers statiques /uploads
