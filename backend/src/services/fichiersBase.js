@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '../../config/database.js';
+import { uploadToIDrive } from './idriveStorage.js';
 
 /**
  * Photos enregistrées DANS la base de données (table « fichiers ») : rien ne
@@ -38,6 +39,8 @@ export async function enregistrerEnBase(file, { proprietaire = null, usage = nul
     'INSERT INTO fichiers (id, mime, taille, donnees, proprietaire, usage) VALUES (:id, :mime, :taille, :donnees, :proprietaire, :usage)',
     { replacements: { id, mime: file.mimetype || 'application/octet-stream', taille: donnees.length, donnees, proprietaire, usage }, type: QueryTypes.INSERT }
   );
+  // Copie de sauvegarde sur IDrive, comme les autres médias de Moftal
+  uploadToIDrive(donnees, file.originalname || `${id}.jpg`, file.mimetype, 'sauvegarde-photos').catch(() => {});
   return `/api/fichiers/${id}`;
 }
 
