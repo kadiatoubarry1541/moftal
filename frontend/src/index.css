@@ -25,10 +25,12 @@ html, body, #root {
   margin: 0;
   padding: 0;
   background-color: #ffffff;
-  color-scheme: light;
+  color-scheme: only light;
 }
 
-/* Bloquer le mode sombre du système — le site est toujours en clair */
+/* Bloquer le mode sombre du système — le site est toujours en clair.
+   « only light » interdit aussi à Chrome Android d'assombrir lui-même la page
+   (thème sombre automatique des sites, visible dans l'app du Play Store). */
 @media (prefers-color-scheme: dark) {
   html, body, #root {
     background-color: #ffffff !important;
