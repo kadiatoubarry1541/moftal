@@ -78,6 +78,7 @@ import moderationRoutes from './routes/moderation.js';
 import paymentRoutes from './routes/payment.js';
 import uploadRoutes from './routes/upload.js';
 import fichiersRoutes from './routes/fichiers.js';
+import { cleLimite, validationLimite } from './utils/cleLimite.js';
 import { migrerPhotosDisque } from './services/fichiersBase.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
@@ -2754,6 +2755,9 @@ const isDev = process.env.NODE_ENV === 'development';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
+  // Par membre (ou par visiteur réel), jamais une seule limite pour tout le site
+  keyGenerator: cleLimite,
+  validate: validationLimite,
   max: isDev ? 10000 : 500, // en dev: illimité pour tests, en prod: 500 par 15min
   standardHeaders: true,
   legacyHeaders: false,

@@ -503,6 +503,14 @@ export function FloatingMessenger() {
     setLoading(false)
   }
 
+  // Ouverture depuis la cloche des notifications (« 💬 N nouveaux messages »)
+  useEffect(() => {
+    const ouvrir = () => { openPicker() }
+    window.addEventListener('ouvrir-messagerie', ouvrir)
+    return () => window.removeEventListener('ouvrir-messagerie', ouvrir)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData?.numeroH])
+
   // Ouverture depuis une notification de message (/compte?messages=1)
   useEffect(() => {
     if (!userData) return

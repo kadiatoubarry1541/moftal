@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
+import { adresseVisiteur, validationLimite } from '../utils/cleLimite.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
@@ -28,6 +29,8 @@ const registerUploadLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 50,
   message: { success: false, message: 'Trop de tentatives, réessayez dans 1 heure' },
+  keyGenerator: (req) => `ip:${adresseVisiteur(req)}`,
+  validate: validationLimite,
 });
 
 async function handleUpload(req, res) {
