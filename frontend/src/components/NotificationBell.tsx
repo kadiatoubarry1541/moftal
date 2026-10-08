@@ -169,7 +169,8 @@ export default function NotificationBell() {
     chargerMessages();
     const interval = setInterval(() => { loadUnreadCount(); chargerMessages(); }, 30000);
     window.addEventListener(EVENEMENT_MESSAGES_LUS, chargerMessages);
-    setupPushNotifications(true).finally(() => setEtatNotif(etatNotifications()));
+    // Jamais de demande automatique : seulement par le bouton « Activer les notifications »
+    setupPushNotifications(false).finally(() => setEtatNotif(etatNotifications()));
     const socket = getSocket();
     socket.on("new-notification", (notif: Notification) => {
       setNotifications(prev => [notif, ...prev]);
