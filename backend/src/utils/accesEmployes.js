@@ -62,7 +62,7 @@ function refusEmploye(req, niveau) {
   if (niveau === 'limite') {
     if (/\/rapport(\/|$)/.test(chemin)) return "Le rapport financier est réservé au propriétaire et aux employés à accès complet.";
     const m = req.method;
-    const changementStatut = m === 'PATCH' || (m === 'PUT' && /\/(statut|status|pay|discharge|publish|convert|reject|confirm)(\/|$)/.test(chemin));
+    const changementStatut = m === 'PATCH' || (m === 'PUT' && /\/(statut|status|pay|pay-credit|discharge|publish|convert|reject|confirm)(\/|$)/.test(chemin));
     if ((m === 'PUT' || m === 'PATCH' || m === 'DELETE') && !changementStatut) {
       return "Votre accès est limité : vous pouvez ajouter et consulter, mais pas modifier ni supprimer. Demandez au propriétaire.";
     }

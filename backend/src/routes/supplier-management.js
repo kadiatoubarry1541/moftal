@@ -27,7 +27,7 @@ async function verifyTenantProprietaire(req, res, next) {
     if (!tenant) {
       const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU', vendor:'VENT', producer:'PROD', broker:'BROK', restaurant:'REST' };
       const [proAcc] = await sequelize.query(
-        `SELECT * FROM professional_accounts WHERE owner_numero_h=:n AND status='approved' LIMIT 1`,
+        `SELECT * FROM professional_accounts WHERE owner_numero_h=:n AND status='approved' AND type='supplier' LIMIT 1`,
         { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
       ).catch(() => []);
       if (proAcc) {
@@ -51,6 +51,11 @@ async function verifyTenantProprietaire(req, res, next) {
     }
 
     if (!tenant) return res.status(403).json({ success: false, message: 'Accès refusé. Votre compte professionnel n\'est pas activé.' });
+    // Le filet de sécurité ci-dessus retrouve SON propre établissement : il ne doit
+    // jamais ouvrir celui d'un autre (toutes les requêtes utilisent le code de l'URL).
+    if (tenant.tenant_code !== tenantCode) {
+      return res.status(403).json({ success: false, message: 'Accès refusé à cet espace fournisseur.', tenantCode: tenant.tenant_code });
+    }
     req.tenant = tenant; return enforceGestionAccess(req, res, next);
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 }
@@ -65,7 +70,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM supplier_products WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM supplier_clients WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM supplier_orders WHERE tenant_code=:code AND statut='en_attente'`, { code }),
-      q(`SELECT COALESCE(SUM(montant_total),0) as t FROM supplier_orders WHERE tenant_code=:code AND EXTRACT(MONTH FROM date_commande)=EXTRACT(MONTH FROM CURRENT_DATE)`, { code }),
+      q(`SELECT COALESCE(SUM(montant_total),0) as t FROM supplier_orders WHERE tenant_code=:code AND statut NOT IN ('annule','annulee') AND date_commande >= date_trunc('month', CURRENT_DATE) AND date_commande < date_trunc('month', CURRENT_DATE) + interval '1 month'`, { code }),
       sequelize.query(`SELECT * FROM supplier_orders WHERE tenant_code=:code ORDER BY date_commande DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);
     res.json({ success: true, totalProducts: +(prods.c||0), totalClients: +(clients.c||0), commandesEnAttente: +(orders.c||0), caMois: +(ca.t||0), recentOrders: recent });
@@ -154,7 +159,7 @@ ajouterRoutesModifier(router, [authenticate, verifyTenant], {
 
 // ── Rapport du mois (recettes, dépenses, bénéfice) ──
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
-  recettes: [{ label: 'Commandes', table: 'supplier_orders', montant: 'montant_total', date: 'COALESCE(date_commande, created_at)', where: "statut <> 'annule'" }],
+  recettes: [{ label: 'Commandes', table: 'supplier_orders', montant: 'montant_total', date: 'COALESCE(date_commande, created_at)', where: "statut NOT IN ('annule','annulee')" }],
 });
 
 // ── Accès des employés (géré par le propriétaire uniquement) ──

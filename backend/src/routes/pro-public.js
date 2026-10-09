@@ -7,6 +7,19 @@ import { ensureEnrollRequestsTable, ensureSchoolReviewsTable } from './school-ma
 
 const router = express.Router();
 
+// Type dans l'URL du site client → type(s) réellement enregistrés dans
+// management_tenants.type (= professional_accounts.type). Ex. : l'immobilier est
+// inscrit en 'broker', le vendeur en 'vendor' (référence admin : 'retailer').
+const TYPES_PAR_URL = {
+  immobilier: ['immobilier', 'broker', 'immo'],
+  immo:       ['immobilier', 'broker', 'immo'],
+  broker:     ['immobilier', 'broker', 'immo'],
+  vendor:     ['vendor', 'retailer'],
+  retailer:   ['vendor', 'retailer'],
+  imam:       ['imam', 'mosque'],
+};
+const typesEnBase = (type) => TYPES_PAR_URL[type] || [type];
+
 const q = (sql, rep) =>
   sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT })
     .catch(() => []);
@@ -26,9 +39,9 @@ router.get('/list/:type', async (req, res) => {
     const tenants = await sequelize.query(
       `SELECT tenant_code, type, name, logo_url, address, phone, email, description, city
        FROM management_tenants
-       WHERE type = :type AND is_active = true AND tenant_code NOT LIKE 'DEMO-REF-%'
+       WHERE type IN (:types) AND is_active = true AND tenant_code NOT LIKE 'DEMO-REF-%'
        ORDER BY name ASC`,
-      { replacements: { type }, type: sequelize.QueryTypes.SELECT }
+      { replacements: { types: typesEnBase(type) }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, tenants });
   } catch (e) {
@@ -47,9 +60,9 @@ router.get('/:type/:tenantCode', async (req, res) => {
     const [tenant] = await sequelize.query(
       `SELECT tenant_code, type, name, logo_url, address, phone, email, description, horaires, phone_urgence
        FROM management_tenants
-       WHERE tenant_code = :code AND type = :type AND is_active = true
+       WHERE tenant_code = :code AND type IN (:types) AND is_active = true
        LIMIT 1`,
-      { replacements: { code: tenantCode, type }, type: sequelize.QueryTypes.SELECT }
+      { replacements: { code: tenantCode, types: typesEnBase(type) }, type: sequelize.QueryTypes.SELECT }
     );
     if (!tenant) return res.status(404).json({ success: false, message: 'Espace introuvable ou inactif.' });
     res.json({ success: true, tenant });
@@ -162,11 +175,13 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
       }
 
       case 'immo':
+      case 'broker':
       case 'immobilier': {
         const [propCnt, vacantCnt, properties] = await Promise.all([
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code AND statut='vacant'`, { code }),
-          q(`SELECT nom,type_bien,superficie,prix,statut,quartier,ville FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 9`, { code }),
+          // Colonnes réelles : surface, loyer_mensuel, adresse — renommées pour le site client.
+          q(`SELECT nom,type_bien,surface AS superficie,loyer_mensuel AS prix,statut,adresse AS quartier,ville FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 9`, { code }),
         ]);
         return res.json({ success: true, stats: { total: +(propCnt.c||0), vacant: +(vacantCnt.c||0) }, properties });
       }
@@ -206,7 +221,8 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM reseau_members WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM reseau_projets WHERE tenant_code=:code AND statut='en_cours'`, { code }),
           q1(`SELECT COUNT(*) as c FROM reseau_announcements WHERE tenant_code=:code AND is_active=true`, { code }),
-          q(`SELECT nom,prenom,poste,secteur FROM reseau_members WHERE tenant_code=:code AND is_active=true ORDER BY nom LIMIT 8`, { code }),
+          // reseau_members n'a ni poste ni secteur : le rôle est affiché comme poste.
+          q(`SELECT nom,prenom,role AS poste FROM reseau_members WHERE tenant_code=:code AND is_active=true ORDER BY nom LIMIT 8`, { code }),
           q(`SELECT titre,contenu,created_at FROM reseau_announcements WHERE tenant_code=:code AND is_active=true ORDER BY created_at DESC LIMIT 3`, { code }),
         ]);
         return res.json({ success: true, stats: { members: +(memCnt.c||0), projects: +(projCnt.c||0), announcements: +(annCnt.c||0) }, members, announcements });

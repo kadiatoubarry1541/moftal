@@ -75,11 +75,17 @@ export default function GestionArtisan() {
 
   useEffect(() => {
     if (!tenantCode || loading) return;
-    if (tab === "interventions") { loadInterventions(); loadServices(); loadClients(); }
+    if (tab === "interventions") { loadServices(); loadClients(); }
     if (tab === "services")      loadServices();
     if (tab === "clients")       loadClients();
     if (tab === "announcements") loadAnnouncements();
   }, [tab, tenantCode, loading]);
+
+  // Liste des interventions : rechargée aussi quand on change le filtre de statut.
+  useEffect(() => {
+    if (!tenantCode || loading || tab !== "interventions") return;
+    loadInterventions();
+  }, [tab, tenantCode, loading, filterStatut]);
 
   async function loadAll() {
     setLoading(true);
@@ -105,13 +111,28 @@ export default function GestionArtisan() {
   async function loadClients()       { const r = await fetch(`${b(tenantCode!)}/clients`,       { headers: auth() }); const d = await r.json(); if (d.success) setClients(d.clients || []); }
   async function loadAnnouncements() { const r = await fetch(`${b(tenantCode!)}/announcements`, { headers: auth() }); const d = await r.json(); if (d.success) setAnnouncements(d.announcements || []); }
 
+  // Envoi d'un formulaire : en cas de coupure ou de réponse illisible, on renvoie
+  // une erreur (jamais de faux succès) et le bouton est toujours débloqué.
+  async function poster(url: string, body: object): Promise<any> {
+    setSaving(true);
+    try {
+      const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+      const d = await r.json().catch(() => null);
+      if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+      if (!r.ok && d.success !== false) return { ...d, success: false };
+      return d;
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveIntervention() {
     if (!intForm.titre) return alert("Titre requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/interventions`, { method: "POST", headers: auth(), body: JSON.stringify(intForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/interventions`, intForm);
     if (d.success) { setShowAddInt(false); setIntForm({ client_id: "", service_id: "", titre: "", description: "", adresse: "", date_debut: "", cout_estime: "", priorite: "normale", notes: "" }); loadInterventions(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function patchIntervention(id: number, statut: string, cout_reel?: string) {
@@ -122,18 +143,18 @@ export default function GestionArtisan() {
   }
 
   async function terminerIntervention(id: number) {
-    const cout = prompt("Coût réel de l'intervention (GNF) :", "0");
+    // Pré-rempli avec le coût estimé : l'artisan n'a qu'à confirmer ou corriger.
+    const estime = interventions.find(i => i.id === id)?.cout_estime;
+    const cout = prompt("Coût réel de l'intervention (GNF) :", String(estime ?? 0));
     if (cout === null) return;
     await patchIntervention(id, "terminee", cout);
   }
 
   async function saveService() {
     if (!svcForm.nom) return alert("Nom requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/services`, { method: "POST", headers: auth(), body: JSON.stringify(svcForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/services`, svcForm);
     if (d.success) { setShowAddSvc(false); setSvcForm({ nom: "", categorie: "Plomberie", prix_base: "", description: "", zone_intervention: "" }); loadServices(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function deleteService(id: number) {
@@ -144,20 +165,16 @@ export default function GestionArtisan() {
 
   async function saveClient() {
     if (!cliForm.nom) return alert("Nom requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/clients`, { method: "POST", headers: auth(), body: JSON.stringify(cliForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/clients`, cliForm);
     if (d.success) { setShowAddCli(false); setCliForm({ nom: "", telephone: "", adresse: "", email: "" }); loadClients(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function saveAnn() {
     if (!annForm.titre || !annForm.contenu) return alert("Titre et contenu requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(annForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/announcements`, annForm);
     if (d.success) { setShowAddAnn(false); setAnnForm({ titre: "", contenu: "", type: "general" }); loadAnnouncements(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   if (loading) return (

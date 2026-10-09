@@ -30,41 +30,57 @@ export default function EspaceParentEcole({ mode }: Props) {
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500); };
 
+  // Enfant affiché (un parent peut en suivre plusieurs) — null = premier enfant relié
+  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: `/espace-parent-${mode}/${tenantCode}` } }); return; }
-    fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode}/my-access`, { headers: auth() })
-      .then(r => r.json())
-      .then(d => {
-        if (d.success === false) { setError(d.message || "Accès refusé."); return; }
+    setLoading(true); setError(null);
+    const qs = selectedStudentId ? `?student_id=${selectedStudentId}` : "";
+    fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode}/my-access${qs}`, { headers: auth() })
+      .then(async r => {
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.success === false) { setError(d.message || "Accès refusé."); return; }
         setData(d);
       })
       .catch(e => setError("Impossible de joindre le serveur : " + (e?.message || e)))
       .finally(() => setLoading(false));
-  }, [apiName, tenantCode, navigate, mode]);
+  }, [apiName, tenantCode, navigate, mode, selectedStudentId, reloadKey]);
 
   const payFee = async (feeId: number) => {
     if (!payPhone.trim()) { showToast("Numéro de téléphone requis", false); return; }
     setPaying(true); setPayMsg("");
     try {
+      // Frais d'une madrasa : enregistré dans madrasa_fees, pas dans school_fees
+      const purpose = isMadrasa ? "madrasa_fee" : "school_fee";
       const r = await fetch(`${config.API_BASE_URL}/djomy/initiate`, {
         method: "POST", headers: auth(),
-        body: JSON.stringify({ paymentMethod: payMethod, payerPhone: payPhone, purpose: "school_fee", relatedId: feeId, description: "Frais scolaire" })
+        body: JSON.stringify({ paymentMethod: payMethod, payerPhone: payPhone, purpose, relatedId: feeId, description: isMadrasa ? "Frais madrasa" : "Frais scolaire" })
       });
-      const d = await r.json();
-      if (!d.success) { showToast(d.message || "Erreur de paiement", false); setPaying(false); return; }
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.success) { showToast(d.message || "Erreur de paiement", false); setPaying(false); return; }
       setPayMsg("Confirmez le paiement sur votre téléphone...");
       const txId = d.transactionId;
       let attempts = 0;
       const poll = setInterval(async () => {
         attempts++;
-        const sr = await fetch(`${config.API_BASE_URL}/djomy/status/${txId}`, { headers: auth() });
-        const sd = await sr.json();
-        const status = sd.status || sd.data?.status;
+        let status = "";
+        try {
+          const sr = await fetch(`${config.API_BASE_URL}/djomy/status/${txId}`, { headers: auth() });
+          const sd = await sr.json().catch(() => ({}));
+          status = sd.status || sd.data?.status || "";
+        } catch { /* nouvel essai au prochain tour */ }
         if (status === "SUCCESS") {
           clearInterval(poll);
           setPaying(false); setPayingFeeId(null); setPayMsg("");
-          setData((prev: any) => ({ ...prev, fees: prev.fees.map((f: any) => f.id === feeId ? { ...f, est_paye: true } : f) }));
           showToast("Paiement réussi !");
+          // Relire les frais depuis le serveur (statut enregistré en base)
+          setReloadKey(k => k + 1);
+        } else if (status === "FAILED" || status === "CANCELLED" || status === "EXPIRED") {
+          clearInterval(poll);
+          setPaying(false);
+          setPayMsg("Paiement refusé ou annulé. Vous pouvez réessayer.");
         } else if (attempts >= 20) {
           clearInterval(poll);
           setPaying(false);
@@ -77,7 +93,7 @@ export default function EspaceParentEcole({ mode }: Props) {
     }
   };
 
-  if (loading) return (
+  if (loading && !data) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ width: 40, height: 40, border: "3px solid #e2e8f0", borderTopColor: color, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -96,6 +112,7 @@ export default function EspaceParentEcole({ mode }: Props) {
   );
 
   const student = data.student;
+  const children: { id: number; prenom: string; nom: string; niveau?: string; classe?: string }[] = data.children || [];
   const grades = data.grades || [];
   const attendance = data.attendance || [];
   const fees = data.fees || [];
@@ -133,6 +150,19 @@ export default function EspaceParentEcole({ mode }: Props) {
       </header>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px" }}>
+        {children.length > 1 && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            {children.map(c => {
+              const actif = student?.id === c.id;
+              return (
+                <button key={c.id} onClick={() => { if (!actif) { setPayingFeeId(null); setPayMsg(""); setSelectedStudentId(c.id); } }}
+                  style={{ padding: "8px 14px", borderRadius: 20, border: `1.5px solid ${actif ? color : "#e2e8f0"}`, background: actif ? color : "white", color: actif ? "white" : "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  {c.prenom} {c.nom}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {!student ? (
           <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>

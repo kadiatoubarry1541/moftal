@@ -51,7 +51,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
     const q = (sql, rep) => sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT }).then(r => r[0]).catch(() => ({ c: 0, t: 0 }));
     const [products, activeLots, pendingOrders, staff, caMonth, recentOrders] = await Promise.all([
       q(`SELECT COUNT(*) as c FROM producer_products WHERE tenant_code=:code AND is_active=true`, { code }),
-      q(`SELECT COUNT(*) as c FROM producer_lots WHERE tenant_code=:code AND statut NOT IN ('livre','annule')`, { code }),
+      q(`SELECT COUNT(*) as c FROM producer_lots WHERE tenant_code=:code AND statut IN ('en_attente','en_cours')`, { code }),
       q(`SELECT COUNT(*) as c FROM producer_orders WHERE tenant_code=:code AND statut IN ('en_attente','en_production')`, { code }),
       q(`SELECT COUNT(*) as c FROM producer_staff WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COALESCE(SUM(montant_total),0) as t FROM producer_orders WHERE tenant_code=:code AND statut='livre' AND EXTRACT(MONTH FROM date_livraison)=EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM date_livraison)=EXTRACT(YEAR FROM CURRENT_DATE)`, { code }),
@@ -126,11 +126,26 @@ router.patch('/:tenantCode/lots/:id', authenticate, verifyTenant, async (req, re
     if (quantite_produite != null) { updates.push('quantite_produite=:qte'); rep.qte = +quantite_produite; }
     if (statut === 'termine') updates.push('date_fin_reelle=NOW()');
     if (!updates.length) return res.json({ success: true });
-    await sequelize.query(`UPDATE producer_lots SET ${updates.join(',')} WHERE id=:id AND tenant_code=:code`, { replacements: rep });
-    if (statut === 'termine' && quantite_produite) {
-      const [lot] = await sequelize.query(`SELECT product_id FROM producer_lots WHERE id=:id`, { replacements: { id: req.params.id }, type: sequelize.QueryTypes.SELECT });
-      if (lot) await sequelize.query(`UPDATE producer_products SET stock=stock+:qte WHERE id=:pid AND tenant_code=:code`, { replacements: { qte:+quantite_produite, pid:lot.product_id, code:req.params.tenantCode } });
+    // Un lot terminé n'ajoute sa production au stock qu'une seule fois
+    // (un double clic ou un nouvel envoi ne la compte pas deux fois).
+    const dejaTermine = statut === 'termine' ? ` AND statut IS DISTINCT FROM 'termine'` : '';
+    const resultat = await sequelize.transaction(async (t) => {
+      const [lignes] = await sequelize.query(
+        `UPDATE producer_lots SET ${updates.join(',')} WHERE id=:id AND tenant_code=:code${dejaTermine} RETURNING product_id`,
+        { replacements: rep, transaction: t }
+      );
+      const lot = lignes?.[0];
+      if (!lot) return statut === 'termine' ? 'deja' : 'introuvable';
+      if (statut === 'termine' && quantite_produite && lot.product_id) {
+        await sequelize.query(`UPDATE producer_products SET stock=stock+:qte WHERE id=:pid AND tenant_code=:code`, { replacements: { qte:+quantite_produite, pid:lot.product_id, code:req.params.tenantCode }, transaction: t });
+      }
+      return 'ok';
+    });
+    if (resultat === 'deja') {
+      const [existe] = await sequelize.query(`SELECT id FROM producer_lots WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+      if (existe) return res.status(400).json({ success: false, message: 'Ce lot est déjà terminé.' });
     }
+    if (resultat !== 'ok') return res.status(404).json({ success: false, message: 'Lot introuvable.' });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -158,11 +173,28 @@ router.post('/:tenantCode/orders', authenticate, verifyTenant, async (req, res) 
 router.patch('/:tenantCode/orders/:id', authenticate, verifyTenant, async (req, res) => {
   try {
     const { statut } = req.body;
+    if (!statut) return res.status(400).json({ success: false, message: 'Statut requis.' });
     const rep = { id: req.params.id, code: req.params.tenantCode, statut };
     let q = `UPDATE producer_orders SET statut=:statut`;
     if (statut === 'livre') q += ',date_livraison=NOW()';
     q += ` WHERE id=:id AND tenant_code=:code`;
-    await sequelize.query(q, { replacements: rep });
+    // Commande livrée : la quantité sort du stock, une seule fois, avec le changement de statut
+    const trouvee = await sequelize.transaction(async (t) => {
+      const [avant] = await sequelize.query(
+        `SELECT statut, product_id, quantite FROM producer_orders WHERE id=:id AND tenant_code=:code FOR UPDATE`,
+        { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT, transaction: t }
+      );
+      if (!avant) return false;
+      await sequelize.query(q, { replacements: rep, transaction: t });
+      if (statut === 'livre' && avant.statut !== 'livre' && avant.product_id) {
+        await sequelize.query(
+          `UPDATE producer_products SET stock=GREATEST(0, stock - :qte) WHERE id=:pid AND tenant_code=:code`,
+          { replacements: { qte: +avant.quantite || 0, pid: avant.product_id, code: req.params.tenantCode }, transaction: t }
+        );
+      }
+      return true;
+    });
+    if (!trouvee) return res.status(404).json({ success: false, message: 'Commande introuvable.' });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });

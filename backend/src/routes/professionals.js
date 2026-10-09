@@ -705,7 +705,9 @@ router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
        VALUES (:code, :type, :name, :owner, :logo)
        ON CONFLICT (tenant_code) DO UPDATE SET logo_url = COALESCE(management_tenants.logo_url, EXCLUDED.logo_url)`,
       { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH, logo: account.photo || null } }
-    ).catch(() => {});
+    );
+    // (Une vraie erreur d'enregistrement remonte au catch ci-dessous → 500 : jamais
+    // de « succès » si la gestion interne n'a pas été créée en base.)
 
     if (!account.tenant_code) {
       await account.update({ tenant_code: tenantCode });
@@ -714,7 +716,7 @@ router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
     res.json({ success: true, tenantCode });
   } catch (e) {
     console.error('ensure-tenant:', e);
-    res.status(500).json({ success: false, message: e.message });
+    res.status(500).json({ success: false, message: `Impossible de créer la gestion interne : ${e.message}` });
   }
 });
 

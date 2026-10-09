@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import PaymentModal from "./PaymentModal";
 import { getSessionUser, isAdmin } from "../utils/auth";
 import { OffreGestionInterne, type PeriodeGI } from "./EspaceProModals";
@@ -13,6 +13,8 @@ const LIBELLE_GI: Record<PeriodeGI, string> = { mois: "mensuel", troisMois: "3 m
 // paiement). Sa place est dans les Paramètres : ce n'est pas un outil de tous les jours.
 export default function AbonnementGestion() {
   const navigate = useNavigate();
+  // Abonnement de l'établissement ouvert (un propriétaire peut en avoir plusieurs)
+  const { tenantCode } = useParams<{ tenantCode?: string }>();
   const token = localStorage.getItem("token") || "";
   const estAdmin = isAdmin(getSessionUser());
   const [accesGI, setAccesGI] = useState<any>(null);
@@ -20,7 +22,7 @@ export default function AbonnementGestion() {
   const [periode, setPeriode] = useState<PeriodeGI | null>(null);
 
   function charger() {
-    fetch(`${API}/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/api/payment/acces-gestion-interne${tenantCode ? `?tenantCode=${encodeURIComponent(tenantCode)}` : ""}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json()).then(d => { if (d.success) setAccesGI(d); }).catch(() => {});
   }
   useEffect(() => { if (!estAdmin) charger(); }, []);

@@ -49,7 +49,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM transport_vehicles WHERE tenant_code=:code AND statut='actif'`, { code }),
       q(`SELECT COUNT(*) as c FROM transport_drivers WHERE tenant_code=:code AND statut='disponible'`, { code }),
       q(`SELECT COUNT(*) as c FROM transport_trips WHERE tenant_code=:code AND DATE(date_depart)=CURRENT_DATE`, { code }),
-      q(`SELECT COALESCE(SUM(montant),0) as t FROM transport_bookings WHERE tenant_code=:code AND EXTRACT(MONTH FROM created_at)=EXTRACT(MONTH FROM CURRENT_DATE) AND statut='confirme'`, { code }),
+      q(`SELECT COALESCE(SUM(montant),0) as t FROM transport_bookings WHERE tenant_code=:code AND created_at >= date_trunc('month', CURRENT_DATE) AND created_at < date_trunc('month', CURRENT_DATE) + interval '1 month' AND statut='confirme'`, { code }),
       q(`SELECT COUNT(*) as c FROM transport_bookings WHERE tenant_code=:code AND statut='en_attente'`, { code }),
       q(`SELECT COUNT(*) as c FROM transport_announcements WHERE tenant_code=:code`, { code }),
       sequelize.query(

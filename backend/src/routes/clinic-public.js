@@ -97,7 +97,7 @@ router.get('/:tenantCode/my-portal', authenticate, async (req, res) => {
 
     // Vérifier si ce patient est enregistré dans cette clinique
     const [patient] = await sequelize.query(
-      `SELECT * FROM clinic_patients WHERE tenant_code = :code AND numero_h = :nh LIMIT 1`,
+      `SELECT * FROM clinic_patients WHERE tenant_code = :code AND LOWER(TRIM(numero_h)) = LOWER(TRIM(:nh)) LIMIT 1`,
       { replacements: { code: tenantCode, nh: numeroH }, type: sequelize.QueryTypes.SELECT }
     );
     if (!patient) {
@@ -160,7 +160,7 @@ router.post('/:tenantCode/request-appointment', authenticate, async (req, res) =
     const { service, date_rdv, heure, motif } = req.body;
 
     const [patient] = await sequelize.query(
-      `SELECT * FROM clinic_patients WHERE tenant_code = :code AND numero_h = :nh LIMIT 1`,
+      `SELECT * FROM clinic_patients WHERE tenant_code = :code AND LOWER(TRIM(numero_h)) = LOWER(TRIM(:nh)) LIMIT 1`,
       { replacements: { code: tenantCode, nh: numeroH }, type: sequelize.QueryTypes.SELECT }
     );
     if (!patient) return res.status(403).json({ success: false, message: 'Non enregistré dans cette clinique.' });

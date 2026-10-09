@@ -47,7 +47,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
     const [mems, projs, dons, anns, recent] = await Promise.all([
       q(`SELECT COUNT(*) as c FROM ngo_members WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM ngo_projects WHERE tenant_code=:code AND statut='en_cours'`, { code }),
-      q(`SELECT COALESCE(SUM(montant),0) as t FROM ngo_donations WHERE tenant_code=:code AND EXTRACT(MONTH FROM date_don)=EXTRACT(MONTH FROM CURRENT_DATE)`, { code }),
+      q(`SELECT COALESCE(SUM(montant),0) as t FROM ngo_donations WHERE tenant_code=:code AND date_don >= date_trunc('month', CURRENT_DATE) AND date_don < date_trunc('month', CURRENT_DATE) + interval '1 month'`, { code }),
       q(`SELECT COUNT(*) as c FROM ngo_announcements WHERE tenant_code=:code AND is_active=true`, { code }),
       sequelize.query(`SELECT * FROM ngo_projects WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);

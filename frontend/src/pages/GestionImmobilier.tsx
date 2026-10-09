@@ -90,10 +90,19 @@ export default function GestionImmobilier() {
     if (tab === "announcements") fetch(`${BASE(tenantCode)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || []));
   }, [tab, tenantCode, loading]);
 
+  // Coupure réseau ou réponse illisible : échec affiché, jamais de bouton bloqué.
   const post = async (url: string, body: object) => {
     setSaving(true);
-    const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    const d = await r.json(); setSaving(false); return d;
+    try {
+      const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+      const d = await r.json().catch(() => null);
+      if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+      return d;
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally {
+      setSaving(false);
+    }
   };
   const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
   const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
@@ -202,8 +211,8 @@ export default function GestionImmobilier() {
               <div style={{ fontSize: 28, fontWeight: 800 }}>{fmtMoney(dash.loyersMois)}</div>
             </div>
             <div style={{ textAlign: "right", opacity: 0.9 }}>
-              <div style={{ fontSize: 12, marginBottom: 2 }}>Baux expirant bientôt</div>
-              <div style={{ fontWeight: 700, fontSize: 20 }}>{dash.arrieresBails ?? 0}</div>
+              <div style={{ fontSize: 12, marginBottom: 2 }}>Loyers non soldés (partiels / en attente)</div>
+              <div style={{ fontWeight: 700, fontSize: 20 }}>{dash.loyersNonPayes ?? 0}</div>
             </div>
           </div>
           {/* Quick Actions */}

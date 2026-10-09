@@ -16,6 +16,8 @@ import {
   sendSubscriptionRenewedEmail,
 } from '../services/emailService.js';
 import { getGestionInterneAccess } from '../middleware/gestionAccessGuard.js';
+import { elevesLiesEcole } from './school-management.js';
+import { elevesLiesMadrasa } from './madrasa-management.js';
 
 // ─── RÈGLE GÉNÉRALE : hors Afrique = toujours le DOUBLE du tarif Afrique ──────
 
@@ -389,7 +391,9 @@ router.get('/prix-vendeur-echange', authenticate, async (req, res) => {
  */
 router.get('/acces-gestion-interne', authenticate, async (req, res) => {
   try {
-    const access = await getGestionInterneAccess(req.user.numeroH);
+    // ?tenantCode= : l'accès de CET établissement (un propriétaire peut en avoir plusieurs)
+    const tenantCode = typeof req.query.tenantCode === 'string' && /^[\w-]{2,60}$/.test(req.query.tenantCode) ? req.query.tenantCode : null;
+    const access = await getGestionInterneAccess(req.user.numeroH, tenantCode);
     const proAccount = access.proAccount;
 
     if (!proAccount) {
@@ -727,19 +731,25 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     amount = montantDepot;
   }
 
-  // Paiement en ligne d'un frais scolaire (école/madrasa) — relatedId = id du frais.
-  // Le montant vient toujours du frais enregistré côté gestion interne, jamais du
-  // frontend, et seul un parent relié à l'élève concerné peut payer.
-  if (purpose === 'school_fee') {
+  // Paiement en ligne d'un frais scolaire — relatedId = id du frais.
+  // 'school_fee' : frais d'une école (school_fees) ; 'madrasa_fee' : frais d'une
+  // madrasa (madrasa_fees). Le montant vient toujours du frais enregistré côté
+  // gestion interne, jamais du frontend, et seul un membre actif relié à l'élève
+  // concerné (dans le même établissement) peut payer.
+  if (purpose === 'school_fee' || purpose === 'madrasa_fee') {
+    const estMadrasa = purpose === 'madrasa_fee';
     const feeId = parseInt(relatedId, 10);
-    const [fee] = await sequelize.query(`SELECT * FROM school_fees WHERE id=:id LIMIT 1`, { replacements: { id: feeId }, type: sequelize.QueryTypes.SELECT });
+    if (!feeId) return { error: 'Frais introuvable.' };
+    const [fee] = await sequelize.query(
+      `SELECT * FROM ${estMadrasa ? 'madrasa_fees' : 'school_fees'} WHERE id=:id LIMIT 1`,
+      { replacements: { id: feeId }, type: sequelize.QueryTypes.SELECT }
+    );
     if (!fee) return { error: 'Frais introuvable.' };
     if (fee.est_paye) return { error: 'Ce frais est déjà payé.' };
-    const [member] = await sequelize.query(
-      `SELECT 1 FROM school_members WHERE tenant_code=:code AND numero_h=:nh AND linked_student_id=:sid AND is_active=true LIMIT 1`,
-      { replacements: { code: fee.tenant_code, nh: user?.numeroH, sid: fee.student_id }, type: sequelize.QueryTypes.SELECT }
-    );
-    if (!member) return { error: 'Vous n\'êtes pas autorisé à payer ce frais.' };
+    const lies = estMadrasa
+      ? await elevesLiesMadrasa(fee.tenant_code, user?.numeroH)
+      : await elevesLiesEcole(fee.tenant_code, user?.numeroH);
+    if (!lies.some(e => e.id === fee.student_id)) return { error: 'Vous n\'êtes pas autorisé à payer ce frais.' };
     amount = +fee.montant;
   }
 
@@ -930,9 +940,21 @@ export async function handlePostPayment(payment) {
     }
 
     // ── Frais scolaire payé en ligne (école/madrasa) ──────────────────
+    // Montant encaissé et date renseignés : le frais compte dans « Frais collectés
+    // (mois) » et dans le rapport du mois, comme un encaissement au guichet.
     if (payment.purpose === 'school_fee' && payment.relatedId) {
-      await sequelize.query(`UPDATE school_fees SET est_paye=true WHERE id=:id`, { replacements: { id: payment.relatedId } }).catch(e => console.warn('school_fee update:', e.message));
+      await sequelize.query(
+        `UPDATE school_fees SET est_paye=true, montant_paye=montant, date_paiement=CURRENT_DATE WHERE id=:id`,
+        { replacements: { id: payment.relatedId } }
+      ).catch(e => console.warn('school_fee update:', e.message));
       console.log(`✅ Frais scolaire payé en ligne — frais ${payment.relatedId}`);
+    }
+    if (payment.purpose === 'madrasa_fee' && payment.relatedId) {
+      await sequelize.query(
+        `UPDATE madrasa_fees SET est_paye=true, date_paiement=NOW() WHERE id=:id`,
+        { replacements: { id: payment.relatedId } }
+      ).catch(e => console.warn('madrasa_fee update:', e.message));
+      console.log(`✅ Frais madrasa payé en ligne — frais ${payment.relatedId}`);
     }
 
     // ── Publication formation — activer l'annonce après paiement ─────

@@ -105,50 +105,56 @@ export default function GestionVendeur() {
     if (d.success) setExpenses(d.expenses || []);
   }
 
-  async function saveProduct(isEdit = false) {
+  // Envoie au serveur et renvoie toujours une réponse lisible : en cas d'échec,
+  // le bouton se débloque et l'erreur est affichée (jamais de faux succès).
+  async function envoyer(url: string, method: string, body: object): Promise<any> {
     setSaving(true);
+    try {
+      const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(body) });
+      return await r.json().catch(() => ({ success: false, message: `Erreur du serveur (${r.status}) : rien n'a été enregistré.` }));
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveProduct(isEdit = false) {
     const url = isEdit ? `${b(tenantCode!)}/products/${editProduct.id}` : `${b(tenantCode!)}/products`;
-    const method = isEdit ? "PUT" : "POST";
-    const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(pForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await envoyer(url, isEdit ? "PUT" : "POST", pForm);
     if (d.success) { setShowAddProduct(false); setEditProduct(null); setPForm({ nom: "", categorie: "", prix_vente: "", prix_achat: "", stock: "", stock_min: "5", unite: "pièce" }); loadProducts(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function saveSale() {
     const valid = sForm.items.filter(i => i.nom && i.prix_unitaire);
     if (!valid.length) return alert("Ajoutez au moins un article");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/sales`, { method: "POST", headers: auth(), body: JSON.stringify({ ...sForm, items: valid }) });
-    const d = await r.json(); setSaving(false);
+    // Vente à crédit : sans nom de client, la dette serait perdue
+    if (sForm.est_credit && !sForm.client_nom.trim()) return alert("Nom du client obligatoire pour une vente à crédit.");
+    const d = await envoyer(`${b(tenantCode!)}/sales`, "POST", { ...sForm, items: valid });
     if (d.success) { setShowNewSale(false); setSForm({ client_nom: "", type_paiement: "especes", montant_recu: "", est_credit: false, notes: "", items: [{ nom: "", product_id: "", prix_unitaire: "", quantite: "1" }] }); loadAll(); loadSales(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function saveClient() {
     if (!cForm.nom) return alert("Nom requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/clients`, { method: "POST", headers: auth(), body: JSON.stringify(cForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await envoyer(`${b(tenantCode!)}/clients`, "POST", cForm);
     if (d.success) { setShowAddClient(false); setCForm({ nom: "", telephone: "", adresse: "" }); loadClients(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function saveExpense() {
     if (!eForm.description || !eForm.montant) return alert("Description et montant requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/expenses`, { method: "POST", headers: auth(), body: JSON.stringify(eForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await envoyer(`${b(tenantCode!)}/expenses`, "POST", eForm);
     if (d.success) { setShowAddExpense(false); setEForm({ description: "", montant: "", categorie: "Transport" }); loadExpenses(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function payCredit(clientId: number, montant: number) {
     const m = prompt("Montant à encaisser (GNF) :", String(montant));
     if (!m) return;
-    const r = await fetch(`${b(tenantCode!)}/clients/${clientId}/pay-credit`, { method: "PUT", headers: auth(), body: JSON.stringify({ montant: +m }) });
-    const d = await r.json();
-    if (d.success) loadClients();
+    if (!(await envoyerGestion(`${b(tenantCode!)}/clients/${clientId}/pay-credit`, { method: "PUT", headers: auth(), body: JSON.stringify({ montant: +m }) }))) { return; }
+    loadClients();
   }
 
   async function adjustStock(productId: number, delta: number) {
@@ -321,7 +327,7 @@ export default function GestionVendeur() {
             <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_BDR}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
               <h3 style={{ margin: "0 0 12px", fontSize: 15 }}>Nouvelle vente</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                <div><label style={{ fontSize: 12, color: "#64748b" }}>Client</label><input style={inp} value={sForm.client_nom} onChange={e => setSForm(f => ({ ...f, client_nom: e.target.value }))} placeholder="Nom du client" /></div>
+                <div><label style={{ fontSize: 12, color: "#64748b" }}>Client{sForm.est_credit && <span style={{ color: "#dc2626" }}> * (obligatoire pour un crédit)</span>}</label><input style={inp} value={sForm.client_nom} onChange={e => setSForm(f => ({ ...f, client_nom: e.target.value }))} placeholder="Nom du client" /></div>
                 <div><label style={{ fontSize: 12, color: "#64748b" }}>Paiement</label>
                   <select style={inp} value={sForm.type_paiement} onChange={e => setSForm(f => ({ ...f, type_paiement: e.target.value }))}>
                     {["especes", "mobile_money", "virement", "cheque"].map(p => <option key={p}>{p}</option>)}

@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
+import { envoyerGestion } from "../utils/envoyerGestion";
 
 const BASE = (code: string) => `/api/restaurant-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -90,10 +91,16 @@ export default function GestionRestaurant() {
 
   const post = async (url: string, body: object) => {
     setSaving(true);
-    const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    const d = await r.json(); setSaving(false); return d;
+    try {
+      const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+      const d = await r.json().catch(() => null);
+      if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+      if (!r.ok && d.success !== false) return { ...d, success: false };
+      return d;
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally { setSaving(false); }
   };
-  const del = (url: string) => fetch(url, { method: "DELETE", headers: auth() }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
   const patch = (url: string, body: object) => fetch(url, { method: "PATCH", headers: auth(), body: JSON.stringify(body) }).then(r => { if (!r.ok) r.clone().json().catch(() => ({})).then((d: any) => alert(d.message || "Erreur : rien n'a été enregistré")); return r; }, e => { alert("Connexion coupée : rien n'a été enregistré"); throw e; });
 
   const reloadDash = () => {
@@ -307,7 +314,7 @@ export default function GestionRestaurant() {
                           onClick={async () => { const r = await patch(`${BASE(tenantCode!)}/dishes/${d.id}`, { disponible: !d.disponible }).catch(() => null); if (!r?.ok) return; const h = { Authorization: `Bearer ${localStorage.getItem("token")}` }; fetch(`${BASE(tenantCode!)}/dishes`, { headers: h }).then(r => r.json()).then(dd => dd.success && setDishes(dd.dishes || [])); }}>
                           {d.disponible ? "✓ Disponible" : "Indisponible"}
                         </span>
-                        <button onClick={async () => { await del(`${BASE(tenantCode!)}/dishes/${d.id}`); setDishes(ds => ds.filter(x => x.id !== d.id)); }}
+                        <button onClick={async () => { if (await envoyerGestion(`${BASE(tenantCode!)}/dishes/${d.id}`, { method: "DELETE", headers: auth() })) setDishes(ds => ds.filter(x => x.id !== d.id)); }}
                           style={{ padding: "4px 10px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>
                       </div>
                     </div>
@@ -490,7 +497,7 @@ export default function GestionRestaurant() {
                     <div style={{ fontSize: 12, color: "#64748b" }}>{s.poste}{s.telephone ? ` · 📞 ${s.telephone}` : ""}</div>
                     {s.salaire > 0 && <div style={{ fontSize: 12, color: ORANGE, fontWeight: 600, marginTop: 2 }}>{fmtMoney(s.salaire)}/mois</div>}
                   </div>
-                  <button onClick={async () => { if (confirm("Retirer ce membre ?")) { await del(`${BASE(tenantCode!)}/staff/${s.id}`); setStaff(ss => ss.filter(x => x.id !== s.id)); } }}
+                  <button onClick={async () => { if (confirm("Retirer ce membre ?")) { if (await envoyerGestion(`${BASE(tenantCode!)}/staff/${s.id}`, { method: "DELETE", headers: auth() })) setStaff(ss => ss.filter(x => x.id !== s.id)); } }}
                     style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>
                 </div>
               ))}
@@ -532,7 +539,7 @@ export default function GestionRestaurant() {
                       <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{a.contenu}</div>
                       <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>{fmtDate(a.created_at)}</div>
                     </div>
-                    <button onClick={async () => { await del(`${BASE(tenantCode!)}/announcements/${a.id}`); setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
+                    <button onClick={async () => { if (await envoyerGestion(`${BASE(tenantCode!)}/announcements/${a.id}`, { method: "DELETE", headers: auth() })) setAnnouncements(as => as.filter(x => x.id !== a.id)); }}
                       style={{ padding: "5px 12px", background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>
                   </div>
                 </div>

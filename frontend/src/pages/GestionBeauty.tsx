@@ -101,13 +101,28 @@ export default function GestionBeauty() {
   async function loadClients()       { const r = await fetch(`${b(tenantCode!)}/clients`,       { headers: auth() }); const d = await r.json(); if (d.success) setClients(d.clients || []); }
   async function loadAnnouncements() { const r = await fetch(`${b(tenantCode!)}/announcements`, { headers: auth() }); const d = await r.json(); if (d.success) setAnnouncements(d.announcements || []); }
 
+  // Envoi d'un formulaire : en cas de coupure ou de réponse illisible, on renvoie
+  // une erreur (jamais de faux succès) et le bouton est toujours débloqué.
+  async function poster(url: string, body: object): Promise<any> {
+    setSaving(true);
+    try {
+      const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+      const d = await r.json().catch(() => null);
+      if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+      if (!r.ok && d.success !== false) return { ...d, success: false };
+      return d;
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveService() {
     if (!svcForm.nom || !svcForm.prix) return alert("Nom et prix requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/services`, { method: "POST", headers: auth(), body: JSON.stringify(svcForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/services`, svcForm);
     if (d.success) { setShowAddService(false); setSvcForm({ nom: "", categorie: "Coiffure", prix: "", duree_min: "30", description: "" }); loadServices(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function deleteService(id: number) {
@@ -118,11 +133,9 @@ export default function GestionBeauty() {
 
   async function saveBooking() {
     if (!bkForm.client_nom || !bkForm.date_rdv) return alert("Nom client et date requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/bookings`, { method: "POST", headers: auth(), body: JSON.stringify(bkForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/bookings`, bkForm);
     if (d.success) { setShowAddBooking(false); setBkForm({ client_nom: "", client_telephone: "", service_id: "", staff_id: "", date_rdv: "", heure_rdv: "", notes: "" }); loadBookings(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function patchBooking(id: number, statut: string) {
@@ -132,11 +145,9 @@ export default function GestionBeauty() {
 
   async function saveStaff() {
     if (!stForm.nom) return alert("Nom requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/staff`, { method: "POST", headers: auth(), body: JSON.stringify(stForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/staff`, stForm);
     if (d.success) { setShowAddStaff(false); setStForm({ nom: "", prenom: "", poste: "Coiffeur/se", telephone: "", specialite: "", salaire: "" }); loadStaff(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function deleteStaff(id: number) {
@@ -147,20 +158,16 @@ export default function GestionBeauty() {
 
   async function saveClient() {
     if (!cliForm.nom) return alert("Nom requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/clients`, { method: "POST", headers: auth(), body: JSON.stringify(cliForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/clients`, cliForm);
     if (d.success) { setShowAddClient(false); setCliForm({ nom: "", telephone: "", email: "", notes: "" }); loadClients(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function saveAnn() {
     if (!annForm.titre || !annForm.contenu) return alert("Titre et contenu requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(annForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await poster(`${b(tenantCode!)}/announcements`, annForm);
     if (d.success) { setShowAddAnn(false); setAnnForm({ titre: "", contenu: "", type: "general" }); loadAnnouncements(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   if (loading) return (

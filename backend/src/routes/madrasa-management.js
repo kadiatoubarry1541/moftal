@@ -43,6 +43,62 @@ for (const methode of ['get', 'post', 'put', 'delete']) {
   ));
 }
 
+// ─── Liens parent ↔ étudiants ─────────────────────────────────────────────────
+// Un parent peut suivre plusieurs enfants du même institut : chaque lien est
+// une ligne de madrasa_member_students. L'ancienne colonne
+// madrasa_members.linked_student_id reste remplie (dernier enfant relié) et
+// ses valeurs existantes sont recopiées une fois dans la table de liens.
+let liensMadrasaPrets = false;
+export async function ensureLiensParentsMadrasa() {
+  if (liensMadrasaPrets) return;
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS madrasa_member_students (
+      id          SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      numero_h    VARCHAR(30) NOT NULL,
+      student_id  INTEGER NOT NULL REFERENCES madrasa_students(id) ON DELETE CASCADE,
+      created_at  TIMESTAMP DEFAULT NOW(),
+      UNIQUE(tenant_code, numero_h, student_id)
+    );
+    INSERT INTO madrasa_member_students (tenant_code, numero_h, student_id)
+      SELECT m.tenant_code, m.numero_h, m.linked_student_id
+      FROM madrasa_members m
+      JOIN madrasa_students s ON s.id = m.linked_student_id AND s.tenant_code = m.tenant_code
+      WHERE m.linked_student_id IS NOT NULL AND m.is_active = true
+    ON CONFLICT (tenant_code, numero_h, student_id) DO NOTHING;
+  `);
+  liensMadrasaPrets = true;
+}
+
+// Étudiants de l'institut suivis par ce membre actif : enfants reliés par la
+// direction, ou fiche étudiant portant son NuméroH (étudiant / parent).
+export async function elevesLiesMadrasa(tc, numeroH) {
+  if (!tc || !numeroH) return [];
+  await ensureLiensParentsMadrasa();
+  return sequelize.query(
+    `SELECT s.id, s.prenom, s.nom, s.niveau
+     FROM madrasa_students s
+     WHERE s.tenant_code = :tc
+       AND EXISTS (SELECT 1 FROM madrasa_members m WHERE m.tenant_code = :tc AND m.numero_h = :nh AND m.is_active = true)
+       AND (s.id IN (SELECT l.student_id FROM madrasa_member_students l WHERE l.tenant_code = :tc AND l.numero_h = :nh)
+            OR s.numero_h = :nh OR s.parent_numero_h = :nh)
+     ORDER BY s.prenom, s.nom`,
+    { replacements: { tc, nh: numeroH }, type: sequelize.QueryTypes.SELECT }
+  );
+}
+
+// Membres actifs reliés à un étudiant (pour les notifications de bulletin)
+async function membresLiesAEtudiant(tc, studentId, studentNumeroH) {
+  await ensureLiensParentsMadrasa();
+  return sequelize.query(
+    `SELECT DISTINCT m.numero_h FROM madrasa_members m
+     WHERE m.tenant_code = :tc AND m.is_active = true
+       AND (m.numero_h IN (SELECT l.numero_h FROM madrasa_member_students l WHERE l.tenant_code = :tc AND l.student_id = :sid)
+            OR m.numero_h = :snh)`,
+    { replacements: { tc, sid: studentId, snh: studentNumeroH || '' }, type: sequelize.QueryTypes.SELECT }
+  );
+}
+
 // ─── Middleware : vérifier que l'utilisateur est directeur / propriétaire ──────
 async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
@@ -450,8 +506,12 @@ router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, 
 
 // ── Membres (accès app par numeroH) ──────────────────────────────────────────
 router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) => {
+  await ensureLiensParentsMadrasa();
   const [members] = await sequelize.query(
-    `SELECT m.*, COALESCE(u.prenom || ' ' || u.nom_famille, m.nom_display) AS nom_display
+    `SELECT m.*, COALESCE(u.prenom || ' ' || u.nom_famille, m.nom_display) AS nom_display,
+       COALESCE((SELECT json_agg(json_build_object('id', s.id, 'prenom', s.prenom, 'nom', s.nom) ORDER BY s.prenom)
+                 FROM madrasa_member_students l JOIN madrasa_students s ON s.id = l.student_id AND s.tenant_code = l.tenant_code
+                 WHERE l.tenant_code = m.tenant_code AND l.numero_h = m.numero_h), '[]'::json) AS enfants
      FROM madrasa_members m
      LEFT JOIN users u ON u.numero_h = m.numero_h
      WHERE m.tenant_code = :tc AND m.is_active = true ORDER BY m.role, m.created_at`,
@@ -463,85 +523,132 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
 router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const { numero_h, role, linked_student_id } = req.body;
-  if (!numero_h) return res.status(400).json({ message: 'NuméroH requis.' });
+  if (!numero_h) return res.status(400).json({ success: false, message: 'NuméroH requis.' });
   const [users] = await sequelize.query(
-    `SELECT * FROM users WHERE numero_h = :nh`, { replacements: { nh: numero_h } }
+    `SELECT prenom, nom_famille FROM users WHERE numero_h = :nh LIMIT 1`, { replacements: { nh: numero_h } }
   );
-  if (!users.length) return res.status(404).json({ message: 'Utilisateur introuvable sur la plateforme.' });
+  if (!users.length) return res.status(404).json({ success: false, message: 'Utilisateur introuvable sur la plateforme.' });
+  const user = users[0];
+  // L'étudiant relié doit appartenir à CET institut
+  let lsid = null;
+  if (linked_student_id !== undefined && linked_student_id !== null && linked_student_id !== '') {
+    const [eleves] = await sequelize.query(
+      `SELECT id FROM madrasa_students WHERE id = :sid AND tenant_code = :tc LIMIT 1`,
+      { replacements: { sid: parseInt(linked_student_id, 10) || 0, tc } }
+    );
+    if (!eleves.length) return res.status(404).json({ success: false, message: 'Étudiant introuvable dans cet institut.' });
+    lsid = eleves[0].id;
+  }
+  const roleFinal = role || 'apprenant';
+  const nom = [user.prenom, user.nom_famille].filter(Boolean).join(' ');
   try {
-    await sequelize.query(
+    await ensureLiensParentsMadrasa();
+    const [rows] = await sequelize.query(
       `INSERT INTO madrasa_members (tenant_code, numero_h, role, linked_student_id, nom_display, is_active)
        VALUES (:tc, :nh, :role, :lsid, :nom, true)
-       ON CONFLICT (tenant_code, numero_h) DO UPDATE SET role = EXCLUDED.role, is_active = true`,
-      { replacements: { tc, nh: numero_h, role: role || 'apprenant', lsid: linked_student_id || null, nom: users[0].prenom + ' ' + users[0].nom } }
+       ON CONFLICT (tenant_code, numero_h) DO UPDATE SET role = EXCLUDED.role,
+         linked_student_id = COALESCE(EXCLUDED.linked_student_id, madrasa_members.linked_student_id),
+         nom_display = EXCLUDED.nom_display, is_active = true
+       RETURNING *`,
+      { replacements: { tc, nh: numero_h, role: roleFinal, lsid, nom } }
     );
-    res.json({ success: true, message: `${users[0].prenom} ajouté comme ${role}.` });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+    // Un enfant de plus : les liens déjà enregistrés sont conservés
+    if (lsid) {
+      await sequelize.query(
+        `INSERT INTO madrasa_member_students (tenant_code, numero_h, student_id) VALUES (:tc, :nh, :sid)
+         ON CONFLICT (tenant_code, numero_h, student_id) DO NOTHING`,
+        { replacements: { tc, nh: numero_h, sid: lsid } }
+      );
+    }
+    res.json({ success: true, member: rows[0], user: { prenom: user.prenom, nom: user.nom_famille }, message: `${user.prenom} ajouté comme ${roleFinal}.` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-router.delete('/:tenantCode/members/:id', authenticate, verifyTenant, async (req, res) => {
+// Retirer un seul enfant du suivi d'un parent
+router.delete('/:tenantCode/members/:id/students/:studentId', authenticate, verifyTenant, async (req, res) => {
+  const tc = req.params.tenantCode;
+  await ensureLiensParentsMadrasa();
+  const [members] = await sequelize.query(
+    `SELECT numero_h FROM madrasa_members WHERE id = :id AND tenant_code = :tc LIMIT 1`,
+    { replacements: { id: req.params.id, tc } }
+  );
+  if (!members.length) return res.status(404).json({ success: false, message: 'Membre introuvable.' });
   await sequelize.query(
-    `UPDATE madrasa_members SET is_active = false WHERE id = :id AND tenant_code = :tc`,
-    { replacements: { id: req.params.id, tc: req.params.tenantCode } }
+    `DELETE FROM madrasa_member_students WHERE tenant_code = :tc AND numero_h = :nh AND student_id = :sid`,
+    { replacements: { tc, nh: members[0].numero_h, sid: req.params.studentId } }
+  );
+  await sequelize.query(
+    `UPDATE madrasa_members SET linked_student_id = NULL WHERE id = :id AND tenant_code = :tc AND linked_student_id = :sid`,
+    { replacements: { id: req.params.id, tc, sid: req.params.studentId } }
   );
   res.json({ success: true });
 });
 
+router.delete('/:tenantCode/members/:id', authenticate, verifyTenant, async (req, res) => {
+  const tc = req.params.tenantCode;
+  await ensureLiensParentsMadrasa();
+  const [rows] = await sequelize.query(
+    `UPDATE madrasa_members SET is_active = false, linked_student_id = NULL WHERE id = :id AND tenant_code = :tc RETURNING numero_h`,
+    { replacements: { id: req.params.id, tc } }
+  );
+  if (rows.length) {
+    await sequelize.query(
+      `DELETE FROM madrasa_member_students WHERE tenant_code = :tc AND numero_h = :nh`,
+      { replacements: { tc, nh: rows[0].numero_h } }
+    );
+  }
+  res.json({ success: true });
+});
+
 // ── Mon accès (étudiant / parent / enseignant) ─────────────────────────────────
+// Même forme de réponse que l'école (EspaceParentEcole sert aux deux).
+// ?student_id= choisit l'enfant affiché quand le parent en suit plusieurs.
 router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res) => {
   const tc = req.params.tenantCode;
   const userId = req.userId;
   const role = req.memberRole;
+  const t = req.tenant || {};
+  const tenant = { name: t.name, logo_url: t.logo_url, address: t.address, phone: t.phone };
 
   if (role === 'directeur' || role === 'enseignant') {
-    return res.json({ success: true, role, message: 'Accès directeur/enseignant — utilisez le tableau de bord complet.' });
+    return res.json({ success: true, role, tenant, message: 'Accès directeur/enseignant — utilisez le tableau de bord complet.' });
   }
 
-  // Trouver l'étudiant lié
   const [members] = await sequelize.query(
     `SELECT * FROM madrasa_members WHERE tenant_code = :tc AND numero_h = :uid AND is_active = true`,
     { replacements: { tc, uid: userId } }
   );
-  const member = members[0];
-  const studentId = member?.linked_student_id;
+  const member = members[0] || null;
 
-  let grades = [], fees = [], student = null;
+  const children = await elevesLiesMadrasa(tc, userId);
+  const demande = req.query.student_id ? parseInt(req.query.student_id, 10) : null;
+  if (req.query.student_id && !children.some(c => c.id === demande)) {
+    return res.status(403).json({ success: false, message: 'Cet étudiant n\'est pas relié à votre compte.' });
+  }
+  const studentId = demande || children[0]?.id || null;
+
+  let student = null, grades = [], attendance = [], fees = [], bulletins = [];
   if (studentId) {
-    const [gs] = await sequelize.query(
-      `SELECT * FROM madrasa_grades WHERE tenant_code = :tc AND student_id = :sid ORDER BY created_at DESC`,
-      { replacements: { tc, sid: studentId } }
-    );
-    grades = gs;
-    const [fs] = await sequelize.query(
-      `SELECT * FROM madrasa_fees WHERE tenant_code = :tc AND student_id = :sid ORDER BY created_at DESC`,
-      { replacements: { tc, sid: studentId } }
-    );
-    fees = fs;
+    const rep = { replacements: { tc, sid: studentId } };
     const [ss] = await sequelize.query(
-      `SELECT * FROM madrasa_students WHERE id = :sid`, { replacements: { sid: studentId } }
+      `SELECT * FROM madrasa_students WHERE id = :sid AND tenant_code = :tc LIMIT 1`, rep
     );
     student = ss[0] || null;
-  } else if (role === 'apprenant') {
-    const [ss] = await sequelize.query(
-      `SELECT * FROM madrasa_students WHERE tenant_code = :tc AND numero_h = :uid AND is_active = true`,
-      { replacements: { tc, uid: userId } }
+    [grades] = await sequelize.query(
+      `SELECT * FROM madrasa_grades WHERE tenant_code = :tc AND student_id = :sid ORDER BY created_at DESC`, rep
     );
-    if (ss.length) {
-      student = ss[0];
-      const [gs] = await sequelize.query(
-        `SELECT * FROM madrasa_grades WHERE tenant_code = :tc AND student_id = :sid ORDER BY created_at DESC`,
-        { replacements: { tc, sid: student.id } }
-      );
-      grades = gs;
-      const [fs] = await sequelize.query(
-        `SELECT * FROM madrasa_fees WHERE tenant_code = :tc AND student_id = :sid ORDER BY created_at DESC`,
-        { replacements: { tc, sid: student.id } }
-      );
-      fees = fs;
-    }
+    [attendance] = await sequelize.query(
+      `SELECT * FROM madrasa_attendance WHERE tenant_code = :tc AND student_id = :sid ORDER BY date_presence DESC LIMIT 30`, rep
+    );
+    [fees] = await sequelize.query(
+      `SELECT * FROM madrasa_fees WHERE tenant_code = :tc AND student_id = :sid ORDER BY created_at DESC`, rep
+    );
+    [bulletins] = await sequelize.query(
+      `SELECT * FROM madrasa_bulletins WHERE tenant_code = :tc AND student_id = :sid AND is_published = true ORDER BY created_at DESC`, rep
+    );
   }
 
-  res.json({ success: true, role, student, grades, fees, member });
+  res.json({ success: true, role, member, tenant, children, student, grades, attendance, fees, bulletins });
 });
 
 // ── Bulletins de progression ───────────────────────────────────────────────────
@@ -601,10 +708,7 @@ router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async
 
     if (publish) {
       // Notifier membres liés
-      const [linkedMembers] = await sequelize.query(
-        `SELECT numero_h FROM madrasa_members WHERE tenant_code = :tc AND (linked_student_id = :sid OR numero_h = :snh) AND is_active = true`,
-        { replacements: { tc, sid: s.id, snh: s.numero_h || '' } }
-      );
+      const linkedMembers = await membresLiesAEtudiant(tc, s.id, s.numero_h);
       for (const m of linkedMembers) {
         await sequelize.query(
           `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'bulletin', :msg)`,
@@ -627,14 +731,11 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
   const [rows] = await sequelize.query(
     `SELECT b.*, s.prenom, s.nom, s.numero_h AS student_nh
      FROM madrasa_bulletins b JOIN madrasa_students s ON s.id = b.student_id
-     WHERE b.id = :id`, { replacements: { id: req.params.id } }
+     WHERE b.id = :id AND b.tenant_code = :tc`, { replacements: { id: req.params.id, tc } }
   );
   if (rows.length) {
     const b = rows[0];
-    const [linked] = await sequelize.query(
-      `SELECT numero_h FROM madrasa_members WHERE tenant_code = :tc AND (linked_student_id = :sid OR numero_h = :snh) AND is_active = true`,
-      { replacements: { tc, sid: b.student_id, snh: b.student_nh || '' } }
-    );
+    const linked = await membresLiesAEtudiant(tc, b.student_id, b.student_nh);
     for (const m of linked) {
       await sequelize.query(
         `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'bulletin', :msg)`,

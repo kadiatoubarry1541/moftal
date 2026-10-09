@@ -91,12 +91,23 @@ export default function GestionReseau() {
   async function loadCotisations() { const r = await fetch(`${BASE(tenantCode!)}/cotisations`, { headers: auth() }); const d = await r.json(); if (d.success) setCotisations(d.cotisations || []); }
   async function loadAnnonces() { const r = await fetch(`${BASE(tenantCode!)}/announcements`, { headers: auth() }); const d = await r.json(); if (d.success) setAnnonces(d.announcements || []); }
 
+  // Coupure réseau ou réponse illisible : échec affiché, jamais de bouton bloqué.
+  async function envoyerPost(url: string, body: object): Promise<{ success: boolean; message?: string }> {
+    setSaving(true);
+    try {
+      const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+      const d = await r.json().catch(() => null);
+      return d || { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveMembre() {
     if (!mForm.nom) return;
-    setSaving(true);
-    const r = await fetch(`${BASE(tenantCode!)}/members`, { method: "POST", headers: auth(), body: JSON.stringify(mForm) });
-    const d = await r.json();
-    setSaving(false);
+    const d = await envoyerPost(`${BASE(tenantCode!)}/members`, mForm);
     if (d.success) { setShowAddMembre(false); setMForm({ nom: "", prenom: "", telephone: "", email: "", numero_h: "", role: "membre" }); loadMembres(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
@@ -108,10 +119,7 @@ export default function GestionReseau() {
 
   async function saveProjet() {
     if (!pForm.titre) return;
-    setSaving(true);
-    const r = await fetch(`${BASE(tenantCode!)}/projets`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
-    const d = await r.json();
-    setSaving(false);
+    const d = await envoyerPost(`${BASE(tenantCode!)}/projets`, pForm);
     if (d.success) { setShowAddProjet(false); setPForm({ titre: "", description: "", responsable: "", date_debut: "", date_fin: "", statut: "en_cours" }); loadProjets(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
@@ -128,19 +136,13 @@ export default function GestionReseau() {
 
   async function saveCotisation() {
     if (!cForm.montant) return;
-    setSaving(true);
-    const r = await fetch(`${BASE(tenantCode!)}/cotisations`, { method: "POST", headers: auth(), body: JSON.stringify({ ...cForm, montant: +cForm.montant }) });
-    const d = await r.json();
-    setSaving(false);
+    const d = await envoyerPost(`${BASE(tenantCode!)}/cotisations`, { ...cForm, montant: +cForm.montant });
     if (d.success) { setShowAddCot(false); setCForm({ membre_nom: "", montant: "", type_cot: "mensuelle", periode: "" }); loadCotisations(); loadDashboard(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 
   async function saveAnnonce() {
     if (!aForm.titre || !aForm.contenu) return;
-    setSaving(true);
-    const r = await fetch(`${BASE(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(aForm) });
-    const d = await r.json();
-    setSaving(false);
+    const d = await envoyerPost(`${BASE(tenantCode!)}/announcements`, aForm);
     if (d.success) { setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" }); loadAnnonces(); } else alert(d.message || "Erreur : rien n'a été enregistré");
   }
 

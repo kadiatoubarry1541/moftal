@@ -72,7 +72,7 @@ export default function GestionMosquee() {
     if (tab === "members") loadMembers();
     if (tab === "announcements") loadAnnouncements();
     if (tab === "donations") loadDonations();
-    if (tab === "quran") loadQuranStudents();
+    if (tab === "quran") { loadQuranStudents(); loadMembers(); }
     if (tab === "imams") loadImams();
     if (tab === "predications") loadPredications();
     if (tab === "partenaires") loadPartenaires();
@@ -183,10 +183,9 @@ export default function GestionMosquee() {
   async function savePredication() {
     if (!predForm.titre) return;
     setSaving(true);
-    const r = await fetch(`${BASE(tenantCode!)}/predications`, { method: "POST", headers: auth(), body: JSON.stringify(predForm) });
-    const d = await r.json();
+    const ok = await envoyerGestion(`${BASE(tenantCode!)}/predications`, { method: "POST", headers: auth(), body: JSON.stringify(predForm) });
     setSaving(false);
-    if (d.success) { setShowAddPred(false); setPredForm({ titre: "", type: "khutba", sourate: "", contenu: "", date_pred: new Date().toISOString().slice(0, 10) }); loadPredications(); } else alert(d.message || "Erreur : rien n'a été enregistré");
+    if (ok) { setShowAddPred(false); setPredForm({ titre: "", type: "khutba", sourate: "", contenu: "", date_pred: new Date().toISOString().slice(0, 10) }); loadPredications(); }
   }
 
   async function deletePredication(id: number) {
@@ -198,10 +197,9 @@ export default function GestionMosquee() {
   async function savePartenaire() {
     if (!partForm.nom_mosquee) return;
     setSaving(true);
-    const r = await fetch(`${BASE(tenantCode!)}/partenaires`, { method: "POST", headers: auth(), body: JSON.stringify(partForm) });
-    const d = await r.json();
+    const ok = await envoyerGestion(`${BASE(tenantCode!)}/partenaires`, { method: "POST", headers: auth(), body: JSON.stringify(partForm) });
     setSaving(false);
-    if (d.success) { setShowAddPart(false); setPartForm({ nom_mosquee: "", ville: "", imam_nom: "", telephone: "" }); loadPartenaires(); } else alert(d.message || "Erreur : rien n'a été enregistré");
+    if (ok) { setShowAddPart(false); setPartForm({ nom_mosquee: "", ville: "", imam_nom: "", telephone: "" }); loadPartenaires(); }
   }
 
   async function deletePartenaire(id: number) {
@@ -551,8 +549,12 @@ export default function GestionMosquee() {
                   </select>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Enseignant (ID membre)</div>
-                  <input value={qForm.enseignant_id} onChange={e => setQForm(f => ({ ...f, enseignant_id: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#093809", marginBottom: 4 }}>Enseignant</div>
+                  {/* Uniquement un membre de cette mosquée (le serveur refuse tout autre identifiant). */}
+                  <select value={qForm.enseignant_id} onChange={e => setQForm(f => ({ ...f, enseignant_id: e.target.value }))} style={{ width: "100%", border: "1px solid #bbf7bb", borderRadius: 6, padding: "8px 10px", fontSize: 13, outline: "none", boxSizing: "border-box" }}>
+                    <option value="">— Aucun —</option>
+                    {members.map(m => <option key={m.id} value={String(m.id)}>{`${m.prenom ? `${m.prenom} ` : ""}${m.nom}${m.role ? ` · ${m.role}` : ""}`}</option>)}
+                  </select>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>

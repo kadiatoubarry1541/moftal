@@ -40,12 +40,14 @@ async function verifyTenantProprietaire(req, res, next) {
       const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code=:code LIMIT 1`, { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT });
       req.tenant = tenant || { tenant_code: tenantCode, name: 'Commerce Admin', type: 'commerce', owner_numero_h: 'ADMIN-G7', is_active: true };
       req.myRole = 'Propriétaire';
+      req.estProprietaire = true;
       return next();
     }
     const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code=:code AND owner_numero_h=:n LIMIT 1`, { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT });
     if (tenant) {
       req.tenant = tenant;
       req.myRole = 'Propriétaire';
+      req.estProprietaire = true;
       return enforceGestionAccess(req, res, next);
     }
     // Pas le propriétaire : vérifier si connecté en tant que membre du personnel
@@ -60,6 +62,16 @@ async function verifyTenantProprietaire(req, res, next) {
     req.myRole = staffMember.role || 'Caissier';
     return enforceGestionAccess(req, res, next);
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+}
+
+// Rôles du personnel, vérifiés par le serveur (pas seulement par l'écran) :
+// le Caissier vend, encaisse et gère produits et clients, mais ne touche ni aux
+// paramètres, ni au personnel, ni aux dépenses, fournisseurs, achats et avis.
+function pasCaissier(req, res, next) {
+  if (String(req.myRole || '') === 'Caissier') {
+    return res.status(403).json({ success: false, message: "Votre rôle (Caissier) ne permet pas cette action. Demandez au gérant ou au propriétaire." });
+  }
+  next();
 }
 
 // ─── EXTRAS (traçabilité stock, annulation de vente) ───────────────────────────
@@ -78,6 +90,16 @@ export async function ensureCommerceExtras() {
   await sequelize.query(`ALTER TABLE commerce_sales ADD COLUMN IF NOT EXISTS remise DECIMAL(15,0) DEFAULT 0;`);
   await sequelize.query(`ALTER TABLE commerce_products ADD COLUMN IF NOT EXISTS code_barre VARCHAR(100);`);
   await sequelize.query(`ALTER TABLE commerce_products ADD COLUMN IF NOT EXISTS photo_url TEXT;`);
+  // Remboursements de crédit : l'argent encaissé est enregistré (rapport du mois)
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS commerce_credit_payments (
+      id           SERIAL PRIMARY KEY,
+      tenant_code  VARCHAR(50) NOT NULL,
+      client_id    INTEGER NOT NULL,
+      montant      DECIMAL(15,0) NOT NULL DEFAULT 0,
+      created_at   TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
 }
 
 // ─── FOURNISSEURS & ACHATS ──────────────────────────────────────────────────────
@@ -105,12 +127,14 @@ async function ensureSuppliersTables() {
   `);
 }
 
-async function logStockMovement(code, productId, delta, reason) {
+// Avec une transaction, une erreur fait tout annuler (rien de perdu en silence).
+async function logStockMovement(code, productId, delta, reason, transaction) {
   if (!delta) return;
-  await sequelize.query(
+  const q = sequelize.query(
     `INSERT INTO commerce_stock_movements (tenant_code, product_id, delta, reason) VALUES (:code,:pid,:delta,:reason)`,
-    { replacements: { code, pid: productId, delta, reason } }
-  ).catch(() => {});
+    { replacements: { code, pid: productId, delta, reason }, transaction }
+  );
+  if (transaction) await q; else await q.catch(() => {});
 }
 
 // ─── INFO ─────────────────────────────────────────────────────────────────────
@@ -127,10 +151,13 @@ router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =>
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
+router.post('/:tenantCode/staff', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     await ensureStaffTable();
     const { nom, telephone, role, numero_h, photo_url } = req.body;
+    if (['Propriétaire', 'Gérant'].includes(role) && !req.estProprietaire) {
+      return res.status(403).json({ success: false, message: 'Seul le propriétaire peut nommer un gérant ou un propriétaire.' });
+    }
     const [rows] = await sequelize.query(
       `INSERT INTO commerce_staff (tenant_code,nom,telephone,role,numero_h,photo_url) VALUES(:code,:nom,:tel,:role,:nh,:photo) RETURNING *`,
       { replacements: { code: req.params.tenantCode, nom, tel: telephone || null, role: role || 'Caissier', nh: numero_h || null, photo: photo_url || null }, type: sequelize.QueryTypes.INSERT }
@@ -139,9 +166,12 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
+router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     const { nom, telephone, role, numero_h, photo_url } = req.body;
+    if (['Propriétaire', 'Gérant'].includes(role) && !req.estProprietaire) {
+      return res.status(403).json({ success: false, message: 'Seul le propriétaire peut nommer un gérant ou un propriétaire.' });
+    }
     await sequelize.query(
       `UPDATE commerce_staff SET nom=:nom,telephone=:tel,role=:role,numero_h=:nh,photo_url=:photo WHERE id=:id AND tenant_code=:code`,
       { replacements: { nom, tel: telephone || null, role: role || 'Caissier', nh: numero_h || null, photo: photo_url || null, id: req.params.id, code: req.params.tenantCode } }
@@ -150,7 +180,7 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
+router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     await sequelize.query(`UPDATE commerce_staff SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
@@ -180,7 +210,7 @@ router.get('/:tenantCode/reviews', authenticate, verifyTenant, async (req, res) 
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, res) => {
+router.put('/:tenantCode/reviews/:id', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     const { statut } = req.body;
     await sequelize.query(`UPDATE commerce_reviews SET statut=:statut WHERE id=:id AND tenant_code=:code`, { replacements: { statut, id: req.params.id, code: req.params.tenantCode } });
@@ -188,7 +218,7 @@ router.put('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, r
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req, res) => {
+router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     await sequelize.query(`DELETE FROM commerce_reviews WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
@@ -196,7 +226,7 @@ router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req
 });
 
 // ─── PARAMÈTRES (nom, logo, contact, horaires, urgence) ────────────────────────
-router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res) => {
+router.put('/:tenantCode/settings', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     await ensureTenantExtraColumns();
     const { name, logo_url, address, phone, email, description, horaires, phone_urgence } = req.body;
@@ -230,7 +260,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM commerce_products WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM commerce_products WHERE tenant_code=:code AND is_active=true AND stock<=stock_min`, { code }),
       q(`SELECT COUNT(*) as c, COALESCE(SUM(total),0) as t FROM commerce_sales WHERE tenant_code=:code AND DATE(date_vente)=CURRENT_DATE AND annulee IS NOT TRUE`, { code }),
-      q(`SELECT COALESCE(SUM(total),0) as t FROM commerce_sales WHERE tenant_code=:code AND EXTRACT(MONTH FROM date_vente)=EXTRACT(MONTH FROM CURRENT_DATE) AND annulee IS NOT TRUE`, { code }),
+      q(`SELECT COALESCE(SUM(total),0) as t FROM commerce_sales WHERE tenant_code=:code AND date_vente >= date_trunc('month', CURRENT_DATE) AND date_vente < date_trunc('month', CURRENT_DATE) + interval '1 month' AND annulee IS NOT TRUE`, { code }),
       q(`SELECT COALESCE(SUM(credit_total),0) as t FROM commerce_clients WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM commerce_clients WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COALESCE(SUM(montant),0) as t FROM commerce_expenses WHERE tenant_code=:code AND DATE(date_depense)=CURRENT_DATE`, { code }),
@@ -367,37 +397,40 @@ router.post('/:tenantCode/sales', authenticate, verifyTenant, async (req, res) =
     const total = Math.max(0, brut - (+remise || 0));
     // Argent reçu : ce qui est saisi ; sinon tout (vente comptant) ou rien (crédit)
     const recu = montant_recu !== undefined && montant_recu !== null && montant_recu !== '' ? Math.max(0, +montant_recu || 0) : (est_credit ? 0 : total);
-    const [rows] = await sequelize.query(
-      `INSERT INTO commerce_sales (tenant_code,client_nom,total,montant_recu,type_paiement,est_credit,notes,items,remise) VALUES(:code,:nom,:total,:recu,:type,:credit,:notes,:items::jsonb,:remise) RETURNING *`,
-      { replacements: { code, nom: String(client_nom || '').trim() || 'Client', total, recu, type: type_paiement || 'especes', credit: !!est_credit, notes: notes || null, items: JSON.stringify(items || []), remise: remise || 0 }, type: sequelize.QueryTypes.INSERT }
-    );
-    // Déduire le stock pour chaque produit
-    for (const item of items || []) {
-      if (item.product_id) {
-        await sequelize.query(
-          `UPDATE commerce_products SET stock=GREATEST(0,stock-:qty) WHERE id=:id AND tenant_code=:code`,
-          { replacements: { qty: item.quantite || 1, id: item.product_id, code } }
-        ).catch(() => {});
-        await logStockMovement(code, item.product_id, -(item.quantite || 1), 'vente');
-      }
-    }
-    // Mettre à jour le crédit client si vente à crédit
-    // Vente à crédit : la dette (total - reçu) s'ajoute à la fiche du client,
-    // créée une seule fois (avant : une nouvelle fiche à chaque vente)
-    if (est_credit) {
-      const nomClient = String(client_nom).trim();
-      const dette = Math.max(0, total - recu);
-      const [existant] = await sequelize.query(
-        `SELECT id FROM commerce_clients WHERE tenant_code=:code AND LOWER(TRIM(nom))=LOWER(:nom) ORDER BY id LIMIT 1`,
-        { replacements: { code, nom: nomClient }, type: sequelize.QueryTypes.SELECT }
+    // Vente, stock et crédit client : tout est enregistré ensemble, ou rien
+    const sale = await sequelize.transaction(async (t) => {
+      const [rows] = await sequelize.query(
+        `INSERT INTO commerce_sales (tenant_code,client_nom,total,montant_recu,type_paiement,est_credit,notes,items,remise) VALUES(:code,:nom,:total,:recu,:type,:credit,:notes,:items::jsonb,:remise) RETURNING *`,
+        { replacements: { code, nom: String(client_nom || '').trim() || 'Client', total, recu, type: type_paiement || 'especes', credit: !!est_credit, notes: notes || null, items: JSON.stringify(items || []), remise: remise || 0 }, type: sequelize.QueryTypes.INSERT, transaction: t }
       );
-      if (existant) {
-        await sequelize.query(`UPDATE commerce_clients SET credit_total=COALESCE(credit_total,0)+:dette WHERE id=:id`, { replacements: { dette, id: existant.id } });
-      } else {
-        await sequelize.query(`INSERT INTO commerce_clients (tenant_code,nom,credit_total) VALUES(:code,:nom,:dette)`, { replacements: { code, nom: nomClient, dette } });
+      // Déduire le stock pour chaque produit
+      for (const item of items) {
+        if (item.product_id) {
+          await sequelize.query(
+            `UPDATE commerce_products SET stock=GREATEST(0,stock-:qty) WHERE id=:id AND tenant_code=:code`,
+            { replacements: { qty: item.quantite || 1, id: item.product_id, code }, transaction: t }
+          );
+          await logStockMovement(code, item.product_id, -(item.quantite || 1), 'vente', t);
+        }
       }
-    }
-    res.json({ success: true, sale: rows[0] });
+      // Vente à crédit : la dette (total - reçu) s'ajoute à la fiche du client,
+      // créée une seule fois (avant : une nouvelle fiche à chaque vente)
+      if (est_credit) {
+        const nomClient = String(client_nom).trim();
+        const dette = Math.max(0, total - recu);
+        const [existant] = await sequelize.query(
+          `SELECT id FROM commerce_clients WHERE tenant_code=:code AND LOWER(TRIM(nom))=LOWER(:nom) ORDER BY id LIMIT 1`,
+          { replacements: { code, nom: nomClient }, type: sequelize.QueryTypes.SELECT, transaction: t }
+        );
+        if (existant) {
+          await sequelize.query(`UPDATE commerce_clients SET credit_total=COALESCE(credit_total,0)+:dette WHERE id=:id`, { replacements: { dette, id: existant.id }, transaction: t });
+        } else {
+          await sequelize.query(`INSERT INTO commerce_clients (tenant_code,nom,credit_total) VALUES(:code,:nom,:dette)`, { replacements: { code, nom: nomClient, dette }, transaction: t });
+        }
+      }
+      return rows[0];
+    });
+    res.json({ success: true, sale });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -405,28 +438,40 @@ router.delete('/:tenantCode/sales/:id', authenticate, verifyTenant, async (req, 
   try {
     await ensureCommerceExtras();
     const code = req.params.tenantCode;
-    const [sale] = await sequelize.query(`SELECT * FROM commerce_sales WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
-    if (!sale) return res.status(404).json({ success: false, message: 'Vente introuvable.' });
-    if (sale.annulee) return res.status(400).json({ success: false, message: 'Cette vente est déjà annulée.' });
-    const items = sale.items || [];
-    for (const item of items) {
-      if (item.product_id) {
-        await sequelize.query(
-          `UPDATE commerce_products SET stock=stock+:qty WHERE id=:id AND tenant_code=:code`,
-          { replacements: { qty: item.quantite || 1, id: item.product_id, code } }
-        ).catch(() => {});
-        await logStockMovement(code, item.product_id, +(item.quantite || 1), 'annulation_vente');
-      }
-    }
-    if (sale.est_credit && sale.client_nom) {
-      const creditPart = (+sale.total || 0) - (+sale.montant_recu || 0);
-      await sequelize.query(
-        `UPDATE commerce_clients SET credit_total=GREATEST(0,credit_total-:m)
-         WHERE id=(SELECT id FROM commerce_clients WHERE tenant_code=:code AND LOWER(TRIM(nom))=LOWER(TRIM(:nom)) ORDER BY id LIMIT 1)`,
-        { replacements: { m: creditPart, code, nom: sale.client_nom } }
+    // On marque d'abord la vente annulée : seule la requête qui réussit ce
+    // passage remet le stock et le crédit (un double clic ne compte pas deux fois).
+    const resultat = await sequelize.transaction(async (t) => {
+      const [annulees] = await sequelize.query(
+        `UPDATE commerce_sales SET annulee=true WHERE id=:id AND tenant_code=:code AND annulee IS NOT TRUE RETURNING *`,
+        { replacements: { id: req.params.id, code }, transaction: t }
       );
-    }
-    await sequelize.query(`UPDATE commerce_sales SET annulee=true WHERE id=:id`, { replacements: { id: req.params.id } });
+      const sale = annulees?.[0];
+      if (!sale) {
+        const [existe] = await sequelize.query(`SELECT id FROM commerce_sales WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT, transaction: t });
+        return existe ? 'deja' : 'introuvable';
+      }
+      const items = Array.isArray(sale.items) ? sale.items : [];
+      for (const item of items) {
+        if (item.product_id) {
+          await sequelize.query(
+            `UPDATE commerce_products SET stock=stock+:qty WHERE id=:id AND tenant_code=:code`,
+            { replacements: { qty: item.quantite || 1, id: item.product_id, code }, transaction: t }
+          );
+          await logStockMovement(code, item.product_id, +(item.quantite || 1), 'annulation_vente', t);
+        }
+      }
+      if (sale.est_credit && sale.client_nom) {
+        const creditPart = Math.max(0, (+sale.total || 0) - (+sale.montant_recu || 0));
+        await sequelize.query(
+          `UPDATE commerce_clients SET credit_total=GREATEST(0,credit_total-:m)
+           WHERE id=(SELECT id FROM commerce_clients WHERE tenant_code=:code AND LOWER(TRIM(nom))=LOWER(TRIM(:nom)) ORDER BY id LIMIT 1)`,
+          { replacements: { m: creditPart, code, nom: sale.client_nom }, transaction: t }
+        );
+      }
+      return 'ok';
+    });
+    if (resultat === 'introuvable') return res.status(404).json({ success: false, message: 'Vente introuvable.' });
+    if (resultat === 'deja') return res.status(400).json({ success: false, message: 'Cette vente est déjà annulée.' });
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -472,12 +517,31 @@ router.delete('/:tenantCode/clients/:id', authenticate, verifyTenant, async (req
 
 router.put('/:tenantCode/clients/:id/pay-credit', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { montant } = req.body;
-    await sequelize.query(
-      `UPDATE commerce_clients SET credit_total=GREATEST(0,credit_total-:m) WHERE id=:id AND tenant_code=:code`,
-      { replacements: { m: montant || 0, id: req.params.id, code: req.params.tenantCode } }
-    );
-    res.json({ success: true });
+    await ensureCommerceExtras();
+    const montant = Math.round(+req.body?.montant || 0);
+    if (!(montant > 0)) return res.status(400).json({ success: false, message: 'Le montant encaissé doit être supérieur à 0.' });
+    const code = req.params.tenantCode;
+    // Baisse du crédit et enregistrement de l'argent reçu : ensemble, ou rien
+    const resultat = await sequelize.transaction(async (t) => {
+      const [client] = await sequelize.query(
+        `SELECT id, credit_total FROM commerce_clients WHERE id=:id AND tenant_code=:code FOR UPDATE`,
+        { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT, transaction: t }
+      );
+      if (!client) return { erreur: 404, message: 'Client introuvable.' };
+      const encaisse = Math.min(montant, Math.max(0, +client.credit_total || 0));
+      if (!(encaisse > 0)) return { erreur: 400, message: "Ce client n'a pas de crédit à rembourser." };
+      await sequelize.query(
+        `UPDATE commerce_clients SET credit_total=GREATEST(0,credit_total-:m) WHERE id=:id AND tenant_code=:code`,
+        { replacements: { m: encaisse, id: client.id, code }, transaction: t }
+      );
+      await sequelize.query(
+        `INSERT INTO commerce_credit_payments (tenant_code, client_id, montant) VALUES (:code,:cid,:m)`,
+        { replacements: { code, cid: client.id, m: encaisse }, transaction: t }
+      );
+      return { encaisse };
+    });
+    if (resultat.erreur) return res.status(resultat.erreur).json({ success: false, message: resultat.message });
+    res.json({ success: true, montant: resultat.encaisse });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -492,7 +556,7 @@ router.get('/:tenantCode/expenses', authenticate, verifyTenant, async (req, res)
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.post('/:tenantCode/expenses', authenticate, verifyTenant, async (req, res) => {
+router.post('/:tenantCode/expenses', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     const { description, montant, categorie } = req.body;
     const [rows] = await sequelize.query(
@@ -503,7 +567,7 @@ router.post('/:tenantCode/expenses', authenticate, verifyTenant, async (req, res
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/:tenantCode/expenses/:id', authenticate, verifyTenant, async (req, res) => {
+router.put('/:tenantCode/expenses/:id', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     const { description, montant, categorie } = req.body;
     await sequelize.query(
@@ -514,7 +578,7 @@ router.put('/:tenantCode/expenses/:id', authenticate, verifyTenant, async (req, 
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.delete('/:tenantCode/expenses/:id', authenticate, verifyTenant, async (req, res) => {
+router.delete('/:tenantCode/expenses/:id', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     await sequelize.query(`DELETE FROM commerce_expenses WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
@@ -530,7 +594,7 @@ router.get('/:tenantCode/suppliers', authenticate, verifyTenant, async (req, res
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.post('/:tenantCode/suppliers', authenticate, verifyTenant, async (req, res) => {
+router.post('/:tenantCode/suppliers', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     await ensureSuppliersTables();
     const { nom, telephone, adresse } = req.body;
@@ -542,7 +606,7 @@ router.post('/:tenantCode/suppliers', authenticate, verifyTenant, async (req, re
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.delete('/:tenantCode/suppliers/:id', authenticate, verifyTenant, async (req, res) => {
+router.delete('/:tenantCode/suppliers/:id', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     await sequelize.query(`UPDATE commerce_suppliers SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
@@ -564,7 +628,7 @@ router.get('/:tenantCode/purchases', authenticate, verifyTenant, async (req, res
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.post('/:tenantCode/purchases', authenticate, verifyTenant, async (req, res) => {
+router.post('/:tenantCode/purchases', authenticate, verifyTenant, pasCaissier, async (req, res) => {
   try {
     await ensureSuppliersTables();
     await ensureCommerceExtras();
@@ -585,7 +649,10 @@ router.post('/:tenantCode/purchases', authenticate, verifyTenant, async (req, re
 
 // ── Rapport du mois (recettes, dépenses, bénéfice) ──
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
-  recettes: [{ label: 'Ventes encaissées', table: 'commerce_sales', montant: 'montant_recu', date: 'date_vente' }],
+  recettes: [
+    { label: 'Ventes encaissées', table: 'commerce_sales', montant: 'montant_recu', date: 'date_vente', where: 'annulee IS NOT TRUE' },
+    { label: 'Crédits remboursés', table: 'commerce_credit_payments', montant: 'montant', date: 'created_at' },
+  ],
   depenses: [
     { label: 'Dépenses', table: 'commerce_expenses', montant: 'montant', date: 'date_depense' },
     { label: 'Achats fournisseurs', table: 'commerce_purchases', montant: 'total', date: 'created_at' },

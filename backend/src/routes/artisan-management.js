@@ -55,7 +55,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM artisan_interventions WHERE tenant_code=:code AND statut='en_cours'`, { code }),
       q(`SELECT COUNT(*) as c FROM artisan_interventions WHERE tenant_code=:code AND statut='terminee' AND DATE(date_fin)=CURRENT_DATE`, { code }),
       q(`SELECT COUNT(*) as c FROM artisan_clients WHERE tenant_code=:code AND is_active=true`, { code }),
-      q(`SELECT COALESCE(SUM(cout_reel),0) as t FROM artisan_interventions WHERE tenant_code=:code AND statut='terminee' AND EXTRACT(MONTH FROM date_fin)=EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM date_fin)=EXTRACT(YEAR FROM CURRENT_DATE)`, { code }),
+      q(`SELECT COALESCE(SUM(COALESCE(NULLIF(cout_reel,0),cout_estime,0)),0) as t FROM artisan_interventions WHERE tenant_code=:code AND statut='terminee' AND EXTRACT(MONTH FROM date_fin)=EXTRACT(MONTH FROM CURRENT_DATE) AND EXTRACT(YEAR FROM date_fin)=EXTRACT(YEAR FROM CURRENT_DATE)`, { code }),
       sequelize.query(`SELECT ai.*, ac.nom as client_nom, ase.nom as service_nom FROM artisan_interventions ai LEFT JOIN artisan_clients ac ON ai.client_id=ac.id LEFT JOIN artisan_services ase ON ai.service_id=ase.id WHERE ai.tenant_code=:code ORDER BY ai.date_debut DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);
     res.json({ success: true, totalServices: +(services.c||0), interventionsEnCours: +(interventions.c||0), enCours: +(enCours.c||0), terminéesAujourdhui: +(terminees.c||0), totalClients: +(clients.c||0), caCeMois: +(caTotal.t||0), recentInterventions: recent });
@@ -141,7 +141,7 @@ router.post('/:tenantCode/clients', authenticate, verifyTenant, async (req, res)
     const { nom, telephone, adresse, email } = req.body;
     if (!nom) return res.status(400).json({ success: false, message: 'Nom requis.' });
     const [row] = await sequelize.query(
-      `INSERT INTO artisan_clients (tenant_code,nom,telephone,adresse,email) VALUES (:code,:nom,:tel,:adr,:email) ON CONFLICT (tenant_code,nom) DO UPDATE SET telephone=EXCLUDED.telephone,is_active=true RETURNING *`,
+      `INSERT INTO artisan_clients (tenant_code,nom,telephone,adresse,email) VALUES (:code,:nom,:tel,:adr,:email) ON CONFLICT (tenant_code,nom) DO UPDATE SET telephone=COALESCE(NULLIF(EXCLUDED.telephone,''),artisan_clients.telephone),adresse=COALESCE(NULLIF(EXCLUDED.adresse,''),artisan_clients.adresse),email=COALESCE(NULLIF(EXCLUDED.email,''),artisan_clients.email),is_active=true RETURNING *`,
       { replacements: { code: req.params.tenantCode, nom, tel:telephone||'', adr:adresse||'', email:email||'' }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, client: row });
@@ -178,7 +178,7 @@ router.delete('/:tenantCode/announcements/:id', authenticate, verifyTenant, asyn
 
 // ── Rapport du mois (recettes, dépenses, bénéfice) ──
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
-  recettes: [{ label: 'Interventions terminées', table: 'artisan_interventions', montant: 'COALESCE(cout_reel, cout_estime)', date: 'COALESCE(date_fin, created_at)', where: "statut = 'terminee'" }],
+  recettes: [{ label: 'Interventions terminées', table: 'artisan_interventions', montant: 'COALESCE(NULLIF(cout_reel, 0), cout_estime, 0)', date: 'COALESCE(date_fin, created_at)', where: "statut = 'terminee'" }],
 });
 
 // ── Accès des employés (géré par le propriétaire uniquement) ──
