@@ -862,3 +862,8 @@ table {
     gap: 0.75rem !important;
   }
 }
+
+/* Hauteur de la partie visible de l'écran. Sur téléphone, 100vh dépasse
+   (barres du navigateur) : le bas des menus de gestion (« Voir la vitrine »,
+   « Retour sur Moftal ») passait sous le bord de l'écran. */
+.hauteur-ecran { height: 100vh; height: 100dvh; }

@@ -603,7 +603,7 @@ export default function GestionEnseignement({ mode }: Props) {
   ) : null;
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#f8fafc" }}>
+    <div className="hauteur-ecran" style={{ display: "flex", overflow: "hidden", background: "#f8fafc" }}>
       <DynamicAppManifest
         name={tenant?.name || "Gestion"}
         description={`Gestion ${isMadrasa ? "madrasa" : "école"} — ${tenant?.name || ""}`}
@@ -625,7 +625,7 @@ export default function GestionEnseignement({ mode }: Props) {
       )}
 
       {/* ── SIDEBAR ── */}
-      <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 244, flexShrink: 0, transition: "width 0.25s ease", background: V.gradient, borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, left: 0, height: "100vh", zIndex: 50 } : {}) }}>
+      <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 244, flexShrink: 0, transition: "width 0.25s ease", background: V.gradient, borderRight: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, bottom: 0, left: 0, zIndex: 50, paddingBottom: "env(safe-area-inset-bottom, 0px)" } : {}) }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
           <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback={V.emoji} size={36} style={{ background: "rgba(255,255,255,0.15)" }} />
           {!collapsed && (
