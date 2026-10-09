@@ -6,7 +6,7 @@ import { getPhotoUrl } from "../../utils/auth";
 // enseignants) et bibliothèque de livres PDF réservée aux membres de l'école.
 
 const jeton = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}` });
-const api = (code: string, chemin: string) => `${config.API_BASE_URL}/school-mgmt/${encodeURIComponent(code)}${chemin}`;
+const api = (apiName: string, code: string, chemin: string) => `${config.API_BASE_URL}/${apiName}/${encodeURIComponent(code)}${chemin}`;
 
 export const heure = (d?: string | null) =>
   d ? new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Conakry" }) : "—";
@@ -33,7 +33,7 @@ interface Pointage {
   prevu_debut?: string | null; prevu_fin?: string | null; debut: string; fin?: string | null;
 }
 
-export function PointageCours({ tenantCode, couleur }: { tenantCode: string; couleur: string }) {
+export function PointageCours({ tenantCode, apiName = "school-mgmt", couleur }: { tenantCode: string; apiName?: string; couleur: string }) {
   const [jour, setJour] = useState(aujourdhui);
   const [liste, setListe] = useState<Pointage[]>([]);
   const [erreur, setErreur] = useState("");
@@ -41,12 +41,12 @@ export function PointageCours({ tenantCode, couleur }: { tenantCode: string; cou
 
   const charger = useCallback(() => {
     setChargement(true);
-    fetch(api(tenantCode, `/pointages?jour=${jour}`), { headers: jeton() })
+    fetch(api(apiName, tenantCode, `/pointages?jour=${jour}`), { headers: jeton() })
       .then((r) => r.json())
       .then((d) => { if (d.success) { setListe(d.pointages); setErreur(""); } else setErreur(d.message || "Erreur"); })
       .catch(() => setErreur("Erreur de connexion."))
       .finally(() => setChargement(false));
-  }, [tenantCode, jour]);
+  }, [apiName, tenantCode, jour]);
 
   useEffect(() => { charger(); }, [charger]);
   // Les cours en cours avancent : on rafraîchit chaque minute
@@ -124,7 +124,7 @@ export function CarteLivre({ livre, couleur, onSupprimer }: { livre: Livre; coul
   );
 }
 
-export function BibliothequeGestion({ tenantCode, couleur }: { tenantCode: string; couleur: string }) {
+export function BibliothequeGestion({ tenantCode, apiName = "school-mgmt", couleur }: { tenantCode: string; apiName?: string; couleur: string }) {
   const [livres, setLivres] = useState<Livre[]>([]);
   const [titre, setTitre] = useState("");
   const [auteur, setAuteur] = useState("");
@@ -134,9 +134,9 @@ export function BibliothequeGestion({ tenantCode, couleur }: { tenantCode: strin
   const [message, setMessage] = useState<{ ok: boolean; texte: string } | null>(null);
 
   const charger = useCallback(() => {
-    fetch(api(tenantCode, "/bibliotheque"), { headers: jeton() })
+    fetch(api(apiName, tenantCode, "/bibliotheque"), { headers: jeton() })
       .then((r) => r.json()).then((d) => d.success && setLivres(d.livres)).catch(() => {});
-  }, [tenantCode]);
+  }, [apiName, tenantCode]);
   useEffect(() => { charger(); }, [charger]);
 
   const ajouter = async () => {
@@ -145,7 +145,7 @@ export function BibliothequeGestion({ tenantCode, couleur }: { tenantCode: strin
     try {
       const fd = new FormData();
       fd.append("titre", titre.trim()); fd.append("auteur", auteur.trim()); fd.append("niveau", niveau.trim()); fd.append("fichier", fichier);
-      const r = await fetch(api(tenantCode, "/bibliotheque"), { method: "POST", headers: jeton(), body: fd });
+      const r = await fetch(api(apiName, tenantCode, "/bibliotheque"), { method: "POST", headers: jeton(), body: fd });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) throw new Error(d.message || "Le livre n'a pas pu être enregistré.");
       setTitre(""); setAuteur(""); setNiveau(""); setFichier(null);
@@ -158,7 +158,7 @@ export function BibliothequeGestion({ tenantCode, couleur }: { tenantCode: strin
 
   const supprimer = async (l: Livre) => {
     if (!window.confirm(`Retirer « ${l.titre} » de la bibliothèque ?`)) return;
-    const r = await fetch(api(tenantCode, `/bibliotheque/${l.id}`), { method: "DELETE", headers: jeton() });
+    const r = await fetch(api(apiName, tenantCode, `/bibliotheque/${l.id}`), { method: "DELETE", headers: jeton() });
     const d = await r.json().catch(() => ({}));
     if (d.success) charger(); else alert(d.message || "Erreur");
   };
@@ -167,7 +167,7 @@ export function BibliothequeGestion({ tenantCode, couleur }: { tenantCode: strin
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm text-slate-600">Les livres PDF de l'école. Seuls les membres de l'école (enseignants, élèves, parents) peuvent les lire.</p>
+        <p className="text-sm text-slate-600">Les livres PDF de l'établissement. Seuls ses membres (enseignants, élèves, parents) peuvent les lire.</p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-100 p-4 space-y-2">

@@ -8,7 +8,6 @@ import { heure, duree } from "../components/ecole/CoursEtBibliotheque";
 // L'heure enregistrée est celle du serveur ; le directeur la voit dans
 // « Pointage des cours » de la gestion de l'école.
 
-const VERT = "#1a8f1a";
 const jeton = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
 interface Creneau { heure_debut?: string; heure_fin?: string; matiere?: string }
@@ -20,14 +19,17 @@ interface Donnees {
   jour: string; classes: Classe[]; pointages: Pointage[]; enCours: Pointage | null;
 }
 
-export default function EspaceEnseignantEcole() {
+export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "school" | "madrasa" }) {
+  const madrasa = mode === "madrasa";
+  const VERT = madrasa ? "#0891b2" : "#1a8f1a";
+  const prefixe = madrasa ? "madrasa" : "ecole";
   const { tenantCode = "" } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const [d, setD] = useState<Donnees | null>(null);
   const [erreur, setErreur] = useState("");
   const [occupe, setOccupe] = useState(false);
   const [, setTic] = useState(0);
-  const base = `${config.API_BASE_URL}/school-mgmt/${encodeURIComponent(tenantCode)}`;
+  const base = `${config.API_BASE_URL}/${madrasa ? "madrasa-mgmt" : "school-mgmt"}/${encodeURIComponent(tenantCode)}`;
 
   const charger = useCallback(() => {
     fetch(`${base}/enseignant/mes-cours`, { headers: jeton() })
@@ -37,7 +39,7 @@ export default function EspaceEnseignantEcole() {
   }, [base]);
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: `/ecole/${tenantCode}/enseignant` } }); return; }
+    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: `/${prefixe}/${tenantCode}/enseignant` } }); return; }
     charger();
   }, [charger, navigate, tenantCode]);
 
@@ -73,12 +75,12 @@ export default function EspaceEnseignantEcole() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
         <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="w-12 h-12 flex-shrink-0"><LogoEtablissement src={d.ecole.logo_url} name={d.ecole.nom} type="school" fontSize={18} /></div>
+          <div className="w-12 h-12 flex-shrink-0"><LogoEtablissement src={d.ecole.logo_url} name={d.ecole.nom} type={mode} fontSize={18} /></div>
           <div className="min-w-0 flex-1">
             <p className="font-bold text-slate-900 truncate">{d.ecole.nom}</p>
             <p className="text-xs text-slate-500">{d.enseignant.prenom} {d.enseignant.nom} · {d.jour}</p>
           </div>
-          <button onClick={() => navigate(`/ecole/${tenantCode}/bibliotheque`)} className="px-3 py-2 rounded-lg text-xs font-bold text-white" style={{ background: VERT }}>
+          <button onClick={() => navigate(`/${prefixe}/${tenantCode}/bibliotheque`)} className="px-3 py-2 rounded-lg text-xs font-bold text-white" style={{ background: VERT }}>
             📚 Bibliothèque
           </button>
         </div>

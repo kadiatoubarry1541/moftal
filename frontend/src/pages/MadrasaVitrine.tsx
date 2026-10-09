@@ -214,7 +214,13 @@ export default function MadrasaVitrine() {
               <div style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 12, padding: "16px 32px", fontSize: 14, color: "white", fontWeight: 600 }}>
                 ✅ Vous êtes connecté — présentez-vous à la madrasa avec votre numéro Moftal.
               </div>
-            ) : (
+            ) : null}
+            {isLoggedIn && (
+              <button onClick={() => navigate(`/madrasa/${tenantCode}/enseignant`)} style={{ background: "white", color: TEAL_DARK, border: "none", borderRadius: 12, padding: "14px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+                🧑‍🏫 Espace Enseignant
+              </button>
+            )}
+            {isLoggedIn ? null : (
               <>
                 <button onClick={() => navigate("/login-membre")} style={{ background: "white", color: TEAL_DARK, border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
                   Se connecter

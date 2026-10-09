@@ -24,8 +24,7 @@ let tablesPretes = null;
 function preparerTables() {
   if (!tablesPretes) {
     tablesPretes = sequelize.query(`
-      ALTER TABLE school_classrooms ADD COLUMN IF NOT EXISTS emploi_du_temps JSONB DEFAULT '[]';
-      CREATE TABLE IF NOT EXISTS school_cours_pointages (
+      CREATE TABLE IF NOT EXISTS ecole_cours_pointages (
         id            SERIAL PRIMARY KEY,
         tenant_code   VARCHAR(50)  NOT NULL,
         staff_id      INTEGER      NOT NULL,
@@ -38,8 +37,8 @@ function preparerTables() {
         debut         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
         fin           TIMESTAMPTZ
       );
-      CREATE INDEX IF NOT EXISTS idx_cours_pointages_jour ON school_cours_pointages (tenant_code, jour);
-      CREATE TABLE IF NOT EXISTS school_bibliotheque (
+      CREATE INDEX IF NOT EXISTS idx_ecole_cours_pointages_jour ON ecole_cours_pointages (tenant_code, jour);
+      CREATE TABLE IF NOT EXISTS ecole_bibliotheque (
         id          SERIAL PRIMARY KEY,
         tenant_code VARCHAR(50)  NOT NULL,
         titre       VARCHAR(255) NOT NULL,
@@ -50,7 +49,7 @@ function preparerTables() {
         ajoute_par  VARCHAR(100),
         created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
       );
-      CREATE INDEX IF NOT EXISTS idx_school_bibliotheque_tenant ON school_bibliotheque (tenant_code);
+      CREATE INDEX IF NOT EXISTS idx_ecole_bibliotheque_tenant ON ecole_bibliotheque (tenant_code);
     `).catch((e) => { tablesPretes = null; throw e; });
   }
   return tablesPretes;
@@ -87,82 +86,96 @@ async function tenantDe(code) {
   return t || null;
 }
 
-/** L'utilisateur connecté est-il un enseignant (fiche du personnel) de cette école ? */
-async function verifyEnseignant(req, res, next) {
-  try {
-    await preparerTables();
-    const tenant = await tenantDe(req.params.tenantCode);
-    if (!tenant) return res.status(404).json({ success: false, message: 'École introuvable.' });
-    const [staff] = await sequelize.query(
-      `SELECT * FROM school_staff WHERE tenant_code = :code AND is_active = true AND ${memeNumeroH} LIMIT 1`,
-      { replacements: { code: tenant.tenant_code, nh: String(req.userId || '') }, type: Q.SELECT }
+
+
+
+/**
+ * T : tables du secteur — école (school_*) ou madrasa (madrasa_*).
+ *   staff, groupes (classes / halaqas), principal (enseignant principal du
+ *   groupe), membres, eleves, staffActif (filtre des fiches actives).
+ */
+export const TABLES_ECOLE = { staff: 'school_staff', groupes: 'school_classrooms', principal: 'professeur_principal_id', membres: 'school_members', eleves: 'school_students', staffActif: 'AND is_active = true' };
+export const TABLES_MADRASA = { staff: 'madrasa_staff', groupes: 'madrasa_halaqas', principal: 'enseignant_id', membres: 'madrasa_members', eleves: 'madrasa_students', staffActif: '' };
+
+export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant, T = TABLES_ECOLE) {
+  // Emploi du temps de chaque classe / halaqa (créneaux avec leur enseignant)
+  let edtPret = null;
+  const preparerEdt = () => (edtPret ||= sequelize.query(`ALTER TABLE ${T.groupes} ADD COLUMN IF NOT EXISTS emploi_du_temps JSONB DEFAULT '[]'`).catch((e) => { edtPret = null; throw e; }));
+
+  /** L'utilisateur connecté est-il un enseignant (fiche du personnel) de cette école ? */
+  async function verifyEnseignant(req, res, next) {
+    try {
+      await preparerTables();
+      const tenant = await tenantDe(req.params.tenantCode);
+      if (!tenant) return res.status(404).json({ success: false, message: 'Établissement introuvable.' });
+      const [staff] = await sequelize.query(
+        `SELECT * FROM ${T.staff} WHERE tenant_code = :code ${T.staffActif} AND ${memeNumeroH} LIMIT 1`,
+        { replacements: { code: tenant.tenant_code, nh: String(req.userId || '') }, type: Q.SELECT }
+      );
+      if (!staff) return res.status(403).json({ success: false, message: "Vous n'êtes pas enregistré(e) comme enseignant de cet établissement. Demandez au directeur d'ajouter votre NuméroH à votre fiche." });
+      req.tenant = tenant;
+      req.enseignant = staff;
+      return enforceGestionAccess(req, res, next);
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+  }
+  /** Lecteurs de la bibliothèque : propriétaire, employés, enseignants, élèves et parents inscrits. */
+  async function verifyLecteur(req, res, next) {
+    try {
+      await preparerTables();
+      const tenant = await tenantDe(req.params.tenantCode);
+      if (!tenant) return res.status(404).json({ success: false, message: 'Établissement introuvable.' });
+      const nh = String(req.userId || '');
+      const role = req.user?.role || '';
+      const admin = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
+      let ok = admin || tenant.owner_numero_h === nh;
+      if (!ok) {
+        const [r] = await sequelize.query(
+          `SELECT 1 AS ok WHERE
+             EXISTS (SELECT 1 FROM ${T.membres} WHERE tenant_code = :code AND numero_h = :nh AND is_active = true)
+             OR EXISTS (SELECT 1 FROM ${T.staff} WHERE tenant_code = :code AND ${memeNumeroH} ${T.staffActif})
+             OR EXISTS (SELECT 1 FROM ${T.eleves} WHERE tenant_code = :code AND (LOWER(numero_h) = LOWER(:nh) OR LOWER(parent_numero_h) = LOWER(:nh)))
+             OR EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'management_staff_access')
+                AND EXISTS (SELECT 1 FROM management_staff_access WHERE tenant_code = :code AND LOWER(numero_h) = LOWER(:nh) AND is_active = true)`,
+          { replacements: { code: tenant.tenant_code, nh }, type: Q.SELECT }
+        ).catch(() => []);
+        ok = !!r;
+      }
+      if (!ok) return res.status(403).json({ success: false, message: "La bibliothèque est réservée aux membres de l'établissement." });
+      req.tenant = tenant;
+      return enforceGestionAccess(req, res, next);
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+  }
+  /** Classes de l'enseignant : professeur principal ou dans un créneau de l'emploi du temps. */
+  async function classesDe(enseignant) {
+    await preparerEdt();
+    const classes = await sequelize.query(
+      `SELECT id, nom, niveau, ${T.principal} AS principal, COALESCE(emploi_du_temps, '[]'::jsonb) AS emploi_du_temps
+         FROM ${T.groupes} WHERE tenant_code = :code ORDER BY nom`,
+      { replacements: { code: enseignant.tenant_code }, type: Q.SELECT }
     );
-    if (!staff) return res.status(403).json({ success: false, message: "Vous n'êtes pas enregistré(e) comme enseignant de cette école. Demandez au directeur d'ajouter votre NuméroH à votre fiche." });
-    req.tenant = tenant;
-    req.enseignant = staff;
-    return enforceGestionAccess(req, res, next);
-  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
-}
+    const jour = jourSemaine();
+    return classes
+      .map((c) => {
+        const edt = Array.isArray(c.emploi_du_temps) ? c.emploi_du_temps : [];
+        const miens = edt.filter((s) => String(s.enseignant_id || '') === String(enseignant.id));
+        const principal = String(c.principal || '') === String(enseignant.id);
+        if (!principal && miens.length === 0) return null;
+        // Créneaux du jour : les miens, sinon (professeur principal sans créneau attribué) ceux sans enseignant
+        const duJour = (miens.length ? miens : edt.filter((s) => !s.enseignant_id))
+          .filter((s) => s.jour === jour)
+          .sort((a, b) => String(a.heure_debut).localeCompare(String(b.heure_debut)));
+        return { id: c.id, nom: c.nom, niveau: c.niveau, creneaux: duJour };
+      })
+      .filter(Boolean);
+  }
 
-/** Lecteurs de la bibliothèque : propriétaire, employés, enseignants, élèves et parents inscrits. */
-async function verifyLecteur(req, res, next) {
-  try {
-    await preparerTables();
-    const tenant = await tenantDe(req.params.tenantCode);
-    if (!tenant) return res.status(404).json({ success: false, message: 'École introuvable.' });
-    const nh = String(req.userId || '');
-    const role = req.user?.role || '';
-    const admin = !!(req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin');
-    let ok = admin || tenant.owner_numero_h === nh;
-    if (!ok) {
-      const [r] = await sequelize.query(
-        `SELECT 1 AS ok WHERE
-           EXISTS (SELECT 1 FROM school_members WHERE tenant_code = :code AND numero_h = :nh AND is_active = true)
-           OR EXISTS (SELECT 1 FROM school_staff WHERE tenant_code = :code AND ${memeNumeroH} AND is_active = true)
-           OR EXISTS (SELECT 1 FROM school_students WHERE tenant_code = :code AND (LOWER(numero_h) = LOWER(:nh) OR LOWER(parent_numero_h) = LOWER(:nh)))
-           OR EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'management_staff_access')
-              AND EXISTS (SELECT 1 FROM management_staff_access WHERE tenant_code = :code AND LOWER(numero_h) = LOWER(:nh) AND is_active = true)`,
-        { replacements: { code: tenant.tenant_code, nh }, type: Q.SELECT }
-      ).catch(() => []);
-      ok = !!r;
-    }
-    if (!ok) return res.status(403).json({ success: false, message: "La bibliothèque est réservée aux membres de l'école." });
-    req.tenant = tenant;
-    return enforceGestionAccess(req, res, next);
-  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
-}
-
-/** Classes de l'enseignant : professeur principal ou dans un créneau de l'emploi du temps. */
-async function classesDe(enseignant) {
-  const classes = await sequelize.query(
-    `SELECT id, nom, niveau, professeur_principal_id, COALESCE(emploi_du_temps, '[]'::jsonb) AS emploi_du_temps
-       FROM school_classrooms WHERE tenant_code = :code ORDER BY nom`,
-    { replacements: { code: enseignant.tenant_code }, type: Q.SELECT }
-  );
-  const jour = jourSemaine();
-  return classes
-    .map((c) => {
-      const edt = Array.isArray(c.emploi_du_temps) ? c.emploi_du_temps : [];
-      const miens = edt.filter((s) => String(s.enseignant_id || '') === String(enseignant.id));
-      const principal = String(c.professeur_principal_id || '') === String(enseignant.id);
-      if (!principal && miens.length === 0) return null;
-      // Créneaux du jour : les miens, sinon (professeur principal sans créneau attribué) ceux sans enseignant
-      const duJour = (miens.length ? miens : edt.filter((s) => !s.enseignant_id))
-        .filter((s) => s.jour === jour)
-        .sort((a, b) => String(a.heure_debut).localeCompare(String(b.heure_debut)));
-      return { id: c.id, nom: c.nom, niveau: c.niveau, creneaux: duJour };
-    })
-    .filter(Boolean);
-}
-
-export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant) {
   // ─── Enseignant : mes cours du jour ───────────────────────────────────────
   router.get('/:tenantCode/enseignant/mes-cours', authenticate, verifyEnseignant, async (req, res) => {
     const e = req.enseignant;
     const [classes, pointages] = await Promise.all([
       classesDe(e),
       sequelize.query(
-        `SELECT p.*, c.nom AS classe FROM school_cours_pointages p LEFT JOIN school_classrooms c ON c.id = p.classroom_id
+        `SELECT p.*, c.nom AS classe FROM ecole_cours_pointages p LEFT JOIN ${T.groupes} c ON c.id = p.classroom_id
           WHERE p.tenant_code = :code AND p.staff_id = :sid AND p.jour = :jour ORDER BY p.debut`,
         { replacements: { code: e.tenant_code, sid: e.id, jour: aujourdhui() }, type: Q.SELECT }
       ),
@@ -187,12 +200,12 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant) {
       return res.status(403).json({ success: false, message: "Cette classe ne fait pas partie de vos classes." });
     }
     const [ouvert] = await sequelize.query(
-      'SELECT id FROM school_cours_pointages WHERE tenant_code = :code AND staff_id = :sid AND fin IS NULL LIMIT 1',
+      'SELECT id FROM ecole_cours_pointages WHERE tenant_code = :code AND staff_id = :sid AND fin IS NULL LIMIT 1',
       { replacements: { code: e.tenant_code, sid: e.id }, type: Q.SELECT }
     );
     if (ouvert) return res.status(409).json({ success: false, message: "Un cours est déjà en cours : terminez-le d'abord." });
     const [rows] = await sequelize.query(
-      `INSERT INTO school_cours_pointages (tenant_code, staff_id, numero_h, classroom_id, matiere, prevu_debut, prevu_fin, jour)
+      `INSERT INTO ecole_cours_pointages (tenant_code, staff_id, numero_h, classroom_id, matiere, prevu_debut, prevu_fin, jour)
        VALUES (:code, :sid, :nh, :cid, :mat, :pd, :pf, :jour) RETURNING *`,
       { replacements: { code: e.tenant_code, sid: e.id, nh: e.numero_h, cid: classroom_id, mat: matiere || null,
           pd: prevu_debut || null, pf: prevu_fin || null, jour: aujourdhui() }, type: Q.INSERT }
@@ -203,7 +216,7 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant) {
   router.post('/:tenantCode/enseignant/fin', authenticate, verifyEnseignant, async (req, res) => {
     const e = req.enseignant;
     const [rows] = await sequelize.query(
-      `UPDATE school_cours_pointages SET fin = NOW() WHERE tenant_code = :code AND staff_id = :sid AND fin IS NULL RETURNING *`,
+      `UPDATE ecole_cours_pointages SET fin = NOW() WHERE tenant_code = :code AND staff_id = :sid AND fin IS NULL RETURNING *`,
       { replacements: { code: e.tenant_code, sid: e.id }, type: Q.UPDATE }
     );
     if (!rows?.length) return res.status(404).json({ success: false, message: "Aucun cours en cours." });
@@ -216,9 +229,9 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant) {
     const jour = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.jour || '')) ? req.query.jour : aujourdhui();
     const rows = await sequelize.query(
       `SELECT p.*, c.nom AS classe, s.prenom, s.nom
-         FROM school_cours_pointages p
-         LEFT JOIN school_classrooms c ON c.id = p.classroom_id
-         LEFT JOIN school_staff s ON s.id = p.staff_id
+         FROM ecole_cours_pointages p
+         LEFT JOIN ${T.groupes} c ON c.id = p.classroom_id
+         LEFT JOIN ${T.staff} s ON s.id = p.staff_id
         WHERE p.tenant_code = :code AND p.jour = :jour ORDER BY p.debut`,
       { replacements: { code: req.params.tenantCode, jour }, type: Q.SELECT }
     );
@@ -228,7 +241,7 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant) {
   // ─── Bibliothèque ─────────────────────────────────────────────────────────
   router.get('/:tenantCode/bibliotheque', authenticate, verifyLecteur, async (req, res) => {
     const livres = await sequelize.query(
-      'SELECT id, titre, auteur, niveau, fichier_url, taille, created_at FROM school_bibliotheque WHERE tenant_code = :code ORDER BY created_at DESC',
+      `SELECT id, titre, auteur, niveau, fichier_url, taille, created_at FROM ecole_bibliotheque WHERE tenant_code = :code ORDER BY created_at DESC`,
       { replacements: { code: req.tenant.tenant_code }, type: Q.SELECT }
     );
     res.json({ success: true, ecole: { nom: req.tenant.name, logo_url: req.tenant.logo_url }, livres });
@@ -249,7 +262,7 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant) {
     if (!estPdf) return res.status(400).json({ success: false, message: 'Seuls les fichiers PDF sont acceptés.' });
     const url = await enregistrerEnBase({ ...f, mimetype: 'application/pdf' }, { proprietaire: req.params.tenantCode, usage: 'bibliotheque-ecole', tailleMax: PDF_MAX });
     const [rows] = await sequelize.query(
-      `INSERT INTO school_bibliotheque (tenant_code, titre, auteur, niveau, fichier_url, taille, ajoute_par)
+      `INSERT INTO ecole_bibliotheque (tenant_code, titre, auteur, niveau, fichier_url, taille, ajoute_par)
        VALUES (:code, :titre, :auteur, :niveau, :url, :taille, :par) RETURNING *`,
       { replacements: { code: req.params.tenantCode, titre, auteur: String(req.body?.auteur || '').trim() || null,
           niveau: String(req.body?.niveau || '').trim() || null, url, taille: f.size, par: req.userId }, type: Q.INSERT }
@@ -259,7 +272,7 @@ export function ajouterRoutesCoursEtBibliotheque(router, verifyTenant) {
 
   router.delete('/:tenantCode/bibliotheque/:id', authenticate, verifyTenant, async (req, res) => {
     await preparerTables();
-    await sequelize.query('DELETE FROM school_bibliotheque WHERE id = :id AND tenant_code = :code',
+    await sequelize.query('DELETE FROM ecole_bibliotheque WHERE id = :id AND tenant_code = :code',
       { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
   });

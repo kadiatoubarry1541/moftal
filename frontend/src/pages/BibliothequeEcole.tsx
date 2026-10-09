@@ -7,9 +7,11 @@ import { CarteLivre, type Livre } from "../components/ecole/CoursEtBibliotheque"
 // Bibliothèque de l'école, pour ses membres (enseignants, élèves, parents) :
 // les livres PDF ajoutés par le directeur.
 
-const VERT = "#1a8f1a";
 
-export default function BibliothequeEcole() {
+export default function BibliothequeEcole({ mode = "school" }: { mode?: "school" | "madrasa" }) {
+  const madrasa = mode === "madrasa";
+  const VERT = madrasa ? "#0891b2" : "#1a8f1a";
+  const prefixe = madrasa ? "madrasa" : "ecole";
   const { tenantCode = "" } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const [ecole, setEcole] = useState<{ nom: string; logo_url?: string | null } | null>(null);
@@ -18,8 +20,8 @@ export default function BibliothequeEcole() {
   const [recherche, setRecherche] = useState("");
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: `/ecole/${tenantCode}/bibliotheque` } }); return; }
-    fetch(`${config.API_BASE_URL}/school-mgmt/${encodeURIComponent(tenantCode)}/bibliotheque`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
+    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: `/${prefixe}/${tenantCode}/bibliotheque` } }); return; }
+    fetch(`${config.API_BASE_URL}/${madrasa ? "madrasa-mgmt" : "school-mgmt"}/${encodeURIComponent(tenantCode)}/bibliotheque`, { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } })
       .then(async (r) => ({ ok: r.ok, d: await r.json().catch(() => ({})) }))
       .then(({ ok, d }) => { if (ok && d.success) { setEcole(d.ecole); setLivres(d.livres); } else setErreur(d.message || "Accès refusé."); })
       .catch(() => setErreur("Erreur de connexion. Réessayez."));
@@ -33,7 +35,7 @@ export default function BibliothequeEcole() {
       <div className="bg-white border-b">
         <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} aria-label="Retour" className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">‹</button>
-          {ecole && <div className="w-10 h-10 flex-shrink-0"><LogoEtablissement src={ecole.logo_url} name={ecole.nom} type="school" fontSize={16} /></div>}
+          {ecole && <div className="w-10 h-10 flex-shrink-0"><LogoEtablissement src={ecole.logo_url} name={ecole.nom} type={mode} fontSize={16} /></div>}
           <div className="min-w-0">
             <p className="font-bold text-slate-900 truncate">📚 Bibliothèque</p>
             {ecole && <p className="text-xs text-slate-500 truncate">{ecole.nom}</p>}

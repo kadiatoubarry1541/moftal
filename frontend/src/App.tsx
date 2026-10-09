@@ -781,6 +781,8 @@ function App() {
           <Route path="/ecole/:tenantCode/enseignant"      element={<EspaceEnseignantEcole />} />
           <Route path="/ecole/:tenantCode/bibliotheque"    element={<BibliothequeEcole />} />
           <Route path="/madrasa/:tenantCode/espace-parent" element={<EspaceParentEcole mode="madrasa" />} />
+          <Route path="/madrasa/:tenantCode/enseignant"    element={<EspaceEnseignantEcole mode="madrasa" />} />
+          <Route path="/madrasa/:tenantCode/bibliotheque"  element={<BibliothequeEcole mode="madrasa" />} />
           <Route path="/madrasa/:tenantCode"       element={<MadrasaVitrine />} />
           <Route path="/mosquee/:tenantCode"       element={<MosqueeVitrine />} />
           <Route path="/imam/:tenantCode"          element={<MosqueeVitrine />} />

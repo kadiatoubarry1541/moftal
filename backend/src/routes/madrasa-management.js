@@ -15,6 +15,7 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { ajouterRoutesCoursEtBibliotheque, numeroHComplet, TABLES_MADRASA } from './schoolCoursBibliotheque.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -247,22 +248,31 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
   const tc = req.params.tenantCode;
   const { prenom, nom, role, specialite, telephone, numero_h } = req.body;
   if (!prenom || !nom) return res.status(400).json({ message: 'Prénom et nom requis.' });
+  const nh = await numeroHComplet(numero_h);
   const [rows] = await sequelize.query(
     `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, telephone, numero_h)
      VALUES (:tc, :prenom, :nom, :role, :spec, :tel, :nh) RETURNING *`,
-    { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh: numero_h || null } }
+    { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh } }
   );
+  if (nh) {
+    // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
+    await sequelize.query(
+      `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
+      { replacements: { uid: nh, msg: `Vous êtes enregistré(e) au personnel de « ${req.tenant?.name || 'votre madrasa'} ». Marquez le début et la fin de vos cours : moftal.com/madrasa/${tc}/enseignant` } }
+    ).catch(() => {});
+  }
   res.json({ success: true, staff: rows[0] });
 });
 
 router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
   const { prenom, nom, role, specialite, telephone, numero_h } = req.body;
   if (!prenom || !nom) return res.status(400).json({ success: false, message: 'Prénom et nom requis.' });
+  const nh = await numeroHComplet(numero_h);
   await sequelize.query(
     `UPDATE madrasa_staff SET prenom = :prenom, nom = :nom, role = COALESCE(:role, role), specialite = COALESCE(:spec, specialite),
        telephone = :tel, numero_h = :nh
      WHERE id = :id AND tenant_code = :tc`,
-    { replacements: { prenom, nom, role: role || null, spec: specialite || null, tel: telephone || '', nh: numero_h || null, id: req.params.id, tc: req.params.tenantCode } }
+    { replacements: { prenom, nom, role: role || null, spec: specialite || null, tel: telephone || '', nh, id: req.params.id, tc: req.params.tenantCode } }
   );
   res.json({ success: true });
 });
@@ -307,6 +317,16 @@ router.put('/:tenantCode/halaqas/:id', authenticate, verifyTenant, async (req, r
     `UPDATE madrasa_halaqas SET nom = :nom, niveau = COALESCE(:niveau, niveau), capacite = :cap, enseignant_id = :eid
      WHERE id = :id AND tenant_code = :tc`,
     { replacements: { nom, niveau: niveau || null, cap: capacite || 20, eid: enseignant_id || null, id: req.params.id, tc: req.params.tenantCode } }
+  );
+  res.json({ success: true });
+});
+
+// Emploi du temps hebdomadaire d'une halaqa — [{jour, heure_debut, heure_fin, matiere, enseignant_id}]
+router.put('/:tenantCode/halaqas/:id/schedule', authenticate, verifyTenant, async (req, res) => {
+  await sequelize.query(`ALTER TABLE madrasa_halaqas ADD COLUMN IF NOT EXISTS emploi_du_temps JSONB DEFAULT '[]';`);
+  await sequelize.query(
+    `UPDATE madrasa_halaqas SET emploi_du_temps = :edt::jsonb WHERE id = :id AND tenant_code = :tc`,
+    { replacements: { edt: JSON.stringify(req.body?.emploi_du_temps || []), id: req.params.id, tc: req.params.tenantCode } }
   );
   res.json({ success: true });
 });
@@ -632,6 +652,9 @@ ajouterRouteRapport(router, [authenticate, verifyTenant], {
 });
 
 // ── Accès des employés (géré par le propriétaire uniquement) ──
+// ── Pointage des cours (enseignants) et bibliothèque de la madrasa ──
+ajouterRoutesCoursEtBibliotheque(router, verifyTenant, TABLES_MADRASA);
+
 ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
 
 export default router;
