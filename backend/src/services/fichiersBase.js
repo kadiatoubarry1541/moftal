@@ -29,10 +29,10 @@ export function ensureTableFichiers() {
 }
 
 /** Fichier reçu par multer → enregistré en base → URL « /api/fichiers/<id> ». */
-export async function enregistrerEnBase(file, { proprietaire = null, usage = null } = {}) {
+export async function enregistrerEnBase(file, { proprietaire = null, usage = null, tailleMax = TAILLE_MAX } = {}) {
   const donnees = file.buffer || await fs.readFile(file.path);
   if (file.path) fs.unlink(file.path).catch(() => {});
-  if (donnees.length > TAILLE_MAX) throw new Error('Photo trop lourde (5 Mo maximum).');
+  if (donnees.length > tailleMax) throw new Error(`Fichier trop lourd (${Math.round(tailleMax / 1048576)} Mo maximum).`);
   await ensureTableFichiers();
   const id = randomUUID();
   await sequelize.query(

@@ -10,12 +10,13 @@ import { normaliserLogo } from "../utils/logoImage";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte, dateTexte } from "../utils/rappelWhatsApp";
+import { PointageCours, BibliothequeGestion } from "../components/ecole/CoursEtBibliotheque";
 
 interface Props { mode: "school" | "madrasa"; }
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "notes" | "frais" | "bulletins" | "inscriptions" | "avis" | "settings";
+type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "settings";
 
 function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
 function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
@@ -116,9 +117,11 @@ export default function GestionEnseignement({ mode }: Props) {
     { id: "staff",       label: V.staffLabel,             icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
     { id: "groupes",     label: V.groupes,                icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
     { id: "presences",   label: "Présences",              icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+    { id: "cours",       label: "Pointage des cours",     icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
     { id: "notes",       label: "Notes / Progression",    icon: "M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" },
     { id: "frais",       label: "Frais",                  icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" },
     { id: "bulletins",   label: "Bulletins",              icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
+    { id: "bibliotheque", label: "Bibliothèque",          icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
     ...(!isMadrasa ? [
       { id: "inscriptions" as Section, label: "Inscriptions",          icon: "M12 4v16m8-8H4" },
       { id: "avis"         as Section, label: "Avis parents/élèves",   icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" },
@@ -280,7 +283,7 @@ export default function GestionEnseignement({ mode }: Props) {
           else showToast(d.message || "Erreur", false);
         }
       } else if (modal === "edit-schedule") {
-        const d = await put(`/classrooms/${form.id}/schedule`, { emploi_du_temps: form.emploi_du_temps || [] });
+        const d = await put(`/${groupEP}/${form.id}/schedule`, { emploi_du_temps: form.emploi_du_temps || [] });
         if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, emploi_du_temps: form.emploi_du_temps } : x)); setModal(null); setForm({}); showToast("Emploi du temps enregistré"); }
         else showToast(d.message || "Erreur", false);
       } else if (modal === "add-note") {
@@ -459,7 +462,7 @@ export default function GestionEnseignement({ mode }: Props) {
 
         {modal === "edit-schedule" && (<>
           <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700 }}>Emploi du temps — {form.nom}</h3>
-          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#94a3b8" }}>Ajoutez les créneaux de cours de la semaine.</p>
+          <p style={{ margin: "0 0 16px", fontSize: 12, color: "#94a3b8" }}>Ajoutez les créneaux de cours de la semaine et l’enseignant de chacun : il pourra marquer le début et la fin de son cours.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(form.emploi_du_temps || []).map((slot: any, i: number) => (
               <div key={i} style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr 0.8fr 1.3fr 28px", gap: 6, alignItems: "center" }}>
@@ -475,6 +478,13 @@ export default function GestionEnseignement({ mode }: Props) {
                   placeholder="Matière" style={{ border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12 }} />
                 <button onClick={()=>setForm((f:any)=>({...f,emploi_du_temps:f.emploi_du_temps.filter((_:any,idx:number)=>idx!==i)}))}
                   style={{ width:28,height:28,border:"none",background:"#fef2f2",color:"#ef4444",borderRadius:6,cursor:"pointer",fontWeight:700 }}>×</button>
+                {(
+                  <select value={slot.enseignant_id ? String(slot.enseignant_id) : ""} onChange={e=>setForm((f:any)=>{ const edt=[...f.emploi_du_temps]; edt[i]={...edt[i],enseignant_id:e.target.value?Number(e.target.value):null}; return {...f,emploi_du_temps:edt}; })}
+                    style={{ gridColumn:"1 / -2", border:"1px solid #e2e8f0",borderRadius:6,padding:"6px 8px",fontSize:12, marginBottom:6 }}>
+                    <option value="">— Enseignant de ce cours —</option>
+                    {staff.map((p:any)=><option key={p.id} value={String(p.id)}>{p.prenom} {p.nom}{p.numero_h ? "" : " (sans NuméroH)"}</option>)}
+                  </select>
+                )}
               </div>
             ))}
             <button onClick={()=>setForm((f:any)=>({...f,emploi_du_temps:[...(f.emploi_du_temps||[]),{jour:"Lundi",heure_debut:"08:00",heure_fin:"09:00",matiere:""}]}))}
@@ -1151,6 +1161,9 @@ export default function GestionEnseignement({ mode }: Props) {
           )}
 
           {/* ── AVIS PARENTS / ÉLÈVES ── */}
+          {section === "cours" && tenantCode && <PointageCours tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
+          {section === "bibliotheque" && tenantCode && <BibliothequeGestion tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
+
           {section === "avis" && (() => {
             const approved = reviews.filter((r:any) => r.statut === "approuve");
             const moyenne = approved.length ? (approved.reduce((s:number,r:any) => s + r.note, 0) / approved.length).toFixed(1) : "—";

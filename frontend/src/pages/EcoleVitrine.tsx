@@ -142,6 +142,12 @@ export default function EcoleVitrine() {
                 👪 Espace Parent
               </button>
             )}
+            {isLoggedIn && (
+              <button onClick={() => navigate(`/ecole/${tenantCode}/enseignant`)}
+                style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                🧑‍🏫 Espace Enseignant
+              </button>
+            )}
           </div>
         </div>
       </nav>
