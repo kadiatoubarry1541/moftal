@@ -123,6 +123,12 @@ export default function EspaceParentEcole({ mode }: Props) {
           <div style={{ fontSize: 12, opacity: 0.8 }}>{data.tenant?.name}</div>
           <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 800 }}>👪 Espace Parent</h1>
           {student && <p style={{ margin: "6px 0 0", fontSize: 14, opacity: 0.9 }}>{student.prenom} {student.nom} {student.niveau ? `· ${student.niveau}` : ""}{student.classe ? ` · ${student.classe}` : ""}</p>}
+          {!isMadrasa && (
+            <button onClick={() => navigate(`/ecole/${tenantCode}/bibliotheque`)}
+              style={{ marginTop: 12, background: "white", color, border: "none", borderRadius: 8, padding: "8px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              📚 Bibliothèque de l'école
+            </button>
+          )}
         </div>
       </header>
 

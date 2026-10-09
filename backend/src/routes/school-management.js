@@ -7,6 +7,7 @@ import { ensureTenantExtraColumns } from './clinic-management.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { ajouterRoutesCoursEtBibliotheque, numeroHComplet } from './schoolCoursBibliotheque.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -189,10 +190,18 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `PROF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const mats = matieres || (specialite ? [specialite] : []);
+    const nh = await numeroHComplet(numero_h);
     const [rows] = await sequelize.query(
       `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,specialite,matiere,telephone,email,matricule,photo_url,numero_h) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:spec,:spec,:tel,:email,:mat,:photo,:nh) RETURNING *`,
-      { replacements: { code, nom, prenom, role: role || 'Enseignant', mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, mat, photo: photo_url || null, nh: numero_h || null }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, nom, prenom, role: role || 'Enseignant', mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, mat, photo: photo_url || null, nh }, type: sequelize.QueryTypes.INSERT }
     );
+    if (nh) {
+      // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
+      await sequelize.query(
+        `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
+        { replacements: { uid: nh, msg: `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours : moftal.com/ecole/${code}/enseignant` } }
+      ).catch(() => {});
+    }
     res.json({ success: true, staff: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -203,11 +212,12 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
     const { nom, prenom, role, matieres, specialite, telephone, email, photo_url, numero_h } = req.body;
     if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
     const mats = matieres || (specialite ? [specialite] : []);
+    const nh = await numeroHComplet(numero_h);
     await sequelize.query(
       `UPDATE school_staff SET nom=:nom,prenom=:prenom,role=COALESCE(:role,role),matieres=:mats::jsonb,specialite=:spec,matiere=:spec,
          telephone=:tel,email=COALESCE(:email,email),photo_url=COALESCE(:photo,photo_url),numero_h=:nh
        WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo: photo_url || null, nh: numero_h || null, id: req.params.id, code: req.params.tenantCode } }
+      { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo: photo_url || null, nh, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -725,6 +735,9 @@ router.delete('/:tenantCode/reviews/:id', authenticate, verifyTenant, async (req
 ajouterRouteRapport(router, [authenticate, verifyTenant], {
   recettes: [{ label: 'Frais encaissés', table: 'school_fees', montant: 'montant_paye', date: 'date_paiement', where: 'montant_paye > 0' }],
 });
+
+// ── Pointage des cours (enseignants) et bibliothèque de l'école ──
+ajouterRoutesCoursEtBibliotheque(router, verifyTenant);
 
 // ── Accès des employés (géré par le propriétaire uniquement) ──
 ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
