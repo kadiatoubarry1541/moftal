@@ -6,6 +6,7 @@ import Activite from "./Activite";
 import { AddPersonModal } from "../components/AddPersonModal";
 import PaymentModal from "../components/PaymentModal";
 import { TenantLogo } from "../components/GestionBrand";
+import { demanderCodeOuverture } from "../utils/codeOuverture";
 import {
   ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
   type PublishModal, type ProfilModal,
@@ -126,10 +127,10 @@ export default function GestionInterne() {
 
   // remplacer = true : la page intermédiaire ne reste pas dans l'historique (le
   // bouton retour ne la ramène pas).
-  function ouvrirGestionUrl(path: string, tenantCode: string, remplacer = false) {
-    const t = localStorage.getItem("token") || "";
-    const s = localStorage.getItem("session_user") || "";
-    const url = `https://gestions.moftal.com/${path}/${tenantCode}?_t=${encodeURIComponent(t)}&_s=${encodeURIComponent(s)}`;
+  // La session n'est jamais mise dans l'adresse : un code à usage unique la remplace.
+  async function ouvrirGestionUrl(path: string, tenantCode: string, remplacer = false) {
+    const code = await demanderCodeOuverture();
+    const url = `https://gestions.moftal.com/${path}/${tenantCode}${code ? `?_c=${code}` : ""}`;
     if (remplacer) window.location.replace(url);
     else window.location.href = url;
   }

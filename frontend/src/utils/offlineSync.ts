@@ -37,7 +37,7 @@ const QUEUE_PATTERNS = [
 // employés et l'encaissement en ligne ne se font jamais en différé)
 const ONLINE_ONLY_PATTERNS = [
   /\/bulletins\/generate$/, /\/members\/add$/, /\/pharmacy\/dispense\//,
-  /\/enseignant\/(debut|fin)$/, /\/acces-employes/, /\/bibliotheque$/,
+  /\/enseignant\/(debut|fin)$/, /\/acces-employes/,
 ];
 
 // Base « tenant » d'une URL : /api/clinic-mgmt/CODE
@@ -46,12 +46,43 @@ const TENANT_BASE = /^(.*\/api\/[a-z]+-mgmt\/[^/]+)(\/.*)?$/;
 const GET_TIMEOUT_MS = 8000;
 const TEMP_PREFIX = "hors-ligne-";
 
+type ChampFormulaire =
+  | { nom: string; texte: string }
+  | { nom: string; fichier: ArrayBuffer; type: string; nomFichier: string };
+
+// Limite des fichiers gardés sur l'appareil pour une seule opération
+const MAX_FICHIERS_HORS_LIGNE = 30 * 1024 * 1024;
+
+async function lireFormulaire(fd: FormData): Promise<ChampFormulaire[] | null> {
+  const champs: ChampFormulaire[] = [];
+  let total = 0;
+  for (const [nom, valeur] of fd.entries()) {
+    if (typeof valeur === "string") { champs.push({ nom, texte: valeur }); continue; }
+    total += valeur.size;
+    if (total > MAX_FICHIERS_HORS_LIGNE) return null;
+    // Contenu copié (ArrayBuffer) : se garde partout, même après fermeture de l'app
+    champs.push({ nom, fichier: await valeur.arrayBuffer(), type: valeur.type, nomFichier: (valeur as File).name || "fichier" });
+  }
+  return champs;
+}
+
+function refaireFormulaire(champs: ChampFormulaire[], idMap: Record<string, string>): FormData {
+  const fd = new FormData();
+  for (const c of champs) {
+    if ("texte" in c) fd.append(c.nom, replaceIds(c.texte, idMap));
+    else fd.append(c.nom, new Blob([c.fichier], { type: c.type }), c.nomFichier);
+  }
+  return fd;
+}
+
 interface QueueItem {
   id?: number;
   url: string;
   method: string;
   headers: Record<string, string>;
   body: string | null;
+  /** Formulaire avec fichiers (photo, PDF…) : champs texte et contenu des fichiers */
+  form?: ChampFormulaire[];
   tempId?: string;
   createdAt: number;
   /** NuméroH de la personne qui a fait l'opération : jamais envoyée au nom d'une autre */
@@ -409,9 +440,11 @@ function offlineMissing() {
 async function handleWrite(original: typeof fetch, req: Request, init?: RequestInit): Promise<Response> {
   const method = req.method.toUpperCase();
   let bodyText: string | null = null;
+  let formulaire: FormData | null = null;
   if (init?.body != null) {
-    if (typeof init.body !== "string") return original(req); // fichiers / FormData : pas de file d'attente
-    bodyText = init.body;
+    if (typeof init.body === "string") bodyText = init.body;
+    else if (init.body instanceof FormData) formulaire = init.body; // fichiers : gardés aussi hors ligne
+    else return original(req);
   }
 
   const enqueue = async () => {
@@ -422,10 +455,23 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
       );
     }
     let body: any = null;
-    try {
-      body = bodyText ? JSON.parse(bodyText) : null;
-    } catch {
-      /* corps non JSON */
+    let form: ChampFormulaire[] | undefined;
+    if (formulaire) {
+      const champs = await lireFormulaire(formulaire);
+      if (!champs) {
+        return jsonResponse(
+          { success: false, offline: true, message: "Fichier trop lourd pour être gardé sans connexion (30 Mo max.). Réessayez avec internet." },
+          503
+        );
+      }
+      form = champs;
+      body = Object.fromEntries(champs.filter((c): c is { nom: string; texte: string } => "texte" in c).map((c) => [c.nom, c.texte]));
+    } else {
+      try {
+        body = bodyText ? JSON.parse(bodyText) : null;
+      } catch {
+        /* corps non JSON */
+      }
     }
     const tempId = method === "POST" ? `${TEMP_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 7)}` : undefined;
 
@@ -441,6 +487,8 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
     }
 
     const headers = headersToObject(init?.headers);
+    // Formulaire : le navigateur remet lui-même le bon Content-Type (avec sa « boundary »)
+    if (form) delete headers["content-type"];
     // Identifiant unique : le serveur n'enregistre cette opération qu'une seule fois,
     // même si elle est envoyée deux fois après une coupure
     headers["x-idempotency-key"] = headers["x-idempotency-key"] || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
@@ -449,6 +497,7 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
       method,
       headers,
       body: bodyText,
+      form,
       tempId,
       createdAt: Date.now(),
       proprietaire: userScope(),
@@ -546,7 +595,8 @@ export function syncNow(): Promise<void> {
 
       let res: Response;
       try {
-        res = await doFetch(url, { method: item.method, headers, body: body ?? undefined });
+        const corps = item.form ? refaireFormulaire(item.form, idMap) : body ?? undefined;
+        res = await doFetch(url, { method: item.method, headers, body: corps });
       } catch {
         setStatus({ online: false });
         break; // toujours pas de connexion : on réessaiera plus tard

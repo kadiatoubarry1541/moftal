@@ -163,6 +163,20 @@ router.get('/:tenantCode/patients', authenticate, verifyTenant, async (req, res)
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// Numéro de patient : suit le plus grand numéro déjà donné (jamais le nombre de
+// patients, qui redonnerait un numéro existant après une suppression). Le verrou
+// empêche deux enregistrements simultanés de prendre le même numéro.
+async function prochainMatricule(code, transaction) {
+  await sequelize.query(`SELECT pg_advisory_xact_lock(hashtext('clinic_patients:' || :code))`, { replacements: { code }, transaction });
+  const prefixe = `PAT-${code.slice(-4)}-`;
+  const [row] = await sequelize.query(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(numero_matricule FROM '([0-9]+)$') AS INTEGER)), 0) AS n
+     FROM clinic_patients WHERE tenant_code=:code AND numero_matricule LIKE :motif`,
+    { replacements: { code, motif: `${prefixe}%` }, type: sequelize.QueryTypes.SELECT, transaction }
+  );
+  return `${prefixe}${String(+row.n + 1).padStart(4, '0')}`;
+}
+
 router.post('/:tenantCode/patients', authenticate, verifyTenant, async (req, res) => {
   try {
     const { nom, prenom, date_naissance, sexe, telephone, adresse, groupe_sanguin, allergies, numero_h } = req.body;
@@ -175,13 +189,15 @@ router.post('/:tenantCode/patients', authenticate, verifyTenant, async (req, res
       );
       if (existing) return res.status(400).json({ success: false, message: 'Ce numéro Moftal est déjà enregistré dans cette clinique.' });
     }
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_patients WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `PAT-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
-    const [rows] = await sequelize.query(
-      `INSERT INTO clinic_patients (tenant_code,nom,prenom,date_naissance,sexe,telephone,adresse,groupe_sanguin,allergies,numero_matricule,numero_h)
-       VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:adr,:gs,:alg,:mat,:nh) RETURNING *`,
-      { replacements: { code, nom, prenom, dob: date_naissance || null, sexe, tel: telephone, adr: adresse, gs: groupe_sanguin, alg: allergies, mat, nh: nh || null }, type: sequelize.QueryTypes.INSERT }
-    );
+    const rows = await sequelize.transaction(async (transaction) => {
+      const mat = await prochainMatricule(code, transaction);
+      const [r] = await sequelize.query(
+        `INSERT INTO clinic_patients (tenant_code,nom,prenom,date_naissance,sexe,telephone,adresse,groupe_sanguin,allergies,numero_matricule,numero_h)
+         VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:adr,:gs,:alg,:mat,:nh) RETURNING *`,
+        { replacements: { code, nom, prenom, dob: date_naissance || null, sexe, tel: telephone, adr: adresse, gs: groupe_sanguin, alg: allergies, mat, nh: numero_h || null }, type: sequelize.QueryTypes.INSERT, transaction }
+      );
+      return r;
+    });
     res.json({ success: true, patient: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -922,8 +938,7 @@ router.put('/:tenantCode/appointment-requests/:id/convert', authenticate, verify
     const { patient, appointment } = await sequelize.transaction(async (transaction) => {
       let [patient] = await sequelize.query(`SELECT * FROM clinic_patients WHERE tenant_code=:code AND telephone=:tel LIMIT 1`, { replacements: { code, tel: reqRow.telephone }, type: sequelize.QueryTypes.SELECT, transaction });
       if (!patient) {
-        const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_patients WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT, transaction });
-        const mat = `PAT-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
+        const mat = await prochainMatricule(code, transaction);
         const nameParts = (reqRow.nom || '').trim().split(/\s+/);
         const prenom = nameParts.shift() || reqRow.nom;
         const nom = nameParts.join(' ') || '—';

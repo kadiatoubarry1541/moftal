@@ -10,6 +10,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import PWAUpdatePrompt from "./components/PWAUpdatePrompt";
 import { installOfflineSync } from "./utils/offlineSync";
+import { echangerCodeOuverture } from "./utils/codeOuverture";
 import { noterLancementApp, appPlayInstallee } from "./utils/appMoftalInstallee";
 
 // Supprimer les anciennes données de test qui stockaient des mots de passe en clair
@@ -31,20 +32,27 @@ keysToClean.forEach(key => {
 
 const basename = '';
 
-// Sur gestion.moftal.com : récupérer le token passé dans l'URL depuis moftal.com
-if (window.location.hostname === 'gestions.moftal.com') {
+// Sur gestions.moftal.com : récupérer la session transmise par Moftal.
+// Moftal passe un code à usage unique (« _c ») échangé contre la session — la
+// session elle-même n'est jamais dans l'adresse. « _t »/« _s » restent lus pour
+// les anciens liens, puis retirés de l'adresse.
+async function preparerSessionGestion() {
+  if (window.location.hostname !== 'gestions.moftal.com') return;
   const _p = new URLSearchParams(window.location.search);
+  const _c = _p.get('_c');
   const _t = _p.get('_t');
   const _s = _p.get('_s');
   // Arrivée par un lien de Moftal (et non par l'icône de l'app de la gestion) :
   // on le note pour ne jamais afficher « Application installée » dans ce cas.
-  if (_t || _s) sessionStorage.setItem('gestionOuverteDepuisMoftal', '1');
-  if (_t) { localStorage.setItem('token', decodeURIComponent(_t)); _p.delete('_t'); }
-  if (_s) { localStorage.setItem('session_user', decodeURIComponent(_s)); _p.delete('_s'); }
-  if (_t || _s) {
+  if (_c || _t || _s) sessionStorage.setItem('gestionOuverteDepuisMoftal', '1');
+  if (_t) localStorage.setItem('token', decodeURIComponent(_t));
+  if (_s) localStorage.setItem('session_user', decodeURIComponent(_s));
+  if (_c || _t || _s) {
+    _p.delete('_c'); _p.delete('_t'); _p.delete('_s');
     const clean = window.location.pathname + (_p.toString() ? '?' + _p.toString() : '');
     window.history.replaceState({}, '', clean);
   }
+  if (_c) await echangerCodeOuverture(_c);
   // Si pas de token du tout → renvoyer vers moftal.com pour se connecter
   if (!localStorage.getItem('token')) {
     window.location.href = `https://moftal.com/login?redirect=${encodeURIComponent(window.location.href)}`;
@@ -132,4 +140,4 @@ function initAndRender() {
   );
 }
 
-initAndRender();
+void preparerSessionGestion().finally(initAndRender);
