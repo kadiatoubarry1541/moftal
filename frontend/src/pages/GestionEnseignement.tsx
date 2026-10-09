@@ -634,7 +634,7 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
           )}
         </div>
-        <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
+        <nav style={{ flex: 1, minHeight: 0, padding: "10px 8px", overflowY: "auto" }}>
           {NAV.map(n => {
             const active = section === n.id;
             return (

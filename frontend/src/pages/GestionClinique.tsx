@@ -490,7 +490,7 @@ export default function GestionClinique() {
             </div>
           )}
         </div>
-        <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto" }}>
+        <nav style={{ flex: 1, minHeight: 0, padding: "10px 8px", overflowY: "auto" }}>
           {NAV_ITEMS.filter(n => (ROLE_PERMISSIONS[myRole] || ROLE_PERMISSIONS.Autre).includes(n.id)).map(n => {
             const active = section === n.id;
             const isUrgent = n.id === "appointments" && stats?.urgences > 0;

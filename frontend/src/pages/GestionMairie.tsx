@@ -419,7 +419,7 @@ export default function GestionMairie() {
         </div>
         <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>État Civil · Administration</div>
       </div>
-      <nav style={{ flex: 1, padding: "12px 8px", overflowY: "auto" }}>
+      <nav style={{ flex: 1, minHeight: 0, padding: "12px 8px", overflowY: "auto" }}>
         {NAV_ITEMS.map(item => (
           <button key={item.id} onClick={() => { setSection(item.id); setSidebarOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, border: "none", cursor: "pointer", marginBottom: 2, background: section === item.id ? "rgba(255,255,255,0.15)" : "transparent", color: section === item.id ? "#fff" : "rgba(255,255,255,0.7)", fontWeight: section === item.id ? 700 : 500, fontSize: 13, transition: "all 0.15s" }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
