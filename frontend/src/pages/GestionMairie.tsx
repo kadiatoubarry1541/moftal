@@ -411,7 +411,7 @@ export default function GestionMairie() {
   );
 
   const Sidebar = () => (
-    <aside style={{ width: 220, background: `linear-gradient(180deg, ${BLUE_DARK} 0%, ${BLUE} 100%)`, display: "flex", flexDirection: "column", height: "100vh", position: "sticky", top: 0, flexShrink: 0 }}>
+    <aside style={{ width: 220, background: `linear-gradient(180deg, ${BLUE_DARK} 0%, ${BLUE} 100%)`, display: "flex", flexDirection: "column", position: "sticky", top: 0, flexShrink: 0 }} className="hauteur-ecran">
       <div style={{ padding: "24px 16px 16px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback="🏛️" size={32} style={{ background: "rgba(255,255,255,0.15)" }} />
