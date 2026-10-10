@@ -63,9 +63,13 @@ async function compteDeLEtablissement(ownerNumeroH, tenantCode) {
     { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
   );
   if (!lien?.professional_account_id) return null;
-  return ProfessionalAccount.findOne({
-    where: { id: lien.professional_account_id, ownerNumeroH, status: 'approved', isActive: true },
-  });
+  // Colonne INTEGER côté établissement, UUID côté compte pro : comparaison en texte
+  const [compte] = await sequelize.query(
+    `SELECT id FROM professional_accounts
+      WHERE id::text = :id AND owner_numero_h = :owner AND status = 'approved' AND is_active = true LIMIT 1`,
+    { replacements: { id: String(lien.professional_account_id), owner: ownerNumeroH }, type: sequelize.QueryTypes.SELECT }
+  );
+  return compte ? ProfessionalAccount.findByPk(compte.id) : null;
 }
 
 // Source de vérité : subscriptionStatus + subscriptionValidUntil, tenus à jour par

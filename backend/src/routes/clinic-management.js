@@ -241,7 +241,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, refuserPersonnel, 
     const mat = `STAFF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const [rows] = await sequelize.query(
       `INSERT INTO clinic_staff (tenant_code,nom,prenom,role,service,specialite,telephone,email,matricule,numero_h) VALUES(:code,:nom,:prenom,:role,:svc,:spec,:tel,:email,:mat,:nh) RETURNING *`,
-      { replacements: { code, nom, prenom, role, svc: service, spec: specialite, tel: telephone, email, mat, nh: numero_h || null }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, nom, prenom, role, svc: service, spec: specialite, tel: telephone, email, mat, nh: nh || null }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, staff: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }

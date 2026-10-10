@@ -52,7 +52,12 @@ async function preparerSessionGestion() {
     const clean = window.location.pathname + (_p.toString() ? '?' + _p.toString() : '');
     window.history.replaceState({}, '', clean);
   }
-  if (_c) await echangerCodeOuverture(_c);
+  // Code refusé ou expiré : on n'ouvre jamais la gestion avec une ancienne
+  // session restée sur l'appareil (elle pourrait être celle d'un autre compte)
+  if (_c && !(await echangerCodeOuverture(_c))) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('session_user');
+  }
   // Si pas de token du tout → renvoyer vers moftal.com pour se connecter
   if (!localStorage.getItem('token')) {
     window.location.href = `https://moftal.com/login?redirect=${encodeURIComponent(window.location.href)}`;

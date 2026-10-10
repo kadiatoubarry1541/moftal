@@ -40,10 +40,20 @@ export async function idempotence(req, res, next) {
   try {
     await preparerTable();
     nettoyer();
-    const [[pris]] = await sequelize.query(
+    const prendre = () => sequelize.query(
       `INSERT INTO envois_idempotents (cle) VALUES (:cle) ON CONFLICT (cle) DO NOTHING RETURNING cle`,
       { replacements: { cle } }
-    );
+    ).then(([[r]]) => r);
+    let pris = await prendre();
+    if (!pris) {
+      // Envoi resté « en cours » trop longtemps (serveur redémarré pendant le
+      // traitement) : la clé est libérée pour ne pas bloquer l'opération à vie
+      await sequelize.query(
+        `DELETE FROM envois_idempotents WHERE cle = :cle AND etat = 'en_cours' AND created_at < NOW() - INTERVAL '3 minutes'`,
+        { replacements: { cle } }
+      );
+      pris = await prendre();
+    }
     if (!pris) {
       const [[deja]] = await sequelize.query(`SELECT etat, statut_http, reponse FROM envois_idempotents WHERE cle = :cle`, { replacements: { cle } });
       if (deja?.etat === 'fini') {
@@ -54,22 +64,26 @@ export async function idempotence(req, res, next) {
       }
       return res.status(409).json({ success: false, enCours: true, message: 'Cet enregistrement est déjà en cours d\'envoi.' });
     }
-    // Mémoriser la réponse finale ; une erreur serveur (5xx) libère la clé pour réessayer
+    // Seule une réussite (2xx) est mémorisée : l'opération est faite, elle ne
+    // sera jamais refaite. Un refus (session expirée, abonnement, erreur…)
+    // libère la clé : après reconnexion ou correction, l'envoi peut réussir.
+    // Pas de libération si la connexion du téléphone coupe pendant le
+    // traitement : le serveur finit l'opération et mémorise sa réponse.
     const envoyer = res.send.bind(res);
+    let note = false;
     res.send = (corps) => {
-      const statut = res.statusCode;
-      const texte = typeof corps === 'string' ? corps : Buffer.isBuffer(corps) ? corps.toString('utf8') : JSON.stringify(corps);
-      const requete = statut >= 500
-        ? sequelize.query(`DELETE FROM envois_idempotents WHERE cle = :cle`, { replacements: { cle } })
-        : sequelize.query(`UPDATE envois_idempotents SET etat = 'fini', statut_http = :s, reponse = :r WHERE cle = :cle`,
-            { replacements: { cle, s: statut, r: texte } });
-      requete.catch(() => {});
+      if (!note) {
+        note = true;
+        const statut = res.statusCode;
+        const texte = typeof corps === 'string' ? corps : Buffer.isBuffer(corps) ? corps.toString('utf8') : JSON.stringify(corps);
+        const requete = statut >= 200 && statut < 300
+          ? sequelize.query(`UPDATE envois_idempotents SET etat = 'fini', statut_http = :s, reponse = :r WHERE cle = :cle`,
+              { replacements: { cle, s: statut, r: texte } })
+          : sequelize.query(`DELETE FROM envois_idempotents WHERE cle = :cle`, { replacements: { cle } });
+        requete.catch(() => {});
+      }
       return envoyer(corps);
     };
-    // Requête interrompue avant toute réponse : la clé est libérée
-    res.on('close', () => {
-      if (!res.writableEnded) sequelize.query(`DELETE FROM envois_idempotents WHERE cle = :cle AND etat = 'en_cours'`, { replacements: { cle } }).catch(() => {});
-    });
     next();
   } catch (e) {
     console.warn('⚠️ idempotence:', e.message);

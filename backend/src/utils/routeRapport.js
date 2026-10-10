@@ -20,6 +20,8 @@ async function somme(src, code, debut, fin) {
         ${src.where ? `AND (${src.where})` : ''}`,
     { replacements: { code, debut, fin }, type: sequelize.QueryTypes.SELECT }
   ).catch(e => {
+    // Table pas encore créée (module jamais ouvert) : rien n'a été enregistré
+    if ((e?.original?.code || e?.parent?.code) === '42P01') return [{ total: 0, n: 0 }];
     // Jamais de total 0 inventé : l'erreur remonte (500) pour être vue.
     console.error('rapport:', src.table, e.message);
     throw new Error(`Impossible de calculer « ${src.label} » pour le rapport : ${e.message}`);

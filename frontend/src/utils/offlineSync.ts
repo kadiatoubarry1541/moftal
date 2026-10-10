@@ -90,6 +90,8 @@ interface QueueItem {
   /** Refusée par le serveur : gardée (jamais effacée en silence) et montrée à l'écran */
   rejete?: boolean;
   message?: string;
+  /** Échecs « erreur serveur » (500) d'affilée pour cette opération */
+  essais?: number;
 }
 
 export interface OfflineStatus {
@@ -198,7 +200,7 @@ async function refreshPending() {
 export async function reessayerOperation(id: number) {
   const item = (await queueAll()).find((q) => q.id === id);
   if (!item) return;
-  await queuePut({ ...item, rejete: false, message: undefined });
+  await queuePut({ ...item, rejete: false, message: undefined, essais: 0 });
   await refreshPending();
   void syncNow();
 }
@@ -446,6 +448,11 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
     else if (init.body instanceof FormData) formulaire = init.body; // fichiers : gardés aussi hors ligne
     else return original(req);
   }
+  // Identifiant unique de l'opération, posé DÈS le premier envoi : si la réponse
+  // se perd (coupure, passerelle 504) alors que le serveur a déjà enregistré,
+  // le renvoi depuis la file d'attente reprend la même clé et n'enregistre rien
+  // une deuxième fois.
+  const cle = req.headers.get("x-idempotency-key") || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 
   const enqueue = async () => {
     if (matches(req.url, ONLINE_ONLY_PATTERNS)) {
@@ -491,7 +498,7 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
     if (form) delete headers["content-type"];
     // Identifiant unique : le serveur n'enregistre cette opération qu'une seule fois,
     // même si elle est envoyée deux fois après une coupure
-    headers["x-idempotency-key"] = headers["x-idempotency-key"] || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+    headers["x-idempotency-key"] = cle;
     await queueAdd({
       url: absUrl(req.url),
       method,
@@ -514,7 +521,11 @@ async function handleWrite(original: typeof fetch, req: Request, init?: RequestI
     return enqueue();
   }
   try {
-    const res = await original(req.clone());
+    const avecCle = new Headers(init?.headers ?? req.headers);
+    avecCle.set("x-idempotency-key", cle);
+    const res = init?.body != null || !req.body
+      ? await original(req.url, { ...init, method, headers: avecCle })
+      : await original(req.clone());
     // Serveur momentanément injoignable (redémarrage, passerelle) : rien n'est perdu
     if ([502, 503, 504].includes(res.status) && !matches(req.url, ONLINE_ONLY_PATTERNS)) return enqueue();
     return res;
@@ -589,6 +600,16 @@ export function syncNow(): Promise<void> {
       const idMap = loadIdMap();
       const url = replaceIds(item.url, idMap);
       const body = item.body ? replaceIds(item.body, idMap) : item.body;
+      // Opération liée à un enregistrement créé hors ligne qui a été refusé (son
+      // identifiant n'a jamais été remplacé) : gardée et montrée, sans bloquer
+      // le reste de la file
+      const textes = [url, body || "", ...(item.form || []).map((c) => ("texte" in c ? replaceIds(c.texte, idMap) : ""))];
+      if (textes.some((t) => t.includes(TEMP_PREFIX))) {
+        const message = "Dépend d'un enregistrement refusé par le serveur : corrigez ou retirez d'abord celui-ci.";
+        errors.push(message);
+        await queuePut({ ...item, rejete: true, message });
+        continue;
+      }
       const headers = { ...item.headers };
       const token = localStorage.getItem("token");
       if (token && headers["authorization"]) headers["authorization"] = `Bearer ${token}`;
@@ -607,7 +628,20 @@ export function syncNow(): Promise<void> {
         errors.push("Reconnectez-vous pour envoyer les opérations en attente.");
         break;
       }
-      if (res.status >= 500) break; // serveur indisponible : on réessaiera
+      if (res.status >= 500) {
+        // 502/503/504 : serveur indisponible (redémarrage) → on réessaiera sans compter.
+        // Autre erreur serveur répétée sur CETTE opération : elle est mise de côté
+        // (gardée, visible, « Réessayer » possible) pour ne pas bloquer les suivantes.
+        if ([502, 503, 504].includes(res.status)) break;
+        const essais = (item.essais || 0) + 1;
+        if (essais < 3) { await queuePut({ ...item, essais }); break; }
+        let detail = "";
+        try { detail = (await res.json())?.message || ""; } catch { /* réponse vide */ }
+        const message = `Le serveur n'a pas pu enregistrer cette opération${detail ? ` : ${detail}` : ""}. Réessayez plus tard ou retirez-la.`;
+        errors.push(message);
+        await queuePut({ ...item, essais, rejete: true, message });
+        continue;
+      }
 
       let data: any = null;
       try {

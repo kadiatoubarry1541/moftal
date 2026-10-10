@@ -81,6 +81,7 @@ import fichiersRoutes from './routes/fichiers.js';
 import codeOuvertureRoutes from './routes/codeOuverture.js';
 import { cleLimite, validationLimite } from './utils/cleLimite.js';
 import { migrerPhotosDisque } from './services/fichiersBase.js';
+import { erreursDonnees } from './middleware/erreursDonnees.js';
 import { idempotence } from './middleware/idempotence.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
@@ -2792,6 +2793,7 @@ app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // Envois rejoués par le mode hors ligne : un même envoi (X-Idempotency-Key)
 // n'est enregistré qu'une seule fois, même s'il arrive plusieurs fois
+app.use('/api', erreursDonnees);
 app.use('/api', idempotence);
 
 // Servir les fichiers uploads (photos, vidéos)

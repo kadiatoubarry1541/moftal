@@ -20,10 +20,12 @@ const TYPES_PAR_URL = {
 };
 const typesEnBase = (type) => TYPES_PAR_URL[type] || [type];
 
-// Une table pas encore créée (gestion jamais ouverte) = aucune donnée.
+// Une table ou colonne pas encore créée (gestion jamais ouverte) = aucune donnée.
 // Toute autre erreur SQL remonte : la vitrine affiche une erreur au lieu de
 // montrer à tort un établissement vide.
-const tableAbsente = (e) => e?.original?.code === '42P01' || e?.parent?.code === '42P01';
+// 42P01 : table absente ; 42703 : colonne pas encore ajoutée (les colonnes
+// optionnelles sont créées à la première ouverture de la gestion).
+const tableAbsente = (e) => ['42P01', '42703'].includes(e?.original?.code || e?.parent?.code);
 
 const q = (sql, rep) =>
   sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT })
