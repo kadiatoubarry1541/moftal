@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -738,6 +739,27 @@ router.post('/login', [
 });
 
 
+// ─── Mot de passe oublié : protections ─────────────────────────────────────
+// Empreinte secrète du code (HMAC avec la clé du serveur) : le code lui-même
+// n'est jamais renvoyé au navigateur.
+function empreinteCode(numeroH, jti, code) {
+  return crypto.createHmac('sha256', config.JWT_SECRET).update(`${numeroH}|${jti}|${code}`).digest('hex');
+}
+// Version du mot de passe actuel : le jeton de réinitialisation n'est valable
+// que tant que le mot de passe n'a pas changé (il ne sert donc qu'une fois).
+// (Avant : basé sur user.updatedAt, toujours vide ici → la réinitialisation
+// échouait toujours avec « lien déjà utilisé ».)
+function versionMotDePasse(user) {
+  return crypto.createHmac('sha256', config.JWT_SECRET).update(`pwv|${user.password || ''}`).digest('hex').slice(0, 24);
+}
+const demandesRecuperation = new Map(); // numeroH → heure de la dernière demande
+const essaisCode = new Map();           // jti → { n: nombre d'essais, t: heure }
+setInterval(() => {
+  const limite = Date.now() - 15 * 60 * 1000; // un code expire après 10 min
+  for (const [k, t] of demandesRecuperation) if (t < limite) demandesRecuperation.delete(k);
+  for (const [k, v] of essaisCode) if (v.t < limite) essaisCode.delete(k);
+}, 10 * 60 * 1000).unref();
+
 // @route   POST /api/auth/forgot-password/verify
 // @desc    Vérifier l'identité : NumeroH obligatoire, NumeroH parent et code arbre facultatifs
 // @access  Public
@@ -821,12 +843,21 @@ router.post('/forgot-password/verify', [
       }
     }
 
-    // Générer un code OTP à 6 chiffres
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Un code par minute au plus pour un même compte (pas d'envoi d'emails en rafale)
+    const derniereDemande = demandesRecuperation.get(user.numeroH) || 0;
+    if (Date.now() - derniereDemande < 60 * 1000) {
+      return res.status(429).json({ success: false, message: 'Un code vient d\'être envoyé. Attendez une minute avant d\'en demander un nouveau.' });
+    }
+    demandesRecuperation.set(user.numeroH, Date.now());
 
-    // Signer un token OTP (contient le code, valide 10 min)
+    // Code à 6 chiffres (tirage cryptographique)
+    const otpCode = String(crypto.randomInt(100000, 1000000));
+
+    // Le jeton renvoyé au navigateur ne contient JAMAIS le code (un JWT se lit
+    // sans clé) : seulement son empreinte secrète, vérifiable par le serveur seul.
+    const jti = crypto.randomBytes(12).toString('hex');
     const otpToken = jwt.sign(
-      { numeroH: user.numeroH, code: otpCode, purpose: 'forgot_password_otp' },
+      { numeroH: user.numeroH, purpose: 'forgot_password_otp', jti, h: empreinteCode(user.numeroH, jti, otpCode) },
       config.JWT_SECRET,
       { expiresIn: '10m' }
     );
@@ -871,12 +902,21 @@ router.post('/forgot-password/verify-code', [
     } catch (e) {
       return res.status(400).json({ success: false, message: 'Code expiré. Recommencez la procédure.' });
     }
-    if (payload.purpose !== 'forgot_password_otp' || !payload.numeroH) {
-      return res.status(400).json({ success: false, message: 'Token invalide.' });
+    if (payload.purpose !== 'forgot_password_otp' || !payload.numeroH || !payload.jti || !payload.h) {
+      return res.status(400).json({ success: false, message: 'Code expiré. Recommencez la procédure.' });
     }
-    if (payload.code !== code.trim()) {
-      return res.status(400).json({ success: false, message: 'Code incorrect. Vérifiez le code reçu par email.' });
+    // 5 essais au plus par code : impossible de deviner le code en essayant tout
+    const essais = (essaisCode.get(payload.jti)?.n || 0) + 1;
+    essaisCode.set(payload.jti, { n: essais, t: Date.now() });
+    if (essais > 5) {
+      return res.status(429).json({ success: false, message: 'Trop d\'essais. Recommencez la procédure pour recevoir un nouveau code.' });
     }
+    const attendu = Buffer.from(payload.h, 'hex');
+    const donne = Buffer.from(empreinteCode(payload.numeroH, payload.jti, String(code).trim()), 'hex');
+    if (attendu.length !== donne.length || !crypto.timingSafeEqual(attendu, donne)) {
+      return res.status(400).json({ success: false, message: `Code incorrect. Vérifiez le code reçu par email (${5 - essais} essai(s) restant(s)).` });
+    }
+    essaisCode.set(payload.jti, { n: 99, t: Date.now() }); // un code ne sert qu'une fois
     const user = await User.findByNumeroH(payload.numeroH);
     if (!user) {
       return res.status(400).json({ success: false, message: 'Compte introuvable.' });
@@ -884,7 +924,7 @@ router.post('/forgot-password/verify-code', [
     // Code correct → générer le token de réinitialisation, lié à l'état actuel du
     // compte (pwv) pour qu'il devienne invalide dès qu'il a servi une fois.
     const resetToken = jwt.sign(
-      { numeroH: payload.numeroH, purpose: 'forgot_password', pwv: new Date(user.updatedAt).getTime() },
+      { numeroH: payload.numeroH, purpose: 'forgot_password', pwv: versionMotDePasse(user) },
       config.JWT_SECRET,
       { expiresIn: '15m' }
     );
@@ -924,7 +964,7 @@ router.post('/forgot-password/reset', [
     }
     // Le lien/token n'est valable qu'une seule fois : s'il a déjà servi (le compte a
     // changé depuis), on le refuse même s'il n'a pas encore expiré.
-    if (payload.pwv !== undefined && payload.pwv !== new Date(user.updatedAt).getTime()) {
+    if (payload.pwv !== versionMotDePasse(user)) {
       return res.status(400).json({ success: false, message: 'Ce lien a déjà été utilisé. Recommencez la procédure « Mot de passe oublié ».' });
     }
     user.password = await bcrypt.hash(newPassword, config.BCRYPT_ROUNDS);
