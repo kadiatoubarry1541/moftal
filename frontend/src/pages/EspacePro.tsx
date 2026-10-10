@@ -2574,7 +2574,7 @@ export default function EspacePro() {
                 {/* Informations */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {[
-                    { label: "Adresse",   value: account.address },
+                    { label: "Adresse (quartier)", value: account.address },
                     { label: "Ville",     value: account.city },
                     { label: "Pays",      value: account.country },
                     { label: "Téléphone", value: account.phone },
