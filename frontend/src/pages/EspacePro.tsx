@@ -642,7 +642,6 @@ export default function EspacePro() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoSuccess, setLogoSuccess]     = useState(false);
   // Logo enregistré dans un format que le navigateur ne sait pas afficher (ex. HEIC)
-  const [logoIllisible, setLogoIllisible] = useState(false);
 
   // Lien client à partager
   const [clientLinkCopied, setClientLinkCopied] = useState(false);
@@ -829,12 +828,17 @@ export default function EspacePro() {
     if (!account) return;
     if (!window.confirm('Retirer cette personne ?')) return;
     try {
-      await fetch(`${API}/api/pro-members/${account.id}/members/${memberId}`, {
+      const res = await fetch(`${API}/api/pro-members/${account.id}/members/${memberId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      loadMembers();
-    } catch { /* ignore */ }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        loadMembers();
+      } else {
+        alert(data.message || "Cette personne n'a pas pu être retirée. Réessayez.");
+      }
+    } catch { alert("Erreur de connexion : rien n'a été modifié. Réessayez."); }
   };
 
   /* ── Fonctions Ma Vitrine ─────────────────────────────────────────────── */
@@ -898,27 +902,34 @@ export default function EspacePro() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(newPub),
       });
-      const data = await res.json();
-      if (data.success) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         setPublications(prev => [data.publication, ...prev]);
         setNewPub({ type: 'annonce', titre: '', contenu: '', prix: '', disponible: true, image: null, video: null });
         setShowAddPub(false);
         setPubSuccess(true);
         setTimeout(() => setPubSuccess(false), 3000);
+      } else {
+        alert(data.message || "La publication n'a pas pu être enregistrée.");
       }
-    } catch { /* ignore */ } finally { setPubSaving(false); }
+    } catch { alert("Erreur de connexion : rien n'a été publié. Réessayez."); } finally { setPubSaving(false); }
   };
 
   const deletePublication = async (pubId: string) => {
     if (!account) return;
     if (!window.confirm('Supprimer cette publication ?')) return;
     try {
-      await fetch(`${API}/api/pro-vitrine/${account.id}/publications/${pubId}`, {
+      const res = await fetch(`${API}/api/pro-vitrine/${account.id}/publications/${pubId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      setPublications(prev => prev.filter(p => p.id !== pubId));
-    } catch { /* ignore */ }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setPublications(prev => prev.filter(p => p.id !== pubId));
+      } else {
+        alert(data.message || "La publication n'a pas pu être supprimée.");
+      }
+    } catch { alert("Erreur de connexion : rien n'a été supprimé. Réessayez."); }
   };
 
   const toggleDisponible = async (pub: any) => {
@@ -1021,7 +1032,7 @@ export default function EspacePro() {
   }, [token]);
 
   /* ---- Accepter ---- */
-  const handleAccept = async (aptId: string, videoUrl?: string) => {
+  const handleAccept = async (aptId: string, videoUrl?: string): Promise<boolean> => {
     setActionLoading(aptId);
     try {
       const body: Record<string, unknown> = {
@@ -1034,13 +1045,18 @@ export default function EspacePro() {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (data.success && account) {
-        await loadAppointments(account.id);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        if (account) await loadAppointments(account.id);
         setTab("history");
+        return true;
       }
+      alert(data.message || "Le rendez-vous n'a pas pu être accepté. Réessayez.");
+      return false;
     } catch (err) {
       console.error(err);
+      alert("Erreur de connexion : le rendez-vous n'a pas été accepté. Réessayez.");
+      return false;
     } finally {
       setActionLoading(null);
     }
@@ -1098,8 +1114,9 @@ export default function EspacePro() {
     if (!capturedId) return;
     const reader = new FileReader();
     reader.onloadend = async () => {
-      await handleAccept(capturedId, reader.result as string);
-      setVideoSent(true);
+      // « Envoyé » seulement si le serveur a bien enregistré la réponse
+      const ok = await handleAccept(capturedId, reader.result as string);
+      if (ok) setVideoSent(true);
     };
     reader.readAsDataURL(proVideoFile);
   };
@@ -1125,7 +1142,6 @@ export default function EspacePro() {
       const data = await res.json();
       if (data.success) {
         setAccount(prev => prev ? { ...prev, photo: base64 } : prev);
-        setLogoIllisible(false);
         setLogoSuccess(true);
         setTimeout(() => setLogoSuccess(false), 3500);
       } else {
@@ -1322,18 +1338,8 @@ export default function EspacePro() {
           {/* Identité du compte */}
           <div className="flex items-start gap-4 mb-6">
             <div className="w-16 h-16 rounded-2xl flex-shrink-0 shadow-inner overflow-hidden border-2 border-white/30">
-              {account.photo && !logoIllisible ? (
-                <img
-                  src={account.photo}
-                  alt={`Logo ${account.name}`}
-                  className="w-full h-full object-contain bg-white"
-                  onError={() => setLogoIllisible(true)}
-                />
-              ) : (
-                <div className="w-full h-full bg-white/20 flex items-center justify-center text-4xl">
-                  {typeInfo.icon}
-                </div>
-              )}
+              {/* Logo de l'établissement (initiale si illisible) — jamais un emoji à sa place */}
+              <LogoEtablissement src={account.photo} name={account.name} type={account.type} fontSize={28} />
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{account.name}</h1>

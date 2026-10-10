@@ -5,7 +5,7 @@ import { getSessionUser, isAdmin } from "../utils/auth";
 import Activite from "./Activite";
 import { AddPersonModal } from "../components/AddPersonModal";
 import PaymentModal from "../components/PaymentModal";
-import { TenantLogo } from "../components/GestionBrand";
+import LogoEtablissement from "../components/LogoEtablissement";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
 import {
   ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
@@ -17,6 +17,27 @@ import {
 // donc toujours passer par cette base. Le littéral "http://localhost:5002" est remplacé
 // par la vraie URL du backend au build (voir vite.config.ts, replaceLocalhostPlugin).
 const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\/api\/?$/, "");
+
+// Logo de l'établissement (logo enregistré, sinon celui servi par le serveur) en entier ;
+// s'il est illisible : l'initiale de l'établissement — jamais un emoji à sa place.
+function LogoCompte({ tenantCode, logoUrl, name, type, size, radius }: {
+  tenantCode?: string; logoUrl?: string | null; name?: string; type?: string; size: number; radius: number;
+}) {
+  const src = logoUrl || (tenantCode ? `${API}/api/professionals/tenant-icon/${encodeURIComponent(tenantCode)}?fallback=none` : null);
+  return (
+    <div style={{ width:size, height:size, borderRadius:radius, overflow:"hidden", flexShrink:0, border:"1px solid #e2e8f0" }}>
+      <LogoEtablissement src={src} name={name} type={type} fontSize={Math.round(size * 0.45)} radius={radius} />
+    </div>
+  );
+}
+
+// La formule de CE compte inclut-elle la Gestion Interne (site client, connexion de clients) ?
+// 'visibility' = Visibilité + Rendez-vous : non, sauf Gestion Interne payée en cours.
+function compteAvecGestion(a: any): boolean {
+  if (a?.planType !== "visibility") return true;
+  const fin = a?.gestionInterneValidUntil ? new Date(a.gestionInterneValidUntil) : null;
+  return !!fin && fin.getTime() > Date.now();
+}
 
 // ─── COMPOSANT PRINCIPAL ──────────────────────────────────────────────────────
 
@@ -592,7 +613,7 @@ export default function GestionInterne() {
                           style={{ display:"flex", alignItems:"center", gap:14, width:"100%", textAlign:"left", padding:"13px 16px", cursor:"pointer", background:"transparent", border:"none" }}
                           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#f8fafc"; }}
                           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                          <div style={{ width:38, height:38, borderRadius:8, background:info.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{info.emoji}</div>
+                          <LogoCompte tenantCode={t.tenant_code} logoUrl={t.logo_url || t.photo} name={t.name} type={t.type} size={38} radius={8} />
                           <div style={{ flex:1, minWidth:0 }}>
                             <div style={{ fontWeight:700, color:"#0f172a", fontSize:14, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.name}</div>
                             <div style={{ display:"flex", gap:6, marginTop:2, flexWrap:"wrap" }}>
@@ -784,7 +805,7 @@ export default function GestionInterne() {
                         style={{ display:"flex", alignItems:"center", gap:16, width:"100%", textAlign:"left", padding:"16px 20px", cursor:"pointer", background:"transparent", border:"none", transition:"background 0.15s" }}
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "#f8fafc"; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}>
-                        <TenantLogo tenantCode={a.tenant_code} logoUrl={a.photo} fallback={info.emoji} size={44} radius={10} style={{ background: info.bg }} />
+                        <LogoCompte tenantCode={a.tenant_code} logoUrl={a.photo} name={a.name} type={a.type} size={44} radius={10} />
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ fontWeight:700, color:"#0f172a", fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{a.name}</div>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:3, flexWrap:"wrap" }}>
@@ -806,8 +827,8 @@ export default function GestionInterne() {
                       {/* Pied de carte : toutes les actions */}
                       <div style={{ borderTop:"1px solid #f1f5f9", padding:"8px 20px", background:"#fafbfc" }}>
                         <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-                          {/* Site vitrine : seulement avec la Gestion Interne (formule 2) */}
-                          {info.vitrinePath && accesGI?.mode !== "visibilite" && (
+                          {/* Site vitrine et connexion de clients : seulement si CE compte a la Gestion Interne (formule 2) */}
+                          {info.vitrinePath && a.tenant_code && compteAvecGestion(a) && (
                             <button onClick={() => navigate(`/${info.vitrinePath}/${a.tenant_code}`)}
                               style={{ padding:"6px 14px", background:info.color, color:"white", border:"none", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>
                               Voir le site client
@@ -825,7 +846,7 @@ export default function GestionInterne() {
                               </button>
                             </>
                           )}
-                          {accesGI?.mode !== "visibilite" && <button onClick={() => setConnectModal({ accountId: a.id, name: a.name })}
+                          {compteAvecGestion(a) && <button onClick={() => setConnectModal({ accountId: a.id, name: a.name })}
                             style={{ padding:"6px 14px", background:"#f8fafc", color:"#475569", border:"1.5px solid #e2e8f0", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, marginLeft:"auto" }}>
                             Connecter un client
                           </button>}

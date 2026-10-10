@@ -107,9 +107,11 @@ export default function PrendreRendezVous() {
   };
 
   // === Sélection/enregistrement vidéo (file input — compatible tous appareils) ===
+  // ~140 Mo max : une fois encodée pour l'envoi, la vidéo pèse un tiers de plus
+  const VIDEO_MAX_MO = 140;
   const handleVideoFile = (file: File) => {
-    if (file.size > 200 * 1024 * 1024) {
-      alert("Vidéo trop volumineuse (maximum 200 MB).");
+    if (file.size > VIDEO_MAX_MO * 1024 * 1024) {
+      alert(`Vidéo trop volumineuse (${Math.round(file.size / (1024 * 1024))} Mo). Maximum ${VIDEO_MAX_MO} Mo : raccourcissez-la ou filmez en qualité plus basse.`);
       return;
     }
     setVideoFile(file);
@@ -125,19 +127,27 @@ export default function PrendreRendezVous() {
     try {
       const reader = new FileReader();
       reader.onloadend = async () => {
-        const res = await fetch(`${API_BASE}/api/appointments/book`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            professionalAccountId: id,
-            type: "video",
-            videoUrl: reader.result
-          })
-        });
-        const data = await res.json();
-        if (data.success) setMode("done");
-        else setError(data.message || "Erreur");
-        setSending(false);
+        // L'envoi se fait ici, hors du try extérieur : il a son propre try/catch
+        try {
+          if (reader.error || !reader.result) throw new Error("lecture");
+          const res = await fetch(`${API_BASE}/api/appointments/book`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              professionalAccountId: id,
+              type: "video",
+              videoUrl: reader.result
+            })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.success) setMode("done");
+          else if (res.status === 413) setError(`Vidéo trop volumineuse pour l'envoi (maximum ${VIDEO_MAX_MO} Mo).`);
+          else setError(data.message || "Le rendez-vous n'a pas pu être envoyé. Réessayez.");
+        } catch {
+          setError("Erreur de connexion : la vidéo n'a pas été envoyée. Réessayez.");
+        } finally {
+          setSending(false);
+        }
       };
       reader.readAsDataURL(videoFile);
     } catch {
