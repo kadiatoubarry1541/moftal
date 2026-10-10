@@ -143,37 +143,43 @@ router.post('/:tenantCode/sales', authenticate, verifyTenant, async (req, res) =
     const { client_nom, type_paiement, est_credit, notes, items } = req.body;
     const validItems = (items || []).filter(i => i.nom && i.prix_unitaire);
     if (!validItems.length) return res.status(400).json({ success: false, message: 'Au moins un article requis.' });
+    const nomClient = String(client_nom || '').trim();
+    if (est_credit && !nomClient) return res.status(400).json({ success: false, message: 'Nom du client obligatoire pour une vente à crédit.' });
     const total = validItems.reduce((s, i) => s + +i.prix_unitaire * +(i.quantite || 1), 0);
+    const code = req.params.tenantCode;
 
-    const [sale] = await sequelize.query(
-      `INSERT INTO retailer_sales (tenant_code,client_nom,type_paiement,total,est_credit,notes)
-       VALUES (:code,:cnom,:tp,:total,:credit,:notes) RETURNING *`,
-      { replacements: { code: req.params.tenantCode, cnom: client_nom || 'Client', tp: type_paiement || 'especes', total, credit: !!est_credit, notes: notes || '' }, type: sequelize.QueryTypes.SELECT }
-    );
-    const saleId = sale.id;
-
-    for (const item of validItems) {
-      await sequelize.query(
-        `INSERT INTO retailer_sale_items (sale_id,tenant_code,nom,product_id,prix_unitaire,quantite,sous_total)
-         VALUES (:sid,:code,:nom,:pid,:prix,:qte,:sous)`,
-        { replacements: { sid: saleId, code: req.params.tenantCode, nom: item.nom, pid: item.product_id || null, prix: +item.prix_unitaire, qte: +(item.quantite || 1), sous: +item.prix_unitaire * +(item.quantite || 1) } }
+    // Vente, articles, stock et crédit client : tout est enregistré ensemble, ou rien
+    const sale = await sequelize.transaction(async (t) => {
+      const [vente] = await sequelize.query(
+        `INSERT INTO retailer_sales (tenant_code,client_nom,type_paiement,total,est_credit,notes)
+         VALUES (:code,:cnom,:tp,:total,:credit,:notes) RETURNING *`,
+        { replacements: { code, cnom: nomClient || 'Client', tp: type_paiement || 'especes', total, credit: !!est_credit, notes: notes || '' }, type: sequelize.QueryTypes.SELECT, transaction: t }
       );
-      if (item.product_id) {
+
+      for (const item of validItems) {
         await sequelize.query(
-          `UPDATE retailer_products SET stock=GREATEST(0,stock-:qte) WHERE id=:pid AND tenant_code=:code`,
-          { replacements: { qte: +(item.quantite || 1), pid: +item.product_id, code: req.params.tenantCode } }
+          `INSERT INTO retailer_sale_items (sale_id,tenant_code,nom,product_id,prix_unitaire,quantite,sous_total)
+           VALUES (:sid,:code,:nom,:pid,:prix,:qte,:sous)`,
+          { replacements: { sid: vente.id, code, nom: item.nom, pid: item.product_id || null, prix: +item.prix_unitaire, qte: +(item.quantite || 1), sous: +item.prix_unitaire * +(item.quantite || 1) }, transaction: t }
+        );
+        if (item.product_id) {
+          await sequelize.query(
+            `UPDATE retailer_products SET stock=GREATEST(0,stock-:qte) WHERE id=:pid AND tenant_code=:code`,
+            { replacements: { qte: +(item.quantite || 1), pid: +item.product_id, code }, transaction: t }
+          );
+        }
+      }
+
+      if (est_credit) {
+        await sequelize.query(
+          `INSERT INTO retailer_clients (tenant_code,nom,credit_total)
+           VALUES (:code,:nom,:total)
+           ON CONFLICT (tenant_code,nom) DO UPDATE SET credit_total=retailer_clients.credit_total+:total`,
+          { replacements: { code, nom: nomClient, total }, transaction: t }
         );
       }
-    }
-
-    if (est_credit && client_nom) {
-      await sequelize.query(
-        `INSERT INTO retailer_clients (tenant_code,nom,credit_total)
-         VALUES (:code,:nom,:total)
-         ON CONFLICT (tenant_code,nom) DO UPDATE SET credit_total=retailer_clients.credit_total+:total`,
-        { replacements: { code: req.params.tenantCode, nom: client_nom, total } }
-      );
-    }
+      return vente;
+    });
 
     res.json({ success: true, sale });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -205,14 +211,46 @@ router.post('/:tenantCode/clients', authenticate, verifyTenant, async (req, res)
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// Remboursements de crédit : l'argent encaissé est enregistré en base
+async function ensureRetailerCreditPayments() {
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS retailer_credit_payments (
+      id           SERIAL PRIMARY KEY,
+      tenant_code  VARCHAR(50) NOT NULL,
+      client_id    INTEGER NOT NULL,
+      montant      DECIMAL(15,0) NOT NULL DEFAULT 0,
+      created_at   TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+}
+
 router.put('/:tenantCode/clients/:id/pay-credit', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { montant } = req.body;
-    await sequelize.query(
-      `UPDATE retailer_clients SET credit_total=GREATEST(0,credit_total-:montant) WHERE id=:id AND tenant_code=:code`,
-      { replacements: { montant: +montant, id: req.params.id, code: req.params.tenantCode } }
-    );
-    res.json({ success: true });
+    await ensureRetailerCreditPayments();
+    const montant = Math.round(+req.body?.montant || 0);
+    if (!(montant > 0)) return res.status(400).json({ success: false, message: 'Le montant encaissé doit être supérieur à 0.' });
+    const code = req.params.tenantCode;
+    // Baisse du crédit et enregistrement de l'argent reçu : ensemble, ou rien
+    const resultat = await sequelize.transaction(async (t) => {
+      const [client] = await sequelize.query(
+        `SELECT id, credit_total FROM retailer_clients WHERE id=:id AND tenant_code=:code FOR UPDATE`,
+        { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT, transaction: t }
+      );
+      if (!client) return { erreur: 404, message: 'Client introuvable.' };
+      const encaisse = Math.min(montant, Math.max(0, +client.credit_total || 0));
+      if (!(encaisse > 0)) return { erreur: 400, message: "Ce client n'a pas de crédit à rembourser." };
+      await sequelize.query(
+        `UPDATE retailer_clients SET credit_total=GREATEST(0,credit_total-:m) WHERE id=:id AND tenant_code=:code`,
+        { replacements: { m: encaisse, id: client.id, code }, transaction: t }
+      );
+      await sequelize.query(
+        `INSERT INTO retailer_credit_payments (tenant_code, client_id, montant) VALUES (:code,:cid,:m)`,
+        { replacements: { code, cid: client.id, m: encaisse }, transaction: t }
+      );
+      return { encaisse };
+    });
+    if (resultat.erreur) return res.status(resultat.erreur).json({ success: false, message: resultat.message });
+    res.json({ success: true, montant: resultat.encaisse });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 

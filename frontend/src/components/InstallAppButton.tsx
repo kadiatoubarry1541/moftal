@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { demanderCodeOuverture } from "../utils/codeOuverture";
 import { setProBrand } from "./proBrand";
 import { synchroniserIconeApp } from "../utils/appIcon";
 import { appPlayInstallee, appSiteInstallee, estDansAppPlay, lienOuvrirAppPlay } from "../utils/appMoftalInstallee";
@@ -56,20 +57,34 @@ function isAndroid() {
 // depuis l'app Moftal (ou depuis WhatsApp, Facebook…) s'affiche dans une fenêtre
 // intégrée (croix ✕ en haut) où le téléphone ne propose jamais l'installation :
 // seul un vrai onglet Chrome peut installer l'app de la gestion. La session est
-// transmise (comme depuis Moftal) pour ne pas avoir à se reconnecter.
-function lienOuvrirDansChrome() {
+// transmise par un code à usage unique (jamais la session elle-même dans
+// l'adresse) pour ne pas avoir à se reconnecter.
+function lienOuvrirDansChrome(code?: string | null) {
   const { host, pathname, search } = window.location;
   const params = new URLSearchParams(search);
-  const t = localStorage.getItem("token");
-  const s = localStorage.getItem("session_user");
-  if (t) params.set("_t", t);
-  if (s) params.set("_s", s);
+  params.delete("_t"); params.delete("_s"); params.delete("_c");
+  if (code) params.set("_c", code);
   // À l'arrivée dans Chrome, la gestion affiche directement l'installation
   params.set("installer", "1");
   const q = params.toString();
   const cible = `${host}${pathname}${q ? `?${q}` : ""}`;
   const secours = encodeURIComponent(`https://${host}${pathname}`);
   return `intent://${cible}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${secours};end`;
+}
+
+// Code d'ouverture pour « Ouvrir dans Chrome », demandé seulement quand le lien
+// est affiché, et renouvelé avant son expiration (10 min côté serveur).
+function useCodeChrome(actif: boolean) {
+  const [code, setCode] = useState<string | null>(null);
+  useEffect(() => {
+    if (!actif) return;
+    let fini = false;
+    const charger = () => demanderCodeOuverture().then((c) => { if (!fini) setCode(c); });
+    charger();
+    const t = setInterval(charger, 8 * 60 * 1000);
+    return () => { fini = true; clearInterval(t); };
+  }, [actif]);
+  return code;
 }
 
 // Vérifie auprès du navigateur (Chrome/Edge/Android uniquement — API absente sur
@@ -178,6 +193,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
   const [ouvert, setOuvert] = useState(false);
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [etat, setEtat] = useState<"" | "installation" | "installee" | "manuel">("");
+  const codeChrome = useCodeChrome(etat === "manuel" && isAndroid());
 
   useEffect(() => {
     let minuterie: ReturnType<typeof setTimeout> | undefined;
@@ -263,7 +279,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
         ) : etat === "manuel" ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
             {isAndroid() && (
-              <a href={lienOuvrirDansChrome()} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: themeColor, color: "white", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 8 }}>
+              <a href={lienOuvrirDansChrome(codeChrome)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: themeColor, color: "white", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 8 }}>
                 🌐 Ouvrir dans Chrome
               </a>
             )}
@@ -600,6 +616,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   const STORAGE_KEY = getTenantStorageKey();
   const android = isAndroid();
+  const codeChrome = useCodeChrome(showToast && android);
 
   useEffect(() => {
     const standalone =
@@ -726,7 +743,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
                 Ici (fenêtre avec une croix ✕ en haut), le téléphone ne permet pas d'installer.
               </div>
               <a
-                href={lienOuvrirDansChrome()}
+                href={lienOuvrirDansChrome(codeChrome)}
                 style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: themeColor, color: "white", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 8 }}
               >
                 🌐 Ouvrir dans Chrome

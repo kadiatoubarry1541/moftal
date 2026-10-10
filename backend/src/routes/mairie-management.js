@@ -35,6 +35,44 @@ async function verifyTenantProprietaire(req, res, next) {
   }
 }
 
+// ── Numéro de dossier sans collision ──
+// Format : PRE-<code établissement complet>-0001. On part du plus grand suffixe
+// numérique déjà utilisé avec ce préfixe (pas du COUNT, qui recule après une
+// suppression) et on réessaie si un autre enregistrement a pris le numéro
+// entre-temps (colonne UNIQUE). Les anciens numéros (PRE-<4 derniers>-NNNN)
+// restent valides : ils ne sont jamais modifiés.
+const TABLES_DOSSIER = { mairie_mariages: 'MAR', mairie_naissances: 'NAI', mairie_deces: 'DEC', mairie_residences: 'RES' };
+
+async function prochainNumero(table, code, decalage = 0) {
+  // numero_dossier est un VARCHAR(50) : on borne la longueur du code.
+  const prefixe = `${TABLES_DOSSIER[table]}-${String(code).slice(0, 36)}-`;
+  const [row] = await sequelize.query(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(numero_dossier FROM :len) AS BIGINT)), 0) AS m
+       FROM ${table}
+      WHERE numero_dossier LIKE :like ESCAPE '\\'
+        AND SUBSTRING(numero_dossier FROM :len) ~ '^[0-9]+$'`,
+    { replacements: { len: prefixe.length + 1, like: prefixe.replace(/[\\%_]/g, '\\$&') + '%' }, type: sequelize.QueryTypes.SELECT }
+  );
+  return `${prefixe}${String(+(row?.m || 0) + 1 + decalage).padStart(4, '0')}`;
+}
+
+// Exécute l'INSERT avec un numéro libre ; en cas de conflit d'unicité sur
+// numero_dossier, recalcule et réessaie (quelques fois au plus).
+async function insererAvecNumero(table, code, inserer) {
+  let derniereErreur;
+  for (let essai = 0; essai < 5; essai++) {
+    const num = await prochainNumero(table, code, essai);
+    try {
+      return await inserer(num);
+    } catch (e) {
+      const unique = e?.name === 'SequelizeUniqueConstraintError' || e?.original?.code === '23505' || e?.parent?.code === '23505';
+      if (!unique) throw e;
+      derniereErreur = e;
+    }
+  }
+  throw derniereErreur || new Error('Impossible de générer un numéro de dossier.');
+}
+
 // GET /api/mairie-mgmt/:tenantCode/info
 router.get('/:tenantCode/info', authenticate, verifyTenant, (req, res) => {
   res.json({ success: true, tenant: req.tenant });
@@ -121,23 +159,21 @@ router.post('/:tenantCode/mariages', authenticate, verifyTenant, async (req, res
   try {
     const { epoux_nom, epoux_prenom, epoux_ddn, epoux_numero_h, epouse_nom, epouse_prenom, epouse_ddn, epouse_numero_h, date_mariage, lieu_mariage, temoin1_nom, temoin2_nom, notes } = req.body;
     const code = req.params.tenantCode;
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM mairie_mariages WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const num = `MAR-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
-    const [rows] = await sequelize.query(
+    const [rows] = await insererAvecNumero('mairie_mariages', code, (num) => sequelize.query(
       `INSERT INTO mairie_mariages (tenant_code,numero_dossier,epoux_nom,epoux_prenom,epoux_ddn,epoux_numero_h,epouse_nom,epouse_prenom,epouse_ddn,epouse_numero_h,date_mariage,lieu_mariage,temoin1_nom,temoin2_nom,notes)
        VALUES(:code,:num,:en,:ep,:edd,:enh,:fn,:fp,:fdd,:fnh,:dm,:lm,:t1,:t2,:notes) RETURNING *`,
       { replacements: { code, num, en: epoux_nom, ep: epoux_prenom, edd: epoux_ddn || null, enh: epoux_numero_h || null, fn: epouse_nom, fp: epouse_prenom, fdd: epouse_ddn || null, fnh: epouse_numero_h || null, dm: date_mariage, lm: lieu_mariage || '', t1: temoin1_nom || null, t2: temoin2_nom || null, notes: notes || null }, type: sequelize.QueryTypes.INSERT }
-    );
+    ));
     res.json({ success: true, mariage: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 router.put('/:tenantCode/mariages/:id', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { epoux_nom, epoux_prenom, epoux_ddn, epouse_nom, epouse_prenom, epouse_ddn, date_mariage, lieu_mariage, temoin1_nom, temoin2_nom, statut, notes } = req.body;
+    const { epoux_nom, epoux_prenom, epoux_ddn, epoux_numero_h, epouse_nom, epouse_prenom, epouse_ddn, epouse_numero_h, date_mariage, lieu_mariage, temoin1_nom, temoin2_nom, statut, notes } = req.body;
     await sequelize.query(
-      `UPDATE mairie_mariages SET epoux_nom=:en,epoux_prenom=:ep,epoux_ddn=:edd,epouse_nom=:fn,epouse_prenom=:fp,epouse_ddn=:fdd,date_mariage=:dm,lieu_mariage=:lm,temoin1_nom=:t1,temoin2_nom=:t2,statut=:statut,notes=:notes,updated_at=NOW() WHERE id=:id AND tenant_code=:code`,
-      { replacements: { en: epoux_nom, ep: epoux_prenom, edd: epoux_ddn || null, fn: epouse_nom, fp: epouse_prenom, fdd: epouse_ddn || null, dm: date_mariage, lm: lieu_mariage || '', t1: temoin1_nom || null, t2: temoin2_nom || null, statut: statut || 'en_attente', notes: notes || null, id: req.params.id, code: req.params.tenantCode } }
+      `UPDATE mairie_mariages SET epoux_nom=:en,epoux_prenom=:ep,epoux_ddn=:edd,epoux_numero_h=:enh,epouse_nom=:fn,epouse_prenom=:fp,epouse_ddn=:fdd,epouse_numero_h=:fnh,date_mariage=:dm,lieu_mariage=:lm,temoin1_nom=:t1,temoin2_nom=:t2,statut=:statut,notes=:notes,updated_at=NOW() WHERE id=:id AND tenant_code=:code`,
+      { replacements: { en: epoux_nom, ep: epoux_prenom, edd: epoux_ddn || null, enh: epoux_numero_h || null, fn: epouse_nom, fp: epouse_prenom, fdd: epouse_ddn || null, fnh: epouse_numero_h || null, dm: date_mariage, lm: lieu_mariage || '', t1: temoin1_nom || null, t2: temoin2_nom || null, statut: statut || 'en_attente', notes: notes || null, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -182,13 +218,11 @@ router.post('/:tenantCode/naissances', authenticate, verifyTenant, async (req, r
   try {
     const { enfant_nom, enfant_prenom, date_naissance, lieu_naissance, sexe, pere_nom, pere_prenom, mere_nom, mere_prenom, declarant_nom, notes } = req.body;
     const code = req.params.tenantCode;
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM mairie_naissances WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const num = `NAI-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
-    const [rows] = await sequelize.query(
+    const [rows] = await insererAvecNumero('mairie_naissances', code, (num) => sequelize.query(
       `INSERT INTO mairie_naissances (tenant_code,numero_dossier,enfant_nom,enfant_prenom,date_naissance,lieu_naissance,sexe,pere_nom,pere_prenom,mere_nom,mere_prenom,declarant_nom,notes)
        VALUES(:code,:num,:en,:ep,:dn,:ln,:sexe,:pn,:pp,:mn,:mp,:decl,:notes) RETURNING *`,
       { replacements: { code, num, en: enfant_nom, ep: enfant_prenom, dn: date_naissance, ln: lieu_naissance || '', sexe: sexe || 'M', pn: pere_nom || null, pp: pere_prenom || null, mn: mere_nom || null, mp: mere_prenom || null, decl: declarant_nom || null, notes: notes || null }, type: sequelize.QueryTypes.INSERT }
-    );
+    ));
     res.json({ success: true, naissance: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -243,23 +277,21 @@ router.post('/:tenantCode/deces', authenticate, verifyTenant, async (req, res) =
   try {
     const { defunt_nom, defunt_prenom, defunt_ddn, defunt_numero_h, date_deces, lieu_deces, cause_deces, declarant_nom, declarant_telephone, notes } = req.body;
     const code = req.params.tenantCode;
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM mairie_deces WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const num = `DEC-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
-    const [rows] = await sequelize.query(
+    const [rows] = await insererAvecNumero('mairie_deces', code, (num) => sequelize.query(
       `INSERT INTO mairie_deces (tenant_code,numero_dossier,defunt_nom,defunt_prenom,defunt_ddn,defunt_numero_h,date_deces,lieu_deces,cause_deces,declarant_nom,declarant_telephone,notes)
        VALUES(:code,:num,:dn,:dp,:ddd,:dnh,:dd,:ld,:cd,:decl,:tel,:notes) RETURNING *`,
       { replacements: { code, num, dn: defunt_nom, dp: defunt_prenom, ddd: defunt_ddn || null, dnh: defunt_numero_h || null, dd: date_deces, ld: lieu_deces || '', cd: cause_deces || '', decl: declarant_nom || null, tel: declarant_telephone || null, notes: notes || null }, type: sequelize.QueryTypes.INSERT }
-    );
+    ));
     res.json({ success: true, deces: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 router.put('/:tenantCode/deces/:id', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { defunt_nom, defunt_prenom, defunt_ddn, date_deces, lieu_deces, cause_deces, declarant_nom, declarant_telephone, statut, notes } = req.body;
+    const { defunt_nom, defunt_prenom, defunt_ddn, defunt_numero_h, date_deces, lieu_deces, cause_deces, declarant_nom, declarant_telephone, statut, notes } = req.body;
     await sequelize.query(
-      `UPDATE mairie_deces SET defunt_nom=:dn,defunt_prenom=:dp,defunt_ddn=:ddd,date_deces=:dd,lieu_deces=:ld,cause_deces=:cd,declarant_nom=:decl,declarant_telephone=:tel,statut=:statut,notes=:notes,updated_at=NOW() WHERE id=:id AND tenant_code=:code`,
-      { replacements: { dn: defunt_nom, dp: defunt_prenom, ddd: defunt_ddn || null, dd: date_deces, ld: lieu_deces || '', cd: cause_deces || '', decl: declarant_nom || null, tel: declarant_telephone || null, statut: statut || 'en_attente', notes: notes || null, id: req.params.id, code: req.params.tenantCode } }
+      `UPDATE mairie_deces SET defunt_nom=:dn,defunt_prenom=:dp,defunt_ddn=:ddd,defunt_numero_h=:dnh,date_deces=:dd,lieu_deces=:ld,cause_deces=:cd,declarant_nom=:decl,declarant_telephone=:tel,statut=:statut,notes=:notes,updated_at=NOW() WHERE id=:id AND tenant_code=:code`,
+      { replacements: { dn: defunt_nom, dp: defunt_prenom, ddd: defunt_ddn || null, dnh: defunt_numero_h || null, dd: date_deces, ld: lieu_deces || '', cd: cause_deces || '', decl: declarant_nom || null, tel: declarant_telephone || null, statut: statut || 'en_attente', notes: notes || null, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -346,13 +378,11 @@ router.post('/:tenantCode/residences', authenticate, verifyTenant, async (req, r
   try {
     const { nom, prenom, date_naissance, numero_h, adresse, depuis_quand, motif, notes, chef_quartier_id, chef_quartier_nom, chef_quartier_telephone } = req.body;
     const code = req.params.tenantCode;
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM mairie_residences WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const num = `RES-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
-    const [rows] = await sequelize.query(
+    const [rows] = await insererAvecNumero('mairie_residences', code, (num) => sequelize.query(
       `INSERT INTO mairie_residences (tenant_code,numero_dossier,nom,prenom,date_naissance,numero_h,adresse,depuis_quand,motif,notes,chef_quartier_id,chef_quartier_nom,chef_quartier_telephone)
        VALUES(:code,:num,:nom,:prenom,:ddn,:nh,:adr,:dq,:motif,:notes,:cid,:cnom,:ctel) RETURNING *`,
       { replacements: { code, num, nom, prenom, ddn: date_naissance || null, nh: numero_h || null, adr: adresse, dq: depuis_quand || '', motif: motif || 'Autre', notes: notes || null, cid: chef_quartier_id || null, cnom: chef_quartier_nom || null, ctel: chef_quartier_telephone || null }, type: sequelize.QueryTypes.INSERT }
-    );
+    ));
     res.json({ success: true, residence: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });

@@ -39,6 +39,7 @@ export default function GestionSecurite() {
   useEffect(() => { setRecherche(""); }, [tab]);
   const [tenant, setTenant] = useState<any>(null);
   const [dash, setDash] = useState<any>(null);
+  const [dashError, setDashError] = useState("");
   const [agents, setAgents] = useState<any[]>([]);
   const [missions, setMissions] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -68,7 +69,8 @@ export default function GestionSecurite() {
     ]).then(([info, d]) => {
       if (!info.success) { setError(info.message || "Accès refusé."); return; }
       setTenant(info.tenant);
-      setDash(d);
+      if (d?.success) setDash(d);
+      else setDashError(d?.message || "Impossible de charger le tableau de bord.");
     }).catch(() => setError("Erreur de connexion.")).finally(() => setLoading(false));
   }, [tenantCode]);
 
@@ -83,10 +85,17 @@ export default function GestionSecurite() {
 
   const post = async (url: string, body: object) => {
     setSaving(true);
-    const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    const d = await r.json();
-    setSaving(false);
-    return d;
+    try {
+      const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+      const d = await r.json().catch(() => null);
+      if (!d) return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+      if (!r.ok && d.success !== false) return { ...d, success: false };
+      return d;
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally {
+      setSaving(false);
+    }
   };
 
   const del = (url: string) => envoyerGestion(url, { method: "DELETE", headers: auth() });
@@ -179,6 +188,9 @@ export default function GestionSecurite() {
       </div>
 
       {/* ── DASHBOARD ── */}
+      {tab === "dashboard" && !dash && dashError && (
+        <div style={{ background: "#fff1f2", border: "1px solid #fecdd3", color: "#be123c", borderRadius: 10, padding: "14px 16px", fontSize: 13, fontWeight: 600 }}>{dashError}</div>
+      )}
       {tab === "dashboard" && dash && (
         <div style={{ animation: "fadeIn 0.2s ease" }}>
           <BoutonRapport base={`/api/security-mgmt/${tenantCode}`} etablissement={tenant || undefined} couleur={SLATE} rapport={false} />

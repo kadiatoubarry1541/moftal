@@ -42,12 +42,12 @@ async function verifyTenantProprietaire(req, res, next) {
     const [isTenant] = await sequelize.query(
       `SELECT mt.* FROM management_tenants mt
        JOIN mosque_imams mi ON mi.tenant_code = mt.tenant_code
-       WHERE mt.tenant_code=:code AND mi.numero_h=:n AND mi.is_active=true LIMIT 1`,
+       WHERE mt.tenant_code=:code AND LOWER(mi.numero_h)=LOWER(:n) AND mi.is_active=true LIMIT 1`,
       { replacements: { code: tenantCode, n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
     );
     if (isTenant) {
       const [imam] = await sequelize.query(
-        `SELECT rang FROM mosque_imams WHERE tenant_code=:code AND numero_h=:n AND is_active=true LIMIT 1`,
+        `SELECT rang FROM mosque_imams WHERE tenant_code=:code AND LOWER(numero_h)=LOWER(:n) AND is_active=true LIMIT 1`,
         { replacements: { code: tenantCode, n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
       );
       req.tenant = isTenant;
@@ -60,6 +60,58 @@ async function verifyTenantProprietaire(req, res, next) {
 }
 
 // ─── INFO ─────────────────────────────────────────────────────────────────────
+// (déclarées avant les routes « /:tenantCode/… » : un quartier nommé « info »
+// ou « members » ne doit pas être pris pour un code d'établissement)
+// ─── GESTIONNAIRES DE QUARTIER ────────────────────────────────────────────────
+
+// GET /quartier-managers/:quartierNom → récupérer chef + gestionnaire d'un quartier
+router.get('/quartier-managers/:quartierNom', authenticate, async (req, res) => {
+  try {
+    const [mgr] = await sequelize.query(
+      `SELECT * FROM quartier_managers WHERE quartier_nom=:nom LIMIT 1`,
+      { replacements: { nom: req.params.quartierNom }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, manager: mgr || null });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// POST /quartier-managers → définir chef + gestionnaire (admin ou chef de quartier)
+router.post('/quartier-managers', authenticate, async (req, res) => {
+  try {
+    const { quartier_nom, chef_numero_h, chef_nom, gestionnaire_numero_h, gestionnaire_nom } = req.body;
+    if (!quartier_nom) return res.status(400).json({ success: false, message: 'Nom du quartier requis.' });
+    // Seuls l'admin et le chef actuel du quartier peuvent changer ses responsables
+    const role = String(req.user?.role || '').toLowerCase();
+    const estAdmin = !!(req.user?.isMasterAdmin || ['admin', 'super-admin', 'superadmin'].includes(role));
+    if (!estAdmin) {
+      const [actuel] = await sequelize.query(
+        `SELECT chef_numero_h FROM quartier_managers WHERE quartier_nom=:nom LIMIT 1`,
+        { replacements: { nom: quartier_nom }, type: sequelize.QueryTypes.SELECT }
+      );
+      const moi = String(req.user?.numeroH || req.userId || '').toLowerCase();
+      if (!actuel?.chef_numero_h || String(actuel.chef_numero_h).toLowerCase() !== moi) {
+        return res.status(403).json({ success: false, message: "Seuls l'administrateur et le chef du quartier peuvent désigner ses responsables." });
+      }
+    }
+
+    await sequelize.query(
+      `INSERT INTO quartier_managers (quartier_nom, chef_numero_h, chef_nom, gestionnaire_numero_h, gestionnaire_nom, updated_at)
+       VALUES (:qnom, :cn, :cnom, :gn, :gnom, NOW())
+       ON CONFLICT (quartier_nom) DO UPDATE
+       SET chef_numero_h=:cn, chef_nom=:cnom, gestionnaire_numero_h=:gn, gestionnaire_nom=:gnom, updated_at=NOW()`,
+      { replacements: { qnom: quartier_nom, cn: chef_numero_h || null, cnom: chef_nom || null, gn: gestionnaire_numero_h || null, gnom: gestionnaire_nom || null } }
+    );
+
+    const [mgr] = await sequelize.query(
+      `SELECT * FROM quartier_managers WHERE quartier_nom=:nom LIMIT 1`,
+      { replacements: { nom: quartier_nom }, type: sequelize.QueryTypes.SELECT }
+    );
+    res.json({ success: true, manager: mgr });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
+
 router.get('/:tenantCode/info', authenticate, verifyTenant, (req, res) => {
   res.json({ success: true, tenant: req.tenant });
 });
@@ -72,7 +124,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
     const [mem, ann, don, qst, recent] = await Promise.all([
       q(`SELECT COUNT(*) as c FROM mosque_members WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM mosque_announcements WHERE tenant_code=:code AND is_active=true`, { code }),
-      q(`SELECT COALESCE(SUM(montant),0) as t FROM mosque_donations WHERE tenant_code=:code AND EXTRACT(MONTH FROM date_don)=EXTRACT(MONTH FROM CURRENT_DATE)`, { code }),
+      q(`SELECT COALESCE(SUM(montant),0) as t FROM mosque_donations WHERE tenant_code=:code AND date_don >= date_trunc('month', CURRENT_DATE) AND date_don < date_trunc('month', CURRENT_DATE) + interval '1 month'`, { code }),
       q(`SELECT COUNT(*) as c FROM mosque_quran_students WHERE tenant_code=:code AND statut='actif'`, { code }),
       sequelize.query(`SELECT * FROM mosque_announcements WHERE tenant_code=:code AND is_active=true ORDER BY created_at DESC LIMIT 3`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);
@@ -155,7 +207,7 @@ router.post('/:tenantCode/donations', authenticate, verifyTenant, async (req, re
 router.get('/:tenantCode/quran-students', authenticate, verifyTenant, async (req, res) => {
   try {
     const rows = await sequelize.query(
-      `SELECT q.*,m.nom as enseignant_nom FROM mosque_quran_students q LEFT JOIN mosque_members m ON q.enseignant_id=m.id WHERE q.tenant_code=:code AND q.statut='actif' ORDER BY q.nom`,
+      `SELECT q.*,m.nom as enseignant_nom FROM mosque_quran_students q LEFT JOIN mosque_members m ON q.enseignant_id=m.id AND m.tenant_code=q.tenant_code WHERE q.tenant_code=:code AND q.statut='actif' ORDER BY q.nom`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, students: rows });
@@ -165,9 +217,17 @@ router.get('/:tenantCode/quran-students', authenticate, verifyTenant, async (req
 router.post('/:tenantCode/quran-students', authenticate, verifyTenant, async (req, res) => {
   try {
     const { nom, prenom, niveau_coran, telephone_parent, enseignant_id } = req.body;
+    if (!nom) return res.status(400).json({ success: false, message: 'Le nom est obligatoire.' });
+    let ens = null;
+    if (enseignant_id) {
+      const [m] = await sequelize.query(`SELECT id FROM mosque_members WHERE id::text=:ens AND tenant_code=:code LIMIT 1`,
+        { replacements: { ens: String(enseignant_id), code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT });
+      if (!m) return res.status(400).json({ success: false, message: "Cet enseignant n'est pas un membre de la mosquée." });
+      ens = m.id;
+    }
     const [rows] = await sequelize.query(
       `INSERT INTO mosque_quran_students (tenant_code,nom,prenom,niveau_coran,telephone_parent,enseignant_id) VALUES(:code,:nom,:prenom,:niveau,:tel,:ens) RETURNING *`,
-      { replacements: { code: req.params.tenantCode, nom, prenom: prenom || null, niveau: niveau_coran || 'Débutant', tel: telephone_parent || null, ens: enseignant_id || null }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code: req.params.tenantCode, nom, prenom: prenom || null, niveau: niveau_coran || 'Débutant', tel: telephone_parent || null, ens }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, student: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -273,42 +333,6 @@ router.delete('/:tenantCode/partenaires/:id', authenticate, verifyTenant, async 
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-// ─── GESTIONNAIRES DE QUARTIER ────────────────────────────────────────────────
-
-// GET /quartier-managers/:quartierNom → récupérer chef + gestionnaire d'un quartier
-router.get('/quartier-managers/:quartierNom', authenticate, async (req, res) => {
-  try {
-    const [mgr] = await sequelize.query(
-      `SELECT * FROM quartier_managers WHERE quartier_nom=:nom LIMIT 1`,
-      { replacements: { nom: req.params.quartierNom }, type: sequelize.QueryTypes.SELECT }
-    );
-    res.json({ success: true, manager: mgr || null });
-  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
-});
-
-// POST /quartier-managers → définir chef + gestionnaire (admin ou chef de quartier)
-router.post('/quartier-managers', authenticate, async (req, res) => {
-  try {
-    const { quartier_nom, chef_numero_h, chef_nom, gestionnaire_numero_h, gestionnaire_nom } = req.body;
-    if (!quartier_nom) return res.status(400).json({ success: false, message: 'Nom du quartier requis.' });
-
-    await sequelize.query(
-      `INSERT INTO quartier_managers (quartier_nom, chef_numero_h, chef_nom, gestionnaire_numero_h, gestionnaire_nom, updated_at)
-       VALUES (:qnom, :cn, :cnom, :gn, :gnom, NOW())
-       ON CONFLICT (quartier_nom) DO UPDATE
-       SET chef_numero_h=:cn, chef_nom=:cnom, gestionnaire_numero_h=:gn, gestionnaire_nom=:gnom, updated_at=NOW()`,
-      { replacements: { qnom: quartier_nom, cn: chef_numero_h || null, cnom: chef_nom || null, gn: gestionnaire_numero_h || null, gnom: gestionnaire_nom || null } }
-    );
-
-    const [mgr] = await sequelize.query(
-      `SELECT * FROM quartier_managers WHERE quartier_nom=:nom LIMIT 1`,
-      { replacements: { nom: quartier_nom }, type: sequelize.QueryTypes.SELECT }
-    );
-    res.json({ success: true, manager: mgr });
-  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
-});
-
-
 // ── Modifier une fiche (toutes les ressources ci-dessus) ──
 ajouterRoutesModifier(router, [authenticate, verifyTenant], {
   'members': { table: 'mosque_members', colonnes: ['nom', 'prenom', 'telephone', 'numero_h', 'role'] },
@@ -327,6 +351,9 @@ ajouterRouteRapport(router, [authenticate, verifyTenant], {
 });
 
 // ── Accès des employés (géré par le propriétaire uniquement) ──
-ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
+// Les cheikhs imams (rang 1 à 3) gèrent la mosquée, mais pas les accès des employés
+const proprietaireSeulement = (req, res, next) => (req.imamRang === 0 || req.imamRang === undefined)
+  ? next() : res.status(403).json({ success: false, message: "Seul le propriétaire de la mosquée peut gérer les accès des employés." });
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire, proprietaireSeulement]);
 
 export default router;

@@ -171,7 +171,7 @@ router.post('/:tenantCode/clients', authenticate, verifyTenant, async (req, res)
     const { nom, telephone, email, notes } = req.body;
     if (!nom) return res.status(400).json({ success: false, message: 'Nom requis.' });
     const [row] = await sequelize.query(
-      `INSERT INTO beauty_clients (tenant_code,nom,telephone,email,notes) VALUES (:code,:nom,:tel,:email,:notes) ON CONFLICT (tenant_code,nom) DO UPDATE SET telephone=EXCLUDED.telephone,is_active=true RETURNING *`,
+      `INSERT INTO beauty_clients (tenant_code,nom,telephone,email,notes) VALUES (:code,:nom,:tel,:email,:notes) ON CONFLICT (tenant_code,nom) DO UPDATE SET telephone=COALESCE(NULLIF(EXCLUDED.telephone,''),beauty_clients.telephone),email=COALESCE(NULLIF(EXCLUDED.email,''),beauty_clients.email),notes=COALESCE(NULLIF(EXCLUDED.notes,''),beauty_clients.notes),is_active=true RETURNING *`,
       { replacements: { code: req.params.tenantCode, nom, tel:telephone||'', email:email||'', notes:notes||'' }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, client: row });

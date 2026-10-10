@@ -156,6 +156,11 @@ export default function GestionEnseignement({ mode }: Props) {
   const [toast, setToast]         = useState<{ msg: string; ok: boolean } | null>(null);
   const [settingsForm, setSettingsForm] = useState<any>({});
   const [settingsSaving, setSettingsSaving] = useState(false);
+  // Parents reliés à un élève (un parent peut suivre plusieurs enfants)
+  const [parentsDe, setParentsDe] = useState<any | null>(null);
+  const [membres, setMembres]     = useState<any[]>([]);
+  const [nhParent, setNhParent]   = useState("");
+  const [parentsBusy, setParentsBusy] = useState(false);
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
@@ -360,6 +365,92 @@ export default function GestionEnseignement({ mode }: Props) {
     const map: Record<string, string> = { "Iqra": "#ecfeff", "Qa'idah": "#eff6ff", "Débutant": "#f5f3ff", "Juz' Amma": "#f0fdf0", "Hizb": "#fffbeb", "Hafiz": "#fef2f2" };
     return map[n] || "#f8fafc";
   };
+
+  const chargerMembres = async () => {
+    const d = await get("/members").catch(() => ({}));
+    if (d?.success) setMembres(d.members || []);
+    else showToast(d?.message || "Impossible de charger les parents.", false);
+  };
+
+  const ouvrirParents = (s: any) => { setParentsDe(s); setNhParent(""); chargerMembres(); };
+
+  const parentsDeLEleve = parentsDe
+    ? membres.filter((m) => (Array.isArray(m.enfants) ? m.enfants : []).some((e: any) => Number(e.id) === Number(parentsDe.id)))
+    : [];
+
+  const lierParent = async () => {
+    if (!parentsDe || !nhParent.trim()) return;
+    setParentsBusy(true);
+    try {
+      const v = nhParent.trim();
+      const tel = !/[a-z]/i.test(v) && v.replace(/[^0-9]/g, "").length >= 8;
+      const d = await post("/members/add", { ...(tel ? { telephone: v } : { numero_h: v }), role: "parent", linked_student_id: parentsDe.id });
+      if (!d.success) { showToast(d.message || "Erreur", false); return; }
+      showToast(d.user ? `Parent relié (${d.user.prenom} ${d.user.nom})` : "Parent relié");
+      setNhParent(""); await chargerMembres();
+    } catch { showToast("Erreur de connexion. Réessayez.", false); }
+    finally { setParentsBusy(false); }
+  };
+
+  // Retirer en tapant le NuméroH ou le numéro de téléphone du parent
+  const chiffres9 = (v: any) => String(v || "").replace(/[^0-9]/g, "").slice(-9);
+  const retirerParIdentifiant = () => {
+    const v = nhParent.trim();
+    if (!v) return;
+    const tel = !/[a-z]/i.test(v) && chiffres9(v).length >= 8 ? chiffres9(v) : "";
+    const m = parentsDeLEleve.find((p) =>
+      tel ? chiffres9(p.telephone_compte) === tel : String(p.numero_h || "").trim().toLowerCase() === v.toLowerCase());
+    if (!m) { showToast(`Aucun parent de ${parentsDe?.prenom || "cet élève"} avec ce ${tel ? "numéro de téléphone" : "NuméroH"}.`, false); return; }
+    void delierParent(m).then(() => setNhParent(""));
+  };
+
+  const delierParent = async (m: any) => {
+    if (!parentsDe) return;
+    const nomParent = [m.prenom, m.nom].filter(Boolean).join(" ") || m.nom_display || m.numero_h;
+    if (!confirm(`Retirer ${parentsDe.prenom} ${parentsDe.nom} du suivi de ${nomParent} ? Ses autres enfants restent reliés.`)) return;
+    setParentsBusy(true);
+    try {
+      const d = await del(`/members/${m.id}/students/${parentsDe.id}`);
+      if (!d.success) { showToast(d.message || "Erreur", false); return; }
+      showToast("Enfant retiré de ce parent");
+      await chargerMembres();
+    } catch { showToast("Erreur de connexion. Réessayez.", false); }
+    finally { setParentsBusy(false); }
+  };
+
+  const PARENTS = parentsDe ? (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={e => { if (e.target === e.currentTarget) setParentsDe(null); }}>
+      <div style={{ background: "white", borderRadius: 16, padding: "24px 24px", width: "100%", maxWidth: 480, maxHeight: "88vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#0f172a" }}>👪 Parents de {parentsDe.prenom} {parentsDe.nom}</h3>
+          <button onClick={() => setParentsDe(null)} aria-label="Fermer" style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94a3b8" }}>×</button>
+        </div>
+        {parentsDeLEleve.length === 0
+          ? <p style={{ fontSize: 13, color: "#94a3b8", margin: "0 0 14px" }}>Aucun parent relié pour le moment.</p>
+          : <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+              {parentsDeLEleve.map((m) => (
+                <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{[m.prenom, m.nom].filter(Boolean).join(" ") || m.nom_display || m.numero_h}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8" }}>{m.numero_h}{m.telephone_compte ? ` · 📞 ${m.telephone_compte}` : ""}{(m.enfants?.length || 0) > 1 ? ` · ${m.enfants.length} enfants suivis` : ""}</div>
+                  </div>
+                  <button disabled={parentsBusy} onClick={() => delierParent(m)} style={{ color: "#ef4444", background: "#fef2f2", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>
+                </div>
+              ))}
+            </div>}
+        <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 6px" }}>NuméroH ou numéro de téléphone du parent :</p>
+        <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder="Ex. G96C1P1… ou 620 00 00 00" inputMode="text"
+          style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, marginBottom: 8 }} />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button disabled={parentsBusy || !nhParent.trim()} onClick={lierParent}
+            style={{ flex: 1, background: V.color, color: "white", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: parentsBusy || !nhParent.trim() ? 0.6 : 1 }}>Relier</button>
+          <button disabled={parentsBusy || !nhParent.trim()} onClick={retirerParIdentifiant}
+            style={{ flex: 1, background: "#fef2f2", color: "#ef4444", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: parentsBusy || !nhParent.trim() ? 0.6 : 1 }}>Retirer</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   // ── Modal ──────────────────────────────────────────────────────────────────
   const MODAL = modal ? (
@@ -613,6 +704,7 @@ export default function GestionEnseignement({ mode }: Props) {
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}`}</style>
       {MODAL}
 
+      {PARENTS}
       {toast && (
         <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? V.color : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", animation: "fadeIn 0.2s ease" }}>
           {toast.ok ? "✓ " : "⚠ "}{toast.msg}
@@ -807,13 +899,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 16px" }}>
                           <div style={{ display:"flex", gap:10 }}>
                             <button onClick={()=>{ setForm({ ...s }); setModal("add-apprenant"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Modifier</button>
-                            <button onClick={async()=>{
-                              const nh = prompt(`Numéro Moftal du parent à relier à ${s.prenom} ${s.nom} :`);
-                              if (!nh) return;
-                              const d = await post("/members/add", { numero_h: nh.trim(), role: "parent", linked_student_id: s.id });
-                              if (d.success) showToast(d.user ? `Parent relié (${d.user.prenom} ${d.user.nom})` : (d.message || "Parent relié"));
-                              else showToast(d.message || "Erreur", false);
-                            }} style={{ color:"#7c3aed",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>👪 Lier parent</button>
+                            <button onClick={()=>ouvrirParents(s)} style={{ color:"#7c3aed",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>👪 Parents</button>
                             <button onClick={async()=>{ if(confirm(`Retirer ${s.prenom} ${s.nom} ?`)){const d=await del(`/students/${s.id}`); if(d.success){setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast("Retiré(e)");} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>Retirer</button>
                           </div>
                         </td>

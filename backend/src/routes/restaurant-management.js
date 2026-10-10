@@ -49,7 +49,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM resto_dishes WHERE tenant_code=:code AND disponible=true`, { code }),
       q(`SELECT COUNT(*) as c FROM resto_orders WHERE tenant_code=:code AND DATE(created_at)=CURRENT_DATE`, { code }),
       q(`SELECT COALESCE(SUM(total),0) as t FROM resto_orders WHERE tenant_code=:code AND DATE(created_at)=CURRENT_DATE AND statut='servi'`, { code }),
-      q(`SELECT COALESCE(SUM(total),0) as t FROM resto_orders WHERE tenant_code=:code AND EXTRACT(MONTH FROM created_at)=EXTRACT(MONTH FROM CURRENT_DATE) AND statut='servi'`, { code }),
+      q(`SELECT COALESCE(SUM(total),0) as t FROM resto_orders WHERE tenant_code=:code AND created_at >= date_trunc('month', CURRENT_DATE) AND created_at < date_trunc('month', CURRENT_DATE) + interval '1 month' AND statut='servi'`, { code }),
       q(`SELECT COUNT(*) as c FROM resto_tables WHERE tenant_code=:code`, { code }),
       q(`SELECT COUNT(*) as c FROM resto_staff WHERE tenant_code=:code AND actif=true`, { code }),
       sequelize.query(`SELECT * FROM resto_orders WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 6`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),

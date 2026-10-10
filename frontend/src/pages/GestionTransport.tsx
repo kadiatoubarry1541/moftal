@@ -46,6 +46,7 @@ export default function GestionTransport() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [accessError, setAccessError] = useState("");
 
   const [vForm, setVForm] = useState({ immatriculation: "", type_vehicule: "voiture", marque: "", capacite: "4", driver_id: "", description: "" });
   const [dForm, setDForm] = useState({ nom: "", prenom: "", telephone: "", permis: "", type_permis: "B", salaire: "", notes: "" });
@@ -68,7 +69,10 @@ export default function GestionTransport() {
       api(`/${code}/deliveries`),
       api(`/${code}/announcements`),
     ]);
-    if (info.success) setTenant(info.tenant);
+    // Accès refusé (403) ou abonnement à régler (402) : on affiche le message du serveur.
+    if (!info.success) { setAccessError(info.message || "Accès refusé."); setLoading(false); return; }
+    setAccessError("");
+    setTenant(info.tenant);
     if (d.success) setDash(d);
     if (v.success) setVehicles(v.vehicles || []);
     if (dr.success) setDrivers(dr.drivers || []);
@@ -167,6 +171,14 @@ export default function GestionTransport() {
     const c = STATUT_COLORS[s] || { bg: "#f1f5f9", color: "#475569" };
     return <span style={{ background: c.bg, color: c.color, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>{s.replace("_", " ")}</span>;
   };
+
+  if (accessError) return (
+    <div style={{ maxWidth: 480, margin: "80px auto", padding: 24, textAlign: "center" }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+      <h2>{accessError}</h2>
+      <button onClick={() => navigate(-1 as any)} style={{ padding: "10px 24px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>← Retour</button>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "system-ui, sans-serif" }}>

@@ -1,4 +1,5 @@
 import express from 'express';
+import { trouverPersonne } from '../utils/trouverPersonne.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
@@ -42,6 +43,62 @@ router.use(async (req, res, next) => {
   try { await ensureSchoolColumns(); } catch (e) { console.warn('⚠️ ensureSchoolColumns:', e.message); }
   next();
 });
+
+// ─── LIENS PARENT ↔ ÉLÈVES ───────────────────────────────────────────────────
+// Un parent peut suivre plusieurs enfants du même établissement : chaque lien
+// est une ligne de school_member_students. L'ancienne colonne
+// school_members.linked_student_id reste remplie (dernier enfant relié) et ses
+// valeurs existantes sont recopiées une fois dans la table de liens.
+let liensEcolePrets = false;
+export async function ensureLiensParentsEcole() {
+  if (liensEcolePrets) return;
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS school_member_students (
+      id          SERIAL PRIMARY KEY,
+      tenant_code VARCHAR(50) NOT NULL,
+      numero_h    VARCHAR(50) NOT NULL,
+      student_id  INTEGER NOT NULL REFERENCES school_students(id) ON DELETE CASCADE,
+      created_at  TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(tenant_code, numero_h, student_id)
+    );
+    INSERT INTO school_member_students (tenant_code, numero_h, student_id)
+      SELECT m.tenant_code, m.numero_h, m.linked_student_id
+      FROM school_members m
+      JOIN school_students s ON s.id = m.linked_student_id AND s.tenant_code = m.tenant_code
+      WHERE m.linked_student_id IS NOT NULL AND m.is_active = true
+    ON CONFLICT (tenant_code, numero_h, student_id) DO NOTHING;
+  `);
+  liensEcolePrets = true;
+}
+
+// Élèves de l'établissement suivis par ce membre actif : enfants reliés par la
+// direction, ou fiche élève portant son NuméroH (élève / parent).
+export async function elevesLiesEcole(code, numeroH) {
+  if (!code || !numeroH) return [];
+  await ensureLiensParentsEcole();
+  return sequelize.query(
+    `SELECT s.id, s.prenom, s.nom, s.niveau, c.nom AS classe
+     FROM school_students s
+     LEFT JOIN school_classrooms c ON c.id = s.classroom_id
+     WHERE s.tenant_code = :code
+       AND EXISTS (SELECT 1 FROM school_members m WHERE m.tenant_code = :code AND m.numero_h = :nh AND m.is_active = true)
+       AND (s.id IN (SELECT l.student_id FROM school_member_students l WHERE l.tenant_code = :code AND l.numero_h = :nh)
+            OR s.numero_h = :nh OR s.parent_numero_h = :nh)
+     ORDER BY s.prenom, s.nom`,
+    { replacements: { code, nh: numeroH }, type: sequelize.QueryTypes.SELECT }
+  );
+}
+
+// Membres actifs reliés à un élève (pour les notifications de bulletin)
+async function membresLiesAEleve(code, studentId) {
+  await ensureLiensParentsEcole();
+  return sequelize.query(
+    `SELECT DISTINCT m.numero_h FROM school_members m
+     WHERE m.tenant_code = :code AND m.is_active = true
+       AND m.numero_h IN (SELECT l.numero_h FROM school_member_students l WHERE l.tenant_code = :code AND l.student_id = :sid)`,
+    { replacements: { code, sid: studentId }, type: sequelize.QueryTypes.SELECT }
+  );
+}
 
 async function verifyTenantProprietaire(req, res, next) {
   const { tenantCode } = req.params;
@@ -473,8 +530,13 @@ async function verifyMemberProprietaire(req, res, next) {
 
 router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) => {
   try {
+    await ensureLiensParentsEcole();
     const rows = await sequelize.query(
-      `SELECT m.*,u.prenom,u.nom_famille AS nom,u.photo FROM school_members m LEFT JOIN users u ON m.numero_h=u.numero_h WHERE m.tenant_code=:code AND m.is_active=true ORDER BY m.role,m.created_at`,
+      `SELECT m.*,u.prenom,u.nom_famille AS nom,u.photo,u.tel1 AS telephone_compte,
+         COALESCE((SELECT json_agg(json_build_object('id',s.id,'prenom',s.prenom,'nom',s.nom) ORDER BY s.prenom)
+                   FROM school_member_students l JOIN school_students s ON s.id=l.student_id AND s.tenant_code=l.tenant_code
+                   WHERE l.tenant_code=m.tenant_code AND l.numero_h=m.numero_h), '[]'::json) AS enfants
+       FROM school_members m LEFT JOIN users u ON m.numero_h=u.numero_h WHERE m.tenant_code=:code AND m.is_active=true ORDER BY m.role,m.created_at`,
       { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, members: rows });
@@ -483,21 +545,40 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
 
 router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { numero_h, role, linked_student_id } = req.body;
+    const { role, linked_student_id } = req.body;
     const code = req.params.tenantCode;
-    const [user] = await sequelize.query(
-      `SELECT numero_h AS "numeroH", prenom, nom_famille AS nom FROM users WHERE numero_h=:n LIMIT 1`,
-      { replacements: { n: numero_h }, type: sequelize.QueryTypes.SELECT }
-    );
-    if (!user) return res.status(404).json({ success: false, message: `Aucun utilisateur avec le numéroH : ${numero_h}` });
-    const nom_display = `${user.prenom} ${user.nom}`;
+    // NuméroH ou numéro de téléphone du compte
+    const trouve = await trouverPersonne(req.body.numero_h || req.body.telephone);
+    if (!trouve.personne) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
+    const user = trouve.personne;
+    const numero_h = user.numero_h;
+    // L'élève relié doit appartenir à CET établissement
+    let sid = null;
+    if (linked_student_id !== undefined && linked_student_id !== null && linked_student_id !== '') {
+      const [eleve] = await sequelize.query(
+        `SELECT id FROM school_students WHERE id=:sid AND tenant_code=:code LIMIT 1`,
+        { replacements: { sid: parseInt(linked_student_id, 10) || 0, code }, type: sequelize.QueryTypes.SELECT }
+      );
+      if (!eleve) return res.status(404).json({ success: false, message: 'Élève introuvable dans cet établissement.' });
+      sid = eleve.id;
+    }
+    await ensureLiensParentsEcole();
+    const nom_display = [user.prenom, user.nom].filter(Boolean).join(' ');
     const [rows] = await sequelize.query(
       `INSERT INTO school_members (tenant_code,numero_h,role,linked_student_id,nom_display,added_by)
        VALUES(:code,:n,:role,:sid,:nom,:by)
-       ON CONFLICT(tenant_code,numero_h) DO UPDATE SET role=EXCLUDED.role,linked_student_id=EXCLUDED.linked_student_id,is_active=true
+       ON CONFLICT(tenant_code,numero_h) DO UPDATE SET role=EXCLUDED.role,linked_student_id=COALESCE(EXCLUDED.linked_student_id,school_members.linked_student_id),nom_display=EXCLUDED.nom_display,is_active=true
        RETURNING *`,
-      { replacements: { code, n: numero_h, role: role || 'parent', sid: linked_student_id || null, nom: nom_display, by: req.userId }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, n: numero_h, role: role || 'parent', sid, nom: nom_display, by: req.userId }, type: sequelize.QueryTypes.INSERT }
     );
+    // Un enfant de plus : les liens déjà enregistrés sont conservés
+    if (sid) {
+      await sequelize.query(
+        `INSERT INTO school_member_students (tenant_code,numero_h,student_id) VALUES(:code,:n,:sid)
+         ON CONFLICT (tenant_code,numero_h,student_id) DO NOTHING`,
+        { replacements: { code, n: numero_h, sid } }
+      );
+    }
     await sequelize.query(
       `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
       { replacements: { uid: numero_h, msg: `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}).` } }
@@ -506,17 +587,48 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.delete('/:tenantCode/members/:id', authenticate, verifyTenant, async (req, res) => {
+// Retirer un seul enfant du suivi d'un parent
+router.delete('/:tenantCode/members/:id/students/:studentId', authenticate, verifyTenant, async (req, res) => {
   try {
+    await ensureLiensParentsEcole();
+    const code = req.params.tenantCode;
+    const [member] = await sequelize.query(
+      `SELECT numero_h FROM school_members WHERE id=:id AND tenant_code=:code LIMIT 1`,
+      { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (!member) return res.status(404).json({ success: false, message: 'Membre introuvable.' });
     await sequelize.query(
-      `UPDATE school_members SET is_active=false WHERE id=:id AND tenant_code=:code`,
-      { replacements: { id: req.params.id, code: req.params.tenantCode } }
+      `DELETE FROM school_member_students WHERE tenant_code=:code AND numero_h=:n AND student_id=:sid`,
+      { replacements: { code, n: member.numero_h, sid: req.params.studentId } }
+    );
+    await sequelize.query(
+      `UPDATE school_members SET linked_student_id=NULL WHERE id=:id AND tenant_code=:code AND linked_student_id=:sid`,
+      { replacements: { id: req.params.id, code, sid: req.params.studentId } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+router.delete('/:tenantCode/members/:id', authenticate, verifyTenant, async (req, res) => {
+  try {
+    await ensureLiensParentsEcole();
+    const code = req.params.tenantCode;
+    const [member] = await sequelize.query(
+      `UPDATE school_members SET is_active=false,linked_student_id=NULL WHERE id=:id AND tenant_code=:code RETURNING numero_h`,
+      { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT }
+    );
+    if (member) {
+      await sequelize.query(
+        `DELETE FROM school_member_students WHERE tenant_code=:code AND numero_h=:n`,
+        { replacements: { code, n: member.numero_h } }
+      );
+    }
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // GET /:tenantCode/my-access — accès du membre connecté
+// ?student_id= choisit l'enfant affiché quand le parent en suit plusieurs.
 router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res) => {
   try {
     const code = req.params.tenantCode;
@@ -525,29 +637,32 @@ router.get('/:tenantCode/my-access', authenticate, verifyMember, async (req, res
     let data = {};
 
     if (member.role === 'apprenant' || member.role === 'parent') {
-      const studentId = member.linked_student_id;
+      const children = await elevesLiesEcole(code, req.userId);
+      const demande = req.query.student_id ? parseInt(req.query.student_id, 10) : null;
+      if (req.query.student_id && !children.some(c => c.id === demande)) {
+        return res.status(403).json({ success: false, message: 'Cet élève n\'est pas relié à votre compte.' });
+      }
+      const studentId = demande || children[0]?.id || null;
+      data = { children, student: null, grades: [], attendance: [], fees: [], bulletins: [] };
       if (studentId) {
+        const rep = { replacements: { sid: studentId, code }, type: sequelize.QueryTypes.SELECT };
         const [student] = await sequelize.query(
-          `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE s.id=:id LIMIT 1`,
-          { replacements: { id: studentId }, type: sequelize.QueryTypes.SELECT }
+          `SELECT s.*,c.nom as classe FROM school_students s LEFT JOIN school_classrooms c ON s.classroom_id=c.id WHERE s.id=:sid AND s.tenant_code=:code LIMIT 1`, rep
         );
         const grades = await sequelize.query(
-          `SELECT * FROM school_grades WHERE student_id=:sid ORDER BY created_at DESC LIMIT 50`,
-          { replacements: { sid: studentId }, type: sequelize.QueryTypes.SELECT }
+          `SELECT * FROM school_grades WHERE student_id=:sid AND tenant_code=:code ORDER BY created_at DESC LIMIT 50`, rep
         );
         const attendance = await sequelize.query(
-          `SELECT * FROM school_attendance WHERE student_id=:sid ORDER BY date_presence DESC LIMIT 30`,
-          { replacements: { sid: studentId }, type: sequelize.QueryTypes.SELECT }
+          `SELECT * FROM school_attendance WHERE student_id=:sid AND tenant_code=:code ORDER BY date_presence DESC LIMIT 30`, rep
         );
         const fees = await sequelize.query(
-          `SELECT * FROM school_fees WHERE student_id=:sid ORDER BY created_at DESC`,
-          { replacements: { sid: studentId }, type: sequelize.QueryTypes.SELECT }
+          `SELECT * FROM school_fees WHERE student_id=:sid AND tenant_code=:code ORDER BY created_at DESC`, rep
         );
+        // Une ligne par bulletin (le détail des notes est déjà dans « grades »)
         const bulletins = await sequelize.query(
-          `SELECT b.*,g.matiere,g.note,g.note_max,g.coefficient,g.periode as g_periode FROM school_bulletins b LEFT JOIN school_grades g ON g.student_id=b.student_id AND g.periode=b.periode WHERE b.student_id=:sid AND b.is_published=true ORDER BY b.created_at DESC`,
-          { replacements: { sid: studentId }, type: sequelize.QueryTypes.SELECT }
+          `SELECT * FROM school_bulletins WHERE student_id=:sid AND tenant_code=:code AND is_published=true ORDER BY created_at DESC`, rep
         );
-        data = { student: student || null, grades, attendance, fees, bulletins };
+        data = { children, student: student || null, grades, attendance, fees, bulletins };
       }
     }
 
@@ -599,10 +714,7 @@ router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async
       );
       generated.push(rows[0]);
       if (publish) {
-        const members = await sequelize.query(
-          `SELECT numero_h FROM school_members WHERE tenant_code=:code AND linked_student_id=:sid AND is_active=true`,
-          { replacements: { code, sid: student.id }, type: sequelize.QueryTypes.SELECT }
-        );
+        const members = await membresLiesAEleve(code, student.id);
         for (const m of members) {
           await sequelize.query(
             `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'bulletin',:msg)`,
@@ -622,10 +734,7 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
       { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
     );
     if (bulletin) {
-      const members = await sequelize.query(
-        `SELECT numero_h FROM school_members WHERE tenant_code=:code AND linked_student_id=:sid AND is_active=true`,
-        { replacements: { code: req.params.tenantCode, sid: bulletin.student_id }, type: sequelize.QueryTypes.SELECT }
-      );
+      const members = await membresLiesAEleve(req.params.tenantCode, bulletin.student_id);
       for (const m of members) {
         await sequelize.query(
           `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'bulletin',:msg)`,

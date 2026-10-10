@@ -504,7 +504,7 @@ export default function InscriptionPro() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className={labelCls}>
-                {selectedType === "restaurant" ? "Nom du restaurant" : "Nom"}{" "}
+                {selectedType === "restaurant" ? "Nom du restaurant" : "Nom de l'entreprise"}{" "}
                 <span className="text-gray-400 font-normal">(optionnel, à compléter plus tard si besoin)</span>
               </label>
               <div className="relative">
@@ -514,7 +514,7 @@ export default function InscriptionPro() {
                   onChange={e => { setForm({ ...form, name: e.target.value }); setNomStatut(''); }}
                   onBlur={verifierNom}
                   className={`${inputCls} ${nomStatut === 'pris' ? 'border-red-400 focus:ring-red-400' : nomStatut === 'disponible' ? 'border-green-400 focus:ring-green-400' : ''}`}
-                  placeholder={selectedType === "restaurant" ? "Ex: Restaurant Chez Kadiatou" : "Nom de votre établissement"}
+                  placeholder={selectedType === "restaurant" ? "Ex: Restaurant Chez Kadiatou" : "Ex : Boutique Barry & Fils"}
                 />
                 {nomStatut === 'checking' && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -613,9 +613,9 @@ export default function InscriptionPro() {
               )}
             </div>
             <div>
-              <label className={labelCls}>Adresse</label>
+              <label className={labelCls}>Adresse (quartier)</label>
               <input type="text" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className={inputCls}
-                placeholder={selectedType === "restaurant" ? "Quartier, rue..." : ""} />
+                placeholder="Ex : quartier Madina, près du marché" />
             </div>
             <div>
               <label className={labelCls}>Ville</label>

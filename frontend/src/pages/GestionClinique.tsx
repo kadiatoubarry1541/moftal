@@ -169,6 +169,8 @@ export default function GestionClinique() {
   const [partialAmount, setPartialAmount] = useState("");
   const [dispensingId, setDispensingId] = useState<number|null>(null);
   const [dispensingMed, setDispensingMed] = useState<any>(null);
+  // Sortie de stock choisie pour chaque médicament prescrit (article + quantité)
+  const [dispenseLignes, setDispenseLignes] = useState<{ stock_id: string; quantite: string }[]>([]);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<string | null>(null);
   const [form, setForm] = useState<any>({});
@@ -1474,6 +1476,12 @@ export default function GestionClinique() {
                                 if (dispensingId === p.id) return;
                                 setDispensingId(p.id);
                                 setDispensingMed(p);
+                                // Proposition : l'article du stock dont le nom figure dans la ligne prescrite
+                                setDispenseLignes(meds.map((m: any) => {
+                                  const texte = String(m?.medicament || m || "").toLowerCase();
+                                  const article = pharmacyStock.find(st => st.nom && texte.includes(String(st.nom).toLowerCase()));
+                                  return { stock_id: article ? String(article.id) : "", quantite: article ? "1" : "" };
+                                }));
                               }}
                               style={{ padding: "7px 16px", background: TEAL, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
                               Dispenser →
@@ -1506,9 +1514,25 @@ export default function GestionClinique() {
                           <div style={{ background: "#f0fdfa", borderRadius: 10, padding: "12px 14px" }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color: "#156315", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Médicaments à dispenser</div>
                             {(Array.isArray(dispensingMed.medicaments) ? dispensingMed.medicaments : []).map((m: any, i: number) => (
-                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < dispensingMed.medicaments.length-1 ? "1px solid #ccfbf1" : "none" }}>
-                                <span style={{ color: TEAL }}>💊</span>
-                                <span style={{ flex: 1, fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{m.medicament || m}</span>
+                              <div key={i} style={{ padding: "8px 0", borderBottom: i < dispensingMed.medicaments.length-1 ? "1px solid #ccfbf1" : "none" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                  <span style={{ color: TEAL }}>💊</span>
+                                  <span style={{ flex: 1, fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{m.medicament || m}</span>
+                                </div>
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  <select className={inp} style={{ ...inpStyle, flex: "1 1 180px", minWidth: 0 }}
+                                    value={dispenseLignes[i]?.stock_id || ""}
+                                    onChange={e => { const v = e.target.value; setDispenseLignes(ls => { const n = [...ls]; n[i] = { stock_id: v, quantite: v ? (n[i]?.quantite || "1") : "" }; return n; }); }}>
+                                    <option value="">— Pas de sortie de stock —</option>
+                                    {pharmacyStock.map(st => (
+                                      <option key={st.id} value={String(st.id)}>{st.nom}{st.dosage ? ` ${st.dosage}` : ""}{st.forme ? ` (${st.forme})` : ""} — stock : {st.quantite ?? 0}</option>
+                                    ))}
+                                  </select>
+                                  <input type="number" min={1} step={1} className={inp} style={{ ...inpStyle, width: 90 }} placeholder="Qté"
+                                    disabled={!dispenseLignes[i]?.stock_id}
+                                    value={dispenseLignes[i]?.quantite || ""}
+                                    onChange={e => { const v = e.target.value; setDispenseLignes(ls => { const n = [...ls]; n[i] = { stock_id: n[i]?.stock_id || "", quantite: v }; return n; }); }} />
+                                </div>
                               </div>
                             ))}
                             {(!dispensingMed.medicaments || dispensingMed.medicaments.length === 0) && <p style={{ color: "#94a3b8", fontSize: 13, margin: 0 }}>Aucun médicament listé dans l'ordonnance</p>}
@@ -1518,19 +1542,32 @@ export default function GestionClinique() {
                             <textarea className={inp} style={{ ...inpStyle, height: 70, resize: "none" as const, marginTop: 4 }} placeholder="Notes de dispensation..." id="dispense-notes" />
                           </div>
                           <div style={{ background: "#fffbeb", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#92400e", borderLeft: "3px solid #f59e0b" }}>
-                            ⚠️ La déduction de stock automatique se fait uniquement si les médicaments sont liés aux articles en stock. Pour gérer le stock précisément, utilisez l'onglet "Stock médicaments".
+                            ⚠️ Pour chaque médicament, choisissez l'article du stock et la quantité remise : le stock est diminué d'autant. Laissez « Pas de sortie de stock » si le médicament n'est pas pris dans la pharmacie.
                           </div>
                         </div>
                         <div style={{ padding: "14px 24px", borderTop: "1px solid #f1f5f9", display: "flex", gap: 10 }}>
-                          <button onClick={() => { setDispensingId(null); setDispensingMed(null); }} style={{ flex: 1, padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
+                          <button onClick={() => { setDispensingId(null); setDispensingMed(null); setDispenseLignes([]); }} style={{ flex: 1, padding: "9px 16px", border: "1.5px solid #e2e8f0", borderRadius: 8, background: "white", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                           <button onClick={async () => {
                             const notes = (document.getElementById("dispense-notes") as HTMLTextAreaElement)?.value || "";
+                            // Sorties de stock au format attendu par le serveur : [{ stock_id, quantite_deduite }]
+                            const parArticle = new Map<number, number>();
+                            for (const l of dispenseLignes) {
+                              if (!l?.stock_id) continue;
+                              const q = Math.floor(Number(l.quantite));
+                              if (!Number.isFinite(q) || q <= 0) { showToast("Indiquez une quantité (au moins 1) pour chaque article de stock choisi.", false); return; }
+                              parArticle.set(Number(l.stock_id), (parArticle.get(Number(l.stock_id)) || 0) + q);
+                            }
+                            for (const [id, q] of parArticle) {
+                              const article = pharmacyStock.find(st => st.id === id);
+                              if (article && q > (+article.quantite || 0)) { showToast(`Stock insuffisant pour ${article.nom} : ${article.quantite ?? 0} disponible(s), ${q} demandé(s).`, false); return; }
+                            }
+                            const stock_movements = [...parArticle].map(([stock_id, quantite_deduite]) => ({ stock_id, quantite_deduite }));
                             setSaving(true);
                             try {
-                              const d = await post(`/pharmacy/dispense/${dispensingId}`, { notes, stock_movements: [] });
+                              const d = await post(`/pharmacy/dispense/${dispensingId}`, { notes, stock_movements });
                               if (d.success) {
                                 setPharmacyPending(prev => prev.filter(x => x.id !== dispensingId));
-                                setDispensingId(null); setDispensingMed(null);
+                                setDispensingId(null); setDispensingMed(null); setDispenseLignes([]);
                                 showToast("Ordonnance dispensée avec succès !");
                                 reloadPharmacy();
                               } else showToast(d.message || "Erreur", false);

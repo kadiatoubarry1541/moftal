@@ -259,13 +259,13 @@ export function ProfilModalComp({ modal, onChange, onSubmit, onClose }: {
 
         <div style={{ padding:"16px 24px 24px" }}>
 
-          {field("Nom de l'établissement", "name", "Nom officiel de l'établissement")}
+          {field("Nom de l'entreprise", "name", "Nom officiel de l'entreprise")}
           {field("Description", "description", "Décrivez votre établissement, vos services...", "textarea")}
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <div style={{ marginBottom:14 }}>
-              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Adresse</label>
-              <input value={modal.form.address} onChange={e => onChange({ ...modal.form, address: e.target.value })} placeholder="Adresse"
+              <label style={{ fontSize:12, fontWeight:700, color:"#475569", textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:6 }}>Adresse (quartier)</label>
+              <input value={modal.form.address} onChange={e => onChange({ ...modal.form, address: e.target.value })} placeholder="Ex : quartier Madina, près du marché"
                 style={{ width:"100%", padding:"11px 14px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"inherit" }}
               />
             </div>

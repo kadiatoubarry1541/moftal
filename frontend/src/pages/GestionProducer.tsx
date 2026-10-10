@@ -106,13 +106,25 @@ export default function GestionProducer() {
   async function loadStaff()         { const r = await fetch(`${b(tenantCode!)}/staff`,         { headers: auth() }); const d = await r.json(); if (d.success) setStaff(d.staff || []); }
   async function loadAnnouncements() { const r = await fetch(`${b(tenantCode!)}/announcements`, { headers: auth() }); const d = await r.json(); if (d.success) setAnnouncements(d.announcements || []); }
 
+  // Envoie au serveur et renvoie toujours une réponse lisible : en cas d'échec,
+  // le bouton se débloque et l'erreur est affichée (jamais de faux succès).
+  async function envoyer(chemin: string, body: object): Promise<any> {
+    setSaving(true);
+    try {
+      const r = await fetch(`${b(tenantCode!)}${chemin}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+      return await r.json().catch(() => ({ success: false, message: `Erreur du serveur (${r.status}) : rien n'a été enregistré.` }));
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function saveProd() {
     if (!prodForm.nom) return alert("Nom requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/products`, { method: "POST", headers: auth(), body: JSON.stringify(prodForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await envoyer(`/products`, prodForm);
     if (d.success) { setShowAddProd(false); setProdForm({ nom: "", categorie: "", unite: "kg", prix_unitaire: "", stock: "0", description: "" }); loadProducts(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function adjustStock(id: number, delta: number) {
@@ -128,11 +140,9 @@ export default function GestionProducer() {
 
   async function saveLot() {
     if (!lotForm.product_id || !lotForm.quantite_prevue) return alert("Produit et quantité requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/lots`, { method: "POST", headers: auth(), body: JSON.stringify(lotForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await envoyer(`/lots`, lotForm);
     if (d.success) { setShowAddLot(false); setLotForm({ product_id: "", quantite_prevue: "", date_debut: "", date_fin_prevue: "", notes: "" }); loadLots(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function patchLot(id: number, statut: string) {
@@ -148,11 +158,9 @@ export default function GestionProducer() {
 
   async function saveOrder() {
     if (!ordForm.client_nom || !ordForm.product_id || !ordForm.quantite) return alert("Client, produit et quantité requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/orders`, { method: "POST", headers: auth(), body: JSON.stringify(ordForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await envoyer(`/orders`, ordForm);
     if (d.success) { setShowAddOrder(false); setOrdForm({ client_nom: "", client_telephone: "", product_id: "", quantite: "", montant_total: "", date_livraison_prevue: "", notes: "" }); loadOrders(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function patchOrder(id: number, statut: string) {
@@ -162,11 +170,9 @@ export default function GestionProducer() {
 
   async function saveStaff() {
     if (!stForm.nom) return alert("Nom requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/staff`, { method: "POST", headers: auth(), body: JSON.stringify(stForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await envoyer(`/staff`, stForm);
     if (d.success) { setShowAddStaff(false); setStForm({ nom: "", prenom: "", poste: "Ouvrier", telephone: "", salaire: "" }); loadStaff(); loadAll(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   async function deleteStaff(id: number) {
@@ -177,11 +183,9 @@ export default function GestionProducer() {
 
   async function saveAnn() {
     if (!annForm.titre || !annForm.contenu) return alert("Titre et contenu requis");
-    setSaving(true);
-    const r = await fetch(`${b(tenantCode!)}/announcements`, { method: "POST", headers: auth(), body: JSON.stringify(annForm) });
-    const d = await r.json(); setSaving(false);
+    const d = await envoyer(`/announcements`, annForm);
     if (d.success) { setShowAddAnn(false); setAnnForm({ titre: "", contenu: "", type: "general" }); loadAnnouncements(); }
-    else alert(d.message);
+    else alert(d.message || "Erreur : rien n'a été enregistré.");
   }
 
   if (loading) return (

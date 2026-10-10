@@ -7,13 +7,34 @@ import { ensureEnrollRequestsTable, ensureSchoolReviewsTable } from './school-ma
 
 const router = express.Router();
 
+// Type dans l'URL du site client → type(s) réellement enregistrés dans
+// management_tenants.type (= professional_accounts.type). Ex. : l'immobilier est
+// inscrit en 'broker', le vendeur en 'vendor' (référence admin : 'retailer').
+const TYPES_PAR_URL = {
+  immobilier: ['immobilier', 'broker', 'immo'],
+  immo:       ['immobilier', 'broker', 'immo'],
+  broker:     ['immobilier', 'broker', 'immo'],
+  vendor:     ['vendor', 'retailer'],
+  retailer:   ['vendor', 'retailer'],
+  imam:       ['imam', 'mosque'],
+};
+const typesEnBase = (type) => TYPES_PAR_URL[type] || [type];
+
+// Une table ou colonne pas encore créée (gestion jamais ouverte) = aucune donnée.
+// Toute autre erreur SQL remonte : la vitrine affiche une erreur au lieu de
+// montrer à tort un établissement vide.
+// 42P01 : table absente ; 42703 : colonne pas encore ajoutée (les colonnes
+// optionnelles sont créées à la première ouverture de la gestion).
+const tableAbsente = (e) => ['42P01', '42703'].includes(e?.original?.code || e?.parent?.code);
+
 const q = (sql, rep) =>
   sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT })
-    .catch(() => []);
+    .catch((e) => { if (tableAbsente(e)) return []; throw e; });
 
 const q1 = (sql, rep) =>
   sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT })
-    .then(r => r[0]).catch(() => ({ c: 0, t: 0 }));
+    .then(r => r[0] || { c: 0, t: 0 })
+    .catch((e) => { if (tableAbsente(e)) return { c: 0, t: 0 }; throw e; });
 
 // ─── GET /api/pro-public/list/:type ────────────────────────────────────────
 // Liste publique des espaces Gestion Interne actifs d'un type donné — pour
@@ -26,9 +47,9 @@ router.get('/list/:type', async (req, res) => {
     const tenants = await sequelize.query(
       `SELECT tenant_code, type, name, logo_url, address, phone, email, description, city
        FROM management_tenants
-       WHERE type = :type AND is_active = true AND tenant_code NOT LIKE 'DEMO-REF-%'
+       WHERE type IN (:types) AND is_active = true AND tenant_code NOT LIKE 'DEMO-REF-%'
        ORDER BY name ASC`,
-      { replacements: { type }, type: sequelize.QueryTypes.SELECT }
+      { replacements: { types: typesEnBase(type) }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, tenants });
   } catch (e) {
@@ -47,9 +68,9 @@ router.get('/:type/:tenantCode', async (req, res) => {
     const [tenant] = await sequelize.query(
       `SELECT tenant_code, type, name, logo_url, address, phone, email, description, horaires, phone_urgence
        FROM management_tenants
-       WHERE tenant_code = :code AND type = :type AND is_active = true
+       WHERE tenant_code = :code AND type IN (:types) AND is_active = true
        LIMIT 1`,
-      { replacements: { code: tenantCode, type }, type: sequelize.QueryTypes.SELECT }
+      { replacements: { code: tenantCode, types: typesEnBase(type) }, type: sequelize.QueryTypes.SELECT }
     );
     if (!tenant) return res.status(404).json({ success: false, message: 'Espace introuvable ou inactif.' });
     res.json({ success: true, tenant });
@@ -92,7 +113,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
         const [memCnt, annCnt, imams, announcements] = await Promise.all([
           q1(`SELECT COUNT(*) as c FROM mosque_members WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM mosque_announcements WHERE tenant_code=:code AND is_active=true`, { code }),
-          q(`SELECT nom,prenom,rang,specialite FROM mosque_imams WHERE tenant_code=:code AND is_active=true ORDER BY rang LIMIT 6`, { code }),
+          q(`SELECT nom,prenom,rang,NULL::text AS specialite FROM mosque_imams WHERE tenant_code=:code AND is_active=true ORDER BY rang LIMIT 6`, { code }),
           q(`SELECT titre,contenu,created_at FROM mosque_announcements WHERE tenant_code=:code AND is_active=true ORDER BY created_at DESC LIMIT 5`, { code }),
         ]);
         return res.json({ success: true, stats: { members: +(memCnt.c||0), announcements: +(annCnt.c||0) }, imams, announcements });
@@ -103,7 +124,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM imam_network_imams WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM imam_network_predications WHERE tenant_code=:code`, { code }),
           q(`SELECT nom,prenom,specialite FROM imam_network_imams WHERE tenant_code=:code AND is_active=true ORDER BY nom LIMIT 6`, { code }),
-          q(`SELECT titre,theme,date_pred FROM imam_network_predications WHERE tenant_code=:code ORDER BY date_pred DESC LIMIT 5`, { code }),
+          q(`SELECT titre,type_pred AS theme,date_pred,imam_nom,mosquee FROM imam_network_predications WHERE tenant_code=:code ORDER BY date_pred DESC LIMIT 5`, { code }),
         ]);
         return res.json({ success: true, stats: { imams: +(imamsCnt.c||0), predications: +(predCnt.c||0) }, imams, predications });
       }
@@ -113,7 +134,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM ngo_members WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM ngo_projects WHERE tenant_code=:code AND statut='en_cours'`, { code }),
           q1(`SELECT COUNT(*) as c FROM ngo_announcements WHERE tenant_code=:code AND is_active=true`, { code }),
-          q(`SELECT nom,description,statut,budget,beneficiaires FROM ngo_projects WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 6`, { code }),
+          q(`SELECT titre AS nom,description,statut,budget,NULL::int AS beneficiaires FROM ngo_projects WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 6`, { code }),
           q(`SELECT titre,contenu,created_at FROM ngo_announcements WHERE tenant_code=:code AND is_active=true ORDER BY created_at DESC LIMIT 3`, { code }),
         ]);
         return res.json({ success: true, stats: { members: +(memCnt.c||0), projects: +(projCnt.c||0), announcements: +(annCnt.c||0) }, projects, announcements });
@@ -135,7 +156,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM journalist_reporters WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM journalist_articles WHERE tenant_code=:code AND statut='publie'`, { code }),
           q1(`SELECT COUNT(*) as c FROM journalist_subscribers WHERE tenant_code=:code AND is_active=true`, { code }),
-          q(`SELECT titre,categorie,auteur_nom,date_pub,resume FROM journalist_articles WHERE tenant_code=:code AND statut='publie' ORDER BY date_pub DESC LIMIT 6`, { code }),
+          q(`SELECT titre,categorie,reporter_nom AS auteur_nom,date_pub,LEFT(contenu,240) AS resume FROM journalist_articles WHERE tenant_code=:code AND statut='publie' ORDER BY date_pub DESC LIMIT 6`, { code }),
           q(`SELECT nom,prenom,role,specialite FROM journalist_reporters WHERE tenant_code=:code AND is_active=true ORDER BY nom LIMIT 8`, { code }),
         ]);
         return res.json({ success: true, stats: { reporters: +(repCnt.c||0), articles: +(artCnt.c||0), subscribers: +(subCnt.c||0) }, articles, reporters });
@@ -147,7 +168,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM scientist_publications WHERE tenant_code=:code AND statut='publie'`, { code }),
           q1(`SELECT COUNT(*) as c FROM scientist_projects WHERE tenant_code=:code AND statut='en_cours'`, { code }),
           q(`SELECT titre,type_pub,domaine,auteur_nom,date_pub,resume FROM scientist_publications WHERE tenant_code=:code AND statut='publie' ORDER BY date_pub DESC LIMIT 6`, { code }),
-          q(`SELECT nom,prenom,role,specialite FROM scientist_members WHERE tenant_code=:code AND is_active=true ORDER BY nom LIMIT 8`, { code }),
+          q(`SELECT nom,prenom,titre AS role,domaine AS specialite FROM scientist_members WHERE tenant_code=:code AND is_active=true ORDER BY nom LIMIT 8`, { code }),
         ]);
         return res.json({ success: true, stats: { members: +(memCnt.c||0), publications: +(pubCnt.c||0), projects: +(projCnt.c||0) }, publications, members });
       }
@@ -162,11 +183,13 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
       }
 
       case 'immo':
+      case 'broker':
       case 'immobilier': {
         const [propCnt, vacantCnt, properties] = await Promise.all([
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM immo_properties WHERE tenant_code=:code AND statut='vacant'`, { code }),
-          q(`SELECT nom,type_bien,superficie,prix,statut,quartier,ville FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 9`, { code }),
+          // Colonnes réelles : surface, loyer_mensuel, adresse — renommées pour le site client.
+          q(`SELECT nom,type_bien,surface AS superficie,loyer_mensuel AS prix,statut,adresse AS quartier,ville FROM immo_properties WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 9`, { code }),
         ]);
         return res.json({ success: true, stats: { total: +(propCnt.c||0), vacant: +(vacantCnt.c||0) }, properties });
       }
@@ -206,10 +229,56 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM reseau_members WHERE tenant_code=:code AND is_active=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM reseau_projets WHERE tenant_code=:code AND statut='en_cours'`, { code }),
           q1(`SELECT COUNT(*) as c FROM reseau_announcements WHERE tenant_code=:code AND is_active=true`, { code }),
-          q(`SELECT nom,prenom,poste,secteur FROM reseau_members WHERE tenant_code=:code AND is_active=true ORDER BY nom LIMIT 8`, { code }),
+          // reseau_members n'a ni poste ni secteur : le rôle est affiché comme poste.
+          q(`SELECT nom,prenom,role AS poste FROM reseau_members WHERE tenant_code=:code AND is_active=true ORDER BY nom LIMIT 8`, { code }),
           q(`SELECT titre,contenu,created_at FROM reseau_announcements WHERE tenant_code=:code AND is_active=true ORDER BY created_at DESC LIMIT 3`, { code }),
         ]);
         return res.json({ success: true, stats: { members: +(memCnt.c||0), projects: +(projCnt.c||0), announcements: +(annCnt.c||0) }, members, announcements });
+      }
+
+      case 'vendor':
+      case 'retailer': {
+        const [prodCnt, clientCnt, products] = await Promise.all([
+          q1(`SELECT COUNT(*) as c FROM retailer_products WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(*) as c FROM retailer_clients WHERE tenant_code=:code AND is_active=true`, { code }),
+          // Le prix d'achat reste privé : seul le prix de vente est public.
+          q(`SELECT nom,categorie,prix_vente AS prix_detail,stock,unite FROM retailer_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
+        ]);
+        return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products, announcements: [] });
+      }
+
+      case 'producer': {
+        const [prodCnt, clientCnt, products, announcements] = await Promise.all([
+          q1(`SELECT COUNT(*) as c FROM producer_products WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(DISTINCT LOWER(TRIM(client_nom))) as c FROM producer_orders WHERE tenant_code=:code AND statut NOT IN ('annule','annulee')`, { code }),
+          q(`SELECT nom,categorie,prix_unitaire AS prix_detail,stock,unite,description FROM producer_products WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
+          q(`SELECT titre,contenu,type,created_at FROM producer_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
+        ]);
+        return res.json({ success: true, stats: { products: +(prodCnt.c||0), clients: +(clientCnt.c||0) }, products, announcements });
+      }
+
+      case 'beauty': {
+        const [servCnt, clientCnt, rdvCnt, services, announcements] = await Promise.all([
+          q1(`SELECT COUNT(*) as c FROM beauty_services WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(*) as c FROM beauty_clients WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(*) as c FROM beauty_bookings WHERE tenant_code=:code AND statut='termine'`, { code }),
+          q(`SELECT nom,categorie,prix,description,
+                    CASE WHEN duree_min > 0 THEN duree_min || ' min' END AS duree
+             FROM beauty_services WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
+          q(`SELECT titre,contenu,type,created_at FROM beauty_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
+        ]);
+        return res.json({ success: true, stats: { services: +(servCnt.c||0), clients: +(clientCnt.c||0), rendezvous: +(rdvCnt.c||0) }, services, announcements });
+      }
+
+      case 'artisan': {
+        const [servCnt, clientCnt, worksCnt, works, announcements] = await Promise.all([
+          q1(`SELECT COUNT(*) as c FROM artisan_services WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(*) as c FROM artisan_clients WHERE tenant_code=:code AND is_active=true`, { code }),
+          q1(`SELECT COUNT(*) as c FROM artisan_interventions WHERE tenant_code=:code AND statut IN ('termine','terminee')`, { code }),
+          q(`SELECT nom,categorie,prix_base AS prix,description,zone_intervention FROM artisan_services WHERE tenant_code=:code AND is_active=true ORDER BY categorie,nom LIMIT 40`, { code }),
+          q(`SELECT titre,contenu,type,created_at FROM artisan_announcements WHERE tenant_code=:code ORDER BY created_at DESC LIMIT 5`, { code }),
+        ]);
+        return res.json({ success: true, stats: { works: +(worksCnt.c||0), services: +(servCnt.c||0), clients: +(clientCnt.c||0) }, works, announcements });
       }
 
       default:

@@ -78,8 +78,11 @@ import moderationRoutes from './routes/moderation.js';
 import paymentRoutes from './routes/payment.js';
 import uploadRoutes from './routes/upload.js';
 import fichiersRoutes from './routes/fichiers.js';
+import codeOuvertureRoutes from './routes/codeOuverture.js';
 import { cleLimite, validationLimite } from './utils/cleLimite.js';
 import { migrerPhotosDisque } from './services/fichiersBase.js';
+import { erreursDonnees } from './middleware/erreursDonnees.js';
+import { idempotence } from './middleware/idempotence.js';
 import quotasRoutes from './routes/quotas.js';
 import familyFundRoutes from './routes/familyFund.js';
 import quartierFundRoutes from './routes/quartierFund.js';
@@ -2788,6 +2791,11 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
+// Envois rejoués par le mode hors ligne : un même envoi (X-Idempotency-Key)
+// n'est enregistré qu'une seule fois, même s'il arrive plusieurs fois
+app.use('/api', erreursDonnees);
+app.use('/api', idempotence);
+
 // Servir les fichiers uploads (photos, vidéos)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   maxAge: '7d', // cache navigateur 7 jours pour les images
@@ -2857,6 +2865,7 @@ app.use('/api/push', pushRoutes);
 app.use('/api/ia', iaRoutes);
 app.use('/api/admin/moderation', moderationRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/code-ouverture', codeOuvertureRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/quotas', quotasRoutes);
 app.use('/api/family-fund', familyFundRoutes);

@@ -63,6 +63,7 @@ const PROVISIONAL_PRO_SPACE_ROUTES = [
   /^\/api\/appointments/,               // rendez-vous
   /^\/api\/withdrawal-requests/,        // retraits Moftal Pay
   /^\/api\/payment\//,                 // abonnement de la gestion
+  /^\/api\/djomy\/(initiate|gateway|status\/)/, // paiement Djomy (PaymentModal) : payer / débloquer son abonnement
   /^\/api\/education/,                  // outils de la gestion école
 ];
 

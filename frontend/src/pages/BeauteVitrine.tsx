@@ -76,7 +76,7 @@ export default function BeauteVitrine() {
             {[
               { label:"Services", value: stats.services ?? services.length, icon:"💅" },
               { label:"Clients", value: stats.clients ?? 0, icon:"👥" },
-              { label:"Avis", value: stats.reviews ?? 0, icon:"⭐" },
+              { label:"Rendez-vous", value: stats.rendezvous ?? 0, icon:"📅" },
             ].map(s => (
               <div key={s.label} style={{ background:"rgba(255,255,255,0.15)", borderRadius:12, padding:"12px 20px", textAlign:"center", minWidth:100 }}>
                 <div style={{ fontSize:22, marginBottom:4 }}>{s.icon}</div>

@@ -705,7 +705,9 @@ router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
        VALUES (:code, :type, :name, :owner, :logo)
        ON CONFLICT (tenant_code) DO UPDATE SET logo_url = COALESCE(management_tenants.logo_url, EXCLUDED.logo_url)`,
       { replacements: { code: tenantCode, type: account.type, name: account.name, owner: account.ownerNumeroH, logo: account.photo || null } }
-    ).catch(() => {});
+    );
+    // (Une vraie erreur d'enregistrement remonte au catch ci-dessous → 500 : jamais
+    // de « succès » si la gestion interne n'a pas été créée en base.)
 
     if (!account.tenant_code) {
       await account.update({ tenant_code: tenantCode });
@@ -714,7 +716,7 @@ router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
     res.json({ success: true, tenantCode });
   } catch (e) {
     console.error('ensure-tenant:', e);
-    res.status(500).json({ success: false, message: e.message });
+    res.status(500).json({ success: false, message: `Impossible de créer la gestion interne : ${e.message}` });
   }
 });
 
@@ -751,8 +753,32 @@ router.put('/:id', authenticate, async (req, res) => {
     if (!account) {
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     }
+    // L'admin peut changer le LOGO de n'importe quel professionnel (formule
+    // Visibilité ou Gestion Interne) ; le reste du profil reste au propriétaire.
+    const role = String(req.user?.role || '').toLowerCase();
+    const estAdmin = req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin'
+      || ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'].includes(req.user?.numeroH);
     if (account.ownerNumeroH !== req.userId) {
-      return res.status(403).json({ success: false, message: 'Non autorisé' });
+      if (!estAdmin) return res.status(403).json({ success: false, message: 'Non autorisé' });
+      const logo = typeof req.body?.photo === 'string' ? req.body.photo.trim() : '';
+      const autres = Object.keys(req.body || {}).filter((k) => k !== 'photo');
+      if (autres.length) {
+        return res.status(403).json({ success: false, message: 'En tant qu\'admin, seul le logo peut être changé ici.' });
+      }
+      // Le logo est obligatoire : une valeur vide n'efface jamais le logo enregistré
+      if (!logo) return res.status(400).json({ success: false, message: 'Choisissez une image pour le logo.' });
+      if (!/^data:image\//.test(logo) && !/^https?:\/\//.test(logo) && !logo.startsWith('/')) {
+        return res.status(400).json({ success: false, message: 'Logo invalide : choisissez une image.' });
+      }
+      await account.update({ photo: logo });
+      if (account.tenant_code) {
+        await sequelize.query(
+          `UPDATE management_tenants SET logo_url = :logo WHERE tenant_code = :code`,
+          { replacements: { logo, code: account.tenant_code } }
+        );
+      }
+      console.log(`🖼️ Logo du compte ${account.id} changé par l'admin ${req.userId}`);
+      return res.json({ success: true, account: sanitizeAccountForPublic(account) });
     }
 
   const { name, description, address, city, country, phone, email, services, specialties, photo, billingInfo } = req.body;
@@ -1117,6 +1143,26 @@ router.delete('/admin/:id', authenticate, requireAdmin, async (req, res) => {
 // PUT /api/professionals/admin/:id/identite — l'admin modifie le nom et/ou le logo
 // d'un compte pro (comptes créés pour des personnes éloignées). Le changement suit
 // partout : compte pro, gestion interne, site vitrine, icône de l'app.
+// @route   PUT /api/professionals/admin/:id/formule
+// @desc    Admin : fixer la formule d'un compte (« visibility » = Visibilité +
+//          Rendez-vous ; « full » = + Gestion Interne). Rien n'est supprimé :
+//          les données de la gestion restent en base et réapparaissent si le
+//          compte repasse en Gestion Interne.
+router.put('/admin/:id/formule', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const planType = req.body?.planType;
+    if (!['visibility', 'full'].includes(planType)) {
+      return res.status(400).json({ success: false, message: 'Formule invalide.' });
+    }
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    await account.update({ planType });
+    res.json({ success: true, account: { id: account.id, planType: account.planType } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 router.put('/admin/:id/identite', authenticate, requireAdmin, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);

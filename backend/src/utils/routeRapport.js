@@ -19,7 +19,13 @@ async function somme(src, code, debut, fin) {
         AND ${src.date} >= :debut AND ${src.date} < :fin
         ${src.where ? `AND (${src.where})` : ''}`,
     { replacements: { code, debut, fin }, type: sequelize.QueryTypes.SELECT }
-  ).catch(e => { console.error('rapport:', src.table, e.message); return [{ total: 0, n: 0 }]; });
+  ).catch(e => {
+    // Table pas encore créée (module jamais ouvert) : rien n'a été enregistré
+    if ((e?.original?.code || e?.parent?.code) === '42P01') return [{ total: 0, n: 0 }];
+    // Jamais de total 0 inventé : l'erreur remonte (500) pour être vue.
+    console.error('rapport:', src.table, e.message);
+    throw new Error(`Impossible de calculer « ${src.label} » pour le rapport : ${e.message}`);
+  });
   return { label: src.label, total: Math.round(r?.total || 0), n: r?.n || 0 };
 }
 
@@ -39,7 +45,7 @@ export function ajouterRouteRapport(router, middlewares, { recettes = [], depens
       const precedent = await calc(prec, debut);
       res.json({ success: true, mois, ...actuel, precedent: { mois: prec.toISOString().slice(0, 7), totalRecettes: precedent.totalRecettes, totalDepenses: precedent.totalDepenses, benefice: precedent.benefice } });
     } catch (e) {
-      res.status(500).json({ success: false, message: e.message });
+      res.status(500).json({ success: false, message: e.message || 'Impossible de calculer le rapport du mois.' });
     }
   });
 }

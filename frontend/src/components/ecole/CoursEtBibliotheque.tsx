@@ -149,7 +149,7 @@ export function BibliothequeGestion({ tenantCode, apiName = "school-mgmt", coule
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) throw new Error(d.message || "Le livre n'a pas pu être enregistré.");
       setTitre(""); setAuteur(""); setNiveau(""); setFichier(null);
-      setMessage({ ok: true, texte: "Livre ajouté à la bibliothèque." });
+      setMessage({ ok: true, texte: d.queued ? d.message : "Livre ajouté à la bibliothèque." });
       charger();
     } catch (e) {
       setMessage({ ok: false, texte: (e as Error).message });
@@ -158,9 +158,11 @@ export function BibliothequeGestion({ tenantCode, apiName = "school-mgmt", coule
 
   const supprimer = async (l: Livre) => {
     if (!window.confirm(`Retirer « ${l.titre} » de la bibliothèque ?`)) return;
-    const r = await fetch(api(apiName, tenantCode, `/bibliotheque/${l.id}`), { method: "DELETE", headers: jeton() });
-    const d = await r.json().catch(() => ({}));
-    if (d.success) charger(); else alert(d.message || "Erreur");
+    try {
+      const r = await fetch(api(apiName, tenantCode, `/bibliotheque/${l.id}`), { method: "DELETE", headers: jeton() });
+      const d = await r.json().catch(() => ({}));
+      if (d.success) charger(); else alert(d.message || "Erreur");
+    } catch { alert("Erreur de connexion. Réessayez."); }
   };
 
   const champ = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm";

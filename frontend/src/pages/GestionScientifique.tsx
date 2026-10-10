@@ -92,7 +92,7 @@ export default function GestionScientifique() {
     setSaving(false); setShowAddMember(false); setMForm({ nom: "", prenom: "", telephone: "", numero_h: "", titre: "Chercheur", domaine: "", institution: "" });
     loadMembers(); loadAll();
   }
-  async function deleteMember(id: number) { if (!confirm("Retirer ce chercheur ?")) return; await fetch(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }); loadMembers(); loadAll(); }
+  async function deleteMember(id: number) { if (!confirm("Retirer ce chercheur ?")) return; if (!(await envoyerGestion(`${BASE(tenantCode!)}/members/${id}`, { method: "DELETE", headers: auth() }))) return; loadMembers(); loadAll(); }
 
   async function addPublication() {
     if (!pForm.titre.trim()) return; setSaving(true);
@@ -101,8 +101,8 @@ export default function GestionScientifique() {
     setSaving(false); setShowAddPub(false); setPForm({ auteur_id: "", auteur_nom: "", titre: "", type_pub: "article", domaine: "", statut: "en_cours", date_pub: new Date().toISOString().split("T")[0], resume: "" });
     loadPublications(); loadAll();
   }
-  async function updatePubStatut(id: number, statut: string) { await fetch(`${BASE(tenantCode!)}/publications/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }); loadPublications(); loadAll(); }
-  async function deletePub(id: number) { if (!confirm("Supprimer cette publication ?")) return; await fetch(`${BASE(tenantCode!)}/publications/${id}`, { method: "DELETE", headers: auth() }); loadPublications(); loadAll(); }
+  async function updatePubStatut(id: number, statut: string) { if (!(await envoyerGestion(`${BASE(tenantCode!)}/publications/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) return; loadPublications(); loadAll(); }
+  async function deletePub(id: number) { if (!confirm("Supprimer cette publication ?")) return; if (!(await envoyerGestion(`${BASE(tenantCode!)}/publications/${id}`, { method: "DELETE", headers: auth() }))) return; loadPublications(); loadAll(); }
 
   async function addProject() {
     if (!prjForm.titre.trim()) return; setSaving(true);
@@ -110,8 +110,8 @@ export default function GestionScientifique() {
     setSaving(false); setShowAddProject(false); setPrjForm({ titre: "", description: "", responsable: "", statut: "en_cours", date_debut: new Date().toISOString().split("T")[0], date_fin: "", budget: "" });
     loadProjects(); loadAll();
   }
-  async function updatePrjStatut(id: number, statut: string) { await fetch(`${BASE(tenantCode!)}/projects/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }); loadProjects(); loadAll(); }
-  async function deleteProject(id: number) { if (!confirm("Supprimer ce projet ?")) return; await fetch(`${BASE(tenantCode!)}/projects/${id}`, { method: "DELETE", headers: auth() }); loadProjects(); loadAll(); }
+  async function updatePrjStatut(id: number, statut: string) { if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects/${id}/statut`, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) }))) return; loadProjects(); loadAll(); }
+  async function deleteProject(id: number) { if (!confirm("Supprimer ce projet ?")) return; if (!(await envoyerGestion(`${BASE(tenantCode!)}/projects/${id}`, { method: "DELETE", headers: auth() }))) return; loadProjects(); loadAll(); }
 
   async function addAnn() {
     if (!aForm.titre.trim() || !aForm.contenu.trim()) return; setSaving(true);
@@ -119,7 +119,7 @@ export default function GestionScientifique() {
     setSaving(false); setShowAddAnn(false); setAForm({ titre: "", contenu: "", type: "general" });
     loadAnnouncements(); loadAll();
   }
-  async function deleteAnn(id: number) { if (!confirm("Supprimer cette annonce ?")) return; await fetch(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }); loadAnnouncements(); loadAll(); }
+  async function deleteAnn(id: number) { if (!confirm("Supprimer cette annonce ?")) return; if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) return; loadAnnouncements(); loadAll(); }
 
   if (loading) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:300 }}><div style={{ width:32, height:32, border:"3px solid #c7d2fe", borderTopColor:INDIGO, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
   if (error) return <div style={{ maxWidth:500, margin:"60px auto", textAlign:"center" }}><div style={{ fontSize:48 }}>🔒</div><h2>{error}</h2><button onClick={() => navigate(-1)} style={{ padding:"10px 24px", background:INDIGO, color:"white", border:"none", borderRadius:8, cursor:"pointer" }}>Retour</button></div>;

@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { QueryTypes } from 'sequelize';
-import { sequelize } from '../../config/database.js';
+import { sequelize } from '../config/database.js';
 import { uploadToIDrive } from './idriveStorage.js';
 
 /**

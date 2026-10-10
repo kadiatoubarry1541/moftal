@@ -372,6 +372,31 @@ export default function AdminDashboard() {
     }
   };
 
+  // Formule du compte : fixe le contenu de son espace (CLAUDE.md §1).
+  // Rien n'est supprimé en passant en Visibilité : les données restent en base.
+  const changerFormule = async (pro: ProfessionalAccount) => {
+    const versVisibilite = !isFormuleRdv(pro);
+    const cible = versVisibilite ? "visibility" : "full";
+    const libelle = versVisibilite ? "📅 Visibilité + Rendez-vous" : "🔧 Visibilité + Gestion Interne";
+    const detail = versVisibilite
+      ? "Son espace n'affichera plus que Demandes · Historique · Paramètres (pas de gestion interne, pas d'app installable, pas de Moftal Pay). Ses données de gestion restent enregistrées."
+      : "Son espace affichera la gestion interne, l'app installable et Moftal Pay.";
+    if (!window.confirm(`Mettre « ${pro.name} » en formule ${libelle} ?\n\n${detail}`)) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/professionals/admin/${pro.id}/formule`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ planType: cible }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) { alert(data.message || "La formule n'a pas pu être changée."); return; }
+      setAllPros((liste) => liste.map((p) => (p.id === pro.id ? { ...p, planType: cible } : p)));
+    } catch {
+      alert("Impossible de changer la formule. Vérifiez votre connexion.");
+    }
+  };
+
   const checkExpiredSubscriptions = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -1280,7 +1305,11 @@ export default function AdminDashboard() {
                           {pro.name}
                           {isFormuleRdv(pro)
                             ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">📅 Rendez-vous</span>
-                            : <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 font-semibold">🔧 Gestion Interne</span>}
+                            : <span className="text-[11px] px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 font-semibold">🔧 Gestion Interne{!pro.planType ? " (ancien compte)" : ""}</span>}
+                          <button type="button" onClick={() => changerFormule(pro)}
+                            className="text-[11px] font-semibold text-blue-700 hover:underline whitespace-nowrap">
+                            ⇄ Changer la formule
+                          </button>
                         </div>
                         <div className="text-sm text-gray-600">
                           {typeLabels[pro.type]?.label || pro.type}

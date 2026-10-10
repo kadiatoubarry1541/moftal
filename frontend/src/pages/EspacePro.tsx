@@ -1257,7 +1257,7 @@ export default function EspacePro() {
       {isAdminViewing && (
         <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm font-semibold sticky top-[72px] z-50 shadow-md">
           <span>👁️ Mode Admin — Vue lecture seule · Compte de <strong>{account.ownerNumeroH}</strong></span>
-          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Actions désactivées</span>
+          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Actions désactivées · logo modifiable</span>
         </div>
       )}
 
@@ -2574,7 +2574,7 @@ export default function EspacePro() {
                 {/* Informations */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {[
-                    { label: "Adresse",   value: account.address },
+                    { label: "Adresse (quartier)", value: account.address },
                     { label: "Ville",     value: account.city },
                     { label: "Pays",      value: account.country },
                     { label: "Téléphone", value: account.phone },

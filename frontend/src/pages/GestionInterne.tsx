@@ -6,6 +6,7 @@ import Activite from "./Activite";
 import { AddPersonModal } from "../components/AddPersonModal";
 import PaymentModal from "../components/PaymentModal";
 import { TenantLogo } from "../components/GestionBrand";
+import { demanderCodeOuverture } from "../utils/codeOuverture";
 import {
   ADMIN_SERVICES, DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp, OffreGestionInterne,
   type PublishModal, type ProfilModal,
@@ -26,6 +27,8 @@ export default function GestionInterne() {
   const [accounts, setAccounts]         = useState<any[]>([]);
   const [adminTenants, setAdminTenants] = useState<any[]>([]);
   const [loading, setLoading]           = useState(true);
+  // Échec du chargement des comptes : ce n'est PAS « aucun compte » → on propose de réessayer.
+  const [erreurComptes, setErreurComptes] = useState(false);
   const [search, setSearch]             = useState("");
   const [accesGI, setAccesGI]           = useState<any>(null);
   const [payGILoading, setPayGILoading] = useState(false);
@@ -56,11 +59,7 @@ export default function GestionInterne() {
   useEffect(() => {
     if (!currentUser) { navigate("/login"); return; }
 
-    const myAccountsPromise = fetch(`${API}/api/professionals/my-accounts`, {
-      headers: { Authorization: `Bearer ${token}` }
-    }).then(r => r.json()).then(data => {
-      setAccounts((data.accounts || []).filter((a: any) => a.status === "approved"));
-    }).catch(() => {});
+    const myAccountsPromise = chargerComptes();
 
     const accesPromise = !userIsAdmin
       ? fetch(`${API}/api/payment/acces-gestion-interne`, { headers: { Authorization: `Bearer ${token}` } })
@@ -74,6 +73,16 @@ export default function GestionInterne() {
 
     Promise.all([myAccountsPromise, accesPromise, adminTenantsPromise]).finally(() => setLoading(false));
   }, []);
+
+  function chargerComptes() {
+    setErreurComptes(false);
+    return fetch(`${API}/api/professionals/my-accounts`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(r => r.json()).then(data => {
+      if (!data?.success) throw new Error(data?.message || "Chargement impossible");
+      setAccounts((data.accounts || []).filter((a: any) => a.status === "approved"));
+    }).catch(() => { setErreurComptes(true); });
+  }
 
   // Compte bloqué (3 mois d'impayé) : charger le montant à régulariser (tous les mois consommés)
   useEffect(() => {
@@ -118,17 +127,23 @@ export default function GestionInterne() {
 
   // remplacer = true : la page intermédiaire ne reste pas dans l'historique (le
   // bouton retour ne la ramène pas).
-  function ouvrirGestionUrl(path: string, tenantCode: string, remplacer = false) {
-    const t = localStorage.getItem("token") || "";
-    const s = localStorage.getItem("session_user") || "";
-    const url = `https://gestions.moftal.com/${path}/${tenantCode}?_t=${encodeURIComponent(t)}&_s=${encodeURIComponent(s)}`;
+  // La session n'est jamais mise dans l'adresse : un code à usage unique la remplace.
+  async function ouvrirGestionUrl(path: string, tenantCode: string, remplacer = false) {
+    const code = await demanderCodeOuverture();
+    const url = `https://gestions.moftal.com/${path}/${tenantCode}${code ? `?_c=${code}` : ""}`;
     if (remplacer) window.location.replace(url);
     else window.location.href = url;
   }
 
   async function ouvrirGestion(account: any, remplacer = false): Promise<boolean> {
-    if (accesGI?.mode === "visibilite") { navigate(`/espace-pro/${account.id}`); return true; }
-    if (accesGI && !accesGI.aAcces) {
+    // Accès de CET établissement (formule et abonnement propres à chaque compte pro)
+    let accesCompte = accesGI;
+    if (!userIsAdmin && account?.tenant_code) {
+      accesCompte = await fetch(`${API}/api/payment/acces-gestion-interne?tenantCode=${encodeURIComponent(account.tenant_code)}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(d => (d.success ? d : accesGI)).catch(() => accesGI);
+    }
+    if (accesCompte?.mode === "visibilite") { navigate(`/espace-pro/${account.id}`); return true; }
+    if (accesCompte && !accesCompte.aAcces) {
       alert("Votre essai gratuit est terminé. Achetez l'accès ci-dessous pour continuer.");
       return false;
     }
@@ -657,7 +672,14 @@ export default function GestionInterne() {
   const sansAcces = accounts.length > 0 && accesGI && !accesGI.aAcces;
 
   let espacePro: { emoji: string; titre: string; desc: string; label: string; onClick: () => void };
-  if (accounts.length === 0) {
+  if (erreurComptes) {
+    espacePro = {
+      emoji: "⚠️", titre: "Espace Pro",
+      desc: "Impossible de charger vos comptes. Vérifiez votre connexion et réessayez.",
+      label: "Réessayer",
+      onClick: () => { chargerComptes(); },
+    };
+  } else if (accounts.length === 0) {
     espacePro = {
       emoji: "💼", titre: "Espace Pro",
       desc: "Inscrivez-vous comme professionnel pour ouvrir votre espace de gestion.",

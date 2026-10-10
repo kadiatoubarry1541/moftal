@@ -13,6 +13,24 @@ import { BoutonRapport } from "../components/RapportMois";
 const BASE = (code: string) => `/api/mairie-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
+// Appel au serveur qui ne lève jamais d'exception : une panne réseau ou une
+// réponse non JSON devient { success: false, message } pour être affichée.
+type Reponse = { success?: boolean; message?: string; [k: string]: any };
+async function appeler(url: string, init?: RequestInit): Promise<{ status: number; d: Reponse }> {
+  let r: Response;
+  try {
+    r = await fetch(url, init);
+  } catch {
+    return { status: 0, d: { success: false, message: "Connexion impossible au serveur. Vérifiez votre connexion internet." } };
+  }
+  try {
+    const d = await r.json();
+    return { status: r.status, d: d && typeof d === "object" ? d : { success: false, message: `Réponse inattendue du serveur (${r.status}).` } };
+  } catch {
+    return { status: r.status, d: { success: false, message: `Réponse inattendue du serveur (${r.status}).` } };
+  }
+}
+
 type Section = "dashboard" | "mariages" | "naissances" | "deces" | "residences" | "chefs_quartier" | "agents" | "settings";
 type Statut = "en_attente" | "en_traitement" | "valide_chef" | "valide" | "rejete";
 
@@ -77,6 +95,7 @@ export default function GestionMairie() {
   const [stats, setStats] = useState<any>({});
   const [recentMariages, setRecentMariages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accesRefuse, setAccesRefuse] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   // Mariages
@@ -136,64 +155,61 @@ export default function GestionMairie() {
   };
 
   const fetchTenant = useCallback(async () => {
-    const r = await fetch(`${BASE(tenantCode!)}/info`, { headers: auth() });
-    const d = await r.json();
-    if (d.success) { setTenant(d.tenant); setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", logo_url: d.tenant.logo_url || "" }); } else showToast(d.message || "Erreur : rien n'a été enregistré", false);
+    const { status, d } = await appeler(`${BASE(tenantCode!)}/info`, { headers: auth() });
+    if (status === 403 || status === 402) { setAccesRefuse(d.message || "Accès refusé à cet espace mairie."); return; }
+    if (d.success) { setTenant(d.tenant); setSettingsForm({ name: d.tenant.name, address: d.tenant.address || "", phone: d.tenant.phone || "", email: d.tenant.email || "", description: d.tenant.description || "", logo_url: d.tenant.logo_url || "" }); } else showToast(d.message || "Impossible de charger les informations de la mairie.", false);
   }, [tenantCode]);
 
   const fetchDashboard = useCallback(async () => {
-    const r = await fetch(`${BASE(tenantCode!)}/dashboard`, { headers: auth() });
-    const d = await r.json();
-    if (d.success) { setStats(d.stats); setRecentMariages(d.recentMariages || []); } else showToast(d.message || "Erreur : rien n'a été enregistré", false);
-    setLoading(false);
+    try {
+      const { status, d } = await appeler(`${BASE(tenantCode!)}/dashboard`, { headers: auth() });
+      if (status === 403 || status === 402) { setAccesRefuse(d.message || "Accès refusé à cet espace mairie."); return; }
+      if (d.success) { setStats(d.stats); setRecentMariages(d.recentMariages || []); } else showToast(d.message || "Impossible de charger le tableau de bord.", false);
+    } finally {
+      setLoading(false);
+    }
   }, [tenantCode]);
 
   const fetchMariages = useCallback(async () => {
     const params = new URLSearchParams();
     if (mariageSearch) params.set("search", mariageSearch);
     if (mariageStatut) params.set("statut", mariageStatut);
-    const r = await fetch(`${BASE(tenantCode!)}/mariages?${params}`, { headers: auth() });
-    const d = await r.json();
-    if (d.success) setMariages(d.mariages);
+    const { d } = await appeler(`${BASE(tenantCode!)}/mariages?${params}`, { headers: auth() });
+    if (d.success) setMariages(d.mariages); else showToast(d.message || "Impossible de charger la liste.", false);
   }, [tenantCode, mariageSearch, mariageStatut]);
 
   const fetchNaissances = useCallback(async () => {
     const params = new URLSearchParams();
     if (naissanceSearch) params.set("search", naissanceSearch);
     if (naissanceStatut) params.set("statut", naissanceStatut);
-    const r = await fetch(`${BASE(tenantCode!)}/naissances?${params}`, { headers: auth() });
-    const d = await r.json();
-    if (d.success) setNaissances(d.naissances);
+    const { d } = await appeler(`${BASE(tenantCode!)}/naissances?${params}`, { headers: auth() });
+    if (d.success) setNaissances(d.naissances); else showToast(d.message || "Impossible de charger la liste.", false);
   }, [tenantCode, naissanceSearch, naissanceStatut]);
 
   const fetchDeces = useCallback(async () => {
     const params = new URLSearchParams();
     if (decesSearch) params.set("search", decesSearch);
     if (decesStatut) params.set("statut", decesStatut);
-    const r = await fetch(`${BASE(tenantCode!)}/deces?${params}`, { headers: auth() });
-    const d = await r.json();
-    if (d.success) setDeces(d.deces);
+    const { d } = await appeler(`${BASE(tenantCode!)}/deces?${params}`, { headers: auth() });
+    if (d.success) setDeces(d.deces); else showToast(d.message || "Impossible de charger la liste.", false);
   }, [tenantCode, decesSearch, decesStatut]);
 
   const fetchResidences = useCallback(async () => {
     const params = new URLSearchParams();
     if (residenceSearch) params.set("search", residenceSearch);
     if (residenceStatut) params.set("statut", residenceStatut);
-    const r = await fetch(`${BASE(tenantCode!)}/residences?${params}`, { headers: auth() });
-    const d = await r.json();
-    if (d.success) setResidences(d.residences);
+    const { d } = await appeler(`${BASE(tenantCode!)}/residences?${params}`, { headers: auth() });
+    if (d.success) setResidences(d.residences); else showToast(d.message || "Impossible de charger la liste.", false);
   }, [tenantCode, residenceSearch, residenceStatut]);
 
   const fetchChefsQuartier = useCallback(async () => {
-    const r = await fetch(`${BASE(tenantCode!)}/chefs-quartier`, { headers: auth() });
-    const d = await r.json();
-    if (d.success) setChefsQuartier(d.chefs);
+    const { d } = await appeler(`${BASE(tenantCode!)}/chefs-quartier`, { headers: auth() });
+    if (d.success) setChefsQuartier(d.chefs); else showToast(d.message || "Impossible de charger la liste.", false);
   }, [tenantCode]);
 
   const fetchAgents = useCallback(async () => {
-    const r = await fetch(`${BASE(tenantCode!)}/agents`, { headers: auth() });
-    const d = await r.json();
-    if (d.success) setAgents(d.agents);
+    const { d } = await appeler(`${BASE(tenantCode!)}/agents`, { headers: auth() });
+    if (d.success) setAgents(d.agents); else showToast(d.message || "Impossible de charger la liste.", false);
   }, [tenantCode]);
 
   useEffect(() => {
@@ -224,8 +240,7 @@ export default function GestionMairie() {
   const saveMariage = async () => {
     const url = editingMariage ? `${BASE(tenantCode!)}/mariages/${editingMariage.id}` : `${BASE(tenantCode!)}/mariages`;
     const method = editingMariage ? "PUT" : "POST";
-    const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(mariageForm) });
-    const d = await r.json();
+    const { d } = await appeler(url, { method, headers: auth(), body: JSON.stringify(mariageForm) });
     if (d.success) { showToast(editingMariage ? "Dossier mis à jour" : "Dossier créé"); setShowMariageForm(false); fetchMariages(); fetchDashboard(); }
     else showToast(d.message || "Erreur", false);
   };
@@ -251,8 +266,7 @@ export default function GestionMairie() {
   const saveNaissance = async () => {
     const url = editingNaissance ? `${BASE(tenantCode!)}/naissances/${editingNaissance.id}` : `${BASE(tenantCode!)}/naissances`;
     const method = editingNaissance ? "PUT" : "POST";
-    const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(naissanceForm) });
-    const d = await r.json();
+    const { d } = await appeler(url, { method, headers: auth(), body: JSON.stringify(naissanceForm) });
     if (d.success) { showToast(editingNaissance ? "Déclaration mise à jour" : "Déclaration enregistrée"); setShowNaissanceForm(false); fetchNaissances(); fetchDashboard(); }
     else showToast(d.message || "Erreur", false);
   };
@@ -278,8 +292,7 @@ export default function GestionMairie() {
   const saveDeces = async () => {
     const url = editingDeces ? `${BASE(tenantCode!)}/deces/${editingDeces.id}` : `${BASE(tenantCode!)}/deces`;
     const method = editingDeces ? "PUT" : "POST";
-    const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(decesForm) });
-    const d = await r.json();
+    const { d } = await appeler(url, { method, headers: auth(), body: JSON.stringify(decesForm) });
     if (d.success) { showToast(editingDeces ? "Déclaration mise à jour" : "Déclaration enregistrée"); setShowDecesForm(false); fetchDeces(); fetchDashboard(); }
     else showToast(d.message || "Erreur", false);
   };
@@ -305,8 +318,7 @@ export default function GestionMairie() {
   const saveResidence = async () => {
     const url = editingResidence ? `${BASE(tenantCode!)}/residences/${editingResidence.id}` : `${BASE(tenantCode!)}/residences`;
     const method = editingResidence ? "PUT" : "POST";
-    const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(residenceForm) });
-    const d = await r.json();
+    const { d } = await appeler(url, { method, headers: auth(), body: JSON.stringify(residenceForm) });
     if (d.success) { showToast(editingResidence ? "Dossier mis à jour" : "Demande enregistrée"); setShowResidenceForm(false); fetchResidences(); }
     else showToast(d.message || "Erreur", false);
   };
@@ -332,8 +344,7 @@ export default function GestionMairie() {
   const saveChef = async () => {
     const url = editingChef ? `${BASE(tenantCode!)}/chefs-quartier/${editingChef.id}` : `${BASE(tenantCode!)}/chefs-quartier`;
     const method = editingChef ? "PUT" : "POST";
-    const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(chefForm) });
-    const d = await r.json();
+    const { d } = await appeler(url, { method, headers: auth(), body: JSON.stringify(chefForm) });
     if (d.success) { showToast(editingChef ? "Chef de quartier mis à jour" : "Chef de quartier ajouté"); setShowChefForm(false); fetchChefsQuartier(); }
     else showToast(d.message || "Erreur", false);
   };
@@ -357,10 +368,9 @@ export default function GestionMairie() {
 
   const submitChefValidation = async () => {
     if (!validatingResidence) return;
-    const r = await fetch(`${BASE(tenantCode!)}/residences/${validatingResidence.id}/chef-validation`, {
+    const { d } = await appeler(`${BASE(tenantCode!)}/residences/${validatingResidence.id}/chef-validation`, {
       method: "PATCH", headers: auth(), body: JSON.stringify(chefValidationForm)
     });
-    const d = await r.json();
     if (d.success) {
       showToast(chefValidationForm.valide ? "Validation enregistrée" : "Validation annulée");
       setShowChefValidationModal(false);
@@ -378,8 +388,7 @@ export default function GestionMairie() {
   const saveAgent = async () => {
     const url = editingAgent ? `${BASE(tenantCode!)}/agents/${editingAgent.id}` : `${BASE(tenantCode!)}/agents`;
     const method = editingAgent ? "PUT" : "POST";
-    const r = await fetch(url, { method, headers: auth(), body: JSON.stringify(agentForm) });
-    const d = await r.json();
+    const { d } = await appeler(url, { method, headers: auth(), body: JSON.stringify(agentForm) });
     if (d.success) { showToast(editingAgent ? "Agent mis à jour" : "Agent ajouté"); setShowAgentForm(false); fetchAgents(); }
     else showToast(d.message || "Erreur", false);
   };
@@ -393,12 +402,28 @@ export default function GestionMairie() {
   // ── SETTINGS HANDLER ──────────────────────────────────────────────────────
   const saveSettings = async () => {
     setSavingSettings(true);
-    const r = await fetch(`${BASE(tenantCode!)}/settings`, { method: "PUT", headers: auth(), body: JSON.stringify(settingsForm) });
-    const d = await r.json();
-    setSavingSettings(false);
-    if (d.success) { showToast("Paramètres sauvegardés"); setTenant(d.tenant); }
-    else showToast(d.message || "Erreur", false);
+    try {
+      const { d } = await appeler(`${BASE(tenantCode!)}/settings`, { method: "PUT", headers: auth(), body: JSON.stringify(settingsForm) });
+      if (d.success) { showToast("Paramètres sauvegardés"); setTenant(d.tenant); }
+      else showToast(d.message || "Erreur : rien n'a été enregistré", false);
+    } finally {
+      setSavingSettings(false);
+    }
   };
+
+  if (accesRefuse) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", padding: 16 }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "32px 28px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+        <h1 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Accès refusé</h1>
+        <p style={{ fontSize: 14, color: "#475569", marginBottom: 20 }}>{accesRefuse}</p>
+        <button onClick={() => goToMoftal(navigate)} style={{ background: BLUE, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <MoftalMark />
+          Retour sur Moftal
+        </button>
+      </div>
+    </div>
+  );
 
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>

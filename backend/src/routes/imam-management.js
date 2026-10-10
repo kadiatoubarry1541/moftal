@@ -50,7 +50,7 @@ router.get('/:tenantCode/dashboard', authenticate, verifyTenant, async (req, res
       q(`SELECT COUNT(*) as c FROM imam_network_mosques WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM imam_network_announcements WHERE tenant_code=:code AND is_active=true`, { code }),
       q(`SELECT COUNT(*) as c FROM imam_network_members WHERE tenant_code=:code AND is_active=true`, { code }),
-      q(`SELECT COALESCE(SUM(montant),0) as t FROM imam_network_donations WHERE tenant_code=:code AND EXTRACT(MONTH FROM date_don)=EXTRACT(MONTH FROM CURRENT_DATE)`, { code }),
+      q(`SELECT COALESCE(SUM(montant),0) as t FROM imam_network_donations WHERE tenant_code=:code AND date_don >= date_trunc('month', CURRENT_DATE) AND date_don < date_trunc('month', CURRENT_DATE) + interval '1 month'`, { code }),
       q(`SELECT COUNT(*) as c FROM imam_network_quran_students WHERE tenant_code=:code AND statut='actif'`, { code }),
       sequelize.query(`SELECT * FROM imam_network_predications WHERE tenant_code=:code ORDER BY date_pred DESC LIMIT 5`, { replacements: { code }, type: sequelize.QueryTypes.SELECT }).catch(() => []),
     ]);

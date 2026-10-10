@@ -1,8 +1,10 @@
 // Verrouille l'accès aux routes de gestion interne (CRUD clinique, école, commerce, etc.)
 // quand l'abonnement du propriétaire du tenant n'est pas payé / plus en essai gratuit.
 // Ne supprime ni ne modifie jamais aucune donnée — bloque uniquement l'accès en attendant le paiement.
+import { Op } from 'sequelize';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import Payment from '../models/Payment.js';
+import { sequelize } from '../config/database.js';
 
 export const ADMIN_OWNER_MARKER = 'ADMIN-G7';
 
@@ -30,25 +32,65 @@ export async function compteAGestionInterne(proAccount) {
   if (proAccount.planType !== 'visibility') return true;
   const gi = proAccount.gestionInterneValidUntil ? new Date(proAccount.gestionInterneValidUntil) : null;
   if (gi && gi > new Date()) return true;
-  const paiementVie = await Payment.findOne({
-    where: { payerNumeroH: proAccount.ownerNumeroH, purpose: 'gestion_interne_vie', status: 'completed' },
+  return !!(await trouverPaiementVie(proAccount.ownerNumeroH, proAccount.id));
+}
+
+// Paiement « Gestion Interne à vie » de CE compte : relatedId = id du compte pro
+// (AbonnementGestion / GestionInterne envoient proId). Les anciens paiements sans
+// relatedId restent valables pour le propriétaire (compatibilité).
+async function trouverPaiementVie(ownerNumeroH, proAccountId) {
+  const where = { payerNumeroH: ownerNumeroH, purpose: 'gestion_interne_vie', status: 'completed' };
+  if (proAccountId) {
+    // Un ancien paiement sans compte précisé ne vaut que si le propriétaire n'a
+    // qu'UN compte pro : sinon il débloquerait aussi ses comptes « Visibilité ».
+    const nbComptes = await ProfessionalAccount.count({ where: { ownerNumeroH } });
+    where[Op.or] = nbComptes <= 1
+      ? [{ relatedId: String(proAccountId) }, { relatedId: null }, { relatedId: '' }]
+      : [{ relatedId: String(proAccountId) }];
+  }
+  return Payment.findOne({ where });
+}
+
+// Compte pro approuvé de CET établissement : lié par professional_accounts.tenant_code
+// ou par management_tenants.professional_account_id.
+async function compteDeLEtablissement(ownerNumeroH, tenantCode) {
+  if (!tenantCode) return null;
+  const parCode = await ProfessionalAccount.findOne({
+    where: { tenant_code: tenantCode, ownerNumeroH, status: 'approved', isActive: true },
   });
-  return !!paiementVie;
+  if (parCode) return parCode;
+  const [lien] = await sequelize.query(
+    'SELECT professional_account_id FROM management_tenants WHERE tenant_code = :code LIMIT 1',
+    { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT }
+  );
+  if (!lien?.professional_account_id) return null;
+  // Colonne INTEGER côté établissement, UUID côté compte pro : comparaison en texte
+  const [compte] = await sequelize.query(
+    `SELECT id FROM professional_accounts
+      WHERE id::text = :id AND owner_numero_h = :owner AND status = 'approved' AND is_active = true LIMIT 1`,
+    { replacements: { id: String(lien.professional_account_id), owner: ownerNumeroH }, type: sequelize.QueryTypes.SELECT }
+  );
+  return compte ? ProfessionalAccount.findByPk(compte.id) : null;
 }
 
 // Source de vérité : subscriptionStatus + subscriptionValidUntil, tenus à jour par
 // l'approbation du compte (essai gratuit de 3 mois, voir professionals.js) et par les
 // paiements (admin/subscription, webhook de paiement). Ne PAS recalculer un essai à part
 // à partir de approvedAt : ça désynchronise l'accès réel du statut affiché à l'utilisateur.
-export async function getGestionInterneAccess(ownerNumeroH) {
+// tenantCode (optionnel) : l'établissement concerné. Un propriétaire peut avoir
+// plusieurs établissements, chacun avec sa formule et son abonnement : on lit alors
+// le compte de CET établissement. Sans tenantCode (ou sans compte lié), on garde
+// l'ancien comportement : le compte approuvé le plus récent du propriétaire.
+export async function getGestionInterneAccess(ownerNumeroH, tenantCode = null) {
   if (!ownerNumeroH || ownerNumeroH === ADMIN_OWNER_MARKER) {
     return { aAcces: true, mode: 'admin', proAccount: null, validUntil: null, giValidUntil: null };
   }
 
-  const proAccount = await ProfessionalAccount.findOne({
-    where: { ownerNumeroH, status: 'approved', isActive: true },
-    order: [['approvedAt', 'DESC']],
-  });
+  const proAccount = (await compteDeLEtablissement(ownerNumeroH, tenantCode))
+    || await ProfessionalAccount.findOne({
+      where: { ownerNumeroH, status: 'approved', isActive: true },
+      order: [['approvedAt', 'DESC']],
+    });
   if (!proAccount) return { aAcces: false, mode: 'aucun_compte', proAccount: null, validUntil: null, giValidUntil: null };
 
   const maintenant = new Date();
@@ -65,9 +107,7 @@ export async function getGestionInterneAccess(ownerNumeroH) {
   const giValidUntil = proAccount.gestionInterneValidUntil ? new Date(proAccount.gestionInterneValidUntil) : null;
   const giPayee = giValidUntil && giValidUntil > maintenant;
 
-  const paiementVie = await Payment.findOne({
-    where: { payerNumeroH: ownerNumeroH, purpose: 'gestion_interne_vie', status: 'completed' },
-  });
+  const paiementVie = await trouverPaiementVie(ownerNumeroH, proAccount.id);
 
   // Formule « Visibilité + Rendez-vous » : pas de Gestion Interne tant qu'elle
   // n'est pas payée (le paiement Gestion Interne ou à vie la débloque).
@@ -97,7 +137,7 @@ const PAYMENT_REQUIRED_RESPONSE = {
 // À appeler une fois req.tenant résolu (propriétaire ou membre) par le middleware verifyTenant/verifyMember de chaque module.
 export async function enforceGestionAccess(req, res, next) {
   try {
-    const access = await getGestionInterneAccess(req.tenant?.owner_numero_h);
+    const access = await getGestionInterneAccess(req.tenant?.owner_numero_h, req.tenant?.tenant_code);
     if (!access.aAcces) {
       if (access.mode === 'visibilite') {
         return res.status(402).json({

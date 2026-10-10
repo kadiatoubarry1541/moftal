@@ -82,12 +82,18 @@ export default function GestionEntreprise() {
     if (tab === "announcements") fetch(`${BASE(tenantCode)}/announcements`, { headers: h }).then(r => r.json()).then(d => d.success && setAnnouncements(d.announcements || []));
   }, [tab, tenantCode, loading]);
 
-  const post = async (url: string, body: object) => {
+  // Envoie au serveur et renvoie toujours une réponse lisible : en cas d'échec,
+  // le bouton se débloque et l'erreur est affichée (jamais de faux succès).
+  const post = async (url: string, body: object): Promise<any> => {
     setSaving(true);
-    const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    const d = await r.json();
-    setSaving(false);
-    return d;
+    try {
+      const r = await fetch(url, { method: "POST", headers: auth(), body: JSON.stringify(body) });
+      return await r.json().catch(() => ({ success: false, message: `Erreur du serveur (${r.status}) : rien n'a été enregistré.` }));
+    } catch {
+      return { success: false, message: "Erreur de connexion : rien n'a été enregistré." };
+    } finally {
+      setSaving(false);
+    }
   };
   const del = (url: string) => envoyerGestion(url, { method: "DELETE", headers: auth() });
   const patchStatut = (url: string, statut: string) => envoyerGestion(url, { method: "PATCH", headers: auth(), body: JSON.stringify({ statut }) });

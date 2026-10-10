@@ -6,6 +6,7 @@ import { enforceGestionAccess } from '../middleware/gestionAccessGuard.js';
 import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
+import { numeroHComplet } from './schoolCoursBibliotheque.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -28,28 +29,52 @@ async function verifyTenantProprietaire(req, res, next) {
       const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code LIMIT 1`, { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT });
       req.tenant = tenant || { tenant_code: tenantCode, name: 'Clinique Admin', type: 'clinic', owner_numero_h: 'ADMIN-G7', is_active: true };
       req.myRole = 'Admin';
+      req.estProprietaireClinique = true;
       return next();
     }
     const [tenant] = await sequelize.query(`SELECT * FROM management_tenants WHERE tenant_code = :code AND owner_numero_h = :n LIMIT 1`, { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT });
     if (tenant) {
       req.tenant = tenant;
       req.myRole = 'Admin';
+      req.estProprietaireClinique = true;
       return enforceGestionAccess(req, res, next);
     }
     // Pas le propriétaire : vérifier si connecté en tant que membre du personnel
     await ensureStaffExtraColumns();
     const [staffMember] = await sequelize.query(
       `SELECT s.*, t.* FROM clinic_staff s JOIN management_tenants t ON t.tenant_code = s.tenant_code
-       WHERE s.tenant_code = :code AND s.numero_h = :n AND s.is_active = true LIMIT 1`,
-      { replacements: { code: tenantCode, n: req.userId }, type: sequelize.QueryTypes.SELECT }
+       WHERE s.tenant_code = :code AND LOWER(TRIM(s.numero_h)) = LOWER(TRIM(:n)) AND s.is_active = true LIMIT 1`,
+      { replacements: { code: tenantCode, n: String(req.userId || '') }, type: sequelize.QueryTypes.SELECT }
     );
     if (!staffMember) return res.status(403).json({ success: false, message: 'Accès refusé à cet espace clinique.' });
     req.tenant = staffMember;
-    req.myRole = staffMember.role || 'Autre';
+    // Le rôle « Admin » est réservé au propriétaire : un membre du personnel garde son
+    // rôle métier (jamais les droits du propriétaire, même si sa fiche dit « Admin »).
+    const roleStaff = staffMember.role && staffMember.role !== 'Admin' ? staffMember.role : 'Autre';
+    req.myRole = roleStaff;
+    req.estPersonnelClinique = true;
     return enforceGestionAccess(req, res, next);
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
+}
+
+// Actions réservées au propriétaire (ou à l'admin plateforme) : paramètres de
+// l'établissement (nom, logo, contact) et gestion des accès employés.
+// Un membre du personnel (clinic_staff) garde l'accès au travail courant de la clinique.
+function exigerProprietaire(req, res, next) {
+  if (req.estProprietaireClinique && !req.estPersonnelClinique && !req.employe) return next();
+  return res.status(403).json({ success: false, message: "Seul le propriétaire de l'établissement peut faire cette action." });
+}
+
+// Gestion du personnel : refusée aux membres du personnel (clinic_staff), quel que
+// soit le rôle inscrit sur leur fiche ; le propriétaire et ses employés à accès
+// complet (utils/accesEmployes.js) la gardent.
+function refuserPersonnel(req, res, next) {
+  if (req.estPersonnelClinique) {
+    return res.status(403).json({ success: false, message: "Seul le propriétaire de l'établissement peut gérer le personnel." });
+  }
+  return next();
 }
 
 // GET /api/clinic-mgmt/:tenantCode/info
@@ -66,7 +91,7 @@ export async function ensureTenantExtraColumns() {
 }
 
 // PUT /api/clinic-mgmt/:tenantCode/settings — mise à jour nom, logo, contact
-router.put('/:tenantCode/settings', authenticate, verifyTenant, async (req, res) => {
+router.put('/:tenantCode/settings', authenticate, verifyTenant, exigerProprietaire, async (req, res) => {
   try {
     await ensureTenantExtraColumns();
     const { name, logo_url, address, phone, email, description, horaires, phone_urgence } = req.body;
@@ -138,6 +163,20 @@ router.get('/:tenantCode/patients', authenticate, verifyTenant, async (req, res)
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// Numéro de patient : suit le plus grand numéro déjà donné (jamais le nombre de
+// patients, qui redonnerait un numéro existant après une suppression). Le verrou
+// empêche deux enregistrements simultanés de prendre le même numéro.
+async function prochainMatricule(code, transaction) {
+  await sequelize.query(`SELECT pg_advisory_xact_lock(hashtext('clinic_patients:' || :code))`, { replacements: { code }, transaction });
+  const prefixe = `PAT-${code.slice(-4)}-`;
+  const [row] = await sequelize.query(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(numero_matricule FROM '([0-9]+)$') AS INTEGER)), 0) AS n
+     FROM clinic_patients WHERE tenant_code=:code AND numero_matricule LIKE :motif`,
+    { replacements: { code, motif: `${prefixe}%` }, type: sequelize.QueryTypes.SELECT, transaction }
+  );
+  return `${prefixe}${String(+row.n + 1).padStart(4, '0')}`;
+}
+
 router.post('/:tenantCode/patients', authenticate, verifyTenant, async (req, res) => {
   try {
     const { nom, prenom, date_naissance, sexe, telephone, adresse, groupe_sanguin, allergies, numero_h } = req.body;
@@ -150,13 +189,15 @@ router.post('/:tenantCode/patients', authenticate, verifyTenant, async (req, res
       );
       if (existing) return res.status(400).json({ success: false, message: 'Ce numéro Moftal est déjà enregistré dans cette clinique.' });
     }
-    const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_patients WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-    const mat = `PAT-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
-    const [rows] = await sequelize.query(
-      `INSERT INTO clinic_patients (tenant_code,nom,prenom,date_naissance,sexe,telephone,adresse,groupe_sanguin,allergies,numero_matricule,numero_h)
-       VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:adr,:gs,:alg,:mat,:nh) RETURNING *`,
-      { replacements: { code, nom, prenom, dob: date_naissance || null, sexe, tel: telephone, adr: adresse, gs: groupe_sanguin, alg: allergies, mat, nh: numero_h || null }, type: sequelize.QueryTypes.INSERT }
-    );
+    const rows = await sequelize.transaction(async (transaction) => {
+      const mat = await prochainMatricule(code, transaction);
+      const [r] = await sequelize.query(
+        `INSERT INTO clinic_patients (tenant_code,nom,prenom,date_naissance,sexe,telephone,adresse,groupe_sanguin,allergies,numero_matricule,numero_h)
+         VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:adr,:gs,:alg,:mat,:nh) RETURNING *`,
+        { replacements: { code, nom, prenom, dob: date_naissance || null, sexe, tel: telephone, adr: adresse, gs: groupe_sanguin, alg: allergies, mat, nh: numero_h || null }, type: sequelize.QueryTypes.INSERT, transaction }
+      );
+      return r;
+    });
     res.json({ success: true, patient: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -188,22 +229,25 @@ router.get('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =>
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
+router.post('/:tenantCode/staff', authenticate, verifyTenant, refuserPersonnel, async (req, res) => {
   try {
     await ensureStaffExtraColumns();
     const { nom, prenom, role, service, specialite, telephone, email, numero_h } = req.body;
     const code = req.params.tenantCode;
+    // NuméroH complet du compte Moftal (ex. saisie sans le compteur final) pour que
+    // ce membre du personnel puisse ensuite se connecter à la gestion.
+    const nh = numero_h ? await numeroHComplet(numero_h) : null;
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_staff WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `STAFF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const [rows] = await sequelize.query(
       `INSERT INTO clinic_staff (tenant_code,nom,prenom,role,service,specialite,telephone,email,matricule,numero_h) VALUES(:code,:nom,:prenom,:role,:svc,:spec,:tel,:email,:mat,:nh) RETURNING *`,
-      { replacements: { code, nom, prenom, role, svc: service, spec: specialite, tel: telephone, email, mat, nh: numero_h || null }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, nom, prenom, role, svc: service, spec: specialite, tel: telephone, email, mat, nh: nh || null }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, staff: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
+router.delete('/:tenantCode/staff/:id', authenticate, verifyTenant, refuserPersonnel, async (req, res) => {
   try {
     await sequelize.query(`UPDATE clinic_staff SET is_active=false WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code: req.params.tenantCode } });
     res.json({ success: true });
@@ -512,11 +556,11 @@ router.put('/:tenantCode/invoices/:id', authenticate, verifyTenant, async (req, 
       const total = +(inv?.total || 0);
       const paye = Math.max(0, +montant_paye || 0);
       statut = paye <= 0 ? 'impaye' : paye >= total ? 'paye' : 'partiel';
-      await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,montant_paye=:paye,mode_paiement=:mode WHERE id=:id AND tenant_code=:code`, { replacements: { statut, paye, mode: mode_paiement || 'especes', id: req.params.id, code } });
+      await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,montant_paye=:paye,mode_paiement=COALESCE(:mode, mode_paiement, 'especes') WHERE id=:id AND tenant_code=:code`, { replacements: { statut, paye, mode: mode_paiement || null, id: req.params.id, code } });
     } else {
       // Facture réglée : le montant payé devient le total
       const montantPaye = statut === 'paye' ? 'total' : 'montant_paye';
-      await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,mode_paiement=:mode,montant_paye=${montantPaye} WHERE id=:id AND tenant_code=:code`, { replacements: { statut, mode: mode_paiement || 'especes', id: req.params.id, code } });
+      await sequelize.query(`UPDATE clinic_invoices SET statut=:statut,mode_paiement=COALESCE(:mode, mode_paiement, 'especes'),montant_paye=${montantPaye} WHERE id=:id AND tenant_code=:code`, { replacements: { statut, mode: mode_paiement || null, id: req.params.id, code } });
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -671,30 +715,35 @@ router.post('/:tenantCode/pharmacy/dispense/:prescriptionId', authenticate, veri
     );
     if (!prescription) return res.status(404).json({ success: false, message: 'Ordonnance introuvable.' });
 
-    // Déduire le stock pour chaque médicament
-    if (Array.isArray(stock_movements)) {
-      for (const mv of stock_movements) {
-        if (mv.stock_id && mv.quantite_deduite > 0) {
-          await sequelize.query(
-            `UPDATE clinic_pharmacy_stock SET quantite=GREATEST(0,quantite-:q),updated_at=NOW() WHERE id=:id AND tenant_code=:code`,
-            { replacements: { q: +mv.quantite_deduite, id: mv.stock_id, code } }
-          );
+    if (prescription.pharma_statut === 'dispense') return res.status(400).json({ success: false, message: 'Cette ordonnance a déjà été dispensée.' });
+
+    // Sorties de stock + dispensation + statut de l'ordonnance : tout ou rien.
+    await sequelize.transaction(async (transaction) => {
+      // Déduire le stock pour chaque médicament
+      if (Array.isArray(stock_movements)) {
+        for (const mv of stock_movements) {
+          if (mv.stock_id && +mv.quantite_deduite > 0) {
+            await sequelize.query(
+              `UPDATE clinic_pharmacy_stock SET quantite=GREATEST(0,quantite-:q),updated_at=NOW() WHERE id=:id AND tenant_code=:code`,
+              { replacements: { q: +mv.quantite_deduite, id: mv.stock_id, code }, transaction }
+            );
+          }
         }
       }
-    }
 
-    // Créer l'entrée de dispensation
-    await sequelize.query(
-      `INSERT INTO clinic_pharmacy_dispensing (tenant_code,prescription_id,patient_id,staff_id,medicaments_dispensed,notes)
-       VALUES(:code,:pid,:patid,:sid,:meds::jsonb,:notes)`,
-      { replacements: { code, pid: prescriptionId, patid: prescription.patient_id || null, sid: prescription.staff_id || null, meds: JSON.stringify(prescription.medicaments || []), notes: notes || null } }
-    );
+      // Créer l'entrée de dispensation
+      await sequelize.query(
+        `INSERT INTO clinic_pharmacy_dispensing (tenant_code,prescription_id,patient_id,staff_id,medicaments_dispensed,notes)
+         VALUES(:code,:pid,:patid,:sid,:meds::jsonb,:notes)`,
+        { replacements: { code, pid: prescriptionId, patid: prescription.patient_id || null, sid: prescription.staff_id || null, meds: JSON.stringify(prescription.medicaments || []), notes: notes || null }, transaction }
+      );
 
-    // Marquer l'ordonnance comme dispensée
-    await sequelize.query(
-      `UPDATE clinic_prescriptions SET pharma_statut='dispense' WHERE id=:id AND tenant_code=:code`,
-      { replacements: { id: prescriptionId, code } }
-    );
+      // Marquer l'ordonnance comme dispensée
+      await sequelize.query(
+        `UPDATE clinic_prescriptions SET pharma_statut='dispense' WHERE id=:id AND tenant_code=:code`,
+        { replacements: { id: prescriptionId, code }, transaction }
+      );
+    });
 
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -882,28 +931,34 @@ router.put('/:tenantCode/appointment-requests/:id/convert', authenticate, verify
     const [reqRow] = await sequelize.query(`SELECT * FROM clinic_appointment_requests WHERE id=:id AND tenant_code=:code LIMIT 1`, { replacements: { id: req.params.id, code }, type: sequelize.QueryTypes.SELECT });
     if (!reqRow) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
 
-    let [patient] = await sequelize.query(`SELECT * FROM clinic_patients WHERE tenant_code=:code AND telephone=:tel LIMIT 1`, { replacements: { code, tel: reqRow.telephone }, type: sequelize.QueryTypes.SELECT });
-    if (!patient) {
-      const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM clinic_patients WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
-      const mat = `PAT-${code.slice(-4)}-${String(+cnt.c + 1).padStart(4, '0')}`;
-      const nameParts = (reqRow.nom || '').trim().split(/\s+/);
-      const prenom = nameParts.shift() || reqRow.nom;
-      const nom = nameParts.join(' ') || '—';
-      const [rows] = await sequelize.query(
-        `INSERT INTO clinic_patients (tenant_code,nom,prenom,telephone,numero_matricule) VALUES(:code,:nom,:prenom,:tel,:mat) RETURNING *`,
-        { replacements: { code, nom, prenom, tel: reqRow.telephone, mat }, type: sequelize.QueryTypes.INSERT }
+    if (reqRow.statut === 'converti') return res.status(400).json({ success: false, message: 'Cette demande a déjà été convertie en rendez-vous.' });
+
+    // Patient (si besoin) + rendez-vous + statut de la demande : tout ou rien.
+    // Sans date souhaitée, le rendez-vous est posé à aujourd'hui (modifiable ensuite).
+    const { patient, appointment } = await sequelize.transaction(async (transaction) => {
+      let [patient] = await sequelize.query(`SELECT * FROM clinic_patients WHERE tenant_code=:code AND telephone=:tel LIMIT 1`, { replacements: { code, tel: reqRow.telephone }, type: sequelize.QueryTypes.SELECT, transaction });
+      if (!patient) {
+        const mat = await prochainMatricule(code, transaction);
+        const nameParts = (reqRow.nom || '').trim().split(/\s+/);
+        const prenom = nameParts.shift() || reqRow.nom;
+        const nom = nameParts.join(' ') || '—';
+        const [rows] = await sequelize.query(
+          `INSERT INTO clinic_patients (tenant_code,nom,prenom,telephone,numero_matricule) VALUES(:code,:nom,:prenom,:tel,:mat) RETURNING *`,
+          { replacements: { code, nom, prenom, tel: reqRow.telephone, mat }, type: sequelize.QueryTypes.INSERT, transaction }
+        );
+        patient = rows[0];
+      }
+
+      const [apptRows] = await sequelize.query(
+        `INSERT INTO clinic_appointments_mgmt (tenant_code,patient_id,service,date_rdv,motif) VALUES(:code,:pid,:svc,COALESCE(CAST(:date AS DATE), CURRENT_DATE),:motif) RETURNING *`,
+        { replacements: { code, pid: patient.id, svc: reqRow.service || null, date: reqRow.date_souhaitee || null, motif: reqRow.motif || null }, type: sequelize.QueryTypes.INSERT, transaction }
       );
-      patient = rows[0];
-    }
 
-    const [apptRows] = await sequelize.query(
-      `INSERT INTO clinic_appointments_mgmt (tenant_code,patient_id,service,date_rdv,motif) VALUES(:code,:pid,:svc,:date,:motif) RETURNING *`,
-      { replacements: { code, pid: patient.id, svc: reqRow.service || null, date: reqRow.date_souhaitee || null, motif: reqRow.motif || null }, type: sequelize.QueryTypes.INSERT }
-    );
+      await sequelize.query(`UPDATE clinic_appointment_requests SET statut='converti' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code }, transaction });
+      return { patient, appointment: apptRows[0] };
+    });
 
-    await sequelize.query(`UPDATE clinic_appointment_requests SET statut='converti' WHERE id=:id AND tenant_code=:code`, { replacements: { id: req.params.id, code } });
-
-    res.json({ success: true, patient, appointment: apptRows[0] });
+    res.json({ success: true, patient, appointment });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
@@ -925,6 +980,6 @@ ajouterRouteRapport(router, [authenticate, verifyTenant], {
 });
 
 // ── Accès des employés (géré par le propriétaire uniquement) ──
-ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);
+ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire, exigerProprietaire]);
 
 export default router;
