@@ -403,6 +403,8 @@ export default function EditProfileModal({
       });
 
       let serverUser: any = completedUser || {};
+      // Champs que le serveur n'a pas pu enregistrer (aucune colonne en base)
+      let champsIgnores: string[] = [];
       if (textChanged || preuveFile) {
         const preuve = preuveFile
           ? await new Promise<string>((resolve) => {
@@ -427,20 +429,25 @@ export default function EditProfileModal({
           );
         }
         serverUser = (data && data.user) ? data.user : {};
+        champsIgnores = Array.isArray(data?.champsIgnores) ? data.champsIgnores : [];
       }
 
-      // 4. Construire l'utilisateur final
-      const finalPhoto = uploadedPhotoUrl || (serverUser as any).photo || formData.photo;
-      const finalVideo = uploadedVideoUrl || (serverUser as any).video || formData.video;
+      // 4. Construire l'utilisateur final — uniquement à partir de ce que le
+      // serveur a enregistré (jamais le formulaire brut : un champ refusé ou
+      // ignoré par le serveur ne doit pas paraître enregistré)
+      const base: any = { ...(reference || {}), ...serverUser };
       const updatedUser: UserData = {
-        ...formData,
-        ...serverUser,
-        photo: finalPhoto,
-        video: finalVideo,
-        vitrinePhoto1: uploadedVitrinePhoto1Url || (serverUser as any).vitrinePhoto1 || formData.vitrinePhoto1,
-        vitrinePhoto2: uploadedVitrinePhoto2Url || (serverUser as any).vitrinePhoto2 || formData.vitrinePhoto2,
-        vitrineVideo: uploadedVitrineVideoUrl || (serverUser as any).vitrineVideo || formData.vitrineVideo,
+        ...base,
+        // Le formulaire lit « region » / « telephone » ; la base les nomme regionOrigine / tel1
+        region: base.regionOrigine ?? base.region,
+        telephone: base.tel1 ?? base.telephone,
+        photo: uploadedPhotoUrl || base.photo,
+        video: uploadedVideoUrl || base.video,
+        vitrinePhoto1: uploadedVitrinePhoto1Url || base.vitrinePhoto1,
+        vitrinePhoto2: uploadedVitrinePhoto2Url || base.vitrinePhoto2,
+        vitrineVideo: uploadedVitrineVideoUrl || base.vitrineVideo,
       };
+      const finalPhoto = updatedUser.photo;
 
       console.log('✅ Profil mis à jour - photo:', finalPhoto);
 
@@ -466,6 +473,12 @@ export default function EditProfileModal({
       // 6. Notifier les autres composants
       window.dispatchEvent(new Event("session-updated"));
 
+      if (champsIgnores.length) {
+        // Le reste est enregistré, mais on ne cache pas ce qui ne l'a pas été
+        setError(`Profil enregistré, sauf : ${champsIgnores.join(", ")} (ne peut pas encore être enregistré).`);
+        modalRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
       setSuccess(true);
       if (completedUser) {
         alert(`✅ Profil mis à jour !\n\nVotre NuméroH : ${numeroH}\n\nVous pouvez toujours vous connecter avec votre numéro de téléphone.`);

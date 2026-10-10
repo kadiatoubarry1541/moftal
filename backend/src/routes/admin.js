@@ -2,9 +2,31 @@ import express from 'express';
 import { Op } from 'sequelize';
 import User from '../models/User.js';
 import { sequelize } from '../config/database.js';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Champs du profil qu'un admin peut corriger depuis l'espace admin.
+// Jamais : NuméroH, mot de passe, rôle, statut actif/vérifié, génération,
+// préfixe du NuméroH, portefeuille (routes dédiées pour rôle et statut).
+const CHAMPS_MODIFIABLES_ADMIN = [
+  'prenom', 'nomFamille', 'genre', 'dateNaissance', 'email', 'tel1', 'tel2',
+  'famillePere', 'prenomPere', 'pereStatut', 'numeroHPere',
+  'familleMere', 'prenomMere', 'mereStatut', 'numeroHMere',
+  'ethnie', 'regionOrigine', 'pays', 'nationalite', 'lieuNaissance',
+  'statutSocial', 'religion', 'situationEco', 'etatPhysique', 'situationSanitaire',
+  'langues', 'languesAutre', 'photo', 'activite1', 'activite2', 'activite3',
+  'specialite', 'statutMatrimonial', 'lieu1', 'lieu2', 'lieu3',
+  'prefecture', 'sousPrefecture', 'lieuResidence1', 'lieuResidence2', 'lieuResidence3'
+];
+
+// Les comptes administrateurs principaux ne se modifient, ne se désactivent
+// et ne se suppriment jamais depuis l'espace admin.
+const estCompteMaitre = (numeroH) => MASTER_ADMIN_NUMEROS.includes(String(numeroH || '').trim().replace(/\s+/g, ' '));
+const refusCompteMaitre = (res) => res.status(403).json({
+  success: false,
+  message: 'Action impossible sur un compte administrateur principal'
+});
 
 // Toutes les routes nécessitent l'authentification et les privilèges admin
 router.use(authenticate);
@@ -99,10 +121,17 @@ router.get('/users/:numeroH', async (req, res) => {
 router.put('/users/:numeroH', async (req, res) => {
   try {
     const { numeroH } = req.params;
-    const updates = req.body;
-    
-    // Ne pas permettre la modification du mot de passe via cette route
-    delete updates.password;
+    const body = req.body || {};
+
+    // Seuls les champs du profil listés sont modifiables (jamais rôle,
+    // NuméroH, statut, mot de passe ni génération via cette route)
+    const updates = {};
+    for (const champ of CHAMPS_MODIFIABLES_ADMIN) {
+      if (Object.prototype.hasOwnProperty.call(body, champ) && User.rawAttributes[champ]) {
+        updates[champ] = body[champ];
+      }
+    }
+    const champsIgnores = Object.keys(body).filter((k) => k !== 'numeroH' && !(k in updates));
     
     const user = await User.findByNumeroH(numeroH);
     
@@ -112,6 +141,8 @@ router.put('/users/:numeroH', async (req, res) => {
         message: 'Utilisateur non trouvé'
       });
     }
+
+    if (estCompteMaitre(user.numeroH)) return refusCompteMaitre(res);
     
     // Mettre à jour l'utilisateur
     await user.update(updates);
@@ -121,7 +152,10 @@ router.put('/users/:numeroH', async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Utilisateur mis à jour avec succès',
+      message: champsIgnores.length
+        ? `Utilisateur mis à jour (non modifiables, ignorés : ${champsIgnores.join(', ')})`
+        : 'Utilisateur mis à jour avec succès',
+      champsIgnores,
       user: userWithoutPassword
     });
   } catch (error) {
@@ -149,6 +183,8 @@ router.patch('/users/:numeroH/toggle-status', async (req, res) => {
       });
     }
     
+    if (estCompteMaitre(user.numeroH)) return refusCompteMaitre(res);
+
     // Ne pas permettre de désactiver son propre compte
     if (user.numeroH === req.user.numeroH) {
       return res.status(400).json({
@@ -202,6 +238,8 @@ router.patch('/users/:numeroH/role', async (req, res) => {
       });
     }
     
+    if (estCompteMaitre(user.numeroH)) return refusCompteMaitre(res);
+
     // Ne pas permettre de changer son propre rôle
     if (user.numeroH === req.user.numeroH) {
       return res.status(400).json({
@@ -246,6 +284,8 @@ router.delete('/users/:numeroH', async (req, res) => {
       });
     }
     
+    if (estCompteMaitre(user.numeroH)) return refusCompteMaitre(res);
+
     // Ne pas permettre de supprimer son propre compte
     if (user.numeroH === req.user.numeroH) {
       return res.status(400).json({

@@ -27,11 +27,14 @@ class User extends Model {
     if (!numeroH || typeof numeroH !== 'string') return null;
     const normalizedNumeroH = numeroH.trim().replace(/\s+/g, ' ');
     const trimmed = numeroH.trim();
+    // iLike sert seulement à ignorer la casse : %, _ et \ saisis doivent être pris
+    // à la lettre (sinon « % » trouverait n'importe quel compte)
+    const litteral = (v) => v.replace(/[\\%_]/g, '\\$&');
     try {
       // Au plus 2 requêtes : index sur numero_h → réponse rapide
-      let user = await this.findOne({ where: { numeroH: { [Op.iLike]: normalizedNumeroH } }, raw: false });
+      let user = await this.findOne({ where: { numeroH: { [Op.iLike]: litteral(normalizedNumeroH) } }, raw: false });
       if (!user && trimmed !== normalizedNumeroH) {
-        user = await this.findOne({ where: { numeroH: { [Op.iLike]: trimmed } }, raw: false });
+        user = await this.findOne({ where: { numeroH: { [Op.iLike]: litteral(trimmed) } }, raw: false });
       }
       return user || null;
     } catch (error) {

@@ -443,16 +443,22 @@ export default function Identite() {
                   }
                   setDeleteLoading(true);
                   setDeleteError("");
-                  const result = await api.deleteAccount(deletePassword.trim());
-                  setDeleteLoading(false);
-                  if (result.success) {
-                    localStorage.removeItem("session_user");
-                    localStorage.removeItem("token");
-                    setShowDeleteModal(false);
-                    navigate("/", { replace: true });
-                    window.location.reload();
-                  } else {
-                    setDeleteError(result.message || "Erreur lors de la suppression du compte.");
+                  // Mot de passe envoyé tel quel (jamais raccourci : un espace peut en faire partie)
+                  try {
+                    const result = await api.deleteAccount(deletePassword);
+                    if (result.success) {
+                      localStorage.removeItem("session_user");
+                      localStorage.removeItem("token");
+                      setShowDeleteModal(false);
+                      navigate("/", { replace: true });
+                      window.location.reload();
+                    } else {
+                      setDeleteError(result.message || "Erreur lors de la suppression du compte.");
+                    }
+                  } catch (err: any) {
+                    setDeleteError(err?.message || "Le serveur n'a pas pu supprimer le compte. Vérifiez votre connexion et réessayez.");
+                  } finally {
+                    setDeleteLoading(false);
                   }
                 }}
                 className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium disabled:opacity-50"

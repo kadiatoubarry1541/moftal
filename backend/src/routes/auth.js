@@ -30,6 +30,13 @@ function isReservedGeneration(generation) {
   return num >= 0 && num <= 90;
 }
 
+// Génération portée par le NuméroH lui-même (« G0C0P0… » → « G0 ») : un
+// NuméroH réservé est refusé même si le champ « generation » envoyé dit autre chose.
+function generationDuNumeroH(numeroH) {
+  const match = String(numeroH || '').trim().match(/^G(\d+)/i);
+  return match ? `G${match[1]}` : null;
+}
+
 // Toutes les données utilisateur proviennent uniquement de la base de données PostgreSQL.
 
 // (Plus aucun compte de test créé automatiquement au démarrage : il avait
@@ -195,9 +202,23 @@ router.post('/register', validateUser, async (req, res) => {
     const email = String(req.body.email || '').trim();
     req.body.email = email && !/@example\.com$/i.test(email) ? email : null;
 
-    // Bloquer G0–G90 : générations réservées à l'admin
+    const estDefunt = req.body.type === 'defunt' || Boolean(req.body.isDeceased);
+
+    // Ajouter un défunt dans un arbre exige une session valide : jamais un
+    // visiteur anonyme. Le créateur est toujours l'utilisateur connecté.
+    if (estDefunt) {
+      let sessionValide = false;
+      await authenticate(req, res, () => { sessionValide = true; });
+      if (!sessionValide) return; // réponse 401/403 déjà envoyée
+      req.body.createdBy = req.user.numeroH;
+    }
+
+    // Bloquer G0–G90 : générations réservées à l'admin — sur le champ
+    // « generation » ET sur le préfixe du NuméroH envoyé (le numéro d'ordre
+    // étant réattribué ici, aucun compte principal ne passe par cette route)
     const generationDemandee = req.body.generation || 'G1';
-    if (isReservedGeneration(generationDemandee)) {
+    if (isReservedGeneration(generationDemandee)
+        || (!estDefunt && isReservedGeneration(generationDuNumeroH(numeroH)))) {
       return res.status(400).json({
         success: false,
         message: 'Ce numéro est impossible. Notre plateforme existe depuis 2025, aucun vivant ne peut avoir ce numéro.'
@@ -285,7 +306,7 @@ router.post('/register', validateUser, async (req, res) => {
           video: userData.video,
           preuve: userData.preuve,
           additionalInfo: userData.additionalInfo || null,
-          createdBy: userData.createdBy || null
+          createdBy: req.user.numeroH
         };
 
         const deceased = await DeceasedMember.create(deceasedData);
@@ -493,7 +514,9 @@ router.post('/complete-profile', authenticate, [
   // Le téléphone envoie le préfixe (génération, pays, région, ethnie, famille…) ;
   // le numéro d'ordre final est toujours attribué ici : le dernier + 1.
   const prefixe = prefixeNumeroH(req.body.numeroH);
-  if (!prefixe || isProvisionalNumeroH(prefixe) || isReservedGeneration(req.body.generation)) {
+  const generationReservee = (isReservedGeneration(req.body.generation) || isReservedGeneration(generationDuNumeroH(prefixe)))
+    && !MASTER_ADMIN_NUMEROS.includes(normalizeNumeroH(String(req.body.numeroH || '')));
+  if (!prefixe || isProvisionalNumeroH(prefixe) || generationReservee) {
     return res.status(400).json({ success: false, message: 'NuméroH invalide.' });
   }
 
@@ -512,7 +535,10 @@ router.post('/complete-profile', authenticate, [
         const allowed = Object.keys(User.rawAttributes).filter((k) => !['numeroH', 'password', 'role', 'isAdmin', 'tel1', 'isActive', 'isVerified', 'type', 'createdAt', 'updatedAt'].includes(k));
         const updates = {};
         for (const k of allowed) if (profil[k] !== undefined) updates[k] = profil[k];
-        if (!updates.email) updates.email = null;
+        // E-mail : modifié seulement s'il est fourni et non vide — sinon on garde
+        // celui déjà enregistré sur le compte provisoire (jamais effacé).
+        if (typeof updates.email === 'string' && updates.email.trim()) updates.email = updates.email.trim();
+        else delete updates.email;
         const base = oldRow.get({ plain: true });
         // Libère téléphone / email (colonnes uniques) sur l'ancien compte
         await User.sequelize.query('UPDATE users SET tel1 = NULL, email = NULL WHERE numero_h = :ancien',
@@ -614,7 +640,8 @@ router.post('/login', [
 
       if (rawIdentifiant.includes('@')) {
         // Connexion par email
-        user = await User.findOne({ where: { email: { [Op.iLike]: rawIdentifiant } } });
+        // %, _ et \ pris à la lettre (iLike ne sert qu'à ignorer la casse)
+        user = await User.findOne({ where: { email: { [Op.iLike]: rawIdentifiant.replace(/[\\%_]/g, '\\$&') } } });
       } else {
         const digitsOnly = rawIdentifiant.replace(/[^0-9]/g, '');
         const strippedOfPunctuation = rawIdentifiant.replace(/[\s\-().+]/g, '');
@@ -1102,20 +1129,29 @@ router.put('/profile', authenticate, async (req, res) => {
 
     // Mettre à jour les champs autorisés
     const allowedFields = [
-      'prenom', 'nomFamille', 'email', 'telephone', 'tel1', 'genre',
-      'dateNaissance', 'age', 'generation', 'ethnie', 'region', 'pays',
-      'nationalite', 'prenomPere', 'nomFamillePere', 'numeroHPere',
-      'prenomMere', 'nomFamilleMere', 'numeroHMere', 'treeVisibility',
+      'prenom', 'nomFamille', 'email', 'tel1', 'genre',
+      'dateNaissance', 'age', 'generation', 'ethnie', 'regionOrigine', 'pays',
+      'nationalite', 'religion', 'preuve', 'prenomPere', 'famillePere', 'numeroHPere',
+      'prenomMere', 'familleMere', 'numeroHMere', 'treeVisibility',
       'activite1', 'activite2', 'activite3', 'specialite', 'statutMatrimonial',
       'lieu1', 'lieu2', 'lieu3', 'languesAutre',
-      'sousPrefecture', 'handicap'
+      'sousPrefecture'
     ];
+    // Noms envoyés par le formulaire → vraies colonnes du modèle User
+    const alias = { region: 'regionOrigine', telephone: 'tel1', nomFamillePere: 'famillePere', nomFamilleMere: 'familleMere' };
     
     const updates = {};
-    allowedFields.forEach(field => {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
+    const champsIgnores = [];
+    Object.keys(req.body).forEach((cle) => {
+      if (cle === 'numeroH' || req.body[cle] === undefined) return;
+      const champ = alias[cle] || cle;
+      if (!allowedFields.includes(champ) || !User.rawAttributes[champ]) {
+        champsIgnores.push(cle);
+        return;
       }
+      // Le nom réel de la colonne l'emporte sur son alias s'ils sont envoyés tous les deux
+      if (alias[cle] && req.body[champ] !== undefined) return;
+      updates[champ] = req.body[cle];
     });
 
     // Un numéro de téléphone = un seul compte (même écrit autrement)
@@ -1144,9 +1180,13 @@ router.put('/profile', authenticate, async (req, res) => {
     const userWithoutPassword = { ...user.dataValues };
     delete userWithoutPassword.password;
 
+    // Ne jamais annoncer comme enregistré un champ qui ne l'a pas été
     res.json({
       success: true,
-      message: 'Profil mis à jour avec succès',
+      message: champsIgnores.length
+        ? `Profil mis à jour, sauf : ${champsIgnores.join(', ')} (non enregistrable)`
+        : 'Profil mis à jour avec succès',
+      champsIgnores,
       user: userWithoutPassword
     });
   } catch (error) {
