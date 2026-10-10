@@ -27,7 +27,8 @@ export async function uploadToIDrive(fileBuffer, originalName, mimeType, folder 
     Key: key,
     Body: fileBuffer,
     ContentType: mimeType,
-    ACL: 'public-read',
+    // Copie de sauvegarde : privée (avant « public-read » : justificatifs, PDF…
+    // lisibles par quiconque avait l'adresse)
   }));
 
   return `${IDRIVE_ENDPOINT}/${IDRIVE_BUCKET}/${key}`;

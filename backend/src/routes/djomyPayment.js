@@ -1,4 +1,5 @@
 import express from 'express';
+import { Op } from 'sequelize';
 import crypto from 'crypto';
 import { authenticate } from '../middleware/auth.js';
 import Payment from '../models/Payment.js';
@@ -78,9 +79,14 @@ function formatPhone(phone) {
 // l'action (ex: ajouter les points deux fois) pour un même paiement.
 async function completeIfNeeded(payment) {
   if (!payment || payment.status === 'completed') return;
+  // Passage à « completed » atomique : si le webhook et le suivi de statut
+  // arrivent en même temps, un seul des deux crédite (jamais deux fois).
+  const [nb] = await Payment.update(
+    { status: 'completed' },
+    { where: { id: payment.id, status: { [Op.ne]: 'completed' } } }
+  );
   payment.status = 'completed';
-  await payment.save();
-  await handlePostPayment(payment);
+  if (nb === 1) await handlePostPayment(payment);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

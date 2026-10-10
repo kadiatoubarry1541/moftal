@@ -1,4 +1,5 @@
 import express from 'express';
+import { attraperErreursAsync } from '../utils/routerAsync.js';
 import multer from 'multer';
 import { Op } from 'sequelize';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
@@ -26,6 +27,9 @@ const upload = multer({
 initGameModels();
 
 const router = express.Router();
+// Une erreur (ex. base saturée à l'ouverture d'une transaction) répond 500 au
+// lieu d'arrêter tout le serveur.
+attraperErreursAsync(router);
 
 // Toutes les routes nécessitent l'authentification
 router.use(authenticate);

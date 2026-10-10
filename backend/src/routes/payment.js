@@ -182,8 +182,11 @@ function getPrixLivres(pays) {
 }
 
 // Calcule la date d'expiration selon la période payée
-function calculerExpiration(periode) {
-  const d = new Date();
+// depuis : fin actuelle de l'abonnement — un renouvellement anticipé s'ajoute
+// au temps restant au lieu de le faire perdre.
+function calculerExpiration(periode, depuis = null) {
+  const fin = depuis ? new Date(depuis) : null;
+  const d = fin && !isNaN(fin) && fin > new Date() ? fin : new Date();
   if (periode === 'mois')      { d.setMonth(d.getMonth() + 1); }
   if (periode === 'troisMois') { d.setMonth(d.getMonth() + 3); }
   if (periode === 'an')        { d.setFullYear(d.getFullYear() + 1); }
@@ -238,12 +241,13 @@ const PAYS_AFRICAINS = new Set([
 
 function estAfricain(pays) {
   if (!pays) return true; // si pas de pays renseigné → prix africain par défaut
-  const p = pays.toLowerCase().trim();
-  // Vérifie si le pays ou un sous-string correspond
+  // Comparaison exacte (sans accents ni majuscules). Avant, une simple
+  // ressemblance suffisait : « Canada » contient « na », « Espagne » contient
+  // « gn »… et presque tous les pays payaient le tarif africain.
+  const simple = (x) => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const p = simple(pays);
   for (const a of PAYS_AFRICAINS) {
-    if (p === a.toLowerCase() || p.includes(a.toLowerCase()) || a.toLowerCase().includes(p)) {
-      return true;
-    }
+    if (p === simple(a)) return true;
   }
   return false;
 }
@@ -407,8 +411,6 @@ router.get('/acces-gestion-interne', authenticate, async (req, res) => {
       ? Math.max(0, Math.ceil((access.giValidUntil.getTime() - maintenant.getTime()) / (1000 * 60 * 60 * 24)))
       : 0;
 
-    const secteur = getSecteur(proAccount.type);
-    const prixGI = PRIX_GESTION_INTERNE[secteur];
 
     res.json({
       success: true,
@@ -418,9 +420,10 @@ router.get('/acces-gestion-interne', authenticate, async (req, res) => {
       finEssai: proAccount.isTrial ? access.validUntil : null,
       finGestionInterne: access.giValidUntil,
       prixVie: 3000000,
-      prixMois: prixGI.mois,
-      prixTroisMois: prixGI.troisMois,
-      prixAn: prixGI.an,
+      // Exactement le prix qui sera encaissé (tarif ONG, tarif hors Afrique)
+      prixMois: getPrixGestionInterne(proAccount.type, 'mois', req.user?.pays),
+      prixTroisMois: getPrixGestionInterne(proAccount.type, 'troisMois', req.user?.pays),
+      prixAn: getPrixGestionInterne(proAccount.type, 'an', req.user?.pays),
       proId: proAccount.id,
     });
   } catch (e) {
@@ -645,6 +648,20 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     if (!pack) return { error: 'Pack de points invalide. Choisir : 10, 20, 100 ou 210 points.' };
     amount = estAfricain(pays) ? pack.afrique : pack.horsAfrique;
   }
+  // Abonnements d'un compte pro : seulement par son propriétaire (ou un admin),
+  // et un compte bloqué doit d'abord régler sa dette (régularisation).
+  const PAIEMENTS_COMPTE_PRO = ['subscription_pro', 'visibilite_mois', 'visibilite_3mois', 'visibilite_an', 'gestion_mois', 'gestion_3mois', 'gestion_an', 'regularisation'];
+  if (PAIEMENTS_COMPTE_PRO.includes(purpose) && relatedId) {
+    const compte = await ProfessionalAccount.findByPk(relatedId);
+    if (!compte) return { error: 'Compte professionnel requis.' };
+    const role = String(user?.role || '').toLowerCase();
+    const estAdmin = user?.isMasterAdmin || role === 'admin' || role === 'super-admin';
+    if (!estAdmin && compte.ownerNumeroH !== user?.numeroH) return { error: 'Ce compte professionnel ne vous appartient pas.' };
+    if (compte.subscriptionStatus === 'blocked' && purpose !== 'regularisation') {
+      return { error: 'Ce compte est bloqué pour impayé : réglez d\'abord les mois dus (régularisation).' };
+    }
+  }
+
   // Ancien abonnement mensuel simple (compatibilité)
   if (purpose === 'subscription_pro') amount = getPrixAbonnementPro(pays);
 
@@ -714,6 +731,17 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     if (!montantDepot || montantDepot < 1000) {
       return { error: 'Montant minimum de dépôt : 1 000 GNF.' };
     }
+    // Jamais d'encaissement sans compte pour recevoir l'argent
+    if (purpose === 'wallet_depot_famille') {
+      const fund = user?.nomFamille
+        ? await FamilyFund.findOne({ where: { nomFamille: { [Op.iLike]: String(user.nomFamille).trim() }, isActive: true } })
+        : null;
+      if (!fund) return { error: 'Aucun compte famille actif : créez d\'abord le compte de votre famille.' };
+    }
+    if (purpose === 'wallet_depot_pro') {
+      const pro = await ProfessionalAccount.findOne({ where: { ownerNumeroH: user?.numeroH, status: 'approved' }, order: [['createdAt', 'ASC']] });
+      if (!pro) return { error: 'Aucun compte professionnel approuvé pour recevoir ce dépôt.' };
+    }
     amount = montantDepot;
   }
 
@@ -728,6 +756,10 @@ export async function computeAmountForPurpose(purpose, relatedId, user) {
     if (!montantDepot || montantDepot < 1000) {
       return { error: 'Montant minimum de dépôt : 1 000 GNF.' };
     }
+    const fundQuartier = (parts[0] && parts[1])
+      ? await QuartierFund.findOne({ where: { scope: parts[0], location: parts[1].toLowerCase(), isActive: true } })
+      : null;
+    if (!fundQuartier) return { error: 'Ce Compte Solidarité n\'existe pas (ou plus).' };
     amount = montantDepot;
   }
 
@@ -851,7 +883,7 @@ export async function handlePostPayment(payment) {
         {
           subscriptionStatus: 'active',
           subscriptionValidUntil: expiresAt,
-          status: 'approved',
+          // Payer n'approuve jamais un compte : seule la validation de l'admin le fait
           tenant_code: tenantCode,
         },
         { where: { id: payment.relatedId } }
@@ -890,7 +922,8 @@ export async function handlePostPayment(payment) {
     // ── Visibilité seulement ──────────────────────────────────────────
     if (['visibilite_mois','visibilite_3mois','visibilite_an'].includes(payment.purpose) && payment.relatedId) {
       const periode = payment.purpose === 'visibilite_mois' ? 'mois' : payment.purpose === 'visibilite_3mois' ? 'troisMois' : 'an';
-      const expiration = calculerExpiration(periode);
+      const actuel = await ProfessionalAccount.findByPk(payment.relatedId);
+      const expiration = calculerExpiration(periode, actuel?.subscriptionValidUntil);
       await ProfessionalAccount.update(
         { subscriptionStatus: 'active', subscriptionValidUntil: expiration, isTrial: false },
         { where: { id: payment.relatedId } }
@@ -901,7 +934,8 @@ export async function handlePostPayment(payment) {
     // ── Gestion Interne (inclut visibilité) ──────────────────────────
     if (['gestion_mois','gestion_3mois','gestion_an'].includes(payment.purpose) && payment.relatedId) {
       const periode = payment.purpose === 'gestion_mois' ? 'mois' : payment.purpose === 'gestion_3mois' ? 'troisMois' : 'an';
-      const expiration = calculerExpiration(periode);
+      const actuel = await ProfessionalAccount.findByPk(payment.relatedId);
+      const expiration = calculerExpiration(periode, actuel?.subscriptionValidUntil);
       // Active le compte pro ET la Gestion Interne jusqu'à la même date
       await ProfessionalAccount.update(
         {
@@ -943,18 +977,21 @@ export async function handlePostPayment(payment) {
     // Montant encaissé et date renseignés : le frais compte dans « Frais collectés
     // (mois) » et dans le rapport du mois, comme un encaissement au guichet.
     if (payment.purpose === 'school_fee' && payment.relatedId) {
-      await sequelize.query(
-        `UPDATE school_fees SET est_paye=true, montant_paye=montant, date_paiement=CURRENT_DATE WHERE id=:id`,
+      // Seulement s'il n'est pas déjà payé (deux parents peuvent payer en même temps)
+      const [lignes] = await sequelize.query(
+        `UPDATE school_fees SET est_paye=true, montant_paye=montant, date_paiement=CURRENT_DATE WHERE id=:id AND est_paye IS NOT TRUE RETURNING id`,
         { replacements: { id: payment.relatedId } }
-      ).catch(e => console.warn('school_fee update:', e.message));
-      console.log(`✅ Frais scolaire payé en ligne — frais ${payment.relatedId}`);
+      ).catch(e => { console.warn('school_fee update:', e.message); return [[{ id: null }]]; });
+      if (!lignes?.length) console.warn(`🚨 DOUBLE PAIEMENT à rembourser — frais scolaire ${payment.relatedId} déjà payé | txRef: ${payment.txRef} | payeur ${payment.payerNumeroH}`);
+      else console.log(`✅ Frais scolaire payé en ligne — frais ${payment.relatedId}`);
     }
     if (payment.purpose === 'madrasa_fee' && payment.relatedId) {
-      await sequelize.query(
-        `UPDATE madrasa_fees SET est_paye=true, date_paiement=NOW() WHERE id=:id`,
+      const [lignes] = await sequelize.query(
+        `UPDATE madrasa_fees SET est_paye=true, date_paiement=NOW() WHERE id=:id AND est_paye IS NOT TRUE RETURNING id`,
         { replacements: { id: payment.relatedId } }
-      ).catch(e => console.warn('madrasa_fee update:', e.message));
-      console.log(`✅ Frais madrasa payé en ligne — frais ${payment.relatedId}`);
+      ).catch(e => { console.warn('madrasa_fee update:', e.message); return [[{ id: null }]]; });
+      if (!lignes?.length) console.warn(`🚨 DOUBLE PAIEMENT à rembourser — frais madrasa ${payment.relatedId} déjà payé | txRef: ${payment.txRef} | payeur ${payment.payerNumeroH}`);
+      else console.log(`✅ Frais madrasa payé en ligne — frais ${payment.relatedId}`);
     }
 
     // ── Publication formation — activer l'annonce après paiement ─────
@@ -1096,7 +1133,7 @@ export async function handlePostPayment(payment) {
     // ── Dépôt Moftal Pay — wallet professionnel (commission plateforme 1%) ──
     if (payment.purpose === 'wallet_depot_pro') {
       const { commission, montantNet } = calculerCommissionPlateforme(payment.amount);
-      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: payment.payerNumeroH, status: 'approved' } });
+      const proAccount = await ProfessionalAccount.findOne({ where: { ownerNumeroH: payment.payerNumeroH, status: 'approved' }, order: [['createdAt', 'ASC']] });
       if (proAccount) {
         let wallet = await ProfessionalWallet.findOne({ where: { proAccountId: proAccount.id } });
         if (!wallet) {

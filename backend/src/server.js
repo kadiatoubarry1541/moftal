@@ -79,7 +79,7 @@ import paymentRoutes from './routes/payment.js';
 import uploadRoutes from './routes/upload.js';
 import fichiersRoutes from './routes/fichiers.js';
 import codeOuvertureRoutes from './routes/codeOuverture.js';
-import { cleLimite, validationLimite } from './utils/cleLimite.js';
+import { cleLimite, validationLimite, adresseVisiteur } from './utils/cleLimite.js';
 import { migrerPhotosDisque } from './services/fichiersBase.js';
 import { erreursDonnees } from './middleware/erreursDonnees.js';
 import { idempotence } from './middleware/idempotence.js';
@@ -181,6 +181,12 @@ const startIaServer = () => {
   trySpawn(0);
 };
 
+// Filet de sécurité : une promesse rejetée oubliée est journalisée au lieu
+// d'arrêter tout le serveur (Node 22 s'arrête sinon).
+process.on('unhandledRejection', (raison) => {
+  console.error('🚨 Promesse rejetée non gérée :', raison?.stack || raison);
+});
+
 // Créer ou mettre à jour les comptes admin au démarrage
 async function ensureAdmin() {
   const saltRounds = config.BCRYPT_ROUNDS || 12;
@@ -188,17 +194,23 @@ async function ensureAdmin() {
   const admins = [
     {
       numeroH: (process.env.ADMIN_NUMERO_H || 'G0C0P0R0E0F0 0').trim().replace(/\s+/g, ' '),
-      password: process.env.ADMIN_PASSWORD || 'Neneyaya1',
+      password: process.env.ADMIN_PASSWORD || '',
       generation: 'G0', prenom: 'Administrateur', nom: 'Principal'
     },
     {
       numeroH: 'G7C7P7R7E7F7 7',
-      password: process.env.SUPER_ADMIN_PASSWORD || 'Alphabobomodizakoolo2025@amourpur',
+      password: process.env.SUPER_ADMIN_PASSWORD || '',
       generation: 'G7', prenom: 'Super', nom: 'Admin'
     },
   ];
 
   for (const { numeroH, password, generation, prenom, nom } of admins) {
+    // Plus aucun mot de passe écrit dans le code : sans variable d'environnement,
+    // le compte existant n'est jamais touché (ni créé, ni remis à un mot de passe connu).
+    if (!password) {
+      console.warn(`⚠️ ensureAdmin [${numeroH}] : mot de passe non défini dans l'environnement — compte laissé tel quel`);
+      continue;
+    }
     try {
       const hashedPassword = await bcrypt.hash(password, saltRounds);
       const [rows] = await User.sequelize.query(
@@ -2799,9 +2811,31 @@ app.use('/api', idempotence);
 // Servir les fichiers uploads (photos, vidéos)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   maxAge: '7d', // cache navigateur 7 jours pour les images
+  // Un fichier envoyé ne peut jamais exécuter de script sur le domaine Moftal
+  setHeaders: (res) => {
+    res.setHeader('Content-Security-Policy', 'sandbox');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  },
 }));
 
 // Routes
+// Connexion : 10 essais ratés au plus par compte visé en 15 min. Compté par
+// identifiant (NuméroH / téléphone / email) et non par adresse, qu'on peut
+// falsifier : impossible d'essayer des milliers de mots de passe sur un compte.
+const limiteurConnexion = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 1000 : 10,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => {
+    const ident = String(req.body?.numeroH || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    return ident ? `connexion:${ident}` : `connexion-ip:${adresseVisiteur(req)}`;
+  },
+  validate: validationLimite,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Trop d\'essais de connexion pour ce compte. Réessayez dans 15 minutes, ou utilisez « Mot de passe oublié ».' }
+});
+app.post('/api/auth/login', limiteurConnexion);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/badges', badgeRoutes);
@@ -2905,11 +2939,14 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Route pour servir les fichiers uploadés
+// Seulement un nom de fichier du dossier uploads : jamais de « ../ » (sinon
+// n'importe quel fichier du serveur, code et secrets compris, était lisible).
 app.get('/api/files/:filename', (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(__dirname, '../uploads', filename);
-  
-  res.sendFile(filePath, (err) => {
+  const filename = path.basename(String(req.params.filename || ''));
+  if (!filename || filename.startsWith('.')) {
+    return res.status(404).json({ success: false, message: 'Fichier non trouvé' });
+  }
+  res.sendFile(filename, { root: path.join(__dirname, '../uploads'), dotfiles: 'deny' }, (err) => {
     if (err) {
       res.status(404).json({
         success: false,

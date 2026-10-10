@@ -102,12 +102,17 @@ router.post('/retrait-pro', authenticate, async (req, res) => {
 // ─────────────────────────────────────────
 router.post('/paiement-interne', authenticate, async (req, res) => {
   try {
-    const { montant, proAccountId, categorie, description } = req.body;
+    const { proAccountId, categorie, description } = req.body;
     // categorie = 'sante' | 'nourriture' | 'urgence' | 'projet'
     const { numeroH, nomFamille } = req.user;
-
-    if (!montant || montant <= 0) {
+    // Montant converti en nombre entier : une valeur texte (« 1000 ») était
+    // collée au solde au lieu d'y être ajoutée (argent créé de rien).
+    const montant = Number(req.body.montant);
+    if (!Number.isInteger(montant) || montant <= 0) {
       return res.status(400).json({ success: false, message: 'Montant invalide.' });
+    }
+    if (!proAccountId) {
+      return res.status(400).json({ success: false, message: 'Professionnel à payer manquant.' });
     }
 
     const categorieMap = {
@@ -122,55 +127,40 @@ router.post('/paiement-interne', authenticate, async (req, res) => {
       urgence: 'solde_urgence', projet: 'solde_projet'
     }[categorie] || 'solde_sante';
 
-    // Vérifier le compte famille
-    const fund = await FamilyFund.findOne({
-      where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true }
-    });
-    if (!fund) return res.status(404).json({ success: false, message: 'Compte famille introuvable.' });
-
-    // Vérifier que c'est un gérant
-    if (fund.gerant1NumeroH !== numeroH && fund.gerant2NumeroH !== numeroH) {
-      return res.status(403).json({ success: false, message: 'Seuls les gérants peuvent effectuer ce paiement.' });
+    // Le professionnel est vérifié AVANT tout débit
+    const proAccount = await ProfessionalAccount.findByPk(proAccountId);
+    if (!proAccount || proAccount.status !== 'approved' || proAccount.isActive === false) {
+      return res.status(404).json({ success: false, message: 'Compte professionnel introuvable. Aucun débit effectué.' });
     }
 
-    const soldeActuel = Number(fund[soldeChamp]);
-    if (soldeActuel < montant) {
-      return res.status(400).json({
-        success: false,
-        message: `Solde ${categorie} insuffisant. Disponible : ${soldeActuel.toLocaleString()} GNF`
+    // Débit de la famille et crédit du pro : tout ou rien, comptes verrouillés
+    const resultat = await sequelize.transaction(async (transaction) => {
+      const fund = await FamilyFund.findOne({
+        where: { nomFamille: { [Op.iLike]: nomFamille?.trim() }, isActive: true },
+        transaction, lock: transaction.LOCK.UPDATE,
       });
-    }
-
-    // Débiter le compte famille
-    await fund.update({
-      [soldeChamp]:  soldeActuel - montant,
-      total_depense: Number(fund.total_depense) + montant,
-    });
-
-    await FamilyFundTransaction.create({
-      fundId: fund.id, acteurNumeroH: numeroH,
-      type: typeTransaction, montant,
-      beneficiaireNom: proAccountId,
-      description: description || `Paiement interne Moftal Pay → Pro ${proAccountId}`,
-      statut: 'confirme'
-    });
-
-    // Créditer le wallet du professionnel (auto-création si premier paiement)
-    if (proAccountId) {
-      const proAccount = await ProfessionalAccount.findByPk(proAccountId);
-      if (!proAccount) {
-        // Annuler le débit famille si le compte pro est introuvable
-        await fund.update({
-          [soldeChamp]:  soldeActuel,
-          total_depense: Number(fund.total_depense),
-        });
-        return res.status(404).json({
-          success: false,
-          message: 'Compte professionnel introuvable. Paiement annulé — aucun débit effectué.'
-        });
+      if (!fund) return { statut: 404, message: 'Compte famille introuvable.' };
+      if (fund.gerant1NumeroH !== numeroH && fund.gerant2NumeroH !== numeroH) {
+        return { statut: 403, message: 'Seuls les gérants peuvent effectuer ce paiement.' };
       }
+      const soldeActuel = Number(fund[soldeChamp]);
+      if (soldeActuel < montant) {
+        return { statut: 400, message: `Solde ${categorie} insuffisant. Disponible : ${soldeActuel.toLocaleString()} GNF` };
+      }
+      await fund.update({
+        [soldeChamp]:  soldeActuel - montant,
+        total_depense: Number(fund.total_depense) + montant,
+      }, { transaction });
 
-      let walletPro = await ProfessionalWallet.findOne({ where: { proAccountId } });
+      await FamilyFundTransaction.create({
+        fundId: fund.id, acteurNumeroH: numeroH,
+        type: typeTransaction, montant,
+        beneficiaireNom: proAccountId,
+        description: description || `Paiement interne Moftal Pay → Pro ${proAccountId}`,
+        statut: 'confirme'
+      }, { transaction });
+
+      let walletPro = await ProfessionalWallet.findOne({ where: { proAccountId }, transaction, lock: transaction.LOCK.UPDATE });
       if (!walletPro) {
         // Première fois que ce pro reçoit un paiement → créer son wallet automatiquement
         walletPro = await ProfessionalWallet.create({
@@ -178,13 +168,16 @@ router.post('/paiement-interne', authenticate, async (req, res) => {
           ownerNumeroH: proAccount.ownerNumeroH,
           nomPro:  proAccount.name,
           typePro: proAccount.type,
-        });
+        }, { transaction });
       }
-
       await walletPro.update({
         solde:     Number(walletPro.solde)     + montant,
         totalRecu: Number(walletPro.totalRecu) + montant,
-      });
+      }, { transaction });
+      return { statut: 200 };
+    });
+    if (resultat.statut !== 200) {
+      return res.status(resultat.statut).json({ success: false, message: resultat.message });
     }
 
     res.json({
@@ -285,8 +278,9 @@ router.post('/admin/depot-test', authenticate, async (req, res) => {
     const estAdmin = req.user.isMasterAdmin || req.user.isAdmin || req.user.role === 'admin';
     if (!estAdmin) return res.status(403).json({ success: false, message: 'Accès refusé.' });
 
-    const { walletId, montant } = req.body;
-    if (!walletId || !montant || montant < 100) {
+    const { walletId } = req.body;
+    const montant = Number(req.body.montant);
+    if (!walletId || !Number.isInteger(montant) || montant < 100) {
       return res.status(400).json({ success: false, message: 'ID du compte et montant (min 100) requis.' });
     }
 
