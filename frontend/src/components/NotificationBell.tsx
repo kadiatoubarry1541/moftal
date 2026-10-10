@@ -67,32 +67,121 @@ const etatNotifications = (): EtatNotif =>
   !("Notification" in window) || !("serviceWorker" in navigator) ? "unsupported" : (Notification.permission as EtatNotif);
 
 // demander : seulement après un geste (bouton) — Android ignore une demande automatique
-async function setupPushNotifications(demander = false) {
-  if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
+async function setupPushNotifications(demander = false): Promise<boolean> {
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) return false;
   let permission = Notification.permission;
   if (permission === "default" && demander) permission = await Notification.requestPermission();
-  if (permission !== "granted") return;
+  if (permission !== "granted") return false;
   const registration = await navigator.serviceWorker.ready;
-  if (!registration.pushManager) return;
+  if (!registration.pushManager) return false;
   try {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) return false;
     const res = await fetch(`${API_BASE}/api/push/vapid-key`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await res.json();
-    if (!data.success || !data.publicKey) return;
+    if (!data.success || !data.publicKey) return false;
     const applicationServerKey = urlBase64ToUint8Array(data.publicKey);
     let subscription = await registration.pushManager.getSubscription();
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
     }
-    await fetch(`${API_BASE}/api/push/subscribe`, {
+    const r = await fetch(`${API_BASE}/api/push/subscribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(subscription.toJSON())
     });
-  } catch { /* silently fail */ }
+    return r.ok;
+  } catch { return false; }
+}
+
+// ─── Invitation à activer les notifications (comme WhatsApp au premier lancement) ──
+// Quelques secondes après l'ouverture de Moftal, une seule fois par visite, au
+// plus 3 fois en tout (tous les 2 jours au plus), et jamais le même jour que
+// l'invitation à installer l'application. L'appui sur « Activer » est le geste
+// que le téléphone exige pour demander l'autorisation.
+const CLE_INVITATION_NOTIF = "invitationNotifications";
+const MAX_INVITATIONS_NOTIF = 3;
+
+function invitationNotifPossible() {
+  try {
+    if (sessionStorage.getItem(`${CLE_INVITATION_NOTIF}_vue`) === "1") return false;
+    if (sessionStorage.getItem("installInvite_moftal_vue") === "1") return false;
+    const etat = JSON.parse(localStorage.getItem(CLE_INVITATION_NOTIF) || "{}");
+    if ((etat.n || 0) >= MAX_INVITATIONS_NOTIF) return false;
+    return !etat.t || Date.now() - etat.t > 2 * 24 * 3600 * 1000;
+  } catch { return false; }
+}
+
+function noterInvitationNotif() {
+  try {
+    sessionStorage.setItem(`${CLE_INVITATION_NOTIF}_vue`, "1");
+    const etat = JSON.parse(localStorage.getItem(CLE_INVITATION_NOTIF) || "{}");
+    localStorage.setItem(CLE_INVITATION_NOTIF, JSON.stringify({ n: (etat.n || 0) + 1, t: Date.now() }));
+  } catch { /* ignore */ }
+}
+
+export function InvitationNotifications() {
+  const [ouvert, setOuvert] = useState(false);
+  const [etat, setEtat] = useState<"" | "en_cours" | "active" | "refuse" | "erreur">("");
+
+  useEffect(() => {
+    if (!localStorage.getItem("token") || etatNotifications() !== "default") return;
+    if (window.location.hostname.startsWith("gestions.")) return;
+    const minuterie = setTimeout(() => {
+      // Vérifié au dernier moment : l'invitation à installer a pu s'ouvrir entre-temps
+      if (!invitationNotifPossible() || etatNotifications() !== "default") return;
+      noterInvitationNotif();
+      setOuvert(true);
+    }, 6000);
+    return () => clearTimeout(minuterie);
+  }, []);
+
+  if (!ouvert) return null;
+
+  const activer = async () => {
+    setEtat("en_cours");
+    const ok = await setupPushNotifications(true);
+    const permission = etatNotifications();
+    if (ok) { setEtat("active"); setTimeout(() => setOuvert(false), 1800); }
+    else if (permission === "denied") setEtat("refuse");
+    else if (permission === "granted") setEtat("erreur");
+    else setEtat("");
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+      onClick={e => { if (e.target === e.currentTarget) setOuvert(false); }}>
+      <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "26px 24px 34px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>🔔</div>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Ne manquez aucun message</div>
+            <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>Moftal vous prévient de vos nouveaux messages et demandes, même quand l'application est fermée — comme WhatsApp.</div>
+          </div>
+        </div>
+        {etat === "active" ? (
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "4px 0 12px" }}>✅ C'est activé : vous serez prévenu(e) de vos nouveaux messages.</p>
+        ) : etat === "refuse" ? (
+          <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: "4px 0 12px" }}>
+            Les notifications sont bloquées sur ce téléphone. Pour les activer : <strong>Paramètres</strong> du téléphone → <strong>Applications</strong> → <strong>Moftal</strong> (ou Chrome) → <strong>Notifications</strong> → Autoriser.
+          </p>
+        ) : etat === "erreur" ? (
+          <p style={{ fontSize: 13, color: "#b91c1c", margin: "4px 0 12px" }}>L'activation n'a pas abouti (connexion ?). Réessayez depuis la cloche 🔔.</p>
+        ) : (
+          <button onClick={activer} disabled={etat === "en_cours"}
+            style={{ width: "100%", padding: 14, background: "#16a34a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10, opacity: etat === "en_cours" ? 0.75 : 1 }}>
+            {etat === "en_cours" ? "⏳ Activation…" : "🔔 Activer les notifications"}
+          </button>
+        )}
+        <button onClick={() => setOuvert(false)}
+          style={{ width: "100%", padding: 12, background: "#f1f5f9", color: "#334155", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+          {etat === "active" || etat === "refuse" || etat === "erreur" ? "Fermer" : "Plus tard"}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
