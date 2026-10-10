@@ -166,14 +166,19 @@ export default function Activite2() {
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      await fetch(`${API_BASE}/api/activities/groups/${groupId}/join`, {
+      const res = await fetch(`${API_BASE}/api/activities/groups/${groupId}/join`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ numeroH: userData?.numeroH })
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        alert(data.message || 'Impossible de rejoindre ce groupe. Réessayez.');
+      }
       loadGroups();
     } catch (error) {
       console.error('Erreur:', error);
+      alert('Impossible de rejoindre ce groupe : vérifiez votre connexion.');
     }
   };
 

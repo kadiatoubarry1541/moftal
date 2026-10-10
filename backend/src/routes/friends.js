@@ -113,6 +113,11 @@ function isAdmin(user) {
   return !!(user && user.numeroH === 'G7C7P7R7E7F7 7');
 }
 
+/** Admin maître ou compte ayant un rôle d'administration. */
+function estAdminOuRole(user) {
+  return isAdmin(user) || ['admin', 'super-admin', 'superadmin', 'administrator'].includes(String(user?.role || '').toLowerCase());
+}
+
 /**
  * Comptes de l'administration : secrets, jamais montrés ni trouvables par les
  * membres (suggestions, recherches par nom / téléphone / e-mail / NuméroH).
@@ -928,6 +933,12 @@ router.post('/messages/upload', uploadFriendMedia.single('media'), async (req, r
 
 router.get('/:numeroH', async (req, res) => {
   try {
+    // Seul l'intéressé (ou l'admin) peut lire sa liste d'amis
+    const cible = String(req.params.numeroH || '').trim().toLowerCase();
+    const moi = String(req.user?.numeroH || '').trim().toLowerCase();
+    if (cible !== moi && !estAdminOuRole(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
+    }
     const friends = await Friend.findAll({
       where: {
         [Op.or]: [
@@ -951,6 +962,10 @@ router.delete('/:id', async (req, res) => {
     const friend = await Friend.findByPk(req.params.id);
     if (!friend) {
       return res.status(404).json({ success: false, message: 'Ami non trouvé' });
+    }
+    // Seuls les deux membres de l'amitié (ou l'admin) peuvent la supprimer
+    if (!estDansLAmitie(friend, req.user?.numeroH) && !estAdminOuRole(req.user)) {
+      return res.status(403).json({ success: false, message: 'Accès refusé' });
     }
     await friend.destroy();
     res.json({ success: true, message: 'Ami supprimé' });

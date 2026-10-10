@@ -90,10 +90,13 @@ export const api = {
   // Enregistrer un utilisateur défunt
   async registerDeceased(userData: User) {
     try {
+      // Ajouter un défunt exige d'être connecté (le serveur le refuse sinon)
+      const jeton = localStorage.getItem('token')
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(jeton ? { Authorization: `Bearer ${jeton}` } : {}),
         },
         body: JSON.stringify({
           ...userData,
@@ -109,7 +112,8 @@ export const api = {
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
+        const d = await response.json().catch(() => ({}))
+        throw new Error(response.status === 401 ? 'Connectez-vous pour ajouter un défunt.' : (d.message || `Erreur HTTP: ${response.status}`))
       }
 
       const result = await response.json()

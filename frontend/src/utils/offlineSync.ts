@@ -38,6 +38,11 @@ const QUEUE_PATTERNS = [
 const ONLINE_ONLY_PATTERNS = [
   /\/bulletins\/generate$/, /\/members\/add$/, /\/pharmacy\/dispense\//,
   /\/enseignant\/(debut|fin)$/, /\/acces-employes/,
+  // Demandes et avis des visiteurs publics : jamais gardés dans le téléphone,
+  // le visiteur doit voir une vraie erreur s'il n'y a pas de connexion
+  /\/api\/clinic-public\/[^/]+\/(quick-request|request-appointment|reviews)$/,
+  /\/api\/pro-public\/(school|madrasa)\/[^/]+\/(enroll-request|reviews)$/,
+  /\/quick-request$/, /\/request-appointment$/, /\/enroll-request$/,
 ];
 
 // Base « tenant » d'une URL : /api/clinic-mgmt/CODE

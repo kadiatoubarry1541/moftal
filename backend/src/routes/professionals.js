@@ -1,6 +1,8 @@
 import express from 'express';
 import { Op } from 'sequelize';
-import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur } from '../middleware/auth.js';
+import jwt from 'jsonwebtoken';
+import { config } from '../../config.js';
+import { authenticate, requireAdmin, isProvisionalNumeroH, estAdminUtilisateur, findUserFollowingAlias } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import Notification from '../models/Notification.js';
 import PageAdmin from '../models/PageAdmin.js';
@@ -74,18 +76,44 @@ function filterProsForSubAdmin(accounts) {
   return [...notGranted.slice(0, quota), ...granted];
 }
 
-/** Retire le justificatif des réponses publiques : réservé à l'admin uniquement. */
+/** Retire le justificatif et les données internes (facturation, attribution au
+ * petit admin, motif de refus) des réponses publiques : réservés à l'admin / au propriétaire. */
 function sanitizeAccountForPublic(account) {
   const a = account?.toJSON ? account.toJSON() : { ...account };
-  const { justificatifDocument, ...rest } = a;
+  const { justificatifDocument, billingInfo, grantedToSubAdmin, rejectionReason, ...rest } = a;
   return rest;
+}
+
+/** Vue du propriétaire : garde ses coordonnées de paiement (billingInfo) et le
+ * motif de refus, sans le justificatif ni l'attribution interne au petit admin. */
+function sanitizeAccountForOwner(account) {
+  const a = account?.toJSON ? account.toJSON() : { ...account };
+  const { justificatifDocument, grantedToSubAdmin, ...rest } = a;
+  return rest;
+}
+
+/** Authentification facultative (routes publiques) : renvoie l'utilisateur du
+ * jeton Bearer s'il est valide, sinon null — ne bloque jamais la requête. */
+async function utilisateurOptionnel(req) {
+  try {
+    const authHeader = req.headers.authorization || '';
+    if (!authHeader.startsWith('Bearer ')) return null;
+    const token = authHeader.substring(7).trim();
+    if (!token) return null;
+    const decoded = jwt.verify(token, config.JWT_SECRET);
+    if (decoded.purpose) return null;
+    const user = await findUserFollowingAlias(decoded.numeroH);
+    return user && user.isActive ? user : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Validation d'un compte pro vue par son propriétaire : 60 % tant que le
  * profil du propriétaire n'est pas à jour (NuméroH provisoire), 100 % dès
  * qu'il l'est (la mise à jour du profil rattache le compte pro au vrai NuméroH). */
 function withValidation(account) {
-  const a = sanitizeAccountForPublic(account);
+  const a = sanitizeAccountForOwner(account);
   const incomplete = isProvisionalNumeroH(a.ownerNumeroH);
   return { ...a, validationPercent: incomplete ? 60 : 100, ownerProfileIncomplete: incomplete };
 }
@@ -102,7 +130,9 @@ function withValidation(account) {
 async function finalizeApproval(account, approverUserId) {
   const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
   let tenantCode = account.tenant_code || null;
-  if (mgmtTypes.includes(account.type) && !tenantCode) {
+  // Formule « Visibilité + Rendez-vous » : pas de gestion interne ni de site client
+  // (sauf Gestion Interne payée à part) → aucun établissement créé.
+  if (mgmtTypes.includes(account.type) && !tenantCode && await compteAGestionInterne(account)) {
     const prefixMap = { clinic: 'CLIN', school: 'ECO', enterprise: 'ENT', mosque: 'MSQ', madrasa: 'MDS', commerce: 'COM', ngo: 'NGO', journalist: 'JOUR', scientist: 'SCIEN', supplier: 'FOUR', security_agency: 'SECU' };
     const prefix = prefixMap[account.type] || 'PRO';
     tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
@@ -300,9 +330,17 @@ router.get('/detail/:id', async (req, res) => {
     if (!account || !account.isActive) {
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     }
+    // Un compte non approuvé n'est visible que par son propriétaire ou un admin
+    const user = await utilisateurOptionnel(req);
+    const estProprietaire = !!user && account.ownerNumeroH === user.numeroH;
+    const estAdmin = !!user && (estAdminUtilisateur(user) || isAnyAdmin(user));
+    if (account.status !== 'approved' && !estProprietaire && !estAdmin) {
+      return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    }
+    const vue = (estProprietaire || estAdmin) ? sanitizeAccountForOwner(account) : sanitizeAccountForPublic(account);
     res.json({
       success: true,
-      account: { ...sanitizeAccountForPublic(account), hasGestionInterne: await compteAGestionInterne(account) },
+      account: { ...vue, hasGestionInterne: await compteAGestionInterne(account) },
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -695,6 +733,13 @@ router.post('/:id/ensure-tenant', authenticate, async (req, res) => {
     if (account.status !== 'approved') {
       return res.status(400).json({ success: false, message: 'Le compte doit être approuvé.' });
     }
+    if (!(await compteAGestionInterne(account))) {
+      return res.status(403).json({
+        success: false,
+        code: 'FORMULE_VISIBILITE',
+        message: 'La formule Visibilité + Rendez-vous n\'inclut pas la gestion interne. Passez à la formule Gestion Interne pour l\'activer.'
+      });
+    }
 
     const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU', vendor:'VENT', producer:'PROD', broker:'BROK', restaurant:'REST', transport:'TRANS', mairie:'MAIR', beauty:'BEAU', artisan:'ARTIS', immobilier:'IMMO', reseau:'RESEAU' };
     const prefix = prefixMap[account.type] || 'PRO';
@@ -785,7 +830,7 @@ router.put('/:id', authenticate, async (req, res) => {
       );
     }
 
-    res.json({ success: true, account: sanitizeAccountForPublic(account) });
+    res.json({ success: true, account: sanitizeAccountForOwner(account) });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
@@ -895,6 +940,15 @@ router.post('/admin/approve/:id', authenticate, async (req, res) => {
         success: false,
         message: 'Vous ne pouvez approuver que les comptes de votre secteur (santé, éducation ou échanges).'
       });
+    }
+    // Seul un compte en attente peut être approuvé (pas de ré-approbation d'un
+    // compte refusé / déjà approuvé, qui relancerait l'essai gratuit).
+    if (account.status !== 'pending') {
+      return res.status(409).json({ success: false, message: `Ce compte n'est pas en attente (statut : ${account.status}).` });
+    }
+    // Un admin de secteur ne valide jamais son propre compte
+    if (account.ownerNumeroH === req.userId && !isGlobalAdmin(req.user)) {
+      return res.status(403).json({ success: false, message: 'Vous ne pouvez pas approuver votre propre compte.' });
     }
 
     await finalizeApproval(account, req.userId);
@@ -1253,7 +1307,7 @@ router.delete('/admin/:id/definitif', authenticate, requireAdmin, async (req, re
 
 // DEBUG: Compter les comptes professionnels présents en base
 // GET /api/professionals/admin/debug-count
-router.get('/admin/debug-count', authenticate, async (req, res) => {
+router.get('/admin/debug-count', authenticate, requireAdmin, async (req, res) => {
   try {
     const total = await ProfessionalAccount.count();
     const active = await ProfessionalAccount.count({ where: { isActive: true } });

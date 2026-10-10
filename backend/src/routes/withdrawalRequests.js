@@ -14,8 +14,12 @@ router.use(authenticate);
 // ─────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   try {
-    const { proAccountId, montant, motif, coordonneesPaiement } = req.body;
+    const { proAccountId, motif, coordonneesPaiement } = req.body;
+    const montant = Number(req.body.montant);
     const { numeroH, prenom, nomFamille } = req.user;
+    if (!Number.isInteger(montant)) {
+      return res.status(400).json({ success: false, message: 'Montant invalide.' });
+    }
 
     if (!proAccountId || !montant || montant < 1_000_000) {
       return res.status(400).json({ success: false, message: 'Le montant minimum de retrait est de 1 000 000 GNF.' });
@@ -76,40 +80,36 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // ── RÈGLE 5 : Solde suffisant ──────────────────────────────────────────────
-    const wallet = await ProfessionalWallet.findOne({ where: { proAccountId: pro.id } });
-    if (!wallet || Number(wallet.solde) < montant) {
-      return res.status(400).json({
-        success: false,
-        message: `Solde insuffisant. Disponible : ${Number(wallet?.solde || 0).toLocaleString()} GNF`
-      });
-    }
-
-    // ── RÈGLE 6 : Pas de demande déjà en attente ──────────────────────────────
-    const demandeExistante = await ProWithdrawalRequest.findOne({
-      where: { proAccountId, statut: 'en_attente' }
-    });
-    if (demandeExistante) {
-      return res.status(400).json({
-        success: false,
-        message: 'Une demande de retrait est déjà en attente. Attendez la décision de l\'administrateur.'
-      });
-    }
-
+    // ── RÈGLES 5 et 6, et création : dans une transaction, compte verrouillé ──
+    // (deux demandes envoyées en même temps ne passent plus toutes les deux)
     const receiptRef = `MF-RET-${uuidv4().slice(0, 8).toUpperCase()}`;
-
-    const demande = await ProWithdrawalRequest.create({
-      proAccountId,
-      proAccountName: pro.name,
-      proAccountType: pro.type,
-      proLogoUrl: pro.photo || null,
-      ownerNumeroH: numeroH,
-      ownerNom: `${prenom || ''} ${nomFamille || ''}`.trim(),
-      montant,
-      motif: motif || null,
-      coordonneesPaiement: coordonneesPaiement || null,
-      receiptRef
+    const resultat = await ProWithdrawalRequest.sequelize.transaction(async (transaction) => {
+      const wallet = await ProfessionalWallet.findOne({ where: { proAccountId: pro.id }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!wallet || Number(wallet.solde) < montant) {
+        return { erreur: `Solde insuffisant. Disponible : ${Number(wallet?.solde || 0).toLocaleString()} GNF` };
+      }
+      const demandeExistante = await ProWithdrawalRequest.findOne({
+        where: { proAccountId, statut: 'en_attente' }, transaction
+      });
+      if (demandeExistante) {
+        return { erreur: 'Une demande de retrait est déjà en attente. Attendez la décision de l\'administrateur.' };
+      }
+      const demande = await ProWithdrawalRequest.create({
+        proAccountId,
+        proAccountName: pro.name,
+        proAccountType: pro.type,
+        proLogoUrl: pro.photo || null,
+        ownerNumeroH: numeroH,
+        ownerNom: `${prenom || ''} ${nomFamille || ''}`.trim(),
+        montant,
+        motif: motif || null,
+        coordonneesPaiement: coordonneesPaiement || null,
+        receiptRef
+      }, { transaction });
+      return { demande };
     });
+    if (resultat.erreur) return res.status(400).json({ success: false, message: resultat.erreur });
+    const demande = resultat.demande;
 
     res.json({
       success: true,
@@ -215,32 +215,37 @@ router.put('/admin/:id/valider', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Accès réservé aux administrateurs.' });
     }
 
-    const demande = await ProWithdrawalRequest.findByPk(req.params.id);
-    if (!demande) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
-    if (demande.statut !== 'en_attente') {
-      return res.status(400).json({ success: false, message: 'Cette demande a déjà été traitée.' });
-    }
+    // Validation dans une transaction : demande et compte verrouillés, solde
+    // revérifié. Deux clics (ou deux admins) ne débitent jamais deux fois, et
+    // un solde ne devient jamais négatif.
+    const verdict = await ProWithdrawalRequest.sequelize.transaction(async (transaction) => {
+      const d = await ProWithdrawalRequest.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!d) return { statut: 404, message: 'Demande introuvable.' };
+      if (d.statut !== 'en_attente') return { statut: 400, message: 'Cette demande a déjà été traitée.' };
+      const m = Number(d.montant);
+      const wallet = await ProfessionalWallet.findOne({ where: { proAccountId: d.proAccountId }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!wallet || Number(wallet.solde) < m) {
+        return { statut: 400, message: `Solde insuffisant pour ce retrait (disponible : ${Number(wallet?.solde || 0).toLocaleString()} GNF).` };
+      }
+      await wallet.update({
+        solde:       Number(wallet.solde) - m,
+        totalRetire: Number(wallet.totalRetire) + m
+      }, { transaction });
+      await d.update({
+        statut:       'valide',
+        validePar:    numeroH,
+        valideParNom: `${prenom || ''} ${nomFamille || ''}`.trim(),
+        valideAt:     new Date()
+      }, { transaction });
+      return { statut: 200, demande: d };
+    });
+    if (verdict.statut !== 200) return res.status(verdict.statut).json({ success: false, message: verdict.message });
+    const demande = verdict.demande;
 
     const montant = Number(demande.montant);
     const commission = Math.round(montant * 0.01);
     const montantNet = montant - commission;
     const numOM = demande.coordonneesPaiement;
-
-    // Débiter le wallet du professionnel
-    const wallet = await ProfessionalWallet.findOne({ where: { proAccountId: demande.proAccountId } });
-    if (wallet) {
-      await wallet.update({
-        solde:       Number(wallet.solde) - montant,
-        totalRetire: Number(wallet.totalRetire) + montant
-      });
-    }
-
-    await demande.update({
-      statut:       'valide',
-      validePar:    numeroH,
-      valideParNom: `${prenom || ''} ${nomFamille || ''}`.trim(),
-      valideAt:     new Date()
-    });
 
     const reçuData = {
       id:                  demande.receiptRef,

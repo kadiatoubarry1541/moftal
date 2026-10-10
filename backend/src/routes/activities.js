@@ -114,7 +114,7 @@ router.get('/groups', async (req, res) => {
 // @access  Authentifié
 router.post('/groups', async (req, res) => {
   try {
-    const { name, description, activity, createdBy, pays } = req.body;
+    const { name, description, activity, pays } = req.body;
 
     // Récupère le pays depuis : body > profil utilisateur connecté
     let groupPays = pays || '';
@@ -139,9 +139,10 @@ router.post('/groups', async (req, res) => {
       description: description || `Groupe d'activité pour les membres de ${groupPays || 'la plateforme'}`,
       activity,
       pays: groupPays,
-      members: [createdBy || req.user.numeroH],
+      // Le créateur est toujours l'utilisateur connecté (jamais une valeur du body)
+      members: [req.user.numeroH],
       posts: [],
-      createdBy: createdBy || req.user.numeroH
+      createdBy: req.user.numeroH
     });
 
     res.status(201).json({ success: true, group, message: 'Groupe créé avec succès' });
@@ -156,7 +157,8 @@ router.post('/groups', async (req, res) => {
 // @access  Authentifié
 router.post('/groups/:id/join', async (req, res) => {
   try {
-    const { numeroH } = req.body;
+    // On rejoint toujours en son propre nom (jamais un numeroH du body)
+    const numeroH = req.user.numeroH;
     const group = await ActivityGroup.findByPk(req.params.id);
     
     if (!group) {
@@ -168,8 +170,7 @@ router.post('/groups/:id/join', async (req, res) => {
     
     const members = group.members || [];
     if (!members.includes(numeroH)) {
-      members.push(numeroH);
-      await group.update({ members });
+      await group.update({ members: [...members, numeroH] });
     }
     
     res.json({
@@ -228,7 +229,7 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
     
     // Récupérer le nom de l'auteur
     const author = await User.findOne({ where: { numero_h: user.numeroH } });
-    const authorName = author ? `${author.prenom} ${author.nom_famille}` : 'Utilisateur inconnu';
+    const authorName = author ? `${author.prenom} ${author.nomFamille}` : 'Utilisateur inconnu';
     
     res.status(201).json({
       success: true,
@@ -278,7 +279,7 @@ router.get('/groups/:id/messages', async (req, res) => {
         const user = await User.findOne({ where: { numero_h: msg.numeroH } });
         return {
           ...msg.toJSON(),
-          authorName: user ? `${user.prenom} ${user.nom_famille}` : 'Utilisateur inconnu'
+          authorName: user ? `${user.prenom} ${user.nomFamille}` : 'Utilisateur inconnu'
         };
       })
     );

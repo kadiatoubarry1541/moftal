@@ -133,7 +133,8 @@ export default function PaymentModal({
           const id = data.transactionId || data.data?.transactionId || data.id || '';
           window.open(url, '_blank');
           setTxId(id);
-          setTxRef(ref);
+          // Référence du serveur (celle que /payment/verify connaît)
+          setTxRef(data.reference || ref);
           setStep('waiting');
         } else {
           setError(data.message || 'Erreur lors de la création du paiement.');
@@ -154,10 +155,11 @@ export default function PaymentModal({
         const data = await res.json();
         if (data.success) {
           const id = data.transactionId || data.data?.transactionId || data.id || '';
+          const refServeur = data.reference || ref;
           setTxId(id);
-          setTxRef(ref);
+          setTxRef(refServeur);
           setStep('waiting');
-          if (id) startPolling(id, ref);
+          if (id) startPolling(id, refServeur);
         } else {
           setError(data.message || "Erreur lors de l'initiation du paiement.");
         }
@@ -171,8 +173,8 @@ export default function PaymentModal({
 
   const confirmManually = async () => {
     if (!txId) {
-      setStep('success');
-      onSuccess(txRef);
+      // Jamais de « paiement réussi » sans vérification auprès du serveur
+      setError("Impossible de vérifier ce paiement pour l'instant. Si vous avez payé, il sera confirmé automatiquement dans quelques minutes ; sinon, recommencez.");
       return;
     }
     setLoading(true);

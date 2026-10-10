@@ -10,7 +10,12 @@ router.get('/:id', async (req, res) => {
     if (!UUID_RE.test(req.params.id)) return res.status(404).end();
     const f = await lireFichier(req.params.id);
     if (!f) return res.status(404).end();
-    res.setHeader('Content-Type', f.mime);
+    // Seuls les types média connus sont affichés tels quels ; tout le reste est
+    // téléchargé. Et aucun fichier ne peut exécuter de script (sandbox).
+    const sur = /^(image\/(jpeg|png|gif|webp|avif)|video\/[\w.+-]+|audio\/[\w.+-]+|application\/pdf)$/i.test(String(f.mime || ''));
+    res.setHeader('Content-Type', sur ? f.mime : 'application/octet-stream');
+    if (!sur) res.setHeader('Content-Disposition', 'attachment');
+    res.setHeader('Content-Security-Policy', 'sandbox');
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.send(f.donnees);

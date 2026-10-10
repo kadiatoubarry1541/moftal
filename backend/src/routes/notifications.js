@@ -54,7 +54,7 @@ router.post('/send-message', authenticate, async (req, res) => {
     const sender = req.user;
     const senderName = sender.prenom ? `${sender.prenom} ${sender.nomFamille || ''}`.trim() : sender.numeroH;
     await Notification.createNotification({
-      recipientNumeroH,
+      recipientNumeroH: recipient.numeroH,
       type: 'direct_message',
       title: title || `Message de ${senderName}`,
       message,

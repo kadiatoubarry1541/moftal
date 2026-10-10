@@ -73,6 +73,7 @@ export default function Solidarite() {
   const [activeTab, setActiveTab] = useState<'dons' | 'zaka' | 'livres' | 'ong'>('dons');
   const [donsSubTab, setDonsSubTab] = useState<'pauvres' | 'mes-dons'>('pauvres');
   const [rawPoorPeople, setRawPoorPeople] = useState<PoorPerson[]>([]);
+  const [poorLoadError, setPoorLoadError] = useState('');
   const [userGeo, setUserGeo] = useState<UserGeoContext>(getUserGeoContext());
   const [gpsActive, setGpsActive] = useState(false);
   const poorPeople = useMemo(() => sortAnyByProximity(rawPoorPeople, userGeo), [rawPoorPeople, userGeo]);
@@ -246,15 +247,19 @@ export default function Solidarite() {
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success !== false) {
         setRawPoorPeople(data.poorPeople || []);
+        setPoorLoadError('');
       } else {
-        setRawPoorPeople(getDefaultPoorPeople());
+        // Jamais de personnes ni de numéros inventés affichés comme réels
+        setRawPoorPeople([]);
+        setPoorLoadError(data.message || 'Impossible de charger la liste des familles en difficulté.');
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
-      setRawPoorPeople(getDefaultPoorPeople());
+      setRawPoorPeople([]);
+      setPoorLoadError('Impossible de charger la liste des familles en difficulté : vérifiez votre connexion.');
     }
   };
 
@@ -617,6 +622,11 @@ export default function Solidarite() {
                       <span className="inline-flex items-center gap-1">🍽️ <strong>Problème de nourriture</strong> — manque de repas, famille sans ressources alimentaires</span>
                     </p>
                   </div>
+                  {poorLoadError ? (
+                    <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">{poorLoadError}</div>
+                  ) : filteredPoorPeople.length === 0 && (
+                    <div className="mb-4 p-4 bg-gray-50 text-gray-600 rounded-lg text-sm">Aucune famille signalée pour le moment.</div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                     {filteredPoorPeople.map((person) => (
                       <div key={person.id} className="border rounded-lg p-3 sm:p-6 hover:shadow-md transition-shadow">

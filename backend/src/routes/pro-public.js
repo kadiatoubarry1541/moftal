@@ -31,6 +31,21 @@ const q = (sql, rep) =>
   sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT })
     .catch((e) => { if (tableAbsente(e)) return []; throw e; });
 
+// Formule « Visibilité + Rendez-vous » : pas de site client. On exclut les
+// établissements dont le compte pro lié est en 'visibility' sans Gestion Interne
+// payée en cours ; un établissement sans compte lié (ex. créé par l'admin) reste visible.
+const FILTRE_GESTION_INTERNE = `NOT EXISTS (
+  SELECT 1 FROM professional_accounts pa
+   WHERE pa.tenant_code = mt.tenant_code
+     AND pa.plan_type = 'visibility'
+     AND (pa.gestion_interne_valid_until IS NULL OR pa.gestion_interne_valid_until <= NOW())
+     AND NOT EXISTS (
+       SELECT 1 FROM payments p
+        WHERE p.payer_numero_h = pa.owner_numero_h AND p.purpose = 'gestion_interne_vie'
+          AND p.status = 'completed' AND p.related_id = pa.id::text
+     )
+)`;
+
 const q1 = (sql, rep) =>
   sequelize.query(sql, { replacements: rep, type: sequelize.QueryTypes.SELECT })
     .then(r => r[0] || { c: 0, t: 0 })
@@ -45,10 +60,11 @@ router.get('/list/:type', async (req, res) => {
   try {
     const { type } = req.params;
     const tenants = await sequelize.query(
-      `SELECT tenant_code, type, name, logo_url, address, phone, email, description, city
-       FROM management_tenants
-       WHERE type IN (:types) AND is_active = true AND tenant_code NOT LIKE 'DEMO-REF-%'
-       ORDER BY name ASC`,
+      `SELECT mt.tenant_code, mt.type, mt.name, mt.logo_url, mt.address, mt.phone, mt.email, mt.description, mt.city
+       FROM management_tenants mt
+       WHERE mt.type IN (:types) AND mt.is_active = true AND mt.tenant_code NOT LIKE 'DEMO-REF-%'
+         AND ${FILTRE_GESTION_INTERNE}
+       ORDER BY mt.name ASC`,
       { replacements: { types: typesEnBase(type) }, type: sequelize.QueryTypes.SELECT }
     );
     res.json({ success: true, tenants });
@@ -66,9 +82,10 @@ router.get('/:type/:tenantCode', async (req, res) => {
     await fillTenantsFromAccounts(tenantCode).catch(() => {});
     await ensureTenantExtraColumns();
     const [tenant] = await sequelize.query(
-      `SELECT tenant_code, type, name, logo_url, address, phone, email, description, horaires, phone_urgence
-       FROM management_tenants
-       WHERE tenant_code = :code AND type IN (:types) AND is_active = true
+      `SELECT mt.tenant_code, mt.type, mt.name, mt.logo_url, mt.address, mt.phone, mt.email, mt.description, mt.horaires, mt.phone_urgence
+       FROM management_tenants mt
+       WHERE mt.tenant_code = :code AND mt.type IN (:types) AND mt.is_active = true
+         AND ${FILTRE_GESTION_INTERNE}
        LIMIT 1`,
       { replacements: { code: tenantCode, types: typesEnBase(type) }, type: sequelize.QueryTypes.SELECT }
     );

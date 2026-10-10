@@ -52,14 +52,16 @@ router.post('/link', async (req, res) => {
     if (!siblingNumeroH || !String(siblingNumeroH).trim()) {
       return res.status(400).json({ success: false, message: 'Le NumeroH du frère/de la sœur est obligatoire' });
     }
-    const targetNumeroH = String(siblingNumeroH).trim();
-    if (targetNumeroH === user.numeroH) {
-      return res.status(400).json({ success: false, message: 'Vous ne pouvez pas vous lier à vous-même.' });
-    }
+    const saisie = String(siblingNumeroH).trim();
 
-    const sibling = await User.findByNumeroH(targetNumeroH);
+    const sibling = await User.findByNumeroH(saisie);
     if (!sibling) {
       return res.status(404).json({ success: false, message: 'Aucun utilisateur trouvé avec ce NumeroH' });
+    }
+    // On enregistre le vrai NumeroH du compte trouvé, jamais la saisie brute
+    const targetNumeroH = sibling.numeroH;
+    if (targetNumeroH === user.numeroH) {
+      return res.status(400).json({ success: false, message: 'Vous ne pouvez pas vous lier à vous-même.' });
     }
 
     const [existing] = await sequelize.query(

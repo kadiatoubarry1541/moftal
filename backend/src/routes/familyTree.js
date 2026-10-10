@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { authenticate, isProvisionalNumeroH } from '../middleware/auth.js';
+import { authenticate, isProvisionalNumeroH, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
 import User from '../models/User.js';
 import DeceasedMember from '../models/DeceasedMember.js';
 import FamilyTreeConfirmation from '../models/FamilyTreeConfirmation.js';
@@ -21,7 +21,8 @@ import { notifierNouveauMessage, membresFamille } from '../services/notification
  *  silencieusement le rattachement au bon arbre familial. */
 function matchNumeroH(value) {
   const normalized = normalizeNumeroH(value);
-  return normalized ? { [Op.iLike]: normalized } : null;
+  // Les jokers LIKE (% et _) saisis sont échappés : comparaison exacte, sans motif
+  return normalized ? { [Op.iLike]: normalized.replace(/[\\%_]/g, '\\$&') } : null;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -82,7 +83,7 @@ router.get('/tree', async (req, res) => {
 
     // Récupérer tous les membres de l'arbre (vivants et décédés)
     const members = await getTreeMembers(tree);
-    const deceasedMembers = await getTreeDeceasedMembers(tree);
+    const deceasedMembers = await getTreeDeceasedMembers(tree, user.numeroH);
 
     // Le code de sang n'est révélé qu'après le paiement d'activation au propriétaire du site
     const arbreActive = !!tree.arbreActive;
@@ -173,13 +174,14 @@ async function getTreeMembers(tree) {
 }
 
 // Fonction pour récupérer les membres décédés de l'arbre
-async function getTreeDeceasedMembers(tree) {
+// + les défunts déclarés par la personne qui regarde (ils sont rangés dans
+// l'arbre de leurs parents, qui n'est pas forcément le sien)
+async function getTreeDeceasedMembers(tree, declarantNumeroH = null) {
   const deceasedMembers = tree.deceasedMembers || [];
+  const conditions = [{ numeroHD: { [Op.in]: deceasedMembers } }];
+  if (declarantNumeroH) conditions.push({ createdBy: declarantNumeroH });
   const deceased = await DeceasedMember.findAll({
-    where: {
-      numeroHD: { [Op.in]: deceasedMembers },
-      isActive: true
-    }
+    where: { [Op.or]: conditions, isActive: true }
   });
   return deceased;
 }
@@ -207,13 +209,13 @@ router.post('/request-access', async (req, res) => {
 
     // Si le père est fourni, vérifier s'il est vivant ou décédé
     if (numeroHPere) {
-      const pere = await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHPere }, type: 'vivant' } });
+      const pere = await User.findOne({ where: { numeroH: matchNumeroH(numeroHPere), type: 'vivant' } });
       
       if (pere && pere.isActive) {
         // Père vivant : créer une confirmation
         const confirmation = await FamilyTreeConfirmation.create({
           childNumeroH: user.numeroH,
-          parentNumeroH: numeroHPere,
+          parentNumeroH: pere.numeroH,
           parentType: 'pere',
           status: 'pending'
         });
@@ -222,7 +224,7 @@ router.post('/request-access', async (req, res) => {
         try {
           const childName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
           await Notification.createNotification({
-            recipientNumeroH: numeroHPere,
+            recipientNumeroH: pere.numeroH,
             type: 'tree_request',
             title: 'Demande d\'accès à l\'arbre familial',
             message: `${childName} demande à rejoindre votre arbre généalogique (en tant qu'enfant).`,
@@ -237,13 +239,13 @@ router.post('/request-access', async (req, res) => {
 
     // Si la mère est fournie, vérifier si elle est vivante ou décédée
     if (numeroHMere) {
-      const mere = await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHMere }, type: 'vivant' } });
+      const mere = await User.findOne({ where: { numeroH: matchNumeroH(numeroHMere), type: 'vivant' } });
 
       if (mere && mere.isActive) {
         // Mère vivante : créer une confirmation
         const confirmation = await FamilyTreeConfirmation.create({
           childNumeroH: user.numeroH,
-          parentNumeroH: numeroHMere,
+          parentNumeroH: mere.numeroH,
           parentType: 'mere',
           status: 'pending'
         });
@@ -252,7 +254,7 @@ router.post('/request-access', async (req, res) => {
         try {
           const childName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
           await Notification.createNotification({
-            recipientNumeroH: numeroHMere,
+            recipientNumeroH: mere.numeroH,
             type: 'tree_request',
             title: 'Demande d\'accès à l\'arbre familial',
             message: `${childName} demande à rejoindre votre arbre généalogique (en tant qu'enfant).`,
@@ -265,8 +267,8 @@ router.post('/request-access', async (req, res) => {
     }
 
     // Si les deux parents sont décédés, ajouter directement à l'arbre
-    const pereVivant = numeroHPere ? await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHPere }, type: 'vivant', isActive: true } }) : null;
-    const mereVivante = numeroHMere ? await User.findOne({ where: { numeroH: { [Op.iLike]: numeroHMere }, type: 'vivant', isActive: true } }) : null;
+    const pereVivant = numeroHPere ? await User.findOne({ where: { numeroH: matchNumeroH(numeroHPere), type: 'vivant', isActive: true } }) : null;
+    const mereVivante = numeroHMere ? await User.findOne({ where: { numeroH: matchNumeroH(numeroHMere), type: 'vivant', isActive: true } }) : null;
 
     let limitReached = false;
     if (!pereVivant && !mereVivante) {
@@ -548,6 +550,43 @@ router.post('/add-deceased', async (req, res) => {
     const user = req.user;
     const { numeroHD: _ignored, ...deceasedData } = req.body; // ignorer le numeroHD client
 
+    // Membre de la famille (non admin) : le signalement reste EN ATTENTE.
+    // Le compte n'est jamais fermé sur la seule parole d'un membre : les
+    // administrateurs sont notifiés et confirment en refaisant le signalement.
+    if (!isAdmin) {
+      const nomMembre = `${membre.prenom || ''} ${membre.nomFamille || ''}`.trim() || membre.numeroH;
+      const nomReporter = [reporter.prenom, reporter.nomFamille].filter(Boolean).join(' ') || reporter.numeroH;
+      const details = [
+        dateDeces ? `date : ${dateDeces}` : (anneeDeces ? `année : ${anneeDeces}` : null),
+        causeDeces ? `cause : ${causeDeces}` : null
+      ].filter(Boolean).join(', ');
+      const admins = await User.findAll({
+        where: {
+          [Op.or]: [
+            { role: { [Op.in]: ['admin', 'super-admin'] } },
+            { numeroH: { [Op.in]: MASTER_ADMIN_NUMEROS } }
+          ]
+        },
+        attributes: ['numeroH']
+      });
+      const destinataires = [...new Set(admins.map(a => a.numeroH).filter(Boolean))];
+      if (!destinataires.length) {
+        return res.status(503).json({ success: false, message: 'Aucun administrateur disponible pour confirmer ce décès. Réessayez plus tard.' });
+      }
+      await Promise.all(destinataires.map(numeroH => Notification.createNotification({
+        recipientNumeroH: numeroH,
+        type: 'death_report',
+        title: 'Signalement de décès à confirmer',
+        message: `${nomReporter} (${reporter.numeroH}) signale le décès de ${nomMembre} (${membre.numeroH})${details ? ` — ${details}` : ''}. À confirmer avant la fermeture du compte.`,
+        relatedId: null // related_id est un UUID : le NuméroH du membre figure dans le message
+      })));
+      return res.status(202).json({
+        success: true,
+        pending: true,
+        message: `Le signalement du décès de ${nomMembre} a été transmis. Un administrateur doit le confirmer avant la fermeture du compte.`
+      });
+    }
+
     // Générer automatiquement le numeroHD unique (DM0001, DM0002, …)
     const numeroHD = await genererNumeroHD();
 
@@ -632,7 +671,8 @@ router.post('/report-death', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Ce membre n\'est dans aucun arbre actif.' });
     }
 
-    const isAdmin = reporter.role === 'admin' || reporter.role === 'super-admin' || reporter.isMasterAdmin;
+    const isAdmin = reporter.role === 'admin' || reporter.role === 'super-admin' || reporter.isMasterAdmin
+      || MASTER_ADMIN_NUMEROS.includes(reporter.numeroH);
     const isInSameTree = (tree.members || []).includes(reporter.numeroH)
       || tree.chefFamille1 === reporter.numeroH
       || tree.chefFamille2 === reporter.numeroH;

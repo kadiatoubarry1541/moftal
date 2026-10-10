@@ -352,7 +352,8 @@ export function WrittenRegistration() {
         ? await api.login(identifiant, data.password).catch(() => null)
         : null
       if (loginResult?.success) {
-        showCredentialsReminder(numeroH, data.password)
+        // NuméroH attribué par le serveur (pas celui calculé dans le téléphone)
+        showCredentialsReminder((loginResult as any).user?.numeroH || numeroH, data.password)
         navigate('/compte')
       } else {
         alert(result.message || "L'inscription n'a pas pu être enregistrée. Réessayez.")

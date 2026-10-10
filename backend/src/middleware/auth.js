@@ -39,7 +39,7 @@ export async function ensureNumeroHAliasTable(transaction) {
   if (!transaction) aliasTableReady = true;
 }
 
-async function findUserFollowingAlias(numeroH) {
+export async function findUserFollowingAlias(numeroH) {
   const user = await User.findByNumeroH(numeroH);
   if (user || !isProvisionalNumeroH(numeroH)) return user;
   try {
@@ -110,6 +110,11 @@ export const authenticate = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, config.JWT_SECRET);
+      // Un jeton de récupération de mot de passe (ou tout jeton « à usage »)
+      // n'est jamais une session : il ne donne accès à aucun compte.
+      if (decoded.purpose) {
+        return res.status(401).json({ success: false, message: 'Token invalide' });
+      }
 
       const user = await findUserFollowingAlias(decoded.numeroH);
 

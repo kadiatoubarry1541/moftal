@@ -155,13 +155,20 @@ export default function MonProfil() {
     try {
       const token = localStorage.getItem("token");
       const API_BASE = config.API_BASE_URL || 'http://localhost:5002/api';
-      await fetch(`${API_BASE}/pro-members/${membership.professional_account_id}/members/${membership.id}`, {
+      const res = await fetch(`${API_BASE}/pro-members/${membership.professional_account_id}/members/${membership.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
+      const data = await res.json().catch(() => ({}));
+      // On ne retire de la liste que si le serveur a bien enregistré la sortie
+      if (!res.ok || data.success === false) {
+        alert(data.message || 'Impossible de quitter l\'établissement pour le moment.');
+        return;
+      }
       setMemberships(prev => prev.filter(m => m.id !== membership.id));
     } catch (error) {
       console.error('Erreur lors de la sortie de l\'établissement:', error);
+      alert('Impossible de quitter l\'établissement : vérifiez votre connexion.');
     }
   };
 

@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate, requireAdmin, estAdminUtilisateur } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import ProPublication from '../models/ProPublication.js';
+import { compteAGestionInterne } from '../middleware/gestionAccessGuard.js';
 import { sequelize } from '../../config/database.js';
 
 const router = express.Router();
@@ -177,8 +178,10 @@ router.put('/:id/publish-info', authenticate, async (req, res) => {
     });
 
     // Auto-créer le tenant_code si le compte n'en a pas encore (tous les types sont couverts)
+    // Formule « Visibilité + Rendez-vous » : pas de site client ni de gestion interne
+    // (sauf Gestion Interne payée à part) → on n'en crée pas.
     let tenantCode = account.tenant_code;
-    if (!tenantCode) {
+    if (!tenantCode && await compteAGestionInterne(account)) {
       const prefixMap = { clinic:'CLIN', school:'ECO', enterprise:'ENT', mosque:'MSQ', madrasa:'MDS', commerce:'COM', ngo:'NGO', journalist:'JOUR', scientist:'SCIEN', supplier:'FOUR', security_agency:'SECU', vendor:'VENT', producer:'PROD', broker:'BROK', restaurant:'REST', transport:'TRANS', mairie:'MAIR', beauty:'BEAU', artisan:'ARTIS', immobilier:'IMMO', reseau:'RESEAU' };
       const prefix = prefixMap[account.type] || 'PRO';
       tenantCode = `${prefix}-GN-${String(account.id).padStart(5, '0')}`;
@@ -190,7 +193,7 @@ router.put('/:id/publish-info', authenticate, async (req, res) => {
     }
 
     // Synchroniser management_tenants pour que la vitrine publique soit à jour
-    await sequelize.query(
+    if (tenantCode) await sequelize.query(
       `UPDATE management_tenants
        SET name=:name, description=:desc, address=:addr, phone=:phone, email=:email, logo_url=COALESCE(:logo, logo_url)
        WHERE tenant_code=:code`,

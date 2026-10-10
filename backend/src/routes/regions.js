@@ -10,6 +10,7 @@ import { extractHashtags } from '../utils/hashtags.js';
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
+import { sequelize } from '../config/database.js';
 
 const router = express.Router();
 
@@ -95,7 +96,8 @@ router.post('/groups', async (req, res) => {
 // @access  Authentifié
 router.post('/groups/:id/join', async (req, res) => {
   try {
-    const { numeroH } = req.body;
+    // On rejoint toujours en son propre nom (le numeroH vient du token, pas du corps)
+    const numeroH = req.user.numeroH;
     const group = await RegionGroup.findByPk(req.params.id);
     
     if (!group) {
@@ -127,9 +129,12 @@ router.post('/groups/:id/join', async (req, res) => {
 // @route   POST /api/regions/groups/:id/posts
 // @desc    Créer un post dans un organisation de région
 // @access  Authentifié
-router.post('/groups/:id/posts', async (req, res) => {
+// upload.single : le formulaire est envoyé en FormData (sinon req.body est vide)
+router.post('/groups/:id/posts', upload.single('media'), async (req, res) => {
   try {
-    const { content, type, author, authorName } = req.body;
+    const { content, type, authorName } = req.body;
+    // L'auteur est toujours l'utilisateur connecté
+    const author = req.user.numeroH;
     const group = await RegionGroup.findByPk(req.params.id);
     
     if (!group) {
@@ -467,6 +472,95 @@ router.get('/groups/:id/check-permission', async (req, res) => {
       success: false,
       message: 'Erreur serveur lors de la vérification de la permission'
     });
+  }
+});
+
+// ─── Événements et annonces des régions ───────────────────────────────────────
+// Enregistrés en base (jamais seulement dans le téléphone).
+let regionPostsReady = null;
+function ensureRegionPostsTable() {
+  if (!regionPostsReady) {
+    regionPostsReady = sequelize.query(`
+      CREATE TABLE IF NOT EXISTS "region_posts" (
+        "id"          SERIAL        PRIMARY KEY,
+        "region"      VARCHAR(100)  NOT NULL,
+        "type"        VARCHAR(20)   NOT NULL CHECK (type IN ('event','announcement')),
+        "title"       VARCHAR(255)  NOT NULL,
+        "content"     TEXT          DEFAULT '',
+        "date"        VARCHAR(50),
+        "details"     JSONB         DEFAULT '{}'::jsonb,
+        "author"      VARCHAR(50)   NOT NULL,
+        "created_at"  TIMESTAMPTZ   DEFAULT NOW()
+      )
+    `).catch((err) => {
+      regionPostsReady = null;
+      throw err;
+    });
+  }
+  return regionPostsReady;
+}
+
+const REGION_POST_TYPES = { events: 'event', announcements: 'announcement' };
+
+// @route   GET /api/regions/:region/events|announcements
+// @desc    Lister les événements ou annonces d'une région
+// @access  Authentifié
+router.get('/:region/:kind(events|announcements)', async (req, res) => {
+  try {
+    await ensureRegionPostsTable();
+    const [rows] = await sequelize.query(`
+      SELECT id, region, type, title, content, date, details, author, created_at
+      FROM region_posts
+      WHERE region = :region AND type = :type
+      ORDER BY created_at DESC LIMIT 100
+    `, { replacements: { region: req.params.region, type: REGION_POST_TYPES[req.params.kind] } });
+    res.json({ success: true, items: rows });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des publications de région:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la récupération' });
+  }
+});
+
+// @route   POST /api/regions/:region/events|announcements
+// @desc    Créer un événement ou une annonce dans une région
+// @access  Authentifié
+router.post('/:region/:kind(events|announcements)', async (req, res) => {
+  try {
+    const type = REGION_POST_TYPES[req.params.kind];
+    const { title, description, content, date, ...rest } = req.body || {};
+    const titre = typeof title === 'string' ? title.trim() : '';
+    if (!titre) {
+      return res.status(400).json({ success: false, message: 'Le titre est obligatoire' });
+    }
+    // Champs complémentaires (heure, lieu, priorité, catégorie…) gardés tels quels
+    delete rest.createdBy;
+    delete rest.region;
+
+    await ensureRegionPostsTable();
+    const [[row]] = await sequelize.query(`
+      INSERT INTO region_posts (region, type, title, content, date, details, author, created_at)
+      VALUES (:region, :type, :title, :content, :date, CAST(:details AS JSONB), :author, NOW())
+      RETURNING id, region, type, title, content, date, details, author, created_at
+    `, {
+      replacements: {
+        region: req.params.region,
+        type,
+        title: titre.slice(0, 255),
+        content: String(content ?? description ?? ''),
+        date: date ? String(date).slice(0, 50) : null,
+        details: JSON.stringify(rest),
+        author: req.user.numeroH
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      item: row,
+      message: type === 'event' ? 'Événement créé avec succès' : 'Annonce créée avec succès'
+    });
+  } catch (error) {
+    console.error('Erreur lors de la création de la publication de région:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la création' });
   }
 });
 

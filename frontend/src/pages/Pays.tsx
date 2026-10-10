@@ -534,23 +534,22 @@ export default function Pays() {
       // Rejoindre automatiquement le groupe si pas déjà membre
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/regions/join-group`, {
+      const response = await fetch(`${API_BASE_URL}/regions/groups/${groupId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          groupId,
-          userId: userData?.numeroH
-        })
+        }
       });
-      
-      if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         loadRegionGroups();
+      } else {
+        alert(data.message || 'Impossible de rejoindre ce groupe pour le moment.');
       }
     } catch (error) {
-      // Erreur silencieuse
+      console.error('Erreur lors de l\'adhésion au groupe:', error);
+      alert('Impossible de rejoindre ce groupe : vérifiez votre connexion.');
     }
       setSelectedGroup(group);
     }

@@ -112,10 +112,18 @@ export default function Publicite() {
 
   async function retirerPublicite(id: string) {
     if (!confirm('Retirer cette publicité ?')) return
-    await fetch(`${API}/api/publicites/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    try {
+      const res = await fetch(`${API}/api/publicites/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.success === false) {
+        alert(data.message || 'Le retrait a échoué. Réessayez.')
+      }
+    } catch {
+      alert('Le retrait a échoué : vérifiez votre connexion.')
+    }
     chargerMesPublicites()
   }
 

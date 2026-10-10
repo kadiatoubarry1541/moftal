@@ -1,6 +1,8 @@
 import { Navigate, Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { hideIncrement } from '../../utils/formatNumeroH'
+import { InvitationManager } from '../../utils/invitationManager'
+import type { Invitation } from '../../types/invitation.ts'
 
 interface UserData {
   numeroH: string
@@ -11,32 +13,59 @@ interface UserData {
 interface FamilyMember {
   numeroH: string
   nomComplet: string
-  type: 'parent' | 'femme' | 'mari' | 'enfant' | 'invite'
+  relation: string
+  statut: Invitation['status']
 }
 
-function getTypeLabel(type: FamilyMember['type']) {
-  switch (type) {
-    case 'parent': return 'Parent'
-    case 'femme': return 'Femme'
-    case 'mari': return 'Mari'
-    case 'enfant': return 'Enfant'
-    default: return 'Invité'
+function getStatutLabel(statut: FamilyMember['statut']) {
+  switch (statut) {
+    case 'accepted': return 'Acceptée'
+    case 'declined': return 'Refusée'
+    default: return 'En attente'
+  }
+}
+
+function lireSession(): UserData | null {
+  try {
+    const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
+    const u = sessionData.userData || sessionData
+    return u?.numeroH ? u : null
+  } catch {
+    return null
   }
 }
 
 export default function Membres() {
-  const [user, setUser] = useState<UserData | null>(null)
+  // Session lue tout de suite (sinon redirection vers /login avant le chargement)
+  const [user] = useState<UserData | null>(() => lireSession())
   const [membres, setMembres] = useState<FamilyMember[]>([])
+  const [chargement, setChargement] = useState(true)
+  const [erreur, setErreur] = useState('')
 
   useEffect(() => {
-    const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
-    const u = sessionData.userData || sessionData
-    if (!u?.numeroH) return
-    setUser(u)
-
-    const membresStockes = localStorage.getItem(`membres_${u.numeroH}`)
-    if (membresStockes) setMembres(JSON.parse(membresStockes))
-  }, [])
+    if (!user) return
+    // Membres invités : invitations familiales enregistrées en base (/api/family-data)
+    InvitationManager.getInvitations()
+      .then(({ received, sent }) => {
+        const envoyees: FamilyMember[] = sent.map((inv) => ({
+          numeroH: inv.toNumeroH,
+          nomComplet: inv.toName || inv.toNumeroH,
+          relation: inv.relation,
+          statut: inv.status
+        }))
+        const recuesAcceptees: FamilyMember[] = received
+          .filter((inv) => inv.status === 'accepted')
+          .map((inv) => ({
+            numeroH: inv.fromNumeroH,
+            nomComplet: inv.fromName || inv.fromNumeroH,
+            relation: inv.relation,
+            statut: inv.status
+          }))
+        setMembres([...envoyees, ...recuesAcceptees])
+      })
+      .catch((e: Error) => setErreur(e.message || 'Impossible de charger les membres.'))
+      .finally(() => setChargement(false))
+  }, [user])
 
   if (!user) return <Navigate to="/login" replace />
 
@@ -53,7 +82,11 @@ export default function Membres() {
       </div>
       <div className="card">
         <h2 className="text-2xl font-bold mb-2">📋 Membres invités ({membres.length})</h2>
-        {membres.length === 0 ? (
+        {chargement ? (
+          <div className="text-gray-500">Chargement…</div>
+        ) : erreur ? (
+          <div className="text-red-600">{erreur}</div>
+        ) : membres.length === 0 ? (
           <div className="text-gray-500">Aucun membre ajouté pour le moment.</div>
         ) : (
           <div className="stack">
@@ -62,7 +95,7 @@ export default function Membres() {
                 <div className="row">
                   <div className="col-6 font-medium">{m.nomComplet}</div>
                   <div className="col-3 text-blue-700 font-semibold">{hideIncrement(m.numeroH)}</div>
-                  <div className="col-3">{getTypeLabel(m.type)}</div>
+                  <div className="col-3">{m.relation} · {getStatutLabel(m.statut)}</div>
                 </div>
               </div>
             ))}

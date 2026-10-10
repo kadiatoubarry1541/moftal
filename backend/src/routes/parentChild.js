@@ -81,9 +81,20 @@ async function ensureParentChildMessagesTable() {
   }
 }
 
+/**
+ * Statut d'un lien demandé par l'enfant (/register-parents) : en attente de
+ * confirmation par le parent (le statut 'pending' attend, lui, l'enfant).
+ */
+const STATUT_ATTENTE_PARENT = 'pending_parent';
+
 /** Vérifie que l'utilisateur fait bien partie de ce lien parent-enfant. */
 function estDansLeLienPC(link, numeroH) {
   return !!link && (link.parentNumeroH === numeroH || link.childNumeroH === numeroH);
+}
+
+/** Envoi de messages : seulement sur un lien confirmé et toujours actif. */
+function lienPCActif(link) {
+  return !!link && link.status === 'active' && link.isActive !== false;
 }
 
 /** Admin : aucune condition, tout voir et tout gérer. */
@@ -127,7 +138,7 @@ router.post('/link', async (req, res) => {
     const existing = await ParentChildLink.findOne({
       where: {
         parentNumeroH: user.numeroH,
-        childNumeroH,
+        childNumeroH: child.numeroH,
         parentType: typeParent,
         isActive: true
       }
@@ -153,7 +164,7 @@ router.post('/link', async (req, res) => {
 
     const link = await ParentChildLink.create({
       parentNumeroH: user.numeroH,
-      childNumeroH: String(childNumeroH).trim(),
+      childNumeroH: child.numeroH,
       codeLiaison: codeLiaison ? String(codeLiaison).trim() : null,
       numeroMaternite: numeroMaternite ? String(numeroMaternite).trim() : null,
       parentType: typeParent,
@@ -164,7 +175,7 @@ router.post('/link', async (req, res) => {
     try {
       const senderName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
       await Notification.createNotification({
-        recipientNumeroH: String(childNumeroH).trim(),
+        recipientNumeroH: child.numeroH,
         type: 'parent_request',
         title: 'Demande de lien parent-enfant',
         message: `${senderName} vous a envoyé une demande de lien parent (${typeParent}).`,
@@ -222,10 +233,12 @@ router.post('/register-parents', async (req, res) => {
       parents.push(parent2NumeroH.trim());
     }
     const created = [];
-    for (const parentNumeroH of parents) {
-      if (parentNumeroH === childNumeroH) continue;
-      const parentUser = await User.findByNumeroH(parentNumeroH);
+    for (const saisie of parents) {
+      const parentUser = await User.findByNumeroH(saisie);
       if (!parentUser) continue;
+      // On enregistre le vrai NumeroH du compte trouvé, jamais la saisie brute
+      const parentNumeroH = parentUser.numeroH;
+      if (parentNumeroH === childNumeroH) continue;
       const existing = await ParentChildLink.findOne({
         where: {
           parentNumeroH,
@@ -234,19 +247,30 @@ router.post('/register-parents', async (req, res) => {
         }
       });
       if (existing) continue;
+      // Lien en attente : le parent doit confirmer (jamais de rattachement
+      // automatique d'un enfant à n'importe qui sans son accord).
       const link = await ParentChildLink.create({
         parentNumeroH,
         childNumeroH,
         parentType: 'pere',
-        status: 'active',
-        confirmedAt: new Date()
+        status: STATUT_ATTENTE_PARENT
       });
+      try {
+        const senderName = [user.prenom, user.nomFamille].filter(Boolean).join(' ') || user.numeroH;
+        await Notification.createNotification({
+          recipientNumeroH: parentNumeroH,
+          type: 'parent_request',
+          title: 'Demande de lien parent-enfant',
+          message: `${senderName} vous indique comme parent. Confirmez ou refusez ce lien.`,
+          relatedId: link.id
+        });
+      } catch (e) { console.error('Notif parent_request (register-parents):', e.message); }
       created.push({ parentNumeroH, linkId: link.id });
     }
     res.json({
       success: true,
       message: created.length
-        ? 'NumeroH des parents enregistrés. Ils pourront suivre votre progression.'
+        ? 'Demande envoyée à vos parents. Le lien sera actif dès qu\'ils l\'auront confirmé.'
         : 'Aucun nouveau parent ajouté (déjà liés ou NumeroH invalides).',
       created: created.length
     });
@@ -276,7 +300,22 @@ router.get('/pending-invitations', async (req, res) => {
         return { ...link.toJSON(), parent };
       })
     );
-    res.json({ success: true, invitations: withParent });
+    // Demandes envoyées par un enfant, que ce parent doit confirmer
+    const demandesEnfants = await ParentChildLink.findAll({
+      where: { parentNumeroH: user.numeroH, status: STATUT_ATTENTE_PARENT, isActive: true },
+      order: [['created_at', 'DESC']]
+    });
+    const withChild = await Promise.all(
+      demandesEnfants.map(async (link) => {
+        const child = await User.findOne({
+          where: { numeroH: link.childNumeroH },
+          attributes: ['numeroH', 'prenom', 'nomFamille', 'photo', 'genre']
+        });
+        // `parent` = la personne qui demande (affichage), `child` pour plus de clarté
+        return { ...link.toJSON(), demandeDeLEnfant: true, child, parent: child };
+      })
+    );
+    res.json({ success: true, invitations: [...withParent, ...withChild] });
   } catch (error) {
     console.error('Erreur invitations en attente:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -295,11 +334,14 @@ router.post('/confirm/:linkId', async (req, res) => {
     if (!link || !link.isActive) {
       return res.status(404).json({ success: false, message: 'Lien non trouvé' });
     }
-    if (link.status !== 'pending') {
+    if (link.status !== 'pending' && link.status !== STATUT_ATTENTE_PARENT) {
       return res.status(400).json({ success: false, message: 'Ce lien n\'est plus en attente' });
     }
-    if (link.childNumeroH !== user.numeroH && !isAdmin(user)) {
-      return res.status(403).json({ success: false, message: 'Seul l\'apprenant (destinataire) peut confirmer ce lien' });
+    // Le destinataire confirme : l'enfant pour une demande du parent,
+    // le parent pour une demande de l'enfant (/register-parents).
+    const destinataire = link.status === STATUT_ATTENTE_PARENT ? link.parentNumeroH : link.childNumeroH;
+    if (destinataire !== user.numeroH && !isAdmin(user)) {
+      return res.status(403).json({ success: false, message: 'Seul le destinataire de la demande peut confirmer ce lien' });
     }
 
     // Rattache l'enfant au même arbre familial que son parent (limite de
@@ -341,11 +383,12 @@ router.post('/reject/:linkId', async (req, res) => {
     if (!link || !link.isActive) {
       return res.status(404).json({ success: false, message: 'Lien non trouvé' });
     }
-    if (link.status !== 'pending') {
+    if (link.status !== 'pending' && link.status !== STATUT_ATTENTE_PARENT) {
       return res.status(400).json({ success: false, message: 'Ce lien n\'est plus en attente' });
     }
-    if (link.childNumeroH !== user.numeroH && !isAdmin(user)) {
-      return res.status(403).json({ success: false, message: 'Seul l\'apprenant (destinataire) peut refuser ce lien' });
+    const destinataire = link.status === STATUT_ATTENTE_PARENT ? link.parentNumeroH : link.childNumeroH;
+    if (destinataire !== user.numeroH && !isAdmin(user)) {
+      return res.status(403).json({ success: false, message: 'Seul le destinataire de la demande peut refuser ce lien' });
     }
     link.status = 'rejected';
     await link.save();
@@ -914,6 +957,9 @@ router.post('/messages', async (req, res) => {
     if (!estDansLeLienPC(link, user.numeroH)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
+    if (!lienPCActif(link)) {
+      return res.status(403).json({ success: false, message: 'Ce lien n\'est pas (ou plus) actif.' });
+    }
     const msg = await ParentChildMessage.create({
       linkId,
       numeroH: user.numeroH,
@@ -944,6 +990,9 @@ router.post('/messages/upload', uploadChild.single('media'), async (req, res) =>
     const link = await ParentChildLink.findByPk(linkId);
     if (!estDansLeLienPC(link, user.numeroH)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (!lienPCActif(link)) {
+      return res.status(403).json({ success: false, message: 'Ce lien n\'est pas (ou plus) actif.' });
     }
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
 

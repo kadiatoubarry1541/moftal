@@ -48,13 +48,28 @@ export default function ReseauImam() {
   async function saveProfile() {
     if (!pForm.nom_mosquee || !pForm.ville) return;
     setSaving(true);
-    const r = await fetch(`${BASE}/register`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
-    const d = await r.json();
-    setSaving(false);
-    if (d.success) { setProfile(d.profile); setEditMode(false); }
+    try {
+      const r = await fetch(`${BASE}/register`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.success) { setProfile(d.profile); setEditMode(false); }
+      else alert(d.message || "Le profil n'a pas été enregistré. Réessayez.");
+    } catch {
+      alert("Le profil n'a pas été enregistré : vérifiez votre connexion.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  async function acceptConn(from: string) { await fetch(`${BASE}/connect/${from}/accept`, { method: "PUT", headers: auth() }); loadConnections(); }
+  async function acceptConn(from: string) {
+    try {
+      const r = await fetch(`${BASE}/connect/${from}/accept`, { method: "PUT", headers: auth() });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.success === false) alert(d.message || "La connexion n'a pas été acceptée. Réessayez.");
+    } catch {
+      alert("La connexion n'a pas été acceptée : vérifiez votre connexion.");
+    }
+    loadConnections();
+  }
 
   async function sendFriday() {
     if (!fForm.message_imam || !fForm.date_vendredi) return;

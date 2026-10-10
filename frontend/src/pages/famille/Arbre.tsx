@@ -5,7 +5,6 @@ import { hideIncrement } from '../../utils/formatNumeroH'
 import { ArbreGenealogique } from '../../components/ArbreGenealogique'
 import { buildFamilyTree, getCercleDesRacinesCounts } from '../../services/FamilyTreeBuilder'
 import { useI18n } from '../../i18n/useI18n'
-import { disconnectSocket } from '../../services/socket'
 
 interface UserData {
   numeroH: string
@@ -245,7 +244,8 @@ useEffect(() => {
   const sessionData = JSON.parse(localStorage.getItem('session_user') || '{}')
   const u = sessionData.userData || sessionData
   if (u?.numeroH) setUser(u)
-  return () => { disconnectSocket() }
+  // Pas de disconnectSocket() : le socket est partagé par toute l'app
+  // (cette page n'enregistre aucun écouteur à retirer).
 }, [])
 
 useEffect(() => {
@@ -568,7 +568,19 @@ const enhancedUser: UserData = useMemo(() => {
         })
       })
       const data = await res.json()
-      if (data.success) {
+      if (data.success && data.pending) {
+        // Signalement en attente de confirmation par un administrateur :
+        // le membre reste dans l'arbre tant que le décès n'est pas confirmé.
+        setMsgDeces(`⏳ ${data.message}`)
+        setTimeout(() => {
+          setShowDecesModal(false)
+          setMemberToReport(null)
+          setDateDeces('')
+          setAnneeDeces('')
+          setCauseDeces('')
+          setMsgDeces('')
+        }, 3000)
+      } else if (data.success) {
         setMsgDeces(`✅ ${data.message}`)
         // Mettre à jour treeInfo localement
         setTreeInfo((prev: any) => {

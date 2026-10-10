@@ -1,4 +1,5 @@
 import express from 'express';
+import { Op } from 'sequelize';
 import { authenticate } from '../middleware/auth.js';
 import Appointment from '../models/Appointment.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
@@ -20,6 +21,11 @@ router.post('/book', authenticate, async (req, res) => {
     const proAccount = await ProfessionalAccount.findByPk(professionalAccountId);
     if (!proAccount || proAccount.status !== 'approved') {
       return res.status(404).json({ success: false, message: 'Professionnel non trouvé ou non approuvé' });
+    }
+    // Compte désactivé ou suspendu pour impayé : plus de nouveaux rendez-vous
+    // (l'essai gratuit et l'abonnement actif continuent de fonctionner).
+    if (!proAccount.isActive || proAccount.subscriptionStatus === 'blocked') {
+      return res.status(403).json({ success: false, message: 'Ce professionnel ne prend pas de rendez-vous pour le moment.' });
     }
 
     if (type === 'written' && (!appointmentDate || !appointmentTime || !service)) {
@@ -111,7 +117,30 @@ router.post('/accept/:id', authenticate, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Non autorisé' });
     }
 
+    // Seule une demande en attente peut être acceptée
+    if (appointment.status !== 'pending') {
+      return res.status(409).json({ success: false, message: `Ce rendez-vous n'est plus en attente (statut : ${appointment.status}).` });
+    }
+
     const { responseMessage, responseVideoUrl, appointmentDate, appointmentTime } = req.body;
+
+    // Pas deux rendez-vous acceptés sur le même créneau pour ce professionnel
+    const dateFinale = appointmentDate || appointment.appointmentDate;
+    const heureFinale = appointmentTime || appointment.appointmentTime;
+    if (dateFinale && heureFinale) {
+      const conflit = await Appointment.findOne({
+        where: {
+          professionalAccountId: appointment.professionalAccountId,
+          appointmentDate: dateFinale,
+          appointmentTime: heureFinale,
+          status: 'accepted',
+          id: { [Op.ne]: appointment.id }
+        }
+      });
+      if (conflit) {
+        return res.status(409).json({ success: false, message: `Vous avez déjà un rendez-vous accepté le ${dateFinale} à ${heureFinale}. Proposez un autre créneau.` });
+      }
+    }
 
     await appointment.update({
       status: 'accepted',

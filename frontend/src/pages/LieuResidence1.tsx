@@ -267,18 +267,10 @@ export default function LieuResidence1() {
     }
   };
 
-  const joinEvent = async (postId: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      await fetch(`${API_BASE}/api/residences/groups/${selectedGroup?.id}/posts/${postId}/join-event`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ numeroH: userData?.numeroH })
-      });
-      loadGroups(userData ?? undefined);
-    } catch (error) {
-      console.error('Erreur:', error);
-    }
+  // L'inscription aux événements n'existe pas encore côté serveur :
+  // on le dit clairement au lieu de faire semblant d'enregistrer.
+  const joinEvent = (_postId: string) => {
+    alert('L\'inscription aux événements sera bientôt disponible.');
   };
 
   if (loading) {
@@ -778,9 +770,10 @@ export default function LieuResidence1() {
                        post.eventDetails.participants.length < post.eventDetails.maxParticipants && (
                         <button
                           onClick={() => joinEvent(post.id)}
-                          className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                          className="mt-2 px-4 py-2 bg-gray-400 text-white rounded-lg text-sm cursor-not-allowed"
+                          title="Bientôt disponible"
                         >
-                          📅 Rejoindre l'événement
+                          📅 Rejoindre l'événement (bientôt disponible)
                         </button>
                       )}
                     </div>

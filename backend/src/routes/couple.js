@@ -77,6 +77,11 @@ function estDansLeLien(link, numeroH) {
   );
 }
 
+/** Envoi de messages : seulement sur un lien confirmé, actif et non archivé. */
+function lienCoupleActif(link) {
+  return !!link && link.status === 'active' && link.isActive !== false && !link.isArchived;
+}
+
 /** Admin : aucune condition, tout voir et tout gérer. */
 const isAdmin = (user) =>
   !!(
@@ -125,14 +130,14 @@ router.post('/link', async (req, res) => {
     let husbandNumeroH, wifeNumeroH;
     if (userGenre === 'HOMME' && partnerGenre === 'FEMME') {
       husbandNumeroH = user.numeroH;
-      wifeNumeroH    = partnerNumeroH;
+      wifeNumeroH    = partner.numeroH;
     } else if (userGenre === 'FEMME' && partnerGenre === 'HOMME') {
-      husbandNumeroH = partnerNumeroH;
+      husbandNumeroH = partner.numeroH;
       wifeNumeroH    = user.numeroH;
     } else {
       // Fallback : utiliser l'ancienne logique si genre non défini
       husbandNumeroH = user.numeroH;
-      wifeNumeroH    = partnerNumeroH;
+      wifeNumeroH    = partner.numeroH;
     }
 
     // Vérification numéro mairie (toujours unique)
@@ -838,6 +843,9 @@ router.post('/messages', async (req, res) => {
     if (!estDansLeLien(link, user.numeroH)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
     }
+    if (!lienCoupleActif(link)) {
+      return res.status(403).json({ success: false, message: 'Ce lien n\'est pas (ou plus) actif.' });
+    }
     const msg = await CoupleMessage.create({
       linkId,
       numeroH: user.numeroH,
@@ -868,6 +876,9 @@ router.post('/messages/upload', uploadCouple.single('media'), async (req, res) =
     const link = await CoupleLink.findByPk(linkId);
     if (!estDansLeLien(link, user.numeroH)) {
       return res.status(403).json({ success: false, message: 'Accès refusé.' });
+    }
+    if (!lienCoupleActif(link)) {
+      return res.status(403).json({ success: false, message: 'Ce lien n\'est pas (ou plus) actif.' });
     }
     if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
 
