@@ -53,6 +53,14 @@ function isAndroid() {
   return /Android/i.test(navigator.userAgent);
 }
 
+// Vrai onglet Chrome sur Android (pas l'app Moftal, ni WhatsApp / Facebook…,
+// ni un autre navigateur) : le seul endroit où le téléphone propose d'installer.
+function estOngletChrome() {
+  const ua = navigator.userAgent;
+  const standalone = window.matchMedia("(display-mode: standalone)").matches;
+  return isAndroid() && /Chrome\//.test(ua) && !/; wv\)|FBAN|FBAV|Instagram|SamsungBrowser|EdgA|OPR\/|MiuiBrowser/.test(ua) && !standalone;
+}
+
 // Lien Android qui rouvre la page actuelle dans Chrome lui-même. Une gestion ouverte
 // depuis l'app Moftal (ou depuis WhatsApp, Facebook…) s'affiche dans une fenêtre
 // intégrée (croix ✕ en haut) où le téléphone ne propose jamais l'installation :
@@ -239,8 +247,15 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
 
   const installer = async () => {
     setEtat("installation");
-    // Chrome peut mettre quelques secondes à proposer l'installation après l'ouverture
     let p = prompt || (window as any).__pwaGestionPrompt as BeforeInstallPromptEvent | null;
+    // Hors d'un vrai onglet Chrome (app Moftal, WhatsApp…) : on ouvre Chrome directement
+    if (!p && isAndroid() && !estOngletChrome()) {
+      const code = await demanderCodeOuverture();
+      window.location.href = lienOuvrirDansChrome(code);
+      setTimeout(() => setEtat(""), 4000);
+      return;
+    }
+    // Chrome peut mettre quelques secondes à proposer l'installation après l'ouverture
     for (let i = 0; !p && i < 10; i++) {
       await new Promise(r => setTimeout(r, 400));
       p = (window as any).__pwaGestionPrompt;
@@ -278,10 +293,13 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
           <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.</p>
         ) : etat === "manuel" ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
-            {isAndroid() && (
+            {isAndroid() && !estOngletChrome() && (
               <a href={lienOuvrirDansChrome(codeChrome)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: themeColor, color: "white", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 8 }}>
                 🌐 Ouvrir dans Chrome
               </a>
+            )}
+            {estOngletChrome() && (
+              <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>Elle est peut-être déjà installée : cherchez son icône sur votre écran d'accueil. Sinon :</div>
             )}
             <div>1. Appuyez sur le menu <strong>⋮</strong> de Chrome (en haut à droite)</div>
             <div>2. Choisissez « <strong>Installer l'application</strong> » ou « <strong>Ajouter à l'écran d'accueil</strong> »</div>
@@ -689,8 +707,17 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   const handleInstall = async () => {
     if (!prompt) {
-      // Le téléphone ne propose pas l'installation ici (fenêtre intégrée, ou pas
-      // encore prêt) : on explique comment faire, avec le bouton « Ouvrir dans Chrome ».
+      // Android, hors d'un vrai onglet Chrome (app Moftal, WhatsApp, Facebook…) :
+      // l'installation n'est possible que dans Chrome → on l'ouvre directement,
+      // session transmise, et l'installation s'y propose toute seule.
+      if (isAndroid() && !estOngletChrome()) {
+        setInstalling(true);
+        const code = await demanderCodeOuverture();
+        window.location.href = lienOuvrirDansChrome(code);
+        setTimeout(() => setInstalling(false), 4000);
+        return;
+      }
+      // Sinon (pas encore prêt, iPhone…) : on explique comment faire.
       setShowToast(v => !v);
       return;
     }

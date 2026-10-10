@@ -42,8 +42,12 @@ export const PUB_TYPES = [
 export const DEFAULT_PUB_FORM = { type: "annonce", titre: "", contenu: "", prix: "", image: "" };
 export const DEFAULT_PROFIL_FORM = { name: "", description: "", address: "", city: "", phone: "", email: "", photo: "" };
 
+// Types enregistrés sous un autre nom que celui du modèle de gestion
+const ALIAS_TYPES: Record<string, string> = { imam: "mosque", immobilier: "broker", immo: "broker", retailer: "vendor" };
+
 export function getTypeInfo(type: string) {
-  const found = ADMIN_SERVICES.find(s => s.type === type);
+  const t = ALIAS_TYPES[type] || type;
+  const found = ADMIN_SERVICES.find(s => s.type === t);
   if (found) return { label: found.label, path: found.path, vitrinePath: found.vitrinePath || "", color: found.color, bg: found.bg, emoji: found.emoji };
   return { label: type || "Service", path: "gestion-commerce", vitrinePath: "", color: "#64748b", bg: "#f8fafc", emoji: "🏢" };
 }
