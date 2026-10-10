@@ -7,7 +7,7 @@ import { getSessionUser, isAdmin, isMasterAdmin, getPhotoUrl, getNumeroHForDispl
 import { config } from "./config/api";
 import { recupererPhotosAnciennes } from "./utils/recuperationPhoto";
 import DefaultAvatar from "./assets/default-avatar.svg";
-import NotificationBell from "./components/NotificationBell";
+import NotificationBell, { InvitationNotifications } from "./components/NotificationBell";
 import GestionPaymentGate from "./components/GestionPaymentGate";
 import OfflineStatusBar from "./components/OfflineStatusBar";
 import ProfileCompletionPrompt from "./components/ProfileCompletionPrompt";
@@ -391,6 +391,7 @@ function App() {
     <OfflineStatusBar />
     <ProfileCompletionPrompt />
     {isLoggedIn && !isFullscreenPage && <InvitationInstallerMoftal />}
+    {isLoggedIn && !isFullscreenPage && <InvitationNotifications />}
     {!isFullscreenPage && <AvertissementDoubleInstallation />}
     <div className={`flex flex-col bg-stone-50 dark:bg-gray-900${!isFullscreenPage ? ' max-w-[500px] mx-auto shadow-2xl min-h-dvh' : ''}${isHome ? ' h-dvh overflow-hidden' : ''}`} style={{ overflowX: isHome ? undefined : 'clip' }}>
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine, et sur les
