@@ -9,6 +9,14 @@ export const MASTER_ADMIN_NUMEROS = ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'];
 
 // Inscription rapide (téléphone + mot de passe) : identifiant provisoire
 // jusqu'à la mise à jour du profil, qui attribue le vrai NuméroH.
+// Administrateur de la plateforme (rôle admin, ou comptes maîtres G7 / G0)
+export const estAdminUtilisateur = (user) => {
+  if (!user) return false;
+  const role = String(user.role || '').toLowerCase();
+  return user.isMasterAdmin === true || role === 'admin' || role === 'super-admin' || role === 'administrator'
+    || MASTER_ADMIN_NUMEROS.includes(user.numeroH);
+};
+
 export const PROVISIONAL_PREFIX = 'TMP-';
 export const isProvisionalNumeroH = (numeroH) => typeof numeroH === 'string' && numeroH.startsWith(PROVISIONAL_PREFIX);
 
