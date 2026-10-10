@@ -753,8 +753,32 @@ router.put('/:id', authenticate, async (req, res) => {
     if (!account) {
       return res.status(404).json({ success: false, message: 'Compte non trouvé' });
     }
+    // L'admin peut changer le LOGO de n'importe quel professionnel (formule
+    // Visibilité ou Gestion Interne) ; le reste du profil reste au propriétaire.
+    const role = String(req.user?.role || '').toLowerCase();
+    const estAdmin = req.user?.isMasterAdmin || role === 'admin' || role === 'super-admin'
+      || ['G7C7P7R7E7F7 7', 'G0C0P0R0E0F0 0'].includes(req.user?.numeroH);
     if (account.ownerNumeroH !== req.userId) {
-      return res.status(403).json({ success: false, message: 'Non autorisé' });
+      if (!estAdmin) return res.status(403).json({ success: false, message: 'Non autorisé' });
+      const logo = typeof req.body?.photo === 'string' ? req.body.photo.trim() : '';
+      const autres = Object.keys(req.body || {}).filter((k) => k !== 'photo');
+      if (autres.length) {
+        return res.status(403).json({ success: false, message: 'En tant qu\'admin, seul le logo peut être changé ici.' });
+      }
+      // Le logo est obligatoire : une valeur vide n'efface jamais le logo enregistré
+      if (!logo) return res.status(400).json({ success: false, message: 'Choisissez une image pour le logo.' });
+      if (!/^data:image\//.test(logo) && !/^https?:\/\//.test(logo) && !logo.startsWith('/')) {
+        return res.status(400).json({ success: false, message: 'Logo invalide : choisissez une image.' });
+      }
+      await account.update({ photo: logo });
+      if (account.tenant_code) {
+        await sequelize.query(
+          `UPDATE management_tenants SET logo_url = :logo WHERE tenant_code = :code`,
+          { replacements: { logo, code: account.tenant_code } }
+        );
+      }
+      console.log(`🖼️ Logo du compte ${account.id} changé par l'admin ${req.userId}`);
+      return res.json({ success: true, account: sanitizeAccountForPublic(account) });
     }
 
   const { name, description, address, city, country, phone, email, services, specialties, photo, billingInfo } = req.body;

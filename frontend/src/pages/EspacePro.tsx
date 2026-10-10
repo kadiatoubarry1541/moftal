@@ -1257,7 +1257,7 @@ export default function EspacePro() {
       {isAdminViewing && (
         <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm font-semibold sticky top-[72px] z-50 shadow-md">
           <span>👁️ Mode Admin — Vue lecture seule · Compte de <strong>{account.ownerNumeroH}</strong></span>
-          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Actions désactivées</span>
+          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Actions désactivées · logo modifiable</span>
         </div>
       )}
 
