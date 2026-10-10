@@ -62,8 +62,12 @@ export default function AdminPublicites() {
   async function approuver(id: string) {
     setBusyId(id);
     try {
-      await fetch(`${API}/publicites/admin/${id}/approuver`, { method: "POST", headers });
+      const res = await fetch(`${API}/publicites/admin/${id}/approuver`, { method: "POST", headers });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) alert(data.message || "L'approbation a échoué. Réessayez.");
       chargerTout();
+    } catch {
+      alert("L'approbation a échoué : vérifiez votre connexion.");
     } finally {
       setBusyId(null);
     }
@@ -73,12 +77,16 @@ export default function AdminPublicites() {
     const raison = prompt("Raison du refus (optionnel) :") || "";
     setBusyId(id);
     try {
-      await fetch(`${API}/publicites/admin/${id}/refuser`, {
+      const res = await fetch(`${API}/publicites/admin/${id}/refuser`, {
         method: "POST",
         headers,
         body: JSON.stringify({ raison }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) alert(data.message || "Le refus n'a pas été enregistré. Réessayez.");
       chargerTout();
+    } catch {
+      alert("Le refus n'a pas été enregistré : vérifiez votre connexion.");
     } finally {
       setBusyId(null);
     }

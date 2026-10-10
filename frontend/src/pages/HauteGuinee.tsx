@@ -142,7 +142,8 @@ export default function HauteGuinee() {
       setGroups(data.groups || []);
     } catch (error) {
       console.error('Erreur lors du chargement des groupes:', error);
-      setGroups(getDefaultGroups());
+      // Jamais d'organisations inventées affichées comme réelles : liste vide
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -350,7 +351,7 @@ export default function HauteGuinee() {
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/regions/haute-guinee/groups/${groupId}/join`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${groupId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -358,9 +359,11 @@ export default function HauteGuinee() {
         },
         body: JSON.stringify({ numeroH: userData?.numeroH })
       });
-      if (!response.ok) throw new Error('Erreur');
-      
-      alert('Vous avez rejoint le Organisation !');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erreur lors de l\'adhésion au Organisation');
+      }
+      alert(data.message || 'Vous avez rejoint le Organisation !');
       loadGroups();
     } catch (error: any) {
       console.error('Erreur:', error);
@@ -384,7 +387,11 @@ export default function HauteGuinee() {
           createdBy: userData?.numeroH
         })
       });
-      
+      const data = await response.json().catch(() => ({}));
+      // Succès affiché seulement si le serveur a bien enregistré
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erreur lors de la création de l\'événement');
+      }
       alert('Événement créé avec succès !');
       setShowEventForm(false);
       setNewEvent({ title: '', description: '', date: '', time: '', location: '', maxParticipants: 50, type: 'cultural' });
@@ -410,7 +417,11 @@ export default function HauteGuinee() {
           createdBy: userData?.numeroH
         })
       });
-      
+      const data = await response.json().catch(() => ({}));
+      // Succès affiché seulement si le serveur a bien enregistré
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erreur lors de la création de l\'annonce');
+      }
       alert('Annonce créée avec succès !');
       setShowAnnouncementForm(false);
       setNewAnnouncement({ title: '', content: '', priority: 'normal', category: 'general' });

@@ -406,7 +406,8 @@ export function VideoRegistration() {
           : null
 
         if (loginResult?.success) {
-          showCredentialsReminder(numeroH, normalizedData.password)
+          // NuméroH attribué par le serveur (pas celui calculé dans le téléphone)
+          showCredentialsReminder((loginResult as any).user?.numeroH || numeroH, normalizedData.password)
           navigate('/compte')
         } else {
           alert(result.message || 'Une erreur est survenue lors de l\'inscription. Réessayez.')

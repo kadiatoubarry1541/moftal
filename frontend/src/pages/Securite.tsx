@@ -46,6 +46,7 @@ export default function Securite() {
   const [selectedCountry, setSelectedCountry] = useState('');
   const [activeTab, setActiveTab] = useState<'policiers' | 'gendarmes' | 'pompiers' | 'agents'>('policiers');
   const [rawAgents, setRawAgents] = useState<SecurityAgent[]>([]);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('');
@@ -109,15 +110,19 @@ export default function Securite() {
       const response = await fetch(`${API_URL}/api/security/agents`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
       });
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success !== false) {
         setRawAgents(data.agents || []);
+        setLoadError('');
       } else {
-        setRawAgents(getDefaultAgents());
+        // Jamais d'agents ni de numéros inventés affichés comme réels
+        setRawAgents([]);
+        setLoadError(data.message || 'Impossible de charger les agents de sécurité.');
       }
     } catch (error) {
       console.error('Erreur lors du chargement des agents:', error);
-      setRawAgents(getDefaultAgents());
+      setRawAgents([]);
+      setLoadError('Impossible de charger les agents de sécurité : vérifiez votre connexion.');
     } finally {
       setLoading(false);
     }
@@ -619,10 +624,10 @@ export default function Securite() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-12 text-center">
               <div className="text-4xl mb-4">🔍</div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Aucun agent trouvé
+                {loadError ? 'Chargement impossible' : 'Aucun agent trouvé'}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Aucun agent de sécurité ne correspond à vos critères de recherche.
+              <p className={loadError ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}>
+                {loadError || 'Aucun agent de sécurité ne correspond à vos critères de recherche.'}
               </p>
             </div>
           )}

@@ -83,7 +83,7 @@ router.get('/tree', async (req, res) => {
 
     // Récupérer tous les membres de l'arbre (vivants et décédés)
     const members = await getTreeMembers(tree);
-    const deceasedMembers = await getTreeDeceasedMembers(tree);
+    const deceasedMembers = await getTreeDeceasedMembers(tree, user.numeroH);
 
     // Le code de sang n'est révélé qu'après le paiement d'activation au propriétaire du site
     const arbreActive = !!tree.arbreActive;
@@ -174,13 +174,14 @@ async function getTreeMembers(tree) {
 }
 
 // Fonction pour récupérer les membres décédés de l'arbre
-async function getTreeDeceasedMembers(tree) {
+// + les défunts déclarés par la personne qui regarde (ils sont rangés dans
+// l'arbre de leurs parents, qui n'est pas forcément le sien)
+async function getTreeDeceasedMembers(tree, declarantNumeroH = null) {
   const deceasedMembers = tree.deceasedMembers || [];
+  const conditions = [{ numeroHD: { [Op.in]: deceasedMembers } }];
+  if (declarantNumeroH) conditions.push({ createdBy: declarantNumeroH });
   const deceased = await DeceasedMember.findAll({
-    where: {
-      numeroHD: { [Op.in]: deceasedMembers },
-      isActive: true
-    }
+    where: { [Op.or]: conditions, isActive: true }
   });
   return deceased;
 }

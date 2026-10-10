@@ -61,6 +61,7 @@ export default function Sante() {
   const [activeTab, setActiveTab] = useState<'hopitaux' | 'medecins'>('hopitaux');
   const [rawHospitals, setRawHospitals] = useState<Hospital[]>([]);
   const [rawDoctors, setRawDoctors] = useState<Doctor[]>([]);
+  const [loadErrors, setLoadErrors] = useState<{ hospitals: string; doctors: string }>({ hospitals: '', doctors: '' });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
@@ -129,15 +130,19 @@ export default function Sante() {
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success !== false) {
         setRawHospitals(data.hospitals || []);
+        setLoadErrors(prev => ({ ...prev, hospitals: '' }));
       } else {
-        setRawHospitals(getDefaultHospitals());
+        // Jamais d'établissements ni de numéros inventés affichés comme réels
+        setRawHospitals([]);
+        setLoadErrors(prev => ({ ...prev, hospitals: data.message || 'Impossible de charger la liste des hôpitaux.' }));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des hôpitaux:', error);
-      setRawHospitals(getDefaultHospitals());
+      setRawHospitals([]);
+      setLoadErrors(prev => ({ ...prev, hospitals: 'Impossible de charger la liste des hôpitaux : vérifiez votre connexion.' }));
     }
   };
 
@@ -151,15 +156,19 @@ export default function Sante() {
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success !== false) {
         setRawDoctors(data.doctors || []);
+        setLoadErrors(prev => ({ ...prev, doctors: '' }));
       } else {
-        setRawDoctors(getDefaultDoctors());
+        // Jamais d'établissements ni de numéros inventés affichés comme réels
+        setRawDoctors([]);
+        setLoadErrors(prev => ({ ...prev, doctors: data.message || 'Impossible de charger la liste des médecins.' }));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des médecins:', error);
-      setRawDoctors(getDefaultDoctors());
+      setRawDoctors([]);
+      setLoadErrors(prev => ({ ...prev, doctors: 'Impossible de charger la liste des médecins : vérifiez votre connexion.' }));
     }
   };
 
@@ -450,6 +459,11 @@ export default function Sante() {
 
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">🏥 {t('sante.hospitals_title')}</h2>
+              {loadErrors.hospitals ? (
+                <p className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{loadErrors.hospitals}</p>
+              ) : filteredHospitals.length === 0 && (
+                <p className="mb-4 text-gray-500 text-sm">Aucun hôpital trouvé.</p>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {filteredHospitals.map((hospital) => {
                   const hprox = proximityLabel(hospital, userGeo);
@@ -530,6 +544,11 @@ export default function Sante() {
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">👨‍⚕️ {t('sante.doctors_title')}</h2>
+              {loadErrors.doctors ? (
+                <p className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">{loadErrors.doctors}</p>
+              ) : filteredDoctors.length === 0 && (
+                <p className="mb-4 text-gray-500 text-sm">Aucun médecin trouvé.</p>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                 {filteredDoctors.map((doctor) => {
                   const dprox = proximityLabel(doctor, userGeo);

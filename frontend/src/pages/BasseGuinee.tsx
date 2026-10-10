@@ -136,7 +136,8 @@ export default function BasseGuinee() {
       setGroups(data.groups || []);
     } catch (error) {
       console.error('Erreur lors du chargement des groupes:', error);
-      setGroups(getDefaultGroups());
+      // Jamais d'organisations inventées affichées comme réelles : liste vide
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -392,7 +393,11 @@ export default function BasseGuinee() {
           createdBy: userData?.numeroH
         })
       });
-      
+      const data = await response.json().catch(() => ({}));
+      // Succès affiché seulement si le serveur a bien enregistré
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erreur lors de la création de l\'événement');
+      }
       alert('Événement créé avec succès !');
       setShowEventForm(false);
       setNewEvent({ title: '', description: '', date: '', time: '', location: '', maxParticipants: 50, type: 'cultural' });
@@ -418,7 +423,11 @@ export default function BasseGuinee() {
           createdBy: userData?.numeroH
         })
       });
-      
+      const data = await response.json().catch(() => ({}));
+      // Succès affiché seulement si le serveur a bien enregistré
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Erreur lors de la création de l\'annonce');
+      }
       alert('Annonce créée avec succès !');
       setShowAnnouncementForm(false);
       setNewAnnouncement({ title: '', content: '', priority: 'normal', category: 'general' });

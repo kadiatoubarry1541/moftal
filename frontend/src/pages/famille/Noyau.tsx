@@ -504,11 +504,19 @@ export default function Noyau() {
       setDemoEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, visibility: e.visibility === 'scelle' ? 'visible' : 'scelle' } : e))
       return
     }
-    await fetch(`${API_BASE}/api/family-core/entries/${entry.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ visibility: entry.visibility === 'scelle' ? 'visible' : 'scelle' })
-    })
+    try {
+      const res = await fetch(`${API_BASE}/api/family-core/entries/${entry.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ visibility: entry.visibility === 'scelle' ? 'visible' : 'scelle' })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.success === false) {
+        alert(data.message || 'La modification n\'a pas été enregistrée. Réessayez.')
+      }
+    } catch {
+      alert('La modification n\'a pas été enregistrée : vérifiez votre connexion.')
+    }
     await load()
   }
 
@@ -517,10 +525,18 @@ export default function Noyau() {
       setDemoEntries((prev) => prev.filter((e) => e.id !== entry.id))
       return
     }
-    await fetch(`${API_BASE}/api/family-core/entries/${entry.id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${getToken()}` }
-    })
+    try {
+      const res = await fetch(`${API_BASE}/api/family-core/entries/${entry.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.success === false) {
+        alert(data.message || 'La suppression n\'a pas été enregistrée. Réessayez.')
+      }
+    } catch {
+      alert('La suppression n\'a pas été enregistrée : vérifiez votre connexion.')
+    }
     await load()
   }
 

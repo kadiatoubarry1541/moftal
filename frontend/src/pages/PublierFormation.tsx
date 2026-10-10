@@ -104,10 +104,18 @@ export default function PublierFormation() {
 
   async function supprimerAnnonce(id: string) {
     if (!confirm('Supprimer cette annonce ?')) return
-    await fetch(`${API}/api/formations/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    try {
+      const res = await fetch(`${API}/api/formations/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.success === false) {
+        alert(data.message || 'La suppression a échoué. Réessayez.')
+      }
+    } catch {
+      alert('La suppression a échoué : vérifiez votre connexion.')
+    }
     chargerMesAnnonces()
   }
 

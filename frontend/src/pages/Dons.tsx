@@ -54,6 +54,7 @@ export default function Solidarite() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState<'pauvres' | 'dons'>('pauvres');
   const [poorPeople, setPoorPeople] = useState<PoorPerson[]>([]);
+  const [loadError, setLoadError] = useState('');
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDonationForm, setShowDonationForm] = useState(false);
@@ -117,33 +118,50 @@ export default function Solidarite() {
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success !== false) {
         setPoorPeople(data.poorPeople || []);
+        setLoadError('');
       } else {
-        setPoorPeople(getDefaultPoorPeople());
+        // Jamais de personnes inventées affichées comme réelles
+        setPoorPeople([]);
+        setLoadError(data.message || 'Impossible de charger la liste des bénéficiaires.');
       }
     } catch (error) {
       console.error('Erreur lors du chargement des pauvres:', error);
-      setPoorPeople(getDefaultPoorPeople());
+      setPoorPeople([]);
+      setLoadError('Impossible de charger la liste des bénéficiaires : vérifiez votre connexion.');
     }
   };
 
   const loadDonations = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/zakat/donations`, {
+      // Historique réel des dons enregistrés en base (opérations « don_au_pauvre »)
+      const response = await fetch(`${API_BASE}/api/zakat/mes-dons`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Filtrer uniquement les dons (sadaqah), pas la zakat
-        const allDonations = data.donations || [];
-        setDonations(allDonations.filter((d: any) => !d.donationType || d.donationType === 'sadaqah'));
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
+        setDonations((data.dons || []).map((d: any, i: number): Donation => ({
+          id: `${d.created_at || ''}-${i}`,
+          donor: userData?.numeroH || '',
+          donorName: d.de_nom || '',
+          recipient: '',
+          recipientName: d.vers_nom || '',
+          amount: parseFloat(d.montant) || 0,
+          currency: d.currency || 'GNF',
+          type: 'money',
+          description: d.description || '',
+          status: d.statut === 'confirme' ? 'completed' : 'pending',
+          createdAt: d.created_at
+        })));
+      } else {
+        console.error('Erreur lors du chargement des dons:', data.message);
+        setDonations([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des dons:', error);
@@ -282,38 +300,38 @@ export default function Solidarite() {
   const submitDonation = async () => {
     if (!donationForm.amount || !selectedPoorPerson) return;
 
+    // Le don passe par le compte Zakat (argent, en GNF) : enregistré en base
+    if (donationForm.type !== 'money' || donationForm.currency !== 'FG') {
+      alert('Pour le moment, seuls les dons en argent (Franc Guinéen) depuis votre compte Zakat sont possibles.');
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/zakat/make-donation`, {
+      const response = await fetch(`${API_BASE}/api/zakat/donner-au-pauvre/${encodeURIComponent(selectedPoorPerson.id)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          donor: userData?.numeroH,
-          donorName: `${userData?.prenom} ${userData?.nomFamille}`,
-          recipient: selectedPoorPerson.id,
-          recipientName: `${selectedPoorPerson.prenom} ${selectedPoorPerson.nomFamille}`,
-          amount: parseFloat(donationForm.amount),
-          currency: donationForm.currency,
-          type: donationForm.type,
-          description: donationForm.description,
-          donationType: 'sadaqah' // Toujours sadaqah pour cette page
+          montant: parseFloat(donationForm.amount),
+          description: donationForm.description || undefined
         })
       });
-      
-      if (response.ok) {
-        alert('Don effectué avec succès !');
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && data.success) {
+        alert(data.message || 'Don effectué avec succès !');
         setShowDonationForm(false);
         loadDonations();
         loadPoorPeople();
       } else {
-        alert('Erreur lors du don');
+        alert(data.message || 'Erreur lors du don');
       }
     } catch (error) {
       console.error('Erreur lors du don:', error);
-      alert('Erreur lors du don');
+      alert('Erreur lors du don : vérifiez votre connexion.');
     }
   };
 
@@ -454,6 +472,12 @@ export default function Solidarite() {
                   <strong>Note importante :</strong> Cette page est destinée aux <strong>dons généraux (Sadaqah)</strong> qui peuvent être donnés à tous les pauvres, quelle que soit leur religion. Pour les dons spécifiques aux musulmans (Zakat), veuillez utiliser la page <strong>Zaka (Musulman)</strong>.
                 </p>
               </div>
+              {loadError && (
+                <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">{loadError}</div>
+              )}
+              {!loadError && filteredPoorPeople.length === 0 && (
+                <div className="mb-4 p-4 bg-gray-50 text-gray-600 rounded-lg text-sm">Aucun bénéficiaire pour le moment.</div>
+              )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPoorPeople.map((person) => (
                   <div key={person.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">

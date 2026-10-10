@@ -191,24 +191,8 @@ export function DeceasedWizard() {
     // Copie locale pour l'affichage immédiat dans l'arbre (la base reste la référence)
     localStorage.setItem('dernier_defunt', JSON.stringify(sansMotDePasse))
 
-    // Sauvegarder dans la liste des défunts pour l'arbre généalogique
-    const sessionRaw = localStorage.getItem('session_user')
-    if (sessionRaw) {
-      try {
-        const session = JSON.parse(sessionRaw)
-        const ownerNumeroH = (session.userData || session).numeroH
-        if (ownerNumeroH) {
-          const key = `deceased_members_${ownerNumeroH}`
-          const existing = JSON.parse(localStorage.getItem(key) || '[]')
-          existing.push({
-            ...sansMotDePasse,
-            relation: (localStorage.getItem('defunt_relation') || 'autre'),
-            ownerNumeroH
-          })
-          localStorage.setItem(key, JSON.stringify(existing))
-        }
-      } catch { /* ignore */ }
-    }
+    // L'arbre généalogique lit les défunts depuis le serveur (/api/family-tree/tree) :
+    // plus de copie dans le téléphone.
     
     // ❌ NE PAS créer de session - les défunts ne peuvent pas se connecter
     // Les défunts existent uniquement dans l'arbre généalogique pour consultation

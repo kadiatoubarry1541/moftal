@@ -104,7 +104,9 @@ export function checkConditions(
 /**
  * Construit automatiquement l'arbre généalogique basé sur les données disponibles
  */
-export function buildFamilyTree(userData: UserData): FamilyMember[] {
+// deceasedMembers : défunts chargés depuis le serveur (/api/family-tree/tree).
+// Absents → aucun défunt affiché (jamais de lecture dans localStorage).
+export function buildFamilyTree(userData: UserData, deceasedMembers: any[] = []): FamilyMember[] {
   const tree: FamilyMember[] = [];
   
   // 1. L'utilisateur lui-même (toujours visible)
@@ -291,10 +293,9 @@ export function buildFamilyTree(userData: UserData): FamilyMember[] {
     });
   }
 
-  // 8. DÉFUNTS enregistrés manuellement par cet utilisateur
+  // 8. DÉFUNTS enregistrés en base (fournis par l'appelant depuis le serveur)
   try {
-    const key = `deceased_members_${userData.numeroH}`
-    const deceasedList: any[] = JSON.parse(localStorage.getItem(key) || '[]')
+    const deceasedList: any[] = Array.isArray(deceasedMembers) ? deceasedMembers : []
     const relationMap: Record<string, FamilyMember['relation']> = {
       'pere': 'pere',
       'mere': 'mere',
@@ -313,7 +314,17 @@ export function buildFamilyTree(userData: UserData): FamilyMember[] {
       'autre': 'pere'
     }
     deceasedList.forEach((d: any, i: number) => {
-      const rel = relationMap[d.relation] || 'pere'
+      // Lien de parenté : enregistré en base (additionalInfo.relationAvecDeclarant),
+      // sinon déduit des liens parent connus
+      const relationDeclarant = d.additionalInfo?.relationAvecDeclarant
+      let relationBrute: string | undefined = d.relation ||
+        (relationDeclarant && relationDeclarant !== 'inconnu' && (!d.createdBy || d.createdBy === userData.numeroH) ? relationDeclarant : undefined)
+      if (!relationBrute && userData.numeroH) {
+        if (d.numeroHD && d.numeroHD === userData.numeroHPere) relationBrute = 'pere'
+        else if (d.numeroHD && d.numeroHD === userData.numeroHMere) relationBrute = 'mere'
+        else if (d.numeroHPere === userData.numeroH || d.numeroHMere === userData.numeroH) relationBrute = 'fils'
+      }
+      const rel = relationMap[relationBrute || 'autre'] || 'pere'
       const genMap: Record<string, string> = {
         'pere': 'G0', 'mere': 'G0',
         'grand-pere': 'G-1', 'grand-mere': 'G-1',

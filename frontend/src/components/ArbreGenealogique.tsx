@@ -76,6 +76,21 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
   // userData.conjoint* (jamais validés par l'autre personne) quand présent.
   const [realConjoint, setRealConjoint] = useState<{ numeroH: string; prenom: string; nomFamille: string; genre: string; photo?: string } | null>(null)
 
+  // Défunts enregistrés en base (arbre familial côté serveur) — jamais lus du téléphone
+  const [deceasedServeur, setDeceasedServeur] = useState<any[]>([])
+  useEffect(() => {
+    if (!userData.numeroH) return
+    let annule = false
+    const token = localStorage.getItem('token')
+    fetch(`${API_BASE}/api/family-tree/tree`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!annule) setDeceasedServeur(data?.success && Array.isArray(data.tree?.deceasedMembers) ? data.tree.deceasedMembers : [])
+      })
+      .catch(() => { if (!annule) setDeceasedServeur([]) })
+    return () => { annule = true }
+  }, [userData.numeroH])
+
   useEffect(() => {
     if (!showZoomMenu) return
     const handleClick = (e: MouseEvent) => {
@@ -102,7 +117,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
 
   useEffect(() => {
     // Construire automatiquement l'arbre généalogique selon les conditions remplies
-    const autoBuiltTree = buildFamilyTree(userData)
+    const autoBuiltTree = buildFamilyTree(userData, deceasedServeur)
     setFamilyMembers(autoBuiltTree)
 
     // Obtenir les recommandations pour compléter l'arbre
@@ -312,7 +327,7 @@ export function ArbreGenealogique({ userData, cercleCounts, treeHidden = [], onT
         setPendingInvitationCount(pending.length)
       })
       .catch((err) => console.error('Invitations:', err))
-  }, [userData])
+  }, [userData, deceasedServeur])
 
   // Documents familiaux : enregistrés en base (/api/family-data/documents)
   const familyDataHeaders = (): HeadersInit => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token') || ''}` })

@@ -125,22 +125,24 @@ export default function Guinee() {
   const loadGroups = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/regions/guinee/groups`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups?region=Guinée`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success !== false) {
         setGroups(data.groups || []);
       } else {
-        setGroups(getDefaultGroups());
+        // Jamais d'organisations inventées affichées comme réelles : liste vide
+        console.error('Erreur lors du chargement des groupes:', data.message);
+        setGroups([]);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des groupes:', error);
-      setGroups(getDefaultGroups());
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -191,7 +193,7 @@ export default function Guinee() {
   const joinGroup = async (groupId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/regions/guinee/groups/${groupId}/join`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${groupId}/join`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -200,11 +202,12 @@ export default function Guinee() {
         body: JSON.stringify({ numeroH: userData?.numeroH })
       });
       
-      if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         alert('Vous avez rejoint le Organisation !');
         loadGroups();
       } else {
-        alert('Erreur lors de l\'adhésion au Organisation');
+        alert(data.message || 'Erreur lors de l\'adhésion au Organisation');
       }
     } catch (error) {
       console.error('Erreur:', error);
@@ -229,7 +232,7 @@ export default function Guinee() {
       }
       
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/api/regions/guinee/groups/${selectedGroup.id}/posts`, {
+      const response = await fetch(`${API_BASE}/api/regions/groups/${selectedGroup.id}/posts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -237,12 +240,13 @@ export default function Guinee() {
         body: formData
       });
       
-      if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         alert('Publication créée avec succès !');
         setNewPost({ content: '', type: 'text', mediaFile: null, location: '', tags: [''] });
         loadGroups();
       } else {
-        alert('Erreur lors de la création de la publication');
+        alert(data.message || 'Erreur lors de la création de la publication');
       }
     } catch (error) {
       console.error('Erreur:', error);
@@ -266,13 +270,14 @@ export default function Guinee() {
         })
       });
       
-      if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         alert('Événement créé avec succès !');
         setShowEventForm(false);
         setNewEvent({ title: '', description: '', date: '', time: '', location: '', maxParticipants: 50, type: 'cultural' });
         loadGroups();
       } else {
-        alert('Erreur lors de la création de l\'événement');
+        alert(data.message || 'Erreur lors de la création de l\'événement');
       }
     } catch (error) {
       console.error('Erreur:', error);
@@ -296,13 +301,14 @@ export default function Guinee() {
         })
       });
       
-      if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success) {
         alert('Annonce créée avec succès !');
         setShowAnnouncementForm(false);
         setNewAnnouncement({ title: '', content: '', priority: 'normal', category: 'general' });
         loadGroups();
       } else {
-        alert('Erreur lors de la création de l\'annonce');
+        alert(data.message || 'Erreur lors de la création de l\'annonce');
       }
     } catch (error) {
       console.error('Erreur:', error);

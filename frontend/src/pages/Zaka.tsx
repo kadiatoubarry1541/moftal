@@ -190,6 +190,7 @@ export default function Zaka() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [zakatCalculations, setZakatCalculations] = useState<ZakatCalculation[]>([]);
   const [communities, setCommunities] = useState<ReligiousCommunity[]>([]);
+  const [loadErrors, setLoadErrors] = useState<{ poorPeople: string; communities: string }>({ poorPeople: '', communities: '' });
 
   // Compte Zakat du donateur
   const [monCompteZakat, setMonCompteZakat] = useState<{ solde: number; totalDepose: number; totalDonne: number } | null>(null);
@@ -339,19 +340,16 @@ export default function Zaka() {
         } else {
           setCommunities(allCommunities.filter((c: ReligiousCommunity) => c.religion === 'Islam'));
         }
+        setLoadErrors(prev => ({ ...prev, communities: '' }));
       } else {
-        const defaultComms = getDefaultCommunities();
-        const userIsAdmin = userData ? isAdmin(userData) : false;
-        if (userIsAdmin) {
-          // Pour l'admin, on peut ajouter d'autres communautés par défaut si nécessaire
-          setCommunities(defaultComms);
-        } else {
-          setCommunities(defaultComms);
-        }
+        // Jamais de communautés inventées affichées comme réelles
+        setCommunities([]);
+        setLoadErrors(prev => ({ ...prev, communities: 'Impossible de charger les communautés.' }));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des communautés:', error);
-      setCommunities(getDefaultCommunities());
+      setCommunities([]);
+      setLoadErrors(prev => ({ ...prev, communities: 'Impossible de charger les communautés : vérifiez votre connexion.' }));
     }
   };
   
@@ -636,24 +634,16 @@ export default function Zaka() {
         } else {
           setPoorPeople(allPoorPeople.filter((p: PoorPerson) => p.religion === 'Islam'));
         }
+        setLoadErrors(prev => ({ ...prev, poorPeople: '' }));
       } else {
-        const defaultPeople = getDefaultPoorPeople();
-        const userIsAdmin = userData ? isAdmin(userData) : false;
-        if (userIsAdmin) {
-          setPoorPeople(defaultPeople);
-        } else {
-          setPoorPeople(defaultPeople.filter(p => p.religion === 'Islam'));
-        }
+        // Jamais de personnes ni de numéros inventés affichés comme réels
+        setPoorPeople([]);
+        setLoadErrors(prev => ({ ...prev, poorPeople: 'Impossible de charger la liste des bénéficiaires.' }));
       }
     } catch (error) {
       console.error('Erreur lors du chargement des pauvres:', error);
-      const defaultPeople = getDefaultPoorPeople();
-      const userIsAdmin = userData ? isAdmin(userData) : false;
-      if (userIsAdmin) {
-        setPoorPeople(defaultPeople);
-      } else {
-        setPoorPeople(defaultPeople.filter(p => p.religion === 'Islam'));
-      }
+      setPoorPeople([]);
+      setLoadErrors(prev => ({ ...prev, poorPeople: 'Impossible de charger la liste des bénéficiaires : vérifiez votre connexion.' }));
     }
   };
 
@@ -999,6 +989,11 @@ export default function Zaka() {
                   </p>
                 </div>
               )}
+              {loadErrors.poorPeople ? (
+                <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">{loadErrors.poorPeople}</div>
+              ) : filteredPoorPeople.length === 0 && (
+                <div className="mb-4 p-4 bg-gray-50 text-gray-600 rounded-lg text-sm">Aucun bénéficiaire pour le moment.</div>
+              )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPoorPeople.map((person) => (
                   <div key={person.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
@@ -1294,6 +1289,9 @@ export default function Zaka() {
                   {t('zaka.create_community_btn')}
                 </button>
               </div>
+              {loadErrors.communities && (
+                <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg text-sm">{loadErrors.communities}</div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {communities.map((community) => (

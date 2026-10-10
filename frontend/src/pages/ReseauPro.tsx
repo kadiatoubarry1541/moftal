@@ -211,14 +211,26 @@ export default function ReseauPro() {
   async function saveProfile() {
     if (!pForm.nom_structure || !pForm.ville) return;
     setSaving(true);
-    const r = await fetch(`${BASE}/${type}/register`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
-    const d = await r.json();
-    setSaving(false);
-    if (d.success) { setProfile(d.profile); setEditMode(false); }
+    try {
+      const r = await fetch(`${BASE}/${type}/register`, { method: "POST", headers: auth(), body: JSON.stringify(pForm) });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.success) { setProfile(d.profile); setEditMode(false); }
+      else alert(d.message || "Le profil n'a pas été enregistré. Réessayez.");
+    } catch {
+      alert("Le profil n'a pas été enregistré : vérifiez votre connexion.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function acceptConn(fromNh: string) {
-    await fetch(`${BASE}/${type}/connect/${fromNh}/accept`, { method: "PUT", headers: auth() });
+    try {
+      const r = await fetch(`${BASE}/${type}/connect/${fromNh}/accept`, { method: "PUT", headers: auth() });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || d.success === false) alert(d.message || "La connexion n'a pas été acceptée. Réessayez.");
+    } catch {
+      alert("La connexion n'a pas été acceptée : vérifiez votre connexion.");
+    }
     loadConnections();
   }
 
