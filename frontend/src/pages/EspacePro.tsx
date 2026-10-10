@@ -9,6 +9,7 @@ import { AddPersonModal } from "../components/AddPersonModal";
 import { normaliserLogo } from "../utils/logoImage";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AccueilAppGestion from "../components/AccueilAppGestion";
+import { getTypeInfo } from "../components/EspaceProModals";
 
 interface ProAccount {
   id: string;
@@ -31,6 +32,7 @@ interface ProAccount {
   // Calculé par le serveur : false = formule Visibilité + Rendez-vous (Gestion Interne non payée)
   hasGestionInterne?: boolean;
   planType?: "visibility" | "full" | null;
+  tenant_code?: string | null;
   gestionInterneValidUntil?: string | null;
 }
 
@@ -736,6 +738,28 @@ export default function EspacePro() {
 
   /* ---- Chargement initial ---- */
   useEffect(() => { loadAccount(); }, [id]);
+  // Formule complète, dans SON application (installée, ou sur gestions.moftal.com) :
+  // l'application s'ouvre toujours sur la GESTION INTERNE complète, jamais sur
+  // cette page (qui ressemble à la formule Visibilité). Corrige aussi les
+  // applications déjà installées dont le démarrage pointait ici.
+  // ?rdv=1 : ouverte exprès depuis la gestion pour les demandes de rendez-vous.
+  useEffect(() => {
+    if (!account) return;
+    const me = getSessionUser();
+    const estProprietaire = !!me && me.numeroH === account.ownerNumeroH;
+    const enModeApp = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
+    const dansApp = enModeApp || window.location.hostname.startsWith("gestions.");
+    const depuisGestion = new URLSearchParams(window.location.search).get("rdv") === "1";
+    const complete = account.status === "approved" && account.planType !== "visibility"
+      && (account.hasGestionInterne ?? true);
+    if (!estProprietaire || !dansApp || depuisGestion || !complete) return;
+    const chemin = getTypeInfo(account.type).path;
+    if (account.tenant_code) { navigate(`/${chemin}/${account.tenant_code}`, { replace: true }); return; }
+    fetch(`${API}/api/professionals/${account.id}/ensure-tenant`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.success && d.tenantCode) navigate(`/${chemin}/${d.tenantCode}`, { replace: true }); })
+      .catch(() => { /* reste sur cette page : rien n'est perdu */ });
+  }, [account?.id]);
   useEffect(() => { if (tab === 'retrait' && account) loadMesDemandes(); }, [tab, account?.id]);
   useEffect(() => { if (tab === 'membres' && account) loadMembers(); }, [tab, account?.id]);
   useEffect(() => {
@@ -1351,7 +1375,8 @@ export default function EspacePro() {
         name={account.name}
         description={`Gestion ${typeInfo.label} — ${account.name}`}
         proId={account.id}
-        startUrl={`/espace-pro/${account.id}`}
+        // L'application installée s'ouvre sur la gestion interne complète
+        startUrl={account.tenant_code ? `/${getTypeInfo(account.type).path}/${account.tenant_code}` : `/espace-pro/${account.id}`}
         themeColor={SERVICE_MANIFEST_COLOR[serviceKey] || "#1a8f1a"}
       />
       <div className="max-w-5xl mx-auto px-4 pt-3 pb-2 space-y-3">
