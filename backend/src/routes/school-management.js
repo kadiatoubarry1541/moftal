@@ -1,4 +1,5 @@
 import express from 'express';
+import { trouverPersonne } from '../utils/trouverPersonne.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
@@ -531,7 +532,7 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
   try {
     await ensureLiensParentsEcole();
     const rows = await sequelize.query(
-      `SELECT m.*,u.prenom,u.nom_famille AS nom,u.photo,
+      `SELECT m.*,u.prenom,u.nom_famille AS nom,u.photo,u.tel1 AS telephone_compte,
          COALESCE((SELECT json_agg(json_build_object('id',s.id,'prenom',s.prenom,'nom',s.nom) ORDER BY s.prenom)
                    FROM school_member_students l JOIN school_students s ON s.id=l.student_id AND s.tenant_code=l.tenant_code
                    WHERE l.tenant_code=m.tenant_code AND l.numero_h=m.numero_h), '[]'::json) AS enfants
@@ -544,14 +545,13 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
 
 router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { numero_h, role, linked_student_id } = req.body;
+    const { role, linked_student_id } = req.body;
     const code = req.params.tenantCode;
-    if (!numero_h) return res.status(400).json({ success: false, message: 'NuméroH requis.' });
-    const [user] = await sequelize.query(
-      `SELECT numero_h AS "numeroH", prenom, nom_famille AS nom FROM users WHERE numero_h=:n LIMIT 1`,
-      { replacements: { n: numero_h }, type: sequelize.QueryTypes.SELECT }
-    );
-    if (!user) return res.status(404).json({ success: false, message: `Aucun utilisateur avec le numéroH : ${numero_h}` });
+    // NuméroH ou numéro de téléphone du compte
+    const trouve = await trouverPersonne(req.body.numero_h || req.body.telephone);
+    if (!trouve.personne) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
+    const user = trouve.personne;
+    const numero_h = user.numero_h;
     // L'élève relié doit appartenir à CET établissement
     let sid = null;
     if (linked_student_id !== undefined && linked_student_id !== null && linked_student_id !== '') {

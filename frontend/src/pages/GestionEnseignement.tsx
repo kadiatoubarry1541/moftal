@@ -382,12 +382,26 @@ export default function GestionEnseignement({ mode }: Props) {
     if (!parentsDe || !nhParent.trim()) return;
     setParentsBusy(true);
     try {
-      const d = await post("/members/add", { numero_h: nhParent.trim(), role: "parent", linked_student_id: parentsDe.id });
+      const v = nhParent.trim();
+      const tel = !/[a-z]/i.test(v) && v.replace(/[^0-9]/g, "").length >= 8;
+      const d = await post("/members/add", { ...(tel ? { telephone: v } : { numero_h: v }), role: "parent", linked_student_id: parentsDe.id });
       if (!d.success) { showToast(d.message || "Erreur", false); return; }
       showToast(d.user ? `Parent relié (${d.user.prenom} ${d.user.nom})` : "Parent relié");
       setNhParent(""); await chargerMembres();
     } catch { showToast("Erreur de connexion. Réessayez.", false); }
     finally { setParentsBusy(false); }
+  };
+
+  // Retirer en tapant le NuméroH ou le numéro de téléphone du parent
+  const chiffres9 = (v: any) => String(v || "").replace(/[^0-9]/g, "").slice(-9);
+  const retirerParIdentifiant = () => {
+    const v = nhParent.trim();
+    if (!v) return;
+    const tel = !/[a-z]/i.test(v) && chiffres9(v).length >= 8 ? chiffres9(v) : "";
+    const m = parentsDeLEleve.find((p) =>
+      tel ? chiffres9(p.telephone_compte) === tel : String(p.numero_h || "").trim().toLowerCase() === v.toLowerCase());
+    if (!m) { showToast(`Aucun parent de ${parentsDe?.prenom || "cet élève"} avec ce ${tel ? "numéro de téléphone" : "NuméroH"}.`, false); return; }
+    void delierParent(m).then(() => setNhParent(""));
   };
 
   const delierParent = async (m: any) => {
@@ -419,17 +433,20 @@ export default function GestionEnseignement({ mode }: Props) {
                 <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 10 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{[m.prenom, m.nom].filter(Boolean).join(" ") || m.nom_display || m.numero_h}</div>
-                    <div style={{ fontSize: 11, color: "#94a3b8" }}>{m.numero_h}{(m.enfants?.length || 0) > 1 ? ` · ${m.enfants.length} enfants suivis` : ""}</div>
+                    <div style={{ fontSize: 11, color: "#94a3b8" }}>{m.numero_h}{m.telephone_compte ? ` · 📞 ${m.telephone_compte}` : ""}{(m.enfants?.length || 0) > 1 ? ` · ${m.enfants.length} enfants suivis` : ""}</div>
                   </div>
                   <button disabled={parentsBusy} onClick={() => delierParent(m)} style={{ color: "#ef4444", background: "#fef2f2", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Retirer</button>
                 </div>
               ))}
             </div>}
+        <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 6px" }}>NuméroH ou numéro de téléphone du parent :</p>
+        <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder="Ex. G96C1P1… ou 620 00 00 00" inputMode="text"
+          style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, marginBottom: 8 }} />
         <div style={{ display: "flex", gap: 8 }}>
-          <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder="NuméroH du parent"
-            style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13 }} />
           <button disabled={parentsBusy || !nhParent.trim()} onClick={lierParent}
-            style={{ background: V.color, color: "white", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: parentsBusy || !nhParent.trim() ? 0.6 : 1 }}>Relier</button>
+            style={{ flex: 1, background: V.color, color: "white", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: parentsBusy || !nhParent.trim() ? 0.6 : 1 }}>Relier</button>
+          <button disabled={parentsBusy || !nhParent.trim()} onClick={retirerParIdentifiant}
+            style={{ flex: 1, background: "#fef2f2", color: "#ef4444", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: parentsBusy || !nhParent.trim() ? 0.6 : 1 }}>Retirer</button>
         </div>
       </div>
     </div>

@@ -7,6 +7,7 @@
  */
 
 import express from 'express';
+import { trouverPersonne } from '../utils/trouverPersonne.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
@@ -508,7 +509,7 @@ router.put('/:tenantCode/fees/:id/pay', authenticate, verifyTenant, async (req, 
 router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) => {
   await ensureLiensParentsMadrasa();
   const [members] = await sequelize.query(
-    `SELECT m.*, COALESCE(u.prenom || ' ' || u.nom_famille, m.nom_display) AS nom_display,
+    `SELECT m.*, COALESCE(u.prenom || ' ' || u.nom_famille, m.nom_display) AS nom_display, u.tel1 AS telephone_compte,
        COALESCE((SELECT json_agg(json_build_object('id', s.id, 'prenom', s.prenom, 'nom', s.nom) ORDER BY s.prenom)
                  FROM madrasa_member_students l JOIN madrasa_students s ON s.id = l.student_id AND s.tenant_code = l.tenant_code
                  WHERE l.tenant_code = m.tenant_code AND l.numero_h = m.numero_h), '[]'::json) AS enfants
@@ -522,13 +523,14 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
 
 router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
-  const { numero_h, role, linked_student_id } = req.body;
-  if (!numero_h) return res.status(400).json({ success: false, message: 'NuméroH requis.' });
-  const [users] = await sequelize.query(
-    `SELECT prenom, nom_famille FROM users WHERE numero_h = :nh LIMIT 1`, { replacements: { nh: numero_h } }
-  );
-  if (!users.length) return res.status(404).json({ success: false, message: 'Utilisateur introuvable sur la plateforme.' });
-  const user = users[0];
+  const { role, linked_student_id } = req.body;
+  // NuméroH ou numéro de téléphone du compte
+  let trouve;
+  try { trouve = await trouverPersonne(req.body.numero_h || req.body.telephone); }
+  catch (err) { return res.status(500).json({ success: false, message: err.message }); }
+  if (!trouve.personne) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
+  const user = { prenom: trouve.personne.prenom, nom_famille: trouve.personne.nom };
+  const numero_h = trouve.personne.numero_h;
   // L'étudiant relié doit appartenir à CET institut
   let lsid = null;
   if (linked_student_id !== undefined && linked_student_id !== null && linked_student_id !== '') {
