@@ -1119,6 +1119,26 @@ router.delete('/admin/:id', authenticate, requireAdmin, async (req, res) => {
 // PUT /api/professionals/admin/:id/identite — l'admin modifie le nom et/ou le logo
 // d'un compte pro (comptes créés pour des personnes éloignées). Le changement suit
 // partout : compte pro, gestion interne, site vitrine, icône de l'app.
+// @route   PUT /api/professionals/admin/:id/formule
+// @desc    Admin : fixer la formule d'un compte (« visibility » = Visibilité +
+//          Rendez-vous ; « full » = + Gestion Interne). Rien n'est supprimé :
+//          les données de la gestion restent en base et réapparaissent si le
+//          compte repasse en Gestion Interne.
+router.put('/admin/:id/formule', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const planType = req.body?.planType;
+    if (!['visibility', 'full'].includes(planType)) {
+      return res.status(400).json({ success: false, message: 'Formule invalide.' });
+    }
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    await account.update({ planType });
+    res.json({ success: true, account: { id: account.id, planType: account.planType } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 router.put('/admin/:id/identite', authenticate, requireAdmin, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);

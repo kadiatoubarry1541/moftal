@@ -41,11 +41,12 @@ export async function compteAGestionInterne(proAccount) {
 async function trouverPaiementVie(ownerNumeroH, proAccountId) {
   const where = { payerNumeroH: ownerNumeroH, purpose: 'gestion_interne_vie', status: 'completed' };
   if (proAccountId) {
-    where[Op.or] = [
-      { relatedId: String(proAccountId) },
-      { relatedId: null },
-      { relatedId: '' },
-    ];
+    // Un ancien paiement sans compte précisé ne vaut que si le propriétaire n'a
+    // qu'UN compte pro : sinon il débloquerait aussi ses comptes « Visibilité ».
+    const nbComptes = await ProfessionalAccount.count({ where: { ownerNumeroH } });
+    where[Op.or] = nbComptes <= 1
+      ? [{ relatedId: String(proAccountId) }, { relatedId: null }, { relatedId: '' }]
+      : [{ relatedId: String(proAccountId) }];
   }
   return Payment.findOne({ where });
 }
