@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { getSocket, disconnectSocket } from '../services/socket'
+import { getSocket } from '../services/socket'
 import { useI18n } from '../i18n/useI18n'
 import CallModal from './CallModal'
 import { useConversationLue } from '../utils/messagesNonLus'
@@ -128,7 +128,8 @@ export function FamilyGroupChat({ myNumeroH, prenom, nomFamille }: Props) {
   useEffect(() => {
     loadFamilyMessages()
     loadPartner()
-    return () => { disconnectSocket() }
+    // Pas de disconnectSocket() ici : le socket est partagé par toute l'app.
+    // Les écouteurs de ce composant sont retirés (socket.off) par leur propre effet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -292,7 +292,7 @@ router.post('/groups/:id/messages', upload.single('media'), async (req, res) => 
       success: true,
       message: {
         ...message.toJSON(),
-        authorName: user ? `${user.prenom} ${user.nom_famille}` : 'Utilisateur inconnu'
+        authorName: user ? `${user.prenom} ${user.nomFamille}` : 'Utilisateur inconnu'
       }
     });
   } catch (error) {
@@ -350,7 +350,7 @@ router.get('/groups/:id/messages', async (req, res) => {
         const user = await User.findOne({ where: { numero_h: msg.numeroH } });
         return {
           ...msg.toJSON(),
-          authorName: user ? `${user.prenom} ${user.nom_famille}` : 'Utilisateur inconnu'
+          authorName: user ? `${user.prenom} ${user.nomFamille}` : 'Utilisateur inconnu'
         };
       })
     );

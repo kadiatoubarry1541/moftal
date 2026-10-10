@@ -407,7 +407,11 @@ export default function Parents({ inline, focusNumeroH }: { inline?: boolean; fo
                     <p className="font-semibold text-slate-800">
                       {inv.parent ? `${inv.parent.prenom} ${inv.parent.nomFamille}` : inv.parentNumeroH}
                     </p>
-                    <p className="text-sm text-slate-500">{getNumeroHForDisplay(inv.parentNumeroH, false)}</p>
+                    <p className="text-sm text-slate-500">
+                      {(inv as any).demandeDeLEnfant
+                        ? `Dit être votre enfant · ${getNumeroHForDisplay((inv as any).childNumeroH || '', false)}`
+                        : getNumeroHForDisplay(inv.parentNumeroH, false)}
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-2">

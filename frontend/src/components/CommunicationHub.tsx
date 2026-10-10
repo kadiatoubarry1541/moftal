@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { getSocket, disconnectSocket } from '../services/socket'
+import { getSocket } from '../services/socket'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5002'
 
@@ -103,9 +103,8 @@ export function CommunicationHub({ userData, showGroups = true, showBroadcast = 
     return () => { socket.off('family-message', onFamilyMsg) }
   }, [userData?.nomFamille, userData?.numeroH, activeTab])
 
-  useEffect(() => {
-    return () => { disconnectSocket() }
-  }, [])
+  // Pas de disconnectSocket() au démontage : le socket est partagé par toute
+  // l'app ; l'effet ci-dessus retire déjà son écouteur (socket.off).
 
   const loadGallery = useCallback(async () => {
     const token = localStorage.getItem('token')

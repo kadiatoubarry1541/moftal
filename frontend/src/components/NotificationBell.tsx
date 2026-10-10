@@ -44,7 +44,7 @@ function getNavigationPath(type: string): string | null {
     case "friend_request": return "/famille/mes-amours?tab=requests";
     case "couple_request": return "/couple";
     case "tree_request":
-    case "parent_request": return "/arbre";
+    case "parent_request": return "/famille/parents";
     default: return null;
   }
 }
