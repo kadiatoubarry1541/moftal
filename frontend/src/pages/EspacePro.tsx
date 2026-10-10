@@ -850,8 +850,10 @@ export default function EspacePro() {
         setAccount(prev => prev ? { ...prev, ...vitrineInfo } : prev);
         setVitrineSuccess('✅ Informations publiées sur votre vitrine !');
         setTimeout(() => setVitrineSuccess(''), 4000);
+      } else {
+        alert(data.message || "Les informations n'ont pas pu être enregistrées.");
       }
-    } catch { /* ignore */ } finally { setVitrineSaving(false); }
+    } catch { alert("Erreur de connexion : rien n'a été enregistré. Réessayez."); } finally { setVitrineSaving(false); }
   };
 
   const publishServices = async () => {
@@ -868,8 +870,10 @@ export default function EspacePro() {
         setAccount(prev => prev ? { ...prev, services: editServices, specialties: editSpecialties } : prev);
         setServicesSuccess(true);
         setTimeout(() => setServicesSuccess(false), 3500);
+      } else {
+        alert(data.message || "Les services n'ont pas pu être enregistrés.");
       }
-    } catch { /* ignore */ } finally { setServicesSaving(false); }
+    } catch { alert("Erreur de connexion : rien n'a été enregistré. Réessayez."); } finally { setServicesSaving(false); }
   };
 
   const addPublication = async () => {
@@ -1257,7 +1261,7 @@ export default function EspacePro() {
       {isAdminViewing && (
         <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-3 text-sm font-semibold sticky top-[72px] z-50 shadow-md">
           <span>👁️ Mode Admin — Vue lecture seule · Compte de <strong>{account.ownerNumeroH}</strong></span>
-          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Actions désactivées · logo modifiable</span>
+          <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Profil modifiable par l'admin</span>
         </div>
       )}
 
@@ -2121,10 +2125,10 @@ export default function EspacePro() {
               <div className="p-5 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    { key: 'name' as const, label: 'Nom de l\'établissement', placeholder: 'Ex : Clinique Al Baraka' },
+                    { key: 'name' as const, label: 'Nom de l\'entreprise', placeholder: 'Ex : Boutique Barry & Fils' },
                     { key: 'phone' as const, label: 'Téléphone', placeholder: 'Ex : +224 620 000 000' },
                     { key: 'email' as const, label: 'Email', placeholder: 'Ex : contact@etablissement.com' },
-                    { key: 'address' as const, label: 'Adresse', placeholder: 'Ex : Quartier Almamya' },
+                    { key: 'address' as const, label: 'Adresse (quartier)', placeholder: 'Ex : quartier Almamya' },
                     { key: 'city' as const, label: 'Ville', placeholder: 'Ex : Conakry' },
                     { key: 'country' as const, label: 'Pays', placeholder: 'Ex : Guinée' },
                   ].map(f => (

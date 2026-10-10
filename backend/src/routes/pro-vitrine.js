@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth.js';
+import { authenticate, requireAdmin, estAdminUtilisateur } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import ProPublication from '../models/ProPublication.js';
 import { sequelize } from '../../config/database.js';
@@ -8,9 +8,9 @@ const router = express.Router();
 
 const MASTER_ADMIN = 'G7C7P7R7E7F7 7';
 
-// G7 peut gérer n'importe quel compte, le propriétaire gère le sien
-function canManage(account, userId) {
-  return account.ownerNumeroH === userId || userId === MASTER_ADMIN;
+// Un admin peut gérer n'importe quel compte, le propriétaire gère le sien
+function canManage(account, userId, user) {
+  return account.ownerNumeroH === userId || userId === MASTER_ADMIN || estAdminUtilisateur(user);
 }
 
 // ─── COMPTE PAR TENANT CODE (admin ou propriétaire) ──────────────────
@@ -19,7 +19,7 @@ router.get('/by-tenant/:tenantCode/account', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findOne({ where: { tenant_code: req.params.tenantCode } });
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId, req.user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
     res.json({ success: true, account });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -83,7 +83,7 @@ router.post('/:id/publications', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId, req.user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const { type, titre, contenu, image, video, prix, disponible } = req.body;
     if (!titre?.trim()) return res.status(400).json({ success: false, message: 'Titre requis' });
@@ -109,7 +109,7 @@ router.put('/:id/publications/:pubId', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId, req.user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const pub = await ProPublication.findByPk(req.params.pubId);
     if (!pub || String(pub.professionalAccountId) !== String(req.params.id)) {
@@ -137,7 +137,7 @@ router.delete('/:id/publications/:pubId', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId, req.user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const pub = await ProPublication.findByPk(req.params.pubId);
     if (!pub || String(pub.professionalAccountId) !== String(req.params.id)) {
@@ -158,7 +158,7 @@ router.put('/:id/publish-info', authenticate, async (req, res) => {
   try {
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (!canManage(account, req.userId)) return res.status(403).json({ success: false, message: 'Non autorisé' });
+    if (!canManage(account, req.userId, req.user)) return res.status(403).json({ success: false, message: 'Non autorisé' });
 
     const { name, description, address, city, country, phone, email, services, specialties, photo } = req.body;
 
