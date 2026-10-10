@@ -8,6 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { AddPersonModal } from "../components/AddPersonModal";
 import { normaliserLogo } from "../utils/logoImage";
 import LogoEtablissement from "../components/LogoEtablissement";
+import AccueilAppGestion from "../components/AccueilAppGestion";
 
 interface ProAccount {
   id: string;
@@ -735,18 +736,6 @@ export default function EspacePro() {
 
   /* ---- Chargement initial ---- */
   useEffect(() => { loadAccount(); }, [id]);
-  // Formule « Visibilité + Gestion Interne » : le propriétaire arrive directement dans
-  // sa gestion interne complète (cette page-ci est le modèle de la formule Visibilité).
-  // ?rdv=1 : ouverte depuis la gestion pour traiter les demandes de rendez-vous.
-  useEffect(() => {
-    if (!account) return;
-    const me = getSessionUser();
-    const estProprietaire = !!me && me.numeroH === account.ownerNumeroH;
-    const depuisGestion = new URLSearchParams(window.location.search).get("rdv") === "1";
-    if (estProprietaire && !depuisGestion && account.status === "approved" && account.hasGestionInterne && account.planType === "full") {
-      navigate(`/gestion-interne?tab=pro&ouvrir=${account.id}`, { replace: true });
-    }
-  }, [account?.id]);
   useEffect(() => { if (tab === 'retrait' && account) loadMesDemandes(); }, [tab, account?.id]);
   useEffect(() => { if (tab === 'membres' && account) loadMembers(); }, [tab, account?.id]);
   useEffect(() => {
@@ -1249,6 +1238,17 @@ export default function EspacePro() {
     return (
       <SubscriptionPaymentWall account={account} userData={userData} onSuccess={() => window.location.reload()} />
     );
+  }
+
+  // Formule « Visibilité + Gestion Interne » vue sur le site Moftal par son
+  // propriétaire : tout se fait dans SA propre application. Ici, seulement
+  // « Installer ma gestion interne » et « Partager le lien ». Dans l'application
+  // (gestions.moftal.com), cette page reste complète : demandes, historique,
+  // membres, retrait, paramètres, profil et vitrine.
+  const dansAppGestion = window.location.hostname.startsWith("gestions.");
+  const estProprietaireCompte = !!currentUser && currentUser.numeroH === account.ownerNumeroH;
+  if (!dansAppGestion && estProprietaireCompte && account.status === "approved" && hasGestionInterne && account.planType !== "visibility") {
+    return <AccueilAppGestion account={account} couleur={SERVICE_MANIFEST_COLOR[serviceKey] || "#1a8f1a"} />;
   }
 
   /* ============================================================
