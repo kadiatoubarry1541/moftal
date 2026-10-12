@@ -581,10 +581,7 @@ export default function EditProfileModal({
               </button>
             </div>
             {photoCassee && !photoFile && (
-              <p className="text-sm text-amber-700 text-center">
-                Votre photo n'a pas pu être chargée. Choisissez-la à nouveau puis enregistrez :
-                elle sera gardée définitivement.
-              </p>
+              <p className="text-sm text-gray-600 text-center">Ajoutez votre photo de profil.</p>
             )}
           </div>
 
