@@ -100,16 +100,20 @@ export default function AccueilAppGestion({ account, couleur }: { account: any; 
         </button>
         <p className="mt-2 text-xs text-gray-400">Votre application s'ouvre et propose l'installation : confirmez, c'est tout.</p>
 
+        {/* Roue de secours : déjà installée, iPhone / Firefox, installation qui
+            échoue, nouvel appareil — la gestion s'ouvre sans rien installer */}
+        <button onClick={() => ouvrir(false)} disabled={!tenantCode || enCours}
+          className="mt-4 w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 disabled:opacity-60">
+          📂 Ouvrir ma gestion
+        </button>
+        <p className="mt-1.5 text-xs text-gray-400">Déjà installée, ou installation impossible sur cet appareil ? Ouvrez-la directement.</p>
+
         <button onClick={partager}
           className="mt-5 w-full py-3.5 rounded-2xl text-sm font-bold border-2"
           style={{ borderColor: couleur, color: couleur }}>
           {copie ? "✅ Lien copié" : "🔗 Partager le lien à mes membres"}
         </button>
 
-        <button onClick={() => ouvrir(false)} disabled={!tenantCode || enCours}
-          className="mt-5 text-xs font-semibold text-gray-500 underline disabled:opacity-50">
-          Déjà installée ? Ouvrir ma gestion
-        </button>
       </div>
       <button onClick={() => navigate("/")} className="mt-6 text-sm text-gray-500">← Retour à Moftal</button>
     </div>
