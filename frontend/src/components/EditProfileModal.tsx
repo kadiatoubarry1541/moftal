@@ -88,6 +88,8 @@ export default function EditProfileModal({
   const [formData, setFormData] = useState<UserData | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  // Photo enregistrée qui ne se charge plus (ancien fichier perdu par le serveur)
+  const [photoCassee, setPhotoCassee] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [vitrinePhoto1File, setVitrinePhoto1File] = useState<File | null>(null);
@@ -137,6 +139,7 @@ export default function EditProfileModal({
       });
       setGeo({ paysCode: "", continentCode: "", regionCode: "" });
       setPhotoPreview(getPhotoUrl(userData.photo));
+      setPhotoCassee(false);
       setPhotoFile(null);
       setVideoFile(null);
       setVideoPreview(null);
@@ -164,6 +167,7 @@ export default function EditProfileModal({
       setPhotoFile(file);
       const url = URL.createObjectURL(file);
       setPhotoPreview(url);
+      setPhotoCassee(false);
     }
   };
 
@@ -547,10 +551,11 @@ export default function EditProfileModal({
           {/* Photo de profil */}
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              {photoPreview ? (
+              {photoPreview && !photoCassee ? (
                 <img
                   src={photoPreview}
                   alt="Photo de profil"
+                  onError={() => setPhotoCassee(true)}
                   className="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
                 />
               ) : (
@@ -575,6 +580,12 @@ export default function EditProfileModal({
                 📷 Choisir une photo
               </button>
             </div>
+            {photoCassee && !photoFile && (
+              <p className="text-sm text-amber-700 text-center">
+                Votre photo n'a pas pu être chargée. Choisissez-la à nouveau puis enregistrez :
+                elle sera gardée définitivement.
+              </p>
+            )}
           </div>
 
           {/* Vidéo d'inscription */}
