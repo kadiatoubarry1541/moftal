@@ -87,6 +87,48 @@ function lienOuvrirDansChrome(code?: string | null) {
   return `intent://${cible}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${secours};end`;
 }
 
+// Essaie d'ouvrir la gestion dans Chrome. Vrai si le téléphone a bien quitté
+// la page ; faux si rien ne s'est ouvert (Chrome absent ou désactivé, app
+// qui bloque le lien…) : on montre alors une autre solution, jamais un
+// bouton qui tourne sans rien faire.
+async function essayerOuvrirChrome(): Promise<boolean> {
+  const code = await Promise.race([
+    demanderCodeOuverture(),
+    new Promise<null>(r => setTimeout(() => r(null), 4000)),
+  ]);
+  let parti = false;
+  const onCache = () => { if (document.hidden) parti = true; };
+  document.addEventListener("visibilitychange", onCache);
+  window.addEventListener("pagehide", onCache);
+  window.location.href = lienOuvrirDansChrome(code);
+  await new Promise(r => setTimeout(r, 2500));
+  document.removeEventListener("visibilitychange", onCache);
+  window.removeEventListener("pagehide", onCache);
+  return parti || document.hidden;
+}
+
+// Adresse de la gestion à coller dans Chrome (sans aucun code de session)
+function lienGestionACopier() {
+  const { origin, pathname } = window.location;
+  return `${origin}${pathname}?installer=1`;
+}
+
+function BoutonCopierLien({ couleur }: { couleur: string }) {
+  const { tr } = useTraduction();
+  const [copie, setCopie] = useState(false);
+  const copier = async () => {
+    const lien = lienGestionACopier();
+    try { await navigator.clipboard.writeText(lien); setCopie(true); }
+    catch { window.prompt(tr("Copiez ce lien :"), lien); }
+  };
+  return (
+    <button type="button" onClick={copier}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "white", color: couleur, border: `1.5px solid ${couleur}`, borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 8, marginInlineStart: 6 }}>
+      {copie ? tr("✅ Lien copié") : tr("📋 Copier le lien")}
+    </button>
+  );
+}
+
 // Code d'ouverture pour « Ouvrir dans Chrome », demandé seulement quand le lien
 // est affiché, et renouvelé avant son expiration (10 min côté serveur).
 function useCodeChrome(actif: boolean) {
@@ -259,9 +301,8 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
     let p = prompt || (window as any).__pwaGestionPrompt as BeforeInstallPromptEvent | null;
     // Hors d'un vrai onglet Chrome (app Moftal, WhatsApp…) : on ouvre Chrome directement
     if (!p && isAndroid() && !estOngletChrome()) {
-      const code = await demanderCodeOuverture();
-      window.location.href = lienOuvrirDansChrome(code);
-      setTimeout(() => setEtat(""), 4000);
+      const parti = await essayerOuvrirChrome();
+      setEtat(parti ? "" : "manuel");
       return;
     }
     // Chrome peut mettre quelques secondes à proposer l'installation après l'ouverture
@@ -302,11 +343,14 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
           <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{tr("✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.")}</p>
         ) : etat === "manuel" ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
-            {isAndroid() && !estOngletChrome() && (
+            {isAndroid() && !estOngletChrome() && (<>
+              <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr("Ici, le téléphone ne permet pas d'installer. Ouvrez la gestion dans Chrome :")}</div>
               <a href={lienOuvrirDansChrome(codeChrome)} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", background: themeColor, color: "white", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", marginBottom: 8 }}>
                 {tr("🌐 Ouvrir dans Chrome")}
               </a>
-            )}
+              <BoutonCopierLien couleur={themeColor} />
+              <div style={{ color: "#64748b", marginBottom: 6 }}>{tr("Si Chrome ne s'ouvre pas : copiez le lien, ouvrez Chrome, collez-le dans la barre d'adresse, connectez-vous, puis :")}</div>
+            </>)}
             {estOngletChrome() && (
               <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr("Elle est peut-être déjà installée : cherchez son icône sur votre écran d'accueil. Sinon :")}</div>
             )}
@@ -724,9 +768,10 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
       // session transmise, et l'installation s'y propose toute seule.
       if (isAndroid() && !estOngletChrome()) {
         setInstalling(true);
-        const code = await demanderCodeOuverture();
-        window.location.href = lienOuvrirDansChrome(code);
-        setTimeout(() => setInstalling(false), 4000);
+        const parti = await essayerOuvrirChrome();
+        setInstalling(false);
+        // Rien ne s'est ouvert : on explique tout de suite l'autre solution
+        if (!parti) setShowToast(true);
         return;
       }
       // Sinon (pas encore prêt, iPhone…) : on explique comment faire.
@@ -787,7 +832,9 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
               >
                 {tr("🌐 Ouvrir dans Chrome")}
               </a>
+              <BoutonCopierLien couleur={themeColor} />
               <div>{tr("Chrome s'ouvre et propose tout de suite d'installer l'application.")}</div>
+              <div style={{ color: "#64748b" }}>{tr("Si Chrome ne s'ouvre pas : copiez le lien, ouvrez Chrome, collez-le dans la barre d'adresse et connectez-vous.")}</div>
               <div style={{ marginTop: 8, fontWeight: 700 }}>{tr("Si rien ne s'ouvre :")}</div>
             </>
           )}

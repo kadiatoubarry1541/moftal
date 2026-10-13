@@ -2,6 +2,12 @@
 // installation de l'application, rapport du mois, bandeau hors connexion,
 // panneau Espace Pro, reçu imprimé et rappel WhatsApp.
 const ar: Record<string, string> = {
+  "Copiez ce lien :": "انسخوا هذا الرابط:",
+  "✅ Lien copié": "✅ تم نسخ الرابط",
+  "📋 Copier le lien": "📋 نسخ الرابط",
+  "Ici, le téléphone ne permet pas d'installer. Ouvrez la gestion dans Chrome :": "هنا لا يسمح الهاتف بالتثبيت. افتحوا الإدارة في متصفح Chrome:",
+  "Si Chrome ne s'ouvre pas : copiez le lien, ouvrez Chrome, collez-le dans la barre d'adresse, connectez-vous, puis :": "إذا لم يُفتح Chrome: انسخوا الرابط، افتحوا Chrome، الصقوه في شريط العنوان، سجّلوا الدخول، ثم:",
+  "Si Chrome ne s'ouvre pas : copiez le lien, ouvrez Chrome, collez-le dans la barre d'adresse et connectez-vous.": "إذا لم يُفتح Chrome: انسخوا الرابط، افتحوا Chrome، الصقوه في شريط العنوان وسجّلوا الدخول.",
   // ── Identité / paramètres ─────────────────────────────────────────────────
   "Logo": "الشعار",
   "Code identifiant de l'établissement": "الرمز التعريفي للمؤسسة",
