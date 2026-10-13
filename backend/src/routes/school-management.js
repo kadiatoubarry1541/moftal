@@ -9,6 +9,7 @@ import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 import { ajouterRoutesCoursEtBibliotheque, numeroHComplet } from './schoolCoursBibliotheque.js';
+import { photoDepuisFormulaire } from '../services/fichiersBase.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -30,6 +31,7 @@ async function ensureSchoolColumns() {
     ALTER TABLE school_students   ADD COLUMN IF NOT EXISTS niveau VARCHAR(80);
     ALTER TABLE school_students   ADD COLUMN IF NOT EXISTS numero_h VARCHAR(60);
     ALTER TABLE school_students   ADD COLUMN IF NOT EXISTS parent_numero_h VARCHAR(60);
+    ALTER TABLE school_students   ADD COLUMN IF NOT EXISTS photo_url TEXT;
     ALTER TABLE school_staff      ADD COLUMN IF NOT EXISTS specialite VARCHAR(120);
     ALTER TABLE school_staff      ADD COLUMN IF NOT EXISTS matiere VARCHAR(120);
     ALTER TABLE school_staff      ADD COLUMN IF NOT EXISTS numero_h VARCHAR(60);
@@ -192,14 +194,17 @@ router.get('/:tenantCode/students', authenticate, verifyTenant, async (req, res)
 
 router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, niveau, numero_h, parent_numero_h } = req.body;
+    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, niveau, numero_h, parent_numero_h, photo_url } = req.body;
     if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
     const code = req.params.tenantCode;
+    await ensureSchoolColumns();
+    // Photo facultative, enregistrée dans la base (table fichiers)
+    const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-eleve' });
     const [cnt] = await sequelize.query(`SELECT COUNT(*) as c FROM school_students WHERE tenant_code=:code`, { replacements: { code }, type: sequelize.QueryTypes.SELECT });
     const mat = `ELV-${code.slice(-4)}-${new Date().getFullYear()}-${String(+cnt.c + 1).padStart(4, '0')}`;
     const [rows] = await sequelize.query(
-      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule,niveau,numero_h,parent_numero_h) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat,:niveau,:nh,:pnh) RETURNING *`,
-      { replacements: { code, nom, prenom, dob: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, mat, niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null }, type: sequelize.QueryTypes.INSERT }
+      `INSERT INTO school_students (tenant_code,nom,prenom,date_naissance,sexe,telephone_parent,nom_parent,adresse,classroom_id,numero_matricule,niveau,numero_h,parent_numero_h,photo_url) VALUES(:code,:nom,:prenom,:dob,:sexe,:tel,:parent,:adr,:cid,:mat,:niveau,:nh,:pnh,:photo) RETURNING *`,
+      { replacements: { code, nom, prenom, dob: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, mat, niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, photo }, type: sequelize.QueryTypes.INSERT }
     );
     res.json({ success: true, student: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -207,15 +212,17 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
 
 router.put('/:tenantCode/students/:id', authenticate, verifyTenant, async (req, res) => {
   try {
-    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, statut, niveau, numero_h, parent_numero_h } = req.body;
+    const { nom, prenom, date_naissance, sexe, telephone_parent, nom_parent, adresse, classroom_id, statut, niveau, numero_h, parent_numero_h, photo_url } = req.body;
     if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
+    await ensureSchoolColumns();
+    const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-eleve' });
     // Un champ que le formulaire n'envoie pas garde sa valeur enregistrée
     await sequelize.query(
       `UPDATE school_students SET nom=:nom,prenom=:prenom,date_naissance=:dob,sexe=COALESCE(:sexe,sexe),telephone_parent=:tel,
          nom_parent=COALESCE(:parent,nom_parent),adresse=COALESCE(:adr,adresse),classroom_id=COALESCE(:cid,classroom_id),statut=:statut,
-         niveau=COALESCE(:niveau,niveau),numero_h=:nh,parent_numero_h=:pnh
+         niveau=COALESCE(:niveau,niveau),numero_h=:nh,parent_numero_h=:pnh,photo_url=COALESCE(:photo,photo_url)
        WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, dob: date_naissance ? String(date_naissance).slice(0, 10) : null, sexe: sexe || null, tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, statut: statut || 'actif', niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, id: req.params.id, code: req.params.tenantCode } }
+      { replacements: { nom, prenom, dob: date_naissance ? String(date_naissance).slice(0, 10) : null, sexe: sexe || null, tel: telephone_parent || null, parent: nom_parent || null, adr: adresse || null, cid: classroom_id || null, statut: statut || 'actif', niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, photo, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -248,9 +255,10 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     const mat = `PROF-${code.slice(-4)}-${String(+cnt.c + 1).padStart(3, '0')}`;
     const mats = matieres || (specialite ? [specialite] : []);
     const nh = await numeroHComplet(numero_h);
+    const photo = await photoDepuisFormulaire(photo_url, { proprietaire: code, usage: 'photo-personnel' });
     const [rows] = await sequelize.query(
       `INSERT INTO school_staff (tenant_code,nom,prenom,role,matieres,specialite,matiere,telephone,email,matricule,photo_url,numero_h) VALUES(:code,:nom,:prenom,:role,:mats::jsonb,:spec,:spec,:tel,:email,:mat,:photo,:nh) RETURNING *`,
-      { replacements: { code, nom, prenom, role: role || 'Enseignant', mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, mat, photo: photo_url || null, nh }, type: sequelize.QueryTypes.INSERT }
+      { replacements: { code, nom, prenom, role: role || 'Enseignant', mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, mat, photo, nh }, type: sequelize.QueryTypes.INSERT }
     );
     if (nh) {
       // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
@@ -270,11 +278,12 @@ router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res
     if (!nom || !prenom) return res.status(400).json({ success: false, message: 'Nom et prénom obligatoires.' });
     const mats = matieres || (specialite ? [specialite] : []);
     const nh = await numeroHComplet(numero_h);
+    const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-personnel' });
     await sequelize.query(
       `UPDATE school_staff SET nom=:nom,prenom=:prenom,role=COALESCE(:role,role),matieres=:mats::jsonb,specialite=:spec,matiere=:spec,
          telephone=:tel,email=COALESCE(:email,email),photo_url=COALESCE(:photo,photo_url),numero_h=:nh
        WHERE id=:id AND tenant_code=:code`,
-      { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo: photo_url || null, nh, id: req.params.id, code: req.params.tenantCode } }
+      { replacements: { nom, prenom, role: role || null, mats: JSON.stringify(mats), spec: specialite || mats[0] || null, tel: telephone || null, email: email || null, photo, nh, id: req.params.id, code: req.params.tenantCode } }
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }

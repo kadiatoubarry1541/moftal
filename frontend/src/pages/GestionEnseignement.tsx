@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
-import { getSessionUser, isAdmin } from "../utils/auth";
+import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
+import { compressImage } from "../utils/compressImage";
 import DynamicAppManifest from "../components/DynamicAppManifest";
 import { TenantLogo, goToMoftal, MoftalMark, TenantCodeCard } from "../components/GestionBrand";
 import InstallAppButton from "../components/InstallAppButton";
@@ -465,6 +466,33 @@ export default function GestionEnseignement({ mode }: Props) {
     </div>
   ) : null;
 
+  // Photo facultative de l'élève / du professeur : réduite dans le téléphone,
+  // puis enregistrée dans la base par le serveur
+  const champPhoto = (
+    <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ width: 64, height: 64, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: "#f1f5f9", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 26 }}>
+        {form.photo_url ? <img src={getPhotoUrl(form.photo_url) || ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "📷"}
+      </div>
+      <div>
+        <label style={{ ...lbl, display: "block", marginBottom: 6 }}>{tr("Photo (optionnel)")}</label>
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", border: `1px solid ${V.color}`, color: V.color, borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+          {form.photo_url ? tr("Changer la photo") : tr("Ajouter une photo")}
+          <input type="file" accept="image/*" style={{ display: "none" }} onChange={async e => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            try {
+              const petite = await compressImage(file, 600, 0.8);
+              const reader = new FileReader();
+              reader.onload = () => setForm((f: any) => ({ ...f, photo_url: reader.result as string }));
+              reader.readAsDataURL(petite);
+            } catch { showToast(tr("Cette photo n'a pas pu être lue. Essayez une autre image."), false); }
+          }} />
+        </label>
+      </div>
+    </div>
+  );
+
   // ── Modal ──────────────────────────────────────────────────────────────────
   const MODAL = modal ? (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
@@ -494,6 +522,7 @@ export default function GestionEnseignement({ mode }: Props) {
               );
             })}
           </div>
+          {champPhoto}
         </>)}
 
         {modal === "add-staff" && (<>
@@ -519,22 +548,7 @@ export default function GestionEnseignement({ mode }: Props) {
               );
             })}
           </div>
-          {!isMadrasa && (
-            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
-              {form.photo_url && <img src={form.photo_url} alt="" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }} />}
-              <div>
-                <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Photo (optionnel)")}</label>
-                <input type="file" accept="image/*" onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > 1.5 * 1024 * 1024) { showToast(tr("Photo trop volumineuse (max 1.5 Mo)"), false); return; }
-                  const reader = new FileReader();
-                  reader.onload = () => setForm((f: any) => ({ ...f, photo_url: reader.result as string }));
-                  reader.readAsDataURL(file);
-                }} style={{ fontSize: 12 }} />
-              </div>
-            </div>
-          )}
+          {champPhoto}
         </>)}
 
         {modal === "add-groupe" && (<>
@@ -902,7 +916,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#fafafa"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
                         <td style={{ padding:"11px 16px" }}>
                           <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                            <div style={{ width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontSize:11,fontWeight:700,flexShrink:0 }}>{s.prenom?.charAt(0)}</div>
+                            <div style={{ width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontSize:11,fontWeight:700,flexShrink:0,overflow:"hidden" }}>{s.photo_url ? <img src={getPhotoUrl(s.photo_url) || ""} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : s.prenom?.charAt(0)}</div>
                             <span style={{ fontWeight:600,color:"#0f172a" }}>{s.prenom} {s.nom}</span>
                           </div>
                         </td>
@@ -935,7 +949,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   {staff.map(s=>(
                     <div key={s.id} style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:20,boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                       <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:12 }}>
-                        <div style={{ width:42,height:42,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:700,fontSize:15,overflow:"hidden",flexShrink:0 }}>{s.photo_url ? <img src={s.photo_url} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : s.prenom?.charAt(0)}</div>
+                        <div style={{ width:42,height:42,borderRadius:"50%",background:`linear-gradient(135deg,${V.color},${isMadrasa?"#22d3ee":"#4ade80"})`,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:700,fontSize:15,overflow:"hidden",flexShrink:0 }}>{s.photo_url ? <img src={getPhotoUrl(s.photo_url) || ""} alt="" style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : s.prenom?.charAt(0)}</div>
                         <div>
                           <div style={{ fontWeight:700,color:"#0f172a",fontSize:14 }}>{s.prenom} {s.nom}</div>
                           <span style={{ padding:"2px 8px",background:isMadrasa?"#ecfeff":"#f0fdf0",color:V.color,borderRadius:20,fontSize:11,fontWeight:600 }}>{tr(s.role || "")}</span>
