@@ -134,12 +134,13 @@ export default function EcoleVitrine() {
               <div style={{ fontWeight: 800, fontSize: 17, color: "white", lineHeight: 1.1 }}>{school.name}</div>
               <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>{tr("École")}</div>
             </div>
+            {/* À côté du nom : toujours visible, même sur téléphone (les liens, eux, défilent) */}
+            <ChoixLangueEcole sombre compact />
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             {[["Accueil","hero"],["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
               <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
-            <ChoixLangueEcole sombre compact />
             {isLoggedIn && (
               <button onClick={() => navigate(`/ecole/${tenantCode}/espace-parent`)}
                 style={{ background: "white", color: GREEN_DARK, border: "none", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
