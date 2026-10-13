@@ -7,6 +7,7 @@
 //   - « limité »  : voir, ajouter et changer un statut (vente servie, rendez-vous
 //     confirmé…), mais ni modifier ni supprimer une fiche.
 // Tout est contrôlé ici, côté serveur : l'écran ne fait que refléter ces règles.
+import { trouverPersonne } from './trouverPersonne.js';
 import { sequelize } from '../config/database.js';
 
 const NIVEAUX = ['complet', 'limite'];
@@ -120,15 +121,14 @@ export function ajouterRoutesAccesEmployes(router, middlewaresProprietaire) {
   router.post(base, ...middlewaresProprietaire, async (req, res) => {
     try {
       await preparerTableAcces();
-      const numeroH = String(req.body?.numero_h || '').trim();
+      // Un seul champ : téléphone, e-mail ou NuméroH de l'employé
+      const identifiant = String(req.body?.identifiant || req.body?.numero_h || '').trim();
       const niveau = NIVEAUX.includes(req.body?.niveau) ? req.body.niveau : 'limite';
       const poste = String(req.body?.poste || '').trim().slice(0, 100) || null;
-      if (!numeroH) return res.status(400).json({ success: false, message: 'Numéro Moftal de l\'employé obligatoire.' });
-      const [user] = await sequelize.query(
-        `SELECT numero_h, prenom, nom_famille FROM users WHERE LOWER(numero_h) = LOWER(:nh) LIMIT 1`,
-        { replacements: { nh: numeroH }, type: sequelize.QueryTypes.SELECT }
-      );
-      if (!user) return res.status(404).json({ success: false, message: 'Aucun compte Moftal avec ce numéro. Vérifiez le numéro de l\'employé.' });
+      if (!identifiant) return res.status(400).json({ success: false, message: 'Téléphone, e-mail ou NuméroH de l\'employé obligatoire.' });
+      const trouve = await trouverPersonne(identifiant);
+      if (trouve.erreur) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
+      const user = { numero_h: trouve.personne.numero_h, prenom: trouve.personne.prenom, nom_famille: trouve.personne.nom };
       if (String(user.numero_h).toLowerCase() === String(req.tenant?.owner_numero_h || '').toLowerCase()) {
         return res.status(400).json({ success: false, message: 'Le propriétaire a déjà tous les accès.' });
       }

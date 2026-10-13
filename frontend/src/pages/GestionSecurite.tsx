@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -133,13 +134,7 @@ export default function GestionSecurite() {
     </div>
   );
 
-  if (error) return (
-    <div style={{ maxWidth: 480, margin: "80px auto", padding: 24, textAlign: "center" }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-      <h2 style={{ color: "#0f172a" }}>{error}</h2>
-      <button onClick={() => navigate("/gestion-interne")} style={{ marginTop: 16, padding: "10px 24px", background: SLATE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>Retour</button>
-    </div>
-  );
+  if (error) return <AccesRefuseGestion message={error} couleur={SLATE} emoji="🛡️" />;
 
   const TABS: { id: Tab; label: string; emoji: string }[] = [
     { id: "dashboard",     label: "Dashboard",   emoji: "📊" },

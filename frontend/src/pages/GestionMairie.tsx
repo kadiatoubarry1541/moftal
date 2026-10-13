@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -411,19 +412,7 @@ export default function GestionMairie() {
     }
   };
 
-  if (accesRefuse) return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", padding: 16 }}>
-      <div style={{ background: "#fff", borderRadius: 16, padding: "32px 28px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
-        <h1 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Accès refusé</h1>
-        <p style={{ fontSize: 14, color: "#475569", marginBottom: 20 }}>{accesRefuse}</p>
-        <button onClick={() => goToMoftal(navigate)} style={{ background: BLUE, color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <MoftalMark />
-          Retour sur Moftal
-        </button>
-      </div>
-    </div>
-  );
+  if (accesRefuse) return <AccesRefuseGestion message={accesRefuse} couleur={BLUE} emoji="🏛️" />;
 
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>

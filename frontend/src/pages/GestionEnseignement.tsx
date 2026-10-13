@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
@@ -343,16 +344,7 @@ export default function GestionEnseignement({ mode }: Props) {
     </div>
   );
 
-  if (!tenant) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
-      <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Espace inaccessible")}</h2>
-        <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{tr(error || "Erreur inconnue")}</p>
-        <button onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 20px", background: V.color, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{isAr ? "→" : "←"} {tr("Retour")}</button>
-      </div>
-    </div>
-  );
+  if (!tenant) return <AccesRefuseGestion message={error} couleur={V.color} emoji={V.emoji} />;
 
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
@@ -453,8 +445,8 @@ export default function GestionEnseignement({ mode }: Props) {
                 </div>
               ))}
             </div>}
-        <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 6px" }}>{tr("NuméroH ou numéro de téléphone du parent :")}</p>
-        <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder={tr("Ex. G96C1P1… ou 620 00 00 00")} inputMode="text"
+        <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 6px" }}>{tr("Téléphone, e-mail ou NuméroH du parent :")}</p>
+        <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder={tr("Ex. 620 00 00 00, nom@gmail.com ou G96C1P1…")} inputMode="text"
           style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, marginBottom: 8 }} />
         <div style={{ display: "flex", gap: 8 }}>
           <button disabled={parentsBusy || !nhParent.trim()} onClick={lierParent}

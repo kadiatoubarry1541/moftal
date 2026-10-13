@@ -121,7 +121,7 @@ const pul: Record<string, string> = {
   'option.select_placeholder': 'Suɓo',
   'msg.saving': 'Nana winndoo...',
   'login.title': 'Ceŋagol',
-  'login.numeroh': 'NuméroH, Noddaali wala Imeel',
+  'login.numeroh': 'Noddaali, Imeel wala NuméroH',
   'login.password': 'Finnde',
   'login.submit': 'Ceŋo',
   'login.signup_prompt': 'A wonaa winndaaki?',

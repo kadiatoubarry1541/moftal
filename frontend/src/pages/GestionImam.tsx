@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -186,13 +187,7 @@ export default function GestionImam() {
     </div>
   );
 
-  if (error) return (
-    <div style={{ maxWidth: 500, margin: "60px auto", padding: "0 24px", textAlign: "center" }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a" }}>{error}</h2>
-      <button onClick={() => navigate(-1)} style={{ marginTop: 20, padding: "10px 24px", background: VIOLET, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>Retour</button>
-    </div>
-  );
+  if (error) return <AccesRefuseGestion message={error} couleur={VIOLET} emoji="🕋" />;
 
   const TABS: { key: Tab; label: string; emoji: string }[] = [
     { key: "dashboard",     label: "Tableau de bord", emoji: "📊" },

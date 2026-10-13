@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import DynamicAppManifest from "../components/DynamicAppManifest";
@@ -172,13 +173,7 @@ export default function GestionTransport() {
     return <span style={{ background: c.bg, color: c.color, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>{s.replace("_", " ")}</span>;
   };
 
-  if (accessError) return (
-    <div style={{ maxWidth: 480, margin: "80px auto", padding: 24, textAlign: "center" }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-      <h2>{accessError}</h2>
-      <button onClick={() => navigate(-1 as any)} style={{ padding: "10px 24px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>← Retour</button>
-    </div>
-  );
+  if (accessError) return <AccesRefuseGestion message={accessError} couleur={BLUE} emoji="🚌" />;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "system-ui, sans-serif" }}>

@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser } from "../utils/auth";
@@ -122,7 +123,7 @@ export default function GestionScientifique() {
   async function deleteAnn(id: number) { if (!confirm("Supprimer cette annonce ?")) return; if (!(await envoyerGestion(`${BASE(tenantCode!)}/announcements/${id}`, { method: "DELETE", headers: auth() }))) return; loadAnnouncements(); loadAll(); }
 
   if (loading) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:300 }}><div style={{ width:32, height:32, border:"3px solid #c7d2fe", borderTopColor:INDIGO, borderRadius:"50%", animation:"spin 0.8s linear infinite" }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
-  if (error) return <div style={{ maxWidth:500, margin:"60px auto", textAlign:"center" }}><div style={{ fontSize:48 }}>🔒</div><h2>{error}</h2><button onClick={() => navigate(-1)} style={{ padding:"10px 24px", background:INDIGO, color:"white", border:"none", borderRadius:8, cursor:"pointer" }}>Retour</button></div>;
+  if (error) return <AccesRefuseGestion message={error} couleur={INDIGO} emoji="🔬" />;
 
   const TABS: { key: Tab; label: string; emoji: string }[] = [
     { key: "dashboard", label: "Tableau de bord", emoji: "📊" },

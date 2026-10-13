@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { TenantLogo, goToMoftal, MoftalMark } from "../components/GestionBrand";
@@ -198,13 +199,7 @@ export default function GestionIslamique({ mode }: Props) {
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
-  if (error) return (
-    <div style={{ maxWidth:480, margin:"80px auto", padding:24, textAlign:"center" }}>
-      <div style={{ fontSize:48, marginBottom:16 }}>🔒</div>
-      <h2 style={{ color:"#0f172a" }}>{error}</h2>
-      <button onClick={() => navigate("/gestion-interne")} style={btnPrimary}>← Retour</button>
-    </div>
-  );
+  if (error) return <AccesRefuseGestion message={error} couleur={M.color} emoji={M.icon} />;
 
   const TABS = M.tabs.map(id => ({ id, label:(M.tabLabels as any)[id], icon:(M.tabIcons as any)[id] }));
 

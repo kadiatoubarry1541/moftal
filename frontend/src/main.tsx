@@ -58,9 +58,11 @@ async function preparerSessionGestion() {
     localStorage.removeItem('token');
     localStorage.removeItem('session_user');
   }
-  // Si pas de token du tout → renvoyer vers moftal.com pour se connecter
-  if (!localStorage.getItem('token')) {
-    window.location.href = `https://moftal.com/login?redirect=${encodeURIComponent(window.location.href)}`;
+  // Pas encore connecté (lien de l'application reçu par un employé…) : on se
+  // connecte ici même, puis on revient sur la gestion. (Avant : renvoi vers
+  // moftal.com, d'où la session ne revenait jamais sur ce domaine.)
+  if (!localStorage.getItem('token') && !/^\/(login|login-membre|inscription|mot-de-passe|conditions)/.test(window.location.pathname)) {
+    window.location.replace(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
   }
 }
 

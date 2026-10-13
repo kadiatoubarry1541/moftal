@@ -108,7 +108,7 @@ export function LoginMembre() {
               type="text"
               value={numeroH}
               onChange={(e) => setNumeroH(e.target.value)}
-              placeholder="NuméroH, téléphone ou email"
+              placeholder="Téléphone, e-mail ou NuméroH"
               className="form-input"
             />
           </div>
