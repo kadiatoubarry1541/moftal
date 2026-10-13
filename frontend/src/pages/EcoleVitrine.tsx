@@ -68,10 +68,10 @@ export default function EcoleVitrine() {
   const isLoggedIn = !!localStorage.getItem("token");
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: GREEN_BG }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #bbf7bb`, borderTopColor: GREEN, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: GREEN_DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement en cours...")}</p>
+        <p style={{ color: "#334155", fontSize: 14, fontWeight: 600 }}>{tr("Chargement en cours...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -98,8 +98,8 @@ export default function EcoleVitrine() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
-        .vn-link { color:rgba(255,255,255,0.85); font-weight:500; font-size:14px; cursor:pointer; padding:6px 4px; border:none; background:none; border-bottom:2px solid transparent; transition:all 0.2s; }
-        .vn-link:hover { color:white; border-bottom-color:rgba(255,255,255,0.6); }
+        .vn-link { color:#334155; font-weight:500; font-size:14px; cursor:pointer; padding:6px 4px; border:none; background:none; border-bottom:2px solid transparent; transition:all 0.2s; }
+        .vn-link:hover { color:#0f172a; border-bottom-color:${GREEN}; }
         .staff-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.1) !important; }
         .staff-card { transition: all 0.25s ease; }
         @media(max-width:768px){.hero-t{font-size:26px !important}.stats-g{grid-template-columns:1fr 1fr !important}.staff-g{grid-template-columns:1fr 1fr !important}}
@@ -107,7 +107,7 @@ export default function EcoleVitrine() {
       `}</style>
 
       {/* TOP BAR */}
-      <div style={{ background: GREEN_DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
+      <div style={{ background: "#f8fafc", color: "#334155", fontSize: 12, padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {school.phone   && <span>📞 {school.phone}</span>}
@@ -124,18 +124,18 @@ export default function EcoleVitrine() {
       </div>
 
       {/* NAVBAR */}
-      <nav style={{ background: GREEN, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15,23,42,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.2)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: "white", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <LogoEtablissement src={school.logo_url} name={school.name} fontSize={22} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 17, color: "white", lineHeight: 1.1 }}>{school.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>{tr("École")}</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a", lineHeight: 1.1 }}>{school.name}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{tr("École")}</div>
             </div>
             {/* À côté du nom : toujours visible, même sur téléphone (les liens, eux, défilent) */}
-            <ChoixLangueEcole sombre compact />
+            <ChoixLangueEcole compact />
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             {[["Accueil","hero"],["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
@@ -143,13 +143,13 @@ export default function EcoleVitrine() {
             ))}
             {isLoggedIn && (
               <button onClick={() => navigate(`/ecole/${tenantCode}/espace-parent`)}
-                style={{ background: "white", color: GREEN_DARK, border: "none", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                style={{ background: GREEN, color: "white", border: "none", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                 {tr("👪 Espace Parent")}
               </button>
             )}
             {isLoggedIn && (
               <button onClick={() => navigate(`/ecole/${tenantCode}/enseignant`)}
-                style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                style={{ background: "white", color: GREEN, border: `1.5px solid ${GREEN}`, borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                 {tr("🧑‍🏫 Espace Enseignant")}
               </button>
             )}
@@ -158,21 +158,20 @@ export default function EcoleVitrine() {
       </nav>
 
       {/* HERO */}
-      <section id="hero" style={{ background: `linear-gradient(135deg,${GREEN_DARK} 0%,${GREEN} 55%,${GREEN_LIGHT} 100%)`, padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
+      <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
-          <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.15)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid rgba(255,255,255,0.3)" }}>
+          <div style={{ width: 88, height: 88, borderRadius: 22, background: "white", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #e2e8f0" }}>
             <LogoEtablissement src={school.logo_url} name={school.name} fontSize={46} />
           </div>
-          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "white", margin: "0 0 16px", textShadow: "0 2px 8px rgba(0,0,0,0.2)", lineHeight: 1.2 }}>{school.name}</h1>
-          <p style={{ fontSize: 17, color: "rgba(255,255,255,0.88)", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
+          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{school.name}</h1>
+          <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
             {school.description || tr("Une école d'excellence dédiée à la réussite de chaque élève. Formation de qualité, environnement sûr et épanouissant.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => scrollTo("enroll")} style={{ background: "white", color: GREEN_DARK, border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+            <button onClick={() => scrollTo("enroll")} style={{ background: GREEN, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
               {tr("Inscrire mon enfant")}
             </button>
-            <button onClick={() => scrollTo("contact")} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.5)", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+            <button onClick={() => scrollTo("contact")} style={{ background: "white", color: GREEN, border: `1.5px solid ${GREEN}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
               {tr("Nous contacter")}
             </button>
           </div>
@@ -292,20 +291,20 @@ export default function EcoleVitrine() {
       )}
 
       {/* POURQUOI NOUS */}
-      <section style={{ background: `linear-gradient(135deg,${GREEN_DARK},${GREEN})`, padding: "60px 20px", color: "white" }}>
+      <section style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
-          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12 }}>{tr("Pourquoi choisir notre école ?")}</h2>
-          <p style={{ fontSize: 15, opacity: 0.85, marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>{tr("Un cadre d'apprentissage moderne pour préparer les leaders de demain.")}</p>
+          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>{tr("Pourquoi choisir notre école ?")}</h2>
+          <p style={{ fontSize: 15, color: "#334155", marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>{tr("Un cadre d'apprentissage moderne pour préparer les leaders de demain.")}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 900, margin: "0 auto" }}>
             {[
               { icon: "📚", title: "Programme de qualité", desc: "Un curriculum complet et adapté aux standards nationaux avec des méthodes pédagogiques modernes." },
               { icon: "👨‍🏫", title: "Enseignants qualifiés", desc: "Une équipe pédagogique diplômée et expérimentée, passionnée par l'enseignement." },
               { icon: "🛡️", title: "Environnement sécurisé", desc: "Un cadre sûr et bienveillant où chaque élève peut s'épanouir librement." },
             ].map((item, i) => (
-              <div key={i} style={{ background: "rgba(255,255,255,0.1)", borderRadius: 16, padding: "28px 24px", border: "1px solid rgba(255,255,255,0.2)" }}>
+              <div key={i} style={{ background: "white", borderRadius: 16, padding: "28px 24px", border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{tr(item.title)}</h3>
-                <p style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{tr(item.title)}</h3>
+                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
               </div>
             ))}
           </div>
@@ -313,7 +312,7 @@ export default function EcoleVitrine() {
       </section>
 
       {/* INSCRIPTION CTA */}
-      <section id="enroll" style={{ background: GREEN_BG, padding: "60px 20px", textAlign: "center" }}>
+      <section id="enroll" style={{ background: "white", padding: "60px 20px", textAlign: "center" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
           <h2 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>{tr("Inscrire votre enfant")}</h2>
@@ -393,17 +392,17 @@ export default function EcoleVitrine() {
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#16a34a" accentDark="#14532d" />
 
       {/* FOOTER */}
-      <footer style={{ background: GREEN_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>
+      <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.15)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "white", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <LogoEtablissement src={school.logo_url} name={school.name} fontSize={18} />
             </div>
-            <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{school.name}</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>{school.name}</span>
           </div>
           <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("École")}</p>
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            <button onClick={() => navigate("/")} style={{ marginInlineStart: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
+          <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
+            <button onClick={() => navigate("/")} style={{ marginInlineStart: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
               <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginInlineEnd: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}
             </button>
           </div>

@@ -8,8 +8,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 
 const AMBER       = "#d97706";
 const AMBER_DARK  = "#92400e";
-const AMBER_LIGHT = "#fbbf24";
-const AMBER_BG    = "#fffbeb";
 
 function fmtMoney(n: number) {
   return (n || 0).toLocaleString("fr-FR") + " GNF";
@@ -134,7 +132,7 @@ export default function CommerceVitrine() {
   }
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: AMBER_BG }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #fde68a`, borderTopColor: AMBER, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
         <p style={{ color: AMBER_DARK, fontSize: 14, fontWeight: 600 }}>Chargement en cours...</p>
@@ -167,8 +165,8 @@ export default function CommerceVitrine() {
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes fadeUp { from { opacity:0; transform:translateY(24px) } to { opacity:1; transform:translateY(0) } }
         @keyframes slideIn { from { opacity:0; transform:translateX(100%) } to { opacity:1; transform:translateX(0) } }
-        .nav-link { color: rgba(255,255,255,0.85); font-weight: 500; font-size: 14px; cursor: pointer; padding: 6px 4px; border: none; background: none; border-bottom: 2px solid transparent; transition: all 0.2s; }
-        .nav-link:hover { color: white; border-bottom-color: rgba(255,255,255,0.6); }
+        .nav-link { color: #334155; font-weight: 500; font-size: 14px; cursor: pointer; padding: 6px 4px; border: none; background: none; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .nav-link:hover { color: #0f172a; border-bottom-color: ${AMBER}; }
         .prod-card { transition: all 0.22s ease; cursor: default; }
         .prod-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(217,119,6,0.15) !important; }
         .cat-btn { transition: all 0.15s ease; }
@@ -187,7 +185,7 @@ export default function CommerceVitrine() {
       `}</style>
 
       {/* ── BARRE TOP ────────────────────────────────────────────────────────── */}
-      <div style={{ background: AMBER_DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
+      <div style={{ background: "#f8fafc", color: "#64748b", borderBottom: "1px solid #e2e8f0", fontSize: 12, padding: "6px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
             {store.phone   && <span>📞 {store.phone}</span>}
@@ -202,15 +200,15 @@ export default function CommerceVitrine() {
       </div>
 
       {/* ── NAVBAR ───────────────────────────────────────────────────────────── */}
-      <nav style={{ background: AMBER, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", position: "sticky", top: 0, zIndex: 200 }}>
+      <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15,23,42,0.06)", position: "sticky", top: 0, zIndex: 200 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.2)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: "white", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <LogoEtablissement src={store.logo_url} name={store.name} fontSize={22} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 17, color: "white", lineHeight: 1.1 }}>{store.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>{storeLabel}</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a", lineHeight: 1.1 }}>{store.name}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>{storeLabel}</div>
             </div>
           </div>
 
@@ -223,7 +221,7 @@ export default function CommerceVitrine() {
 
             {/* Panier */}
             <button onClick={() => setShowCart(true)}
-              style={{ position: "relative", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.4)", borderRadius: 10, padding: "8px 16px", color: "white", cursor: "pointer", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+              style={{ position: "relative", background: "white", border: `1.5px solid ${AMBER}`, borderRadius: 10, padding: "8px 16px", color: AMBER, cursor: "pointer", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
               🛒 Panier
               {cartCount > 0 && (
                 <span style={{ background: "#ef4444", color: "white", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, position: "absolute", top: -6, right: -6 }}>
@@ -236,21 +234,20 @@ export default function CommerceVitrine() {
       </nav>
 
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
-      <section id="hero" style={{ background: `linear-gradient(135deg,${AMBER_DARK} 0%,${AMBER} 55%,${AMBER_LIGHT} 100%)`, padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
+      <section id="hero" style={{ background: "#f8fafc", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
-          <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.15)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid rgba(255,255,255,0.3)" }}>
+          <div style={{ width: 88, height: 88, borderRadius: 22, background: "white", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #e2e8f0" }}>
             <LogoEtablissement src={store.logo_url} name={store.name} fontSize={46} />
           </div>
-          <h1 className="hero-title" style={{ fontSize: 42, fontWeight: 800, color: "white", margin: "0 0 16px", textShadow: "0 2px 8px rgba(0,0,0,0.2)", lineHeight: 1.2 }}>
+          <h1 className="hero-title" style={{ fontSize: 42, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>
             {store.name}
           </h1>
-          <p className="hero-sub" style={{ fontSize: 17, color: "rgba(255,255,255,0.88)", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
+          <p className="hero-sub" style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
             {store.description || "Bienvenue dans notre boutique. Découvrez nos produits de qualité au meilleur prix."}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("products")}
-              style={{ background: "white", color: AMBER_DARK, border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+              style={{ background: AMBER, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(217,119,6,0.25)" }}>
               Voir les produits
             </button>
             {store.phone && (
@@ -373,20 +370,20 @@ export default function CommerceVitrine() {
       </section>
 
       {/* ── POURQUOI NOUS ────────────────────────────────────────────────────── */}
-      <section style={{ background: `linear-gradient(135deg,${AMBER_DARK},${AMBER})`, padding: "60px 20px", color: "white" }}>
+      <section style={{ background: "white", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
           <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>Pourquoi acheter chez nous ?</h2>
-          <p style={{ fontSize: 14, opacity: 0.85, marginBottom: 44, maxWidth: 460, margin: "0 auto 44px" }}>Des produits de qualité, des prix honnêtes et un service de proximité.</p>
+          <p style={{ fontSize: 14, color: "#334155", marginBottom: 44, maxWidth: 460, margin: "0 auto 44px" }}>Des produits de qualité, des prix honnêtes et un service de proximité.</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 860, margin: "0 auto" }}>
             {[
               { icon: "✅", title: "Produits vérifiés", desc: "Chaque article est contrôlé avant d'être proposé. Qualité garantie." },
               { icon: "⚡", title: "Service rapide", desc: "Disponibles pour répondre à vos questions et traiter vos commandes vite." },
               { icon: "🤝", title: "Prix transparents", desc: "Les prix affichés sont les prix réels. Pas de mauvaises surprises." },
             ].map((item, i) => (
-              <div key={i} style={{ background: "rgba(255,255,255,0.12)", borderRadius: 16, padding: "28px 24px", border: "1px solid rgba(255,255,255,0.2)" }}>
+              <div key={i} style={{ background: "white", borderRadius: 16, padding: "28px 24px", border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{item.title}</h3>
-                <p style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{item.title}</h3>
+                <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -476,18 +473,18 @@ export default function CommerceVitrine() {
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#d97706" accentDark="#78350f" />
 
       {/* ── FOOTER ───────────────────────────────────────────────────────────── */}
-      <footer style={{ background: AMBER_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>
+      <footer style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0", color: "#64748b", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.15)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "white", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <LogoEtablissement src={store.logo_url} name={store.name} fontSize={18} />
             </div>
-            <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{store.name}</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>{store.name}</span>
           </div>
           <p style={{ fontSize: 12, margin: "0 0 8px" }}>{storeLabel}</p>
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
+          <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
+            <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", border: "1px solid #e2e8f0", borderRadius: 4, padding: 1 }} />Retour à la plateforme
             </button>
           </div>
         </div>
@@ -499,9 +496,9 @@ export default function CommerceVitrine() {
           <div onClick={() => setShowCart(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300 }} />
           <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(400px,95vw)", background: "white", zIndex: 400, boxShadow: "-4px 0 32px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", animation: "slideIn 0.25s ease" }}>
             {/* Header panier */}
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", background: AMBER }}>
-              <div style={{ fontWeight: 800, fontSize: 18, color: "white" }}>🛒 Mon Panier ({cartCount})</div>
-              <button onClick={() => setShowCart(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", background: "white" }}>
+              <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a" }}>🛒 Mon Panier ({cartCount})</div>
+              <button onClick={() => setShowCart(false)} style={{ background: "#f1f5f9", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, color: "#334155", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
             </div>
 
             {/* Items */}

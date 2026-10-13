@@ -33,7 +33,7 @@ export default function ProducteurVitrine() {
   }, [tenantCode]);
 
   if (loading) return (
-    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background: COLOR_BG }}>
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:"white" }}>
       <div style={{ textAlign:"center" }}>
         <div style={{ width:48, height:48, border:`3px solid ${COLOR_BDR}`, borderTopColor: COLOR, borderRadius:"50%", animation:"spin 0.8s linear infinite", margin:"0 auto 16px" }} />
         <p style={{ color: COLOR, fontSize:14, fontWeight:600 }}>Chargement…</p>
@@ -62,19 +62,18 @@ export default function ProducteurVitrine() {
   const categories = Array.from(new Set(products.map((p: any) => p.categorie).filter(Boolean)));
 
   return (
-    <div style={{ fontFamily:"system-ui,sans-serif", minHeight:"100vh", background:"#f0fdf0" }}>
+    <div style={{ fontFamily:"system-ui,sans-serif", minHeight:"100vh", background:"#f8fafc" }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}`}</style>
 
-      <div style={{ background:`linear-gradient(135deg,#14532d,${COLOR})`, padding:"32px 24px 28px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:-40, right:-40, width:180, height:180, borderRadius:"50%", background:"rgba(255,255,255,0.05)" }} />
+      <div style={{ background:"white", borderBottom:"1px solid #e2e8f0", padding:"32px 24px 28px", position:"relative", overflow:"hidden" }}>
         <div style={{ maxWidth:900, margin:"0 auto" }}>
-          <button onClick={() => navigate(-1 as any)} style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"none", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontSize:13, fontWeight:600, marginBottom:20 }}>← Retour</button>
+          <button onClick={() => navigate(-1 as any)} style={{ background:"white", color: COLOR, border:`1.5px solid ${COLOR}`, borderRadius:8, padding:"6px 14px", cursor:"pointer", fontSize:13, fontWeight:600, marginBottom:20 }}>← Retour</button>
           <div style={{ display:"flex", alignItems:"center", gap:20 }}>
-            <div style={{ width:72, height:72, borderRadius:14, overflow:"hidden", flexShrink:0, border:"3px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.2)" }}><LogoEtablissement src={prod.logo_url} name={prod.name} fontSize={34} /></div>
+            <div style={{ width:72, height:72, borderRadius:14, overflow:"hidden", flexShrink:0, border:"1px solid #e2e8f0", background:"white" }}><LogoEtablissement src={prod.logo_url} name={prod.name} fontSize={34} /></div>
             <div>
-              <h1 style={{ margin:0, color:"white", fontSize:26, fontWeight:800 }}>{prod.name}</h1>
-              <div style={{ color:"rgba(255,255,255,0.8)", fontSize:14, marginTop:4 }}>Producteur / Agriculteur</div>
-              {prod.city && <div style={{ color:"rgba(255,255,255,0.7)", fontSize:13, marginTop:2 }}>📍 {prod.city}</div>}
+              <h1 style={{ margin:0, color:"#0f172a", fontSize:26, fontWeight:800 }}>{prod.name}</h1>
+              <div style={{ color:"#334155", fontSize:14, marginTop:4 }}>Producteur / Agriculteur</div>
+              {prod.city && <div style={{ color:"#64748b", fontSize:13, marginTop:2 }}>📍 {prod.city}</div>}
             </div>
           </div>
           <div style={{ display:"flex", gap:16, marginTop:24, flexWrap:"wrap" }}>
@@ -83,10 +82,10 @@ export default function ProducteurVitrine() {
               { label:"Catégories", value: categories.length, icon:"🏷️" },
               { label:"Clients", value: stats.clients ?? 0, icon:"👥" },
             ].map(s => (
-              <div key={s.label} style={{ background:"rgba(255,255,255,0.15)", borderRadius:12, padding:"12px 20px", textAlign:"center", minWidth:100 }}>
+              <div key={s.label} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:12, padding:"12px 20px", textAlign:"center", minWidth:100 }}>
                 <div style={{ fontSize:22, marginBottom:4 }}>{s.icon}</div>
-                <div style={{ fontSize:22, fontWeight:800, color:"white" }}>{s.value}</div>
-                <div style={{ fontSize:11, color:"rgba(255,255,255,0.75)" }}>{s.label}</div>
+                <div style={{ fontSize:22, fontWeight:800, color:"#0f172a" }}>{s.value}</div>
+                <div style={{ fontSize:11, color:"#64748b" }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -158,11 +157,11 @@ export default function ProducteurVitrine() {
         </div>
 
         {(prod.phone || prod.email) && (
-          <div style={{ marginTop:32, background:`linear-gradient(135deg,#14532d,${COLOR})`, borderRadius:16, padding:"24px 28px", color:"white" }}>
+          <div style={{ marginTop:32, background:"white", border:"1px solid #e2e8f0", borderRadius:16, padding:"24px 28px", color:"#0f172a" }}>
             <h3 style={{ margin:"0 0 8px", fontSize:17, fontWeight:800 }}>Contacter ce producteur</h3>
             <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginTop:16 }}>
-              {prod.phone && <a href={`tel:${prod.phone}`} style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"white", color: COLOR, borderRadius:10, textDecoration:"none", fontWeight:700, fontSize:14 }}>📞 {prod.phone}</a>}
-              {prod.email && <a href={`mailto:${prod.email}`} style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"rgba(255,255,255,0.15)", color:"white", borderRadius:10, textDecoration:"none", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.3)" }}>✉️ {prod.email}</a>}
+              {prod.phone && <a href={`tel:${prod.phone}`} style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background: COLOR, color:"white", borderRadius:10, textDecoration:"none", fontWeight:700, fontSize:14 }}>📞 {prod.phone}</a>}
+              {prod.email && <a href={`mailto:${prod.email}`} style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"white", color: COLOR, borderRadius:10, textDecoration:"none", fontWeight:700, fontSize:14, border:`1.5px solid ${COLOR}` }}>✉️ {prod.email}</a>}
             </div>
           </div>
         )}

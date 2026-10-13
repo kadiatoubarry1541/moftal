@@ -8,8 +8,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 
 const SKY      = "#0284c7";
 const SKY_DARK = "#075985";
-const SKY_LIGHT= "#0ea5e9";
-const SKY_BG   = "#f0f9ff";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
@@ -37,7 +35,7 @@ export default function TransportVitrine() {
   }, [tenantCode]);
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: SKY_BG }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #bae6fd`, borderTopColor: SKY, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
         <p style={{ color: SKY_DARK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
@@ -65,15 +63,15 @@ export default function TransportVitrine() {
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-        .vn-link{color:rgba(255,255,255,0.85);font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
-        .vn-link:hover{color:white;border-bottom-color:rgba(255,255,255,0.6);}
+        .vn-link{color:#334155;font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
+        .vn-link:hover{color:#0f172a;border-bottom-color:${SKY};}
         .trip-card{transition:all 0.22s;} .trip-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(2,132,199,0.12) !important;}
         @media(max-width:768px){.hero-t{font-size:26px !important}.stats-g{grid-template-columns:1fr 1fr !important}.trip-g{grid-template-columns:1fr 1fr !important}}
         @media(max-width:480px){.trip-g{grid-template-columns:1fr !important}}
       `}</style>
 
       {/* TOP BAR */}
-      <div style={{ background: SKY_DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
+      <div style={{ background: "#f8fafc", color: "#64748b", borderBottom: "1px solid #e2e8f0", fontSize: 12, padding: "6px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {co.phone   && <span>📞 {co.phone}</span>}
@@ -84,15 +82,15 @@ export default function TransportVitrine() {
       </div>
 
       {/* NAVBAR */}
-      <nav style={{ background: SKY, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15,23,42,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.2)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: "white", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <LogoEtablissement src={co.logo_url} name={co.name} fontSize={22} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 17, color: "white" }}>{co.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>Transport</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a" }}>{co.name}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Transport</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
@@ -104,21 +102,20 @@ export default function TransportVitrine() {
       </nav>
 
       {/* HERO */}
-      <section id="hero" style={{ background: `linear-gradient(135deg,${SKY_DARK} 0%,${SKY} 55%,${SKY_LIGHT} 100%)`, padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
+      <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
-          <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.15)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid rgba(255,255,255,0.3)" }}>
+          <div style={{ width: 88, height: 88, borderRadius: 22, background: "white", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #e2e8f0" }}>
             <LogoEtablissement src={co.logo_url} name={co.name} fontSize={46} />
           </div>
-          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "white", margin: "0 0 16px", textShadow: "0 2px 8px rgba(0,0,0,0.2)", lineHeight: 1.2 }}>{co.name}</h1>
-          <p style={{ fontSize: 17, color: "rgba(255,255,255,0.88)", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
+          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{co.name}</h1>
+          <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
             {co.description || "Des voyages confortables et sécurisés à travers toute la région. Réservez votre place et partez en toute sérénité."}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => scrollTo("trips")} style={{ background: "white", color: SKY_DARK, border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+            <button onClick={() => scrollTo("trips")} style={{ background: SKY, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
               Voir les trajets
             </button>
-            <button onClick={() => scrollTo("contact")} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.5)", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+            <button onClick={() => scrollTo("contact")} style={{ background: "white", color: SKY, border: `1.5px solid ${SKY}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
               Réserver
             </button>
           </div>
@@ -229,11 +226,11 @@ export default function TransportVitrine() {
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#0284c7" accentDark="#0c4a6e" />
 
       {/* FOOTER */}
-      <footer style={{ background: SKY_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: "white", marginBottom: 8 }}>{co.name}</div>
+      <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "32px 20px", textAlign: "center" }}>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{co.name}</div>
         <p style={{ fontSize: 12, margin: "0 0 8px" }}>Transport & Voyages</p>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+        <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
         </div>
       </footer>
     </div>

@@ -8,7 +8,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 
 const SLATE      = "#475569";
 const SLATE_DARK = "#1e293b";
-const SLATE_BLUE = "#334155";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR") : ""; }
@@ -74,15 +73,15 @@ export default function JournalisteVitrine() {
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-        .vn-link{color:rgba(255,255,255,0.85);font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
-        .vn-link:hover{color:white;border-bottom-color:rgba(255,255,255,0.6);}
+        .vn-link{color:#334155;font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
+        .vn-link:hover{color:#0f172a;border-bottom-color:${SLATE_DARK};}
         .art-card{transition:all 0.2s;cursor:default;} .art-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.1) !important;}
         @media(max-width:768px){.hero-t{font-size:26px !important}.stats-g{grid-template-columns:1fr 1fr !important}.art-g{grid-template-columns:1fr 1fr !important}}
         @media(max-width:480px){.art-g{grid-template-columns:1fr !important}}
       `}</style>
 
       {/* TOP BAR */}
-      <div style={{ background: SLATE_DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
+      <div style={{ background: "#f8fafc", color: "#334155", borderBottom: "1px solid #e2e8f0", fontSize: 12, padding: "6px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {media.phone   && <span>📞 {media.phone}</span>}
@@ -93,15 +92,15 @@ export default function JournalisteVitrine() {
       </div>
 
       {/* NAVBAR */}
-      <nav style={{ background: SLATE_DARK, boxShadow: "0 2px 12px rgba(0,0,0,0.3)", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", boxShadow: "0 1px 6px rgba(15,23,42,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.1)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: "white", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <LogoEtablissement src={media.logo_url} name={media.name} fontSize={22} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 17, color: "white", letterSpacing: "0.02em" }}>{media.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>Presse</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a", letterSpacing: "0.02em" }}>{media.name}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Presse</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
@@ -113,18 +112,17 @@ export default function JournalisteVitrine() {
       </nav>
 
       {/* HERO */}
-      <section id="hero" style={{ background: `linear-gradient(135deg,${SLATE_DARK} 0%,${SLATE_BLUE} 60%,${SLATE} 100%)`, padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
+      <section id="hero" style={{ background: "#f8fafc", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
-          <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.1)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid rgba(255,255,255,0.2)" }}>
+          <div style={{ width: 88, height: 88, borderRadius: 22, background: "white", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #e2e8f0" }}>
             <LogoEtablissement src={media.logo_url} name={media.name} fontSize={46} />
           </div>
-          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "white", margin: "0 0 16px", fontFamily: "'Georgia', serif", letterSpacing: "-0.5px" }}>{media.name}</h1>
-          <p style={{ fontSize: 17, color: "rgba(255,255,255,0.8)", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px", fontFamily: "system-ui" }}>
+          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", fontFamily: "'Georgia', serif", letterSpacing: "-0.5px" }}>{media.name}</h1>
+          <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px", fontFamily: "system-ui" }}>
             {media.description || "L'information en temps réel. Des journalistes engagés pour vous informer avec rigueur et objectivité."}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => scrollTo("articles")} style={{ background: "white", color: SLATE_DARK, border: "none", borderRadius: 10, padding: "13px 30px", fontWeight: 700, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+            <button onClick={() => scrollTo("articles")} style={{ background: SLATE_DARK, color: "white", border: "none", borderRadius: 10, padding: "13px 30px", fontWeight: 700, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
               Lire nos articles
             </button>
           </div>
@@ -250,11 +248,11 @@ export default function JournalisteVitrine() {
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#475569" accentDark="#1e293b" />
 
       {/* FOOTER */}
-      <footer style={{ background: SLATE_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>
-        <div style={{ fontWeight: 800, fontSize: 18, color: "white", marginBottom: 8, fontFamily: "'Georgia', serif" }}>{media.name}</div>
+      <footer style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0", color: "#64748b", padding: "32px 20px", textAlign: "center" }}>
+        <div style={{ fontWeight: 800, fontSize: 18, color: "#0f172a", marginBottom: 8, fontFamily: "'Georgia', serif" }}>{media.name}</div>
         <p style={{ fontSize: 12, margin: "0 0 8px" }}>Presse & Information</p>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+        <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
         </div>
       </footer>
     </div>

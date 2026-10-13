@@ -8,7 +8,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 
 const DARK      = "#0f172a";
 const GRAY      = "#334155";
-const GRAY_LIGHT= "#475569";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 
@@ -34,7 +33,7 @@ export default function SecuriteVitrine() {
   }, [tenantCode]);
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #e2e8f0`, borderTopColor: DARK, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
         <p style={{ color: DARK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
@@ -62,14 +61,14 @@ export default function SecuriteVitrine() {
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-        .vn-link{color:rgba(255,255,255,0.85);font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
-        .vn-link:hover{color:white;border-bottom-color:rgba(255,255,255,0.6);}
+        .vn-link{color:#334155;font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
+        .vn-link:hover{color:#0f172a;border-bottom-color:${DARK};}
         .svc-card{transition:all 0.2s;} .svc-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,0.12) !important;}
         @media(max-width:768px){.hero-t{font-size:26px !important}.stats-g{grid-template-columns:1fr 1fr !important}}
       `}</style>
 
       {/* TOP BAR */}
-      <div style={{ background: DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
+      <div style={{ background: "#f8fafc", color: "#64748b", borderBottom: "1px solid #e2e8f0", fontSize: 12, padding: "6px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {agency.phone   && <span>🚨 {agency.phone} (urgences)</span>}
@@ -80,15 +79,15 @@ export default function SecuriteVitrine() {
       </div>
 
       {/* NAVBAR */}
-      <nav style={{ background: DARK, boxShadow: "0 2px 12px rgba(0,0,0,0.4)", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15,23,42,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.1)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: "white", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <LogoEtablissement src={agency.logo_url} name={agency.name} fontSize={22} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 17, color: "white" }}>{agency.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>Sécurité</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a" }}>{agency.name}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>Sécurité</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20 }}>
@@ -100,18 +99,17 @@ export default function SecuriteVitrine() {
       </nav>
 
       {/* HERO */}
-      <section id="hero" style={{ background: `linear-gradient(135deg,${DARK} 0%,${GRAY} 60%,${GRAY_LIGHT} 100%)`, padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
+      <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
-          <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.1)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid rgba(255,255,255,0.2)" }}>
+          <div style={{ width: 88, height: 88, borderRadius: 22, background: "white", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #e2e8f0" }}>
             <LogoEtablissement src={agency.logo_url} name={agency.name} fontSize={46} />
           </div>
-          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "white", margin: "0 0 16px", textShadow: "0 2px 8px rgba(0,0,0,0.3)", lineHeight: 1.2 }}>{agency.name}</h1>
-          <p style={{ fontSize: 17, color: "rgba(255,255,255,0.8)", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
+          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{agency.name}</h1>
+          <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
             {agency.description || "Votre sécurité, notre priorité absolue. Des agents professionnels et une couverture sécuritaire de qualité pour protéger ce qui compte."}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => scrollTo("services")} style={{ background: "white", color: DARK, border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+            <button onClick={() => scrollTo("services")} style={{ background: DARK, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
               Nos Services
             </button>
             {agency.phone && (
@@ -197,11 +195,11 @@ export default function SecuriteVitrine() {
       )}
 
       {/* CONTACT */}
-      <section id="contact" style={{ background: DARK, padding: "60px 20px", color: "white" }}>
+      <section id="contact" style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 44 }}>
             <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 8 }}>Demander un devis</h2>
-            <p style={{ opacity: 0.8, fontSize: 15 }}>Contactez-nous pour une évaluation gratuite de vos besoins en sécurité.</p>
+            <p style={{ color: "#334155", fontSize: 15 }}>Contactez-nous pour une évaluation gratuite de vos besoins en sécurité.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 780, margin: "0 auto" }}>
             {[
@@ -209,9 +207,9 @@ export default function SecuriteVitrine() {
               { icon: "✉️", label: "Email", val: agency.email || "Non renseigné" },
               { icon: "📍", label: "Siège", val: agency.address || "Non renseignée" },
             ].map((item, i) => (
-              <div key={i} style={{ textAlign: "center", padding: "24px 16px", background: "rgba(255,255,255,0.07)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.15)" }}>
+              <div key={i} style={{ textAlign: "center", padding: "24px 16px", background: "white", borderRadius: 16, border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 34, marginBottom: 10 }}>{item.icon}</div>
-                <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>{item.label}</div>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{item.val}</div>
               </div>
             ))}
@@ -230,11 +228,11 @@ export default function SecuriteVitrine() {
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#334155" accentDark="#020617" />
 
       {/* FOOTER */}
-      <footer style={{ background: "#020617", color: "rgba(255,255,255,0.6)", padding: "28px 20px", textAlign: "center" }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: "white", marginBottom: 8 }}>{agency.name}</div>
+      <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "28px 20px", textAlign: "center" }}>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{agency.name}</div>
         <p style={{ fontSize: 12, margin: "0 0 8px" }}>Agence de Sécurité</p>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.5)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+        <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
         </div>
       </footer>
     </div>
