@@ -8,6 +8,7 @@ import { getStats, getAllUsers, getAllFamilies, getMySectors, getPageAdmins, add
 import { config } from "../config/api";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";
+import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 
 interface ProfessionalAccount {
@@ -37,6 +38,8 @@ interface ProfessionalAccount {
   isTrial?: boolean;
   /** "visibility" = formule 1 (Rendez-vous) ; "full" ou vide (anciens comptes) = Gestion Interne */
   planType?: "visibility" | "full" | null;
+  /** Code de la gestion interne (absent tant qu'elle n'a pas été créée) */
+  tenant_code?: string | null;
 }
 
 const isFormuleRdv = (p: { planType?: string | null }) => p.planType === "visibility";
@@ -1349,6 +1352,13 @@ export default function AdminDashboard() {
                           );
                         })()}
                         {pro.description && <div className="text-xs text-gray-500 mt-1 line-clamp-2">{pro.description}</div>}
+                        {/* Lien de l'application de gestion, à transmettre au pro ou à ses employés */}
+                        {pro.status === "approved" && !isFormuleRdv(pro) && (
+                          <div className="mt-2">
+                            <BoutonLienAppGestion accountId={pro.id} type={pro.type} tenantCode={pro.tenant_code}
+                              className="px-3 py-1.5 bg-white border border-teal-600 text-teal-700 hover:bg-teal-50 text-xs font-semibold rounded-lg" />
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-wrap gap-2 self-end sm:self-center">
                         {/* Bouton accorder/retirer visibilité — super admin G7 uniquement */}

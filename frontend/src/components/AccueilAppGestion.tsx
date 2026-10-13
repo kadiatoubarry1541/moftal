@@ -4,6 +4,7 @@ import LogoEtablissement from "./LogoEtablissement";
 import { getTypeInfo } from "./EspaceProModals";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
 import { useTraduction } from "../i18n/traduction";
+import BoutonLienAppGestion from "./BoutonLienAppGestion";
 
 // Espace pro d'un établissement en formule complète, vu sur le site Moftal :
 // tout se fait dans SA propre application (la gestion interne, avec son logo).
@@ -115,6 +116,14 @@ export default function AccueilAppGestion({ account, couleur }: { account: any; 
           style={{ borderColor: couleur, color: couleur }}>
           {copie ? tr("✅ Lien copié") : tr("🔗 Partager le lien à mes membres")}
         </button>
+
+        {/* Lien de l'application de gestion elle-même : vos employés l'installent,
+            puis n'ont que les droits que vous leur donnez (Employés) */}
+        <div className="mt-3">
+          <BoutonLienAppGestion accountId={account.id} type={account.type} tenantCode={tenantCode}
+            className="w-full py-3 rounded-2xl text-sm font-bold bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+          <p className="mt-1.5 text-xs text-gray-400">{tr("Pour vos employés : ils installent l'application et n'ont que les droits que vous leur donnez dans « Employés ».")}</p>
+        </div>
 
       </div>
       <button onClick={() => navigate("/")} className="mt-6 text-sm text-gray-500">{tr("← Retour à Moftal")}</button>

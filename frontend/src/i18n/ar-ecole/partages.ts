@@ -2,6 +2,15 @@
 // installation de l'application, rapport du mois, bandeau hors connexion,
 // panneau Espace Pro, reçu imprimé et rappel WhatsApp.
 const ar: Record<string, string> = {
+  "Vous n'avez pas encore accès à cette gestion": "ليس لديكم بعدُ صلاحية الدخول إلى هذه الإدارة",
+  "Connecté(e) : {nom}": "متصل(ة): {nom}",
+  "Le responsable de l'établissement doit vous ajouter dans « Employés » avec votre NuméroH (page Identité). Ensuite, rouvrez cette application : vous aurez vos droits.": "يجب على مسؤول المؤسسة إضافتكم في « الموظفون » برقم NuméroH الخاص بكم (صفحة الهوية). بعد ذلك أعيدوا فتح هذا التطبيق وستحصلون على صلاحياتكم.",
+  "🔄 Réessayer": "🔄 إعادة المحاولة",
+  "Se connecter avec un autre compte": "تسجيل الدخول بحساب آخر",
+  "🔗 Copier le lien de l'application": "🔗 نسخ رابط التطبيق",
+  "⏳ Préparation…": "⏳ جارٍ التحضير…",
+  "Impossible de préparer l'application.": "تعذّر تحضير التطبيق.",
+  "Pour vos employés : ils installent l'application et n'ont que les droits que vous leur donnez dans « Employés ».": "لموظفيكم: يثبّتون التطبيق ولا تكون لهم إلا الصلاحيات التي تمنحونها لهم في « الموظفون ».",
   "Copiez ce lien :": "انسخوا هذا الرابط:",
   "✅ Lien copié": "✅ تم نسخ الرابط",
   "📋 Copier le lien": "📋 نسخ الرابط",

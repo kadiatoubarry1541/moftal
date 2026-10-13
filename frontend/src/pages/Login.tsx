@@ -16,6 +16,10 @@ export function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useI18n()
+  // Lien d'une application de gestion reçu sans être connecté : retour à cette
+  // page après la connexion (seulement une adresse de ce site, jamais un autre)
+  const redirectParam = new URLSearchParams(location.search).get('redirect')
+  const retour = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : null
 
   // Auto-redirect si déjà connecté (comme Facebook)
   useEffect(() => {
@@ -26,7 +30,7 @@ export function Login() {
         const parsed = JSON.parse(session)
         const user   = parsed.userData || parsed
         if (user?.numeroH) {
-          const from = (location.state as any)?.from || '/compte'
+          const from = (location.state as any)?.from || retour || '/compte'
           navigate(from, { replace: true })
           return
         }
@@ -71,7 +75,7 @@ export function Login() {
 
       if (result?.success) {
         // Retourner à la page d'origine (espace-pro, gestion, etc.) ou /compte par défaut
-        const from = (location.state as any)?.from || '/compte'
+        const from = (location.state as any)?.from || retour || '/compte'
         navigate(from, { replace: true, state: { fromLogin: true } })
       } else if (result?.networkError) {
         setIsNetworkError(true)
