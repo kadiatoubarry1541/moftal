@@ -7,7 +7,7 @@
  */
 
 import express from 'express';
-import { trouverPersonne } from '../utils/trouverPersonne.js';
+import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
@@ -544,9 +544,9 @@ router.get('/:tenantCode/members', authenticate, verifyTenant, async (req, res) 
 router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
   const { role, linked_student_id } = req.body;
-  // NuméroH ou numéro de téléphone du compte
+  // Téléphone, e-mail ou NuméroH ; sans compte, il est préparé
   let trouve;
-  try { trouve = await trouverPersonne(req.body.numero_h || req.body.telephone); }
+  try { trouve = await trouverOuPreparerPersonne(req.body.numero_h || req.body.telephone); }
   catch (err) { return res.status(500).json({ success: false, message: err.message }); }
   if (!trouve.personne) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
   const user = { prenom: trouve.personne.prenom, nom_famille: trouve.personne.nom };

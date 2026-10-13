@@ -10,7 +10,6 @@ import LogoEtablissement from "../components/LogoEtablissement";
 import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";
 import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
 import AdminCreerComptePro from "../components/AdminCreerComptePro";
-import EnvoiInvitationPro from "../components/EnvoiInvitationPro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 
 interface ProfessionalAccount {
@@ -113,18 +112,6 @@ export default function AdminDashboard() {
   const [identiteAModifier, setIdentiteAModifier] = useState<ProfessionalAccount | null>(null);
   // Créer un compte pro pour un établissement (téléphone ou e-mail seulement)
   const [creerPro, setCreerPro] = useState(false);
-  // Nouveau lien d'invitation pour un compte déjà créé : { proId: token }
-  const [invitations, setInvitations] = useState<Record<string, string>>({});
-  const nouvelleInvitation = async (pro: ProfessionalAccount) => {
-    try {
-      const r = await fetch(`${API_BASE}/api/invitations-pro/admin/${pro.id}/lien`, {
-        method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.token) { alert(d.message || "Le lien n'a pas pu être créé."); return; }
-      setInvitations(m => ({ ...m, [pro.id]: d.token }));
-    } catch { alert("Erreur de connexion. Vérifiez internet puis réessayez."); }
-  };
   const [proFilter, setProFilter] = useState<string>("pending");
   const [couples, setCouples] = useState<CoupleLink[]>([]);
   const [couplesLoading, setCouplesLoading] = useState(false);
@@ -1135,11 +1122,11 @@ export default function AdminDashboard() {
             <div className="space-y-4">
 
               {/* L'admin crée le compte d'un établissement, même à distance : le pro
-                  reçoit un lien, choisit son mot de passe, ajoute son logo et installe */}
+                  reçoit le lien de son application, se connecte et installe */}
               <div className="bg-white rounded-2xl border border-teal-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1">
                   <div className="font-bold text-gray-900">➕ Créer un compte pro pour un établissement</div>
-                  <div className="text-xs text-gray-500">Nom, secteur et téléphone ou e-mail suffisent. Le pro reçoit un lien et fait le reste.</div>
+                  <div className="text-xs text-gray-500">Nom, secteur et téléphone ou e-mail suffisent. Vous lui envoyez le lien de son application : il se connecte avec ce téléphone / cet e-mail et installe.</div>
                 </div>
                 <button onClick={() => setCreerPro(true)} className="px-4 py-2.5 rounded-xl bg-teal-600 text-white font-bold text-sm">Créer un compte pro</button>
               </div>
@@ -1378,17 +1365,6 @@ export default function AdminDashboard() {
                           );
                         })()}
                         {pro.description && <div className="text-xs text-gray-500 mt-1 line-clamp-2">{pro.description}</div>}
-                        {/* Invitation du propriétaire (compte créé par l'admin, lien perdu ou expiré) */}
-                        {pro.status === "approved" && (
-                          <div className="mt-2">
-                            {invitations[pro.id]
-                              ? <EnvoiInvitationPro token={invitations[pro.id]} nom={pro.name} telephone={pro.phone || undefined} email={pro.email || undefined} />
-                              : <button type="button" onClick={() => nouvelleInvitation(pro)}
-                                  className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-semibold rounded-lg">
-                                  ✉️ Lien d'invitation du propriétaire
-                                </button>}
-                          </div>
-                        )}
                         {/* Lien de l'application de gestion, à transmettre au pro ou à ses employés */}
                         {pro.status === "approved" && !isFormuleRdv(pro) && (
                           <div className="mt-2">

@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { envoyerGestion } from "../utils/envoyerGestion";
 import EnvoiLien from "./EnvoiLien";
-import { lienInvitationEquipe, messageInvitationEquipe } from "../utils/invitationPro";
+import { messageLienApplication } from "../utils/invitationPro";
+import { lienAppGestionIci } from "../utils/lienAppGestion";
 
 // « 👥 Employés » : le propriétaire donne accès à sa gestion à ses employés
 // (téléphone, e-mail ou NuméroH) et choisit pour chacun :
-// Chaque employé reçoit un lien : il installe l'application et se connecte
-// (il choisit d'abord son mot de passe s'il n'avait pas encore de compte).
+// On lui envoie le lien de l'application : il se connecte avec ce téléphone /
+// cet e-mail (la première fois il choisit son mot de passe) et n'a que ses droits.
 //   - Complet : tout, sauf les paramètres et les accès ;
 //   - Limité  : voir, ajouter, changer un statut — sans modifier ni supprimer.
 // Les règles sont appliquées par le serveur (utils/accesEmployes.js).
 
 type Employe = { id: number; numero_h: string; nom: string | null; poste: string | null; niveau: "complet" | "limite"; is_active: boolean; telephone?: string | null; email?: string | null };
-type Invitation = { employeId: number; token: string; nom: string; telephone?: string | null; email?: string | null; nouveauCompte?: boolean };
+type Invitation = { nom: string; telephone?: string | null; email?: string | null; nouveauCompte?: boolean };
 
 const NIVEAUX = [
   { v: "limite", titre: "Limité", detail: "Voir, ajouter (ventes, patients, élèves…) et changer un statut. Ne peut ni modifier ni supprimer." },
@@ -25,6 +26,7 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
   const [form, setForm] = useState({ numero_h: "", poste: "", niveau: "limite" });
   const [envoi, setEnvoi] = useState(false);
   const [invitation, setInvitation] = useState<Invitation | null>(null);
+  const lienApp = lienAppGestionIci() || window.location.href;
   const headers = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
   const charger = () =>
@@ -44,12 +46,10 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) { alert(d.message || "L'employé n'a pas été ajouté. Réessayez."); return; }
       setForm({ numero_h: "", poste: "", niveau: "limite" });
-      // Le lien à lui envoyer tout de suite
-      if (d.invitation) {
-        const estEmail = identifiant.includes("@");
-        setInvitation({ employeId: d.employe.id, token: d.invitation, nom: d.employe.nom || identifiant, nouveauCompte: d.nouveauCompte,
-          telephone: estEmail ? null : (/[a-z]/i.test(identifiant) ? null : identifiant), email: estEmail ? identifiant : null });
-      }
+      // Le lien de l'application, à lui envoyer tout de suite
+      const estEmail = identifiant.includes("@");
+      setInvitation({ nom: d.employe.nom || identifiant, nouveauCompte: d.nouveauCompte,
+        telephone: estEmail || /[a-z]/i.test(identifiant) ? (d.employe.telephone || null) : identifiant, email: estEmail ? identifiant : null });
       charger();
     } catch {
       alert("Erreur de connexion : rien n'a été enregistré. Vérifiez votre connexion et réessayez.");
@@ -57,14 +57,7 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
       setEnvoi(false);
     }
   };
-  const inviter = async (e: Employe) => {
-    try {
-      const r = await fetch(`${base}/acces-employes/${e.id}/invitation`, { method: "POST", headers: headers() });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.invitation) { alert(d.message || "Le lien n'a pas pu être créé."); return; }
-      setInvitation({ employeId: e.id, token: d.invitation, nom: e.nom || e.numero_h, telephone: e.telephone, email: e.email });
-    } catch { alert("Erreur de connexion. Vérifiez internet puis réessayez."); }
-  };
+  const envoyerLien = (e: Employe) => setInvitation({ nom: e.nom || e.numero_h, telephone: e.telephone, email: e.email });
   const changerNiveau = async (e: Employe, niveau: string) => {
     if (await envoyerGestion(`${base}/acces-employes/${e.id}`, { method: "PUT", headers: headers(), body: JSON.stringify({ niveau }) })) charger();
   };
@@ -86,11 +79,11 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
             <div style={{ fontWeight: 700, fontSize: 14, color: "#166534" }}>✅ Envoyez ce lien à {invitation.nom}</div>
             <div style={{ fontSize: 12, color: "#334155", marginTop: 4 }}>
               {invitation.nouveauCompte
-                ? "Il choisit son mot de passe, installe l'application, puis se connecte avec son téléphone ou son e-mail."
-                : "Il installe l'application et se connecte avec son téléphone ou son e-mail et son mot de passe."}
+                ? "Il ouvre le lien, se connecte avec ce téléphone / cet e-mail et choisit son mot de passe la première fois. Il n'a que les droits donnés ici."
+                : "Il ouvre le lien et se connecte avec son téléphone / e-mail et son mot de passe habituel. Il n'a que les droits donnés ici."}
             </div>
-            <EnvoiLien lien={lienInvitationEquipe(invitation.token)} message={messageInvitationEquipe(nomEtablissement || "Votre établissement", lienInvitationEquipe(invitation.token))}
-              telephone={invitation.telephone} email={invitation.email} sujet={`Invitation — ${nomEtablissement || "Moftal"}`} />
+            <EnvoiLien lien={lienApp} message={messageLienApplication(nomEtablissement || "notre établissement", lienApp)}
+              telephone={invitation.telephone} email={invitation.email} sujet={`Application — ${nomEtablissement || "Moftal"}`} />
             <button onClick={() => setInvitation(null)} style={{ marginTop: 10, background: "none", border: "none", color: "#64748b", fontSize: 12, cursor: "pointer" }}>Masquer</button>
           </div>
         )}
@@ -98,7 +91,7 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
         <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, marginBottom: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Ajouter un employé</div>
           <input value={form.numero_h} onChange={e => setForm(f => ({ ...f, numero_h: e.target.value }))} placeholder="Téléphone, e-mail ou NuméroH de l'employé" inputMode="email" autoCapitalize="none" style={{ ...inp, marginBottom: 4 }} />
-          <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>Pas encore de compte Moftal ? Mettez son téléphone ou son e-mail : il choisira son mot de passe en ouvrant son lien.</div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>Pas encore de compte Moftal ? Mettez son téléphone ou son e-mail : il choisira son mot de passe à sa première connexion.</div>
           <input value={form.poste} onChange={e => setForm(f => ({ ...f, poste: e.target.value }))} placeholder="Poste (ex. Caissier, Secrétaire, Infirmier)" style={{ ...inp, marginBottom: 10 }} />
           {NIVEAUX.map(n => (
             <label key={n.v} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 10px", marginBottom: 6, borderRadius: 8, cursor: "pointer", border: `1.5px solid ${form.niveau === n.v ? couleur : "#e2e8f0"}`, background: "white" }}>
@@ -125,7 +118,7 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
               <option value="limite">Limité</option>
               <option value="complet">Complet</option>
             </select>
-            <button onClick={() => inviter(e)} style={{ padding: "6px 10px", background: "white", color: couleur, border: `1px solid ${couleur}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>✉️ Invitation</button>
+            <button onClick={() => envoyerLien(e)} style={{ padding: "6px 10px", background: "white", color: couleur, border: `1px solid ${couleur}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>🔗 Lien</button>
             <button onClick={() => retirer(e)} style={{ padding: "6px 10px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Retirer</button>
           </div>
         ))}

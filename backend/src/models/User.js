@@ -497,4 +497,15 @@ User.beforeSave(async (user) => {
   }
 });
 
+// Dès qu'un mot de passe est choisi (première connexion, mot de passe oublié,
+// changement), la « première connexion » par téléphone / e-mail est fermée.
+User.addHook('afterUpdate', async (user, options) => {
+  if (user.changed && user.changed('password')) {
+    await User.sequelize.query(
+      'UPDATE users SET mot_de_passe_a_choisir = false WHERE numero_h = :nh AND mot_de_passe_a_choisir = true',
+      { replacements: { nh: user.numeroH }, transaction: options?.transaction }
+    ).catch(() => {});
+  }
+});
+
 export default User;

@@ -1,10 +1,8 @@
-// Lien d'invitation d'un pro (créé par l'admin) et messages prêts à envoyer
-export function lienInvitationPro(token: string) {
-  return `${window.location.origin}/rejoindre-pro/${token}`;
-}
-
-export function messageInvitation(nom: string, lien: string) {
-  return `Bonjour ! Votre espace professionnel « ${nom} » est prêt sur Moftal. Ouvrez ce lien pour choisir votre mot de passe, ajouter votre logo et installer votre application de gestion : ${lien}`;
+// Message prêt à envoyer avec le lien de l'application d'un établissement
+export function messageLienApplication(etablissement: string, lien: string, proprietaire = false) {
+  return proprietaire
+    ? `Bonjour ! Votre application « ${etablissement} » est prête sur Moftal. Ouvrez ce lien, connectez-vous avec votre téléphone ou votre e-mail (la première fois, vous choisissez votre mot de passe) puis installez-la : ${lien}`
+    : `Bonjour ! Voici l'application de ${etablissement} sur Moftal. Ouvrez ce lien, connectez-vous avec votre téléphone ou votre e-mail (la première fois, vous choisissez votre mot de passe) puis installez-la : ${lien}`;
 }
 
 /** Lien WhatsApp vers ce numéro (indicatif 224 ajouté si absent). */
@@ -13,13 +11,4 @@ export function lienWhatsApp(telephone: string, texte: string) {
   if (n.startsWith("00")) n = n.slice(2);
   if (n.length === 9) n = `224${n}`;
   return `https://wa.me/${n}?text=${encodeURIComponent(texte)}`;
-}
-
-// Invitation d'un employé par le pro
-export function lienInvitationEquipe(token: string) {
-  return `${window.location.hostname === "gestions.moftal.com" ? "https://moftal.com" : window.location.origin}/rejoindre-equipe/${token}`;
-}
-
-export function messageInvitationEquipe(etablissement: string, lien: string) {
-  return `Bonjour ! ${etablissement} vous a ajouté(e) à son équipe sur Moftal. Ouvrez ce lien pour installer l'application et vous connecter avec votre téléphone ou votre e-mail : ${lien}`;
 }

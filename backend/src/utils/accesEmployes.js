@@ -7,8 +7,7 @@
 //   - « limité »  : voir, ajouter et changer un statut (vente servie, rendez-vous
 //     confirmé…), mais ni modifier ni supprimer une fiche.
 // Tout est contrôlé ici, côté serveur : l'écran ne fait que refléter ces règles.
-import { trouverPersonne } from './trouverPersonne.js';
-import { analyserIdentifiant, creerCompteProvisoire, creerInvitationEquipe, motDePasseAChoisir } from '../services/invitations.js';
+import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
 import { sequelize } from '../config/database.js';
 
 const NIVEAUX = ['complet', 'limite'];
@@ -128,19 +127,12 @@ export function ajouterRoutesAccesEmployes(router, middlewaresProprietaire) {
       const niveau = NIVEAUX.includes(req.body?.niveau) ? req.body.niveau : 'limite';
       const poste = String(req.body?.poste || '').trim().slice(0, 100) || null;
       if (!identifiant) return res.status(400).json({ success: false, message: 'Téléphone, e-mail ou NuméroH de l\'employé obligatoire.' });
-      const trouve = await trouverPersonne(identifiant);
-      let user;
-      let userCree = false;
-      if (trouve.personne) {
-        user = { numero_h: trouve.personne.numero_h, prenom: trouve.personne.prenom, nom_famille: trouve.personne.nom };
-      } else {
-        // Pas encore de compte Moftal : téléphone ou e-mail → compte préparé,
-        // l'employé choisit son mot de passe en ouvrant son invitation
-        const { valide } = analyserIdentifiant(identifiant);
-        if (trouve.statut !== 404 || !valide) return res.status(trouve.statut || 400).json({ success: false, message: trouve.erreur || 'Téléphone ou e-mail invalide.' });
-        user = { numero_h: await creerCompteProvisoire(identifiant), prenom: null, nom_famille: null };
-        userCree = true;
-      }
+      // Sans compte Moftal : compte préparé, la personne choisit son mot de passe
+      // à sa première connexion avec ce téléphone / cet e-mail
+      const trouve = await trouverOuPreparerPersonne(identifiant);
+      if (trouve.erreur) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
+      const userCree = trouve.cree;
+      const user = { numero_h: trouve.personne.numero_h, prenom: trouve.personne.prenom, nom_famille: trouve.personne.nom };
       if (String(user.numero_h).toLowerCase() === String(req.tenant?.owner_numero_h || '').toLowerCase()) {
         return res.status(400).json({ success: false, message: 'Le propriétaire a déjà tous les accès.' });
       }
@@ -153,25 +145,8 @@ export function ajouterRoutesAccesEmployes(router, middlewaresProprietaire) {
          RETURNING id, numero_h, nom, poste, niveau, is_active, created_at`,
         { replacements: { code: req.params.tenantCode, nh: user.numero_h, nom, poste, niveau, par: req.userId || null } }
       );
-      // Lien à lui envoyer : il installe l'application et se connecte (ou choisit
-      // d'abord son mot de passe si son compte vient d'être préparé)
-      const invitation = await creerInvitationEquipe(req.params.tenantCode, user.numero_h, userCree || await motDePasseAChoisir(user.numero_h));
-      res.json({ success: true, employe: rows[0], invitation, nouveauCompte: userCree });
+      res.json({ success: true, employe: rows[0], nouveauCompte: userCree });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
-  });
-
-  // Nouveau lien d'invitation pour un employé (perdu, expiré…)
-  router.post(`${base}/:id/invitation`, ...middlewaresProprietaire, async (req, res) => {
-    try {
-      await preparerTableAcces();
-      const [e] = await sequelize.query(
-        `SELECT numero_h FROM management_staff_access WHERE id = :id AND tenant_code = :code LIMIT 1`,
-        { replacements: { id: req.params.id, code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
-      );
-      if (!e) return res.status(404).json({ success: false, message: 'Employé introuvable.' });
-      const invitation = await creerInvitationEquipe(req.params.tenantCode, e.numero_h, await motDePasseAChoisir(e.numero_h));
-      res.json({ success: true, invitation });
-    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
   });
 
   router.put(`${base}/:id`, ...middlewaresProprietaire, async (req, res) => {

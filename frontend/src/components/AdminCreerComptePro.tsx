@@ -2,11 +2,14 @@ import { useState } from "react";
 import { config } from "../config/api";
 import { ADMIN_SERVICES } from "./EspaceProModals";
 import { normaliserLogo } from "../utils/logoImage";
-import EnvoiInvitationPro from "./EnvoiInvitationPro";
+import EnvoiLien from "./EnvoiLien";
+import { lienAppGestion } from "../utils/lienAppGestion";
+import { messageLienApplication } from "../utils/invitationPro";
 
 // L'admin crée un compte pro avec le minimum (nom, secteur, téléphone ou e-mail).
-// Le pro reçoit un lien : il choisit son mot de passe, ajoute son logo et
-// installe sa gestion. Le compte est publié tout de suite (essai gratuit).
+// Il envoie le lien de l'application : le pro se connecte avec ce téléphone /
+// cet e-mail (la première fois il choisit son mot de passe), installe et a
+// tous les droits. Le compte est publié tout de suite (essai gratuit).
 export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () => void; onCree?: () => void }) {
   const [name, setName] = useState("");
   const [type, setType] = useState("school");
@@ -16,7 +19,7 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
   const [photo, setPhoto] = useState("");
   const [erreur, setErreur] = useState("");
   const [envoi, setEnvoi] = useState(false);
-  const [resultat, setResultat] = useState<{ token: string; nom: string; telephone?: string; email?: string; compteExistant: boolean } | null>(null);
+  const [resultat, setResultat] = useState<{ lien: string; nom: string; telephone?: string; email?: string; compteExistant: boolean } | null>(null);
   const echanges = ["vendor", "supplier", "producer"].includes(type);
 
   const creer = async () => {
@@ -33,7 +36,19 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) { setErreur(d.message || "Le compte n'a pas été créé."); return; }
-      setResultat({ token: d.token, nom: d.account.name, telephone: d.account.phone || undefined, email: d.account.email || undefined, compteExistant: !!d.compteExistant });
+      // Lien à envoyer : l'application de gestion (formule complète), sinon son espace pro
+      let lien = `${window.location.origin}/espace-pro/${d.account.id}`;
+      if (d.account.planType === "full") {
+        let code = d.account.tenant_code;
+        if (!code) {
+          const e = await fetch(`${config.API_BASE_URL}/professionals/${d.account.id}/ensure-tenant`, {
+            method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+          }).then(x => x.json()).catch(() => ({}));
+          code = e.tenantCode;
+        }
+        if (code) lien = lienAppGestion(d.account.type, code);
+      }
+      setResultat({ lien, nom: d.account.name, telephone: d.account.phone || undefined, email: d.account.email || undefined, compteExistant: !!d.compteExistant });
       onCree?.();
     } catch {
       setErreur("Erreur de connexion. Vérifiez internet puis réessayez.");
@@ -56,10 +71,10 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
             <p className="text-sm text-green-700 font-semibold">✅ « {resultat.nom} » est créé et publié.</p>
             <p className="text-sm text-gray-600 mt-1">
               {resultat.compteExistant
-                ? "Ce téléphone / e-mail a déjà un compte Moftal : le pro se connecte avec, puis accepte l'invitation."
-                : "Envoyez-lui ce lien : il choisit son mot de passe, ajoute son logo et installe sa gestion."}
+                ? "Ce téléphone / e-mail a déjà un compte Moftal : il se connecte avec son mot de passe habituel."
+                : "Envoyez-lui ce lien : il se connecte avec ce téléphone / cet e-mail, choisit son mot de passe la première fois, puis installe."}
             </p>
-            <EnvoiInvitationPro token={resultat.token} nom={resultat.nom} telephone={resultat.telephone} email={resultat.email} />
+            <EnvoiLien lien={resultat.lien} message={messageLienApplication(resultat.nom, resultat.lien, true)} telephone={resultat.telephone} email={resultat.email} sujet={`Votre application ${resultat.nom} sur Moftal`} />
             <button onClick={onClose} className="mt-4 w-full py-2.5 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm">Fermer</button>
           </div>
         ) : (
@@ -112,7 +127,7 @@ export default function AdminCreerComptePro({ onClose, onCree }: { onClose: () =
             </div>
             {erreur && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{erreur}</p>}
             <button onClick={creer} disabled={envoi} className="w-full py-3 rounded-xl bg-teal-600 text-white font-bold text-sm disabled:opacity-60">
-              {envoi ? "⏳ Création…" : "Créer et obtenir le lien d'invitation"}
+              {envoi ? "⏳ Création…" : "Créer et obtenir le lien de l'application"}
             </button>
           </div>
         )}

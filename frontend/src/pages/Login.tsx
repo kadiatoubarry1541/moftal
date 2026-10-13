@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { api } from '../utils/api'
+import { config } from '../config/api'
 import { useI18n } from '../i18n/useI18n'
 import { TermsModal, hasAcceptedTerms } from '../components/TermsModal'
 
@@ -13,6 +14,10 @@ export function Login() {
   const [loading, setLoading] = useState(false)
   const [slowServer, setSlowServer] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
+  // Première connexion d'une personne ajoutée par son téléphone / e-mail
+  // (propriétaire, employé, professeur, parent) : elle choisit son mot de passe
+  const [premiere, setPremiere] = useState(false)
+  const [confirmation, setConfirmation] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useI18n()
@@ -55,12 +60,60 @@ export function Login() {
     }
   }, [])
 
+  const allerApresConnexion = () => {
+    // Retourner à la page d'origine (espace-pro, gestion, etc.) ou /compte par défaut
+    const from = (location.state as any)?.from || retour || '/compte'
+    navigate(from, { replace: true, state: { fromLogin: true } })
+  }
+
+  const choisirMotDePasse = async () => {
+    if (password.length < 6) { setError('Le mot de passe doit contenir au moins 6 caractères.'); return }
+    if (password !== confirmation) { setError('Les mots de passe ne correspondent pas.'); return }
+    const r = await fetch(`${config.API_BASE_URL}/auth/premiere-connexion`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiant: numeroH.trim(), password }),
+    })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok || !d.success) { setError(d.message || "Le mot de passe n'a pas été enregistré. Réessayez."); return }
+    localStorage.setItem('token', d.token)
+    localStorage.setItem('session_user', JSON.stringify({ numeroH: d.user.numeroH, userData: d.user, token: d.token }))
+    window.dispatchEvent(new Event('session-updated'))
+    allerApresConnexion()
+  }
+
+  // Ce téléphone / e-mail a-t-il été ajouté par un établissement, sans mot de passe encore ?
+  const verifierPremiereConnexion = async (): Promise<boolean> => {
+    try {
+      const r = await fetch(`${config.API_BASE_URL}/auth/premiere-connexion/verifier`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifiant: numeroH.trim() }),
+      })
+      const d = await r.json().catch(() => ({}))
+      return !!d.premiereConnexion
+    } catch { return false }
+  }
+
   const onSubmit = async () => {
     if (loading) return
     setError('')
     setIsNetworkError(false)
     setSlowServer(false)
-    if (!numeroH || !password) {
+    if (premiere) {
+      setLoading(true)
+      try { await choisirMotDePasse() } catch { setIsNetworkError(true); setError('Serveur inaccessible. Réessayez dans quelques instants.') }
+      finally { setLoading(false) }
+      return
+    }
+    if (!numeroH) {
+      setError(t('login.error_required'))
+      return
+    }
+    if (!password) {
+      // Sans mot de passe : peut-être sa toute première connexion
+      setLoading(true)
+      const p = await verifierPremiereConnexion()
+      setLoading(false)
+      if (p) { setPremiere(true); return }
       setError(t('login.error_required'))
       return
     }
@@ -74,12 +127,14 @@ export function Login() {
       setSlowServer(false)
 
       if (result?.success) {
-        // Retourner à la page d'origine (espace-pro, gestion, etc.) ou /compte par défaut
-        const from = (location.state as any)?.from || retour || '/compte'
-        navigate(from, { replace: true, state: { fromLogin: true } })
+        allerApresConnexion()
       } else if (result?.networkError) {
         setIsNetworkError(true)
         setError(result.message || 'Serveur inaccessible. Réessayez dans quelques instants.')
+      } else if (await verifierPremiereConnexion()) {
+        // Ajouté(e) par un établissement, jamais connecté(e) : on choisit son mot de passe
+        setPremiere(true)
+        setConfirmation('')
       } else {
         if (result?.numeroHExists) {
           setError('Mot de passe incorrect.')
@@ -118,7 +173,7 @@ export function Login() {
               <label>{t('login.numeroh')}</label>
               <input 
                 value={numeroH} 
-                onChange={(e)=>setNumeroH(e.target.value)} 
+                onChange={(e)=>{ setNumeroH(e.target.value); setPremiere(false) }} 
                 onKeyPress={(e) => e.key === 'Enter' && onSubmit()}
                 placeholder="Téléphone, e-mail ou NuméroH"
                 autoFocus
@@ -127,7 +182,7 @@ export function Login() {
           </div>
           <div className="col-6">
             <div className="field">
-              <label>{t('login.password')}</label>
+              <label>{premiere ? 'Choisissez votre mot de passe' : t('login.password')}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -158,6 +213,18 @@ export function Login() {
             </div>
           </div>
         </div>
+        {premiere && (
+          <div className="stack">
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3 py-2.5 rounded-lg text-sm">
+              <b>Première connexion.</b> Vous avez été ajouté(e) par un établissement : choisissez votre mot de passe (au moins 6 caractères). Ensuite, vous vous connecterez toujours avec ce téléphone / cet e-mail et ce mot de passe.
+            </div>
+            <div className="field">
+              <label>Confirmez le mot de passe</label>
+              <input type={showPassword ? 'text' : 'password'} value={confirmation} onChange={(e)=>setConfirmation(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && onSubmit()} autoComplete="new-password" />
+            </div>
+          </div>
+        )}
         {successMessage && (
           <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 px-3 py-2 rounded text-sm">
             {successMessage}
@@ -213,7 +280,7 @@ export function Login() {
           disabled={loading}
           style={loading ? { opacity: 0.7, cursor: 'wait' } : undefined}
         >
-          {loading ? 'Connexion en cours…' : t('login.submit')}
+          {loading ? 'Connexion en cours…' : premiere ? 'Enregistrer et me connecter' : t('login.submit')}
         </button>
         </div>
         <div className="text-center mt-3">
