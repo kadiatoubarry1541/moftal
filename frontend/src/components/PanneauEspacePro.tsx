@@ -4,6 +4,7 @@ import { getSessionUser } from "../utils/auth";
 import { AddPersonModal } from "./AddPersonModal";
 import ParametresEspacePro from "./ParametresEspacePro";
 import { TenantCodeCard } from "./GestionBrand";
+import { useTraduction } from "../i18n/traduction";
 import {
   DEFAULT_PUB_FORM, getTypeInfo, PublierModal, ProfilModalComp,
   type PublishModal, type ProfilModal,
@@ -16,6 +17,7 @@ const API = (import.meta.env.VITE_API_URL || "http://localhost:5002").replace(/\
 // sans quitter la gestion interne. L'abonnement reste discret, tout en bas.
 export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: string; onClose: () => void }) {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const { pathname } = useLocation();
   // Ces gestions ont leur page Paramètres, où se trouve l'abonnement
   const abonnementDansParametres = /^\/gestion-(clinique|commerce|ecole|ecole-v1|madrasa|madrasa-v2|mairie)\//.test(pathname);
@@ -68,10 +70,10 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
         const pubs = await fetchPubs(publishModal.accountId);
         setPublishModal(prev => prev ? { ...prev, step: "ready", form: { ...DEFAULT_PUB_FORM }, pubs } : null);
       } else {
-        alert(d.message || "Erreur lors de la publication.");
+        alert(tr(d.message || "Erreur lors de la publication."));
         setPublishModal(prev => prev ? { ...prev, step: "ready" } : null);
       }
-    } catch { alert("Erreur de connexion."); setPublishModal(prev => prev ? { ...prev, step: "ready" } : null); }
+    } catch { alert(tr("Erreur de connexion.")); setPublishModal(prev => prev ? { ...prev, step: "ready" } : null); }
   }
 
   async function supprimerPublication(pubId: string) {
@@ -80,8 +82,8 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
       const r = await fetch(`${API}/api/pro-vitrine/${publishModal.accountId}/publications/${pubId}`, { method: "DELETE", headers: auth });
       const d = await r.json();
       if (d.success) setPublishModal(prev => prev ? { ...prev, pubs: prev.pubs.filter(p => p.id !== pubId) } : null);
-      else alert(d.message || "Erreur lors de la suppression.");
-    } catch { alert("Erreur de connexion."); }
+      else alert(tr(d.message || "Erreur lors de la suppression."));
+    } catch { alert(tr("Erreur de connexion.")); }
   }
 
   // ─── Profil public ─────────────────────────────────────────────────────────
@@ -121,10 +123,10 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
         // Nouveau logo : on recharge pour qu'il soit le même partout dans la gestion
         if (logoChange) window.location.reload();
       } else {
-        alert(d.message || "Erreur lors de la mise à jour du profil.");
+        alert(tr(d.message || "Erreur lors de la mise à jour du profil."));
         setProfilModal(prev => prev ? { ...prev, step: "ready" } : null);
       }
-    } catch { alert("Erreur de connexion."); setProfilModal(prev => prev ? { ...prev, step: "ready" } : null); }
+    } catch { alert(tr("Erreur de connexion.")); setProfilModal(prev => prev ? { ...prev, step: "ready" } : null); }
   }
 
   // ─── Rendu ─────────────────────────────────────────────────────────────────
@@ -134,7 +136,7 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
 
   const bouton = (label: string, onClick: () => void, style: React.CSSProperties) => (
     <button onClick={onClick}
-      style={{ width: "100%", padding: "12px 14px", borderRadius: 10, cursor: "pointer", fontSize: 14, fontWeight: 700, textAlign: "left", border: "none", ...style }}>
+      style={{ width: "100%", padding: "12px 14px", borderRadius: 10, cursor: "pointer", fontSize: 14, fontWeight: 700, textAlign: "start", border: "none", ...style }}>
       {label}
     </button>
   );
@@ -148,23 +150,23 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
             style={{ background: "white", width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto", borderRadius: "18px 18px 0 0", padding: "18px 16px 24px", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Espace Pro</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>{tr("Espace Pro")}</div>
                 {account && <div style={{ fontSize: 13, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{account.name}</div>}
               </div>
-              <button onClick={onClose} aria-label="Fermer"
+              <button onClick={onClose} aria-label={tr("Fermer")}
                 style={{ border: "none", background: "#f1f5f9", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 18, color: "#475569", flexShrink: 0 }}>✕</button>
             </div>
 
-            {erreur && <p style={{ color: "#dc2626", fontSize: 13, margin: "0 0 12px" }}>{erreur}</p>}
-            {!account && !erreur && <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 12px" }}>Chargement…</p>}
+            {erreur && <p style={{ color: "#dc2626", fontSize: 13, margin: "0 0 12px" }}>{tr(erreur)}</p>}
+            {!account && !erreur && <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 12px" }}>{tr("Chargement…")}</p>}
 
             {account && info && (
               <div style={{ display: "grid", gap: 8 }}>
-                {info.vitrinePath && bouton("🌐  Voir le site client", () => { onClose(); navigate(`/${info.vitrinePath}/${tenantCode}`); }, { background: info.color, color: "white" })}
-                {bouton("📅  Demandes de rendez-vous", () => { onClose(); navigate(`/espace-pro/${account.id}?rdv=1`); }, { background: "#0f172a", color: "white" })}
-                {bouton("📢  Nouvelle publication", ouvrirPublication, { background: "#2563eb", color: "white" })}
-                {bouton("✏️  Modifier le profil public", ouvrirProfil, { background: "#f0fdf4", color: "#059669", border: "1.5px solid #a7f3d0" })}
-                {bouton("🤝  Connecter un client", () => setConnectOpen(true), { background: "#f8fafc", color: "#475569", border: "1.5px solid #e2e8f0" })}
+                {info.vitrinePath && bouton(tr("🌐  Voir le site client"), () => { onClose(); navigate(`/${info.vitrinePath}/${tenantCode}`); }, { background: info.color, color: "white" })}
+                {bouton(tr("📅  Demandes de rendez-vous"), () => { onClose(); navigate(`/espace-pro/${account.id}?rdv=1`); }, { background: "#0f172a", color: "white" })}
+                {bouton(tr("📢  Nouvelle publication"), ouvrirPublication, { background: "#2563eb", color: "white" })}
+                {bouton(tr("✏️  Modifier le profil public"), ouvrirProfil, { background: "#f0fdf4", color: "#059669", border: "1.5px solid #a7f3d0" })}
+                {bouton(tr("🤝  Connecter un client"), () => setConnectOpen(true), { background: "#f8fafc", color: "#475569", border: "1.5px solid #e2e8f0" })}
               </div>
             )}
 
@@ -172,7 +174,7 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
               <div style={{ marginTop: 18, borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
                 <button onClick={() => setVoirAbonnement(v => !v)}
                   style={{ background: "none", border: "none", padding: "4px 0", cursor: "pointer", fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
-                  ⚙️ Paramètres · Application et abonnement {voirAbonnement ? "▴" : "▾"}
+                  {tr("⚙️ Paramètres · Application et abonnement")} {voirAbonnement ? "▴" : "▾"}
                 </button>
                 {voirAbonnement && <div style={{ marginTop: 8 }}><div style={{ display: "grid", gap: 12 }}><TenantCodeCard code={tenantCode} /><ParametresEspacePro /></div></div>}
               </div>
@@ -201,7 +203,7 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
       )}
       {connectOpen && account && (
         <AddPersonModal
-          title={`Connecter un client — ${account.name}`}
+          title={tr("Connecter un client — {nom}", { nom: account.name })}
           onSelect={async (numeroH) => {
             try {
               const r = await fetch(`${API}/api/professionals/${account.id}/connect-client`, {
@@ -210,8 +212,9 @@ export default function PanneauEspacePro({ tenantCode, onClose }: { tenantCode: 
                 body: JSON.stringify({ clientNumeroH: numeroH }),
               });
               const d = await r.json();
-              alert(d.message || (d.success ? "Client connecté avec succès !" : "Erreur lors de la connexion."));
-            } catch { alert("Erreur de connexion au serveur."); }
+              // Message du serveur (« Client connecté à <nom> avec succès. ») traduit avec le nom
+              alert(d.success ? tr("Client connecté à {nom} avec succès.", { nom: account.name }) : tr(d.message || "Erreur lors de la connexion."));
+            } catch { alert(tr("Erreur de connexion au serveur.")); }
             setConnectOpen(false);
           }}
           onClose={() => setConnectOpen(false)}
