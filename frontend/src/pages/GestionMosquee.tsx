@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -229,13 +230,7 @@ export default function GestionMosquee() {
     </div>
   );
 
-  if (error) return (
-    <div style={{ maxWidth: 480, margin: "60px auto", textAlign: "center", padding: "0 24px" }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-      <h2>{error}</h2>
-      <button onClick={() => navigate("/gestion-interne")} style={{ padding: "10px 20px", background: GREEN, color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>Retour</button>
-    </div>
-  );
+  if (error) return <AccesRefuseGestion message={error} couleur={GREEN} emoji="🕌" />;
 
   const TABS: { id: Tab; label: string; icon: string }[] = [
     { id: "dashboard",    label: "Dashboard",           icon: "📊" },

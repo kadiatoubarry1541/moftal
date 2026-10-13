@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin } from "../utils/auth";
@@ -159,13 +160,7 @@ export default function GestionReseau() {
     </div>
   );
 
-  if (error) return (
-    <div style={{ maxWidth: 480, margin: "60px auto", textAlign: "center", padding: "0 24px" }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-      <h2 style={{ color: "#0f172a" }}>{error}</h2>
-      <button onClick={() => navigate("/gestion-interne")} style={{ padding: "10px 20px", background: BLUE, color: "white", border: "none", borderRadius: 8, cursor: "pointer" }}>← Retour</button>
-    </div>
-  );
+  if (error) return <AccesRefuseGestion message={error} couleur={BLUE} emoji="🌐" />;
 
   const isAdminViewing = isAdmin(user) && user?.numeroH !== tenant?.owner_numero_h;
 

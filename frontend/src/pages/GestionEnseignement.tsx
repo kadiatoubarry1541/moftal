@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from "react";
+import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { getSessionUser, isAdmin, getPhotoUrl } from "../utils/auth";
@@ -343,16 +344,7 @@ export default function GestionEnseignement({ mode }: Props) {
     </div>
   );
 
-  if (!tenant) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
-      <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Espace inaccessible")}</h2>
-        <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{tr(error || "Erreur inconnue")}</p>
-        <button onClick={() => navigate("/gestion-interne")} style={{ padding: "8px 20px", background: V.color, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{isAr ? "→" : "←"} {tr("Retour")}</button>
-      </div>
-    </div>
-  );
+  if (!tenant) return <AccesRefuseGestion message={error} couleur={V.color} emoji={V.emoji} />;
 
   const currentUser = getSessionUser();
   const isAdminViewing = isAdmin(currentUser) && currentUser?.numeroH !== tenant.owner_numero_h;
