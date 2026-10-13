@@ -1,15 +1,14 @@
 import express from 'express';
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
 import { config } from '../../config.js';
 import { sequelize } from '../config/database.js';
-import { authenticate, requireAdmin, PROVISIONAL_PREFIX } from '../middleware/auth.js';
+import { authenticate, requireAdmin } from '../middleware/auth.js';
 import ProfessionalAccount from '../models/ProfessionalAccount.js';
 import User from '../models/User.js';
 import { trouverPersonne } from '../utils/trouverPersonne.js';
 import { finalizeApproval } from './professionals.js';
+import { empreinte, nouveauJeton, analyserIdentifiant, creerCompteProvisoire, definirMotDePasse, preparerTablesInvitations, motDePasseAChoisir } from '../services/invitations.js';
 
 /**
  * L'admin crée un compte pro avec seulement le téléphone ou l'e-mail de
@@ -27,27 +26,7 @@ const TYPES = [
 ];
 const TYPES_ECHANGES = ['vendor', 'supplier', 'producer'];
 
-let tablePrete = null;
-function preparerTable() {
-  if (!tablePrete) {
-    tablePrete = sequelize.query(`
-      CREATE TABLE IF NOT EXISTS pro_invitations (
-        id SERIAL PRIMARY KEY,
-        token_hash VARCHAR(64) NOT NULL UNIQUE,
-        account_id VARCHAR(64) NOT NULL,
-        numero_h VARCHAR(100) NOT NULL,
-        user_cree BOOLEAN NOT NULL DEFAULT false,
-        cree_par VARCHAR(100),
-        expires_at TIMESTAMPTZ NOT NULL,
-        used_at TIMESTAMPTZ,
-        accepte_le TIMESTAMPTZ,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )`).catch((e) => { tablePrete = null; throw e; });
-  }
-  return tablePrete;
-}
-
-const empreinte = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
+const preparerTable = preparerTablesInvitations;
 const signer = (numeroH) => jwt.sign({ userId: numeroH, numeroH }, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRE });
 
 async function nouvelleInvitation(account, numeroH, userCree, creePar) {
@@ -57,7 +36,7 @@ async function nouvelleInvitation(account, numeroH, userCree, creePar) {
     `UPDATE pro_invitations SET used_at = NOW() WHERE account_id = :id AND used_at IS NULL`,
     { replacements: { id: String(account.id) } }
   );
-  const token = crypto.randomBytes(24).toString('base64url');
+  const token = nouveauJeton();
   await sequelize.query(
     `INSERT INTO pro_invitations (token_hash, account_id, numero_h, user_cree, cree_par, expires_at)
      VALUES (:h, :id, :nh, :uc, :par, NOW() + INTERVAL '${DUREE_JOURS} days')`,
@@ -107,9 +86,8 @@ router.post('/admin/creer', authenticate, requireAdmin, async (req, res) => {
     if (logo && !/^data:image\//.test(logo) && !/^https?:\/\//.test(logo)) {
       return res.status(400).json({ success: false, message: 'Logo invalide : choisissez une image.' });
     }
-    const estEmail = identifiant.includes('@');
-    const chiffres = identifiant.replace(/[^0-9]/g, '');
-    if (estEmail ? !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(identifiant) : chiffres.length < 8) {
+    const { estEmail, valide } = analyserIdentifiant(identifiant);
+    if (!valide) {
       return res.status(400).json({ success: false, message: 'Indiquez le téléphone ou l\'e-mail de l\'établissement.' });
     }
     const pris = await ProfessionalAccount.findOne({
@@ -124,16 +102,7 @@ router.post('/admin/creer', authenticate, requireAdmin, async (req, res) => {
     let numeroH = trouve.personne?.numero_h || null;
     let userCree = false;
     if (!numeroH) {
-      numeroH = `${PROVISIONAL_PREFIX}${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-      await User.create({
-        numeroH,
-        // Mot de passe inutilisable tant que l'invitation n'est pas acceptée
-        password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), config.BCRYPT_ROUNDS),
-        prenom: 'Nouveau', nomFamille: 'membre',
-        tel1: estEmail ? null : identifiant,
-        email: estEmail ? identifiant.toLowerCase() : null,
-        genre: 'AUTRE', generation: 'G1', type: 'vivant', isActive: true, isVerified: false, role: 'user'
-      });
+      numeroH = await creerCompteProvisoire(identifiant);
       userCree = true;
     }
 
@@ -162,15 +131,7 @@ router.post('/admin/:accountId/lien', authenticate, requireAdmin, async (req, re
   try {
     const account = await ProfessionalAccount.findByPk(req.params.accountId);
     if (!account) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
-    await preparerTable();
-    // Mot de passe encore à choisir : compte provisoire créé par une invitation
-    // qui n'a jamais été acceptée
-    const [etat] = await sequelize.query(
-      `SELECT BOOL_OR(user_cree) AS cree, BOOL_OR(accepte_le IS NOT NULL) AS accepte
-       FROM pro_invitations WHERE account_id = :id`,
-      { replacements: { id: String(account.id) }, type: sequelize.QueryTypes.SELECT }
-    );
-    const userCree = !!etat?.cree && !etat?.accepte && String(account.ownerNumeroH).startsWith(PROVISIONAL_PREFIX);
+    const userCree = await motDePasseAChoisir(account.ownerNumeroH);
     const token = await nouvelleInvitation(account, account.ownerNumeroH, userCree, req.userId);
     res.json({ success: true, token, account: { id: account.id, name: account.name, type: account.type, phone: account.phone, email: account.email } });
   } catch (e) {
@@ -215,7 +176,7 @@ router.post('/:token/accepter', async (req, res) => {
     if (inv.user_cree) {
       const password = String(req.body?.password || '');
       if (password.length < 6) return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
-      await User.update({ password: await bcrypt.hash(password, config.BCRYPT_ROUNDS) }, { where: { numeroH } });
+      await definirMotDePasse(numeroH, password);
     } else {
       // Compte qui existait déjà : il faut être connecté avec ce compte-là
       const entete = String(req.headers.authorization || '');
@@ -237,6 +198,78 @@ router.post('/:token/accepter', async (req, res) => {
     res.json({ success: true, token: signer(numeroH), user: donnees, accountId: account.id, planType: account.planType || 'full' });
   } catch (e) {
     console.error('invitation pro (accepter):', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur : réessayez.' });
+  }
+});
+
+// ── Invitations d'équipe (employé ajouté par le pro) ─────────────────────────
+async function lireInvitationEquipe(token) {
+  await preparerTablesInvitations();
+  const [inv] = await sequelize.query(
+    `SELECT i.*, t.name, t.type, t.logo_url, a.poste, a.niveau, a.is_active AS acces_actif
+       FROM equipe_invitations i
+       JOIN management_tenants t ON t.tenant_code = i.tenant_code
+       LEFT JOIN management_staff_access a ON a.tenant_code = i.tenant_code AND LOWER(a.numero_h) = LOWER(i.numero_h)
+      WHERE i.token_hash = :h LIMIT 1`,
+    { replacements: { h: empreinte(token) }, type: sequelize.QueryTypes.SELECT }
+  );
+  if (!inv) return { erreur: 'Lien d\'invitation introuvable.', statut: 404 };
+  if (inv.used_at) return { erreur: 'Ce lien a déjà été utilisé. Connectez-vous avec votre téléphone ou votre e-mail.', statut: 410 };
+  if (new Date(inv.expires_at) < new Date()) return { erreur: 'Ce lien a expiré. Demandez-en un nouveau à votre responsable.', statut: 410 };
+  if (!inv.acces_actif) return { erreur: 'Votre accès à cet établissement a été retiré. Voyez avec votre responsable.', statut: 410 };
+  return { inv };
+}
+
+// GET /api/invitations-pro/equipe/:token
+router.get('/equipe/:token', async (req, res) => {
+  try {
+    const r = await lireInvitationEquipe(req.params.token);
+    if (r.erreur) return res.status(r.statut).json({ success: false, message: r.erreur });
+    const { inv } = r;
+    const [u] = await sequelize.query(`SELECT tel1, email FROM users WHERE LOWER(numero_h) = LOWER(:nh) LIMIT 1`,
+      { replacements: { nh: inv.numero_h }, type: sequelize.QueryTypes.SELECT });
+    res.json({
+      success: true,
+      choisirMotDePasse: !!inv.user_cree,
+      identifiant: u?.tel1 || u?.email || '',
+      etablissement: { tenantCode: inv.tenant_code, name: inv.name, type: inv.type, logo: inv.logo_url || null },
+      poste: inv.poste || null,
+      niveau: inv.niveau || 'limite',
+    });
+  } catch (e) {
+    console.error('invitation équipe (lire):', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+});
+
+// POST /api/invitations-pro/equipe/:token/accepter
+router.post('/equipe/:token/accepter', async (req, res) => {
+  try {
+    const r = await lireInvitationEquipe(req.params.token);
+    if (r.erreur) return res.status(r.statut).json({ success: false, message: r.erreur });
+    const { inv } = r;
+    const numeroH = inv.numero_h;
+    if (inv.user_cree) {
+      const password = String(req.body?.password || '');
+      if (password.length < 6) return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
+      await definirMotDePasse(numeroH, password);
+    } else {
+      // Compte qui existait déjà : il faut être connecté avec ce compte-là
+      let connecte = null;
+      try { connecte = jwt.verify(String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''), config.JWT_SECRET); } catch { /* pas connecté */ }
+      const qui = connecte?.numeroH || connecte?.userId;
+      if (!qui) return res.status(401).json({ success: false, doitSeConnecter: true, message: 'Connectez-vous avec votre téléphone ou votre e-mail pour rejoindre l\'équipe.' });
+      if (String(qui).toLowerCase() !== String(numeroH).toLowerCase()) {
+        return res.status(403).json({ success: false, message: 'Cette invitation est pour un autre compte. Connectez-vous avec le téléphone ou l\'e-mail donné à votre responsable.' });
+      }
+    }
+    await sequelize.query(`UPDATE equipe_invitations SET used_at = NOW(), accepte_le = NOW() WHERE id = :id`, { replacements: { id: inv.id } });
+    const user = await User.findByPk(numeroH);
+    const donnees = user ? { ...user.dataValues } : { numeroH };
+    delete donnees.password;
+    res.json({ success: true, token: signer(numeroH), user: donnees, etablissement: { tenantCode: inv.tenant_code, type: inv.type } });
+  } catch (e) {
+    console.error('invitation équipe (accepter):', e);
     res.status(500).json({ success: false, message: 'Erreur serveur : réessayez.' });
   }
 });

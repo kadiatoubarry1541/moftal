@@ -14,3 +14,12 @@ export function lienWhatsApp(telephone: string, texte: string) {
   if (n.length === 9) n = `224${n}`;
   return `https://wa.me/${n}?text=${encodeURIComponent(texte)}`;
 }
+
+// Invitation d'un employé par le pro
+export function lienInvitationEquipe(token: string) {
+  return `${window.location.hostname === "gestions.moftal.com" ? "https://moftal.com" : window.location.origin}/rejoindre-equipe/${token}`;
+}
+
+export function messageInvitationEquipe(etablissement: string, lien: string) {
+  return `Bonjour ! ${etablissement} vous a ajouté(e) à son équipe sur Moftal. Ouvrez ce lien pour installer l'application et vous connecter avec votre téléphone ou votre e-mail : ${lien}`;
+}
