@@ -78,7 +78,7 @@ export default function GestionEnseignement({ mode }: Props) {
 
   const V = isMadrasa ? {
     color: "#0891b2", colorDark: "#0e7490",
-    emoji: "📖", gradient: "linear-gradient(180deg,#082f49 0%,#0c4a6e 50%,#0e5a80 100%)",
+    emoji: "📖",
     apprenants: "Apprenants", apprenant: "Apprenant",
     groupes: "Halaqas",  groupe: "Halaqa",
     staffLabel: "Enseignants", staffSingular: "Enseignant",
@@ -89,7 +89,7 @@ export default function GestionEnseignement({ mode }: Props) {
     sourate: true,
   } : {
     color: "#1a8f1a", colorDark: "#156315",
-    emoji: "🏫", gradient: "linear-gradient(180deg,#052e16 0%,#14532d 50%,#0f4b0f 100%)",
+    emoji: "🏫",
     apprenants: "Élèves", apprenant: "Élève",
     groupes: "Classes", groupe: "Classe",
     staffLabel: "Personnel", staffSingular: "Professeur",
@@ -730,12 +730,12 @@ export default function GestionEnseignement({ mode }: Props) {
       )}
 
       {/* ── SIDEBAR ── */}
-      <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 244, flexShrink: 0, transition: "width 0.25s ease", background: V.gradient, borderInlineEnd: "1px solid rgba(255,255,255,0.06)", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, bottom: 0, insetInlineStart: 0, zIndex: 50, paddingBottom: "env(safe-area-inset-bottom, 0px)" } : {}) }}>
+      <aside style={{ display: "flex", flexDirection: "column", width: collapsed ? (isMobile ? 0 : 64) : 244, flexShrink: 0, transition: "width 0.25s ease", background: "white", borderInlineEnd: "1px solid #e2e8f0", overflow: "hidden", ...(isMobile && !collapsed ? { position: "fixed", top: 0, bottom: 0, insetInlineStart: 0, zIndex: 50, paddingBottom: "env(safe-area-inset-bottom, 0px)" } : {}) }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "16px 0" : "16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", justifyContent: collapsed ? "center" : "flex-start", flexShrink: 0 }}>
-          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback={V.emoji} size={36} style={{ background: "rgba(255,255,255,0.15)" }} />
+          <TenantLogo tenantCode={tenantCode} logoUrl={tenant?.logo_url} fallback={V.emoji} size={36} style={{ background: "#f1f5f9" }} />
           {!collapsed && (
             <div style={{ overflow: "hidden" }}>
-              <p style={{ fontWeight: 700, fontSize: 13, color: "white", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 165 }}>{tenant.name}</p>
+              <p style={{ fontWeight: 700, fontSize: 13, color: "#0f172a", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 165 }}>{tenant.name}</p>
             </div>
           )}
         </div>
@@ -744,8 +744,8 @@ export default function GestionEnseignement({ mode }: Props) {
             const active = section === n.id;
             return (
               <button key={n.id} onClick={()=>loadSection(n.id)} title={collapsed?n.label:undefined}
-                style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 11px", borderRadius: 8, marginBottom: 2, border: "none", cursor: "pointer", fontSize: 13, fontWeight: active?600:500, justifyContent: collapsed?"center":"flex-start", background: active?`rgba(${isMadrasa?"8,145,178":"22,163,74"},0.22)`:"transparent", color: active?"white":"rgba(200,240,200,0.5)", boxShadow: active?`inset ${isAr?-2:2}px 0 0 ${V.color}`:"none" }}>
-                <svg width="16" height="16" fill="none" stroke={active?isMadrasa?"#67e8f9":"#86efac":"rgba(200,240,200,0.4)"} strokeWidth={active?2.2:1.8} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 11px", borderRadius: 8, marginBottom: 2, border: "none", cursor: "pointer", fontSize: 13, fontWeight: active?600:500, justifyContent: collapsed?"center":"flex-start", background: active?`${V.color}14`:"transparent", color: active?V.colorDark:"#334155", boxShadow: active?`inset ${isAr?-2:2}px 0 0 ${V.color}`:"none" }}>
+                <svg width="16" height="16" fill="none" stroke={active?V.color:"#64748b"} strokeWidth={active?2.2:1.8} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={n.icon} />
                 </svg>
                 {!collapsed && n.label}
@@ -753,25 +753,20 @@ export default function GestionEnseignement({ mode }: Props) {
             );
           })}
         </nav>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: 8, flexShrink: 0 }}>
+        <div style={{ borderTop: "1px solid #e2e8f0", padding: 8, flexShrink: 0 }}>
           <button onClick={() => navigate(`/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}`)}
             title={collapsed ? tr("Voir la vitrine") : undefined}
-            style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "rgba(255,255,255,0.1)", color: "white", fontSize: 12, fontWeight: 600, justifyContent: collapsed ? "center" : "flex-start", marginBottom: 4 }}
-            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.2)";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.1)";}}>
+            style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "#f1f5f9", color: "#0f172a", fontSize: 12, fontWeight: 600, justifyContent: collapsed ? "center" : "flex-start", marginBottom: 4 }}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="#e2e8f0";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="#f1f5f9";}}>
             🌐 {!collapsed && tr("Voir la vitrine")}
           </button>
-          {!collapsed && (
-            <div style={{ display: "flex", justifyContent: "center", margin: "2px 0 6px" }}>
-              <ChoixLangueEcole sombre compact />
-            </div>
-          )}
           <button onClick={()=>goToMoftal(navigate)} title={collapsed?tr("Retour sur Moftal"):undefined}
-            style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "rgba(200,240,200,0.4)", fontSize: 12, justifyContent: collapsed?"center":"flex-start" }}
-            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="white";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color="rgba(200,240,200,0.4)";}}>
+            style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "transparent", color: "#475569", fontSize: 12, justifyContent: collapsed?"center":"flex-start" }}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color="#0f172a";}} onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color="#475569";}}>
             <MoftalMark />
             {!collapsed && tr("Retour sur Moftal")}
           </button>
-          <button onClick={()=>setCollapsed(!collapsed)} aria-label={collapsed ? tr("Ouvrir le menu") : tr("Réduire le menu")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "5px 0", border: "none", background: "transparent", color: `${V.color}80`, cursor: "pointer", fontSize: 11, marginTop: 4 }}>
+          <button onClick={()=>setCollapsed(!collapsed)} aria-label={collapsed ? tr("Ouvrir le menu") : tr("Réduire le menu")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", padding: "5px 0", border: "none", background: "transparent", color: "#64748b", cursor: "pointer", fontSize: 11, marginTop: 4 }}>
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ transform: isAr ? "scaleX(-1)" : undefined }}><path strokeLinecap="round" strokeLinejoin="round" d={collapsed?"M9 5l7 7-7 7":"M15 19l-7-7 7-7"} /></svg>
           </button>
         </div>
@@ -800,8 +795,6 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* Menu replié (mobile) : la langue reste accessible depuis la barre du haut */}
-            {collapsed && <ChoixLangueEcole compact />}
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={V.color} />
             {section === "apprenants"  && <button onClick={()=>{setModal("add-apprenant");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {M("Nouvel apprenant", "Nouvel élève")}</button>}
             {section === "staff"       && <button onClick={()=>{setModal("add-staff");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter")}</button>}
@@ -1312,6 +1305,14 @@ export default function GestionEnseignement({ mode }: Props) {
           {section === "settings" && (
             <div style={{ maxWidth: 680, display: "flex", flexDirection: "column", gap: 20 }}>
               <TenantCodeCard code={tenantCode} />
+              {/* Langue de la gestion : français ou arabe (de droite à gauche) */}
+              <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "20px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{tr("Langue")}</h3>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>{tr("Langue d'affichage de la gestion sur cet appareil")}</p>
+                </div>
+                <ChoixLangueEcole />
+              </div>
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "24px 28px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{tr("Logo")}</h3>
                 <div style={{ display: "flex", alignItems: "center", gap: 20 }}>

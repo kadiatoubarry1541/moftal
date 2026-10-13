@@ -2,6 +2,7 @@
 // Les valeurs enregistrées (niveaux, matières, rôles, types de frais, périodes, jours,
 // mentions) restent en français en base : seules leurs étiquettes sont traduites ici.
 const ar: Record<string, string> = {
+  "Langue d'affichage de la gestion sur cet appareil": "لغة عرض الإدارة على هذا الجهاز",
   // ── Vocabulaire de l'établissement (école / madrasa)
   "Apprenants": "الطلاب",
   "Apprenant": "الطالب",
