@@ -8,8 +8,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 
 const ROSE       = "#e11d48";
 const ROSE_DARK  = "#be123c";
-const ROSE_LIGHT = "#f43f5e";
-const ROSE_BG    = "#fff1f2";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR") : ""; }
@@ -36,7 +34,7 @@ export default function NgoVitrine() {
   }, [tenantCode]);
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: ROSE_BG }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #fecdd3`, borderTopColor: ROSE, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
         <p style={{ color: ROSE_DARK, fontSize: 14, fontWeight: 600 }}>Chargement...</p>
@@ -65,15 +63,15 @@ export default function NgoVitrine() {
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-        .vn-link{color:rgba(255,255,255,0.85);font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
-        .vn-link:hover{color:white;border-bottom-color:rgba(255,255,255,0.6);}
+        .vn-link{color:#334155;font-weight:500;font-size:14px;cursor:pointer;padding:6px 4px;border:none;background:none;border-bottom:2px solid transparent;transition:all 0.2s;}
+        .vn-link:hover{color:#0f172a;border-bottom-color:${ROSE};}
         .proj-card{transition:all 0.25s;} .proj-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(225,29,72,0.12) !important;}
         @media(max-width:768px){.hero-t{font-size:26px !important}.stats-g{grid-template-columns:1fr 1fr !important}.proj-g{grid-template-columns:1fr 1fr !important}}
         @media(max-width:480px){.proj-g{grid-template-columns:1fr !important}}
       `}</style>
 
       {/* TOP BAR */}
-      <div style={{ background: ROSE_DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
+      <div style={{ background: "#f8fafc", color: "#334155", borderBottom: "1px solid #e2e8f0", fontSize: 12, padding: "6px 0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {ngo.phone   && <span>📞 {ngo.phone}</span>}
@@ -84,15 +82,15 @@ export default function NgoVitrine() {
       </div>
 
       {/* NAVBAR */}
-      <nav style={{ background: ROSE, boxShadow: "0 2px 12px rgba(0,0,0,0.15)", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", boxShadow: "0 1px 6px rgba(15,23,42,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.2)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: "white", border: "1px solid #e2e8f0", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <LogoEtablissement src={ngo.logo_url} name={ngo.name} fontSize={22} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 17, color: "white" }}>{ngo.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>ONG</div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: "#0f172a" }}>{ngo.name}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>ONG</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
@@ -104,21 +102,20 @@ export default function NgoVitrine() {
       </nav>
 
       {/* HERO */}
-      <section id="hero" style={{ background: `linear-gradient(135deg,${ROSE_DARK} 0%,${ROSE} 55%,${ROSE_LIGHT} 100%)`, padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
+      <section id="hero" style={{ background: "#f8fafc", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "relative", zIndex: 1, maxWidth: 700, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
-          <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.15)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "2px solid rgba(255,255,255,0.3)" }}>
+          <div style={{ width: 88, height: 88, borderRadius: 22, background: "white", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "1px solid #e2e8f0" }}>
             <LogoEtablissement src={ngo.logo_url} name={ngo.name} fontSize={46} />
           </div>
-          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "white", margin: "0 0 16px", textShadow: "0 2px 8px rgba(0,0,0,0.2)", lineHeight: 1.2 }}>{ngo.name}</h1>
-          <p style={{ fontSize: 17, color: "rgba(255,255,255,0.88)", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
+          <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>{ngo.name}</h1>
+          <p style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
             {ngo.description || "Une organisation dédiée au service de la communauté, portant des projets d'impact social pour un monde plus juste et solidaire."}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => scrollTo("projects")} style={{ background: "white", color: ROSE_DARK, border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+            <button onClick={() => scrollTo("projects")} style={{ background: ROSE, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
               Nos Projets
             </button>
-            <button onClick={() => scrollTo("join")} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.5)", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+            <button onClick={() => scrollTo("join")} style={{ background: "white", color: ROSE, border: `1.5px solid ${ROSE}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
               Nous rejoindre
             </button>
           </div>
@@ -195,11 +192,11 @@ export default function NgoVitrine() {
       )}
 
       {/* REJOINDRE */}
-      <section id="join" style={{ background: `linear-gradient(135deg,${ROSE_DARK},${ROSE})`, padding: "60px 20px", color: "white", textAlign: "center" }}>
+      <section id="join" style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a", textAlign: "center" }}>
         <div style={{ maxWidth: 600, margin: "0 auto" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🤝</div>
           <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 12 }}>Rejoindre notre cause</h2>
-          <p style={{ fontSize: 15, opacity: 0.88, lineHeight: 1.7, marginBottom: 32 }}>
+          <p style={{ fontSize: 15, color: "#334155", lineHeight: 1.7, marginBottom: 32 }}>
             Ensemble, nous pouvons changer des vies. Contactez-nous pour devenir membre, bénévole ou partenaire de notre organisation.
           </p>
           {ngo.phone && (
@@ -236,11 +233,11 @@ export default function NgoVitrine() {
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#e11d48" accentDark="#9f1239" />
 
       {/* FOOTER */}
-      <footer style={{ background: ROSE_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>
-        <div style={{ fontWeight: 700, fontSize: 16, color: "white", marginBottom: 8 }}>{ngo.name}</div>
+      <footer style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0", color: "#64748b", padding: "32px 20px", textAlign: "center" }}>
+        <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", marginBottom: 8 }}>{ngo.name}</div>
         <p style={{ fontSize: 12, margin: "0 0 8px" }}>ONG · Solidarité</p>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
+        <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
+          <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}><img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme</button>
         </div>
       </footer>
     </div>
