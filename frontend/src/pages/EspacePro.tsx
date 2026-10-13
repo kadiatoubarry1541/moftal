@@ -9,6 +9,7 @@ import { AddPersonModal } from "../components/AddPersonModal";
 import { normaliserLogo } from "../utils/logoImage";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AccueilAppGestion from "../components/AccueilAppGestion";
+import AdminCarteFormule from "../components/AdminCarteFormule";
 import { getTypeInfo } from "../components/EspaceProModals";
 
 interface ProAccount {
@@ -1304,6 +1305,8 @@ export default function EspacePro() {
           <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Profil modifiable par l'admin</span>
         </div>
       )}
+      {/* Admin : formule en clair (la changer), ouvrir la gestion, lien de l'application */}
+      {isAdminViewing && <AdminCarteFormule account={account} />}
 
       {/* ══════════════════════════════════════════
           HEADER SERVICE (gradient)
@@ -1375,8 +1378,9 @@ export default function EspacePro() {
           APPLICATION INSTALLABLE
           Icône + nom propres à l'établissement, accès direct à cet espace
           ══════════════════════════════════════════ */}
-      {/* Formule Visibilité + Rendez-vous : ni app installable, ni lien de partage */}
-      {hasGestionInterne && (<>
+      {/* Formule Visibilité + Rendez-vous : ni app installable, ni lien de partage.
+          Admin : la carte « Formule » au-dessus donne le bon lien (celui de la gestion). */}
+      {hasGestionInterne && !isAdminViewing && (<>
       <DynamicAppManifest
         name={account.name}
         description={`Gestion ${typeInfo.label} — ${account.name}`}
