@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { config } from "../config/api";
 import LogoEtablissement from "../components/LogoEtablissement";
 import { heure, duree } from "../components/ecole/CoursEtBibliotheque";
+import { useTraduction } from "../i18n/traduction";
+import ChoixLangueEcole from "../components/ChoixLangueEcole";
 
 // Espace de l'enseignant : il marque le début et la fin de chacun de ses cours.
 // L'heure enregistrée est celle du serveur ; le directeur la voit dans
@@ -25,6 +27,7 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
   const prefixe = madrasa ? "madrasa" : "ecole";
   const { tenantCode = "" } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [d, setD] = useState<Donnees | null>(null);
   const [erreur, setErreur] = useState("");
   const [occupe, setOccupe] = useState(false);
@@ -51,9 +54,9 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
     try {
       const r = await fetch(`${base}${chemin}`, { method: "POST", headers: jeton(), body: corps ? JSON.stringify(corps) : undefined });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok || !data.success) alert(data.message || "Erreur. Réessayez.");
+      if (!r.ok || !data.success) alert(tr(data.message || "Erreur. Réessayez."));
       charger();
-    } catch { alert("Erreur de connexion. Réessayez."); }
+    } catch { alert(tr("Erreur de connexion. Réessayez.")); }
     finally { setOccupe(false); }
   };
 
@@ -63,25 +66,26 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
   if (erreur) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-2xl shadow-sm border p-6 max-w-sm text-center">
-        <p className="text-sm text-slate-700">{erreur}</p>
-        <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 rounded-lg bg-slate-100 text-sm font-semibold">Retour</button>
+        <p className="text-sm text-slate-700">{tr(erreur)}</p>
+        <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 rounded-lg bg-slate-100 text-sm font-semibold">{tr("Retour")}</button>
       </div>
     </div>
   );
-  if (!d) return <div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Chargement…</div>;
+  if (!d) return <div className="min-h-screen flex items-center justify-center text-sm text-slate-500">{tr("Chargement…")}</div>;
 
   const enCours = d.enCours;
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
+        <div className="max-w-xl mx-auto px-4 pt-3 flex justify-end"><ChoixLangueEcole compact /></div>
         <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
           <div className="w-12 h-12 flex-shrink-0"><LogoEtablissement src={d.ecole.logo_url} name={d.ecole.nom} type={mode} fontSize={18} /></div>
           <div className="min-w-0 flex-1">
             <p className="font-bold text-slate-900 truncate">{d.ecole.nom}</p>
-            <p className="text-xs text-slate-500">{d.enseignant.prenom} {d.enseignant.nom} · {d.jour}</p>
+            <p className="text-xs text-slate-500">{d.enseignant.prenom} {d.enseignant.nom} · {tr(d.jour)}</p>
           </div>
           <button onClick={() => navigate(`/${prefixe}/${tenantCode}/bibliotheque`)} className="px-3 py-2 rounded-lg text-xs font-bold text-white" style={{ background: VERT }}>
-            📚 Bibliothèque
+            {tr("📚 Bibliothèque")}
           </button>
         </div>
       </div>
@@ -89,18 +93,18 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
       <div className="max-w-xl mx-auto px-4 py-4 space-y-4">
         {enCours && (
           <div className="rounded-2xl p-4 text-white" style={{ background: VERT }}>
-            <p className="text-xs opacity-80">Cours en cours</p>
-            <p className="text-lg font-bold">{enCours.classe}{enCours.matiere ? ` · ${enCours.matiere}` : ""}</p>
-            <p className="text-sm opacity-90">Commencé à {heure(enCours.debut)} · {duree(enCours.debut, null)}</p>
+            <p className="text-xs opacity-80">{tr("Cours en cours")}</p>
+            <p className="text-lg font-bold">{enCours.classe}{enCours.matiere ? ` · ${tr(enCours.matiere)}` : ""}</p>
+            <p className="text-sm opacity-90">{tr("Commencé à {heure}", { heure: heure(enCours.debut) })} · {duree(enCours.debut, null)}</p>
             <button disabled={occupe} onClick={() => action("/enseignant/fin")}
-              className="mt-3 w-full py-3 rounded-xl bg-white text-red-600 font-bold disabled:opacity-60">⏹ Fin du cours</button>
+              className="mt-3 w-full py-3 rounded-xl bg-white text-red-600 font-bold disabled:opacity-60">{tr("⏹ Fin du cours")}</button>
           </div>
         )}
 
         <div className="space-y-3">
           {d.classes.length === 0 && (
             <div className="bg-white rounded-xl border p-6 text-center text-sm text-slate-500">
-              Aucune classe ne vous est attribuée. Le directeur doit vous choisir dans l'emploi du temps de vos classes.
+              {tr("Aucune classe ne vous est attribuée. Le directeur doit vous choisir dans l'emploi du temps de vos classes.")}
             </div>
           )}
           {d.classes.map((c) => (
@@ -109,14 +113,14 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
               <div className="mt-2 space-y-2">
                 {c.creneaux.map((cr, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="text-sm text-slate-700 flex-1">{cr.heure_debut}–{cr.heure_fin}{cr.matiere ? ` · ${cr.matiere}` : ""}</span>
+                    <span className="text-sm text-slate-700 flex-1">{cr.heure_debut}–{cr.heure_fin}{cr.matiere ? ` · ${tr(cr.matiere)}` : ""}</span>
                     <button disabled={occupe || !!enCours} onClick={() => debut(c, cr)}
-                      className="px-3 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-40" style={{ background: VERT }}>▶ Début du cours</button>
+                      className="px-3 py-2 rounded-lg text-xs font-bold text-white disabled:opacity-40" style={{ background: VERT }}>{tr("▶ Début du cours")}</button>
                   </div>
                 ))}
                 {c.creneaux.length === 0 && (
                   <button disabled={occupe || !!enCours} onClick={() => debut(c)}
-                    className="w-full py-2 rounded-lg text-sm font-bold text-white disabled:opacity-40" style={{ background: VERT }}>▶ Début du cours</button>
+                    className="w-full py-2 rounded-lg text-sm font-bold text-white disabled:opacity-40" style={{ background: VERT }}>{tr("▶ Début du cours")}</button>
                 )}
               </div>
             </div>
@@ -125,14 +129,14 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
 
         {d.pointages.length > 0 && (
           <div>
-            <p className="text-sm font-bold text-slate-700 mb-2">Mes cours d'aujourd'hui</p>
+            <p className="text-sm font-bold text-slate-700 mb-2">{tr("Mes cours d'aujourd'hui")}</p>
             <div className="space-y-2">
               {d.pointages.map((p) => (
                 <div key={p.id} className="bg-white rounded-lg border border-slate-100 px-3 py-2 text-sm flex items-center gap-2">
-                  <span className="flex-1 text-slate-800">{p.classe}{p.matiere ? ` · ${p.matiere}` : ""}</span>
+                  <span className="flex-1 text-slate-800">{p.classe}{p.matiere ? ` · ${tr(p.matiere)}` : ""}</span>
                   <span className="font-semibold" style={{ color: VERT }}>{heure(p.debut)}</span>
                   <span className="text-slate-400">→</span>
-                  <span className="font-semibold text-slate-800">{p.fin ? heure(p.fin) : "en cours"}</span>
+                  <span className="font-semibold text-slate-800">{p.fin ? heure(p.fin) : tr("en cours")}</span>
                 </div>
               ))}
             </div>

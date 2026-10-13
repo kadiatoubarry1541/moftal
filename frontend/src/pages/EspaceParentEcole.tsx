@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import { useTraduction, trHors } from "../i18n/traduction";
+import ChoixLangueEcole from "../components/ChoixLangueEcole";
 
 interface Props { mode: "school" | "madrasa"; }
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-function fmtDate(d: string) { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }
-function fmtMoney(n: number) { return (n || 0).toLocaleString("fr-FR") + " GNF"; }
+function fmtDate(d: string, locale = "fr-FR") { return d ? new Date(d).toLocaleDateString(locale) : "—"; }
+function fmtMoney(n: number, locale = "fr-FR") { return (n || 0).toLocaleString(locale) + " GNF"; }
 
 export default function EspaceParentEcole({ mode }: Props) {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
+  const { tr, locale } = useTraduction();
   const isMadrasa = mode === "madrasa";
   const apiName = isMadrasa ? "madrasa-mgmt" : "school-mgmt";
   const color = isMadrasa ? "#0891b2" : "#1a8f1a";
@@ -44,12 +47,12 @@ export default function EspaceParentEcole({ mode }: Props) {
         if (!r.ok || d.success === false) { setError(d.message || "Accès refusé."); return; }
         setData(d);
       })
-      .catch(e => setError("Impossible de joindre le serveur : " + (e?.message || e)))
+      .catch(e => setError(trHors("Impossible de joindre le serveur : {erreur}", { erreur: String(e?.message || e) })))
       .finally(() => setLoading(false));
   }, [apiName, tenantCode, navigate, mode, selectedStudentId, reloadKey]);
 
   const payFee = async (feeId: number) => {
-    if (!payPhone.trim()) { showToast("Numéro de téléphone requis", false); return; }
+    if (!payPhone.trim()) { showToast(tr("Numéro de téléphone requis"), false); return; }
     setPaying(true); setPayMsg("");
     try {
       // Frais d'une madrasa : enregistré dans madrasa_fees, pas dans school_fees
@@ -59,8 +62,8 @@ export default function EspaceParentEcole({ mode }: Props) {
         body: JSON.stringify({ paymentMethod: payMethod, payerPhone: payPhone, purpose, relatedId: feeId, description: isMadrasa ? "Frais madrasa" : "Frais scolaire" })
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.success) { showToast(d.message || "Erreur de paiement", false); setPaying(false); return; }
-      setPayMsg("Confirmez le paiement sur votre téléphone...");
+      if (!r.ok || !d.success) { showToast(tr(d.message || "Erreur de paiement"), false); setPaying(false); return; }
+      setPayMsg(tr("Confirmez le paiement sur votre téléphone..."));
       const txId = d.transactionId;
       let attempts = 0;
       const poll = setInterval(async () => {
@@ -74,21 +77,21 @@ export default function EspaceParentEcole({ mode }: Props) {
         if (status === "SUCCESS") {
           clearInterval(poll);
           setPaying(false); setPayingFeeId(null); setPayMsg("");
-          showToast("Paiement réussi !");
+          showToast(tr("Paiement réussi !"));
           // Relire les frais depuis le serveur (statut enregistré en base)
           setReloadKey(k => k + 1);
         } else if (status === "FAILED" || status === "CANCELLED" || status === "EXPIRED") {
           clearInterval(poll);
           setPaying(false);
-          setPayMsg("Paiement refusé ou annulé. Vous pouvez réessayer.");
+          setPayMsg(tr("Paiement refusé ou annulé. Vous pouvez réessayer."));
         } else if (attempts >= 20) {
           clearInterval(poll);
           setPaying(false);
-          setPayMsg("Paiement non confirmé. Réessayez si besoin.");
+          setPayMsg(tr("Paiement non confirmé. Réessayez si besoin."));
         }
       }, 4000);
     } catch {
-      showToast("Erreur de connexion", false);
+      showToast(tr("Erreur de connexion"), false);
       setPaying(false);
     }
   };
@@ -104,9 +107,9 @@ export default function EspaceParentEcole({ mode }: Props) {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Espace parent inaccessible</h2>
-        <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error || "Vous n'êtes pas encore relié(e) à un élève dans cet établissement. Contactez l'école pour vous inscrire."}</p>
-        <button onClick={() => navigate("/compte")} style={{ padding: "8px 20px", background: color, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>← Retour</button>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Espace parent inaccessible")}</h2>
+        <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error ? tr(error) : tr("Vous n'êtes pas encore relié(e) à un élève dans cet établissement. Contactez l'école pour vous inscrire.")}</p>
+        <button onClick={() => navigate("/compte")} style={{ padding: "8px 20px", background: color, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{tr("← Retour")}</button>
       </div>
     </div>
   );
@@ -121,29 +124,32 @@ export default function EspaceParentEcole({ mode }: Props) {
   const absentCount = attendance.length - presentCount;
 
   const TABS: { id: typeof tab; label: string; icon: string; count?: number }[] = [
-    { id: "grades", label: "Notes", icon: "📊", count: grades.length },
-    { id: "attendance", label: "Présences", icon: "📋", count: attendance.length },
-    { id: "fees", label: "Frais", icon: "💰", count: fees.filter((f: any) => !f.est_paye).length },
-    { id: "bulletins", label: "Bulletins", icon: "📄", count: bulletins.length },
+    { id: "grades", label: tr("Notes"), icon: "📊", count: grades.length },
+    { id: "attendance", label: tr("Présences"), icon: "📋", count: attendance.length },
+    { id: "fees", label: tr("Frais"), icon: "💰", count: fees.filter((f: any) => !f.est_paye).length },
+    { id: "bulletins", label: tr("Bulletins"), icon: "📄", count: bulletins.length },
   ];
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
       <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}`}</style>
       {toast && (
-        <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? color : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "fadeIn 0.2s ease" }}>
+        <div style={{ position: "fixed", top: 20, insetInlineEnd: 20, zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? color : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "fadeIn 0.2s ease" }}>
           {toast.ok ? "✓ " : "⚠ "}{toast.msg}
         </div>
       )}
       <header style={{ background: color, color: "white", padding: "20px 24px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
-          <div style={{ fontSize: 12, opacity: 0.8 }}>{data.tenant?.name}</div>
-          <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 800 }}>👪 Espace Parent</h1>
-          {student && <p style={{ margin: "6px 0 0", fontSize: 14, opacity: 0.9 }}>{student.prenom} {student.nom} {student.niveau ? `· ${student.niveau}` : ""}{student.classe ? ` · ${student.classe}` : ""}</p>}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>{data.tenant?.name}</div>
+            <ChoixLangueEcole sombre compact />
+          </div>
+          <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 800 }}>{tr("👪 Espace Parent")}</h1>
+          {student && <p style={{ margin: "6px 0 0", fontSize: 14, opacity: 0.9 }}>{student.prenom} {student.nom} {student.niveau ? `· ${tr(student.niveau)}` : ""}{student.classe ? ` · ${student.classe}` : ""}</p>}
           {(
             <button onClick={() => navigate(`/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}/bibliotheque`)}
               style={{ marginTop: 12, background: "white", color, border: "none", borderRadius: 8, padding: "8px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-              📚 Bibliothèque
+              {tr("📚 Bibliothèque")}
             </button>
           )}
         </div>
@@ -166,7 +172,7 @@ export default function EspaceParentEcole({ mode }: Props) {
         {!student ? (
           <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "60px 20px", textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-            <p style={{ color: "#94a3b8", fontSize: 13 }}>Aucun élève relié à votre compte pour le moment.</p>
+            <p style={{ color: "#94a3b8", fontSize: 13 }}>{tr("Aucun élève relié à votre compte pour le moment.")}</p>
           </div>
         ) : (
           <>
@@ -181,14 +187,14 @@ export default function EspaceParentEcole({ mode }: Props) {
 
             {tab === "grades" && (
               <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-                {grades.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucune note enregistrée</div> : (
+                {grades.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucune note enregistrée")}</div> : (
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <tbody>
                       {grades.map((g: any) => (
                         <tr key={g.id} style={{ borderBottom: "1px solid #f8fafc" }}>
-                          <td style={{ padding: "11px 16px", fontWeight: 600, color: "#0f172a" }}>{g.matiere}</td>
-                          <td style={{ padding: "11px 16px", color: "#64748b" }}>{g.periode}</td>
-                          <td style={{ padding: "11px 16px", textAlign: "right", fontWeight: 800, color: color }}>{g.note}/{g.note_max}</td>
+                          <td style={{ padding: "11px 16px", fontWeight: 600, color: "#0f172a" }}>{tr(g.matiere)}</td>
+                          <td style={{ padding: "11px 16px", color: "#64748b" }}>{tr(g.periode)}</td>
+                          <td style={{ padding: "11px 16px", textAlign: "end", fontWeight: 800, color: color }}>{g.note}/{g.note_max}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -200,22 +206,22 @@ export default function EspaceParentEcole({ mode }: Props) {
             {tab === "attendance" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div style={{ background: "white", borderRadius: 10, border: "1px solid #e2e8f0", padding: "14px 16px", borderLeft: `3px solid ${color}` }}>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Présences</div>
+                  <div style={{ background: "white", borderRadius: 10, border: "1px solid #e2e8f0", padding: "14px 16px", borderInlineStart: `3px solid ${color}` }}>
+                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{tr("Présences")}</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color }}>{presentCount}</div>
                   </div>
-                  <div style={{ background: "white", borderRadius: 10, border: "1px solid #e2e8f0", padding: "14px 16px", borderLeft: "3px solid #ef4444" }}>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Absences</div>
+                  <div style={{ background: "white", borderRadius: 10, border: "1px solid #e2e8f0", padding: "14px 16px", borderInlineStart: "3px solid #ef4444" }}>
+                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{tr("Absences")}</div>
                     <div style={{ fontSize: 22, fontWeight: 800, color: "#ef4444" }}>{absentCount}</div>
                   </div>
                 </div>
                 <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-                  {attendance.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun historique de présence</div> : attendance.map((a: any) => {
+                  {attendance.length === 0 ? <div style={{ padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucun historique de présence")}</div> : attendance.map((a: any) => {
                     const present = a.est_present !== false && a.statut !== "absent";
                     return (
                       <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid #f8fafc", fontSize: 13 }}>
-                        <span style={{ color: "#475569" }}>{fmtDate(a.date_presence)}</span>
-                        <span style={{ color: present ? color : "#ef4444", fontWeight: 700 }}>{present ? "✓ Présent" : "✗ Absent"}</span>
+                        <span style={{ color: "#475569" }}>{fmtDate(a.date_presence, locale)}</span>
+                        <span style={{ color: present ? color : "#ef4444", fontWeight: 700 }}>{present ? tr("✓ Présent") : tr("✗ Absent")}</span>
                       </div>
                     );
                   })}
@@ -226,19 +232,19 @@ export default function EspaceParentEcole({ mode }: Props) {
             {tab === "fees" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {fees.length === 0 ? (
-                  <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun frais enregistré</div>
+                  <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucun frais enregistré")}</div>
                 ) : fees.map((f: any) => (
                   <div key={f.id} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 20px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
                       <div>
-                        <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{f.type_frais}</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: colorDark, marginTop: 2 }}>{fmtMoney(f.montant)}</div>
+                        <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{tr(f.type_frais)}</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: colorDark, marginTop: 2 }}>{fmtMoney(f.montant, locale)}</div>
                       </div>
                       {f.est_paye ? (
-                        <span style={{ padding: "4px 12px", background: "#f0fdf0", color: "#1a8f1a", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>✓ Payé</span>
+                        <span style={{ padding: "4px 12px", background: "#f0fdf0", color: "#1a8f1a", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{tr("✓ Payé")}</span>
                       ) : (
                         <button onClick={() => { setPayingFeeId(payingFeeId === f.id ? null : f.id); setPayMsg(""); }} style={{ padding: "8px 16px", background: color, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
-                          💳 Payer en ligne
+                          {tr("💳 Payer en ligne")}
                         </button>
                       )}
                     </div>
@@ -249,10 +255,10 @@ export default function EspaceParentEcole({ mode }: Props) {
                             <button key={m.id} onClick={() => setPayMethod(m.id)} style={{ flex: 1, padding: "8px", borderRadius: 8, border: `1.5px solid ${payMethod === m.id ? color : "#e2e8f0"}`, background: payMethod === m.id ? `${color}11` : "white", color: payMethod === m.id ? colorDark : "#64748b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{m.label}</button>
                           ))}
                         </div>
-                        <input value={payPhone} onChange={e => setPayPhone(e.target.value)} placeholder="Numéro de téléphone (622 00 00 00)" style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+                        <input value={payPhone} onChange={e => setPayPhone(e.target.value)} placeholder={tr("Numéro de téléphone (622 00 00 00)")} style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                         {payMsg && <p style={{ fontSize: 12, color: "#d97706", margin: 0 }}>{payMsg}</p>}
                         <button onClick={() => payFee(f.id)} disabled={paying} style={{ padding: "10px", background: paying ? "#94a3b8" : color, color: "white", border: "none", borderRadius: 8, cursor: paying ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 700 }}>
-                          {paying ? "Traitement..." : `Payer ${fmtMoney(f.montant)}`}
+                          {paying ? tr("Traitement...") : tr("Payer {montant}", { montant: fmtMoney(f.montant, locale) })}
                         </button>
                       </div>
                     )}
@@ -264,12 +270,12 @@ export default function EspaceParentEcole({ mode }: Props) {
             {tab === "bulletins" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {bulletins.length === 0 ? (
-                  <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Aucun bulletin publié pour le moment</div>
+                  <div style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "40px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>{tr("Aucun bulletin publié pour le moment")}</div>
                 ) : bulletins.map((b: any, i: number) => (
                   <div key={i} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{b.periode} — {b.annee_scolaire}</div>
-                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{b.mention}</div>
+                      <div style={{ fontWeight: 700, color: "#0f172a", fontSize: 14 }}>{tr(b.periode)} — {b.annee_scolaire}</div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{b.mention ? tr(b.mention) : ""}</div>
                     </div>
                     <div style={{ fontSize: 20, fontWeight: 800, color }}>{b.moyenne_generale}/20</div>
                   </div>
