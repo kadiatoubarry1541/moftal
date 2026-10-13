@@ -1,13 +1,16 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { config } from "../config/api";
+import { ADMIN_SERVICES } from "./EspaceProModals";
 import { TenantLogo, goToMoftal, MoftalMark } from "./GestionBrand";
 import InstallAppButton from "./InstallAppButton";
 import { getSessionUser } from "../utils/auth";
 import { useTraduction } from "../i18n/traduction";
 
-// Écran d'une application de gestion ouverte par quelqu'un qui n'y a pas (encore)
-// accès — par exemple un employé qui a reçu le lien. Il peut quand même
-// installer l'application ; dès que le propriétaire l'ajoute dans « Employés »,
-// il la rouvre et retrouve ses droits.
+// Application de gestion ouverte par quelqu'un qui n'est ni le propriétaire ni
+// un employé : c'est un client. Il arrive sur le site de l'établissement — un
+// parent d'élève, sur l'espace de ses enfants. Si le site n'existe pas, cet
+// écran explique comment se faire ajouter (et permet d'installer quand même).
 export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji = "🏢" }: {
   message?: string | null;
   couleur?: string;
@@ -24,11 +27,42 @@ export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji
   const abonnement = /abonnement|formule/i.test(texte);
   const reseau = !abonnement && /joindre le serveur|connexion|network|fetch/i.test(texte);
 
+  const [redirection, setRedirection] = useState(true);
+
+  // Client : site de l'établissement ; parent d'élève : l'espace de ses enfants
+  useEffect(() => {
+    if (abonnement || reseau) { setRedirection(false); return; }
+    const segment = window.location.pathname.split("/")[1] || "";
+    const service = ADMIN_SERVICES.find(sv => segment === sv.path || segment.startsWith(`${sv.path}-`));
+    const vitrine = service?.vitrinePath;
+    if (!vitrine || !tenantCode) { setRedirection(false); return; }
+    let fini = false;
+    (async () => {
+      if (service.type === "school" || service.type === "madrasa") {
+        const api = service.type === "school" ? "school-mgmt" : "madrasa-mgmt";
+        const r = await fetch(`${config.API_BASE_URL}/${api}/${tenantCode}/my-access`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+        }).catch(() => null);
+        const d = r ? await r.json().catch(() => ({})) : {};
+        if (!fini && r?.ok && d.success !== false) { navigate(`/${vitrine}/${tenantCode}/espace-parent`, { replace: true }); return; }
+      }
+      if (!fini) navigate(`/${vitrine}/${tenantCode}`, { replace: true });
+    })();
+    return () => { fini = true; };
+  }, [abonnement, reseau, tenantCode, navigate]);
+
   const autreCompte = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("session_user");
     navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`, { replace: true });
   };
+
+  if (redirection) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
+      <div style={{ width: 32, height: 32, border: `3px solid ${couleur}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>

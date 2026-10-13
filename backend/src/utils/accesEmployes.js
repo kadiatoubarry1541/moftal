@@ -7,7 +7,7 @@
 //   - « limité »  : voir, ajouter et changer un statut (vente servie, rendez-vous
 //     confirmé…), mais ni modifier ni supprimer une fiche.
 // Tout est contrôlé ici, côté serveur : l'écran ne fait que refléter ces règles.
-import { trouverPersonne } from './trouverPersonne.js';
+import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
 import { sequelize } from '../config/database.js';
 
 const NIVEAUX = ['complet', 'limite'];
@@ -110,8 +110,9 @@ export function ajouterRoutesAccesEmployes(router, middlewaresProprietaire) {
     try {
       await preparerTableAcces();
       const rows = await sequelize.query(
-        `SELECT id, numero_h, nom, poste, niveau, is_active, created_at FROM management_staff_access
-          WHERE tenant_code = :code ORDER BY created_at DESC`,
+        `SELECT a.id, a.numero_h, a.nom, a.poste, a.niveau, a.is_active, a.created_at, u.tel1 AS telephone, u.email
+           FROM management_staff_access a LEFT JOIN users u ON LOWER(u.numero_h) = LOWER(a.numero_h)
+          WHERE a.tenant_code = :code ORDER BY a.created_at DESC`,
         { replacements: { code: req.params.tenantCode }, type: sequelize.QueryTypes.SELECT }
       );
       res.json({ success: true, employes: rows });
@@ -126,13 +127,17 @@ export function ajouterRoutesAccesEmployes(router, middlewaresProprietaire) {
       const niveau = NIVEAUX.includes(req.body?.niveau) ? req.body.niveau : 'limite';
       const poste = String(req.body?.poste || '').trim().slice(0, 100) || null;
       if (!identifiant) return res.status(400).json({ success: false, message: 'Téléphone, e-mail ou NuméroH de l\'employé obligatoire.' });
-      const trouve = await trouverPersonne(identifiant);
+      // Sans compte Moftal : compte préparé, la personne choisit son mot de passe
+      // à sa première connexion avec ce téléphone / cet e-mail
+      const trouve = await trouverOuPreparerPersonne(identifiant);
       if (trouve.erreur) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
+      const userCree = trouve.cree;
       const user = { numero_h: trouve.personne.numero_h, prenom: trouve.personne.prenom, nom_famille: trouve.personne.nom };
       if (String(user.numero_h).toLowerCase() === String(req.tenant?.owner_numero_h || '').toLowerCase()) {
         return res.status(400).json({ success: false, message: 'Le propriétaire a déjà tous les accès.' });
       }
-      const nom = [user.prenom, user.nom_famille].filter(Boolean).join(' ') || user.numero_h;
+      const nomCompte = [user.prenom, user.nom_famille].filter((x) => x && x !== 'Nouveau' && x !== 'membre').join(' ');
+      const nom = nomCompte || (userCree ? identifiant : user.numero_h);
       const [rows] = await sequelize.query(
         `INSERT INTO management_staff_access (tenant_code, numero_h, nom, poste, niveau, is_active, ajoute_par)
          VALUES (:code, :nh, :nom, :poste, :niveau, true, :par)
@@ -140,7 +145,7 @@ export function ajouterRoutesAccesEmployes(router, middlewaresProprietaire) {
          RETURNING id, numero_h, nom, poste, niveau, is_active, created_at`,
         { replacements: { code: req.params.tenantCode, nh: user.numero_h, nom, poste, niveau, par: req.userId || null } }
       );
-      res.json({ success: true, employe: rows[0] });
+      res.json({ success: true, employe: rows[0], nouveauCompte: userCree });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
   });
 

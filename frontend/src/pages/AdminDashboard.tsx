@@ -9,6 +9,7 @@ import { config } from "../config/api";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";
 import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
+import AdminCreerComptePro from "../components/AdminCreerComptePro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
 
 interface ProfessionalAccount {
@@ -109,6 +110,8 @@ export default function AdminDashboard() {
   const [allPros, setAllPros] = useState<ProfessionalAccount[]>([]);
   // Compte pro dont l'admin modifie le nom et le logo
   const [identiteAModifier, setIdentiteAModifier] = useState<ProfessionalAccount | null>(null);
+  // Créer un compte pro pour un établissement (téléphone ou e-mail seulement)
+  const [creerPro, setCreerPro] = useState(false);
   const [proFilter, setProFilter] = useState<string>("pending");
   const [couples, setCouples] = useState<CoupleLink[]>([]);
   const [couplesLoading, setCouplesLoading] = useState(false);
@@ -1117,6 +1120,16 @@ export default function AdminDashboard() {
           {/* ========== PROFESSIONNELS ========== */}
           {adminSection === "pros" && (
             <div className="space-y-4">
+
+              {/* L'admin crée le compte d'un établissement, même à distance : le pro
+                  reçoit le lien de son application, se connecte et installe */}
+              <div className="bg-white rounded-2xl border border-teal-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900">➕ Créer un compte pro pour un établissement</div>
+                  <div className="text-xs text-gray-500">Nom, secteur et téléphone ou e-mail suffisent. Vous lui envoyez le lien de son application : il se connecte avec ce téléphone / cet e-mail et installe.</div>
+                </div>
+                <button onClick={() => setCreerPro(true)} className="px-4 py-2.5 rounded-xl bg-teal-600 text-white font-bold text-sm">Créer un compte pro</button>
+              </div>
 
               {/* ── PANORAMA DES TYPES DE COMPTES ── */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -2347,6 +2360,10 @@ export default function AdminDashboard() {
           {/* ========== MOFTAL PAY (G7 uniquement) ========== */}
           {adminSection === "moftal-pay" && isSuperAdmin7(userData) && (
             <MoftalPayAdminSection token={localStorage.getItem('token') || ''} apiBase={API_BASE} />
+          )}
+
+          {creerPro && (
+            <AdminCreerComptePro onClose={() => setCreerPro(false)} onCree={() => loadAllPros(proFilter)} />
           )}
 
           {identiteAModifier && (

@@ -1,5 +1,5 @@
 import express from 'express';
-import { trouverPersonne } from '../utils/trouverPersonne.js';
+import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { authenticate } from '../middleware/auth.js';
 import { sequelize } from '../config/database.js';
@@ -556,8 +556,9 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
   try {
     const { role, linked_student_id } = req.body;
     const code = req.params.tenantCode;
-    // NuméroH ou numéro de téléphone du compte
-    const trouve = await trouverPersonne(req.body.numero_h || req.body.telephone);
+    // Téléphone, e-mail ou NuméroH ; sans compte, il est préparé (mot de passe
+    // choisi par le parent à sa première connexion)
+    const trouve = await trouverOuPreparerPersonne(req.body.numero_h || req.body.telephone);
     if (!trouve.personne) return res.status(trouve.statut).json({ success: false, message: trouve.erreur });
     const user = trouve.personne;
     const numero_h = user.numero_h;

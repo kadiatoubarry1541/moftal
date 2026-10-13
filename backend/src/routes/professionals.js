@@ -127,7 +127,7 @@ function withValidation(account) {
  * ils doivent payer leur abonnement mensuel immédiatement après approbation
  * pour pouvoir publier (voir exchange.js / PRIX_VENDEUR_ECHANGE).
  */
-async function finalizeApproval(account, approverUserId) {
+export async function finalizeApproval(account, approverUserId) {
   const mgmtTypes = ['clinic', 'school', 'enterprise', 'mosque', 'madrasa', 'commerce', 'ngo', 'journalist', 'scientist', 'supplier', 'security_agency'];
   let tenantCode = account.tenant_code || null;
   // Formule « Visibilité + Rendez-vous » : pas de gestion interne ni de site client

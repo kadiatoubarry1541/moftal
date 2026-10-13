@@ -47,7 +47,7 @@ export function BoutonRapport({ base, etablissement, couleur = "#1a8f1a", rappor
         {rapport && employe !== "limite" && <button onClick={() => setOuvert(true)} style={bouton}>{tr("📊 Rapport du mois")}</button>}
       </div>
       {ouvert && <RapportMois base={base} etablissement={etablissement} couleur={couleur} onClose={() => setOuvert(false)} />}
-      {employes && <AccesEmployes base={base} couleur={couleur} onClose={() => setEmployes(false)} />}
+      {employes && <AccesEmployes base={base} couleur={couleur} nomEtablissement={etablissement?.name} onClose={() => setEmployes(false)} />}
     </>
   );
 }

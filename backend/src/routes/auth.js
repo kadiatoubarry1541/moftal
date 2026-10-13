@@ -18,6 +18,8 @@ import { urlDurable } from '../services/stockageDurable.js';
 import { enregistrerEnBase } from '../services/fichiersBase.js';
 import { authenticate, MASTER_ADMIN_NUMEROS, PROVISIONAL_PREFIX, isProvisionalNumeroH, ensureNumeroHAliasTable } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendPasswordOtpEmail, sendWelcomeEmail, maskEmail } from '../services/emailService.js';
+import { trouverPersonne } from '../utils/trouverPersonne.js';
+import { aEteAjoutee, preparerColonne as preparerColonnePremiereConnexion } from '../services/comptesProvisoires.js';
 
 const router = Router();
 
@@ -616,6 +618,54 @@ router.post('/complete-profile', authenticate, [
 // @route   POST /api/auth/login
 // @desc    Connexion utilisateur
 // @access  Public
+// ── Première connexion ────────────────────────────────────────────────────────
+// Une personne ajoutée par son téléphone / e-mail (propriétaire créé par l'admin,
+// employé, professeur, parent) n'a pas encore de mot de passe : en se connectant
+// la première fois avec ce téléphone / cet e-mail, elle choisit le sien.
+async function compteAPremiereConnexion(identifiant) {
+  const trouve = await trouverPersonne(identifiant);
+  if (!trouve.personne) return null;
+  const nh = trouve.personne.numero_h;
+  if (!isProvisionalNumeroH(nh)) return null;
+  await preparerColonnePremiereConnexion();
+  const [u] = await User.sequelize.query(
+    'SELECT mot_de_passe_a_choisir FROM users WHERE numero_h = :nh LIMIT 1',
+    { replacements: { nh }, type: User.sequelize.QueryTypes.SELECT }
+  );
+  if (!u?.mot_de_passe_a_choisir) return null;
+  return (await aEteAjoutee(nh)) ? nh : null;
+}
+
+// POST /api/auth/premiere-connexion/verifier { identifiant } → { premiereConnexion }
+router.post('/premiere-connexion/verifier', async (req, res) => {
+  try {
+    res.json({ success: true, premiereConnexion: !!(await compteAPremiereConnexion(req.body?.identifiant)) });
+  } catch (e) {
+    console.error('première connexion (vérifier):', e);
+    res.json({ success: true, premiereConnexion: false });
+  }
+});
+
+// POST /api/auth/premiere-connexion { identifiant, password } → connecté
+router.post('/premiere-connexion', async (req, res) => {
+  try {
+    const password = String(req.body?.password || '');
+    if (password.length < 6) return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    const nh = await compteAPremiereConnexion(req.body?.identifiant);
+    if (!nh) return res.status(400).json({ success: false, message: 'Ce compte a déjà un mot de passe : connectez-vous normalement.' });
+    const user = await User.findByPk(nh);
+    if (!user) return res.status(404).json({ success: false, message: 'Compte introuvable.' });
+    user.password = await bcrypt.hash(password, config.BCRYPT_ROUNDS);
+    await user.save();
+    const donnees = { ...user.dataValues };
+    delete donnees.password;
+    res.json({ success: true, message: 'Mot de passe enregistré', user: donnees, token: signToken(nh), profileIncomplete: true });
+  } catch (e) {
+    console.error('première connexion:', e);
+    res.status(500).json({ success: false, message: 'Erreur serveur : réessayez.' });
+  }
+});
+
 router.post('/login', [
   body('numeroH').notEmpty().withMessage('Le NumeroH, téléphone ou email est requis'),
   body('password').notEmpty().withMessage('Le mot de passe est requis')
