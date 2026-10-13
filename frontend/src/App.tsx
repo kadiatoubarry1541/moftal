@@ -137,6 +137,7 @@ const Immobilier          = lazy(() => import("./pages/Immobilier"));
 const Restaurants         = lazy(() => import("./pages/Restaurants"));
 const GestionTransport    = lazy(() => import("./pages/GestionTransport"));
 const EcoleVitrine        = lazy(() => import("./pages/EcoleVitrine"));
+const RejoindrePro        = lazy(() => import("./pages/RejoindrePro"));
 const MadrasaVitrine      = lazy(() => import("./pages/MadrasaVitrine"));
 const MosqueeVitrine      = lazy(() => import("./pages/MosqueeVitrine"));
 const NgoVitrine          = lazy(() => import("./pages/NgoVitrine"));
@@ -756,6 +757,7 @@ function App() {
           <Route path="/mon-espace-pro" element={<MonEspacePro />} />
           <Route path="/rendez-vous/:id" element={<PrendreRendezVous />} />
           <Route path="/installer-app/:id" element={<InstallClientApp />} />
+          <Route path="/rejoindre-pro/:token" element={<RejoindrePro />} />
           <Route path="/mes-cours" element={<MesCours />} />
           <Route path="/galerie-famille" element={<GalerieFamily />} />
           <Route path="/moftal-pay" element={<MoftalPay />} />
