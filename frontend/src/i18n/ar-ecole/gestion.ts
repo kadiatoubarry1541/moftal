@@ -2,6 +2,9 @@
 // Les valeurs enregistrées (niveaux, matières, rôles, types de frais, périodes, jours,
 // mentions) restent en français en base : seules leurs étiquettes sont traduites ici.
 const ar: Record<string, string> = {
+  "Changer la photo": "تغيير الصورة",
+  "Ajouter une photo": "إضافة صورة",
+  "Cette photo n'a pas pu être lue. Essayez une autre image.": "تعذّرت قراءة هذه الصورة. جرّبوا صورة أخرى.",
   "Langue d'affichage de la gestion sur cet appareil": "لغة عرض الإدارة على هذا الجهاز",
   // ── Vocabulaire de l'établissement (école / madrasa)
   "Apprenants": "الطلاب",

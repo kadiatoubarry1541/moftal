@@ -83,3 +83,16 @@ export async function migrerPhotosDisque(dossierUploads) {
   }
   console.log(`🖼️ Photos du disque → base : ${copiees} copiée(s), ${introuvables} introuvable(s) sur le disque.`);
 }
+
+/**
+ * Photo envoyée par un formulaire en « data:image/…;base64,… » → enregistrée
+ * dans la table fichiers → URL « /api/fichiers/<id> ».
+ * undefined / vide → null (le champ n'est pas modifié) ; une URL déjà
+ * enregistrée est gardée telle quelle.
+ */
+export async function photoDepuisFormulaire(valeur, { proprietaire = null, usage = null } = {}) {
+  if (typeof valeur !== 'string' || !valeur) return null;
+  const m = valeur.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/);
+  if (!m) return valeur.startsWith('data:') ? null : valeur;
+  return enregistrerEnBase({ buffer: Buffer.from(m[2], 'base64'), mimetype: m[1], originalname: `photo.${m[1].split('/')[1]}` }, { proprietaire, usage });
+}

@@ -17,6 +17,18 @@ import { attraperErreursAsync } from '../utils/routerAsync.js';
 import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 import { ajouterRoutesCoursEtBibliotheque, numeroHComplet, TABLES_MADRASA } from './schoolCoursBibliotheque.js';
+import { photoDepuisFormulaire } from '../services/fichiersBase.js';
+
+// Photo facultative des apprenants et des enseignants
+let colonnesPhotoPretes = false;
+async function ensureColonnesPhoto() {
+  if (colonnesPhotoPretes) return;
+  await sequelize.query(`
+    ALTER TABLE madrasa_students ADD COLUMN IF NOT EXISTS photo_url TEXT;
+    ALTER TABLE madrasa_staff    ADD COLUMN IF NOT EXISTS photo_url TEXT;
+  `);
+  colonnesPhotoPretes = true;
+}
 
 const router = attraperErreursAsync(express.Router());
 
@@ -256,13 +268,15 @@ router.get('/:tenantCode/students', authenticate, verifyMember, async (req, res)
 
 router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
-  const { prenom, nom, date_naissance, sexe, telephone_parent, niveau, numero_h, parent_numero_h } = req.body;
+  const { prenom, nom, date_naissance, sexe, telephone_parent, niveau, numero_h, parent_numero_h, photo_url } = req.body;
   if (!prenom || !nom) return res.status(400).json({ message: 'Prénom et nom requis.' });
   try {
+    await ensureColonnesPhoto();
+    const photo = await photoDepuisFormulaire(photo_url, { proprietaire: tc, usage: 'photo-eleve' });
     const [rows] = await sequelize.query(
-      `INSERT INTO madrasa_students (tenant_code, prenom, nom, date_naissance, sexe, telephone_parent, niveau, numero_h, parent_numero_h)
-       VALUES (:tc, :prenom, :nom, :dn, :sexe, :tel, :niveau, :nh, :pnh) RETURNING *`,
-      { replacements: { tc, prenom, nom, dn: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || '', niveau: niveau || 'Iqra', nh: numero_h || null, pnh: parent_numero_h || null } }
+      `INSERT INTO madrasa_students (tenant_code, prenom, nom, date_naissance, sexe, telephone_parent, niveau, numero_h, parent_numero_h, photo_url)
+       VALUES (:tc, :prenom, :nom, :dn, :sexe, :tel, :niveau, :nh, :pnh, :photo) RETURNING *`,
+      { replacements: { tc, prenom, nom, dn: date_naissance || null, sexe: sexe || 'M', tel: telephone_parent || '', niveau: niveau || 'Iqra', nh: numero_h || null, pnh: parent_numero_h || null, photo } }
     );
     res.json({ success: true, student: rows[0] });
   } catch (err) { res.status(500).json({ message: err.message }); }
@@ -270,16 +284,18 @@ router.post('/:tenantCode/students', authenticate, verifyTenant, async (req, res
 
 router.put('/:tenantCode/students/:id', authenticate, verifyTenant, async (req, res) => {
   const { tenantCode: tc, id } = req.params;
-  const { prenom, nom, date_naissance, sexe, telephone_parent, niveau, numero_h, parent_numero_h } = req.body;
+  const { prenom, nom, date_naissance, sexe, telephone_parent, niveau, numero_h, parent_numero_h, photo_url } = req.body;
+  await ensureColonnesPhoto();
+  const photo = await photoDepuisFormulaire(photo_url, { proprietaire: tc, usage: 'photo-eleve' });
   // Modifier la fiche entière (avant : seul le niveau était gardé)
   await sequelize.query(
     `UPDATE madrasa_students SET
        prenom = COALESCE(:prenom, prenom), nom = COALESCE(:nom, nom),
        date_naissance = :dn, sexe = COALESCE(:sexe, sexe), telephone_parent = :tel,
-       niveau = COALESCE(:niveau, niveau), numero_h = :nh, parent_numero_h = :pnh, updated_at = NOW()
+       niveau = COALESCE(:niveau, niveau), numero_h = :nh, parent_numero_h = :pnh, photo_url = COALESCE(:photo, photo_url), updated_at = NOW()
      WHERE id = :id AND tenant_code = :tc`,
     { replacements: { prenom: prenom || null, nom: nom || null, dn: date_naissance ? String(date_naissance).slice(0, 10) : null, sexe: sexe || null,
-      tel: telephone_parent || '', niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, id, tc } }
+      tel: telephone_parent || '', niveau: niveau || null, nh: numero_h || null, pnh: parent_numero_h || null, photo, id, tc } }
   );
   res.json({ success: true });
 });
@@ -303,13 +319,15 @@ router.get('/:tenantCode/staff', authenticate, verifyMember, async (req, res) =>
 
 router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) => {
   const tc = req.params.tenantCode;
-  const { prenom, nom, role, specialite, telephone, numero_h } = req.body;
+  const { prenom, nom, role, specialite, telephone, numero_h, photo_url } = req.body;
   if (!prenom || !nom) return res.status(400).json({ message: 'Prénom et nom requis.' });
   const nh = await numeroHComplet(numero_h);
+  await ensureColonnesPhoto();
+  const photo = await photoDepuisFormulaire(photo_url, { proprietaire: tc, usage: 'photo-personnel' });
   const [rows] = await sequelize.query(
-    `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, telephone, numero_h)
-     VALUES (:tc, :prenom, :nom, :role, :spec, :tel, :nh) RETURNING *`,
-    { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh } }
+    `INSERT INTO madrasa_staff (tenant_code, prenom, nom, role, specialite, telephone, numero_h, photo_url)
+     VALUES (:tc, :prenom, :nom, :role, :spec, :tel, :nh, :photo) RETURNING *`,
+    { replacements: { tc, prenom, nom, role: role || 'Enseignant', spec: specialite || 'Coran', tel: telephone || '', nh, photo } }
   );
   if (nh) {
     // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
@@ -322,14 +340,16 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
 });
 
 router.put('/:tenantCode/staff/:id', authenticate, verifyTenant, async (req, res) => {
-  const { prenom, nom, role, specialite, telephone, numero_h } = req.body;
+  const { prenom, nom, role, specialite, telephone, numero_h, photo_url } = req.body;
   if (!prenom || !nom) return res.status(400).json({ success: false, message: 'Prénom et nom requis.' });
   const nh = await numeroHComplet(numero_h);
+  await ensureColonnesPhoto();
+  const photo = await photoDepuisFormulaire(photo_url, { proprietaire: req.params.tenantCode, usage: 'photo-personnel' });
   await sequelize.query(
     `UPDATE madrasa_staff SET prenom = :prenom, nom = :nom, role = COALESCE(:role, role), specialite = COALESCE(:spec, specialite),
-       telephone = :tel, numero_h = :nh
+       telephone = :tel, numero_h = :nh, photo_url = COALESCE(:photo, photo_url)
      WHERE id = :id AND tenant_code = :tc`,
-    { replacements: { prenom, nom, role: role || null, spec: specialite || null, tel: telephone || '', nh, id: req.params.id, tc: req.params.tenantCode } }
+    { replacements: { prenom, nom, role: role || null, spec: specialite || null, tel: telephone || '', nh, photo, id: req.params.id, tc: req.params.tenantCode } }
   );
   res.json({ success: true });
 });
