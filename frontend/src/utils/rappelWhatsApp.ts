@@ -1,5 +1,10 @@
 // Rappel par WhatsApp : ouvre la conversation avec un message déjà écrit
 // (frais impayés, rendez-vous, loyer…). Numéros guinéens complétés en +224.
+// Textes dans la langue choisie (trHors) ; chiffres latins même en arabe.
+import { trHors, langueCourante } from "../i18n/traduction";
+
+const locale = () => (langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR");
+
 export function lienWhatsApp(telephone: string | null | undefined, message: string): string | null {
   let n = String(telephone || "").replace(/\D/g, "");
   if (!n) return null;
@@ -11,12 +16,12 @@ export function lienWhatsApp(telephone: string | null | undefined, message: stri
 
 export function envoyerRappel(telephone: string | null | undefined, message: string) {
   const url = lienWhatsApp(telephone, message);
-  if (!url) { alert("Aucun numéro de téléphone enregistré pour envoyer le rappel."); return; }
+  if (!url) { alert(trHors("Aucun numéro de téléphone enregistré pour envoyer le rappel.")); return; }
   window.open(url, "_blank");
 }
 
-export const gnfTexte = (n: unknown) => `${(Number(n) || 0).toLocaleString("fr-FR")} GNF`;
+export const gnfTexte = (n: unknown) => `${(Number(n) || 0).toLocaleString(locale())} GNF`;
 export const dateTexte = (d: unknown) => {
   const x = d ? new Date(d as string) : null;
-  return x && !isNaN(x.getTime()) ? x.toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+  return x && !isNaN(x.getTime()) ? x.toLocaleDateString(locale(), { day: "numeric", month: "long" }) : "";
 };

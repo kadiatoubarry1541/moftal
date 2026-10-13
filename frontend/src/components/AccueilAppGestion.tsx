@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import LogoEtablissement from "./LogoEtablissement";
 import { getTypeInfo } from "./EspaceProModals";
 import { demanderCodeOuverture } from "../utils/codeOuverture";
+import { useTraduction } from "../i18n/traduction";
 
 // Espace pro d'un établissement en formule complète, vu sur le site Moftal :
 // tout se fait dans SA propre application (la gestion interne, avec son logo).
@@ -17,6 +18,7 @@ const estAndroid = () => /Android/i.test(navigator.userAgent);
 
 export default function AccueilAppGestion({ account, couleur }: { account: any; couleur: string }) {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const token = localStorage.getItem("token") || "";
   const [tenantCode, setTenantCode] = useState<string>(account.tenant_code || "");
   const [code, setCode] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export default function AccueilAppGestion({ account, couleur }: { account: any; 
 
   const lienMembres = `${window.location.origin}/installer-app/${account.id}`;
   const partager = async () => {
-    const texte = `Rejoignez ${account.name} sur son application :`;
+    const texte = tr("Rejoignez {nom} sur son application :", { nom: account.name });
     if (navigator.share) {
       try { await navigator.share({ title: account.name, text: texte, url: lienMembres }); return; } catch { /* annulé : on copie */ }
     }
@@ -89,33 +91,33 @@ export default function AccueilAppGestion({ account, couleur }: { account: any; 
           <LogoEtablissement src={account.photo} name={account.name} type={account.type} fontSize={40} />
         </div>
         <h1 className="mt-4 text-xl font-extrabold text-gray-900 dark:text-white">{account.name}</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Votre gestion complète est dans votre propre application, avec votre logo.</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{tr("Votre gestion complète est dans votre propre application, avec votre logo.")}</p>
 
-        {erreur && <p className="mt-4 text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{erreur}</p>}
+        {erreur && <p className="mt-4 text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{tr(erreur)}</p>}
 
         <button onClick={() => ouvrir(true)} disabled={!tenantCode || enCours}
           className="mt-6 w-full py-4 rounded-2xl text-white text-base font-extrabold shadow-md disabled:opacity-60"
           style={{ background: couleur }}>
-          {!tenantCode && !erreur ? "⏳ Préparation…" : enCours ? "⏳ Ouverture…" : "📲 Installer ma gestion interne"}
+          {!tenantCode && !erreur ? tr("⏳ Préparation…") : enCours ? tr("⏳ Ouverture…") : tr("📲 Installer ma gestion interne")}
         </button>
-        <p className="mt-2 text-xs text-gray-400">Votre application s'ouvre et propose l'installation : confirmez, c'est tout.</p>
+        <p className="mt-2 text-xs text-gray-400">{tr("Votre application s'ouvre et propose l'installation : confirmez, c'est tout.")}</p>
 
         {/* Roue de secours : déjà installée, iPhone / Firefox, installation qui
             échoue, nouvel appareil — la gestion s'ouvre sans rien installer */}
         <button onClick={() => ouvrir(false)} disabled={!tenantCode || enCours}
           className="mt-4 w-full py-3.5 rounded-2xl text-sm font-bold bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 disabled:opacity-60">
-          📂 Ouvrir ma gestion
+          {tr("📂 Ouvrir ma gestion")}
         </button>
-        <p className="mt-1.5 text-xs text-gray-400">Déjà installée, ou installation impossible sur cet appareil ? Ouvrez-la directement.</p>
+        <p className="mt-1.5 text-xs text-gray-400">{tr("Déjà installée, ou installation impossible sur cet appareil ? Ouvrez-la directement.")}</p>
 
         <button onClick={partager}
           className="mt-5 w-full py-3.5 rounded-2xl text-sm font-bold border-2"
           style={{ borderColor: couleur, color: couleur }}>
-          {copie ? "✅ Lien copié" : "🔗 Partager le lien à mes membres"}
+          {copie ? tr("✅ Lien copié") : tr("🔗 Partager le lien à mes membres")}
         </button>
 
       </div>
-      <button onClick={() => navigate("/")} className="mt-6 text-sm text-gray-500">← Retour à Moftal</button>
+      <button onClick={() => navigate("/")} className="mt-6 text-sm text-gray-500">{tr("← Retour à Moftal")}</button>
     </div>
   );
 }

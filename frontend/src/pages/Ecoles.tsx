@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { config } from '../config/api';
+import ChoixLangueEcole from '../components/ChoixLangueEcole';
+import { useTraduction } from '../i18n/traduction';
 
 interface School {
   id: string;
@@ -14,6 +16,7 @@ interface School {
 
 export default function Ecoles() {
   const navigate = useNavigate();
+  const { tr } = useTraduction();
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -77,21 +80,22 @@ export default function Ecoles() {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">🏫 Écoles &amp; Établissements</h1>
-            <p className="text-gray-600 mt-1">Liste des écoles partenaires de la communauté</p>
+            <h1 className="text-3xl font-bold text-gray-900">{tr("🏫 Écoles & Établissements")}</h1>
+            <p className="text-gray-600 mt-1">{tr("Liste des écoles partenaires de la communauté")}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <ChoixLangueEcole compact />
             <button
               onClick={() => setShowForm(!showForm)}
               className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-lg transition-colors shadow-sm"
             >
-              + Inscrire mon école
+              {tr("+ Inscrire mon école")}
             </button>
             <button
               onClick={() => navigate(-1)}
               className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
             >
-              Retour
+              {tr("Retour")}
             </button>
           </div>
         </div>
@@ -102,57 +106,57 @@ export default function Ecoles() {
         {/* Formulaire d'inscription */}
         {showForm && (
           <div className="bg-white rounded-xl shadow-sm border border-violet-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Inscrire mon établissement</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{tr("Inscrire mon établissement")}</h2>
             <p className="text-gray-600 text-sm mb-4">
-              Votre école sera visible dans cette liste après validation par un administrateur.
+              {tr("Votre école sera visible dans cette liste après validation par un administrateur.")}
             </p>
             <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom de l&apos;établissement <span className="text-red-500">*</span>
+                  {tr("Nom de l'établissement")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Ex : Lycée Moftal"
+                  placeholder={tr("Ex : Lycée Moftal")}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Adresse (optionnel)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{tr("Adresse (optionnel)")}</label>
                 <input
                   type="text"
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="Ville, pays"
+                  placeholder={tr("Ville, pays")}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact (optionnel)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{tr("Contact (optionnel)")}</label>
                 <input
                   type="text"
                   value={form.contact}
                   onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                  placeholder="Téléphone ou email"
+                  placeholder={tr("Téléphone ou email")}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Présentation (optionnel)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{tr("Présentation (optionnel)")}</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   rows={3}
-                  placeholder="Quelques mots sur l'établissement..."
+                  placeholder={tr("Quelques mots sur l'établissement...")}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                 />
               </div>
               {message && (
                 <p className={`text-sm font-medium ${message.ok ? 'text-green-600' : 'text-red-600'}`}>
-                  {message.text}
+                  {tr(message.text)}
                 </p>
               )}
               <div className="flex gap-3">
@@ -161,14 +165,14 @@ export default function Ecoles() {
                   disabled={formLoading}
                   className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium disabled:opacity-50"
                 >
-                  {formLoading ? 'Enregistrement...' : 'Enregistrer mon école'}
+                  {formLoading ? tr('Enregistrement...') : tr('Enregistrer mon école')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg"
                 >
-                  Annuler
+                  {tr("Annuler")}
                 </button>
               </div>
             </form>
@@ -177,15 +181,15 @@ export default function Ecoles() {
 
         {message && !showForm && (
           <div className={`p-4 rounded-lg ${message.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
-            {message.text}
+            {tr(message.text)}
           </div>
         )}
 
         {/* Liste des écoles */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Écoles partenaires
-            {!loading && <span className="ml-2 text-sm font-normal text-gray-500">({schools.length})</span>}
+            {tr("Écoles partenaires")}
+            {!loading && <span className="ms-2 text-sm font-normal text-gray-500">({schools.length})</span>}
           </h2>
 
           {loading ? (
@@ -195,13 +199,13 @@ export default function Ecoles() {
           ) : schools.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <div className="text-5xl mb-3">🏫</div>
-              <p className="text-lg font-medium text-gray-600 mb-1">Aucune école enregistrée pour l&apos;instant</p>
-              <p className="text-sm">Soyez le premier à inscrire votre établissement !</p>
+              <p className="text-lg font-medium text-gray-600 mb-1">{tr("Aucune école enregistrée pour l'instant")}</p>
+              <p className="text-sm">{tr("Soyez le premier à inscrire votre établissement !")}</p>
               <button
                 onClick={() => setShowForm(true)}
                 className="mt-4 px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors"
               >
-                Inscrire mon école
+                {tr("Inscrire mon école")}
               </button>
             </div>
           ) : (

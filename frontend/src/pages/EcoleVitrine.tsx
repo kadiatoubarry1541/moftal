@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import ChoixLangueEcole from "../components/ChoixLangueEcole";
+import { useTraduction } from "../i18n/traduction";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -22,6 +24,7 @@ function scrollTo(id: string) {
 export default function EcoleVitrine() {
   const { tenantCode } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
+  const { tr, locale } = useTraduction();
   const [school, setSchool] = useState<any>(null);
   const [data, setData]     = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +71,7 @@ export default function EcoleVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: GREEN_BG }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #bbf7bb`, borderTopColor: GREEN, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: GREEN_DARK, fontSize: 14, fontWeight: 600 }}>Chargement en cours...</p>
+        <p style={{ color: GREEN_DARK, fontSize: 14, fontWeight: 600 }}>{tr("Chargement en cours...")}</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -78,9 +81,9 @@ export default function EcoleVitrine() {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f8fafc" }}>
       <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🏫</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>École introuvable</h2>
-        <p style={{ color: "#64748b", marginBottom: 24 }}>{error || "Cette école n'existe pas ou n'est pas disponible."}</p>
-        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: GREEN, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>Retour à l'accueil</button>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("École introuvable")}</h2>
+        <p style={{ color: "#64748b", marginBottom: 24 }}>{tr(error || "Cette école n'existe pas ou n'est pas disponible.")}</p>
+        <button onClick={() => navigate("/")} style={{ padding: "10px 24px", background: GREEN, color: "white", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 600, fontSize: 14 }}>{tr("Retour à l'accueil")}</button>
       </div>
     </div>
   );
@@ -114,7 +117,7 @@ export default function EcoleVitrine() {
           </div>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             {school.phone_urgence && (
-              <a href={`tel:${school.phone_urgence}`} style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "3px 12px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>🚨 Urgence</a>
+              <a href={`tel:${school.phone_urgence}`} style={{ background: "#ef4444", color: "white", borderRadius: 6, padding: "3px 12px", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>{tr("🚨 Urgence")}</a>
             )}
           </div>
         </div>
@@ -129,23 +132,25 @@ export default function EcoleVitrine() {
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: 17, color: "white", lineHeight: 1.1 }}>{school.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>École</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontFamily: "monospace" }}>{tr("École")}</div>
             </div>
+            {/* À côté du nom : toujours visible, même sur téléphone (les liens, eux, défilent) */}
+            <ChoixLangueEcole sombre compact />
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
             {[["Accueil","hero"],["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
-              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
+              <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
             {isLoggedIn && (
               <button onClick={() => navigate(`/ecole/${tenantCode}/espace-parent`)}
                 style={{ background: "white", color: GREEN_DARK, border: "none", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                👪 Espace Parent
+                {tr("👪 Espace Parent")}
               </button>
             )}
             {isLoggedIn && (
               <button onClick={() => navigate(`/ecole/${tenantCode}/enseignant`)}
                 style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                🧑‍🏫 Espace Enseignant
+                {tr("🧑‍🏫 Espace Enseignant")}
               </button>
             )}
           </div>
@@ -161,14 +166,14 @@ export default function EcoleVitrine() {
           </div>
           <h1 className="hero-t" style={{ fontSize: 40, fontWeight: 800, color: "white", margin: "0 0 16px", textShadow: "0 2px 8px rgba(0,0,0,0.2)", lineHeight: 1.2 }}>{school.name}</h1>
           <p style={{ fontSize: 17, color: "rgba(255,255,255,0.88)", marginBottom: 36, lineHeight: 1.65, maxWidth: 560, margin: "0 auto 36px" }}>
-            {school.description || "Une école d'excellence dédiée à la réussite de chaque élève. Formation de qualité, environnement sûr et épanouissant."}
+            {school.description || tr("Une école d'excellence dédiée à la réussite de chaque élève. Formation de qualité, environnement sûr et épanouissant.")}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("enroll")} style={{ background: "white", color: GREEN_DARK, border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
-              Inscrire mon enfant
+              {tr("Inscrire mon enfant")}
             </button>
             <button onClick={() => scrollTo("contact")} style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.5)", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              Nous contacter
+              {tr("Nous contacter")}
             </button>
           </div>
         </div>
@@ -183,12 +188,12 @@ export default function EcoleVitrine() {
       <section style={{ background: "white", padding: "0 20px 48px" }}>
         <div className="stats-g" style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, transform: "translateY(-30px)" }}>
           {[
-            { icon: "👨‍🏫", val: `${stats.staff || 0}`, label: "Enseignants qualifiés" },
-            { icon: "👨‍🎓", val: `${stats.students || 0}`, label: "Élèves inscrits" },
-            { icon: "🏫", val: `${stats.classes || 0}`, label: "Classes" },
+            { icon: "👨‍🏫", val: `${stats.staff || 0}`, label: tr("Enseignants qualifiés") },
+            { icon: "👨‍🎓", val: `${stats.students || 0}`, label: tr("Élèves inscrits") },
+            { icon: "🏫", val: `${stats.classes || 0}`, label: tr("Classes") },
             reviewStats.total > 0
-              ? { icon: "🌟", val: `${reviewStats.moyenne}/5`, label: `${reviewStats.total} avis parents` }
-              : { icon: "📚", val: `${stats.niveaux || 0}`, label: "Niveaux proposés" },
+              ? { icon: "🌟", val: `${reviewStats.moyenne}/5`, label: tr("{n} avis parents", { n: reviewStats.total }) }
+              : { icon: "📚", val: `${stats.niveaux || 0}`, label: tr("Niveaux proposés") },
           ].map((s, i) => (
             <div key={i} style={{ background: "white", borderRadius: 14, padding: "20px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.1)", border: "1px solid #f1f5f9" }}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
@@ -204,9 +209,9 @@ export default function EcoleVitrine() {
         <section id="teachers" style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <span style={{ background: `${GREEN}18`, color: GREEN, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>L'équipe pédagogique</span>
-              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>Nos Enseignants</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Des éducateurs passionnés dédiés à la réussite de vos enfants.</p>
+              <span style={{ background: `${GREEN}18`, color: GREEN, padding: "4px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tr("L'équipe pédagogique")}</span>
+              <h2 style={{ fontSize: 32, fontWeight: 800, margin: "12px 0 12px", color: "#0f172a" }}>{tr("Nos Enseignants")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Des éducateurs passionnés dédiés à la réussite de vos enfants.")}</p>
             </div>
             <div className="staff-g" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20 }}>
               {staff.map((s: any, i: number) => (
@@ -215,8 +220,8 @@ export default function EcoleVitrine() {
                     {s.photo_url ? <img src={s.photo_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <>{(s.prenom || "?").charAt(0)}{(s.nom || "?").charAt(0)}</>}
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", marginBottom: 4 }}>{s.prenom} {s.nom}</div>
-                  <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 4 }}>{s.role}</div>
-                  {s.matiere && <div style={{ fontSize: 11, color: "#94a3b8" }}>{s.matiere}</div>}
+                  <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginBottom: 4 }}>{tr(s.role)}</div>
+                  {s.matiere && <div style={{ fontSize: 11, color: "#94a3b8" }}>{tr(s.matiere)}</div>}
                 </div>
               ))}
             </div>
@@ -229,13 +234,13 @@ export default function EcoleVitrine() {
         <section style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nos Classes</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Les niveaux et classes proposés par notre école.</p>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nos Classes")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Les niveaux et classes proposés par notre école.")}</p>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
               {classrooms.map((c: any, i: number) => (
                 <span key={i} style={{ padding: "10px 20px", background: GREEN_BG, color: GREEN_DARK, borderRadius: 20, fontSize: 14, fontWeight: 700, border: `1px solid ${GREEN}33` }}>
-                  {c.nom} <span style={{ fontWeight: 500, opacity: 0.8 }}>· {c.niveau}</span>
+                  {c.nom} <span style={{ fontWeight: 500, opacity: 0.8 }}>· {tr(c.niveau)}</span>
                 </span>
               ))}
             </div>
@@ -248,15 +253,15 @@ export default function EcoleVitrine() {
         <section style={{ background: "#f8fafc", padding: "60px 20px" }}>
           <div style={{ maxWidth: 800, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Frais de scolarité</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Indicatifs — contactez-nous pour le détail complet.</p>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Frais de scolarité")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Indicatifs — contactez-nous pour le détail complet.")}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 16 }}>
               {feeTypes.map((f: any, i: number) => (
                 <div key={i} style={{ background: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: "18px 20px", textAlign: "center" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{f.type_frais}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr(f.type_frais)}</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: GREEN }}>
-                    {(+f.min_montant).toLocaleString("fr-FR")}{f.max_montant !== f.min_montant ? ` - ${(+f.max_montant).toLocaleString("fr-FR")}` : ""} GNF
+                    {(+f.min_montant).toLocaleString(locale)}{f.max_montant !== f.min_montant ? ` - ${(+f.max_montant).toLocaleString(locale)}` : ""} {tr("GNF")}
                   </div>
                 </div>
               ))}
@@ -270,15 +275,15 @@ export default function EcoleVitrine() {
         <section style={{ background: "white", padding: "60px 20px" }}>
           <div style={{ maxWidth: 1000, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Avis de nos parents</h2>
-              <p style={{ color: "#64748b", fontSize: 15 }}>Note moyenne : {reviewStats.moyenne}/5 sur {reviewStats.total} avis</p>
+              <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Avis de nos parents")}</h2>
+              <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Note moyenne : {moyenne}/5 sur {total} avis", { moyenne: reviewStats.moyenne, total: reviewStats.total })}</p>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }} className="staff-g">
               {reviews.slice(0, 6).map((r: any, i: number) => (
                 <div key={i} style={{ background: "#f8fafc", borderRadius: 16, padding: "22px 20px", border: "1px solid #e2e8f0" }}>
                   <div style={{ color: "#f59e0b", fontSize: 15, marginBottom: 8 }}>{"★".repeat(r.note)}{"☆".repeat(5 - r.note)}</div>
                   {r.commentaire && <p style={{ fontSize: 13, color: "#475569", lineHeight: 1.6, margin: "0 0 10px" }}>{r.commentaire}</p>}
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{r.nom_auteur || "Parent"}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{r.nom_auteur || tr("Parent")}</div>
                 </div>
               ))}
             </div>
@@ -289,8 +294,8 @@ export default function EcoleVitrine() {
       {/* POURQUOI NOUS */}
       <section style={{ background: `linear-gradient(135deg,${GREEN_DARK},${GREEN})`, padding: "60px 20px", color: "white" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
-          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12 }}>Pourquoi choisir notre école ?</h2>
-          <p style={{ fontSize: 15, opacity: 0.85, marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>Un cadre d'apprentissage moderne pour préparer les leaders de demain.</p>
+          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12 }}>{tr("Pourquoi choisir notre école ?")}</h2>
+          <p style={{ fontSize: 15, opacity: 0.85, marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>{tr("Un cadre d'apprentissage moderne pour préparer les leaders de demain.")}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 900, margin: "0 auto" }}>
             {[
               { icon: "📚", title: "Programme de qualité", desc: "Un curriculum complet et adapté aux standards nationaux avec des méthodes pédagogiques modernes." },
@@ -299,8 +304,8 @@ export default function EcoleVitrine() {
             ].map((item, i) => (
               <div key={i} style={{ background: "rgba(255,255,255,0.1)", borderRadius: 16, padding: "28px 24px", border: "1px solid rgba(255,255,255,0.2)" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{item.title}</h3>
-                <p style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{tr(item.title)}</h3>
+                <p style={{ fontSize: 13, opacity: 0.8, lineHeight: 1.6, margin: 0 }}>{tr(item.desc)}</p>
               </div>
             ))}
           </div>
@@ -311,44 +316,44 @@ export default function EcoleVitrine() {
       <section id="enroll" style={{ background: GREEN_BG, padding: "60px 20px", textAlign: "center" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-          <h2 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>Inscrire votre enfant</h2>
+          <h2 style={{ fontSize: 26, fontWeight: 800, color: "#0f172a", marginBottom: 12 }}>{tr("Inscrire votre enfant")}</h2>
           <p style={{ color: "#475569", fontSize: 15, lineHeight: 1.7, marginBottom: 28 }}>
-            Remplissez ce formulaire, l'école vous recontacte pour finaliser l'inscription — pas besoin de compte Moftal pour commencer.
+            {tr("Remplissez ce formulaire, l'école vous recontacte pour finaliser l'inscription — pas besoin de compte Moftal pour commencer.")}
           </p>
-          <div style={{ background: "white", borderRadius: 16, border: `1px solid ${GREEN}33`, padding: "28px 28px", textAlign: "left" }}>
+          <div style={{ background: "white", borderRadius: 16, border: `1px solid ${GREEN}33`, padding: "28px 28px", textAlign: "start" }}>
             {enrollSent ? (
               <div style={{ textAlign: "center", padding: "20px 0" }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
-                <p style={{ fontSize: 14, color: GREEN_DARK, fontWeight: 700, margin: 0 }}>Demande envoyée !</p>
-                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>L'école vous contactera au {enrollForm.telephone_parent}.</p>
+                <p style={{ fontSize: 14, color: GREEN_DARK, fontWeight: 700, margin: 0 }}>{tr("Demande envoyée !")}</p>
+                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{tr("L'école vous contactera au {tel}.", { tel: enrollForm.telephone_parent })}</p>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <input placeholder="Nom de l'enfant *" value={enrollForm.nom_enfant} onChange={e => setEnrollForm(f => ({ ...f, nom_enfant: e.target.value }))}
+                  <input placeholder={tr("Nom de l'enfant *")} value={enrollForm.nom_enfant} onChange={e => setEnrollForm(f => ({ ...f, nom_enfant: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
-                  <input type="date" placeholder="Date de naissance" value={enrollForm.date_naissance} onChange={e => setEnrollForm(f => ({ ...f, date_naissance: e.target.value }))}
+                  <input type="date" placeholder={tr("Date de naissance")} value={enrollForm.date_naissance} onChange={e => setEnrollForm(f => ({ ...f, date_naissance: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                 </div>
-                <input placeholder="Niveau souhaité (ex: CP1, 7ème année, Licence 1...)" value={enrollForm.niveau_souhaite} onChange={e => setEnrollForm(f => ({ ...f, niveau_souhaite: e.target.value }))}
+                <input placeholder={tr("Niveau souhaité (ex: CP1, 7ème année, Licence 1...)")} value={enrollForm.niveau_souhaite} onChange={e => setEnrollForm(f => ({ ...f, niveau_souhaite: e.target.value }))}
                   style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <input placeholder="Nom du parent" value={enrollForm.nom_parent} onChange={e => setEnrollForm(f => ({ ...f, nom_parent: e.target.value }))}
+                  <input placeholder={tr("Nom du parent")} value={enrollForm.nom_parent} onChange={e => setEnrollForm(f => ({ ...f, nom_parent: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
-                  <input placeholder="Téléphone du parent *" value={enrollForm.telephone_parent} onChange={e => setEnrollForm(f => ({ ...f, telephone_parent: e.target.value }))}
+                  <input placeholder={tr("Téléphone du parent *")} value={enrollForm.telephone_parent} onChange={e => setEnrollForm(f => ({ ...f, telephone_parent: e.target.value }))}
                     style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, outline: "none" }} />
                 </div>
-                {enrollError && <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>{enrollError}</p>}
+                {enrollError && <p style={{ color: "#ef4444", fontSize: 12, margin: 0 }}>{tr(enrollError)}</p>}
                 <button onClick={submitEnroll} disabled={enrollSending}
                   style={{ background: enrollSending ? `${GREEN}88` : GREEN, color: "white", border: "none", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: enrollSending ? "not-allowed" : "pointer" }}>
-                  {enrollSending ? "Envoi..." : "Envoyer la demande de pré-inscription"}
+                  {enrollSending ? tr("Envoi...") : tr("Envoyer la demande de pré-inscription")}
                 </button>
               </div>
             )}
           </div>
           {!isLoggedIn && (
             <p style={{ marginTop: 20, fontSize: 12, color: "#64748b" }}>
-              Vous avez déjà un compte Moftal ? <button onClick={() => navigate("/login-membre")} style={{ color: GREEN_DARK, background: "none", border: "none", textDecoration: "underline", cursor: "pointer", fontSize: 12, padding: 0 }}>Connectez-vous</button> pour suivre l'inscription en ligne.
+              {tr("Vous avez déjà un compte Moftal ?")} <button onClick={() => navigate("/login-membre")} style={{ color: GREEN_DARK, background: "none", border: "none", textDecoration: "underline", cursor: "pointer", fontSize: 12, padding: 0 }}>{tr("Connectez-vous")}</button> {tr("pour suivre l'inscription en ligne.")}
             </p>
           )}
         </div>
@@ -358,14 +363,14 @@ export default function EcoleVitrine() {
       <section id="contact" style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 44 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Nous Contacter</h2>
-            <p style={{ color: "#64748b", fontSize: 15 }}>Notre équipe est disponible pour répondre à toutes vos questions.</p>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>{tr("Nous Contacter")}</h2>
+            <p style={{ color: "#64748b", fontSize: 15 }}>{tr("Notre équipe est disponible pour répondre à toutes vos questions.")}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 780, margin: "0 auto" }}>
             {[
-              { icon: "📞", label: "Téléphone", val: school.phone || "Non renseigné" },
-              { icon: "✉️", label: "Email", val: school.email || "Non renseigné" },
-              { icon: "📍", label: "Adresse", val: school.address || "Non renseignée" },
+              { icon: "📞", label: tr("Téléphone"), val: school.phone || tr("Non renseigné") },
+              { icon: "✉️", label: tr("Email"), val: school.email || tr("Non renseigné") },
+              { icon: "📍", label: tr("Adresse"), val: school.address || tr("Non renseignée") },
             ].map((item, i) => (
               <div key={i} style={{ textAlign: "center", padding: "28px 20px", border: "1px solid #e2e8f0", borderRadius: 16, background: "#f8fafc" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
@@ -376,9 +381,9 @@ export default function EcoleVitrine() {
           </div>
           {school.phone && (
             <div style={{ textAlign: "center", marginTop: 32 }}>
-              <button onClick={() => window.open(`https://wa.me/${school.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour ! Je souhaite des informations sur l'école.")}`, "_blank")}
+              <button onClick={() => window.open(`https://wa.me/${school.phone.replace(/\D/g,"")}?text=${encodeURIComponent(tr("Bonjour ! Je souhaite des informations sur l'école."))}`, "_blank")}
                 style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Contacter via WhatsApp
+                {tr("📲 Contacter via WhatsApp")}
               </button>
             </div>
           )}
@@ -396,10 +401,10 @@ export default function EcoleVitrine() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{school.name}</span>
           </div>
-          <p style={{ fontSize: 12, margin: "0 0 8px" }}>École</p>
+          <p style={{ fontSize: 12, margin: "0 0 8px" }}>{tr("École")}</p>
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
-              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
+            <button onClick={() => navigate("/")} style={{ marginInlineStart: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
+              <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginInlineEnd: 5, background: "white", borderRadius: 4, padding: 1 }} />{tr("Retour à la plateforme")}
             </button>
           </div>
         </div>
