@@ -86,7 +86,7 @@ export function Login() {
         } else if (result?.message) {
           setError(result.message)
         } else {
-          setError('NumeroH ou mot de passe incorrect.')
+          setError('Téléphone, e-mail, NuméroH ou mot de passe incorrect.')
         }
       }
     } catch {
@@ -120,7 +120,7 @@ export function Login() {
                 value={numeroH} 
                 onChange={(e)=>setNumeroH(e.target.value)} 
                 onKeyPress={(e) => e.key === 'Enter' && onSubmit()}
-                placeholder="NuméroH, téléphone ou email"
+                placeholder="Téléphone, e-mail ou NuméroH"
                 autoFocus
               />
             </div>

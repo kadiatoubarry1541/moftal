@@ -44,7 +44,7 @@ export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji
           <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: "0 0 6px" }}>{reseau ? tr("Vérifiez votre connexion internet puis réessayez.") : tr(texte)}</p>
         ) : (<>
           <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.6, margin: "0 0 6px" }}>
-            {tr("Le responsable de l'établissement doit vous ajouter dans « Employés » avec votre NuméroH (page Identité). Ensuite, rouvrez cette application : vous aurez vos droits.")}
+            {tr("Le responsable de l'établissement doit vous ajouter dans « Employés » avec votre téléphone, votre e-mail ou votre NuméroH. Ensuite, rouvrez cette application : vous aurez vos droits.")}
           </p>
           {message && <p style={{ fontSize: 12, color: "#94a3b8", margin: "0 0 16px" }}>{tr(message)}</p>}
         </>)}

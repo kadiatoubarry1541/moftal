@@ -30,9 +30,9 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", onClose }: { 
   useEffect(() => { charger(); }, [base]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ajouter = async () => {
-    if (!form.numero_h.trim()) { alert("Saisissez le numéro Moftal de l'employé."); return; }
+    if (!form.numero_h.trim()) { alert("Saisissez le téléphone, l'e-mail ou le NuméroH de l'employé."); return; }
     setEnvoi(true);
-    const ok = await envoyerGestion(`${base}/acces-employes`, { method: "POST", headers: headers(), body: JSON.stringify({ ...form, numero_h: form.numero_h.trim() }) });
+    const ok = await envoyerGestion(`${base}/acces-employes`, { method: "POST", headers: headers(), body: JSON.stringify({ identifiant: form.numero_h.trim(), poste: form.poste, niveau: form.niveau }) });
     setEnvoi(false);
     if (ok) { setForm({ numero_h: "", poste: "", niveau: "limite" }); charger(); }
   };
@@ -54,7 +54,7 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", onClose }: { 
 
         <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 12, padding: 14, marginBottom: 16 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Ajouter un employé</div>
-          <input value={form.numero_h} onChange={e => setForm(f => ({ ...f, numero_h: e.target.value }))} placeholder="Numéro Moftal de l'employé" style={{ ...inp, marginBottom: 8 }} />
+          <input value={form.numero_h} onChange={e => setForm(f => ({ ...f, numero_h: e.target.value }))} placeholder="Téléphone, e-mail ou NuméroH de l'employé" inputMode="email" autoCapitalize="none" style={{ ...inp, marginBottom: 8 }} />
           <input value={form.poste} onChange={e => setForm(f => ({ ...f, poste: e.target.value }))} placeholder="Poste (ex. Caissier, Secrétaire, Infirmier)" style={{ ...inp, marginBottom: 10 }} />
           {NIVEAUX.map(n => (
             <label key={n.v} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 10px", marginBottom: 6, borderRadius: 8, cursor: "pointer", border: `1.5px solid ${form.niveau === n.v ? couleur : "#e2e8f0"}`, background: "white" }}>

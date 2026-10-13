@@ -121,7 +121,7 @@ const ar: Record<string, string> = {
   'option.select_placeholder': 'اختر',
   'msg.saving': 'جاري الحفظ...',
   'login.title': 'تسجيل الدخول',
-  'login.numeroh': 'رقم H، الهاتف أو البريد الإلكتروني',
+  'login.numeroh': 'الهاتف أو البريد الإلكتروني أو رقم H',
   'login.password': 'كلمة المرور',
   'login.submit': 'تسجيل الدخول',
   'login.signup_prompt': 'لست مسجلاً بعد؟',

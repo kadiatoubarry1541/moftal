@@ -121,7 +121,7 @@ const man: Record<string, string> = {
   'option.select_placeholder': 'Faamu',
   'msg.saving': 'Sigin kɛ...',
   'login.title': 'Sigin',
-  'login.numeroh': 'NuméroH, Sɔni wala email',
+  'login.numeroh': 'Sɔni, email wala NuméroH',
   'login.password': 'Baara kɔrɔ',
   'login.submit': 'Sigin',
   'login.signup_prompt': 'Sigin ma kɛ? ',

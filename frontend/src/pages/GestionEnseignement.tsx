@@ -445,8 +445,8 @@ export default function GestionEnseignement({ mode }: Props) {
                 </div>
               ))}
             </div>}
-        <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 6px" }}>{tr("NuméroH ou numéro de téléphone du parent :")}</p>
-        <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder={tr("Ex. G96C1P1… ou 620 00 00 00")} inputMode="text"
+        <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 6px" }}>{tr("Téléphone, e-mail ou NuméroH du parent :")}</p>
+        <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder={tr("Ex. 620 00 00 00, nom@gmail.com ou G96C1P1…")} inputMode="text"
           style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, marginBottom: 8 }} />
         <div style={{ display: "flex", gap: 8 }}>
           <button disabled={parentsBusy || !nhParent.trim()} onClick={lierParent}
