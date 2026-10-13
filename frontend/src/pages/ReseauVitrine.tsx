@@ -9,7 +9,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 const VIOLET      = "#7c3aed";
 const VIOLET_DARK = "#5b21b6";
 const VIOLET_LIGHT= "#8b5cf6";
-const VIOLET_BG   = "#f5f3ff";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR") : ""; }

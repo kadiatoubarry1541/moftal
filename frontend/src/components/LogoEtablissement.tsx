@@ -19,19 +19,22 @@ export default function LogoEtablissement({ src, name, type, fontSize = 22, colo
   // Secteur : donne la couleur de fond de l'initiale
   type?: string | null;
   fontSize?: number;
-  // Fond de l'initiale (sinon celle du secteur, sinon celui du cadre qui l'entoure)
+  // Fond de l'initiale (sinon celle du secteur, sinon gris clair)
   color?: string;
   radius?: number | string;
 }) {
   const [echec, setEchec] = useState(false);
   useEffect(() => { setEchec(false); }, [src]);
   const avecLogo = Boolean(src) && !echec;
+  // Fond de l'initiale : couleur donnée, sinon celle du secteur ; sans l'une ni
+  // l'autre, gris clair et lettre foncée (visible même sur une page blanche)
+  const fond = color || (type ? COULEUR_SECTEUR[type] || "#64748b" : undefined);
   return (
     <span
       style={{
         width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
         overflow: "hidden", borderRadius: radius ?? "inherit",
-        background: avecLogo ? "white" : (color || (type ? COULEUR_SECTEUR[type] || "#64748b" : undefined)),
+        background: avecLogo ? "white" : (fond || "#f1f5f9"),
       }}
     >
       {avecLogo ? (
@@ -42,7 +45,7 @@ export default function LogoEtablissement({ src, name, type, fontSize = 22, colo
           style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
         />
       ) : (
-        <span style={{ fontSize, fontWeight: 800, color: "white", lineHeight: 1 }}>
+        <span style={{ fontSize, fontWeight: 800, color: fond ? "white" : "#0f172a", lineHeight: 1 }}>
           {((name || "").trim()[0] || "•").toUpperCase()}
         </span>
       )}

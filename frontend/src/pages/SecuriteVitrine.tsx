@@ -8,7 +8,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 
 const DARK      = "#0f172a";
 const GRAY      = "#334155";
-const GRAY_LIGHT= "#475569";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 

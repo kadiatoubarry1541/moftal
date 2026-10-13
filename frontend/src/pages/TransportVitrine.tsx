@@ -8,8 +8,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 
 const SKY      = "#0284c7";
 const SKY_DARK = "#075985";
-const SKY_LIGHT= "#0ea5e9";
-const SKY_BG   = "#f0f9ff";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR") : "—"; }

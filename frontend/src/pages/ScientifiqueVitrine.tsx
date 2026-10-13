@@ -9,7 +9,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 const INDIGO       = "#4f46e5";
 const INDIGO_DARK  = "#3730a3";
 const INDIGO_LIGHT = "#6366f1";
-const INDIGO_BG    = "#eef2ff";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 function fmtDate(d: string)   { return d ? new Date(d).toLocaleDateString("fr-FR") : ""; }

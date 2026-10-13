@@ -8,8 +8,6 @@ const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\
 
 const ORANGE      = "#ea580c";
 const ORANGE_DARK = "#9a3412";
-const ORANGE_LIGHT= "#f97316";
-const ORANGE_BG   = "#fff7ed";
 
 function scrollTo(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); }
 

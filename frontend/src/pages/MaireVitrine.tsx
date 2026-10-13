@@ -8,7 +8,6 @@ const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 
 const BLUE      = "#1d4ed8";
 const BLUE_DARK = "#1e3a8a";
-const BLUE_MID  = "#2563eb";
 
 const SERVICES_MAIRIE = [
   { icon: "💍", label: "Acte de Mariage",            desc: "Enregistrement et délivrance des actes de mariage. Dossier traité en quelques jours ouvrables." },
@@ -55,10 +54,10 @@ export default function MaireVitrine() {
   };
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#eff6ff" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
       <div style={{ textAlign: "center" }}>
         <div style={{ width: 48, height: 48, border: `3px solid #e2e8f0`, borderTopColor: BLUE, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-        <p style={{ color: BLUE_DARK, fontSize: 14, fontWeight: 600 }}>Chargement en cours…</p>
+        <p style={{ color: "#334155", fontSize: 14, fontWeight: 600 }}>Chargement en cours…</p>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     </div>
@@ -85,8 +84,8 @@ export default function MaireVitrine() {
       <style>{`
         @keyframes spin    { to { transform: rotate(360deg) } }
         @keyframes fadeUp  { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }
-        .vitrine-nav-link  { color: rgba(255,255,255,0.85); font-weight: 500; font-size: 14px; cursor: pointer; padding: 6px 4px; border-bottom: 2px solid transparent; transition: all 0.2s; background: none; border: none; }
-        .vitrine-nav-link:hover { color: white; border-bottom-color: rgba(255,255,255,0.6); }
+        .vitrine-nav-link  { color: #334155; font-weight: 500; font-size: 14px; cursor: pointer; padding: 6px 4px; border-bottom: 2px solid transparent; transition: all 0.2s; background: none; border: none; }
+        .vitrine-nav-link:hover { color: #0f172a; border-bottom-color: ${BLUE}; }
         .svc-card:hover    { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(29,78,216,0.15) !important; }
         .agent-card:hover  { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important; }
         .svc-card, .agent-card { transition: all 0.25s ease; }
@@ -108,7 +107,7 @@ export default function MaireVitrine() {
       `}</style>
 
       {/* ── BARRE TOP ── */}
-      <div style={{ background: BLUE_DARK, color: "rgba(255,255,255,0.8)", fontSize: 12, padding: "6px 0" }}>
+      <div style={{ background: "#f8fafc", color: "#334155", fontSize: 12, padding: "6px 0", borderBottom: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {mairie.phone   && <span>📞 {mairie.phone}</span>}
@@ -119,15 +118,15 @@ export default function MaireVitrine() {
       </div>
 
       {/* ── NAVBAR ── */}
-      <nav style={{ background: BLUE, boxShadow: "0 2px 12px rgba(0,0,0,0.2)", position: "sticky", top: 0, zIndex: 100 }}>
+      <nav style={{ background: "white", borderBottom: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(15,23,42,0.06)", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 10, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 10, background: "white", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
               <LogoEtablissement src={mairie.logo_url} name={mairie.name} fontSize={18} />
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 16, color: "white", lineHeight: 1.1 }}>{mairie.name}</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.65)", fontFamily: "monospace" }}>État Civil</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: "#0f172a", lineHeight: 1.1 }}>{mairie.name}</div>
+              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace" }}>État Civil</div>
             </div>
           </div>
 
@@ -139,43 +138,42 @@ export default function MaireVitrine() {
           </div>
 
           {/* Burger mobile */}
-          <button onClick={() => setMobileMenu(!mobileMenu)} style={{ background: "none", border: "none", cursor: "pointer", color: "white", display: "none" }} className="burger">
+          <button onClick={() => setMobileMenu(!mobileMenu)} style={{ background: "none", border: "none", cursor: "pointer", color: "#0f172a", display: "none" }} className="burger">
             <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
         </div>
 
         {mobileMenu && (
-          <div style={{ background: BLUE_DARK, padding: "12px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ background: "white", borderTop: "1px solid #e2e8f0", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
             {[["Accueil", "hero"], ["Services", "services"], ["Agents", "agents"], ["Contact", "contact"]].map(([label, id]) => (
-              <button key={id} onClick={() => scrollTo(id)} style={{ color: "white", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, textAlign: "left", padding: "8px 0" }}>{label}</button>
+              <button key={id} onClick={() => scrollTo(id)} style={{ color: "#334155", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, textAlign: "left", padding: "8px 0" }}>{label}</button>
             ))}
           </div>
         )}
       </nav>
 
       {/* ── HERO ── */}
-      <section id="hero" style={{ background: `linear-gradient(135deg, ${BLUE_DARK} 0%, ${BLUE} 55%, ${BLUE_MID} 100%)`, padding: "80px 20px 110px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")", zIndex: 0 }} />
+      <section id="hero" style={{ background: "white", padding: "80px 20px 110px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "relative", zIndex: 1, maxWidth: 720, margin: "0 auto", animation: "fadeUp 0.6s ease" }}>
-          <div style={{ width: 88, height: 88, borderRadius: 22, background: "rgba(255,255,255,0.15)", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, border: "2px solid rgba(255,255,255,0.3)" }}>
+          <div style={{ width: 88, height: 88, borderRadius: 22, background: "white", margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, border: "1px solid #e2e8f0" }}>
             <LogoEtablissement src={mairie.logo_url} name={mairie.name} fontSize={40} />
           </div>
-          <div style={{ display: "inline-block", background: "rgba(255,255,255,0.15)", borderRadius: 20, padding: "4px 16px", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.9)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 16 }}>
+          <div style={{ display: "inline-block", background: `${BLUE}18`, borderRadius: 20, padding: "4px 16px", fontSize: 12, fontWeight: 700, color: BLUE, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 16 }}>
             Service Public · État Civil
           </div>
-          <h1 className="hero-title" style={{ fontSize: 42, fontWeight: 800, color: "white", margin: "0 0 16px", textShadow: "0 2px 8px rgba(0,0,0,0.25)", lineHeight: 1.2 }}>
+          <h1 className="hero-title" style={{ fontSize: 42, fontWeight: 800, color: "#0f172a", margin: "0 0 16px", lineHeight: 1.2 }}>
             {mairie.name}
           </h1>
-          <p className="hero-sub" style={{ fontSize: 17, color: "rgba(255,255,255,0.85)", marginBottom: 36, lineHeight: 1.7, maxWidth: 560, margin: "0 auto 36px" }}>
+          <p className="hero-sub" style={{ fontSize: 17, color: "#334155", marginBottom: 36, lineHeight: 1.7, maxWidth: 560, margin: "0 auto 36px" }}>
             {mairie.description || "Au service des citoyens pour tous vos actes d'état civil. Mariages, naissances, décès et certificats traités rapidement et officiellement."}
           </p>
           <div className="hero-btns" style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={() => scrollTo("services")}
-              style={{ background: "white", color: BLUE_DARK, border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}>
+              style={{ background: BLUE, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(15,23,42,0.12)" }}>
               Nos Services
             </button>
             <button onClick={() => scrollTo("contact")}
-              style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "2px solid rgba(255,255,255,0.5)", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+              style={{ background: "white", color: BLUE, border: `1.5px solid ${BLUE}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
               Nous Contacter
             </button>
           </div>
@@ -305,20 +303,20 @@ export default function MaireVitrine() {
       )}
 
       {/* ── POURQUOI NOUS ── */}
-      <section style={{ background: `linear-gradient(135deg,${BLUE_DARK},${BLUE})`, padding: "60px 20px", color: "white" }}>
+      <section style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
-          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12 }}>Pourquoi passer par notre mairie ?</h2>
-          <p style={{ fontSize: 15, opacity: 0.85, marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>Une administration moderne, transparente et efficace au service de vos droits civiques.</p>
+          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12, color: "#0f172a" }}>Pourquoi passer par notre mairie ?</h2>
+          <p style={{ fontSize: 15, color: "#334155", marginBottom: 48, maxWidth: 500, margin: "0 auto 48px" }}>Une administration moderne, transparente et efficace au service de vos droits civiques.</p>
           <div className="why-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, maxWidth: 900, margin: "0 auto" }}>
             {[
               { icon: "⚡", title: "Traitement rapide",      desc: "Vos dossiers sont traités dans les meilleurs délais. Nous respectons les délais légaux et souvent les dépassons." },
               { icon: "🔒", title: "Sécurité & Officialité", desc: "Tous nos actes sont officiellement signés, tamponnés et enregistrés dans les registres nationaux." },
               { icon: "🤝", title: "Accompagnement",         desc: "Nos agents vous guident dans chaque étape de vos démarches, avec respect et professionnalisme." },
             ].map((item, i) => (
-              <div key={i} style={{ background: "rgba(255,255,255,0.1)", borderRadius: 16, padding: "28px 24px", border: "1px solid rgba(255,255,255,0.2)" }}>
+              <div key={i} style={{ background: "white", borderRadius: 16, padding: "28px 24px", border: "1px solid #e2e8f0" }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{item.title}</h3>
-                <p style={{ fontSize: 13, opacity: 0.82, lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>{item.title}</h3>
+                <p style={{ fontSize: 13, color: "#334155", lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
               </div>
             ))}
           </div>
@@ -326,7 +324,7 @@ export default function MaireVitrine() {
       </section>
 
       {/* ── DOCUMENTS NÉCESSAIRES ── */}
-      <section style={{ background: "#eff6ff", padding: "60px 20px" }}>
+      <section style={{ background: "white", padding: "60px 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <h2 style={{ fontSize: 28, fontWeight: 800, color: "#0f172a", marginBottom: 8 }}>Documents à apporter</h2>
@@ -395,17 +393,17 @@ export default function MaireVitrine() {
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#1d4ed8" accentDark="#1e3a8a" />
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: BLUE_DARK, color: "rgba(255,255,255,0.7)", padding: "32px 20px", textAlign: "center" }}>
+      <footer style={{ background: "#f8fafc", color: "#64748b", borderTop: "1px solid #e2e8f0", padding: "32px 20px", textAlign: "center" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "white", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
               <LogoEtablissement src={mairie.logo_url} name={mairie.name} fontSize={18} />
             </div>
-            <span style={{ fontWeight: 700, fontSize: 16, color: "white" }}>{mairie.name}</span>
+            <span style={{ fontWeight: 700, fontSize: 16, color: "#0f172a" }}>{mairie.name}</span>
           </div>
           <p style={{ fontSize: 12, margin: "0 0 8px" }}>Service Public · État Civil</p>
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
-            <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
+          <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 16, paddingTop: 16, fontSize: 11 }}>
+            <button onClick={() => navigate("/")} style={{ marginLeft: 16, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 11, textDecoration: "underline" }}>
               <img src="/logo-moftal.svg" alt="" style={{ width: 14, height: 14, verticalAlign: "middle", marginRight: 5, background: "white", borderRadius: 4, padding: 1 }} />Retour à la plateforme
             </button>
           </div>
