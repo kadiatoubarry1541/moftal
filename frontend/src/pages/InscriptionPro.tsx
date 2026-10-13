@@ -9,9 +9,9 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5002";
 const PRO_TYPES = [
   { id: "clinic",          label: "Clinique / Hôpital",              icon: "🏥", desc: "Recevez et gérez les rendez-vous des patients" },
   { id: "health_worker",   label: "Médecin / Agent de santé",        icon: "👨‍⚕️", desc: "Publiez vos consultations et services médicaux individuels" },
-  { id: "school",          label: "École / Établissement",           icon: "🏫", desc: "Gérez élèves, notes, bulletins, frais et membres" },
+  { id: "school",          label: "École / Établissement / Franco-arabe", icon: "🏫", desc: "Gérez élèves, notes, bulletins, frais et membres — en français ou en arabe" },
   { id: "mosque",          label: "Mosquée / Madrasa",               icon: "🕌", desc: "Registre fidèles, dons/zakat, annonces, élèves Coran" },
-  { id: "madrasa",         label: "Formation Religieuse",            icon: "📖", desc: "Daroul, médersa, franco-arabe — élèves, bulletins, frais" },
+  { id: "madrasa",         label: "Formation Religieuse",            icon: "📖", desc: "Daroul, médersa — élèves, bulletins, frais" },
   { id: "commerce",        label: "Commerce / Boutique",             icon: "🛒", desc: "Stock, ventes journalières, clients, crédits, caisse" },
   { id: "security_agency", label: "Agent / Agence de sécurité",      icon: "🛡️", desc: "Police, gendarmerie, pompiers ou agent privé — proposez vos services" },
   { id: "journalist",      label: "Journaliste",                     icon: "📰", desc: "Publiez des informations sur Terre Adam" },
