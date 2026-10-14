@@ -8,16 +8,18 @@ import { lienAppGestionIci } from "../utils/lienAppGestion";
 // (téléphone, e-mail ou NuméroH) et choisit pour chacun :
 // On lui envoie le lien de l'application : il se connecte avec ce téléphone /
 // cet e-mail (la première fois il choisit son mot de passe) et n'a que ses droits.
+//   - Tous les droits : exactement comme le propriétaire (directeur + proviseur, associés) ;
 //   - Complet : tout, sauf les paramètres et les accès ;
 //   - Limité  : voir, ajouter, changer un statut — sans modifier ni supprimer.
 // Les règles sont appliquées par le serveur (utils/accesEmployes.js).
 
-type Employe = { id: number; numero_h: string; nom: string | null; poste: string | null; niveau: "complet" | "limite"; is_active: boolean; telephone?: string | null; email?: string | null };
+type Employe = { id: number; numero_h: string; nom: string | null; poste: string | null; niveau: "total" | "complet" | "limite"; is_active: boolean; telephone?: string | null; email?: string | null };
 type Invitation = { nom: string; telephone?: string | null; email?: string | null; nouveauCompte?: boolean };
 
 const NIVEAUX = [
   { v: "limite", titre: "Limité", detail: "Voir, ajouter (ventes, patients, élèves…) et changer un statut. Ne peut ni modifier ni supprimer." },
   { v: "complet", titre: "Complet", detail: "Tout comme vous, sauf les paramètres de l'établissement et la gestion des employés." },
+  { v: "total", titre: "Tous les droits (co-responsable)", detail: "Exactement comme vous : paramètres, logo et employés compris. Pour un directeur, un proviseur, un associé." },
 ] as const;
 
 export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissement, onClose }: { base: string; couleur?: string; nomEtablissement?: string; onClose: () => void }) {
@@ -117,6 +119,7 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
             <select value={e.niveau} onChange={ev => changerNiveau(e, ev.target.value)} style={{ padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13 }}>
               <option value="limite">Limité</option>
               <option value="complet">Complet</option>
+              <option value="total">Tous les droits</option>
             </select>
             <button onClick={() => envoyerLien(e)} style={{ padding: "6px 10px", background: "white", color: couleur, border: `1px solid ${couleur}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>🔗 Lien</button>
             <button onClick={() => retirer(e)} style={{ padding: "6px 10px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Retirer</button>

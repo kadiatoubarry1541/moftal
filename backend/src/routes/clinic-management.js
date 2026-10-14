@@ -62,8 +62,9 @@ async function verifyTenantProprietaire(req, res, next) {
 // Actions réservées au propriétaire (ou à l'admin plateforme) : paramètres de
 // l'établissement (nom, logo, contact) et gestion des accès employés.
 // Un membre du personnel (clinic_staff) garde l'accès au travail courant de la clinique.
+// Un co-responsable (accès « total », utils/accesEmployes.js) compte comme propriétaire.
 function exigerProprietaire(req, res, next) {
-  if (req.estProprietaireClinique && !req.estPersonnelClinique && !req.employe) return next();
+  if (req.estProprietaireClinique && !req.estPersonnelClinique && (!req.employe || req.employe.niveau === 'total')) return next();
   return res.status(403).json({ success: false, message: "Seul le propriétaire de l'établissement peut faire cette action." });
 }
 

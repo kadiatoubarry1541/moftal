@@ -32,7 +32,8 @@ export function BoutonRapport({ base, etablissement, couleur = "#1a8f1a", rappor
   const { tr } = useTraduction();
   const [ouvert, setOuvert] = useState(false);
   const [employes, setEmployes] = useState(false);
-  const employe = etablissement?.acces_employe;
+  // Un co-responsable (« total ») a les mêmes boutons que le propriétaire
+  const employe = etablissement?.acces_employe === "total" ? undefined : etablissement?.acces_employe;
   const bouton = { padding: "8px 14px", background: "white", color: couleur, border: `1.5px solid ${couleur}`, borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer" } as const;
   return (
     <>
