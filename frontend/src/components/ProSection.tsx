@@ -20,6 +20,7 @@ interface ProAccount {
   specialties: string[];
   photo?: string;
   status: string;
+  tenant_code?: string | null;
 }
 
 interface GestionTenant {
@@ -92,13 +93,24 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
     }
   };
 
+  // Un établissement = une seule carte. La gestion complète contient tout : son
+  // compte pro (rendez-vous) et sa gestion (site) sont réunis sur la même carte.
+  const tenantParCode = useMemo(() => new Map(tenants.map(t => [t.tenant_code, t])), [tenants]);
+  const tenantParNom = useMemo(() => new Map(tenants.map(t => [t.name.trim().toLowerCase(), t])), [tenants]);
+  const siteDe = (pro: ProAccount): GestionTenant | undefined =>
+    (pro.tenant_code ? tenantParCode.get(pro.tenant_code) : undefined) || tenantParNom.get((pro.name || "").trim().toLowerCase());
+  const codesLies = useMemo(() => new Set(accounts.map(a => siteDe(a)?.tenant_code).filter(Boolean) as string[]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [accounts, tenantParCode, tenantParNom]);
+
   const filtered = accounts.filter(a =>
     !search || a.name.toLowerCase().includes(search.toLowerCase()) ||
     a.city.toLowerCase().includes(search.toLowerCase()) ||
     (a.address || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredTenants = tenants.filter(t =>
+  // Seulement les gestions qui n'ont pas de carte de compte pro (sinon : doublon)
+  const filteredTenants = tenants.filter(t => !codesLies.has(t.tenant_code)).filter(t =>
     !search || t.name.toLowerCase().includes(search.toLowerCase()) ||
     (t.city || '').toLowerCase().includes(search.toLowerCase()) ||
     (t.address || '').toLowerCase().includes(search.toLowerCase())
@@ -207,6 +219,7 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
             const isExpanded = expandedId === pro.id;
             const location = buildLocation(pro);
             const prox = proximityLabel(pro, userGeo);
+            const site = siteDe(pro);
 
             return (
               <div key={pro.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 overflow-hidden hover:shadow-lg transition-shadow flex">
@@ -214,8 +227,16 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                 {/* ── COLONNE GAUCHE : PHOTO + BOUTON RDV ── */}
                 <div className="flex flex-col items-stretch w-32 sm:w-40 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
                   <div className="relative w-full h-28 sm:h-32 bg-gray-100 dark:bg-gray-700">
-                    <LogoEtablissement src={pro.photo} name={pro.name} type={pro.type || type} fontSize={40} />
+                    <LogoEtablissement src={pro.photo || site?.logo_url} name={pro.name} type={pro.type || type} fontSize={40} />
                   </div>
+                  {site && vitrinePath && (
+                    <button
+                      onClick={() => navigate(`/${vitrinePath}/${site.tenant_code}`)}
+                      className="mt-2 mx-1 flex items-center justify-center gap-1 min-h-[32px] px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-semibold rounded-xl transition-colors"
+                    >
+                      🌐 Voir le site
+                    </button>
+                  )}
                   <button
                     onClick={() => navigate(`/rendez-vous/${pro.id}`)}
                     className="mt-2 mx-1 mb-2 flex items-center justify-center gap-1 min-h-[32px] px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-[11px] sm:text-xs font-semibold rounded-xl transition-colors"
@@ -232,6 +253,11 @@ export default function ProSection({ type, title, icon, description, hideEmptyMe
                     <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-gray-100 leading-snug break-words">
                       {pro.name}
                     </h3>
+                    {site && vitrinePath && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 text-indigo-700 bg-indigo-50 border border-indigo-200 dark:text-indigo-300 dark:bg-indigo-900/30 dark:border-indigo-800">
+                        Espace Gestion
+                      </span>
+                    )}
                     {prox && (
                       <span
                         className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
