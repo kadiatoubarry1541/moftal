@@ -2,6 +2,9 @@
 //
 // Le propriétaire d'un établissement ajoute un employé (par son numéro Moftal)
 // et choisit son niveau :
+//   - « total »   : tous les droits, exactement comme le propriétaire
+//     (paramètres, logo, accès des employés compris) — ex. le directeur et
+//     le proviseur d'une école, deux associés ;
 //   - « complet » : tout comme le propriétaire, SAUF les paramètres de
 //     l'établissement et la gestion des accès ;
 //   - « limité »  : voir, ajouter et changer un statut (vente servie, rendez-vous
@@ -10,7 +13,7 @@
 import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
 import { sequelize } from '../config/database.js';
 
-const NIVEAUX = ['complet', 'limite'];
+const NIVEAUX = ['total', 'complet', 'limite'];
 
 let tablePrete = null;
 export function preparerTableAcces() {
@@ -56,6 +59,7 @@ export async function estEmployeDeLaGestion(numeroH, url) {
 
 // Ce qu'un employé n'a pas le droit de faire, selon son niveau (null = autorisé).
 function refusEmploye(req, niveau) {
+  if (niveau === 'total') return null;
   const chemin = req.path || '';
   if (/\/(settings|acces-employes|logo|members\/add)(\/|$)/.test(chemin)) {
     return "Seul le propriétaire de l'établissement peut faire cette action.";
@@ -103,8 +107,10 @@ export function avecAccesEmployes(verifierProprietaire) {
 }
 
 // Routes du propriétaire : liste, ajout, changement de niveau, retrait.
-export function ajouterRoutesAccesEmployes(router, middlewaresProprietaire) {
+// Un co-responsable (niveau « total ») y a accès comme le propriétaire.
+export function ajouterRoutesAccesEmployes(router, [authentifier, verifierProprietaire, ...autres]) {
   const base = '/:tenantCode/acces-employes';
+  const middlewaresProprietaire = [authentifier, avecAccesEmployes(verifierProprietaire), ...autres];
 
   router.get(base, ...middlewaresProprietaire, async (req, res) => {
     try {

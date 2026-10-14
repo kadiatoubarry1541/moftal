@@ -32,7 +32,7 @@ export default function MesLieuxDeTravail() {
             <div style={{ width: 44, height: 44, flexShrink: 0 }}><LogoEtablissement src={l.logo_url} name={l.name} type={l.type} fontSize={18} radius={10} /></div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{l.name}</div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>{l.poste ? `${l.poste} · ` : ""}Accès {l.niveau === "complet" ? "complet" : "limité"}</div>
+              <div style={{ fontSize: 12, color: "#64748b" }}>{l.poste ? `${l.poste} · ` : ""}{l.niveau === "total" ? "Tous les droits" : l.niveau === "complet" ? "Accès complet" : "Accès limité"}</div>
             </div>
             <button onClick={() => navigate(`/${info.path}/${encodeURIComponent(l.tenant_code)}`)}
               style={{ padding: "8px 14px", background: info.color, color: "white", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>
