@@ -10,6 +10,7 @@ import { ajouterRouteRapport } from '../utils/routeRapport.js';
 import { avecAccesEmployes, ajouterRoutesAccesEmployes } from '../utils/accesEmployes.js';
 import { ajouterRoutesCoursEtBibliotheque, numeroHComplet } from './schoolCoursBibliotheque.js';
 import { photoDepuisFormulaire } from '../services/fichiersBase.js';
+import { notifier } from '../utils/notifier.js';
 
 const router = attraperErreursAsync(express.Router());
 
@@ -166,10 +167,7 @@ async function relierComptesFiche(code, tenantName, studentId, comptes, par) {
        ON CONFLICT (tenant_code,numero_h,student_id) DO NOTHING`,
       { replacements: { code, n: p.numero_h, sid: studentId } }
     );
-    await sequelize.query(
-      `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
-      { replacements: { uid: p.numero_h, msg: `Vous avez été ajouté(e) à l'établissement "${tenantName}" (rôle : ${role}).` } }
-    ).catch(() => {});
+    await notifier(p.numero_h, 'school_member', `Vous avez été ajouté(e) à l'établissement "${tenantName}" (rôle : ${role}).`);
   }
   return avertissements;
 }
@@ -355,10 +353,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     );
     if (nh) {
       // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
-      await sequelize.query(
-        `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
-        { replacements: { uid: nh, msg: `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours : moftal.com/ecole/${code}/enseignant` } }
-      ).catch(() => {});
+      await notifier(nh, 'school_member', `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours : moftal.com/ecole/${code}/enseignant`);
     }
     res.json({ success: true, staff: rows[0] });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -715,10 +710,7 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
         { replacements: { code, n: numero_h, sid } }
       );
     }
-    await sequelize.query(
-      `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
-      { replacements: { uid: numero_h, msg: `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}).` } }
-    ).catch(() => {});
+    await notifier(numero_h, 'school_member', `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}).`);
     res.json({ success: true, member: rows[0], user: { prenom: user.prenom, nom: user.nom } });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
@@ -857,10 +849,7 @@ router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async
       if (publish && moy != null) {
         const members = await membresLiesAEleve(code, student.id);
         for (const m of members) {
-          await sequelize.query(
-            `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'bulletin',:msg)`,
-            { replacements: { uid: m.numero_h, msg: `📊 Bulletin du ${periode} disponible — ${student.prenom} ${student.nom} : ${moy ? moy + '/20' : '—'} (${calcMention(moy)})` } }
-          ).catch(() => {});
+          await notifier(m.numero_h, 'bulletin', `📊 Bulletin du ${periode} disponible — ${student.prenom} ${student.nom} : ${moy ? moy + '/20' : '—'} (${calcMention(moy)})`);
         }
       }
     }
@@ -877,10 +866,7 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
     if (bulletin) {
       const members = await membresLiesAEleve(req.params.tenantCode, bulletin.student_id);
       for (const m of members) {
-        await sequelize.query(
-          `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'bulletin',:msg)`,
-          { replacements: { uid: m.numero_h, msg: `📊 Nouveau bulletin disponible — ${bulletin.periode} : ${bulletin.moyenne_generale ? bulletin.moyenne_generale + '/20' : '—'} (${bulletin.mention})` } }
-        ).catch(() => {});
+        await notifier(m.numero_h, 'bulletin', `📊 Nouveau bulletin disponible — ${bulletin.periode} : ${bulletin.moyenne_generale ? bulletin.moyenne_generale + '/20' : '—'} (${bulletin.mention})`);
       }
     }
     res.json({ success: true });

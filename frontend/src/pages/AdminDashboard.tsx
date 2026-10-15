@@ -8,6 +8,8 @@ import { getStats, getAllUsers, getAllFamilies, getMySectors, getPageAdmins, add
 import { config } from "../config/api";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";
+import AdminDroitsEchange from "../components/AdminDroitsEchange";
+import { SECTEURS_ECHANGE } from "../utils/secteursEchange";
 import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
 import AdminCreerComptePro from "../components/AdminCreerComptePro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
@@ -110,6 +112,9 @@ export default function AdminDashboard() {
   const [allPros, setAllPros] = useState<ProfessionalAccount[]>([]);
   // Compte pro dont l'admin modifie le nom et le logo
   const [identiteAModifier, setIdentiteAModifier] = useState<ProfessionalAccount | null>(null);
+  // Droit de publier dans Échange accordé aux professionnels du commerce : { [id du compte]: secteurs }
+  const [droitsEchange, setDroitsEchange] = useState<Record<string, string[]>>({});
+  const [droitsAModifier, setDroitsAModifier] = useState<ProfessionalAccount | null>(null);
   // Créer un compte pro pour un établissement (téléphone ou e-mail seulement)
   const [creerPro, setCreerPro] = useState(false);
   const [proFilter, setProFilter] = useState<string>("pending");
@@ -296,6 +301,8 @@ export default function AdminDashboard() {
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.success) setAllPros(data.accounts || []);
+      fetch(`${API_BASE}/api/professionals/admin/droits-echange`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.json()).then((d) => { if (d?.success) setDroitsEchange(d.droits || {}); }).catch(() => {});
     } catch (error) {
       console.error("Erreur:", error);
     }
@@ -1335,6 +1342,21 @@ export default function AdminDashboard() {
                         <div className="text-xs text-gray-400 mt-1">
                           Propriétaire: {pro.ownerNumeroH} • {new Date(pro.created_at).toLocaleDateString("fr-FR")}
                         </div>
+                        {pro.type === "commerce" && pro.status === "approved" && (() => {
+                          const secteurs = droitsEchange[pro.id] || [];
+                          return (
+                            <div className="mt-1 text-xs text-gray-600 flex items-center gap-2 flex-wrap">
+                              <span>🛒 Publier dans Échange :</span>
+                              {secteurs.length
+                                ? <strong className="text-emerald-700">{SECTEURS_ECHANGE.filter((s) => secteurs.includes(s.id)).map((s) => s.label).join(" · ")}</strong>
+                                : <strong className="text-gray-500">non autorisé</strong>}
+                              <button type="button" onClick={() => setDroitsAModifier(pro)}
+                                className="text-[11px] font-semibold text-emerald-700 hover:underline whitespace-nowrap">
+                                {secteurs.length ? "✏️ Modifier" : "✅ Donner le droit"}
+                              </button>
+                            </div>
+                          );
+                        })()}
                         {pro.status === "approved" && (() => {
                           const now = new Date();
                           const expiry = pro.subscriptionValidUntil ? new Date(pro.subscriptionValidUntil) : null;
@@ -2364,6 +2386,15 @@ export default function AdminDashboard() {
 
           {creerPro && (
             <AdminCreerComptePro onClose={() => setCreerPro(false)} onCree={() => loadAllPros(proFilter)} />
+          )}
+
+          {droitsAModifier && (
+            <AdminDroitsEchange
+              pro={droitsAModifier}
+              secteurs={droitsEchange[droitsAModifier.id] || []}
+              onClose={() => setDroitsAModifier(null)}
+              onSaved={(secteurs) => setDroitsEchange((d) => ({ ...d, [droitsAModifier.id]: secteurs }))}
+            />
           )}
 
           {identiteAModifier && (

@@ -18,6 +18,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 import { mesAccesEmploye } from '../utils/accesEmployes.js';
+import { SECTEURS_ECHANGE, TYPES_DROIT_ECHANGE, tousLesDroits, enregistrerDroits } from '../utils/droitsEchange.js';
+import { notifier } from '../utils/notifier.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -1174,6 +1176,40 @@ router.delete('/admin/:id', authenticate, requireAdmin, async (req, res) => {
 // Les tables concernées sont trouvées dans la base elle-même (colonne tenant_code
 // ou identifiant du compte) : une gestion ajoutée plus tard est couverte aussi.
 // Tout se fait en une transaction : en cas d'erreur, rien n'est supprimé.
+// @route   GET /api/professionals/admin/droits-echange
+// @desc    Admin : secteurs d'Échange où chaque commerçant peut publier
+router.get('/admin/droits-echange', authenticate, requireAdmin, async (req, res) => {
+  try {
+    res.json({ success: true, droits: await tousLesDroits(), secteurs: SECTEURS_ECHANGE });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// @route   PUT /api/professionals/admin/:id/droits-echange
+// @desc    Admin : donner (ou retirer) à un professionnel du commerce le droit de
+//          publier dans la page Échange, secteur par secteur. { secteurs: [] } retire le droit.
+router.put('/admin/:id/droits-echange', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const secteurs = Array.isArray(req.body?.secteurs) ? req.body.secteurs.map(String) : null;
+    if (!secteurs) return res.status(400).json({ success: false, message: 'Choisissez les secteurs.' });
+    const inconnus = secteurs.filter((s) => !SECTEURS_ECHANGE.includes(s));
+    if (inconnus.length) return res.status(400).json({ success: false, message: `Secteur inconnu : ${inconnus.join(', ')}` });
+    const account = await ProfessionalAccount.findByPk(req.params.id);
+    if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
+    if (!TYPES_DROIT_ECHANGE.includes(String(account.type))) {
+      return res.status(400).json({ success: false, message: 'Ce droit est réservé aux professionnels du commerce.' });
+    }
+    const accordes = await enregistrerDroits(account.id, secteurs, req.user?.numeroH || req.userId);
+    if (accordes.length) {
+      await notifier(account.ownerNumeroH, 'echange_droit', `🛒 « ${account.name} » peut maintenant publier ses produits dans la page Échange.`);
+    }
+    res.json({ success: true, secteurs: accordes });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // PUT /api/professionals/admin/:id/identite — l'admin modifie le nom et/ou le logo
 // d'un compte pro (comptes créés pour des personnes éloignées). Le changement suit
 // partout : compte pro, gestion interne, site vitrine, icône de l'app.
