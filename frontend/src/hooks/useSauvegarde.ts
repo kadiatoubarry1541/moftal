@@ -13,6 +13,8 @@ import {
 interface Etab { code: string; nom: string; secteur: string }
 
 export interface Sauvegarde {
+  /** Heure du dernier enregistrement pas encore envoyé (0 s'il n'y en a pas) */
+  derniereOperation: number;
   /** État du fichier lu (évite d'afficher le rappel avant de savoir) */
   pret: boolean;
   etat: EtatFichier;
@@ -48,7 +50,13 @@ export function useSauvegarde(base: string, etab: Etab): Sauvegarde {
     setPret(true);
   }, [etab.code]);
 
-  const contenu = useCallback(async () => JSON.stringify(await construireSauvegarde(base, etabRef.current)), [base]);
+  // Heure du dernier enregistrement fait sans connexion (pas encore envoyé)
+  const [derniereOperation, setDerniereOperation] = useState(0);
+  const contenu = useCallback(async () => {
+    const sauvegarde = await construireSauvegarde(base, etabRef.current);
+    setDerniereOperation(Math.max(0, ...sauvegarde.operations.map((o) => Number(o.createdAt) || 0)));
+    return JSON.stringify(sauvegarde);
+  }, [base]);
 
   // Écrit la copie automatique et le fichier choisi (s'il est encore autorisé)
   const ecrireTout = useCallback(async () => {
@@ -142,13 +150,14 @@ export function useSauvegarde(base: string, etab: Etab): Sauvegarde {
 
   const oublier = async () => { await oublierFichierChoisi(etab.code); await relireEtat(); };
 
-  return { pret, etat, status, autorisation, occupe, message, nomPropose, automatique, enregistrer, choisirEmplacement, autoriser, recupererFichier, oublier };
+  return { derniereOperation, pret, etat, status, autorisation, occupe, message, nomPropose, automatique, enregistrer, choisirEmplacement, autoriser, recupererFichier, oublier };
 }
 
 /** Fichier de sauvegarde à jour ? (sinon le bandeau le rappelle) */
 export function sauvegardeAJour(s: Sauvegarde) {
   if (s.automatique) return !!s.etat.handle && s.autorisation === "granted";
-  // Téléphone : un enregistrement après le dernier changement fait sans connexion
-  return (s.status?.pending || 0) === 0 ? !!s.etat.dernierTelechargement : false;
+  // Téléphone : fichier enregistré après le dernier changement fait sans connexion
+  const enregistre = s.etat.dernierTelechargement || 0;
+  return (s.status?.pending || 0) === 0 ? enregistre > 0 : enregistre > 0 && enregistre >= s.derniereOperation;
 }
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTraduction } from "../i18n/traduction";
 import { sauvegardeAJour, type Sauvegarde } from "../hooks/useSauvegarde";
 
@@ -121,7 +121,15 @@ export function ProposerSauvegarde({ s, couleur }: { s: Sauvegarde; couleur: str
   const cle = `moftal-sauvegarde-proposee`;
   const [vu, setVu] = useState(() => { try { return sessionStorage.getItem(cle) === "1"; } catch { return false; } });
   const jamais = !s.etat.handle && !s.etat.dernierTelechargement;
-  if (!s.pret || vu || !jamais) return null;
+  // Jamais par-dessus la fenêtre « Installer l'application » : on attend qu'elle soit fermée
+  const [installationOuverte, setInstallationOuverte] = useState(true);
+  useEffect(() => {
+    const voir = () => setInstallationOuverte(!!document.querySelector("[data-fenetre-installation]"));
+    const premiere = setTimeout(voir, 1200);
+    const t = setInterval(voir, 700);
+    return () => { clearTimeout(premiere); clearInterval(t); };
+  }, []);
+  if (!s.pret || vu || !jamais || installationOuverte) return null;
   const fermer = () => { try { sessionStorage.setItem(cle, "1"); } catch { /* navigation privée */ } setVu(true); };
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>

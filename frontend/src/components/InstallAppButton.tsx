@@ -328,7 +328,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setOuvert(false); }}>
+    <div data-fenetre-installation="1" style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setOuvert(false); }}>
       <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", textAlign: "start" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
           {logoUrl
@@ -417,7 +417,7 @@ export function InvitationInstallerMoftal() {
 
   const ios = isIOS();
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setOuvert(false); }}>
+    <div data-fenetre-installation="1" style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setOuvert(false); }}>
       <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", textAlign: "start" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
           <img src="/logo-moftal.svg" alt="" style={{ width: 56, height: 56, borderRadius: 12 }} />
