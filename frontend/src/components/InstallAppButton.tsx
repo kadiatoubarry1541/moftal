@@ -56,6 +56,45 @@ function isIOS() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
+// Sur iPhone, seuls Safari (et, depuis iOS 16.4, Chrome / Edge) savent mettre
+// une page sur l'écran d'accueil, par le bouton Partager. Les fenêtres intégrées
+// (WhatsApp, Facebook, Instagram, app Moftal…) ne le permettent jamais.
+function estNavigateurIntegreIOS() {
+  return isIOS() && /FBAN|FBAV|Instagram|WhatsApp|Line\/|; wv\)|GSA\//.test(navigator.userAgent);
+}
+
+function estAutreNavigateurIOS() {
+  return isIOS() && /CriOS|EdgiOS|FxiOS|OPiOS/.test(navigator.userAgent);
+}
+
+// Marche à suivre sur iPhone / iPad (aucune installation automatique possible :
+// Apple ne propose pas de bouton « Installer » aux sites).
+function ConsignesIPhone({ couleur }: { couleur: string }) {
+  const { tr } = useTraduction();
+  const integre = estNavigateurIntegreIOS();
+  const autre = estAutreNavigateurIOS();
+  return (
+    <>
+      {integre && (<>
+        <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr("Ici, l'iPhone ne permet pas d'installer. Ouvrez la page dans Safari :")}</div>
+        <BoutonCopierLien couleur={couleur} />
+        <div style={{ color: "#64748b", marginBottom: 6 }}>{tr("Copiez le lien, ouvrez Safari, collez-le dans la barre d'adresse, connectez-vous, puis :")}</div>
+      </>)}
+      {autre ? (<>
+        <div>{gras(tr("1. Appuyez sur le bouton **Partager ⎙** (dans la barre d'adresse, ou dans le menu **•••**)"))}</div>
+        <div>{gras(tr("2. Faites défiler et choisissez « **Sur l'écran d'accueil** »"))}</div>
+        <div>{gras(tr("3. Appuyez sur **Ajouter**."))}</div>
+        <div style={{ marginTop: 4, color: "#64748b" }}>{tr("Si « Sur l'écran d'accueil » n'apparaît pas, ouvrez la page dans Safari et recommencez.")}</div>
+      </>) : (<>
+        <div>{gras(tr("1. Appuyez sur le bouton **Partager ⎙** en bas de Safari"))}</div>
+        <div>{gras(tr("2. Faites défiler et choisissez « **Sur l'écran d'accueil** »"))}</div>
+        <div>{gras(tr("3. Appuyez sur **Ajouter**."))}</div>
+      </>)}
+      <div style={{ marginTop: 4, color: "#64748b" }}>{tr("Le bouton Partager est caché ? Touchez le bas de l'écran ou faites défiler un peu vers le haut.")}</div>
+    </>
+  );
+}
+
 function isAndroid() {
   return /Android/i.test(navigator.userAgent);
 }
@@ -235,6 +274,13 @@ export default function InstallAppButton({ name, logoUrl, themeColor, color, lab
 // La barre du haut affiche le logo du professionnel (pas celui de Moftal)
 function ProBrandPublisher({ name, logoUrl, color }: { name?: string; logoUrl?: string; color: string }) {
   useEffect(() => { setProBrand({ name, logoUrl, color }); }, [name, logoUrl, color]);
+  // iPhone : nom affiché sous l'icône ajoutée à l'écran d'accueil
+  useEffect(() => {
+    if (!name) return;
+    let meta = document.querySelector('meta[name="apple-mobile-web-app-title"]') as HTMLMetaElement | null;
+    if (!meta) { meta = document.createElement("meta"); meta.name = "apple-mobile-web-app-title"; document.head.appendChild(meta); }
+    meta.content = name;
+  }, [name]);
   // Icône PNG de l'app installée (sur l'écran d'accueil), toujours à jour du logo
   useEffect(() => {
     const code = window.location.pathname.match(/^\/gestion-[^/]+\/([^/]+)/)?.[1];
@@ -341,6 +387,10 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
         </div>
         {etat === "installee" ? (
           <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{tr("✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.")}</p>
+        ) : isIOS() ? (
+          <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
+            <ConsignesIPhone couleur={themeColor} />
+          </div>
         ) : etat === "manuel" ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
             {isAndroid() && !estOngletChrome() && (<>
@@ -838,12 +888,14 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
               <div style={{ marginTop: 8, fontWeight: 700 }}>{tr("Si rien ne s'ouvre :")}</div>
             </>
           )}
+          {isIOS() ? <ConsignesIPhone couleur={themeColor} /> : (<>
           {!android && <strong>{tr("Le téléphone n'a pas ouvert l'installation. Faites-le à la main :")}</strong>}
           <div>{gras(tr("1. Menu **⋮** du navigateur (en haut à droite)"))}</div>
           {android && <div>{gras(tr("2. Si vous voyez « **Ouvrir dans Chrome** », choisissez-le, puis rouvrez le menu **⋮**"))}</div>}
           <div>{gras(tr("{n}. « **Installer l'application** » ou « **Ajouter à l'écran d'accueil** »", { n: android ? 3 : 2 }))}</div>
           <div>{tr("{n}. Confirmez. L'icône avec votre logo apparaît sur l'écran d'accueil.", { n: android ? 4 : 3 })}</div>
           <div style={{ marginTop: 4, color: "#64748b" }}>{tr("Si le menu dit « Ouvrir l'application », elle est déjà installée : cherchez-la dans la liste de vos applications.")}</div>
+          </>)}
         </div>
       )}
       {installing && (
