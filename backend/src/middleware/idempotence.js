@@ -31,7 +31,9 @@ let dernierNettoyage = 0;
 function nettoyer() {
   if (Date.now() - dernierNettoyage < 6 * 3600 * 1000) return;
   dernierNettoyage = Date.now();
-  sequelize.query(`DELETE FROM envois_idempotents WHERE created_at < NOW() - INTERVAL '14 days'`).catch(() => {});
+  // Un an : un fichier de sauvegarde gardé longtemps sur un appareil puis
+  // récupéré ne doit jamais faire enregistrer une deuxième fois ce qui est déjà reçu
+  sequelize.query(`DELETE FROM envois_idempotents WHERE created_at < NOW() - INTERVAL '365 days'`).catch(() => {});
 }
 
 export async function idempotence(req, res, next) {

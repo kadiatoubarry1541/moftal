@@ -14,13 +14,15 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte, dateTexte } from "../utils/rappelWhatsApp";
 import { PointageCours, BibliothequeGestion } from "../components/ecole/CoursEtBibliotheque";
 import ChoixLangueEcole from "../components/ChoixLangueEcole";
+import { BandeauSauvegarde, PanneauSauvegarde, ProposerSauvegarde } from "../components/SauvegardeEtablissement";
+import { useSauvegarde } from "../hooks/useSauvegarde";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
 
 interface Props { mode: "school" | "madrasa"; }
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "settings";
+type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "sauvegarde" | "settings";
 
 // Dates et montants dans la langue choisie (chiffres latins en arabe)
 const localeCourante = () => langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR";
@@ -148,6 +150,7 @@ export default function GestionEnseignement({ mode }: Props) {
       { id: "inscriptions" as Section, label: tr("Inscriptions"),          icon: "M12 4v16m8-8H4" },
       { id: "avis"         as Section, label: tr("Avis parents/élèves"),   icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" },
     ] : []),
+    { id: "sauvegarde",  label: tr("Sauvegarde"),             icon: "M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" },
     { id: "settings",    label: tr("Paramètres"),             icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
   ];
 
@@ -185,6 +188,9 @@ export default function GestionEnseignement({ mode }: Props) {
   const [membres, setMembres]     = useState<any[]>([]);
   const [nhParent, setNhParent]   = useState("");
   const [parentsBusy, setParentsBusy] = useState(false);
+  // Fichier de sauvegarde de l'établissement sur l'appareil (hors connexion)
+  const sauvegarde = useSauvegarde(`${config.API_BASE_URL}/${apiName}/${tenantCode}`,
+    { code: tenantCode || "", nom: tenant?.name || tenantCode || "", secteur: isMadrasa ? "madrasa" : "ecole" });
 
   // Dernière écriture gardée sur l'appareil (sans connexion) : le message le dit
   const enAttenteRef = useRef(0);
@@ -478,7 +484,7 @@ export default function GestionEnseignement({ mode }: Props) {
       const tel = !/[a-z]/i.test(v) && v.replace(/[^0-9]/g, "").length >= 8;
       const d = await post("/members/add", { ...(tel ? { telephone: v } : { numero_h: v }), role: "parent", linked_student_id: parentsDe.id });
       if (!d.success) { showToast(tr(d.message || "Erreur"), false); return; }
-      showToast(d.user ? tr("Parent relié ({nom})", { nom: `${d.user.prenom} ${d.user.nom}` }) : tr("Parent relié"));
+      showToast(d.user && !d.queued && (d.user.prenom || d.user.nom) ? tr("Parent relié ({nom})", { nom: [d.user.prenom, d.user.nom].filter(Boolean).join(" ") }) : tr("Parent relié"));
       setNhParent(""); await chargerMembres();
     } catch { showToast(tr("Erreur de connexion. Réessayez."), false); }
     finally { setParentsBusy(false); }
@@ -861,6 +867,7 @@ export default function GestionEnseignement({ mode }: Props) {
       {MODAL}
 
       {PARENTS}
+      {!isAdminViewing && <ProposerSauvegarde s={sauvegarde} couleur={V.color} />}
       {toast && (
         <div style={{ position: "fixed", top: 20, insetInlineEnd: 20, zIndex: 9999, padding: "12px 20px", borderRadius: 10, background: toast.ok ? V.color : "#ef4444", color: "white", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.18)", animation: "fadeIn 0.2s ease" }}>
           {toast.ok ? "✓ " : "⚠ "}{toast.msg}
@@ -917,6 +924,7 @@ export default function GestionEnseignement({ mode }: Props) {
 
       {/* ── MAIN ── */}
       <main style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        {!isAdminViewing && <BandeauSauvegarde s={sauvegarde} couleur={V.color} ouvrir={() => loadSection("sauvegarde")} />}
         {isAdminViewing && (
           <div style={{ background: V.colorDark, color: "white", padding: "8px 24px", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             👁 {tr("Mode Administrateur")} · <span style={{ fontFamily: "monospace", fontSize: 11, background: "rgba(255,255,255,0.2)", padding: "1px 6px", borderRadius: 4 }}>{tenant.owner_numero_h}</span>
@@ -1466,6 +1474,8 @@ export default function GestionEnseignement({ mode }: Props) {
               </div>
             );
           })()}
+
+          {section === "sauvegarde" && <PanneauSauvegarde s={sauvegarde} couleur={V.color} />}
 
           {/* ── PARAMÈTRES ── */}
           {section === "settings" && (

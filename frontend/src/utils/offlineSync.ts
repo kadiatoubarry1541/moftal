@@ -11,9 +11,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DB_NAME = "moftal-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_CACHE = "responses";
 const STORE_QUEUE = "outbox";
+// Clés des opérations déjà reçues par le serveur : une sauvegarde ancienne
+// rechargée plus tard ne les renvoie jamais une deuxième fois
+const STORE_ENVOYES = "envoyes";
 
 // API dont les lectures sont gardées sur l'appareil
 const CACHE_PATTERNS = [
@@ -36,7 +39,7 @@ const QUEUE_PATTERNS = [
 // (le pointage des cours doit porter l'heure exacte du serveur ; les accès des
 // employés et l'encaissement en ligne ne se font jamais en différé)
 const ONLINE_ONLY_PATTERNS = [
-  /\/bulletins\/generate$/, /\/members\/add$/, /\/pharmacy\/dispense\//,
+  /\/pharmacy\/dispense\//,
   /\/enseignant\/(debut|fin)$/, /\/acces-employes/,
   // Demandes et avis des visiteurs publics : jamais gardés dans le téléphone,
   // le visiteur doit voir une vraie erreur s'il n'y a pas de connexion
@@ -148,6 +151,7 @@ function openDb(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_CACHE)) db.createObjectStore(STORE_CACHE);
       if (!db.objectStoreNames.contains(STORE_QUEUE)) db.createObjectStore(STORE_QUEUE, { keyPath: "id", autoIncrement: true });
+      if (!db.objectStoreNames.contains(STORE_ENVOYES)) db.createObjectStore(STORE_ENVOYES);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => {
@@ -170,14 +174,26 @@ function idb<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore)
   );
 }
 
+// Prévenir (fichier de sauvegarde…) à chaque changement des données gardées
+const changementsLocaux = new Set<() => void>();
+export function surChangementLocal(fn: () => void) {
+  changementsLocaux.add(fn);
+  return () => { changementsLocaux.delete(fn); };
+}
+function signalerChangement<T>(p: Promise<T>): Promise<T> {
+  return p.then((r) => { changementsLocaux.forEach((fn) => { try { fn(); } catch { /* écouteur en erreur */ } }); return r; });
+}
+
 const cacheGet = (key: string) => idb<{ data: any; ts: number } | undefined>(STORE_CACHE, "readonly", (s) => s.get(key));
-const cachePut = (key: string, data: any) => idb(STORE_CACHE, "readwrite", (s) => s.put({ data, ts: Date.now() }, key));
+const cacheEcrire = (key: string, data: any, ts = Date.now()) => signalerChangement(idb(STORE_CACHE, "readwrite", (s) => s.put({ data, ts }, key)));
+const cachePut = (key: string, data: any) => cacheEcrire(key, data);
 const cacheKeys = () => idb<IDBValidKey[]>(STORE_CACHE, "readonly", (s) => s.getAllKeys());
 const queueAll = () => idb<QueueItem[]>(STORE_QUEUE, "readonly", (s) => s.getAll());
-const queueAdd = (item: QueueItem) => idb(STORE_QUEUE, "readwrite", (s) => s.add(item));
-const queueDelete = (id: number) => idb(STORE_QUEUE, "readwrite", (s) => s.delete(id));
-
-const queuePut = (item: QueueItem) => idb(STORE_QUEUE, "readwrite", (s) => s.put(item));
+const queueAdd = (item: QueueItem) => signalerChangement(idb(STORE_QUEUE, "readwrite", (s) => s.add(item)));
+const queueDelete = (id: number) => signalerChangement(idb(STORE_QUEUE, "readwrite", (s) => s.delete(id)));
+const queuePut = (item: QueueItem) => signalerChangement(idb(STORE_QUEUE, "readwrite", (s) => s.put(item)));
+const noterEnvoye = (cle: string) => idb(STORE_ENVOYES, "readwrite", (s) => s.put(Date.now(), cle));
+const dejaEnvoye = (cle: string) => idb<number | undefined>(STORE_ENVOYES, "readonly", (s) => s.get(cle));
 
 // Ce que l'opération concerne, en mots simples
 function libelleOperation(item: QueueItem): string {
@@ -326,6 +342,27 @@ async function applyOptimistic(url: string, method: string, body: any, tempId?: 
     return { success: true };
   }
 
+  // Parent relié sans connexion (école / madrasa) : visible tout de suite dans
+  // la liste des membres ; le serveur retrouve la personne à l'envoi
+  if (method === "POST" && sub === "/members/add" && tempId && body) {
+    const identifiant = String(body.numero_h || body.telephone || "");
+    const membre = {
+      id: tempId, numero_h: body.numero_h || identifiant, telephone_compte: body.telephone || null, role: body.role || "parent",
+      nom_display: identifiant, enfants: body.linked_student_id != null ? [{ id: body.linked_student_id }] : [], is_active: true, _horsLigne: true,
+    };
+    const cle = cacheKey(`${base}/members`);
+    const entry = await cacheGet(cle).catch(() => undefined);
+    const membres: any[] = Array.isArray(entry?.data?.members) ? entry!.data.members : [];
+    await cachePut(cle, { ...(entry?.data || {}), success: true, members: [membre, ...membres] });
+    return membre;
+  }
+
+  // Bulletins générés sans connexion : calculés sur l'appareil avec les notes
+  // gardées (même calcul que le serveur, qui les recalcule à l'envoi)
+  if (method === "POST" && sub === "/bulletins/generate" && body?.periode) {
+    return genererBulletinsLocaux(base, body);
+  }
+
   if (method === "POST" && tempId) {
     const item = { ...(body || {}), id: tempId, _horsLigne: true, created_at: new Date().toISOString() };
     const collection = new URL(base).pathname + sub;
@@ -379,6 +416,40 @@ async function applyOptimistic(url: string, method: string, body: any, tempId?: 
   return found;
 }
 
+function mentionDe(m: number | null) {
+  return m == null ? "—" : m >= 18 ? "Excellent" : m >= 16 ? "Très bien" : m >= 14 ? "Bien" : m >= 12 ? "Assez bien" : m >= 10 ? "Passable" : "Insuffisant";
+}
+
+async function genererBulletinsLocaux(base: string, body: any) {
+  const lire = async (chemin: string) => (await cacheGet(cacheKey(base + chemin)).catch(() => undefined))?.data;
+  const eleves: any[] = (await lire("/students"))?.students || [];
+  const notes: any[] = (await lire("/grades"))?.grades || [];
+  const bulletinsData = (await lire("/bulletins")) || { success: true, bulletins: [] };
+  const anciens: any[] = Array.isArray(bulletinsData.bulletins) ? bulletinsData.bulletins : [];
+  const annee = String(body.annee || body.annee_scolaire || "");
+  const publier = !!body.publish;
+  const nouveaux = eleves.filter((e) => !e.statut || e.statut === "actif").map((e) => {
+    let pts = 0, coeff = 0;
+    for (const g of notes) {
+      if (String(g.student_id) !== String(e.id) || g.periode !== body.periode) continue;
+      if (annee && g.annee_scolaire && g.annee_scolaire !== annee) continue;
+      const n = Number(g.note), max = Number(g.note_max) || 20, c = Number(g.coefficient) || 1;
+      if (!Number.isNaN(n)) { pts += (n / max) * 20 * c; coeff += c; }
+    }
+    const moy = coeff > 0 ? Math.round((pts / coeff) * 100) / 100 : null;
+    const ancien = anciens.find((b) => String(b.student_id) === String(e.id) && b.periode === body.periode && (b.annee_scolaire || "") === annee);
+    return {
+      ...(ancien || { id: `${TEMP_PREFIX}bulletin-${e.id}-${Date.now()}` }),
+      student_id: e.id, student_prenom: e.prenom, student_nom: e.nom, niveau: e.niveau, classe: e.classe,
+      periode: body.periode, annee_scolaire: annee, moyenne_generale: moy, mention: mentionDe(moy),
+      is_published: !!ancien?.is_published || publier, _horsLigne: true,
+    };
+  });
+  const gardes = anciens.filter((b) => !nouveaux.some((n) => n.id === b.id));
+  await cachePut(cacheKey(base + "/bulletins"), { ...bulletinsData, success: true, bulletins: [...nouveaux, ...gardes] });
+  return { success: true, generated: nouveaux.length };
+}
+
 // Effet local des actions courantes, appliqué sans connexion (seulement aux
 // champs que l'élément possède déjà)
 function changementAction(action: string, body: any): ((x: any) => Record<string, unknown>) | null {
@@ -416,10 +487,12 @@ function queuedResponse(item: any) {
     offline: true,
     message: "Enregistré sur l'appareil — sera envoyé dès le retour de la connexion",
   };
-  const falsy = new Set(["conflict", "error", "errors", "then", "toJSON", "generated"]);
+  const falsy = new Set(["conflict", "error", "errors", "then", "toJSON"]);
   const proxy = new Proxy(base, {
     get(target, prop) {
       if (prop in target) return target[prop as string];
+      // Nombre de bulletins calculés sur l'appareil
+      if (prop === "generated") return typeof item?.generated === "number" ? item.generated : undefined;
       if (typeof prop !== "string" || falsy.has(prop)) return undefined;
       return item ?? { id: undefined };
     },
@@ -711,6 +784,8 @@ export function syncNow(): Promise<void> {
         continue;
       }
       sent++;
+      const cleEnvoi = item.headers["x-idempotency-key"];
+      if (cleEnvoi) await noterEnvoye(cleEnvoi).catch(() => {});
       await queueDelete(item.id!);
 
       const realId = item.tempId ? findRealId(data) : null;
@@ -729,6 +804,90 @@ export function syncNow(): Promise<void> {
     }
   });
   return syncing;
+}
+
+// ─── Fichier de sauvegarde (voir utils/fichierSauvegarde.ts) ─────────────────
+
+const enBase64 = (buf: ArrayBuffer) => {
+  let bin = "";
+  const octets = new Uint8Array(buf);
+  for (let i = 0; i < octets.length; i += 0x8000) bin += String.fromCharCode(...octets.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+const depuisBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+
+export interface DonneesLocales {
+  /** Dernières copies des listes de l'établissement */
+  copies: { url: string; ts: number; data: any }[];
+  /** Enregistrements pas encore reçus par le serveur, dans l'ordre */
+  operations: any[];
+}
+
+/** Tout ce que l'appareil garde pour un établissement (base = …/api/school-mgmt/CODE) */
+export async function exporterDonneesLocales(base: string): Promise<DonneesLocales> {
+  const racine = absUrl(base);
+  const scope = userScope() + "|";
+  const copies: DonneesLocales["copies"] = [];
+  for (const k of (await cacheKeys()).map(String)) {
+    if (!k.startsWith(scope + racine)) continue;
+    const entree = await cacheGet(k);
+    if (entree) copies.push({ url: k.slice(scope.length), ts: entree.ts, data: entree.data });
+  }
+  const qui = userScope();
+  const operations = (await queueAll())
+    .filter((q) => q.url.startsWith(racine) && (!q.proprietaire || q.proprietaire === qui))
+    .sort((a, b) => (a.id ?? 0) - (b.id ?? 0))
+    .map((item) => {
+      const { form, ...q } = item;
+      delete (q as Partial<QueueItem>).id;
+      return {
+      ...q,
+      form: form?.map((c) => ("texte" in c ? c : { nom: c.nom, type: c.type, nomFichier: c.nomFichier, base64: enBase64(c.fichier) })),
+      };
+    });
+  return { copies, operations };
+}
+
+export interface ResultatImport { copies: number; operations: number; dejaEnvoyees: number; autreCompte: number }
+
+/**
+ * Reprend une sauvegarde : les copies plus récentes que celles de l'appareil
+ * remplacent les anciennes, et les enregistrements pas encore reçus par le
+ * serveur rejoignent la file d'attente (jamais en double : chaque opération
+ * garde sa clé unique, et le serveur ne l'exécute qu'une fois).
+ */
+export async function importerDonneesLocales(base: string, donnees: DonneesLocales): Promise<ResultatImport> {
+  const racine = absUrl(base);
+  const scope = userScope() + "|";
+  const res: ResultatImport = { copies: 0, operations: 0, dejaEnvoyees: 0, autreCompte: 0 };
+  for (const c of donnees.copies || []) {
+    if (typeof c?.url !== "string" || !c.url.startsWith(racine)) continue;
+    const cle = scope + c.url;
+    const locale = await cacheGet(cle).catch(() => undefined);
+    if (locale && locale.ts >= (Number(c.ts) || 0)) continue;
+    await cacheEcrire(cle, c.data, Number(c.ts) || Date.now());
+    res.copies++;
+  }
+  const qui = userScope();
+  const enFile = new Set((await queueAll()).map((q) => q.headers?.["x-idempotency-key"]).filter(Boolean));
+  for (const op of donnees.operations || []) {
+    if (typeof op?.url !== "string" || !op.url.startsWith(racine) || typeof op.method !== "string") continue;
+    if (op.proprietaire && op.proprietaire !== qui) { res.autreCompte++; continue; }
+    const cleOp = op.headers?.["x-idempotency-key"];
+    if (!cleOp || enFile.has(cleOp)) continue;
+    if (await dejaEnvoye(cleOp).catch(() => undefined)) { res.dejaEnvoyees++; continue; }
+    const form = Array.isArray(op.form)
+      ? op.form.map((c: any) => (c.base64 != null ? { nom: c.nom, type: c.type, nomFichier: c.nomFichier, fichier: depuisBase64(c.base64) } : c))
+      : undefined;
+    const sansId = { ...op };
+    delete sansId.id;
+    await queueAdd({ ...sansId, form, proprietaire: qui, rejete: false, message: undefined, essais: 0 });
+    enFile.add(cleOp);
+    res.operations++;
+  }
+  await refreshPending();
+  if (res.operations && navigator.onLine) void syncNow();
+  return res;
 }
 
 // ─── Installation ────────────────────────────────────────────────────────────
