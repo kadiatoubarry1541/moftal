@@ -39,18 +39,26 @@ function printFeeReceipt(f: any, tenant: any, color: string) {
 
 const logoHtml = (url?: string | null) => url ? `<img src="${/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-inline-end:12px">` : "";
 
-function printBulletin(b: any, orgName: string, color: string, logoUrl?: string | null) {
+const echapHtml = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+function printBulletin(b: any, orgName: string, color: string, logoUrl?: string | null, notes: any[] = [], fenetre?: Window | null) {
   const ar = langueCourante() === "ar";
+  // Détail des notes de la période, matière par matière
+  const lignesNotes = notes.length ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin:16px 0"><thead><tr style="background:#f1f5f9">
+<th style="text-align:start;padding:8px;border:1px solid #e2e8f0">${trHors("Matière")}</th><th style="padding:8px;border:1px solid #e2e8f0">${trHors("Note")}</th><th style="text-align:start;padding:8px;border:1px solid #e2e8f0">${trHors("Commentaire")}</th></tr></thead><tbody>
+${notes.map(n => `<tr><td style="padding:8px;border:1px solid #e2e8f0">${echapHtml(trHors(n.matiere || ""))}</td><td style="padding:8px;border:1px solid #e2e8f0;text-align:center;font-weight:700">${echapHtml(n.note)}/${echapHtml(n.note_max ?? 20)}</td><td style="padding:8px;border:1px solid #e2e8f0;color:#64748b">${echapHtml(n.commentaire || "")}</td></tr>`).join("")}
+</tbody></table>` : "";
   const html = `<!DOCTYPE html><html lang="${ar ? "ar" : "fr"}" dir="${ar ? "rtl" : "ltr"}"><head><meta charset="UTF-8"><title>${trHors("Bulletin {nom}", { nom: b.student_nom })}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;color:#1e293b;padding:40px;background:white}.header{display:flex;justify-content:space-between;border-bottom:3px solid ${color};padding-bottom:20px;margin-bottom:24px}.title{font-size:22px;font-weight:700;color:${color}}.box{background:#f8fafc;border-radius:8px;padding:14px;margin:16px 0}.moy{font-size:36px;font-weight:800;color:${color};text-align:center;padding:24px;background:#f8fafc;border-radius:10px;margin:20px 0}@media print{@page{margin:20px}}</style></head><body>
 <div class="header"><div class="title">${logoHtml(logoUrl)}${orgName}</div><div style="text-align:end;font-size:12px;color:#64748b">${trHors(b.periode || "")} — ${b.annee_scolaire || ""}</div></div>
 <h2 style="margin-bottom:16px">${trHors("Bulletin de progression")}</h2>
-<div class="box"><strong>${b.student_prenom || ""} ${b.student_nom || ""}</strong><br><span style="color:#64748b;font-size:13px">${trHors(b.niveau || b.classe || "")}</span></div>
-<div class="moy">${b.moyenne_generale}/20<div style="font-size:14px;font-weight:600;margin-top:8px">${trHors(b.mention || "")}</div></div>
+<div class="box"><strong>${echapHtml(b.student_prenom)} ${echapHtml(b.student_nom)}</strong><br><span style="color:#64748b;font-size:13px">${trHors(b.niveau || b.classe || "")}</span></div>
+${lignesNotes}<div class="moy">${b.moyenne_generale != null ? `${b.moyenne_generale}/20` : "—"}<div style="font-size:14px;font-weight:600;margin-top:8px">${trHors(b.mention || "")}</div></div>
 <div style="margin-top:60px;display:flex;justify-content:flex-end"><div style="width:200px;border-top:1px dashed #cbd5e1;padding-top:8px;text-align:center;font-size:12px;color:#64748b">${trHors("Signature & Cachet")}</div></div>
 </body></html>`;
-  const w = window.open("", "_blank", "width=800,height=900");
-  if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500); }
+  const w = fenetre || window.open("", "_blank", "width=800,height=900");
+  if (!w) { alert(trHors("Autorisez l'ouverture des fenêtres pour imprimer le bulletin.")); return; }
+  w.document.write(html); w.document.close(); setTimeout(() => w.print(), 500);
 }
 
 const PERIODES = ["Trim 1", "Trim 2", "Trim 3", "Sem 1", "Sem 2", "Annuel"];
@@ -175,25 +183,19 @@ export default function GestionEnseignement({ mode }: Props) {
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
 
-  const get = useCallback(async (path: string) => {
-    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { headers: auth() });
-    return r.json();
+  // Appel au serveur : renvoie toujours un objet (jamais d'exception), avec un
+  // message clair si la connexion est coupée ou si le serveur ne répond pas
+  const appel = useCallback(async (path: string, init?: RequestInit): Promise<any> => {
+    let r: Response;
+    try { r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { ...init, headers: auth() }); }
+    catch { return { success: false, message: "Connexion coupée : rien n'a été enregistré. Réessayez." }; }
+    return r.json().catch(() => ({ success: false, message: "Le serveur ne répond pas. Réessayez dans un instant." }));
   }, [tenantCode, apiName]);
 
-  const post = useCallback(async (path: string, body: any) => {
-    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "POST", headers: auth(), body: JSON.stringify(body) });
-    return r.json();
-  }, [tenantCode, apiName]);
-
-  const put = useCallback(async (path: string, body: any) => {
-    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "PUT", headers: auth(), body: JSON.stringify(body) });
-    return r.json();
-  }, [tenantCode, apiName]);
-
-  const del = useCallback(async (path: string) => {
-    const r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { method: "DELETE", headers: auth() });
-    return r.json();
-  }, [tenantCode, apiName]);
+  const get  = useCallback((path: string) => appel(path), [appel]);
+  const post = useCallback((path: string, body: any) => appel(path, { method: "POST", body: JSON.stringify(body) }), [appel]);
+  const put  = useCallback((path: string, body: any) => appel(path, { method: "PUT", body: JSON.stringify(body) }), [appel]);
+  const del  = useCallback((path: string) => appel(path, { method: "DELETE" }), [appel]);
 
   useEffect(() => {
     const user = getSessionUser();
@@ -212,6 +214,7 @@ export default function GestionEnseignement({ mode }: Props) {
   const loadSection = useCallback((s: Section) => {
     setSection(s); setSearch(""); setNiveauFilter("");
     if (window.innerWidth < 768) setCollapsed(true);
+    if (s === "dashboard")   { get("/dashboard").then(d => { if (d && d.success !== false) setStats(d); }); }
     const loadG = () => get(`/${groupEP}`).then(d => setGroupes(d[groupEP] || []));
     if (s === "apprenants")  { get("/students").then(d => d.students && setStudents(d.students)); loadG(); }
     if (s === "staff")       { get("/staff").then(d => d.staff && setStaff(d.staff)); }
@@ -230,14 +233,29 @@ export default function GestionEnseignement({ mode }: Props) {
     if (!g) return;
     get(`/attendance?date=${date}`).then(d => {
       const existing: any[] = d.attendance || [];
-      const gs = students.filter(s => s.niveau === g.niveau && s.is_active !== false);
+      const gs = students.filter(s => s.is_active !== false && (!isMadrasa && s.classroom_id
+        ? String(s.classroom_id) === String(g.id)
+        : s.niveau === g.niveau));
       setAttendance(gs.map(s => {
         const rec = existing.find(r => r.student_id === s.id);
         return rec ? { student_id: s.id, prenom: s.prenom, nom: s.nom, statut: rec.statut }
                    : { student_id: s.id, prenom: s.prenom, nom: s.nom, statut: "present" };
       }));
     });
-  }, [get, groupes, students]);
+  }, [get, groupes, students, isMadrasa]);
+
+  // L'appel se recharge quand la classe, la date ou la liste des élèves change
+  // (les élèves arrivent parfois après le choix de la classe)
+  useEffect(() => {
+    if (section === "presences" && selectedGroup) loadAttendance(attendDate, selectedGroup);
+  }, [section, selectedGroup, attendDate, loadAttendance]);
+
+  // Historique de la classe choisie (rechargé quand on change de classe)
+  useEffect(() => {
+    if (section !== "presences" || attendanceView !== "historique" || !selectedGroup || isMadrasa) return;
+    setAttendanceSummary([]);
+    get(`/attendance/summary?classroom_id=${selectedGroup}`).then(d => { if (d.success) setAttendanceSummary(d.summary || []); });
+  }, [section, attendanceView, selectedGroup, get, isMadrasa]);
 
   // Logo converti en PNG 512 px : s'affiche partout et sert d'icône d'application
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,13 +282,15 @@ export default function GestionEnseignement({ mode }: Props) {
     try {
       if (modal === "add-apprenant") {
         if (!form.nom || !form.prenom) { showToast(tr("Nom et prénom obligatoires"), false); return; }
+        const corps = { ...form, niveau: form.niveau || niveaux[0], ...(isMadrasa ? {} : { classroom_id: form.classroom_id || null }) };
+        const avertir = (d: any) => { if (Array.isArray(d.avertissements) && d.avertissements.length) setTimeout(() => showToast(tr(d.avertissements[0]), false), 3100); };
         if (form.id) {
-          const d = await put(`/students/${form.id}`, { ...form, niveau: form.niveau || niveaux[0] });
-          if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form } : x)); setModal(null); setForm({}); showToast(M("Apprenant modifié(e)", "Élève modifié(e)")); }
+          const d = await put(`/students/${form.id}`, corps);
+          if (d.success) { setStudents(p => p.map(x => x.id === form.id ? { ...x, ...form, ...(d.student || {}) } : x)); setModal(null); setForm({}); showToast(M("Apprenant modifié(e)", "Élève modifié(e)")); avertir(d); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
-          const d = await post("/students", { ...form, niveau: form.niveau || niveaux[0] });
-          if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(M("Apprenant ajouté(e)", "Élève ajouté(e)")); }
+          const d = await post("/students", corps);
+          if (d.student) { setStudents(p => [d.student, ...p]); setModal(null); setForm({}); showToast(M("Apprenant ajouté(e)", "Élève ajouté(e)")); avertir(d); }
           else showToast(tr(d.message || "Erreur"), false);
         }
       } else if (modal === "add-staff") {
@@ -287,7 +307,7 @@ export default function GestionEnseignement({ mode }: Props) {
       } else if (modal === "add-groupe") {
         if (!form.nom) { showToast(tr("Nom obligatoire"), false); return; }
         const body: any = { nom: form.nom, niveau: form.niveau || niveaux[0], capacite: +(form.capacite || 20) };
-        if (form.enseignant_id) body[teacherFld] = form.enseignant_id;
+        body[teacherFld] = form.enseignant_id || null;
         if (form.id) {
           const d = await put(`/${groupEP}/${form.id}`, body);
           if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, ...body } : x)); setModal(null); setForm({}); showToast(M("Halaqa modifiée", "Classe modifiée")); }
@@ -303,24 +323,28 @@ export default function GestionEnseignement({ mode }: Props) {
         if (d.success) { setGroupes(p => p.map(x => x.id === form.id ? { ...x, emploi_du_temps: form.emploi_du_temps } : x)); setModal(null); setForm({}); showToast(tr("Emploi du temps enregistré")); }
         else showToast(tr(d.message || "Erreur"), false);
       } else if (modal === "add-note") {
-        if (!form.student_id || !form.matiere || form.note === "") { showToast(tr("Apprenant, matière et note obligatoires"), false); return; }
+        if (!form.student_id || !form.matiere || form.note == null || form.note === "" || isNaN(parseFloat(form.note))) { showToast(tr("Apprenant, matière et note obligatoires"), false); return; }
         const body = { ...form, note: parseFloat(form.note), note_max: parseFloat(form.note_max || 20) };
+        if (!(body.note_max > 0) || body.note < 0 || body.note > body.note_max) { showToast(tr("La note doit être entre 0 et {max}", { max: body.note_max > 0 ? body.note_max : 20 }), false); return; }
+        const el = students.find(x => String(x.id) === String(form.student_id));
+        const nomEleve = el ? { student_prenom: el.prenom, student_nom: el.nom } : {};
         if (form.id) {
           const d = await put(`/grades/${form.id}`, body);
           if (d.success) { setGrades(p => p.map(x => x.id === form.id ? { ...x, ...body } : x)); setModal(null); setForm({}); showToast(tr("Note modifiée")); }
           else showToast(tr(d.message || "Erreur"), false);
         } else {
           const d = await post("/grades", body);
-          if (d.grade) { setGrades(p => [d.grade, ...p]); setModal(null); setForm({}); showToast(tr("Note enregistrée")); }
+          if (d.grade) { setGrades(p => [{ ...nomEleve, ...d.grade }, ...p]); setModal(null); setForm({}); showToast(tr("Note enregistrée")); }
           else showToast(tr(d.message || "Erreur"), false);
         }
       } else if (modal === "add-frais") {
         if (!form.student_id || !form.montant) { showToast(tr("Apprenant et montant obligatoires"), false); return; }
         const d = await post("/fees", { ...form, montant: parseInt(form.montant), type_frais: form.type_frais || V.fraisTypes[1] });
-        if (d.fee) { setFees(p => [d.fee, ...p]); setModal(null); setForm({}); showToast(tr("Frais ajouté")); }
+        const el = students.find(x => String(x.id) === String(form.student_id));
+        if (d.fee) { setFees(p => [{ student_prenom: el?.prenom, student_nom: el?.nom, telephone_parent: el?.telephone_parent, ...d.fee }, ...p]); setModal(null); setForm({}); showToast(tr("Frais ajouté")); }
         else showToast(tr(d.message || "Erreur"), false);
       } else if (modal === "save-presence") {
-        const d = await post("/attendance", { date: attendDate, records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
+        const d = await post("/attendance", { date: attendDate, ...(isMadrasa ? {} : { classroom_id: selectedGroup }), records: attendance.map(r => ({ student_id: r.student_id, statut: r.statut })) });
         if (d.success) { setModal(null); showToast(tr("Présences enregistrées")); }
         else showToast(tr(d.message || "Les présences n'ont pas été enregistrées"), false);
       } else if (modal === "gen-bulletin") {
@@ -369,7 +393,7 @@ export default function GestionEnseignement({ mode }: Props) {
   };
 
   const chargerMembres = async () => {
-    const d = await get("/members").catch(() => ({}));
+    const d = await get("/members");
     if (d?.success) setMembres(d.members || []);
     else showToast(tr(d?.message || "Impossible de charger les parents."), false);
   };
@@ -400,11 +424,14 @@ export default function GestionEnseignement({ mode }: Props) {
     const v = nhParent.trim();
     if (!v) return;
     const tel = !/[a-z]/i.test(v) && chiffres9(v).length >= 8 ? chiffres9(v) : "";
+    const mail = v.includes("@") ? v.toLowerCase() : "";
     const m = parentsDeLEleve.find((p) =>
-      tel ? chiffres9(p.telephone_compte) === tel : String(p.numero_h || "").trim().toLowerCase() === v.toLowerCase());
+      tel ? chiffres9(p.telephone_compte) === tel
+      : mail ? String(p.email_compte || "").trim().toLowerCase() === mail
+      : String(p.numero_h || "").trim().toLowerCase() === v.toLowerCase());
     if (!m) {
       const qui = parentsDe?.prenom || tr("cet élève");
-      showToast(tel ? tr("Aucun parent de {qui} avec ce numéro de téléphone.", { qui }) : tr("Aucun parent de {qui} avec ce NuméroH.", { qui }), false);
+      showToast(tel ? tr("Aucun parent de {qui} avec ce numéro de téléphone.", { qui }) : mail ? tr("Aucun parent de {qui} avec cet e-mail.", { qui }) : tr("Aucun parent de {qui} avec ce NuméroH.", { qui }), false);
       return;
     }
     void delierParent(m).then(() => setNhParent(""));
@@ -514,6 +541,15 @@ export default function GestionEnseignement({ mode }: Props) {
               );
             })}
           </div>
+          {!isMadrasa && groupes.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Classe")}</label>
+              <select value={form.classroom_id ? String(form.classroom_id) : ""} onChange={e=>setForm((f:any)=>({...f,classroom_id:e.target.value}))} className={inp} style={inpSt}>
+                <option value="">{tr("— Selon le niveau —")}</option>
+                {groupes.map(g=><option key={g.id} value={String(g.id)}>{g.nom} — {tr(g.niveau || "")}</option>)}
+              </select>
+            </div>
+          )}
           {champPhoto}
         </>)}
 
@@ -609,8 +645,9 @@ export default function GestionEnseignement({ mode }: Props) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(V.apprenant)} *</label>
-              <select value={form.student_id||""} onChange={e=>setForm((f:any)=>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.student_id||""} disabled={!!form.id} onChange={e=>setForm((f:any)=>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
                 <option value="">{tr("— Choisir —")}</option>
+                {form.id && !students.some(s=>String(s.id)===String(form.student_id)) && <option value={form.student_id}>{form.student_prenom} {form.student_nom}</option>}
                 {students.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom} — {tr(s.niveau || "")}</option>)}
               </select>
             </div>
@@ -628,7 +665,7 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Note *")}</label>
-              <input type="number" min="0" max="20" step="0.25" value={form.note||""} onChange={e=>setForm((f:any)=>({...f,note:e.target.value}))} className={inp} style={inpSt} placeholder="0–20" />
+              <input type="number" min="0" max="20" step="0.25" value={form.note ?? ""} onChange={e=>setForm((f:any)=>({...f,note:e.target.value}))} className={inp} style={inpSt} placeholder="0–20" />
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Note max")}</label>
@@ -785,7 +822,7 @@ export default function GestionEnseignement({ mode }: Props) {
             👁 {tr("Mode Administrateur")} · <span style={{ fontFamily: "monospace", fontSize: 11, background: "rgba(255,255,255,0.2)", padding: "1px 6px", borderRadius: 4 }}>{tenant.owner_numero_h}</span>
           </div>
         )}
-        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: isMobile ? "12px 14px" : "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {collapsed && (
               <button onClick={() => setCollapsed(false)} aria-label={tr("Ouvrir le menu")}
@@ -800,7 +837,7 @@ export default function GestionEnseignement({ mode }: Props) {
               <p style={{ margin: 0, marginTop: 2, fontSize: 12, color: "#94a3b8" }}>{tenant.name} · {new Date().toLocaleDateString(locale,{weekday:"long",day:"numeric",month:"long"})}</p>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <InstallAppButton name={tenant?.name} logoUrl={tenant?.logo_url} themeColor={V.color} />
             {section === "apprenants"  && <button onClick={()=>{setModal("add-apprenant");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {M("Nouvel apprenant", "Nouvel élève")}</button>}
             {section === "staff"       && <button onClick={()=>{setModal("add-staff");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter")}</button>}
@@ -811,14 +848,14 @@ export default function GestionEnseignement({ mode }: Props) {
           </div>
         </div>
 
-        <div style={{ padding: 28, flex: 1 }}>
+        <div style={{ padding: isMobile ? 14 : 28, flex: 1 }}>
 
           {/* ── DASHBOARD ── */}
           {section === "dashboard" && (
             <div style={{ display:"flex",flexDirection:"column",gap:20,animation:"fadeIn 0.2s ease" }}>
               <BoutonRapport base={`${config.API_BASE_URL}/${apiName}/${tenantCode}`} etablissement={tenant || undefined} couleur={V.color} />
               {/* KPI Cards */}
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14 }}>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:14 }}>
                 {[
                   { label: tr(V.apprenants), val: stats?.totalStudents??0, color: V.color, bg: isMadrasa?"#ecfeff":"#f0fdf0",
                     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
@@ -843,7 +880,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 ))}
               </div>
               {/* Financial Banner */}
-              <div style={{ background:`linear-gradient(135deg,${isMadrasa?"#0c4a6e,#0e7490":"#14532d,#156315"})`,borderRadius:14,padding:"18px 24px",display:"flex",alignItems:"center",gap:20,color:"white" }}>
+              <div style={{ background:`linear-gradient(135deg,${isMadrasa?"#0c4a6e,#0e7490":"#14532d,#156315"})`,borderRadius:14,padding:"18px 24px",display:"flex",alignItems:"center",flexWrap:"wrap",gap:20,color:"white" }}>
                 <div style={{ width:48,height:48,borderRadius:11,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                 </div>
@@ -860,7 +897,7 @@ export default function GestionEnseignement({ mode }: Props) {
               {/* Quick Actions */}
               <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"20px 24px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <h3 style={{ margin:"0 0 14px",fontSize:14,fontWeight:700,color:"#0f172a" }}>{tr("Actions rapides")}</h3>
-                <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10 }}>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10 }}>
                   {[
                     {label:tr("Faire l'appel"),    s:"presences" as Section, emoji:"📋"},
                     {label:M("Ajouter un apprenant", "Ajouter un élève"), s:"apprenants" as Section, emoji:"👤"},
@@ -893,7 +930,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   {optionsNiveaux()}
                 </select>
               </div>
-              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                   <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
                     {[tr(V.apprenant),tr("Niveau"),tr("Date naissance"),tr("Tél. parent"),tr("Action")].map(h=>(
@@ -912,14 +949,14 @@ export default function GestionEnseignement({ mode }: Props) {
                             <span style={{ fontWeight:600,color:"#0f172a" }}>{s.prenom} {s.nom}</span>
                           </div>
                         </td>
-                        <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 10px",background:niveauBg(s.niveau),color:niveauColor(s.niveau),borderRadius:20,fontSize:11,fontWeight:700 }}>{tr(s.niveau || "")}</span></td>
+                        <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 10px",background:niveauBg(s.niveau),color:niveauColor(s.niveau),borderRadius:20,fontSize:11,fontWeight:700 }}>{tr(s.niveau || "")}</span>{s.classe && <span style={{ marginInlineStart:6,fontSize:11,color:"#64748b" }}>{s.classe}</span>}</td>
                         <td style={{ padding:"11px 16px",color:"#64748b" }}>{s.date_naissance?fmtDate(s.date_naissance):"—"}</td>
                         <td style={{ padding:"11px 16px",color:"#475569" }}>{s.telephone_parent||"—"}</td>
                         <td style={{ padding:"11px 16px" }}>
                           <div style={{ display:"flex", gap:10 }}>
                             <button onClick={()=>{ setForm({ ...s }); setModal("add-apprenant"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Modifier")}</button>
                             <button onClick={()=>ouvrirParents(s)} style={{ color:"#7c3aed",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>👪 {tr("Parents")}</button>
-                            <button onClick={async()=>{ if(confirm(tr("Retirer {nom} ?", { nom: `${s.prenom} ${s.nom}` }))){const d=await del(`/students/${s.id}`); if(d.success){setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast(tr("Retiré(e)"));} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Retirer")}</button>
+                            <button onClick={async()=>{ if(confirm(tr("Retirer {nom} ?", { nom: `${s.prenom} ${s.nom}` }))){const d=await del(`/students/${s.id}`); if(d.success){setStudents(ss=>ss.filter(x=>x.id!==s.id));showToast(tr("Retiré(e)"));} else showToast(tr(d.message||"Erreur"),false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Retirer")}</button>
                           </div>
                         </td>
                       </tr>
@@ -954,7 +991,7 @@ export default function GestionEnseignement({ mode }: Props) {
                       </div>
                       <div style={{ display:"flex", gap:12, marginTop:12 }}>
                         <button onClick={()=>{ setForm({ ...s }); setModal("add-staff"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Modifier")}</button>
-                        <button onClick={async()=>{ if(confirm(tr("Retirer {nom} ?", { nom: `${s.prenom} ${s.nom}` }))){const d=await del(`/staff/${s.id}`); if(d.success){setStaff(ss=>ss.filter(x=>x.id!==s.id));showToast(tr("Retiré(e)"));} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Retirer")}</button>
+                        <button onClick={async()=>{ if(confirm(tr("Retirer {nom} ?", { nom: `${s.prenom} ${s.nom}` }))){const d=await del(`/staff/${s.id}`); if(d.success){setStaff(ss=>ss.filter(x=>x.id!==s.id));showToast(tr("Retiré(e)"));} else showToast(tr(d.message||"Erreur"),false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Retirer")}</button>
                       </div>
                     </div>
                   ))}
@@ -1002,7 +1039,7 @@ export default function GestionEnseignement({ mode }: Props) {
                           {!isMadrasa && (
                             <button onClick={()=>{ setForm({ id: g.id, nom: g.nom, emploi_du_temps: Array.isArray(g.emploi_du_temps) ? g.emploi_du_temps : [] }); setModal("edit-schedule"); }} style={{ color:"#0369a1",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>📅 {tr("Emploi du temps")}</button>
                           )}
-                          <button onClick={async()=>{ if(confirm(tr("Supprimer {nom} ?", { nom: g.nom }))){const d=await del(`/${groupEP}/${g.id}`); if(d.success){setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(M("Halaqa supprimée", "Classe supprimée"));} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Supprimer")}</button>
+                          <button onClick={async()=>{ if(confirm(tr("Supprimer {nom} ?", { nom: g.nom }))){const d=await del(`/${groupEP}/${g.id}`); if(d.success){setGroupes(gs=>gs.filter(x=>x.id!==g.id));showToast(M("Halaqa supprimée", "Classe supprimée"));} else showToast(tr(d.message||"Erreur"),false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Supprimer")}</button>
                         </div>
                       </div>
                     );
@@ -1016,15 +1053,15 @@ export default function GestionEnseignement({ mode }: Props) {
           {section === "presences" && (
             <div style={{ display:"flex",flexDirection:"column",gap:16,animation:"fadeIn 0.2s ease" }}>
               <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
-                <input type="date" value={attendDate} onChange={e=>{setAttendDate(e.target.value);loadAttendance(e.target.value,selectedGroup);}} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#0f172a",outline:"none" }} />
-                <select value={selectedGroup} onChange={e=>{setSelectedGroup(e.target.value);loadAttendance(attendDate,e.target.value);}} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#475569",outline:"none",background:"white",minWidth:180 }}>
+                <input type="date" value={attendDate} onChange={e=>setAttendDate(e.target.value || new Date().toISOString().split("T")[0])} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#0f172a",outline:"none" }} />
+                <select value={selectedGroup} onChange={e=>setSelectedGroup(e.target.value)} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"8px 12px",fontSize:13,color:"#475569",outline:"none",background:"white",minWidth:180 }}>
                   <option value="">{M("Choisir une halaqa…", "Choisir une classe…")}</option>
                   {groupes.map(g=><option key={g.id} value={g.id}>{g.nom} — {tr(g.niveau || "")}</option>)}
                 </select>
                 {!isMadrasa && selectedGroup && (
                   <div style={{ display:"flex",gap:4,background:"white",borderRadius:8,padding:4,border:"1px solid #e2e8f0" }}>
                     {([{ id:"appel",label:tr("Appel du jour") },{ id:"historique",label:tr("Historique") }] as { id:"appel"|"historique"; label:string }[]).map(t=>(
-                      <button key={t.id} onClick={()=>{ setAttendanceView(t.id); if(t.id==="historique" && selectedGroup) get(`/attendance/summary?classroom_id=${selectedGroup}`).then(d=>d.success&&setAttendanceSummary(d.summary)); }}
+                      <button key={t.id} onClick={()=>setAttendanceView(t.id)}
                         style={{ padding:"6px 12px",borderRadius:6,border:"none",cursor:"pointer",fontSize:12,fontWeight:attendanceView===t.id?700:500,background:attendanceView===t.id?V.color:"transparent",color:attendanceView===t.id?"white":"#64748b" }}>
                         {t.label}
                       </button>
@@ -1038,7 +1075,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   <div style={{ fontSize:13,color:"#94a3b8" }}>{M("Sélectionnez une halaqa pour faire l'appel", "Sélectionnez une classe pour faire l'appel")}</div>
                 </div>
               ) : attendanceView === "historique" ? (
-                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+                <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                   <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                     <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
                       {[tr(V.apprenant),tr("Présences"),tr("Absences"),tr("Taux présence")].map(h=>(
@@ -1101,16 +1138,16 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── NOTES ── */}
           {section === "notes" && (
             <div style={{ animation:"fadeIn 0.2s ease" }}>
-              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                   <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
-                    {[tr(V.apprenant),tr("Matière"),tr("Note"),V.sourate?tr("Sourate"):tr("Référence"),tr("Période"),tr("Commentaire"),""].map(h=>(
+                    {[tr(V.apprenant),tr("Matière"),tr("Note"),...(V.sourate?[tr("Sourate")]:[]),tr("Période"),tr("Commentaire"),""].map(h=>(
                       <th key={h} style={{ padding:"10px 16px",textAlign:"start",fontSize:11,fontWeight:600,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em",whiteSpace:"nowrap" }}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {grades.length===0 ? (
-                      <tr><td colSpan={7} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>{tr("Aucune note enregistrée")}</td></tr>
+                      <tr><td colSpan={V.sourate ? 7 : 6} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>{tr("Aucune note enregistrée")}</td></tr>
                     ) : grades.map(g=>{
                       const pct=(+g.note/+g.note_max)*100;
                       const nc=pct>=70?"#1a8f1a":pct>=50?"#d97706":"#ef4444";
@@ -1120,13 +1157,13 @@ export default function GestionEnseignement({ mode }: Props) {
                           <td style={{ padding:"11px 16px",fontWeight:600,color:"#0f172a" }}>{g.student_prenom} {g.student_nom}</td>
                           <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:isMadrasa?"#ecfeff":"#f0fdf0",color:V.color,borderRadius:4,fontSize:11,fontWeight:600 }}>{tr(g.matiere || "")}</span></td>
                           <td style={{ padding:"11px 16px" }}><span style={{ fontSize:16,fontWeight:800,color:nc }}>{g.note}</span><span style={{ fontSize:11,color:"#94a3b8" }}>/{g.note_max}</span></td>
-                          <td style={{ padding:"11px 16px",color:"#7c3aed",fontSize:12 }}>{g.sourate||"—"}</td>
+                          {V.sourate && <td style={{ padding:"11px 16px",color:"#7c3aed",fontSize:12 }}>{g.sourate||"—"}</td>}
                           <td style={{ padding:"11px 16px" }}><span style={{ padding:"2px 8px",background:"#f1f5f9",color:"#475569",borderRadius:20,fontSize:11 }}>{g.periode ? tr(g.periode) : "—"}</span></td>
                           <td style={{ padding:"11px 16px",color:"#94a3b8",fontSize:12 }}>{g.commentaire||"—"}</td>
                           <td style={{ padding:"11px 16px" }}>
                             <div style={{ display:"flex", gap:10 }}>
                               <button onClick={()=>{ setForm({ ...g }); setModal("add-note"); }} style={{ color:V.color,background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Modif.")}</button>
-                              <button onClick={async()=>{ if(confirm(tr("Supprimer cette note ?"))){const d=await del(`/grades/${g.id}`); if(d.success){setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast(tr("Note supprimée"));} else showToast(d.message||"Erreur",false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Suppr.")}</button>
+                              <button onClick={async()=>{ if(confirm(tr("Supprimer cette note ?"))){const d=await del(`/grades/${g.id}`); if(d.success){setGrades(gs=>gs.filter(x=>x.id!==g.id));showToast(tr("Note supprimée"));} else showToast(tr(d.message||"Erreur"),false); }}} style={{ color:"#ef4444",background:"none",border:"none",cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Suppr.")}</button>
                             </div>
                           </td>
                         </tr>
@@ -1141,7 +1178,7 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── FRAIS ── */}
           {section === "frais" && (
             <div style={{ display:"flex",flexDirection:"column",gap:16,animation:"fadeIn 0.2s ease" }}>
-              <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12 }}>
+              <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12 }}>
                 {[
                   { label:tr("Total facturé"),  val:fmtMoney(fees.reduce((s,f)=>s+ +f.montant,0)),                             color:"#0369a1", bg:"#eff6ff" },
                   { label:tr("Total encaissé"), val:fmtMoney(fees.filter(f=>f.est_paye).reduce((s,f)=>s+ +f.montant,0)),       color:"#1a8f1a", bg:"#f0fdf0" },
@@ -1153,7 +1190,7 @@ export default function GestionEnseignement({ mode }: Props) {
                   </div>
                 ))}
               </div>
-              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
+              <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                   <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
                     {[tr(V.apprenant),tr("Type"),tr("Montant"),tr("Échéance"),tr("Statut"),tr("Action")].map(h=>(
@@ -1174,7 +1211,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <td style={{ padding:"11px 14px" }}>
                           <div style={{ display:"flex", gap:6 }}>
                             {!f.est_paye && (
-                              <button onClick={async()=>{ const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true}:x));showToast(tr("Paiement enregistré"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
+                              <button onClick={async()=>{ if(!confirm(tr("Encaisser {montant} pour {eleve} ?", { montant: fmtMoney(+f.montant), eleve: `${f.student_prenom || ""} ${f.student_nom || ""}`.trim() }))) return; const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true,montant_paye:x.montant,date_paiement:new Date().toISOString(),...(d.fee||{}),student_prenom:x.student_prenom,student_nom:x.student_nom,telephone_parent:x.telephone_parent}:x));showToast(tr("Paiement enregistré"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
                             )}
                             {!f.est_paye && (
                               <button onClick={() => envoyerRappel(f.telephone_parent, tr(f.echeance
@@ -1227,7 +1264,7 @@ export default function GestionEnseignement({ mode }: Props) {
                         <div style={{ display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:"#f8fafc",borderRadius:8 }}>
                           <div>
                             <div style={{ fontSize:11,color:"#94a3b8" }}>{tr("Moyenne générale")}</div>
-                            <div style={{ fontSize:22,fontWeight:800,color:mc }}>{b.moyenne_generale}/20</div>
+                            <div style={{ fontSize:22,fontWeight:800,color:mc }}>{b.moyenne_generale != null ? `${b.moyenne_generale}/20` : "—"}</div>
                           </div>
                           <div style={{ flex:1,textAlign:"end" }}>
                             <span style={{ fontSize:12,fontWeight:600,color:mc,background:"white",border:`1px solid ${mc}22`,padding:"4px 10px",borderRadius:6 }}>{tr(mention)}</span>
@@ -1237,7 +1274,14 @@ export default function GestionEnseignement({ mode }: Props) {
                           {!b.is_published && (
                             <button onClick={async()=>{ const d=await put(`/bulletins/${b.id}/publish`,{}); if(d.success){setBulletins(bs=>bs.map((x:any)=>x.id===b.id?{...x,is_published:true}:x));showToast(tr("Bulletin publié"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ flex:1,padding:"8px 0",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }}>{tr("Publier & notifier")}</button>
                           )}
-                          <button onClick={() => printBulletin(b, tenant?.name || "", V.color, tenant?.logo_url)} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }} title={tr("Imprimer")} aria-label={tr("Imprimer")}>🖨</button>
+                          <button onClick={async () => {
+                            // Fenêtre ouverte tout de suite (sinon bloquée), remplie une fois les notes lues
+                            const w = window.open("", "_blank", "width=800,height=900");
+                            if (!w) { alert(tr("Autorisez l'ouverture des fenêtres pour imprimer le bulletin.")); return; }
+                            const d = await get(`/grades?student_id=${b.student_id}&periode=${encodeURIComponent(b.periode || "")}`);
+                            const notes = (d.grades || []).filter((g: any) => String(g.student_id) === String(b.student_id) && (g.periode || "") === (b.periode || ""));
+                            printBulletin(b, tenant?.name || "", V.color, tenant?.logo_url, notes, w);
+                          }} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }} title={tr("Imprimer")} aria-label={tr("Imprimer")}>🖨</button>
                         </div>
                       </div>
                     );
@@ -1262,7 +1306,7 @@ export default function GestionEnseignement({ mode }: Props) {
                     {r.statut==="nouvelle" ? (
                       <div style={{ display:"flex",gap:6,flexShrink:0 }}>
                         <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/convert`,{}); if(d.success){setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"converti"}:x));showToast(M("Apprenant créé(e)", "Élève créé(e)"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"6px 12px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:700 }}>{tr("Inscrire")}</button>
-                        <button onClick={async()=>{ const d=await put(`/enroll-requests/${r.id}/reject`,{}); if(d.success) setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"rejetee"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"6px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Rejeter")}</button>
+                        <button onClick={async()=>{ if(!confirm(tr("Rejeter la demande de {nom} ?", { nom: r.nom_enfant }))) return; const d=await put(`/enroll-requests/${r.id}/reject`,{}); if(d.success){ setEnrollRequests(rs=>rs.map(x=>x.id===r.id?{...x,statut:"rejetee"}:x)); showToast(tr("Demande rejetée")); } else showToast(tr(d.message||"Erreur"),false); }} style={{ padding:"6px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:8,cursor:"pointer",fontSize:12,fontWeight:600 }}>{tr("Rejeter")}</button>
                       </div>
                     ) : (
                       <span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:r.statut==="converti"?"#f0fdf0":"#fef2f2",color:r.statut==="converti"?"#1a8f1a":"#ef4444",flexShrink:0 }}>{r.statut==="converti"?tr("✓ Inscrit(e)"):tr("Rejetée")}</span>
@@ -1297,8 +1341,8 @@ export default function GestionEnseignement({ mode }: Props) {
                         {r.commentaire && <p style={{ fontSize:13,color:"#475569",marginTop:8 }}>{r.commentaire}</p>}
                       </div>
                       <div style={{ display:"flex",gap:6,flexShrink:0 }}>
-                        {r.statut==="en_attente" && <button onClick={async()=>{ const d=await put(`/reviews/${r.id}`,{statut:"approuve"}); if(d.success) setReviews(rs=>rs.map((x:any)=>x.id===r.id?{...x,statut:"approuve"}:x)); else showToast(d.message||"Erreur",false); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Approuver")}</button>}
-                        <button onClick={async()=>{ if(confirm(tr("Supprimer cet avis ?"))){const d=await del(`/reviews/${r.id}`); if(d.success) setReviews(rs=>rs.filter((x:any)=>x.id!==r.id)); else showToast(d.message||"Erreur",false);} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Supprimer")}</button>
+                        {r.statut==="en_attente" && <button onClick={async()=>{ const d=await put(`/reviews/${r.id}`,{statut:"approuve"}); if(d.success){ setReviews(rs=>rs.map((x:any)=>x.id===r.id?{...x,statut:"approuve"}:x)); showToast(tr("Avis publié")); } else showToast(tr(d.message||"Erreur"),false); }} style={{ padding:"5px 12px",background:"#f0fdf0",color:"#1a8f1a",border:"1px solid #bbf7bb",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Approuver")}</button>}
+                        <button onClick={async()=>{ if(confirm(tr("Supprimer cet avis ?"))){const d=await del(`/reviews/${r.id}`); if(d.success){ setReviews(rs=>rs.filter((x:any)=>x.id!==r.id)); showToast(tr("Avis supprimé")); } else showToast(tr(d.message||"Erreur"),false);} }} style={{ padding:"5px 12px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Supprimer")}</button>
                       </div>
                     </div>
                   </div>

@@ -447,5 +447,18 @@ const ar: Record<string, string> = {
   "Plusieurs comptes ont ce numéro de téléphone : utilisez le NuméroH.": "عدة حسابات تحمل رقم الهاتف هذا: استخدم NuméroH.",
   "Abonnement Gestion Interne expiré ou non payé. Réglez votre abonnement pour continuer — vos données sont conservées et redeviennent accessibles dès le paiement.": "اشتراك الإدارة الداخلية منتهٍ أو غير مدفوع. سدّد اشتراكك للمتابعة — بياناتك محفوظة وستصبح متاحة من جديد فور الدفع.",
   "Votre formule Visibilité + Rendez-vous n'inclut pas la Gestion Interne. Passez à la Gestion Interne pour y accéder.": "باقتك «الظهور + المواعيد» لا تشمل الإدارة الداخلية. انتقل إلى الإدارة الداخلية للوصول إليها.",
+  // ── Corrections de l'audit de la gestion école
+  "— Selon le niveau —": "— حسب المستوى —",
+  "La note doit être entre 0 et {max}": "يجب أن تكون العلامة بين 0 و{max}",
+  "Encaisser {montant} pour {eleve} ?": "تحصيل {montant} من {eleve}؟",
+  "Avis publié": "تم نشر التقييم",
+  "Avis supprimé": "تم حذف التقييم",
+  "Rejeter la demande de {nom} ?": "رفض طلب {nom}؟",
+  "Demande rejetée": "تم رفض الطلب",
+  "Aucun parent de {qui} avec cet e-mail.": "لا يوجد وليّ أمر لـ{qui} بهذا البريد الإلكتروني.",
+  "Autorisez l'ouverture des fenêtres pour imprimer le bulletin.": "اسمحوا بفتح النوافذ لطباعة الكشف.",
+  "Le serveur ne répond pas. Réessayez dans un instant.": "الخادم لا يستجيب. أعيدوا المحاولة بعد لحظة.",
+  "Demande introuvable ou déjà traitée.": "الطلب غير موجود أو تمت معالجته مسبقًا.",
+  "Matière et note obligatoires.": "المادة والعلامة إلزاميتان.",
 };
 export default ar;
