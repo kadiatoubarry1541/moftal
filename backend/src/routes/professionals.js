@@ -18,7 +18,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 import { mesAccesEmploye } from '../utils/accesEmployes.js';
-import { SECTEURS_ECHANGE, TYPES_DROIT_ECHANGE, tousLesDroits, enregistrerDroits } from '../utils/droitsEchange.js';
+import { SECTEURS_ECHANGE, tousLesDroits, enregistrerDroits } from '../utils/droitsEchange.js';
+import { PRIX_VENDEUR_ECHANGE } from './payment.js';
 import { notifier } from '../utils/notifier.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1177,18 +1178,22 @@ router.delete('/admin/:id', authenticate, requireAdmin, async (req, res) => {
 // ou identifiant du compte) : une gestion ajoutée plus tard est couverte aussi.
 // Tout se fait en une transaction : en cas d'erreur, rien n'est supprimé.
 // @route   GET /api/professionals/admin/droits-echange
-// @desc    Admin : secteurs d'Échange où chaque commerçant peut publier
+// @desc    Admin : secteurs d'Échange ouverts à chaque personne (par NuméroH),
+//          avec l'état du paiement de chaque secteur
 router.get('/admin/droits-echange', authenticate, requireAdmin, async (req, res) => {
   try {
-    res.json({ success: true, droits: await tousLesDroits(), secteurs: SECTEURS_ECHANGE });
+    res.json({ success: true, droits: await tousLesDroits(), secteurs: SECTEURS_ECHANGE, prix: PRIX_VENDEUR_ECHANGE });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
 });
 
 // @route   PUT /api/professionals/admin/:id/droits-echange
-// @desc    Admin : donner (ou retirer) à un professionnel du commerce le droit de
-//          publier dans la page Échange, secteur par secteur. { secteurs: [] } retire le droit.
+// @desc    Admin : donner (ou retirer) au propriétaire de ce compte — quel que soit
+//          son type — le droit de publier dans Échange, secteur par secteur.
+//          Chaque secteur ouvert est un compte vendeur Échange approuvé, que la
+//          personne paie à son prix en plus de ses autres comptes.
+//          { secteurs: [] } retire le droit.
 router.put('/admin/:id/droits-echange', authenticate, requireAdmin, async (req, res) => {
   try {
     const secteurs = Array.isArray(req.body?.secteurs) ? req.body.secteurs.map(String) : null;
@@ -1197,14 +1202,18 @@ router.put('/admin/:id/droits-echange', authenticate, requireAdmin, async (req, 
     if (inconnus.length) return res.status(400).json({ success: false, message: `Secteur inconnu : ${inconnus.join(', ')}` });
     const account = await ProfessionalAccount.findByPk(req.params.id);
     if (!account) return res.status(404).json({ success: false, message: 'Compte non trouvé' });
-    if (!TYPES_DROIT_ECHANGE.includes(String(account.type))) {
-      return res.status(400).json({ success: false, message: 'Ce droit est réservé aux professionnels du commerce.' });
+    const ouverts = await enregistrerDroits(
+      { ownerNumeroH: account.ownerNumeroH, nom: account.name, telephone: account.phone, ville: account.city },
+      secteurs, req.user?.numeroH || req.userId
+    );
+    if (ouverts.length) {
+      const LIBELLES = { primaire: 'Alimentation', secondaire: 'Mode & Beauté', tertiaire: 'Maison & Construction', quaternaire: 'Technologie & Véhicules', nourriture: 'Restaurants' };
+      const detail = ouverts.map((s) => `${LIBELLES[s]} (${Number(PRIX_VENDEUR_ECHANGE[s]).toLocaleString('fr-FR')} GNF/mois)`).join(', ');
+      await notifier(account.ownerNumeroH, 'echange_droit',
+        `🛒 Vous pouvez publier dans la page Échange : ${detail}. Payez l'abonnement vendeur de chaque secteur depuis la page Échange pour commencer à publier.`);
     }
-    const accordes = await enregistrerDroits(account.id, secteurs, req.user?.numeroH || req.userId);
-    if (accordes.length) {
-      await notifier(account.ownerNumeroH, 'echange_droit', `🛒 « ${account.name} » peut maintenant publier ses produits dans la page Échange.`);
-    }
-    res.json({ success: true, secteurs: accordes });
+    const droits = (await tousLesDroits())[account.ownerNumeroH] || [];
+    res.json({ success: true, ouverts, droits });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

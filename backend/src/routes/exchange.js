@@ -11,7 +11,6 @@ import { isGlobalAdmin, getManagedSectorsForUser } from '../utils/sectorAdmin.js
 import { uploadToImageKit } from '../services/imagekitStorage.js';
 import { uploadToR2 } from '../services/r2Storage.js';
 import { uploadToIDrive } from '../services/idriveStorage.js';
-import { secteursAccordes } from '../utils/droitsEchange.js';
 
 if (typeof PageAdmin.init === 'function') PageAdmin.init(sequelize);
 
@@ -42,16 +41,12 @@ async function getVendorSubscriptionStatus(numeroH, subSector) {
   const [acc] = await sequelize.query(
     `SELECT id, subscription_status, subscription_valid_until
      FROM professional_accounts
-     WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND sub_sector=:s LIMIT 1`,
+     WHERE owner_numero_h=:n AND type='moftal_vendor' AND status='approved' AND is_active IS NOT FALSE AND sub_sector=:s LIMIT 1`,
     { replacements: { n: numeroH, s: subSector }, type: sequelize.QueryTypes.SELECT }
   ).catch(() => [null]);
-  const validUntil = acc?.subscription_valid_until ? new Date(acc.subscription_valid_until) : null;
-  const aAcces = !!acc && acc.subscription_status === 'active' && !!validUntil && validUntil > new Date();
-  if (aAcces) return { approved: true, aAcces, accountId: acc.id };
-  // Professionnel du commerce autorisé par l'admin pour ce secteur (voir utils/droitsEchange.js)
-  const accordes = await secteursAccordes(numeroH).catch(() => []);
-  if (accordes.includes(subSector)) return { approved: true, aAcces: true, accountId: acc?.id || null, droitAccorde: true };
   if (!acc) return { approved: false, aAcces: false, accountId: null };
+  const validUntil = acc.subscription_valid_until ? new Date(acc.subscription_valid_until) : null;
+  const aAcces = acc.subscription_status === 'active' && !!validUntil && validUntil > new Date();
   return { approved: true, aAcces, accountId: acc.id };
 }
 
@@ -113,7 +108,7 @@ router.get('/vendor-status', async (req, res) => {
 
     const accounts = await sequelize.query(
       `SELECT id, sub_sector, status, name, subscription_status, subscription_valid_until FROM professional_accounts
-       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status IN ('approved', 'pending')`,
+       WHERE owner_numero_h=:n AND type='moftal_vendor' AND status IN ('approved', 'pending') AND is_active IS NOT FALSE`,
       { replacements: { n: userNumeroH }, type: sequelize.QueryTypes.SELECT }
     );
 
@@ -123,15 +118,8 @@ router.get('/vendor-status', async (req, res) => {
       const aAcces = a.subscription_status === 'active' && !!validUntil && validUntil > maintenant;
       return { id: a.id, subSector: a.sub_sector, aAcces, subscriptionValidUntil: a.subscription_valid_until };
     });
-    // Secteurs ouverts par l'admin à ce professionnel du commerce : publication sans compte vendeur
-    const accordes = await secteursAccordes(userNumeroH).catch(() => []);
-    for (const secteur of accordes) {
-      const existant = approvedAccounts.find(a => a.subSector === secteur);
-      if (existant) { existant.aAcces = true; existant.droitAccorde = true; }
-      else approvedAccounts.push({ id: `droit-${secteur}`, subSector: secteur, aAcces: true, subscriptionValidUntil: null, droitAccorde: true });
-    }
     const approvedSectors = approvedAccounts.map(a => a.subSector);
-    const pendingSectors = accounts.filter(a => a.status === 'pending' && !accordes.includes(a.sub_sector)).map(a => a.sub_sector);
+    const pendingSectors = accounts.filter(a => a.status === 'pending').map(a => a.sub_sector);
     const accountName = accounts.find(a => a.status === 'approved')?.name;
 
     return res.json({

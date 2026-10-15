@@ -9,7 +9,7 @@ import { config } from "../config/api";
 import LogoEtablissement from "../components/LogoEtablissement";
 import AdminModifierIdentitePro from "../components/AdminModifierIdentitePro";
 import AdminDroitsEchange from "../components/AdminDroitsEchange";
-import { SECTEURS_ECHANGE } from "../utils/secteursEchange";
+import { SECTEURS_ECHANGE, type DroitEchange } from "../utils/secteursEchange";
 import BoutonLienAppGestion from "../components/BoutonLienAppGestion";
 import AdminCreerComptePro from "../components/AdminCreerComptePro";
 import { isSuperAdmin7, isSubAdmin0 } from "../utils/auth";
@@ -112,8 +112,8 @@ export default function AdminDashboard() {
   const [allPros, setAllPros] = useState<ProfessionalAccount[]>([]);
   // Compte pro dont l'admin modifie le nom et le logo
   const [identiteAModifier, setIdentiteAModifier] = useState<ProfessionalAccount | null>(null);
-  // Droit de publier dans Échange accordé aux professionnels du commerce : { [id du compte]: secteurs }
-  const [droitsEchange, setDroitsEchange] = useState<Record<string, string[]>>({});
+  // Secteurs d'Échange ouverts à chaque personne : { [NuméroH]: droits (payé ou à payer) }
+  const [droitsEchange, setDroitsEchange] = useState<Record<string, DroitEchange[]>>({});
   const [droitsAModifier, setDroitsAModifier] = useState<ProfessionalAccount | null>(null);
   // Créer un compte pro pour un établissement (téléphone ou e-mail seulement)
   const [creerPro, setCreerPro] = useState(false);
@@ -1342,17 +1342,20 @@ export default function AdminDashboard() {
                         <div className="text-xs text-gray-400 mt-1">
                           Propriétaire: {pro.ownerNumeroH} • {new Date(pro.created_at).toLocaleDateString("fr-FR")}
                         </div>
-                        {pro.type === "commerce" && pro.status === "approved" && (() => {
-                          const secteurs = droitsEchange[pro.id] || [];
+                        {pro.status === "approved" && pro.type !== "moftal_vendor" && (() => {
+                          const droits = droitsEchange[pro.ownerNumeroH] || [];
                           return (
-                            <div className="mt-1 text-xs text-gray-600 flex items-center gap-2 flex-wrap">
+                            <div className="mt-1 text-xs text-gray-600 flex items-center gap-x-2 gap-y-1 flex-wrap">
                               <span>🛒 Publier dans Échange :</span>
-                              {secteurs.length
-                                ? <strong className="text-emerald-700">{SECTEURS_ECHANGE.filter((s) => secteurs.includes(s.id)).map((s) => s.label).join(" · ")}</strong>
+                              {droits.length
+                                ? SECTEURS_ECHANGE.filter((s) => droits.some((d) => d.secteur === s.id)).map((s) => {
+                                    const d = droits.find((x) => x.secteur === s.id)!;
+                                    return <strong key={s.id} className={d.paye ? "text-emerald-700" : "text-amber-700"}>{s.label} {d.paye ? "✓ payé" : "(à payer)"}</strong>;
+                                  })
                                 : <strong className="text-gray-500">non autorisé</strong>}
                               <button type="button" onClick={() => setDroitsAModifier(pro)}
                                 className="text-[11px] font-semibold text-emerald-700 hover:underline whitespace-nowrap">
-                                {secteurs.length ? "✏️ Modifier" : "✅ Donner le droit"}
+                                {droits.length ? "✏️ Modifier" : "✅ Donner le droit"}
                               </button>
                             </div>
                           );
@@ -2391,9 +2394,9 @@ export default function AdminDashboard() {
           {droitsAModifier && (
             <AdminDroitsEchange
               pro={droitsAModifier}
-              secteurs={droitsEchange[droitsAModifier.id] || []}
+              droits={droitsEchange[droitsAModifier.ownerNumeroH] || []}
               onClose={() => setDroitsAModifier(null)}
-              onSaved={(secteurs) => setDroitsEchange((d) => ({ ...d, [droitsAModifier.id]: secteurs }))}
+              onSaved={(droits) => setDroitsEchange((d) => ({ ...d, [droitsAModifier.ownerNumeroH]: droits }))}
             />
           )}
 
