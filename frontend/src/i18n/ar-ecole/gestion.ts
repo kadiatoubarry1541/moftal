@@ -460,5 +460,22 @@ const ar: Record<string, string> = {
   "Le serveur ne répond pas. Réessayez dans un instant.": "الخادم لا يستجيب. أعيدوا المحاولة بعد لحظة.",
   "Demande introuvable ou déjà traitée.": "الطلب غير موجود أو تمت معالجته مسبقًا.",
   "Matière et note obligatoires.": "المادة والعلامة إلزاميتان.",
+  // ── Hors ligne, années scolaires, frais (avances, modification, suppression)
+  "hors ligne : gardé sur l'appareil, envoyé dès le retour de la connexion": "دون اتصال: محفوظ على الجهاز، ويُرسل فور عودة الاتصال",
+  "Année scolaire au format 2025-2026": "السنة الدراسية بالصيغة 2025-2026",
+  "Montant obligatoire": "المبلغ إلزامي",
+  "Montant obligatoire.": "المبلغ إلزامي.",
+  "Frais modifié": "تم تعديل الرسوم",
+  "Modifier le frais": "تعديل الرسوم",
+  "Encaisser un paiement": "تحصيل دفعة",
+  "reste {montant}": "المتبقي {montant}",
+  "Montant reçu (GNF) *": "المبلغ المستلم (GNF) *",
+  "Tout le reste": "كل المتبقي",
+  "Un montant plus petit est enregistré comme avance : le reste reste à payer.": "يُسجَّل المبلغ الأصغر كدفعة مقدمة: ويبقى الباقي مستحقًا.",
+  "Avance {montant}": "دفعة مقدمة {montant}",
+  "Montant du versement invalide.": "مبلغ الدفعة غير صالح.",
+  "Supprimer ce frais ?": "حذف هذه الرسوم؟",
+  "Supprimer ce frais ? {montant} ont déjà été encaissés : ils disparaîtront aussi du rapport.": "حذف هذه الرسوم؟ تم تحصيل {montant} مسبقًا: وستختفي أيضًا من التقرير.",
+  "Frais supprimé": "تم حذف الرسوم",
 };
 export default ar;

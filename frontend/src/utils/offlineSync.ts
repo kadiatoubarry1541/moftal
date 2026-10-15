@@ -312,6 +312,20 @@ async function applyOptimistic(url: string, method: string, body: any, tempId?: 
   const sub = new URL(full).pathname.slice(new URL(base).pathname.length) || "/";
   const segs = sub.split("/").filter(Boolean);
 
+  // Appel du jour (école / madrasa) : la copie locale de ce jour reflète l'appel fait
+  if (method === "POST" && sub === "/attendance" && body && Array.isArray(body.records) && /^\d{4}-\d{2}-\d{2}$/.test(body.date || "")) {
+    const cle = cacheKey(`${base}/attendance?date=${body.date}`);
+    const entry = await cacheGet(cle).catch(() => undefined);
+    const anciens: any[] = Array.isArray(entry?.data?.attendance) ? entry!.data.attendance : [];
+    const ids = new Set(body.records.map((r: any) => String(r.student_id)));
+    const attendance = [
+      ...anciens.filter((a) => !ids.has(String(a.student_id))),
+      ...body.records.map((r: any) => ({ ...r, est_present: r.statut !== "absent", date_presence: body.date, _horsLigne: true })),
+    ];
+    await cachePut(cle, { ...(entry?.data || {}), success: true, attendance, records: attendance, date: body.date });
+    return { success: true };
+  }
+
   if (method === "POST" && tempId) {
     const item = { ...(body || {}), id: tempId, _horsLigne: true, created_at: new Date().toISOString() };
     const collection = new URL(base).pathname + sub;
@@ -342,21 +356,54 @@ async function applyOptimistic(url: string, method: string, body: any, tempId?: 
   const id = segs[1];
   const collectionPath = new URL(base).pathname + "/" + segs[0];
   const isPlainUpdate = segs.length === 2;
+  // Action sur un élément (encaisser, publier, inscrire…) : ce qu'elle change
+  const changement = segs.length === 3 ? changementAction(segs[2], body) : null;
   let found: any = null;
 
+  // Seule la liste de cette collection est touchée : un élève n° 5 et un frais
+  // n° 5 sont deux choses différentes
   await eachCachedUnder(base, (_k, data, path) => {
+    if (path !== collectionPath) return undefined;
     const hit = findById(data, id);
     if (!hit) return undefined;
-    if (!found) found = { ...hit, ...(isPlainUpdate ? body || {} : {}) };
-    if (method === "DELETE" && path === collectionPath) {
+    const maj = (x: any) => (isPlainUpdate ? { ...x, ...(body || {}) } : changement ? { ...x, ...changement(x) } : x);
+    if (!found) found = maj(hit);
+    if (method === "DELETE" && isPlainUpdate) {
       return mapArrays(data, (arr) => arr.filter((x) => !(x && typeof x === "object" && String(x.id) === id)));
     }
-    if (method === "PUT" && isPlainUpdate) {
-      return mapArrays(data, (arr) => arr.map((x) => (x && typeof x === "object" && String(x.id) === id ? { ...x, ...(body || {}) } : x)));
+    if (method === "PUT" && (isPlainUpdate || changement)) {
+      return mapArrays(data, (arr) => arr.map((x) => (x && typeof x === "object" && String(x.id) === id ? maj(x) : x)));
     }
     return undefined;
   });
   return found;
+}
+
+// Effet local des actions courantes, appliqué sans connexion (seulement aux
+// champs que l'élément possède déjà)
+function changementAction(action: string, body: any): ((x: any) => Record<string, unknown>) | null {
+  const aujourdhui = new Date().toISOString().slice(0, 10);
+  switch (action) {
+    case "pay":
+      return (x) => {
+        if (!("est_paye" in x)) return {};
+        const du = Number(x.montant) || 0;
+        const deja = Number(x.montant_paye) || 0;
+        const v = body?.versement != null && body.versement !== "" ? Number(body.versement) : null;
+        const paye = v != null ? Math.min(du, deja + v) : body?.montant_paye != null && body.montant_paye !== "" ? Number(body.montant_paye) : du;
+        return { montant_paye: paye, est_paye: paye >= du, date_paiement: aujourdhui };
+      };
+    case "publish":
+      return (x) => ("is_published" in x ? { is_published: true } : {});
+    case "convert":
+      return (x) => ("statut" in x ? { statut: "converti" } : {});
+    case "reject":
+      return (x) => ("statut" in x ? { statut: "rejetee" } : {});
+    case "schedule":
+      return () => (body && Array.isArray(body.emploi_du_temps) ? { emploi_du_temps: body.emploi_du_temps } : {});
+    default:
+      return null;
+  }
 }
 
 // Réponse renvoyée à l'écran pour une écriture mise en attente : { success: true }

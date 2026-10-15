@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import AccesRefuseGestion from "../components/AccesRefuseGestion";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
@@ -36,6 +36,9 @@ function printFeeReceipt(f: any, tenant: any, color: string) {
     total: +f.montant || 0, paye: f.montant_paye != null ? +f.montant_paye : (f.est_paye ? +f.montant : 0),
   });
 }
+
+// Montant déjà encaissé sur un frais (avances comprises)
+const payeDe = (f: any) => f.montant_paye != null && f.montant_paye !== "" ? +f.montant_paye || 0 : (f.est_paye ? +f.montant || 0 : 0);
 
 const logoHtml = (url?: string | null) => url ? `<img src="${/^(data:|https?:)/.test(url) ? url : window.location.origin + (url.startsWith("/") ? "" : "/") + url}" alt="" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-inline-end:12px">` : "";
 
@@ -160,6 +163,8 @@ export default function GestionEnseignement({ mode }: Props) {
   const [fees, setFees]           = useState<any[]>([]);
   const [bulletins, setBulletins] = useState<any[]>([]);
   const [enrollRequests, setEnrollRequests] = useState<any[]>([]);
+  // Année scolaire affichée (notes et bulletins) — école seulement
+  const [anneeVue, setAnneeVue] = useState(anneeScolaireEnCours());
   const [reviews, setReviews] = useState<any[]>([]);
   const [search, setSearch]       = useState("");
   const [niveauFilter, setNiveauFilter] = useState("");
@@ -181,15 +186,26 @@ export default function GestionEnseignement({ mode }: Props) {
   const [nhParent, setNhParent]   = useState("");
   const [parentsBusy, setParentsBusy] = useState(false);
 
-  const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
+  // Dernière écriture gardée sur l'appareil (sans connexion) : le message le dit
+  const enAttenteRef = useRef(0);
+  const showToast = (msg: string, ok = true) => {
+    const horsLigne = ok && Date.now() - enAttenteRef.current < 2000;
+    if (horsLigne) enAttenteRef.current = 0;
+    setToast({ msg: horsLigne ? `${msg} — ${tr("hors ligne : gardé sur l'appareil, envoyé dès le retour de la connexion")}` : msg, ok });
+    setTimeout(() => setToast(null), horsLigne ? 4500 : 3000);
+  };
 
   // Appel au serveur : renvoie toujours un objet (jamais d'exception), avec un
-  // message clair si la connexion est coupée ou si le serveur ne répond pas
+  // message clair si la connexion est coupée ou si le serveur ne répond pas.
+  // Sans connexion, la couche hors ligne (utils/offlineSync) lit la copie gardée
+  // sur l'appareil et met les enregistrements en file d'attente.
   const appel = useCallback(async (path: string, init?: RequestInit): Promise<any> => {
     let r: Response;
     try { r = await fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode!}${path}`, { ...init, headers: auth() }); }
     catch { return { success: false, message: "Connexion coupée : rien n'a été enregistré. Réessayez." }; }
-    return r.json().catch(() => ({ success: false, message: "Le serveur ne répond pas. Réessayez dans un instant." }));
+    const d = await r.json().catch(() => ({ success: false, message: "Le serveur ne répond pas. Réessayez dans un instant." }));
+    if (init?.method && init.method !== "GET" && d?.queued) enAttenteRef.current = Date.now();
+    return d;
   }, [tenantCode, apiName]);
 
   const get  = useCallback((path: string) => appel(path), [appel]);
@@ -206,10 +222,26 @@ export default function GestionEnseignement({ mode }: Props) {
         setTenant(info.tenant);
         setSettingsForm({ name: info.tenant.name, address: info.tenant.address || "", phone: info.tenant.phone || "", email: info.tenant.email || "", description: info.tenant.description || "", horaires: info.tenant.horaires || "", phone_urgence: info.tenant.phone_urgence || "" });
         setStats(dash);
+        if (navigator.onLine) prechargerHorsLigne();
       })
       .catch(e => setError(trHors("Impossible de joindre le serveur : {err}", { err: String(e?.message || e) })))
       .finally(() => setLoading(false));
   }, [get]);
+
+  // Avec internet : chaque liste est lue une fois pour être gardée sur l'appareil
+  // (utils/offlineSync), ainsi toute la gestion reste utilisable sans connexion,
+  // même les rubriques pas encore ouvertes
+  const prechargerHorsLigne = () => {
+    const jourConakry = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Conakry" }).format(new Date());
+    const listes = ["/students", "/staff", "/grades", "/fees", "/bulletins", "/members", "/bibliotheque",
+      `/attendance?date=${new Date().toISOString().split("T")[0]}`, `/pointages?jour=${jourConakry}`,
+      ...(isMadrasa ? [] : ["/enroll-requests", "/reviews"])];
+    listes.forEach(l => { void get(l); });
+    get(`/${groupEP}`).then(d => {
+      if (isMadrasa) return;
+      (d[groupEP] || []).forEach((g: any) => { void get(`/attendance/summary?classroom_id=${g.id}`); });
+    });
+  };
 
   const loadSection = useCallback((s: Section) => {
     setSection(s); setSearch(""); setNiveauFilter("");
@@ -226,6 +258,13 @@ export default function GestionEnseignement({ mode }: Props) {
     if (s === "inscriptions") { get("/enroll-requests").then(d => d.success && setEnrollRequests(d.requests)); }
     if (s === "avis")        { get("/reviews").then(d => d.success && setReviews(d.reviews)); }
   }, [get, groupEP]);
+
+  useEffect(() => {
+    // (pas pendant l'appel : les présences cochées non enregistrées resteraient perdues)
+    const relire = () => { if (section !== "presences") loadSection(section); };
+    window.addEventListener("moftal-offline-synced", relire);
+    return () => window.removeEventListener("moftal-offline-synced", relire);
+  }, [loadSection, section]);
 
   const loadAttendance = useCallback((date: string, groupId: string) => {
     if (!groupId) return;
@@ -324,7 +363,8 @@ export default function GestionEnseignement({ mode }: Props) {
         else showToast(tr(d.message || "Erreur"), false);
       } else if (modal === "add-note") {
         if (!form.student_id || !form.matiere || form.note == null || form.note === "" || isNaN(parseFloat(form.note))) { showToast(tr("Apprenant, matière et note obligatoires"), false); return; }
-        const body = { ...form, note: parseFloat(form.note), note_max: parseFloat(form.note_max || 20) };
+        const body = { ...form, note: parseFloat(form.note), note_max: parseFloat(form.note_max || 20), ...(isMadrasa ? {} : { annee_scolaire: (form.annee_scolaire || anneeVue).trim() }) };
+        if (!isMadrasa && !/^\d{4}-\d{4}$/.test(body.annee_scolaire)) { showToast(tr("Année scolaire au format 2025-2026"), false); return; }
         if (!(body.note_max > 0) || body.note < 0 || body.note > body.note_max) { showToast(tr("La note doit être entre 0 et {max}", { max: body.note_max > 0 ? body.note_max : 20 }), false); return; }
         const el = students.find(x => String(x.id) === String(form.student_id));
         const nomEleve = el ? { student_prenom: el.prenom, student_nom: el.nom } : {};
@@ -337,6 +377,32 @@ export default function GestionEnseignement({ mode }: Props) {
           if (d.grade) { setGrades(p => [{ ...nomEleve, ...d.grade }, ...p]); setModal(null); setForm({}); showToast(tr("Note enregistrée")); }
           else showToast(tr(d.message || "Erreur"), false);
         }
+      } else if (modal === "add-frais" && form.id) {
+        if (!form.montant || +form.montant <= 0) { showToast(tr("Montant obligatoire"), false); return; }
+        const d = await put(`/fees/${form.id}`, { montant: parseInt(form.montant), type_frais: form.type_frais || V.fraisTypes[1], echeance: form.echeance || null });
+        if (d.success) {
+          setFees(p => p.map(x => {
+            if (x.id !== form.id) return x;
+            const montant = parseInt(form.montant);
+            return { ...x, montant, type_frais: form.type_frais || V.fraisTypes[1], echeance: form.echeance || null, est_paye: (+x.montant_paye || 0) >= montant };
+          }));
+          setModal(null); setForm({}); showToast(tr("Frais modifié"));
+        } else showToast(tr(d.message || "Erreur"), false);
+      } else if (modal === "versement") {
+        const v = parseInt(form.versement);
+        if (!v || v <= 0) { showToast(tr("Montant du versement invalide."), false); return; }
+        const d = await put(`/fees/${form.id}/pay`, { versement: v });
+        if (d.success) {
+          setFees(fs => fs.map((x: any) => {
+            if (x.id !== form.id) return x;
+            const du = +x.montant || 0;
+            const paye = Math.min(du, (+x.montant_paye || 0) + v);
+            // Valeurs du serveur quand il a répondu (pas pour une opération gardée hors ligne)
+            const serveur = !d.queued && d.fee ? { montant_paye: d.fee.montant_paye, est_paye: d.fee.est_paye, date_paiement: d.fee.date_paiement } : {};
+            return { ...x, montant_paye: paye, est_paye: paye >= du, date_paiement: new Date().toISOString(), ...serveur };
+          }));
+          setModal(null); setForm({}); showToast(tr("Paiement enregistré"));
+        } else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false);
       } else if (modal === "add-frais") {
         if (!form.student_id || !form.montant) { showToast(tr("Apprenant et montant obligatoires"), false); return; }
         const d = await post("/fees", { ...form, montant: parseInt(form.montant), type_frais: form.type_frais || V.fraisTypes[1] });
@@ -349,7 +415,7 @@ export default function GestionEnseignement({ mode }: Props) {
         else showToast(tr(d.message || "Les présences n'ont pas été enregistrées"), false);
       } else if (modal === "gen-bulletin") {
         if (!form.periode) { showToast(tr("Période obligatoire"), false); return; }
-        const d = await post("/bulletins/generate", { periode: form.periode, annee: form.annee || anneeScolaireEnCours(), publish: !!form.publish });
+        const d = await post("/bulletins/generate", { periode: form.periode, annee: (form.annee || anneeVue).trim(), publish: !!form.publish });
         if (d.success) { showToast(tr("{n} bulletin(s) généré(s)", { n: d.generated })); setModal(null); get("/bulletins").then(b => b.bulletins && setBulletins(b.bulletins)); }
         else showToast(tr(d.message || "Erreur"), false);
       }
@@ -512,6 +578,20 @@ export default function GestionEnseignement({ mode }: Props) {
     </div>
   );
 
+  // Notes et bulletins de l'année scolaire choisie (école)
+  const anneeDe = (x: any) => x.annee_scolaire || anneeScolaireEnCours();
+  const notesVues = isMadrasa ? grades : grades.filter(g => anneeDe(g) === anneeVue);
+  const bulletinsVus = isMadrasa ? bulletins : bulletins.filter(b => anneeDe(b) === anneeVue);
+  const anneesConnues = Array.from(new Set([anneeScolaireEnCours(), anneeVue, ...grades.map(anneeDe), ...bulletins.map(anneeDe)])).sort().reverse();
+  const choixAnnee = (
+    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+      <label style={{ fontSize:12, fontWeight:600, color:"#64748b" }}>{tr("Année scolaire")}</label>
+      <select value={anneeVue} onChange={e=>setAnneeVue(e.target.value)} style={{ border:"1px solid #e2e8f0",borderRadius:8,padding:"6px 10px",fontSize:13,background:"white" }}>
+        {anneesConnues.map(a=><option key={a} value={a}>{a}</option>)}
+      </select>
+    </div>
+  );
+
   // ── Modal ──────────────────────────────────────────────────────────────────
   const MODAL = modal ? (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
@@ -663,6 +743,12 @@ export default function GestionEnseignement({ mode }: Props) {
                 {PERIODES.map(p=><option key={p} value={p}>{tr(p)}</option>)}
               </select>
             </div>
+            {!isMadrasa && (
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Année scolaire")}</label>
+                <input value={form.annee_scolaire ?? anneeVue} onChange={e=>setForm((f:any)=>({...f,annee_scolaire:e.target.value}))} placeholder="2025-2026" className={inp} style={inpSt} />
+              </div>
+            )}
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Note *")}</label>
               <input type="number" min="0" max="20" step="0.25" value={form.note ?? ""} onChange={e=>setForm((f:any)=>({...f,note:e.target.value}))} className={inp} style={inpSt} placeholder="0–20" />
@@ -685,12 +771,13 @@ export default function GestionEnseignement({ mode }: Props) {
         </>)}
 
         {modal === "add-frais" && (<>
-          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{tr("Ajouter un frais")}</h3>
+          <h3 style={{ margin: "0 0 20px", fontSize: 16, fontWeight: 700 }}>{form.id ? tr("Modifier le frais") : tr("Ajouter un frais")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr(V.apprenant)} *</label>
-              <select value={form.student_id||""} onChange={e=>setForm((f:any)=>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
+              <select value={form.student_id||""} disabled={!!form.id} onChange={e=>setForm((f:any)=>({...f,student_id:e.target.value}))} className={inp} style={inpSt}>
                 <option value="">{tr("— Choisir —")}</option>
+                {form.id && !students.some(s=>String(s.id)===String(form.student_id)) && <option value={form.student_id}>{form.student_prenom} {form.student_nom}</option>}
                 {students.map(s=><option key={s.id} value={s.id}>{s.prenom} {s.nom}</option>)}
               </select>
             </div>
@@ -713,6 +800,19 @@ export default function GestionEnseignement({ mode }: Props) {
           </div>
         </>)}
 
+        {modal === "versement" && (<>
+          <h3 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 700 }}>{tr("Encaisser un paiement")}</h3>
+          <p style={{ margin: "0 0 16px", fontSize: 13, color: "#64748b" }}>
+            {form.eleve} · {tr(form.type_frais || "")} — {tr("reste {montant}", { montant: fmtMoney(form.reste) })}
+          </p>
+          <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Montant reçu (GNF) *")}</label>
+          <input type="number" min="1" max={form.reste} value={form.versement ?? ""} onChange={e=>setForm((f:any)=>({...f,versement:e.target.value}))} className={inp} style={inpSt} />
+          <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            <button onClick={()=>setForm((f:any)=>({...f,versement:String(f.reste)}))} style={{ padding: "5px 10px", fontSize: 12, borderRadius: 6, border: `1px solid ${V.color}`, color: V.color, background: "white", cursor: "pointer" }}>{tr("Tout le reste")}</button>
+          </div>
+          <p style={{ margin: "8px 0 0", fontSize: 11, color: "#94a3b8" }}>{tr("Un montant plus petit est enregistré comme avance : le reste reste à payer.")}</p>
+        </>)}
+
         {modal === "save-presence" && (<>
           <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 700 }}>{tr("Confirmer les présences")}</h3>
           <div style={{ background: "#f0fdf0", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: V.colorDark }}>
@@ -732,7 +832,7 @@ export default function GestionEnseignement({ mode }: Props) {
             </div>
             <div>
               <label style={{ ...lbl, display: "block", marginBottom: 4 }}>{tr("Année scolaire")}</label>
-              <input value={form.annee||anneeScolaireEnCours()} onChange={e=>setForm((f:any)=>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
+              <input value={form.annee ?? anneeVue} onChange={e=>setForm((f:any)=>({...f,annee:e.target.value}))} className={inp} style={inpSt} />
             </div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
@@ -842,7 +942,7 @@ export default function GestionEnseignement({ mode }: Props) {
             {section === "apprenants"  && <button onClick={()=>{setModal("add-apprenant");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {M("Nouvel apprenant", "Nouvel élève")}</button>}
             {section === "staff"       && <button onClick={()=>{setModal("add-staff");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter")}</button>}
             {section === "groupes"     && <button onClick={()=>{setModal("add-groupe");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {M("Créer une halaqa", "Créer une classe")}</button>}
-            {section === "notes"       && <button onClick={()=>{setModal("add-note");setForm({matiere:V.matieres[0],periode:"Trim 1"});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter note")}</button>}
+            {section === "notes"       && <button onClick={()=>{setModal("add-note");setForm({matiere:V.matieres[0],periode:"Trim 1",annee_scolaire:anneeVue});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter note")}</button>}
             {section === "frais"       && <button onClick={()=>{setModal("add-frais");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>+ {tr("Ajouter frais")}</button>}
             {section === "bulletins" && <button onClick={()=>{setModal("gen-bulletin");setForm({});}} style={{ display:"flex",alignItems:"center",gap:6,padding:"8px 16px",background:V.color,color:"white",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600 }}>⚙ {tr("Générer bulletins")}</button>}
           </div>
@@ -1137,7 +1237,8 @@ export default function GestionEnseignement({ mode }: Props) {
 
           {/* ── NOTES ── */}
           {section === "notes" && (
-            <div style={{ animation:"fadeIn 0.2s ease" }}>
+            <div style={{ animation:"fadeIn 0.2s ease", display:"flex", flexDirection:"column", gap:12 }}>
+              {!isMadrasa && choixAnnee}
               <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",overflowX:"auto",boxShadow:"0 1px 3px rgba(0,0,0,0.06)" }}>
                 <table style={{ width:"100%",borderCollapse:"collapse",fontSize:13 }}>
                   <thead><tr style={{ background:"#f8fafc",borderBottom:"1px solid #e2e8f0" }}>
@@ -1146,9 +1247,9 @@ export default function GestionEnseignement({ mode }: Props) {
                     ))}
                   </tr></thead>
                   <tbody>
-                    {grades.length===0 ? (
+                    {notesVues.length===0 ? (
                       <tr><td colSpan={V.sourate ? 7 : 6} style={{ padding:"40px 16px",textAlign:"center",color:"#94a3b8" }}>{tr("Aucune note enregistrée")}</td></tr>
-                    ) : grades.map(g=>{
+                    ) : notesVues.map(g=>{
                       const pct=(+g.note/+g.note_max)*100;
                       const nc=pct>=70?"#1a8f1a":pct>=50?"#d97706":"#ef4444";
                       return (
@@ -1181,8 +1282,8 @@ export default function GestionEnseignement({ mode }: Props) {
               <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12 }}>
                 {[
                   { label:tr("Total facturé"),  val:fmtMoney(fees.reduce((s,f)=>s+ +f.montant,0)),                             color:"#0369a1", bg:"#eff6ff" },
-                  { label:tr("Total encaissé"), val:fmtMoney(fees.filter(f=>f.est_paye).reduce((s,f)=>s+ +f.montant,0)),       color:"#1a8f1a", bg:"#f0fdf0" },
-                  { label:tr("Reste à payer"),  val:fmtMoney(fees.filter(f=>!f.est_paye).reduce((s,f)=>s+ +f.montant,0)),     color:"#dc2626", bg:"#fef2f2" },
+                  { label:tr("Total encaissé"), val:fmtMoney(fees.reduce((s,f)=>s+payeDe(f),0)),                              color:"#1a8f1a", bg:"#f0fdf0" },
+                  { label:tr("Reste à payer"),  val:fmtMoney(fees.reduce((s,f)=>s+Math.max(0,(+f.montant||0)-payeDe(f)),0)), color:"#dc2626", bg:"#fef2f2" },
                 ].map((c,i)=>(
                   <div key={i} style={{ background:"white",borderRadius:10,border:"1px solid #e2e8f0",padding:"14px 16px",borderInlineStart:`3px solid ${c.color}` }}>
                     <div style={{ fontSize:11,fontWeight:600,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6 }}>{c.label}</div>
@@ -1205,12 +1306,15 @@ export default function GestionEnseignement({ mode }: Props) {
                         onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="#fafafa"} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="transparent"}>
                         <td style={{ padding:"11px 14px",fontWeight:600,color:"#0f172a" }}>{f.student_prenom} {f.student_nom}</td>
                         <td style={{ padding:"11px 14px",color:"#475569" }}>{tr(f.type_frais || "")}</td>
-                        <td style={{ padding:"11px 14px",fontWeight:700,color:"#0f172a" }}>{fmtMoney(f.montant)}</td>
+                        <td style={{ padding:"11px 14px",fontWeight:700,color:"#0f172a",whiteSpace:"nowrap" }}>{fmtMoney(f.montant)}{!f.est_paye && payeDe(f) > 0 && <div style={{ fontSize:11,fontWeight:500,color:"#dc2626" }}>{tr("reste {montant}", { montant: fmtMoney(+f.montant - payeDe(f)) })}</div>}</td>
                         <td style={{ padding:"11px 14px",color:"#64748b" }}>{f.echeance?fmtDate(f.echeance):"—"}</td>
-                        <td style={{ padding:"11px 14px" }}><span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:f.est_paye?"#f0fdf0":"#fef2f2",color:f.est_paye?"#1a8f1a":"#dc2626" }}>{f.est_paye?tr("✓ Payé"):tr("Impayé")}</span></td>
+                        <td style={{ padding:"11px 14px" }}><span style={{ padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:f.est_paye?"#f0fdf0":payeDe(f)>0?"#fffbeb":"#fef2f2",color:f.est_paye?"#1a8f1a":payeDe(f)>0?"#b45309":"#dc2626",whiteSpace:"nowrap" }}>{f.est_paye?tr("✓ Payé"):payeDe(f)>0?tr("Avance {montant}", { montant: fmtMoney(payeDe(f)) }):tr("Impayé")}</span></td>
                         <td style={{ padding:"11px 14px" }}>
-                          <div style={{ display:"flex", gap:6 }}>
-                            {!f.est_paye && (
+                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                            {!f.est_paye && !isMadrasa && (
+                              <button onClick={()=>{ setForm({ id: f.id, type_frais: f.type_frais, eleve: `${f.student_prenom || ""} ${f.student_nom || ""}`.trim(), reste: Math.max(0, (+f.montant||0) - payeDe(f)), versement: String(Math.max(0, (+f.montant||0) - payeDe(f))) }); setModal("versement"); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
+                            )}
+                            {!f.est_paye && isMadrasa && (
                               <button onClick={async()=>{ if(!confirm(tr("Encaisser {montant} pour {eleve} ?", { montant: fmtMoney(+f.montant), eleve: `${f.student_prenom || ""} ${f.student_nom || ""}`.trim() }))) return; const d=await put(`/fees/${f.id}/pay`,{}); if(d.success){setFees(fs=>fs.map((x:any)=>x.id===f.id?{...x,est_paye:true,montant_paye:x.montant,date_paiement:new Date().toISOString(),...(d.fee||{}),student_prenom:x.student_prenom,student_nom:x.student_nom,telephone_parent:x.telephone_parent}:x));showToast(tr("Paiement enregistré"));} else showToast(tr(d.message || "Erreur : rien n'a été enregistré"), false); }} style={{ padding:"5px 10px",background:V.color,color:"white",border:"none",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Encaisser")}</button>
                             )}
                             {!f.est_paye && (
@@ -1224,7 +1328,17 @@ export default function GestionEnseignement({ mode }: Props) {
                                 date: f.echeance ? dateTexte(f.echeance) : "",
                               }))} style={{ padding:"5px 10px",background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>📲 {tr("Rappel")}</button>
                             )}
-                            {f.est_paye && (
+                            {!isMadrasa && (
+                              <button onClick={()=>{ setForm({ ...f, montant: String(f.montant ?? ""), echeance: f.echeance ? String(f.echeance).slice(0,10) : "" }); setModal("add-frais"); }} style={{ padding:"5px 10px",background:"white",color:V.color,border:`1px solid ${V.color}55`,borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Modifier")}</button>
+                            )}
+                            {!isMadrasa && (
+                              <button onClick={async()=>{ if(!confirm(payeDe(f) > 0
+                                  ? tr("Supprimer ce frais ? {montant} ont déjà été encaissés : ils disparaîtront aussi du rapport.", { montant: fmtMoney(payeDe(f)) })
+                                  : tr("Supprimer ce frais ?"))) return;
+                                const d=await del(`/fees/${f.id}`); if(d.success){ setFees(fs=>fs.filter((x:any)=>x.id!==f.id)); showToast(tr("Frais supprimé")); } else showToast(tr(d.message||"Erreur"),false); }}
+                                style={{ padding:"5px 10px",background:"#fef2f2",color:"#ef4444",border:"1px solid #fecaca",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>{tr("Suppr.")}</button>
+                            )}
+                            {payeDe(f) > 0 && (
                               <button onClick={() => printFeeReceipt(f, tenant, V.color)} style={{ padding:"5px 10px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:6,cursor:"pointer",fontSize:11,fontWeight:600 }}>🖨 {tr("Reçu")}</button>
                             )}
                           </div>
@@ -1239,8 +1353,9 @@ export default function GestionEnseignement({ mode }: Props) {
 
           {/* ── BULLETINS ── */}
           {section === "bulletins" && (
-            <div style={{ animation:"fadeIn 0.2s ease" }}>
-              {bulletins.length===0 ? (
+            <div style={{ animation:"fadeIn 0.2s ease", display:"flex", flexDirection:"column", gap:12 }}>
+              {!isMadrasa && choixAnnee}
+              {bulletinsVus.length===0 ? (
                 <div style={{ background:"white",borderRadius:12,border:"1px solid #e2e8f0",padding:"60px 20px",textAlign:"center" }}>
                   <div style={{ fontSize:48,marginBottom:12 }}>📋</div>
                   <div style={{ fontSize:14,fontWeight:600,color:"#0f172a",marginBottom:6 }}>{tr("Aucun bulletin généré")}</div>
@@ -1249,7 +1364,7 @@ export default function GestionEnseignement({ mode }: Props) {
                 </div>
               ) : (
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:16 }}>
-                  {bulletins.map(b=>{
+                  {bulletinsVus.map(b=>{
                     const mention=b.mention||"—";
                     const mc=mention.includes("Excellent")?"#1a8f1a":mention.includes("Très")?"#0891b2":mention.includes("Bien")?"#7c3aed":"#d97706";
                     return (
@@ -1279,7 +1394,8 @@ export default function GestionEnseignement({ mode }: Props) {
                             const w = window.open("", "_blank", "width=800,height=900");
                             if (!w) { alert(tr("Autorisez l'ouverture des fenêtres pour imprimer le bulletin.")); return; }
                             const d = await get(`/grades?student_id=${b.student_id}&periode=${encodeURIComponent(b.periode || "")}`);
-                            const notes = (d.grades || []).filter((g: any) => String(g.student_id) === String(b.student_id) && (g.periode || "") === (b.periode || ""));
+                            const notes = (d.grades || []).filter((g: any) => String(g.student_id) === String(b.student_id) && (g.periode || "") === (b.periode || "")
+                              && (isMadrasa || !b.annee_scolaire || !g.annee_scolaire || g.annee_scolaire === b.annee_scolaire));
                             printBulletin(b, tenant?.name || "", V.color, tenant?.logo_url, notes, w);
                           }} style={{ padding:"8px 14px",background:"#f8fafc",color:"#475569",border:"1px solid #e2e8f0",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13 }} title={tr("Imprimer")} aria-label={tr("Imprimer")}>🖨</button>
                         </div>

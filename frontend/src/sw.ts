@@ -5,6 +5,7 @@ import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL, match
 import { registerRoute, NavigationRoute } from 'workbox-routing'
 import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
+import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 import { clientsClaim, skipWaiting } from 'workbox-core'
 
 declare const self: ServiceWorkerGlobalScope
@@ -99,6 +100,21 @@ registerRoute(
   new CacheFirst({
     cacheName: 'uploads-cache',
     plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 2_592_000 })]
+  })
+)
+
+// Fichiers enregistrés en base (logo de l'établissement, photos des élèves et
+// du personnel, livres PDF de la bibliothèque) : gardés sur l'appareil pour
+// s'afficher et se lire aussi sans connexion. Un fichier enregistré ne change
+// jamais (un nouveau logo = un nouveau fichier).
+registerRoute(
+  ({ url, request }) => request.method === 'GET' && url.pathname.startsWith('/api/fichiers/'),
+  new CacheFirst({
+    cacheName: 'fichiers-cache',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxEntries: 400, maxAgeSeconds: 90 * 24 * 60 * 60, purgeOnQuotaError: true }),
+    ],
   })
 )
 
