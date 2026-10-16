@@ -14,6 +14,7 @@ import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, gnfTexte, dateTexte } from "../utils/rappelWhatsApp";
 import { PointageCours, BibliothequeGestion } from "../components/ecole/CoursEtBibliotheque";
 import ChoixLangueEcole from "../components/ChoixLangueEcole";
+import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
 
 interface Props { mode: "school" | "madrasa"; }
@@ -208,6 +209,15 @@ export default function GestionEnseignement({ mode }: Props) {
       .catch(e => setError(trHors("Impossible de joindre le serveur : {err}", { err: String(e?.message || e) })))
       .finally(() => setLoading(false));
   }, [get]);
+
+  // Employé qui est aussi enseignant ou parent ici : ses espaces, dans l'application
+  const [droitsMembre, setDroitsMembre] = useState<{ enseignant: boolean; parent: boolean } | null>(null);
+  useEffect(() => {
+    if (!tenant || !tenantCode) return;
+    let fini = false;
+    droitsMembreEcole(mode, tenantCode).then(d => { if (!fini) setDroitsMembre(d); });
+    return () => { fini = true; };
+  }, [!!tenant, tenantCode, mode]);
 
   const loadSection = useCallback((s: Section) => {
     setSection(s); setSearch(""); setNiveauFilter("");
@@ -760,6 +770,12 @@ export default function GestionEnseignement({ mode }: Props) {
           })}
         </nav>
         <div style={{ borderTop: "1px solid #e2e8f0", padding: 8, flexShrink: 0 }}>
+          {([["enseignant", "🧑‍🏫", tr("Mes cours"), droitsMembre?.enseignant], ["parent", "👪", tr("Mes enfants"), droitsMembre?.parent]] as const).filter(x => x[3]).map(([page, emoji, label]) => (
+            <button key={page} onClick={() => navigate(cheminAppEcole(mode, tenantCode!, page))} title={collapsed ? label : undefined}
+              style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: `${V.color}14`, color: V.colorDark, fontSize: 12, fontWeight: 600, justifyContent: collapsed ? "center" : "flex-start", marginBottom: 4 }}>
+              {emoji} {!collapsed && label}
+            </button>
+          ))}
           <button onClick={() => navigate(`/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}`)}
             title={collapsed ? tr("Voir la vitrine") : undefined}
             style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 11px", borderRadius: 8, border: "none", cursor: "pointer", background: "#f1f5f9", color: "#0f172a", fontSize: 12, fontWeight: 600, justifyContent: collapsed ? "center" : "flex-start", marginBottom: 4 }}

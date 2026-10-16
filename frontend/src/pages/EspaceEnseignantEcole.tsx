@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { config } from "../config/api";
-import LogoEtablissement from "../components/LogoEtablissement";
 import { heure, duree } from "../components/ecole/CoursEtBibliotheque";
 import { useTraduction } from "../i18n/traduction";
-import ChoixLangueEcole from "../components/ChoixLangueEcole";
+import BarreAppMembre from "../components/ecole/BarreAppMembre";
+import { cheminAppEcole } from "../utils/appEcole";
 
 // Espace de l'enseignant : il marque le début et la fin de chacun de ses cours.
 // L'heure enregistrée est celle du serveur ; le directeur la voit dans
@@ -24,7 +24,6 @@ interface Donnees {
 export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "school" | "madrasa" }) {
   const madrasa = mode === "madrasa";
   const VERT = madrasa ? "#0891b2" : "#1a8f1a";
-  const prefixe = madrasa ? "madrasa" : "ecole";
   const { tenantCode = "" } = useParams<{ tenantCode: string }>();
   const navigate = useNavigate();
   const { tr } = useTraduction();
@@ -42,7 +41,7 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
   }, [base]);
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: `/${prefixe}/${tenantCode}/enseignant` } }); return; }
+    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: cheminAppEcole(mode, tenantCode, "enseignant") } }); return; }
     charger();
   }, [charger, navigate, tenantCode]);
 
@@ -67,7 +66,7 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-2xl shadow-sm border p-6 max-w-sm text-center">
         <p className="text-sm text-slate-700">{tr(erreur)}</p>
-        <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 rounded-lg bg-slate-100 text-sm font-semibold">{tr("Retour")}</button>
+        <button onClick={charger} className="mt-4 px-4 py-2 rounded-lg bg-slate-100 text-sm font-semibold">{tr("🔄 Réessayer")}</button>
       </div>
     </div>
   );
@@ -76,18 +75,10 @@ export default function EspaceEnseignantEcole({ mode = "school" }: { mode?: "sch
   const enCours = d.enCours;
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="max-w-xl mx-auto px-4 pt-3 flex justify-end"><ChoixLangueEcole compact /></div>
-        <div className="max-w-xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="w-12 h-12 flex-shrink-0"><LogoEtablissement src={d.ecole.logo_url} name={d.ecole.nom} type={mode} fontSize={18} /></div>
-          <div className="min-w-0 flex-1">
-            <p className="font-bold text-slate-900 truncate">{d.ecole.nom}</p>
-            <p className="text-xs text-slate-500">{d.enseignant.prenom} {d.enseignant.nom} · {tr(d.jour)}</p>
-          </div>
-          <button onClick={() => navigate(`/${prefixe}/${tenantCode}/bibliotheque`)} className="px-3 py-2 rounded-lg text-xs font-bold text-white" style={{ background: VERT }}>
-            {tr("📚 Bibliothèque")}
-          </button>
-        </div>
+      <BarreAppMembre mode={mode} tenantCode={tenantCode} nom={d.ecole.nom} logoUrl={d.ecole.logo_url} actif="enseignant" />
+      <div className="max-w-xl mx-auto px-4 pt-4">
+        <p className="font-bold text-slate-900">{tr("🧑‍🏫 Mes cours")}</p>
+        <p className="text-xs text-slate-500">{d.enseignant.prenom} {d.enseignant.nom} · {tr(d.jour)}</p>
       </div>
 
       <div className="max-w-xl mx-auto px-4 py-4 space-y-4">

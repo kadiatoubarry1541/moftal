@@ -264,7 +264,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
       // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
       await sequelize.query(
         `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
-        { replacements: { uid: nh, msg: `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours : moftal.com/ecole/${code}/enseignant` } }
+        { replacements: { uid: nh, msg: `Vous êtes enregistré(e) au personnel de « ${req.tenant.name} ». Marquez le début et la fin de vos cours dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}/enseignant` } }
       ).catch(() => {});
     }
     res.json({ success: true, staff: rows[0] });
@@ -591,7 +591,7 @@ router.post('/:tenantCode/members/add', authenticate, verifyTenant, async (req, 
     }
     await sequelize.query(
       `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
-      { replacements: { uid: numero_h, msg: `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}).` } }
+      { replacements: { uid: numero_h, msg: `Vous avez été ajouté(e) à l'établissement "${req.tenant.name}" (rôle : ${role || 'parent'}). Suivez vos enfants dans l'application de l'école : gestions.moftal.com/gestion-ecole/${code}` } }
     ).catch(() => {});
     res.json({ success: true, member: rows[0], user: { prenom: user.prenom, nom: user.nom } });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }

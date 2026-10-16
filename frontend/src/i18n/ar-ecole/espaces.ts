@@ -32,6 +32,10 @@ const ar: Record<string, string> = {
   "Erreur de connexion": "خطأ في الاتصال",
   "Aucun bulletin publié pour le moment": "لم يُنشر أي كشف نقاط حتى الآن",
   "📚 Bibliothèque": "📚 المكتبة",
+  "👪 Mes enfants": "👪 أبنائي",
+  "🧑‍🏫 Mes cours": "🧑‍🏫 دروسي",
+  "Mes enfants": "أبنائي",
+  "Mes cours": "دروسي",
 
   // Valeurs courantes affichées (périodes, mentions, frais)
   "Trimestre 1": "الفصل الدراسي الأول",

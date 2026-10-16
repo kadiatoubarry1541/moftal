@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { config } from "../config/api";
+import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
 import { ADMIN_SERVICES } from "./EspaceProModals";
 import { TenantLogo, goToMoftal, MoftalMark } from "./GestionBrand";
 import InstallAppButton from "./InstallAppButton";
@@ -9,7 +9,8 @@ import { useTraduction } from "../i18n/traduction";
 
 // Application de gestion ouverte par quelqu'un qui n'est ni le propriétaire ni
 // un employé : c'est un client. Il arrive sur le site de l'établissement — un
-// parent d'élève, sur l'espace de ses enfants. Si le site n'existe pas, cet
+// parent d'élève ou un enseignant reste dans l'application, sur son espace
+// (ses enfants, ses cours). Si le site n'existe pas, cet
 // écran explique comment se faire ajouter (et permet d'installer quand même).
 export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji = "🏢" }: {
   message?: string | null;
@@ -29,7 +30,7 @@ export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji
 
   const [redirection, setRedirection] = useState(true);
 
-  // Client : site de l'établissement ; parent d'élève : l'espace de ses enfants
+  // Client : site de l'établissement ; parent ou enseignant : son espace dans l'application
   useEffect(() => {
     if (abonnement || reseau) { setRedirection(false); return; }
     const segment = window.location.pathname.split("/")[1] || "";
@@ -38,13 +39,12 @@ export default function AccesRefuseGestion({ message, couleur = "#0f172a", emoji
     if (!vitrine || !tenantCode) { setRedirection(false); return; }
     let fini = false;
     (async () => {
+      // École / madrasa : parents et enseignants restent dans l'application,
+      // chacun dans son espace (ses enfants, ses cours)
       if (service.type === "school" || service.type === "madrasa") {
-        const api = service.type === "school" ? "school-mgmt" : "madrasa-mgmt";
-        const r = await fetch(`${config.API_BASE_URL}/${api}/${tenantCode}/my-access`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
-        }).catch(() => null);
-        const d = r ? await r.json().catch(() => ({})) : {};
-        if (!fini && r?.ok && d.success !== false) { navigate(`/${vitrine}/${tenantCode}/espace-parent`, { replace: true }); return; }
+        const droits = await droitsMembreEcole(service.type, tenantCode);
+        const page = droits.enseignant ? "enseignant" : droits.parent ? "parent" : null;
+        if (!fini && page) { navigate(cheminAppEcole(service.type, tenantCode, page), { replace: true }); return; }
       }
       if (!fini) navigate(`/${vitrine}/${tenantCode}`, { replace: true });
     })();
