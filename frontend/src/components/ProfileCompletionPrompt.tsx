@@ -55,10 +55,13 @@ export default function ProfileCompletionPrompt() {
   const goComplete = () => { setBlockedMessage(null); navigate(PAGE_MAJ_PROFIL); };
   // Sur la page du profil, le formulaire est déjà là : pas de bannière par-dessus
   const onCompletePage = pathname.startsWith("/moi/profil");
+  // Gestion interne : le pro approuvé y travaille sans rappel par-dessus ses
+  // formulaires (le rappel cachait le bouton « Enregistrer »)
+  const dansGestion = /^\/(gestion-[a-z0-9-]+|espace-pro)(\/|$)/.test(pathname);
 
   return (
     <>
-      {provisional && !onCompletePage && !dismissed && !blockedMessage && (
+      {provisional && !onCompletePage && !dansGestion && !dismissed && !blockedMessage && (
         <div role="status" style={{ position: "fixed", left: 12, right: 12, bottom: 64, zIndex: 9998, maxWidth: 480, margin: "0 auto" }}
           className="flex items-center gap-3 rounded-2xl bg-white border border-amber-200 shadow-lg px-4 py-3">
           <span className="text-2xl">👤</span>

@@ -3,6 +3,7 @@ import { Op } from 'sequelize';
 import User from '../models/User.js';
 import { sequelize } from '../config/database.js';
 import { authenticate, requireAdmin, MASTER_ADMIN_NUMEROS } from '../middleware/auth.js';
+import { listerEchecsSynchro } from '../middleware/echecsSynchro.js';
 
 const router = express.Router();
 
@@ -637,6 +638,13 @@ router.post('/desactiver-arbre/:treeId', async (req, res) => {
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
+});
+
+// Opérations faites hors connexion puis refusées à l'envoi (middleware/echecsSynchro.js)
+router.get('/echecs-synchro', authenticate, requireAdmin, async (req, res) => {
+  try {
+    res.json({ success: true, echecs: await listerEchecsSynchro() });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 export default router;

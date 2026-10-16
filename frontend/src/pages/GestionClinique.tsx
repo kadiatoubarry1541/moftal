@@ -10,6 +10,7 @@ import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { BoutonRapport } from "../components/RapportMois";
 import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
+import { libelleMedicament } from "../utils/medicament";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
@@ -102,7 +103,7 @@ function printPrescription(p: any, clinicName: string, logoUrl?: string | null) 
 <div class="s-label" style="margin-top:0">Patient</div><div class="pat-box"><div class="pat-name">${p.p_prenom||""} ${p.p_nom||""}</div></div>
 ${p.diagnostic?`<div class="s-label">Diagnostic</div><div class="diag">${p.diagnostic}</div>`:""}
 <div class="s-label">Médicaments prescrits</div>
-${meds.length===0?'<p style="color:#94a3b8;font-size:13px">Aucun médicament</p>':meds.map((m:any)=>`<div class="med-item">◆ &nbsp;${m.medicament||m}</div>`).join("")}
+${meds.length===0?'<p style="color:#94a3b8;font-size:13px">Aucun médicament</p>':meds.map((m:any)=>`<div class="med-item">◆ &nbsp;${libelleMedicament(m)}</div>`).join("")}
 ${p.notes?`<div class="s-label">Notes</div><p style="font-size:12px;color:#64748b;font-style:italic">${p.notes}</p>`:""}
 <div class="footer"><div class="sig">Dr. ${p.s_nom?`${p.s_prenom||""} ${p.s_nom}`:"..."}<br>Médecin prescripteur</div></div>
 </body></html>`;
@@ -968,10 +969,10 @@ export default function GestionClinique() {
                     </div>
                   </div>
                   {p.diagnostic && <p style={{ fontSize: 13, color: "#475569", marginBottom: 10 }}><strong>Diagnostic :</strong> {p.diagnostic}</p>}
-                  {p.medicaments?.length > 0 && (
+                  {Array.isArray(p.medicaments) && p.medicaments.length > 0 && (
                     <div style={{ background: "#f8fafc", borderRadius: 8, padding: "12px 14px" }}>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Médicaments</p>
-                      {p.medicaments.map((m: any, i: number) => <div key={i} style={{ fontSize: 13, color: "#475569", padding: "2px 0" }}>◆ {m.medicament || m}</div>)}
+                      {p.medicaments.map((m: any, i: number) => <div key={i} style={{ fontSize: 13, color: "#475569", padding: "2px 0" }}>◆ {libelleMedicament(m)}</div>)}
                     </div>
                   )}
                   {p.notes && <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>{p.notes}</p>}
@@ -1468,7 +1469,7 @@ export default function GestionClinique() {
                                 setDispensingMed(p);
                                 // Proposition : l'article du stock dont le nom figure dans la ligne prescrite
                                 setDispenseLignes(meds.map((m: any) => {
-                                  const texte = String(m?.medicament || m || "").toLowerCase();
+                                  const texte = libelleMedicament(m).toLowerCase();
                                   const article = pharmacyStock.find(st => st.nom && texte.includes(String(st.nom).toLowerCase()));
                                   return { stock_id: article ? String(article.id) : "", quantite: article ? "1" : "" };
                                 }));
@@ -1483,7 +1484,7 @@ export default function GestionClinique() {
                           {meds.length === 0
                             ? <span style={{ color: "#94a3b8", fontSize: 12 }}>Aucun médicament listé</span>
                             : meds.map((m: any, i: number) => (
-                              <span key={i} style={{ padding: "4px 12px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 20, fontSize: 12, fontWeight: 600, border: `1px solid #99f6e4` }}>💊 {m.medicament || m}</span>
+                              <span key={i} style={{ padding: "4px 12px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 20, fontSize: 12, fontWeight: 600, border: `1px solid #99f6e4` }}>💊 {libelleMedicament(m)}</span>
                             ))
                           }
                         </div>
@@ -1507,7 +1508,7 @@ export default function GestionClinique() {
                               <div key={i} style={{ padding: "8px 0", borderBottom: i < dispensingMed.medicaments.length-1 ? "1px solid #ccfbf1" : "none" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                                   <span style={{ color: TEAL }}>💊</span>
-                                  <span style={{ flex: 1, fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{m.medicament || m}</span>
+                                  <span style={{ flex: 1, fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{libelleMedicament(m)}</span>
                                 </div>
                                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                   <select className={inp} style={{ ...inpStyle, flex: "1 1 180px", minWidth: 0 }}
@@ -1599,7 +1600,7 @@ export default function GestionClinique() {
                             <td style={{ padding: "11px 14px" }}>
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                                 {meds.slice(0, 3).map((m: any, i: number) => (
-                                  <span key={i} style={{ padding: "2px 8px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 12, fontSize: 11 }}>💊 {m.medicament || m}</span>
+                                  <span key={i} style={{ padding: "2px 8px", background: "#f0fdfa", color: TEAL_DARK, borderRadius: 12, fontSize: 11 }}>💊 {libelleMedicament(m)}</span>
                                 ))}
                                 {meds.length > 3 && <span style={{ color: "#94a3b8", fontSize: 11 }}>+{meds.length-3}</span>}
                               </div>

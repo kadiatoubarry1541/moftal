@@ -174,6 +174,7 @@ const ar: Record<string, string> = {
   "Actualiser": "تحديث",
   "Opérations refusées": "العمليات المرفوضة",
   "Faites hors connexion, elles ont été refusées par le serveur. Corrigez la cause (par exemple une information manquante) puis réessayez, ou retirez-les.": "أُنجزت دون اتصال ثم رفضها الخادم. صحّحوا السبب (مثل معلومة ناقصة) ثم أعيدوا المحاولة، أو احذفوها.",
+  "Rien n'est perdu : elles restent sur cet appareil. Le responsable de l'établissement et l'administration Moftal ont été prévenus.": "لم يضِع شيء: تبقى على هذا الجهاز. وقد تم إبلاغ مسؤول المؤسسة وإدارة Moftal.",
   "Retirer définitivement cette opération ? Elle ne sera jamais enregistrée.": "حذف هذه العملية نهائيًا؟ لن تُحفظ أبدًا.",
   "Retirer": "حذف",
   "Ajout": "إضافة",

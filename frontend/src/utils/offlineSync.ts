@@ -618,6 +618,10 @@ export function syncNow(): Promise<void> {
       const headers = { ...item.headers };
       const token = localStorage.getItem("token");
       if (token && headers["authorization"]) headers["authorization"] = `Bearer ${token}`;
+      // Envoi d'une opération faite hors connexion : si le serveur la refuse, il
+      // prévient la personne, le responsable et les administrateurs
+      headers["x-moftal-replay"] = "1";
+      headers["x-moftal-replay-essai"] = String((item.essais || 0) + 1);
 
       let res: Response;
       try {

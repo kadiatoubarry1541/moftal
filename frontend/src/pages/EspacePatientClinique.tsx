@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
+import { libelleMedicament } from "../utils/medicament";
 
 const API_BASE = config.API_BASE_URL || "http://localhost:5002/api";
 const TEAL = "#1a8f1a";
@@ -342,7 +343,7 @@ export default function EspacePatientClinique() {
                       {meds.map((m: any, i: number) => (
                         <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#f8fafc", borderRadius: 8, borderLeft: `3px solid ${TEAL}`, fontSize: 13 }}>
                           <span style={{ color: TEAL }}>◆</span>
-                          <span style={{ color: "#0f172a", fontWeight: 500 }}>{m.medicament || m}</span>
+                          <span style={{ color: "#0f172a", fontWeight: 500 }}>{libelleMedicament(m)}</span>
                         </div>
                       ))}
                     </div>

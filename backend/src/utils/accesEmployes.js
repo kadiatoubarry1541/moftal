@@ -54,7 +54,28 @@ async function accesActif(tenantCode, numeroH) {
 export async function estEmployeDeLaGestion(numeroH, url) {
   const m = /^\/api\/[a-z]+-mgmt\/([^/?]+)/.exec(url || '');
   if (!m || !numeroH) return false;
-  try { return !!(await accesActif(decodeURIComponent(m[1]), numeroH)); } catch { return false; }
+  const code = decodeURIComponent(m[1]);
+  try { if (await accesActif(code, numeroH)) return true; } catch { /* table absente */ }
+  return estPersonnelEnregistre(code, numeroH, /^\/api\/([a-z]+)-mgmt\//.exec(url)[1]);
+}
+
+// Fiches du personnel reliées à un compte Moftal (médecin, infirmier, enseignant) :
+// ces personnes travaillent dans la gestion, même avec un profil pas encore complété.
+const TABLES_PERSONNEL = {
+  clinic: 'clinic_staff WHERE is_active = true',
+  school: 'school_staff WHERE is_active = true',
+  madrasa: 'madrasa_staff WHERE COALESCE(is_active, true) = true',
+};
+async function estPersonnelEnregistre(tenantCode, numeroH, secteur) {
+  const table = TABLES_PERSONNEL[secteur];
+  if (!table) return false;
+  try {
+    const [row] = await sequelize.query(
+      `SELECT 1 FROM ${table} AND tenant_code = :code AND LOWER(TRIM(numero_h)) = LOWER(TRIM(:nh)) LIMIT 1`,
+      { replacements: { code: tenantCode, nh: numeroH }, type: sequelize.QueryTypes.SELECT }
+    );
+    return !!row;
+  } catch { return false; }
 }
 
 // Ce qu'un employé n'a pas le droit de faire, selon son niveau (null = autorisé).
