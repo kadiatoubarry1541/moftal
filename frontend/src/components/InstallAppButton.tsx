@@ -99,6 +99,56 @@ function isAndroid() {
   return /Android/i.test(navigator.userAgent);
 }
 
+// Ordinateur (Windows, Mac, Linux) : ni téléphone ni tablette. Un iPad récent se
+// présente comme un Mac, mais avec un écran tactile.
+function estOrdinateur() {
+  const ua = navigator.userAgent;
+  if (isIOS() || isAndroid() || /Mobi|Tablet/i.test(ua)) return false;
+  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return false;
+  return true;
+}
+
+// Chrome / Edge sur ordinateur proposent eux-mêmes l'installation ; Safari (Mac)
+// et Firefox ne le font jamais : on donne alors la marche à suivre tout de suite.
+function installationAutoPossible() {
+  return "onbeforeinstallprompt" in window;
+}
+
+// Marche à suivre sur ordinateur, selon le navigateur.
+function ConsignesOrdinateur({ couleur }: { couleur: string }) {
+  const { tr } = useTraduction();
+  const ua = navigator.userAgent;
+  const firefox = /Firefox\//.test(ua);
+  const safari = /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR/.test(ua);
+  if (firefox) {
+    return (
+      <>
+        <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>{tr("Ce navigateur ne sait pas installer d'application sur l'ordinateur. Ouvrez la page dans Chrome ou Edge :")}</div>
+        <BoutonCopierLien couleur={couleur} />
+        <div style={{ color: "#64748b" }}>{tr("Copiez le lien, ouvrez Chrome ou Edge, collez-le dans la barre d'adresse, connectez-vous, puis installez.")}</div>
+      </>
+    );
+  }
+  if (safari) {
+    return (
+      <>
+        <div>{gras(tr("1. En haut de l'écran, ouvrez le menu **Fichier** de Safari"))}</div>
+        <div>{gras(tr("2. Choisissez « **Ajouter au Dock** »"))}</div>
+        <div>{gras(tr("3. Cliquez sur **Ajouter**. L'icône apparaît dans le Dock."))}</div>
+        <div style={{ marginTop: 4, color: "#64748b" }}>{tr("« Ajouter au Dock » n'apparaît pas ? Mettez le Mac à jour, ou ouvrez la page dans Chrome ou Edge.")}</div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div>{gras(tr("1. Cliquez sur l'icône **Installer** à droite de la barre d'adresse (un écran avec une flèche)"))}</div>
+      <div>{gras(tr("2. Sinon, ouvrez le menu **⋮** ou **…** du navigateur (en haut à droite) et choisissez « **Installer…** » (dans Chrome, parfois sous « **Caster, enregistrer et partager** »)"))}</div>
+      <div>{tr("3. Confirmez. L'application s'ouvre dans sa propre fenêtre et son icône apparaît sur le bureau ou dans le menu Démarrer.")}</div>
+      <div style={{ marginTop: 4, color: "#64748b" }}>{tr("Si le menu dit « Ouvrir dans l'application », elle est déjà installée sur cet ordinateur.")}</div>
+    </>
+  );
+}
+
 // Vrai onglet Chrome sur Android (pas l'app Moftal ni une autre application,
 // ni un autre navigateur) : le seul endroit où le téléphone propose d'installer.
 function estOngletChrome() {
@@ -341,6 +391,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
   }, []);
 
   if (!ouvert) return null;
+  const ordi = estOrdinateur();
 
   const installer = async () => {
     setEtat("installation");
@@ -382,11 +433,15 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
             : <div style={{ width: 56, height: 56, borderRadius: 12, background: themeColor, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, fontWeight: 800 }}>{((name || "").trim()[0] || "•").toUpperCase()}</div>}
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>{name ? tr("Installer {nom}", { nom: name }) : tr("Installer l'application")}</div>
-            <div style={{ fontSize: 13, color: "#64748b" }}>{tr("L'icône apparaîtra sur votre écran d'accueil")}</div>
+            <div style={{ fontSize: 13, color: "#64748b" }}>{ordi ? tr("L'icône apparaîtra sur le bureau de l'ordinateur") : tr("L'icône apparaîtra sur votre écran d'accueil")}</div>
           </div>
         </div>
         {etat === "installee" ? (
-          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{tr("✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.")}</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{ordi ? tr("✅ Application installée — ouvrez-la depuis son icône sur le bureau ou dans le menu Démarrer.") : tr("✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.")}</p>
+        ) : ordi && (etat === "manuel" || !installationAutoPossible()) ? (
+          <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
+            <ConsignesOrdinateur couleur={themeColor} />
+          </div>
         ) : isIOS() ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
             <ConsignesIPhone couleur={themeColor} />
@@ -411,7 +466,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
           </div>
         ) : (
           <button onClick={installer} disabled={etat === "installation"} style={{ width: "100%", padding: 14, background: themeColor, color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10, opacity: etat === "installation" ? 0.75 : 1 }}>
-            {etat === "installation" ? tr("⏳ Installation…") : tr("📲 Installer maintenant")}
+            {etat === "installation" ? tr("⏳ Installation…") : ordi ? tr("💻 Installer sur cet ordinateur") : tr("📲 Installer maintenant")}
           </button>
         )}
         <button onClick={() => setOuvert(false)} style={{ width: "100%", padding: 12, background: "#f1f5f9", color: "#334155", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
@@ -466,6 +521,7 @@ export function InvitationInstallerMoftal() {
   };
 
   const ios = isIOS();
+  const ordi = estOrdinateur();
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setOuvert(false); }}>
       <div style={{ background: "white", borderRadius: "24px 24px 0 0", padding: "28px 24px 36px", width: "100%", maxWidth: 480, boxShadow: "0 -8px 40px rgba(0,0,0,0.22)", textAlign: "start" }}>
@@ -473,14 +529,14 @@ export function InvitationInstallerMoftal() {
           <img src="/logo-moftal.svg" alt="" style={{ width: 56, height: 56, borderRadius: 12 }} />
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>{tr("Installer l'application Moftal")}</div>
-            <div style={{ fontSize: 13, color: "#64748b" }}>{tr("Gratuite — l'icône apparaîtra sur votre écran d'accueil")}</div>
+            <div style={{ fontSize: 13, color: "#64748b" }}>{ordi ? tr("Gratuite — l'icône apparaîtra sur le bureau de l'ordinateur") : tr("Gratuite — l'icône apparaîtra sur votre écran d'accueil")}</div>
           </div>
         </div>
         {etat === "installee" ? (
-          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{tr("✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.")}</p>
-        ) : etat === "manuel" || (ios && etat === "") ? (
+          <p style={{ fontSize: 14, fontWeight: 700, color: "#166534", margin: "0 0 12px" }}>{ordi ? tr("✅ Application installée — ouvrez-la depuis son icône sur le bureau ou dans le menu Démarrer.") : tr("✅ Application installée — ouvrez-la depuis son icône sur l'écran d'accueil.")}</p>
+        ) : etat === "manuel" || (ios && etat === "") || (ordi && !installationAutoPossible()) ? (
           <div style={{ fontSize: 13, color: "#334155", lineHeight: 1.7, marginBottom: 12 }}>
-            {ios ? (
+            {ordi ? <ConsignesOrdinateur couleur="#1a8f1a" /> : ios ? (
               <>
                 <div>{gras(tr("1. Appuyez sur le bouton **Partager ⎙** en bas de Safari"))}</div>
                 <div>{gras(tr("2. Choisissez « **Sur l'écran d'accueil** »"))}</div>
@@ -496,7 +552,7 @@ export function InvitationInstallerMoftal() {
           </div>
         ) : (
           <button onClick={installer} disabled={etat === "installation"} style={{ width: "100%", padding: 14, background: "#1a8f1a", color: "white", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 10, opacity: etat === "installation" ? 0.75 : 1 }}>
-            {etat === "installation" ? tr("⏳ Installation…") : tr("📲 Installer maintenant")}
+            {etat === "installation" ? tr("⏳ Installation…") : ordi ? tr("💻 Installer sur cet ordinateur") : tr("📲 Installer maintenant")}
           </button>
         )}
         <button onClick={() => setOuvert(false)} style={{ width: "100%", padding: 12, background: "#f1f5f9", color: "#334155", border: "none", borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
@@ -602,6 +658,7 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
     // masque jamais le bouton pour autant : on affiche des instructions manuelles, en
     // adaptant le texte selon l'appareil (iOS vs Android/desktop générique).
     const ios = isIOS();
+    const ordi = estOrdinateur();
     const steps = ios
       ? [
           { icon: "⎙", text: tr("Appuyez sur le bouton Partager en bas de Safari") },
@@ -629,10 +686,10 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
               <span style={{ fontSize: 22 }}>📲</span>
               <span>
                 <span style={{ display: "block", fontSize: 13, fontWeight: 800, color: "#166534" }}>{tr("Installer l'application")}</span>
-                <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>{tr("Application mobile gratuite")}</span>
+                <span style={{ display: "block", fontSize: 11, color: "#4b7c5c" }}>{ordi ? tr("Application gratuite pour ordinateur") : tr("Application mobile gratuite")}</span>
               </span>
             </>
-          ) : "📲"}
+          ) : (ordi ? "💻" : "📲")}
         </button>
         {showHelpCard && (
           <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={e => { if (e.target === e.currentTarget) setShowHelpCard(false); }}>
@@ -642,13 +699,15 @@ function MainAppInstallButton({ variant = "icon" }: { variant?: "icon" | "banner
                 <img src="/logo-moftal.svg" alt="" style={{ width: 56, height: 56, borderRadius: 12 }} />
                 <div>
                   <div style={{ fontSize: 17, fontWeight: 800 }}>{tr("Installer Moftal")}</div>
-                  <div style={{ fontSize: 13, color: "#64748b" }}>{tr("Application mobile gratuite")}</div>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>{ordi ? tr("Application gratuite pour ordinateur") : tr("Application mobile gratuite")}</div>
                 </div>
               </div>
               <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", marginBottom: 12 }}>
-                {ios ? tr("Installer sur iPhone / iPad :") : tr("Installer sur ce téléphone :")}
+                {ios ? tr("Installer sur iPhone / iPad :") : ordi ? tr("Installer sur cet ordinateur :") : tr("Installer sur ce téléphone :")}
               </p>
-              {steps.map((s, i) => (
+              {ordi ? (
+                <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}><ConsignesOrdinateur couleur="#1a8f1a" /></div>
+              ) : steps.map((s, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
                   <div style={{ width: 34, height: 34, borderRadius: 8, background: "#1a8f1a", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, flexShrink: 0 }}>{s.icon}</div>
                   <span style={{ fontSize: 13, color: "#374151" }}>{s.text}</span>
@@ -740,6 +799,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   const STORAGE_KEY = getTenantStorageKey();
   const android = isAndroid();
+  const ordi = estOrdinateur();
   const codeChrome = useCodeChrome(showToast && android);
 
   useEffect(() => {
@@ -847,7 +907,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
   if (installed && dejaSurEcran && !dansLApp) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#166534" }}>
-        {tr("✅ Application installée sur votre écran d'accueil — ouvrez-la depuis l'icône.")}
+        {ordi ? tr("✅ Application installée sur cet ordinateur — ouvrez-la depuis son icône (bureau ou menu Démarrer).") : tr("✅ Application installée sur votre écran d'accueil — ouvrez-la depuis l'icône.")}
       </span>
     );
   }
@@ -865,7 +925,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
         disabled={installing}
         style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "8px 14px", background: themeColor, color: "white", border: "none", borderRadius: 10, cursor: installing ? "default" : "pointer", fontSize: 13, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.18)", opacity: installing ? 0.75 : 1 }}
       >
-        <span style={{ fontSize: 16 }}>{installing ? "⏳" : "📲"}</span>
+        <span style={{ fontSize: 16 }}>{installing ? "⏳" : ordi ? "💻" : "📲"}</span>
         {installing ? tr("Installation…") : (label || tr("Installer"))}
       </button>
       {showToast && (
@@ -888,7 +948,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
               <div style={{ marginTop: 8, fontWeight: 700 }}>{tr("Si rien ne s'ouvre :")}</div>
             </>
           )}
-          {isIOS() ? <ConsignesIPhone couleur={themeColor} /> : (<>
+          {ordi ? <ConsignesOrdinateur couleur={themeColor} /> : isIOS() ? <ConsignesIPhone couleur={themeColor} /> : (<>
           {!android && <strong>{tr("Le téléphone n'a pas ouvert l'installation. Faites-le à la main :")}</strong>}
           <div>{gras(tr("1. Menu **⋮** du navigateur (en haut à droite)"))}</div>
           {android && <div>{gras(tr("2. Si vous voyez « **Ouvrir dans Chrome** », choisissez-le, puis rouvrez le menu **⋮**"))}</div>}
