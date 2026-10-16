@@ -3,6 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import GaleriePhotosSite from "../components/ecole/GaleriePhotosSite";
+import { usePhotosSite } from "../utils/photosSite";
+import { getPhotoUrl } from "../utils/auth";
 import ChoixLangueEcole from "../components/ChoixLangueEcole";
 import { useTraduction } from "../i18n/traduction";
 
@@ -35,6 +38,7 @@ export default function EcoleVitrine() {
   const [enrollSending, setEnrollSending] = useState(false);
   const [enrollSent, setEnrollSent] = useState(false);
   const [enrollError, setEnrollError] = useState("");
+  const photos = usePhotosSite(tenantCode);
 
   useEffect(() => {
     const code = tenantCode!;
@@ -66,6 +70,7 @@ export default function EcoleVitrine() {
   };
 
   const isLoggedIn = !!localStorage.getItem("token");
+  const couverture = photos.find(p => p.est_couverture) || photos[0];
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
@@ -138,12 +143,22 @@ export default function EcoleVitrine() {
             <ChoixLangueEcole compact />
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-            {[["Accueil","hero"],["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
+            {[["Accueil","hero"],...(photos.length ? [["Photos","photos"]] : []),["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
               <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
           </div>
         </div>
       </nav>
+
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'application de l'école) */}
+      {couverture && (
+        <div style={{ position: "relative", height: "clamp(220px, 45vw, 480px)", background: "#0f172a", overflow: "hidden" }}>
+          <img src={getPhotoUrl(couverture.image_url) || ""} alt={couverture.legende || school.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          {couverture.legende && (
+            <span style={{ position: "absolute", insetInline: 0, bottom: 0, padding: "40px 20px 14px", background: "linear-gradient(transparent, rgba(15,23,42,0.7))", color: "white", fontSize: 14, fontWeight: 600, textAlign: "center" }}>{couverture.legende}</span>
+          )}
+        </div>
+      )}
 
       {/* HERO */}
       <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -278,6 +293,9 @@ export default function EcoleVitrine() {
         </section>
       )}
 
+      {/* GALERIE */}
+      <GaleriePhotosSite photos={photos} couleur={GREEN} />
+
       {/* POURQUOI NOUS */}
       <section style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
@@ -370,7 +388,7 @@ export default function EcoleVitrine() {
             <div style={{ textAlign: "center", marginTop: 32 }}>
               <button onClick={() => window.open(`https://wa.me/${school.phone.replace(/\D/g,"")}?text=${encodeURIComponent(tr("Bonjour ! Je souhaite des informations sur l'école."))}`, "_blank")}
                 style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                {tr("📲 Contacter via WhatsApp")}
+                {tr("📲 Nous écrire")}
               </button>
             </div>
           )}

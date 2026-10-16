@@ -1,6 +1,6 @@
 // Composants partagés des gestions internes : paramètres, abonnement,
 // installation de l'application, rapport du mois, bandeau hors connexion,
-// panneau Espace Pro, reçu imprimé et rappel WhatsApp.
+// panneau Espace Pro, reçu imprimé et rappel par message.
 const ar: Record<string, string> = {
   "Téléphone, e-mail ou NuméroH requis.": "الهاتف أو البريد الإلكتروني أو رقم NuméroH مطلوب.",
   "Abonnement de la gestion à régler": "اشتراك الإدارة بحاجة إلى التسديد",
@@ -213,7 +213,7 @@ const ar: Record<string, string> = {
   "Échéance": "تاريخ الاستحقاق",
   "Frais de scolarité": "الرسوم الدراسية",
 
-  // ── Rappel WhatsApp ───────────────────────────────────────────────────────
+  // ── Rappel par message ───────────────────────────────────────────────────────
   "Aucun numéro de téléphone enregistré pour envoyer le rappel.": "لا يوجد رقم هاتف مسجّل لإرسال التذكير.",
 };
 export default ar;

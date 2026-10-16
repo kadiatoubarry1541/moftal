@@ -1,4 +1,6 @@
 import express from 'express';
+import { notifierMembreEtablissement } from '../utils/notificationsEtablissement.js';
+import { ajouterRoutesPhotosPubliques } from './photosSiteEtablissement.js';
 import { fillTenantsFromAccounts } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
@@ -306,6 +308,8 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
   }
 });
 
+ajouterRoutesPhotosPubliques(router);
+
 // ─── ÉCOLE : pré-inscription en ligne (visiteur non encore élève) ──────────
 router.post('/school/:tenantCode/enroll-request', async (req, res) => {
   try {
@@ -318,6 +322,11 @@ router.post('/school/:tenantCode/enroll-request', async (req, res) => {
        VALUES (:code, :nom, :dob, :niveau, :parent, :tel) RETURNING *`,
       { replacements: { code: tenantCode, nom: nom_enfant, dob: date_naissance || null, niveau: niveau_souhaite || null, parent: nom_parent || null, tel: telephone_parent }, type: sequelize.QueryTypes.INSERT }
     );
+    // Le responsable de l'école est prévenu (cloche + journal de l'application)
+    const [t] = await sequelize.query('SELECT owner_numero_h FROM management_tenants WHERE tenant_code = :code LIMIT 1', { replacements: { code: tenantCode }, type: sequelize.QueryTypes.SELECT });
+    if (t?.owner_numero_h) {
+      await notifierMembreEtablissement(tenantCode, t.owner_numero_h, 'inscription', `${nom_enfant}${niveau_souhaite ? ` (${niveau_souhaite})` : ''} — parent : ${nom_parent || '—'}, ${telephone_parent}`, { url: `/gestion-ecole/${tenantCode}` });
+    }
     res.json({ success: true, request: rows[0] });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });

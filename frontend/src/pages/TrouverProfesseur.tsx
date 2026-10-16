@@ -165,7 +165,7 @@ export default function TrouverProfesseur() {
       id: '3',
       name: 'Mme. Aminata Traoré',
       specialties: ['Marketing Digital', 'Réseaux sociaux', 'E-commerce'],
-      qualifications: ['Master en Marketing', 'Certification Google Ads', 'Certification Facebook Blueprint'],
+      qualifications: ['Master en Marketing', 'Certification publicité en ligne', 'Certification marketing digital'],
       experience: 6,
       city: 'Conakry',
       address: 'Commune de Ratoma',
@@ -181,9 +181,9 @@ export default function TrouverProfesseur() {
       createdBy: 'G0C0P0R0E0F0 0',
       bio: 'Spécialiste du marketing digital avec une expertise en e-commerce et réseaux sociaux.',
       education: ['Master en Marketing - Université de Conakry', 'Certification Digital Marketing'],
-      certifications: ['Google Ads Certified', 'Facebook Blueprint', 'HubSpot Content Marketing'],
+      certifications: ['Certifié publicité en ligne', 'Marketing digital', 'Marketing de contenu'],
       teachingStyle: 'Créatif et pratique',
-      subjects: ['SEO', 'Facebook Ads', 'Google Analytics', 'Content Marketing', 'E-commerce']
+      subjects: ['SEO', 'Publicité en ligne', 'Analyse d\'audience', 'Content Marketing', 'E-commerce']
     },
     {
       id: '4',

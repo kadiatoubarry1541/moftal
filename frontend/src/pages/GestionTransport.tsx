@@ -8,7 +8,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
-import { envoyerRappel, gnfTexte } from "../utils/rappelWhatsApp";
+import { envoyerRappel, gnfTexte } from "../utils/rappelMessage";
 
 const token = () => localStorage.getItem("token") || "";
 const h = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token()}` });

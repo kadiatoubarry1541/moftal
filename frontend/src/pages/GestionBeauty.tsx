@@ -10,7 +10,7 @@ import { envoyerGestion } from "../utils/envoyerGestion";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
-import { envoyerRappel, dateTexte } from "../utils/rappelWhatsApp";
+import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
 
 const BASE = (code: string) => `/api/beauty-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });

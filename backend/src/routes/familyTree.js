@@ -728,7 +728,7 @@ router.post('/report-death', async (req, res) => {
   }
 });
 
-// ========== MESSAGERIE FAMILIALE (type WhatsApp) ==========
+// ========== MESSAGERIE FAMILIALE  ==========
 
 // @route   GET /api/family-tree/messages
 // @desc    Récupérer les messages familiaux (par nom de famille)

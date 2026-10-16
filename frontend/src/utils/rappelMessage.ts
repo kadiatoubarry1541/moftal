@@ -1,11 +1,11 @@
-// Rappel par WhatsApp : ouvre la conversation avec un message déjà écrit
+// Rappel par message : ouvre la conversation avec un message déjà écrit
 // (frais impayés, rendez-vous, loyer…). Numéros guinéens complétés en +224.
 // Textes dans la langue choisie (trHors) ; chiffres latins même en arabe.
 import { trHors, langueCourante } from "../i18n/traduction";
 
 const locale = () => (langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR");
 
-export function lienWhatsApp(telephone: string | null | undefined, message: string): string | null {
+export function lienMessage(telephone: string | null | undefined, message: string): string | null {
   let n = String(telephone || "").replace(/\D/g, "");
   if (!n) return null;
   if (n.startsWith("00")) n = n.slice(2);
@@ -15,7 +15,7 @@ export function lienWhatsApp(telephone: string | null | undefined, message: stri
 }
 
 export function envoyerRappel(telephone: string | null | undefined, message: string) {
-  const url = lienWhatsApp(telephone, message);
+  const url = lienMessage(telephone, message);
   if (!url) { alert(trHors("Aucun numéro de téléphone enregistré pour envoyer le rappel.")); return; }
   window.open(url, "_blank");
 }

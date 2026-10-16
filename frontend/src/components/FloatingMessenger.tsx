@@ -246,7 +246,7 @@ export function FloatingMessenger() {
       chargerMessagesNonLus().then(n => {
         if (!actif || !n) return
         setNonLus(n)
-        // Même chiffre sur l'icône de l'application installée (comme WhatsApp)
+        // Même chiffre sur l'icône de l'application installée 
         const nav = navigator as Navigator & { setAppBadge?: (c?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
         ;(n.total > 0 ? nav.setAppBadge?.(n.total) : nav.clearAppBadge?.())?.catch(() => {})
       })
@@ -447,7 +447,7 @@ export function FloatingMessenger() {
       setActivityGroups(activityGroupsByKey)
 
       // Dernier message de chaque conversation — pour trier et afficher un
-      // aperçu, exactement comme l'écran d'accueil de WhatsApp.
+      // aperçu.
       const withLast: Conversation[] = await Promise.all(
         base.map(async conv => {
           const last = await fetchLastMessage(conv.type, conv.linkId)

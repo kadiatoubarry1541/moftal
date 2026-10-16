@@ -38,7 +38,7 @@ class Notification extends Model {
     );
   }
 
-  static async createNotification({ recipientNumeroH, type, title, message, relatedId }) {
+  static async createNotification({ recipientNumeroH, type, title, message, relatedId, url }) {
     const notif = await this.create({
       recipientNumeroH,
       type,
@@ -73,7 +73,7 @@ class Notification extends Model {
         message: notif.message,
         type: notif.type,
         id: notif.id,
-        url: getNotifUrl(notif.type)
+        url: url || getNotifUrl(notif.type)
       });
       await Promise.allSettled(subs.map(async sub => {
         try {

@@ -149,7 +149,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
     isPublic: true
   });
 
-  // Stories Mes Amours (type Facebook/WhatsApp)
+  // Stories Mes Amours
   const [stories, setStories] = useState<MesAmoursStory[]>([]);
   const [uploadingStory, setUploadingStory] = useState(false);
   const [viewingStory, setViewingStory] = useState<MesAmoursStory | null>(null);
@@ -912,7 +912,7 @@ const MesAmours = forwardRef<MesAmoursHandle, { embedded?: boolean }>(function M
               className="flex-1 min-w-0 flex gap-2 overflow-x-auto"
             >
               {stories.map((story) => {
-                // Comme Facebook : l'image/vidéo publiée remplit la carte,
+                // L'image/vidéo publiée remplit la carte,
                 // le cercle montre la photo de profil de l'auteur.
                 const photoUrl = story.photos?.[0] || '';
                 const videoUrl = !photoUrl ? (story.videos?.[0] || '') : '';

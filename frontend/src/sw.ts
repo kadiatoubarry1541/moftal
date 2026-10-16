@@ -113,7 +113,7 @@ registerRoute(
 
 // ─── Web Push ────────────────────────────────────────────────────────────────
 
-// Chiffre sur l'icône de l'application (messages non lus), comme WhatsApp
+// Chiffre sur l'icône de l'application (messages non lus)
 type NavigateurBadge = { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
 async function majBadgeIcone(nombre: unknown) {
   if (typeof nombre !== 'number') return
@@ -130,7 +130,7 @@ self.addEventListener('push', (event: PushEvent) => {
   const title = data.title || 'Moftal'
   const options: NotificationOptions & { renotify?: boolean; vibrate?: number[] } = {
     body: data.message || '',
-    // Android n'affiche pas les SVG : photo de l'expéditeur (comme Messenger),
+    // Android n'affiche pas les SVG : photo de l'expéditeur (photo de profil),
     // sinon l'icône Moftal ; petite icône blanche dans la barre d'état.
     icon: data.icon || '/icon-moftal-192.png',
     badge: '/badge-moftal.png',

@@ -90,7 +90,7 @@ const ar: Record<string, string> = {
   "Non renseigné": "غير محدد",
   "Non renseignée": "غير محددة",
   "Bonjour ! Je souhaite des informations sur l'école.": "السلام عليكم! أرغب في الحصول على معلومات عن المدرسة.",
-  "📲 Contacter via WhatsApp": "📲 التواصل عبر WhatsApp",
+  "📲 Nous écrire": "📲 راسلونا",
   "Retour à la plateforme": "العودة إلى المنصة",
 
   // --- Liste des écoles ---
@@ -120,5 +120,18 @@ const ar: Record<string, string> = {
   "Le nom de l'établissement est obligatoire": "اسم المؤسسة إلزامي",
   "École enregistrée. Elle sera visible après validation par l'administrateur.": "تم تسجيل المدرسة. ستظهر بعد موافقة المسؤول.",
   "Erreur serveur lors de l'inscription de l'école": "خطأ في الخادم أثناء تسجيل المدرسة",
+  // Photos du site et notifications de l'application
+  "Photos": "الصور",
+  "Notre établissement en images": "مؤسستنا بالصور",
+  "Découvrez nos locaux, notre vie scolaire et nos moments forts.": "اكتشفوا مبانينا وحياتنا المدرسية وأبرز لحظاتنا.",
+  "Tout": "الكل",
+  "Photo précédente": "الصورة السابقة",
+  "Photo suivante": "الصورة التالية",
+  "Nos locaux": "مبانينا",
+  "Vie scolaire": "الحياة المدرسية",
+  "Activités": "الأنشطة",
+  "Événements": "الفعاليات",
+  "Résultats": "النتائج",
+  "Autre": "أخرى",
 };
 export default ar;

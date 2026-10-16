@@ -14,7 +14,7 @@ interface Suggestion {
 }
 
 // « Personnes que vous pourriez connaître » : les membres inscrits se voient dans
-// Amitié et s'invitent d'un clic (comme Facebook). La recherche par NuméroH,
+// Amitié et s'invitent d'un clic. La recherche par NuméroH,
 // e-mail ou téléphone reste disponible avec le bouton « Ajouter ».
 export default function SuggestionsAmis() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);

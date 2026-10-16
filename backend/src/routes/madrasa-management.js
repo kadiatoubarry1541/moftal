@@ -7,6 +7,8 @@
  */
 
 import express from 'express';
+import { notifierMembreEtablissement, ajouterRouteNotificationsApp } from '../utils/notificationsEtablissement.js';
+import { ajouterRoutesPhotosSite } from './photosSiteEtablissement.js';
 import { trouverOuPreparerPersonne } from '../services/comptesProvisoires.js';
 import { syncAccountFromTenant } from '../utils/tenantSync.js';
 import { sequelize } from '../config/database.js';
@@ -331,10 +333,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
   );
   if (nh) {
     // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
-    await sequelize.query(
-      `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
-      { replacements: { uid: nh, msg: `Vous êtes enregistré(e) au personnel de « ${req.tenant?.name || 'votre madrasa'} ». Marquez le début et la fin de vos cours dans l'application de la madrasa : gestions.moftal.com/gestion-madrasa/${tc}/enseignant` } }
-    ).catch(() => {});
+    await notifierMembreEtablissement(tc, nh, 'school_member', `Vous êtes enregistré(e) au personnel de « ${req.tenant?.name || 'votre madrasa'} ». Marquez le début et la fin de vos cours dans l'application de la madrasa : gestions.moftal.com/gestion-madrasa/${tc}/enseignant`, { url: `/gestion-madrasa/${tc}` });
   }
   res.json({ success: true, staff: rows[0] });
 });
@@ -732,10 +731,7 @@ router.post('/:tenantCode/bulletins/generate', authenticate, verifyTenant, async
       // Notifier membres liés
       const linkedMembers = await membresLiesAEtudiant(tc, s.id, s.numero_h);
       for (const m of linkedMembers) {
-        await sequelize.query(
-          `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'bulletin', :msg)`,
-          { replacements: { uid: m.numero_h, msg: `📋 Bulletin de ${s.prenom} ${s.nom} pour ${periode} disponible — Moyenne : ${moyenne}/20 (${mention})` } }
-        ).catch(() => {});
+        await notifierMembreEtablissement(tc, m.numero_h, 'bulletin', `📋 Bulletin de ${s.prenom} ${s.nom} pour ${periode} disponible — Moyenne : ${moyenne}/20 (${mention})`, { url: `/gestion-madrasa/${tc}` });
       }
     }
     generated++;
@@ -759,10 +755,7 @@ router.put('/:tenantCode/bulletins/:id/publish', authenticate, verifyTenant, asy
     const b = rows[0];
     const linked = await membresLiesAEtudiant(tc, b.student_id, b.student_nh);
     for (const m of linked) {
-      await sequelize.query(
-        `INSERT INTO notifications (user_id, type, message) VALUES (:uid, 'bulletin', :msg)`,
-        { replacements: { uid: m.numero_h, msg: `📋 Bulletin de ${b.prenom} ${b.nom} (${b.periode}) publié — Moyenne : ${b.moyenne_generale}/20` } }
-      ).catch(() => {});
+      await notifierMembreEtablissement(tc, m.numero_h, 'bulletin', `📋 Bulletin de ${b.prenom} ${b.nom} (${b.periode}) publié — Moyenne : ${b.moyenne_generale}/20`, { url: `/gestion-madrasa/${tc}` });
     }
   }
   res.json({ success: true });
@@ -776,6 +769,8 @@ ajouterRouteRapport(router, [authenticate, verifyTenant], {
 
 // ── Accès des employés (géré par le propriétaire uniquement) ──
 // ── Pointage des cours (enseignants) et bibliothèque de la madrasa ──
+ajouterRouteNotificationsApp(router, authenticate);
+ajouterRoutesPhotosSite(router, authenticate, verifyTenant);
 ajouterRoutesCoursEtBibliotheque(router, verifyTenant, TABLES_MADRASA);
 
 ajouterRoutesAccesEmployes(router, [authenticate, verifyTenantProprietaire]);

@@ -23,7 +23,7 @@ function getCategories(t: (key: string) => string) {
 // Pages qui bénéficient de notifications
 function getPagesNotif(t: (key: string) => string) {
   return [
-    { label: t('info.notif_group_messages'),      emoji: "💬", pages: ["Mes Amours / Messenger"] },
+    { label: t('info.notif_group_messages'),      emoji: "💬", pages: ["Mes Amours / Messagerie"] },
     { label: t('info.notif_group_rdv'),          emoji: "📅", pages: ["Espace Pro", "Prendre RDV"] },
     { label: t('info.notif_group_actualites'),           emoji: "📰", pages: ["Page Info", "À Retenir", "Histoire Humanité"] },
     { label: t('info.notif_group_opportunites'),         emoji: "💼", pages: ["Activité", "Échanges", "Solidarité"] },

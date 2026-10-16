@@ -43,3 +43,19 @@ On montre uniquement ce que le modèle montre, rien de plus.
   (gestion interne, profil public, logo, abonnement…) même si son profil personnel n'est pas
   complété : jamais de blocage « Encore une petite étape » dans sa gestion
   (`PROVISIONAL_PRO_SPACE_ROUTES` dans `backend/src/middleware/auth.js`).
+
+## 3. Jamais de nom d'un autre logiciel
+
+- Aucun texte du projet (écrans, messages, notifications, commentaires) ne cite ni ne se
+  compare à une autre application ou marque (messagerie, réseau social…) : on dit
+  « par message », « Nous écrire », jamais « comme … » ni « via … ».
+- Seuls restent, invisibles pour l'utilisateur, les noms techniques indispensables
+  (détection du navigateur, adresse d'un lien, configuration d'un service d'envoi).
+
+## 4. Notifications de l'application d'un établissement
+
+- Chaque notification est enregistrée en base pour sa personne (cloche + téléphone) et dans
+  le journal de l'établissement (`notifierMembreEtablissement`,
+  `backend/src/utils/notificationsEtablissement.js`).
+- Le responsable (propriétaire, co-responsable « tous les droits ») voit tout le journal ;
+  chaque autre personne (parent, enseignant, employé) ne voit que les siennes.

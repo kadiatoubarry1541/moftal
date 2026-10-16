@@ -240,7 +240,7 @@ export default function RestaurantVitrine() {
             <div style={{ textAlign: "center" }}>
               <button onClick={() => window.open(`https://wa.me/${resto.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour ! Je souhaite réserver une table / passer commande.")}`, "_blank")}
                 style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 40px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(37,211,102,0.3)" }}>
-                📲 Commander via WhatsApp
+                📲 Commander par message
               </button>
             </div>
           )}

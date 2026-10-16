@@ -1419,7 +1419,7 @@ export default function EspacePro() {
             </button>
           </div>
           <p className="text-xs text-blue-500 dark:text-blue-400 mt-1.5">
-            Envoyez ce lien par WhatsApp, SMS ou affichez-le dans votre local.
+            Envoyez ce lien par message, SMS ou affichez-le dans votre local.
           </p>
         </div>
       </div>

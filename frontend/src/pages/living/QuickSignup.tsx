@@ -68,7 +68,7 @@ export function QuickSignup() {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">📱 Téléphone ou e-mail</label>
             <input type="text" inputMode="email" autoComplete="username" autoCapitalize="none" value={identifiant}
-              onChange={e => { setIdentifiant(e.target.value); setError(null) }} placeholder="Ex : 620 00 00 00 ou nom@gmail.com"
+              onChange={e => { setIdentifiant(e.target.value); setError(null) }} placeholder="Ex : 620 00 00 00 ou nom@exemple.com"
               className={`${field} ${saisie && !identifiantOk ? 'border-red-400' : 'border-gray-300'}`} />
             {saisie && !identifiantOk && <p className="text-xs text-red-500 mt-1">{estEmail ? 'Adresse e-mail invalide.' : 'Numéro de téléphone trop court.'}</p>}
           </div>

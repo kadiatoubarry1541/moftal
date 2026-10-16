@@ -167,7 +167,7 @@ export default function InscriptionFormation() {
       schedule: 'Dimanche 14h-17h',
       location: 'Centre de Formation Digital, Conakry',
       prerequisites: [],
-      skills: ['SEO', 'Facebook Ads', 'Google Analytics', 'Content Marketing']
+      skills: ['SEO', 'Publicité en ligne', 'Analyse d\'audience', 'Content Marketing']
     },
     {
       id: '4',

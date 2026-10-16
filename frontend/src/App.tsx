@@ -120,6 +120,7 @@ const GestionReseau  = lazy(() => import("./pages/GestionReseau"));
 const GestionEnseignement = lazy(() => import("./pages/GestionEnseignement"));
 const EspaceParentEcole   = lazy(() => import("./pages/EspaceParentEcole"));
 const EspaceEnseignantEcole = lazy(() => import("./pages/EspaceEnseignantEcole"));
+const NotificationsMembreEcole = lazy(() => import("./pages/NotificationsMembreEcole"));
 const BibliothequeEcole    = lazy(() => import("./pages/BibliothequeEcole"));
 const GestionEntreprise   = lazy(() => import("./pages/GestionEntreprise"));
 const GestionNgo          = lazy(() => import("./pages/GestionNgo"));
@@ -335,7 +336,7 @@ function App() {
   const proBrand = useProBrand();
   const isEspaceTenant = /^\/gestion-[^/]+\/[^/]+/.test(pathname);
   // Parents et enseignants dans l'application de l'école : ni barre ni « Espace Pro »
-  const isEspaceMembreEcole = /^\/gestion-(ecole|madrasa)\/[^/]+\/(parent|enseignant|bibliotheque)/.test(pathname);
+  const isEspaceMembreEcole = /^\/gestion-(ecole|madrasa)\/[^/]+\/(parent|enseignant|bibliotheque|notifications)/.test(pathname);
   // Panneau « Espace Pro » (site client, publications, profil, clients, formules)
   const [panneauProOuvert, setPanneauProOuvert] = useState(false);
   useEffect(() => { setPanneauProOuvert(false); }, [pathname]);
@@ -383,7 +384,7 @@ function App() {
   const isProfilPage = pathname === '/moi/profil';
   // Applis autonomes avec leur propre écran, logo et bouton d'installation —
   // le header/nav de l'app principale ne doit pas se superposer (pas de double
-  // bouton "Installer", chacune reste une app à part comme Messenger/Facebook).
+  // bouton "Installer", chacune reste une app à part).
   const isStandaloneAppPage = pathname.startsWith('/professeur-ia') || pathname.startsWith('/info-wallou');
   const isFullscreenPage = isGestionMode || isVitrineMode || isProfilPage || isMoftalPayMode || isStandaloneAppPage;
   const isHome = pathname === "/";
@@ -406,7 +407,7 @@ function App() {
       {/* Header site principal — masqué en mode Espace Gestion ou Vitrine, et sur les
           pages qui n'ont rien à y afficher (Famille/Terre ADAM/Échanges/Services ont
           leur propre en-tête) : sinon la barre restait affichée vide, blanche. */}
-      {/* ══ MASTHEAD STICKY — Logo + Carte Profil + Navigation (reste collé en haut comme Facebook) ══ */}
+      {/* ══ MASTHEAD STICKY — Logo + Carte Profil + Navigation (reste collé en haut) ══ */}
       {!isFullscreenPage && (isAccueilConnecte || showFullHeader) && (
         <div ref={mastheadRef} className={`sticky top-0 z-50 bg-white dark:bg-gray-900 safe-area-inset-top${familyMenuOpen ? '' : ' shadow-sm'}`}>
 
@@ -593,7 +594,7 @@ function App() {
         </div>
       )}
 
-      {/* ── Barre Espace Gestion (comme Messenger est séparé de Facebook) ── */}
+      {/* ── Barre Espace Gestion (séparée du site principal) ── */}
       {isGestionMode && !isEspaceMembreEcole && (
         <header style={{ background: "#0f172a", position: "sticky", top: 0, zIndex: 50, borderBottom: "2px solid #1e293b", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
           <div style={{ width: "100%", padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -795,6 +796,8 @@ function App() {
           <Route path="/gestion-madrasa/:tenantCode/parent"       element={<EspaceParentEcole mode="madrasa" />} />
           <Route path="/gestion-madrasa/:tenantCode/enseignant"   element={<EspaceEnseignantEcole mode="madrasa" />} />
           <Route path="/gestion-madrasa/:tenantCode/bibliotheque" element={<BibliothequeEcole mode="madrasa" />} />
+          <Route path="/gestion-ecole/:tenantCode/notifications"   element={<NotificationsMembreEcole mode="school" />} />
+          <Route path="/gestion-madrasa/:tenantCode/notifications" element={<NotificationsMembreEcole mode="madrasa" />} />
           <Route path="/ecole/:tenantCode/espace-parent"   element={<VersAppEcole mode="school" page="parent" />} />
           <Route path="/ecole/:tenantCode/enseignant"      element={<VersAppEcole mode="school" page="enseignant" />} />
           <Route path="/ecole/:tenantCode/bibliotheque"    element={<VersAppEcole mode="school" page="bibliotheque" />} />

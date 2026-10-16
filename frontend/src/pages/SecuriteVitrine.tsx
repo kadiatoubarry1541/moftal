@@ -218,7 +218,7 @@ export default function SecuriteVitrine() {
             <div style={{ textAlign: "center", marginTop: 32 }}>
               <button onClick={() => window.open(`https://wa.me/${agency.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite un devis pour vos services de sécurité.")}`, "_blank")}
                 style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Demander un devis WhatsApp
+                📲 Demander un devis par message
               </button>
             </div>
           )}

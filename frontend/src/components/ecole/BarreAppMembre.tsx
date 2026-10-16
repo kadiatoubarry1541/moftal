@@ -35,6 +35,7 @@ export default function BarreAppMembre({ mode, tenantCode, nom, logoUrl, actif }
     { id: "parent", label: tr("👪 Mes enfants"), visible: actif === "parent" || !!droits?.parent },
     { id: "enseignant", label: tr("🧑‍🏫 Mes cours"), visible: actif === "enseignant" || !!droits?.enseignant },
     { id: "bibliotheque", label: tr("📚 Bibliothèque"), visible: true },
+    { id: "notifications", label: tr("🔔 Notifications"), visible: true },
   ];
 
   return (

@@ -199,7 +199,7 @@ export default function GuideEntrepreneur() {
       type: 'Ressources en ligne',
       items: [
         'Sites web des organisations mentionnées',
-        'Groupes Facebook d\'entrepreneurs guinéens',
+        'Groupes en ligne d\'entrepreneurs guinéens',
         'Plateformes de financement participatif',
         'Ressources éducatives gratuites'
       ]
@@ -254,9 +254,9 @@ export default function GuideEntrepreneur() {
     },
     {
       id: 5,
-      title: '5️⃣ Groupes Facebook et Réseaux Sociaux',
+      title: '5️⃣ Groupes en ligne et réseaux sociaux',
       description: 'Communautés d\'entrepreneurs et développeurs guinéens en ligne',
-      pourquoi: 'Les groupes d\'entrepreneurs guinéens sur Facebook sont très actifs. Vous pouvez y publier : "Je cherche un partenaire technique pour mon projet"',
+      pourquoi: 'Les groupes d\'entrepreneurs guinéens sur les réseaux sociaux sont très actifs. Vous pouvez y publier : "Je cherche un partenaire technique pour mon projet"',
       action: 'Rejoindre les groupes "Entrepreneurs Guinée", "Startups Conakry", "Développeurs Guinée" et publier votre demande',
       icon: '💻',
       priorite: 'MOYENNE'

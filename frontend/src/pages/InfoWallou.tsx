@@ -476,7 +476,7 @@ function CarreauReunionLigne({ card, setCard }: { card: CardState; setCard: Reac
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/15 border border-white/20">
           <span className="text-sm">📡</span>
           <input type="text" value={card.plateforme} onChange={e => setCard(p => ({ ...p, plateforme: e.target.value }))}
-            placeholder="Zoom, Teams, WhatsApp..." className="bg-transparent outline-none text-white placeholder-white/30 text-sm flex-1" />
+            placeholder="Lieu ou lien de la réunion..." className="bg-transparent outline-none text-white placeholder-white/30 text-sm flex-1" />
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/15 border border-white/20">
           <span className="text-sm">🔗</span>
@@ -676,7 +676,7 @@ function CarreauWebinaire({ card, setCard }: { card: CardState; setCard: React.D
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/15 border border-white/20">
           <span className="text-sm">📡</span>
           <input type="text" value={card.plateforme} onChange={e => setCard(p => ({ ...p, plateforme: e.target.value }))}
-            placeholder="Zoom, Teams, YouTube..." className="bg-transparent outline-none text-white placeholder-white/30 text-sm flex-1" />
+            placeholder="Lieu ou lien de la diffusion..." className="bg-transparent outline-none text-white placeholder-white/30 text-sm flex-1" />
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/15 border border-white/20">
           <span className="text-sm">🔗</span>
@@ -2155,11 +2155,11 @@ export default function InfoWallou() {
               <p className="text-white font-bold text-sm mb-1">📤 Formats de partage</p>
               <p className="text-gray-500 text-[11px] mb-3">Copiez le texte dans le format de votre choix</p>
               <div className="grid grid-cols-3 gap-2">
-                <button onClick={() => copyToClipboard(generateShareText(card, selected!), 'whatsapp')}
+                <button onClick={() => copyToClipboard(generateShareText(card, selected!), 'message')}
                   className="flex flex-col items-center gap-1.5 py-3 rounded-xl text-xs font-semibold transition-all"
-                  style={{ background: copiedFormat === 'whatsapp' ? "rgba(37,211,102,0.25)" : "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.25)", color: copiedFormat === 'whatsapp' ? "#4ade80" : "#22c55e" }}>
+                  style={{ background: copiedFormat === 'message' ? "rgba(37,211,102,0.25)" : "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.25)", color: copiedFormat === 'message' ? "#4ade80" : "#22c55e" }}>
                   <span className="text-xl">📱</span>
-                  {copiedFormat === 'whatsapp' ? '✅ Copié !' : 'WhatsApp'}
+                  {copiedFormat === 'message' ? '✅ Copié !' : 'Message'}
                 </button>
                 <button onClick={() => {
                     const txt = generateShareText(card, selected!).replace(/\*/g, '').replace(/_/g, '');
@@ -2253,7 +2253,7 @@ export default function InfoWallou() {
                 </div>
               </div>
               <p className="text-gray-600 text-xs mb-4">
-                Contactez l'administrateur via WhatsApp pour acheter vos points.
+                Contactez l'administrateur par message pour acheter vos points.
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setShowAcheterPoints(false)}

@@ -204,7 +204,7 @@ router.get('/groups/:id/messages', async (req, res) => {
 });
 
 // @route   POST /api/regions/groups/:id/messages
-// @desc    Envoyer un message dans un groupe (WhatsApp style)
+// @desc    Envoyer un message dans un groupe 
 // @access  Authentifié avec permission
 router.post('/groups/:id/messages', upload.single('media'), async (req, res) => {
   try {

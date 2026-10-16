@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 
-/** Navigateurs intégrés (Facebook, Instagram, LinkedIn, Messenger, TikTok,
- *  appli Google...) qui bloquent souvent le micro/caméra au niveau du
+/** Navigateurs intégrés des autres applications (réseaux sociaux,
+ *  moteur de recherche…) qui bloquent souvent le micro/caméra au niveau du
  *  système, sans même proposer de demande d'autorisation — rien à faire
  *  côté site dans ce cas, il faut ouvrir le lien dans le vrai navigateur
  *  du téléphone (Chrome, Samsung Internet...). */
@@ -79,7 +79,7 @@ export function AudioRecorder({ onAudioRecorded, maxDuration = 10, compact = fal
       const name = (err as { name?: string })?.name;
       if (estNavigateurIntegre()) {
         setError(
-          "Le micro ne fonctionne pas ici car ce lien s'est ouvert dans le navigateur intégré d'une appli (Google, Facebook, Instagram...), pas dans Chrome directement. Ouvre le menu (⋮ ou ⋯) en haut de l'écran et choisis \"Ouvrir dans le navigateur\" ou \"Ouvrir dans Chrome\"."
+          "Le micro ne fonctionne pas ici car ce lien s'est ouvert dans le navigateur intégré d'une autre application, pas dans Chrome directement. Ouvre le menu (⋮ ou ⋯) en haut de l'écran et choisis \"Ouvrir dans le navigateur\" ou \"Ouvrir dans Chrome\"."
         );
       } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
         setError("Aucun micro trouvé sur cet appareil.");

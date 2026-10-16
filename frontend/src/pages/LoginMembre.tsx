@@ -16,7 +16,7 @@ export function LoginMembre() {
   const navigate = useNavigate()
   const { t } = useI18n()
 
-  // Auto-redirect si déjà connecté (comme Facebook)
+  // Auto-redirect si déjà connecté 
   useEffect(() => {
     try {
       const session = localStorage.getItem('session_user')

@@ -19,7 +19,7 @@ const ZOOM_STEP = 0.1;
 const PREVIEW_WIDTH = 240;
 
 /**
- * Recadrage façon WhatsApp avant l'envoi : on ajuste la photo dans un cadre
+ * Recadrage avant l'envoi : on ajuste la photo dans un cadre
  * au format exact de la carte finale (annonce/publicité), avec un aperçu en
  * direct de ce qui sera exactement publié — pour bien cadrer avant l'envoi.
  */

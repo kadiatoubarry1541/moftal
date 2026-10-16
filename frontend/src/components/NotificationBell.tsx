@@ -96,7 +96,7 @@ async function setupPushNotifications(demander = false): Promise<boolean> {
   } catch { return false; }
 }
 
-// ─── Invitation à activer les notifications (comme WhatsApp au premier lancement) ──
+// ─── Invitation à activer les notifications (au premier lancement) ──
 // Quelques secondes après l'ouverture de Moftal, une seule fois par visite, au
 // plus 3 fois en tout (tous les 2 jours au plus), et jamais le même jour que
 // l'invitation à installer l'application. L'appui sur « Activer » est le geste
@@ -158,7 +158,7 @@ export function InvitationNotifications() {
           <div style={{ width: 52, height: 52, borderRadius: 14, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>🔔</div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#0f172a" }}>Ne manquez aucun message</div>
-            <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>Moftal vous prévient de vos nouveaux messages et demandes, même quand l'application est fermée — comme WhatsApp.</div>
+            <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>Moftal vous prévient de vos nouveaux messages et demandes, même quand l'application est fermée.</div>
           </div>
         </div>
         {etat === "active" ? (

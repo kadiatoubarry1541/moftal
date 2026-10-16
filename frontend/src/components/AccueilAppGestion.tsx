@@ -64,7 +64,7 @@ export default function AccueilAppGestion({ account, couleur }: { account: any; 
     const cible = adresse(installer, c);
     if (estAndroid()) {
       // Installer n'est possible que dans Chrome : on l'ouvre directement (depuis
-      // l'app Moftal, WhatsApp, Facebook… comme depuis Chrome lui-même).
+      // l'app Moftal ou une autre application, comme depuis Chrome lui-même).
       const secours = encodeURIComponent(`https://${cible}`);
       window.location.href = `intent://${cible}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${secours};end`;
     } else {

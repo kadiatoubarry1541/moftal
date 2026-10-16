@@ -1125,7 +1125,7 @@ const pul: Record<string, string> = {
   'publier_formation.your_rate_label': 'Cogu maa (humpito)',
   'publier_formation.your_rate_placeholder': 'Misal: 150 000 GNF / lewru',
   'publier_formation.contact_label': 'Jokkorgel maa ngam jaŋgooɓe *',
-  'publier_formation.contact_placeholder': 'Telefon, WhatsApp, iimeel... — jaŋgooɓe ina jokkoo e maa tawtoo',
+  'publier_formation.contact_placeholder': 'Telefon, iimeel... — jaŋgooɓe ina jokkoo e maa tawtoo',
   'publier_formation.contact_note': 'Jaŋgooɓe ina yoɓa ma tawtoo — sarawiisi on naatataa e ndeer',
   'publier_formation.duration_label': 'Duuɓi winndugol',
   'publier_formation.duration_1week': 'Yontere gootere',
