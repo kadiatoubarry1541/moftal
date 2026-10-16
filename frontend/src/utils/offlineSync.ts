@@ -33,11 +33,12 @@ const QUEUE_PATTERNS = [
 ];
 
 // Opérations qui ont besoin du serveur tout de suite (calculs / recherche côté serveur)
-// (le pointage des cours doit porter l'heure exacte du serveur ; les accès des
-// employés et l'encaissement en ligne ne se font jamais en différé)
+// (le pointage des cours doit porter l'heure exacte du serveur ; l'encaissement
+// en ligne ne se fait jamais en différé). Les accès des employés, eux, se
+// préparent hors connexion : le serveur vérifie les droits du propriétaire à l'envoi.
 const ONLINE_ONLY_PATTERNS = [
   /\/bulletins\/generate$/, /\/members\/add$/, /\/pharmacy\/dispense\//,
-  /\/enseignant\/(debut|fin)$/, /\/acces-employes/,
+  /\/enseignant\/(debut|fin)$/,
   // Demandes et avis des visiteurs publics : jamais gardés dans le téléphone,
   // le visiteur doit voir une vraie erreur s'il n'y a pas de connexion
   /\/api\/clinic-public\/[^/]+\/(quick-request|request-appointment|reviews)$/,

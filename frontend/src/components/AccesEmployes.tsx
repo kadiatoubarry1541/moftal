@@ -13,7 +13,7 @@ import { lienAppGestionIci } from "../utils/lienAppGestion";
 //   - Limité  : voir, ajouter, changer un statut — sans modifier ni supprimer.
 // Les règles sont appliquées par le serveur (utils/accesEmployes.js).
 
-type Employe = { id: number; numero_h: string; nom: string | null; poste: string | null; niveau: "total" | "complet" | "limite"; is_active: boolean; telephone?: string | null; email?: string | null };
+type Employe = { id: number | string; identifiant?: string; _horsLigne?: boolean; numero_h: string; nom: string | null; poste: string | null; niveau: "total" | "complet" | "limite"; is_active: boolean; telephone?: string | null; email?: string | null };
 type Invitation = { nom: string; telephone?: string | null; email?: string | null; nouveauCompte?: boolean };
 
 const NIVEAUX = [
@@ -28,6 +28,8 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
   const [form, setForm] = useState({ numero_h: "", poste: "", niveau: "limite" });
   const [envoi, setEnvoi] = useState(false);
   const [invitation, setInvitation] = useState<Invitation | null>(null);
+  // Ajout fait sans connexion : gardé sur l'appareil, envoyé au retour du réseau
+  const [enAttente, setEnAttente] = useState("");
   const lienApp = lienAppGestionIci() || window.location.href;
   const headers = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
@@ -41,13 +43,27 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
 
   const ajouter = async () => {
     if (!form.numero_h.trim()) { alert("Saisissez le téléphone, l'e-mail ou le NuméroH de l'employé."); return; }
+    const saisi = form.numero_h.trim();
+    // Un numéro de téléphone trop court est refusé tout de suite (même sans connexion)
+    if (!saisi.includes("@") && !/[a-z]/i.test(saisi) && saisi.replace(/\D/g, "").length < 8) {
+      alert("Numéro de téléphone invalide : vérifiez-le (au moins 8 chiffres).");
+      return;
+    }
     setEnvoi(true);
     try {
-      const identifiant = form.numero_h.trim();
+      const identifiant = saisi;
       const r = await fetch(`${base}/acces-employes`, { method: "POST", headers: headers(), body: JSON.stringify({ identifiant, poste: form.poste, niveau: form.niveau }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.success) { alert(d.message || "L'employé n'a pas été ajouté. Réessayez."); return; }
       setForm({ numero_h: "", poste: "", niveau: "limite" });
+      if (d.queued) {
+        // Le lien ne sert qu'une fois l'accès créé sur le serveur
+        setInvitation(null);
+        setEnAttente(identifiant);
+        charger();
+        return;
+      }
+      setEnAttente("");
       // Le lien de l'application, à lui envoyer tout de suite
       const estEmail = identifiant.includes("@");
       setInvitation({ nom: d.employe.nom || identifiant, nouveauCompte: d.nouveauCompte,
@@ -76,6 +92,17 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
         <h3 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 800 }}>👥 Accès des employés</h3>
         <p style={{ margin: "0 0 16px", fontSize: 13, color: "#64748b" }}>Vos employés entrent dans cette gestion avec leur propre compte Moftal. Vous choisissez ce que chacun peut faire, et vous pouvez retirer l'accès à tout moment.</p>
 
+        {enAttente && (
+          <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: 14, marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#92400e" }}>📴 {enAttente} : accès gardé sur cet appareil</div>
+            <div style={{ fontSize: 12, color: "#334155", marginTop: 4 }}>
+              Pas de connexion pour l'instant : rien n'est perdu. L'accès sera créé tout seul dès le retour de la connexion.
+              Ensuite, envoyez-lui le lien avec le bouton « 🔗 Lien ». En cas de refus, vous serez prévenu(e).
+            </div>
+            <button onClick={() => setEnAttente("")} style={{ marginTop: 8, background: "none", border: "none", color: "#64748b", fontSize: 12, cursor: "pointer" }}>Masquer</button>
+          </div>
+        )}
+
         {invitation && (
           <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: 14, marginBottom: 16 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: "#166534" }}>✅ Envoyez ce lien à {invitation.nom}</div>
@@ -101,6 +128,7 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
               <span><b style={{ fontSize: 14 }}>{n.titre}</b><br /><span style={{ fontSize: 12, color: "#64748b" }}>{n.detail}</span></span>
             </label>
           ))}
+          <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>Sans connexion, l'ajout est gardé sur cet appareil et envoyé tout seul dès le retour de la connexion.</div>
           <button onClick={ajouter} disabled={envoi} style={{ width: "100%", marginTop: 6, padding: 11, background: couleur, color: "white", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", opacity: envoi ? 0.7 : 1 }}>
             {envoi ? "Ajout…" : "Donner l'accès"}
           </button>
@@ -110,21 +138,25 @@ export default function AccesEmployes({ base, couleur = "#1a8f1a", nomEtablissem
         {erreur && <p style={{ color: "#dc2626", fontSize: 13 }}>{erreur}</p>}
         {!employes && !erreur && <p style={{ color: "#64748b", fontSize: 13 }}>Chargement…</p>}
         {employes && employes.length === 0 && <p style={{ color: "#94a3b8", fontSize: 13 }}>Aucun employé pour l'instant.</p>}
-        {employes?.map(e => (
+        {employes?.map(e => {
+          const attente = !!e._horsLigne || String(e.id).startsWith("hors-ligne-");
+          return (
           <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #f1f5f9", flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 180px", minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{e.nom || e.numero_h}</div>
-              <div style={{ fontSize: 12, color: "#64748b" }}>{e.poste ? `${e.poste} · ` : ""}{e.numero_h}</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{e.nom || e.numero_h || e.identifiant}</div>
+              <div style={{ fontSize: 12, color: "#64748b" }}>{e.poste ? `${e.poste} · ` : ""}{e.numero_h || e.identifiant}</div>
+              {attente && <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e", marginTop: 2 }}>⏳ En attente d'envoi (sans connexion)</div>}
             </div>
             <select value={e.niveau} onChange={ev => changerNiveau(e, ev.target.value)} style={{ padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13 }}>
               <option value="limite">Limité</option>
               <option value="complet">Complet</option>
               <option value="total">Tous les droits</option>
             </select>
-            <button onClick={() => envoyerLien(e)} style={{ padding: "6px 10px", background: "white", color: couleur, border: `1px solid ${couleur}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>🔗 Lien</button>
+            <button onClick={() => envoyerLien(e)} disabled={attente} title={attente ? "Disponible après l'envoi de l'accès" : undefined} style={{ opacity: attente ? 0.5 : 1, padding: "6px 10px", background: "white", color: couleur, border: `1px solid ${couleur}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>🔗 Lien</button>
             <button onClick={() => retirer(e)} style={{ padding: "6px 10px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Retirer</button>
           </div>
-        ))}
+          );
+        })}
 
         <button onClick={onClose} style={{ width: "100%", marginTop: 16, padding: 11, background: "#f1f5f9", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>Fermer</button>
       </div>
