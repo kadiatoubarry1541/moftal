@@ -333,7 +333,7 @@ router.post('/:tenantCode/staff', authenticate, verifyTenant, async (req, res) =
     // L'enseignant est prévenu : il pourra marquer le début et la fin de ses cours
     await sequelize.query(
       `INSERT INTO notifications (user_id, type, message) VALUES(:uid,'school_member',:msg) ON CONFLICT DO NOTHING`,
-      { replacements: { uid: nh, msg: `Vous êtes enregistré(e) au personnel de « ${req.tenant?.name || 'votre madrasa'} ». Marquez le début et la fin de vos cours : moftal.com/madrasa/${tc}/enseignant` } }
+      { replacements: { uid: nh, msg: `Vous êtes enregistré(e) au personnel de « ${req.tenant?.name || 'votre madrasa'} ». Marquez le début et la fin de vos cours dans l'application de la madrasa : gestions.moftal.com/gestion-madrasa/${tc}/enseignant` } }
     ).catch(() => {});
   }
   res.json({ success: true, staff: rows[0] });

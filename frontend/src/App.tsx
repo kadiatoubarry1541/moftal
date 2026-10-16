@@ -1,5 +1,5 @@
 ﻿import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Routes, Route, Navigate, useLocation, Link, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, Link, useNavigate, useParams } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useI18n } from "./i18n/useI18n";
 import { LANG_LABELS } from "./i18n/strings";
@@ -16,6 +16,7 @@ import { SalesIcon } from "./components/icons/SalesIcon";
 import { useProBrand } from "./components/proBrand";
 import { TenantLogo } from "./components/GestionBrand";
 import { FitText } from "./components/FitText";
+import { cheminAppEcole, type ModeEcole, type PageMembre } from "./utils/appEcole";
 import { InvitationInstallerMoftal, AvertissementDoubleInstallation } from "./components/InstallAppButton";
 
 // Page d'accueil — chargée immédiatement (première vue de l'utilisateur)
@@ -191,6 +192,12 @@ const LoadingBar = () => (
 );
 
 /** Page Zaka : réservée aux profils Islam (ou administrateurs), comme l'onglet Solidarité. */
+// Ancien lien sur le site de l'école (…/espace-parent, …/enseignant) : vers son application
+function VersAppEcole({ mode, page }: { mode: ModeEcole; page: PageMembre }) {
+  const { tenantCode = "" } = useParams<{ tenantCode: string }>();
+  return <Navigate to={cheminAppEcole(mode, tenantCode, page)} replace />;
+}
+
 function ZakaMuslimOnly() {
   const user = getSessionUser();
   if (!user) return <Navigate to="/login" replace />;
@@ -327,6 +334,8 @@ function App() {
   // Espace d'un professionnel ouvert (/gestion-xxx/CODE) : son logo remplace celui de Moftal
   const proBrand = useProBrand();
   const isEspaceTenant = /^\/gestion-[^/]+\/[^/]+/.test(pathname);
+  // Parents et enseignants dans l'application de l'école : ni barre ni « Espace Pro »
+  const isEspaceMembreEcole = /^\/gestion-(ecole|madrasa)\/[^/]+\/(parent|enseignant|bibliotheque)/.test(pathname);
   // Panneau « Espace Pro » (site client, publications, profil, clients, formules)
   const [panneauProOuvert, setPanneauProOuvert] = useState(false);
   useEffect(() => { setPanneauProOuvert(false); }, [pathname]);
@@ -585,7 +594,7 @@ function App() {
       )}
 
       {/* ── Barre Espace Gestion (comme Messenger est séparé de Facebook) ── */}
-      {isGestionMode && (
+      {isGestionMode && !isEspaceMembreEcole && (
         <header style={{ background: "#0f172a", position: "sticky", top: 0, zIndex: 50, borderBottom: "2px solid #1e293b", boxShadow: "0 2px 12px rgba(0,0,0,0.3)" }}>
           <div style={{ width: "100%", padding: "6px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             {/* Gauche : ← + logo + Professionnel */}
@@ -778,12 +787,20 @@ function App() {
           <Route path="/gestion-commerce/:tenantCode" element={<GestionCommerce />} />
           <Route path="/commerce/:tenantCode" element={<CommerceVitrine />} />
           <Route path="/ecole/:tenantCode"         element={<EcoleVitrine />} />
-          <Route path="/ecole/:tenantCode/espace-parent"   element={<EspaceParentEcole mode="school" />} />
-          <Route path="/ecole/:tenantCode/enseignant"      element={<EspaceEnseignantEcole />} />
-          <Route path="/ecole/:tenantCode/bibliotheque"    element={<BibliothequeEcole />} />
-          <Route path="/madrasa/:tenantCode/espace-parent" element={<EspaceParentEcole mode="madrasa" />} />
-          <Route path="/madrasa/:tenantCode/enseignant"    element={<EspaceEnseignantEcole mode="madrasa" />} />
-          <Route path="/madrasa/:tenantCode/bibliotheque"  element={<BibliothequeEcole mode="madrasa" />} />
+          {/* Parents, enseignants et bibliothèque : dans l'application de l'école,
+              pas sur son site (anciens liens redirigés) */}
+          <Route path="/gestion-ecole/:tenantCode/parent"         element={<EspaceParentEcole mode="school" />} />
+          <Route path="/gestion-ecole/:tenantCode/enseignant"     element={<EspaceEnseignantEcole />} />
+          <Route path="/gestion-ecole/:tenantCode/bibliotheque"   element={<BibliothequeEcole />} />
+          <Route path="/gestion-madrasa/:tenantCode/parent"       element={<EspaceParentEcole mode="madrasa" />} />
+          <Route path="/gestion-madrasa/:tenantCode/enseignant"   element={<EspaceEnseignantEcole mode="madrasa" />} />
+          <Route path="/gestion-madrasa/:tenantCode/bibliotheque" element={<BibliothequeEcole mode="madrasa" />} />
+          <Route path="/ecole/:tenantCode/espace-parent"   element={<VersAppEcole mode="school" page="parent" />} />
+          <Route path="/ecole/:tenantCode/enseignant"      element={<VersAppEcole mode="school" page="enseignant" />} />
+          <Route path="/ecole/:tenantCode/bibliotheque"    element={<VersAppEcole mode="school" page="bibliotheque" />} />
+          <Route path="/madrasa/:tenantCode/espace-parent" element={<VersAppEcole mode="madrasa" page="parent" />} />
+          <Route path="/madrasa/:tenantCode/enseignant"    element={<VersAppEcole mode="madrasa" page="enseignant" />} />
+          <Route path="/madrasa/:tenantCode/bibliotheque"  element={<VersAppEcole mode="madrasa" page="bibliotheque" />} />
           <Route path="/madrasa/:tenantCode"       element={<MadrasaVitrine />} />
           <Route path="/mosquee/:tenantCode"       element={<MosqueeVitrine />} />
           <Route path="/imam/:tenantCode"          element={<MosqueeVitrine />} />

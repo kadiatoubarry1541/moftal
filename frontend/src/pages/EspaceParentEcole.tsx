@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import { useTraduction, trHors } from "../i18n/traduction";
-import ChoixLangueEcole from "../components/ChoixLangueEcole";
+import BarreAppMembre from "../components/ecole/BarreAppMembre";
+import { cheminAppEcole } from "../utils/appEcole";
+import { MoftalMark } from "../components/GestionBrand";
 
 interface Props { mode: "school" | "madrasa"; }
 
@@ -38,7 +40,7 @@ export default function EspaceParentEcole({ mode }: Props) {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: `/espace-parent-${mode}/${tenantCode}` } }); return; }
+    if (!localStorage.getItem("token")) { navigate("/login-membre", { state: { from: cheminAppEcole(mode, tenantCode || "", "parent") } }); return; }
     setLoading(true); setError(null);
     const qs = selectedStudentId ? `?student_id=${selectedStudentId}` : "";
     fetch(`${config.API_BASE_URL}/${apiName}/${tenantCode}/my-access${qs}`, { headers: auth() })
@@ -109,7 +111,13 @@ export default function EspaceParentEcole({ mode }: Props) {
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{tr("Espace parent inaccessible")}</h2>
         <p style={{ fontSize: 13, color: "#ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 16px", marginBottom: 16 }}>{error ? tr(error) : tr("Vous n'êtes pas encore relié(e) à un élève dans cet établissement. Contactez l'école pour vous inscrire.")}</p>
-        <button onClick={() => navigate("/compte")} style={{ padding: "8px 20px", background: color, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{tr("← Retour")}</button>
+        <button onClick={() => setReloadKey(k => k + 1)} style={{ padding: "8px 20px", background: color, color: "white", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{tr("🔄 Réessayer")}</button>
+        <div>
+          <button onClick={() => { if (window.location.hostname.startsWith("gestions.")) window.location.href = "https://moftal.com/compte"; else navigate("/compte"); }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 10, padding: "8px 12px", background: "transparent", color: "#475569", border: "none", fontSize: 13, cursor: "pointer" }}>
+            <MoftalMark /> {tr("Retour sur Moftal")}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -138,20 +146,11 @@ export default function EspaceParentEcole({ mode }: Props) {
           {toast.ok ? "✓ " : "⚠ "}{toast.msg}
         </div>
       )}
-      <header style={{ background: color, color: "white", padding: "20px 24px" }}>
+      <BarreAppMembre mode={mode} tenantCode={tenantCode || ""} nom={data.tenant?.name} logoUrl={data.tenant?.logo_url} actif="parent" />
+      <header style={{ background: color, color: "white", padding: "16px 24px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>{data.tenant?.name}</div>
-            <ChoixLangueEcole sombre compact />
-          </div>
-          <h1 style={{ margin: "4px 0 0", fontSize: 20, fontWeight: 800 }}>{tr("👪 Espace Parent")}</h1>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>{tr("👪 Espace Parent")}</h1>
           {student && <p style={{ margin: "6px 0 0", fontSize: 14, opacity: 0.9 }}>{student.prenom} {student.nom} {student.niveau ? `· ${tr(student.niveau)}` : ""}{student.classe ? ` · ${student.classe}` : ""}</p>}
-          {(
-            <button onClick={() => navigate(`/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}/bibliotheque`)}
-              style={{ marginTop: 12, background: "white", color, border: "none", borderRadius: 8, padding: "8px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-              {tr("📚 Bibliothèque")}
-            </button>
-          )}
         </div>
       </header>
 

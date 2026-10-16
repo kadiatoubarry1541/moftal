@@ -141,18 +141,6 @@ export default function EcoleVitrine() {
             {[["Accueil","hero"],["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
               <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{tr(lbl)}</button>
             ))}
-            {isLoggedIn && (
-              <button onClick={() => navigate(`/ecole/${tenantCode}/espace-parent`)}
-                style={{ background: GREEN, color: "white", border: "none", borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                {tr("👪 Espace Parent")}
-              </button>
-            )}
-            {isLoggedIn && (
-              <button onClick={() => navigate(`/ecole/${tenantCode}/enseignant`)}
-                style={{ background: "white", color: GREEN, border: `1.5px solid ${GREEN}`, borderRadius: 8, padding: "8px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                {tr("🧑‍🏫 Espace Enseignant")}
-              </button>
-            )}
           </div>
         </div>
       </nav>
