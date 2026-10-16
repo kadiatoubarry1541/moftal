@@ -26,7 +26,7 @@ export function Login() {
   const redirectParam = new URLSearchParams(location.search).get('redirect')
   const retour = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//') ? redirectParam : null
 
-  // Auto-redirect si déjà connecté (comme Facebook)
+  // Auto-redirect si déjà connecté 
   useEffect(() => {
     try {
       const session = localStorage.getItem('session_user')

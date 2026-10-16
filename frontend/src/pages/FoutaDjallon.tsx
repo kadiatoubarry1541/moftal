@@ -738,7 +738,7 @@ export default function FoutaDjallon() {
           </div>
         )}
 
-        {/* Liste des groupes (style WhatsApp - simple avec icône cliquable) */}
+        {/* Liste des groupes (simple, avec icône cliquable) */}
         {!selectedGroup && (
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -784,10 +784,10 @@ export default function FoutaDjallon() {
           </div>
         )}
               
-        {/* Interface WhatsApp style */}
+        {/* Interface de discussion */}
         {selectedGroup && (
           <div className="mt-8 bg-white rounded-lg shadow-lg overflow-hidden" style={{ height: '600px', display: 'flex', flexDirection: 'column' }}>
-            {/* Header WhatsApp style */}
+            {/* En-tête de la discussion */}
             <div className="bg-green-600 text-white px-4 py-3 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <button
@@ -873,7 +873,7 @@ export default function FoutaDjallon() {
                     </div>
                   )}
                   
-            {/* Zone de messages (WhatsApp style) */}
+            {/* Zone de messages  */}
             <div className="flex-1 overflow-y-auto bg-gray-100 p-4" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23e5e7eb\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}>
               {messages.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
@@ -939,7 +939,7 @@ export default function FoutaDjallon() {
               )}
                         </div>
 
-            {/* Zone de saisie (WhatsApp style) */}
+            {/* Zone de saisie  */}
             <div className="bg-gray-200 px-4 py-3 border-t">
               {!hasPermission && (
                 <div className="mb-2 text-center text-sm text-red-600 bg-red-50 p-2 rounded">

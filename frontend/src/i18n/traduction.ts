@@ -18,7 +18,7 @@ export function traduire(lang: string, fr: string, vars?: Record<string, string 
   return remplir(base, vars);
 }
 
-/** Langue choisie hors React (impression, messages WhatsApp…). */
+/** Langue choisie hors React (impression, messages…). */
 export function langueCourante(): string {
   try { return localStorage.getItem("lang") || "fr"; } catch { return "fr"; }
 }

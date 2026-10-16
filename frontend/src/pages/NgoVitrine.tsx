@@ -202,7 +202,7 @@ export default function NgoVitrine() {
           {ngo.phone && (
             <button onClick={() => window.open(`https://wa.me/${ngo.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite rejoindre votre ONG et m'engager pour la cause.")}`, "_blank")}
               style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              📲 Nous contacter via WhatsApp
+              📲 Nous écrire
             </button>
           )}
         </div>

@@ -452,8 +452,8 @@ router.post('/respond-request', async (req, res) => {
 });
 
 // ─── GET /api/friends/suggestions → « Personnes que vous pourriez connaître » ─
-// Les membres inscrits se voient dans Amitié pour s'inviter facilement (comme
-// Facebook). Exclus : soi-même, amis, demandes en cours, comptes provisoires
+// Les membres inscrits se voient dans Amitié pour s'inviter facilement.
+// Exclus : soi-même, amis, demandes en cours, comptes provisoires
 // (profil pas encore complété) et comptes désactivés. Les plus proches d'abord :
 // même quartier, même nom de famille, même activité, même région, même pays.
 // Jamais de téléphone ni d'e-mail ; photo et NuméroH selon le choix de chacun.

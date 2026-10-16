@@ -3,6 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { config } from "../config/api";
 import ProPublicationsWidget from "../components/ProPublicationsWidget";
 import LogoEtablissement from "../components/LogoEtablissement";
+import GaleriePhotosSite from "../components/ecole/GaleriePhotosSite";
+import { usePhotosSite } from "../utils/photosSite";
+import { getPhotoUrl } from "../utils/auth";
 
 const API = (config.API_BASE_URL || "http://localhost:7777/api").replace(/\/api\/?$/, "");
 
@@ -20,6 +23,7 @@ export default function MadrasaVitrine() {
   const [data, setData]       = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const photos = usePhotosSite(tenantCode);
 
   useEffect(() => {
     const code = tenantCode!;
@@ -35,6 +39,7 @@ export default function MadrasaVitrine() {
   }, [tenantCode]);
 
   const isLoggedIn = !!localStorage.getItem("token");
+  const couverture = photos.find(p => p.est_couverture) || photos[0];
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "white" }}>
@@ -96,12 +101,22 @@ export default function MadrasaVitrine() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-            {[["Accueil","hero"],["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
+            {[["Accueil","hero"],...(photos.length ? [["Photos","photos"]] : []),["Enseignants","teachers"],["Inscription","enroll"],["Contact","contact"]].map(([lbl,id]) => (
               <button key={id} className="vn-link" onClick={() => scrollTo(id)}>{lbl}</button>
             ))}
           </div>
         </div>
       </nav>
+
+      {/* PHOTO DE COUVERTURE (ajoutée depuis l'application de la madrasa) */}
+      {couverture && (
+        <div style={{ position: "relative", height: "clamp(220px, 45vw, 480px)", background: "#0f172a", overflow: "hidden" }}>
+          <img src={getPhotoUrl(couverture.image_url) || ""} alt={couverture.legende || madrasa.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          {couverture.legende && (
+            <span style={{ position: "absolute", insetInline: 0, bottom: 0, padding: "40px 20px 14px", background: "linear-gradient(transparent, rgba(15,23,42,0.7))", color: "white", fontSize: 14, fontWeight: 600, textAlign: "center" }}>{couverture.legende}</span>
+          )}
+        </div>
+      )}
 
       {/* HERO */}
       <section id="hero" style={{ background: "white", padding: "80px 20px 100px", textAlign: "center", position: "relative", overflow: "hidden" }}>
@@ -197,6 +212,9 @@ export default function MadrasaVitrine() {
           </div>
         </section>
       )}
+
+      {/* GALERIE */}
+      <GaleriePhotosSite photos={photos} couleur={TEAL} />
 
       {/* INSCRIPTION CTA */}
       <section id="enroll" style={{ background: "#f8fafc", padding: "60px 20px", color: "#0f172a", textAlign: "center" }}>

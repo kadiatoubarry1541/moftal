@@ -216,7 +216,7 @@ export default function TransportVitrine() {
             <div style={{ textAlign: "center" }}>
               <button onClick={() => window.open(`https://wa.me/${co.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite réserver une place pour un trajet.")}`, "_blank")}
                 style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Réserver via WhatsApp
+                📲 Réserver par message
               </button>
             </div>
           )}

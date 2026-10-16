@@ -692,7 +692,7 @@ export default function Activite({ embedded = false }: { embedded?: boolean } = 
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
                       <p className="text-xs font-bold text-blue-800">🛠️ Partager un outil</p>
                       <input type="text" value={toolForm.nom} onChange={(e) => setToolForm({ ...toolForm, nom: e.target.value })}
-                        placeholder="Lien (https://...) ou nom d'application (ex: WhatsApp, Canva...)"
+                        placeholder="Lien (https://...) ou nom de l'application"
                         className="w-full px-3 py-2 border border-blue-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                       <input type="text" value={toolForm.description} onChange={(e) => setToolForm({ ...toolForm, description: e.target.value })}
                         placeholder="Description (facultatif)"

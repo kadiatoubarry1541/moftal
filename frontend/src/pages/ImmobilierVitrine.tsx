@@ -232,7 +232,7 @@ export default function ImmobilierVitrine() {
             <div style={{ textAlign: "center" }}>
               <button onClick={() => window.open(`https://wa.me/${agency.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je suis intéressé par un bien immobilier. Pouvez-vous m'aider ?")}`, "_blank")}
                 style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Contacter via WhatsApp
+                📲 Nous écrire
               </button>
             </div>
           )}

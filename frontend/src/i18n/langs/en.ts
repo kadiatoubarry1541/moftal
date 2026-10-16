@@ -1123,7 +1123,7 @@ const en: Record<string, string> = {
   'publier_formation.your_rate_label': 'Your rate (info)',
   'publier_formation.your_rate_placeholder': 'Ex: 150,000 GNF / month',
   'publier_formation.contact_label': 'Your contact for learners *',
-  'publier_formation.contact_placeholder': 'Phone, WhatsApp, email... — learners will contact you directly',
+  'publier_formation.contact_placeholder': 'Phone, email... — learners will contact you directly',
   'publier_formation.contact_note': 'Learners pay you directly — the platform does not get involved',
   'publier_formation.duration_label': 'Listing duration',
   'publier_formation.duration_1week': '1 week',

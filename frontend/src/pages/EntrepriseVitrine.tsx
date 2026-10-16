@@ -238,7 +238,7 @@ export default function EntrepriseVitrine() {
             <div style={{ textAlign: "center", marginTop: 32 }}>
               <button onClick={() => window.open(`https://wa.me/${ent.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite des informations sur vos services.")}`, "_blank")}
                 style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Contacter via WhatsApp
+                📲 Nous écrire
               </button>
             </div>
           )}

@@ -6,7 +6,7 @@ export function Home() {
   const { t } = useI18n()
   const navigate = useNavigate()
 
-  // Auto-redirect si déjà connecté — comme Facebook qui ouvre directement le fil
+  // Auto-redirect si déjà connecté — on ouvre directement le fil
   useEffect(() => {
     try {
       const session = localStorage.getItem('session_user')

@@ -180,7 +180,7 @@ export default function MonProfil() {
   return (
     <div className="min-h-screen bg-gray-100">
 
-      {/* Barre de navigation dédiée style Facebook */}
+      {/* Barre de navigation dédiée */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-3">
           <button

@@ -9,7 +9,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import BarreRecherche, { filtrer } from "../components/BarreRecherche";
 import { BoutonRapport } from "../components/RapportMois";
-import { envoyerRappel, gnfTexte } from "../utils/rappelWhatsApp";
+import { envoyerRappel, gnfTexte } from "../utils/rappelMessage";
 
 const BASE = (code: string) => `/api/immo-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });

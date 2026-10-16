@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { lienWhatsApp } from "../utils/invitationPro";
+import { lienMessage } from "../utils/invitationPro";
 import { copierTexte } from "../utils/lienAppGestion";
 
-// Le lien de l'application et les moyens de l'envoyer (copier, WhatsApp, e-mail)
+// Le lien de l'application et les moyens de l'envoyer (copier, message, e-mail)
 export default function EnvoiLien({ lien, message, telephone, email, sujet, legende }: {
   lien: string; message: string; telephone?: string | null; email?: string | null; sujet: string; legende?: string;
 }) {
@@ -18,7 +18,7 @@ export default function EnvoiLien({ lien, message, telephone, email, sujet, lege
           {copie ? "✅ Message copié" : "📋 Copier le message"}
         </button>
         {telephone && (
-          <a className={`${btn} text-white`} style={{ background: "#25D366" }} href={lienWhatsApp(telephone, message)} target="_blank" rel="noreferrer">WhatsApp</a>
+          <a className={`${btn} text-white`} style={{ background: "#25D366" }} href={lienMessage(telephone, message)} target="_blank" rel="noreferrer">📲 Message</a>
         )}
         {email && (
           <a className={`${btn} bg-white border border-gray-300 text-gray-800`}

@@ -11,8 +11,10 @@ import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { imprimerRecu } from "../utils/imprimerRecu";
 import { BoutonRapport } from "../components/RapportMois";
-import { envoyerRappel, gnfTexte, dateTexte } from "../utils/rappelWhatsApp";
+import { envoyerRappel, gnfTexte, dateTexte } from "../utils/rappelMessage";
 import { PointageCours, BibliothequeGestion } from "../components/ecole/CoursEtBibliotheque";
+import PhotosSite from "../components/ecole/PhotosSite";
+import NotificationsApp from "../components/ecole/NotificationsApp";
 import ChoixLangueEcole from "../components/ChoixLangueEcole";
 import { droitsMembreEcole, cheminAppEcole } from "../utils/appEcole";
 import { useTraduction, trHors, langueCourante } from "../i18n/traduction";
@@ -21,7 +23,7 @@ interface Props { mode: "school" | "madrasa"; }
 
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });
 
-type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "settings";
+type Section = "dashboard" | "apprenants" | "staff" | "groupes" | "presences" | "cours" | "notes" | "frais" | "bulletins" | "bibliotheque" | "inscriptions" | "avis" | "photos" | "notifications" | "settings";
 
 // Dates et montants dans la langue choisie (chiffres latins en arabe)
 const localeCourante = () => langueCourante() === "ar" ? "ar-u-nu-latn" : "fr-FR";
@@ -138,6 +140,8 @@ export default function GestionEnseignement({ mode }: Props) {
       { id: "inscriptions" as Section, label: tr("Inscriptions"),          icon: "M12 4v16m8-8H4" },
       { id: "avis"         as Section, label: tr("Avis parents/élèves"),   icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" },
     ] : []),
+    { id: "photos",        label: tr("Photos du site"),  icon: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" },
+    { id: "notifications", label: tr("Notifications"),   icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" },
     { id: "settings",    label: tr("Paramètres"),             icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z" },
   ];
 
@@ -456,7 +460,7 @@ export default function GestionEnseignement({ mode }: Props) {
               ))}
             </div>}
         <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 6px" }}>{tr("Téléphone, e-mail ou NuméroH du parent :")}</p>
-        <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder={tr("Ex. 620 00 00 00, nom@gmail.com ou G96C1P1…")} inputMode="text"
+        <input value={nhParent} onChange={e => setNhParent(e.target.value)} placeholder={tr("Ex. 620 00 00 00, nom@exemple.com ou G96C1P1…")} inputMode="text"
           style={{ width: "100%", boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 12px", fontSize: 13, marginBottom: 8 }} />
         <div style={{ display: "flex", gap: 8 }}>
           <button disabled={parentsBusy || !nhParent.trim()} onClick={lierParent}
@@ -1292,6 +1296,8 @@ export default function GestionEnseignement({ mode }: Props) {
           {/* ── AVIS PARENTS / ÉLÈVES ── */}
           {section === "cours" && tenantCode && <PointageCours tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
           {section === "bibliotheque" && tenantCode && <BibliothequeGestion tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
+          {section === "photos" && tenantCode && <PhotosSite tenantCode={tenantCode} apiName={apiName} couleur={V.color} lienSite={`https://moftal.com/${isMadrasa ? "madrasa" : "ecole"}/${tenantCode}`} />}
+          {section === "notifications" && tenantCode && <NotificationsApp tenantCode={tenantCode} apiName={apiName} couleur={V.color} />}
 
           {section === "avis" && (() => {
             const approved = reviews.filter((r:any) => r.statut === "approuve");

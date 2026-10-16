@@ -58,7 +58,7 @@ function isIOS() {
 
 // Sur iPhone, seuls Safari (et, depuis iOS 16.4, Chrome / Edge) savent mettre
 // une page sur l'écran d'accueil, par le bouton Partager. Les fenêtres intégrées
-// (WhatsApp, Facebook, Instagram, app Moftal…) ne le permettent jamais.
+// (autres applications, app Moftal…) ne le permettent jamais.
 function estNavigateurIntegreIOS() {
   return isIOS() && /FBAN|FBAV|Instagram|WhatsApp|Line\/|; wv\)|GSA\//.test(navigator.userAgent);
 }
@@ -99,7 +99,7 @@ function isAndroid() {
   return /Android/i.test(navigator.userAgent);
 }
 
-// Vrai onglet Chrome sur Android (pas l'app Moftal, ni WhatsApp / Facebook…,
+// Vrai onglet Chrome sur Android (pas l'app Moftal ni une autre application,
 // ni un autre navigateur) : le seul endroit où le téléphone propose d'installer.
 function estOngletChrome() {
   const ua = navigator.userAgent;
@@ -108,7 +108,7 @@ function estOngletChrome() {
 }
 
 // Lien Android qui rouvre la page actuelle dans Chrome lui-même. Une gestion ouverte
-// depuis l'app Moftal (ou depuis WhatsApp, Facebook…) s'affiche dans une fenêtre
+// depuis l'app Moftal (ou depuis une autre application) s'affiche dans une fenêtre
 // intégrée (croix ✕ en haut) où le téléphone ne propose jamais l'installation :
 // seul un vrai onglet Chrome peut installer l'app de la gestion. La session est
 // transmise par un code à usage unique (jamais la session elle-même dans
@@ -202,7 +202,7 @@ export async function reconcileInstalledFlag(storageKey: string | null, setInsta
 
 // Petit logo Moftal cliquable pour revenir au site principal — jamais un bouton de
 // navigation complet : chaque app (Gestion Interne, IA Education, Info Moftal) reste
-// une app à part entière, comme Messenger et Facebook.
+// une app à part entière.
 export function BackToMoftalBadge() {
   const { tr } = useTraduction();
   return (
@@ -345,7 +345,7 @@ function InstallationALArrivee({ name, logoUrl, themeColor }: { name?: string; l
   const installer = async () => {
     setEtat("installation");
     let p = prompt || (window as any).__pwaGestionPrompt as BeforeInstallPromptEvent | null;
-    // Hors d'un vrai onglet Chrome (app Moftal, WhatsApp…) : on ouvre Chrome directement
+    // Hors d'un vrai onglet Chrome (app Moftal ou autre application) : on ouvre Chrome directement
     if (!p && isAndroid() && !estOngletChrome()) {
       const parti = await essayerOuvrirChrome();
       setEtat(parti ? "" : "manuel");
@@ -813,7 +813,7 @@ function GestionInstallButton({ name, logoUrl, themeColor, label }: {
 
   const handleInstall = async () => {
     if (!prompt) {
-      // Android, hors d'un vrai onglet Chrome (app Moftal, WhatsApp, Facebook…) :
+      // Android, hors d'un vrai onglet Chrome (app Moftal ou autre application) :
       // l'installation n'est possible que dans Chrome → on l'ouvre directement,
       // session transmise, et l'installation s'y propose toute seule.
       if (isAndroid() && !estOngletChrome()) {

@@ -1062,7 +1062,7 @@ const enhancedUser: UserData = useMemo(() => {
       {showGallery && (
         <div className="fixed inset-0 bg-white flex flex-col z-50">
 
-          {/* Header (style clair type WhatsApp Web) */}
+          {/* Header (style clair) */}
           <div
             className="flex items-center justify-between px-4 py-3 bg-white text-gray-900 border-b border-gray-200"
             style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}

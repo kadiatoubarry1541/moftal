@@ -1125,7 +1125,7 @@ const man: Record<string, string> = {
   'publier_formation.your_rate_label': 'I ka sɔngɔ (kunnafoni)',
   'publier_formation.your_rate_placeholder': 'Misali: GNF 150 000 / kalo',
   'publier_formation.contact_label': 'I ka kɛnɛkanko kalandenw kama *',
-  'publier_formation.contact_placeholder': 'Telefɔni, WhatsApp, imɛli... — kalandenw bɛna i minɛ i yɛrɛ ma',
+  'publier_formation.contact_placeholder': 'Telefɔni, imɛli... — kalandenw bɛna i minɛ i yɛrɛ ma',
   'publier_formation.contact_note': 'Kalandenw bɛ i sara i yɛrɛ ma — jɛnɛ tɛ don a la',
   'publier_formation.duration_label': 'Bilali waati',
   'publier_formation.duration_1week': 'Dɔgɔkun kelen',

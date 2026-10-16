@@ -34,7 +34,7 @@ const SECTION_INFO: Record<Section, { label: string; icon: string; pour: string 
   enfants: { label: 'Enfants', icon: '🧒',    pour: 'Pour nos enfants' },
 };
 const ALL_SECTIONS: Section[] = ['parents', 'femmes', 'hommes', 'enfants'];
-// Fil principal : vidéos, photos et audio ensemble (comme YouTube / Facebook).
+// Fil principal : vidéos, photos et audio ensemble.
 // Bibliothèque : livres (abonnement) + écrits & PDF.
 type View = 'fil' | 'bibliotheque';
 type BiblioTab = 'livres' | 'ecrits';
@@ -371,7 +371,7 @@ export default function Inspir() {
   };
 
   // Fil : vidéos + photos + audio ensemble (du plus récent au plus ancien)
-  // Tout ensemble, comme sur YouTube : vidéos, photos et audio mélangés
+  // Tout ensemble : vidéos, photos et audio mélangés
   const feedPosts = posts.filter(p => ['video', 'audio', 'image'].includes(p.messageType));
   // Bibliothèque › Écrits & PDF
   const ecritsPosts = posts.filter(p => p.messageType === 'text');

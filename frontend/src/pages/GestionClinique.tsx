@@ -9,7 +9,7 @@ import InstallAppButton from "../components/InstallAppButton";
 import ParametresEspacePro from "../components/ParametresEspacePro";
 import { normaliserLogo } from "../utils/logoImage";
 import { BoutonRapport } from "../components/RapportMois";
-import { envoyerRappel, dateTexte } from "../utils/rappelWhatsApp";
+import { envoyerRappel, dateTexte } from "../utils/rappelMessage";
 
 const BASE = (code: string) => `/api/clinic-mgmt/${code}`;
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" });

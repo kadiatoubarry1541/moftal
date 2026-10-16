@@ -201,7 +201,7 @@ export default function ReseauVitrine() {
           {reseau.phone && (
             <button onClick={() => window.open(`https://wa.me/${reseau.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour, je souhaite rejoindre votre réseau professionnel.")}`, "_blank")}
               style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 36px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              📲 Contacter via WhatsApp
+              📲 Nous écrire
             </button>
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 36 }}>
