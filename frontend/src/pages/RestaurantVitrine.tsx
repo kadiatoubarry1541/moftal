@@ -27,6 +27,13 @@ export default function RestaurantVitrine() {
   const [error, setError]      = useState<string | null>(null);
   const [activeCat, setActiveCat] = useState("Tous");
   const [search, setSearch]    = useState("");
+  // Commande en ligne : envoyée directement au restaurant (sa gestion), jamais ailleurs
+  const [panier, setPanier]    = useState<Record<number, number>>({});
+  const [commandeOuverte, setCommandeOuverte] = useState(false);
+  const [client, setClient]    = useState({ nom: "", telephone: "", type_service: "emporter", adresse: "", notes: "" });
+  const [envoi, setEnvoi]      = useState(false);
+  const [erreurCommande, setErreurCommande] = useState("");
+  const [commandeEnvoyee, setCommandeEnvoyee] = useState<{ total: number } | null>(null);
 
   useEffect(() => {
     const code = tenantCode!;
@@ -43,6 +50,42 @@ export default function RestaurantVitrine() {
 
   const dishes = data?.dishes || [];
   const stats  = data?.stats || {};
+
+  const lignesPanier = dishes.filter((d: any) => panier[d.id]).map((d: any) => ({ ...d, quantite: panier[d.id] }));
+  const nbArticles = lignesPanier.reduce((n: number, l: any) => n + l.quantite, 0);
+  const totalPanier = lignesPanier.reduce((t: number, l: any) => t + (+l.prix || 0) * l.quantite, 0);
+  const changerQuantite = (id: number, delta: number) => setPanier(p => {
+    const q = Math.max(0, Math.min(50, (p[id] || 0) + delta));
+    const suite = { ...p };
+    if (q) suite[id] = q; else delete suite[id];
+    return suite;
+  });
+  const commander = () => {
+    setErreurCommande(""); setCommandeEnvoyee(null);
+    if (nbArticles) setCommandeOuverte(true); else scrollTo("menu");
+  };
+  const envoyerCommande = async () => {
+    if (envoi) return;
+    if (!client.nom.trim() || client.telephone.replace(/\D/g, "").length < 8) { setErreurCommande("Indiquez votre nom et votre numéro de téléphone."); return; }
+    if (client.type_service === "livraison" && !client.adresse.trim()) { setErreurCommande("Indiquez l'adresse de livraison."); return; }
+    setEnvoi(true); setErreurCommande("");
+    try {
+      const r = await fetch(`${API}/api/pro-public/restaurant/${tenantCode}/commande`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: lignesPanier.map((l: any) => ({ id: l.id, quantite: l.quantite })),
+          client_nom: client.nom, client_telephone: client.telephone, type_service: client.type_service,
+          adresse_livraison: client.adresse, notes: client.notes,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.success) { setErreurCommande(d.message || "La commande n'a pas été envoyée. Réessayez."); return; }
+      setCommandeEnvoyee({ total: d.commande?.total ?? totalPanier });
+      setPanier({});
+    } catch {
+      setErreurCommande("Pas de connexion : la commande n'a pas été envoyée. Vérifiez internet puis réessayez.");
+    } finally { setEnvoi(false); }
+  };
 
   const categories = useMemo(() => ["Tous", ...Array.from(new Set(dishes.map((d: any) => d.categorie).filter(Boolean))) as string[]], [dishes]);
 
@@ -131,10 +174,10 @@ export default function RestaurantVitrine() {
             <button onClick={() => scrollTo("menu")} style={{ background: RED, color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 14px rgba(220,38,38,0.25)" }}>
               Voir le menu
             </button>
-            {resto.phone && (
-              <button onClick={() => window.open(`https://wa.me/${resto.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour ! Je souhaite passer une commande.")}`, "_blank")}
-                style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-                📲 Commander
+            {dishes.length > 0 && (
+              <button onClick={commander}
+                style={{ background: "white", color: RED, border: `2px solid ${RED}`, borderRadius: 12, padding: "14px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+                🛒 Commander
               </button>
             )}
           </div>
@@ -208,7 +251,18 @@ export default function RestaurantVitrine() {
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", marginBottom: 4, lineHeight: 1.3 }}>{d.nom}</div>
                   {d.categorie && <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{d.categorie}</div>}
                   {d.description && <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, margin: "0 0 10px" }}>{d.description}</p>}
-                  <div style={{ fontSize: 18, fontWeight: 800, color: RED }}>{fmtMoney(d.prix)}</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: RED }}>{fmtMoney(d.prix)}</div>
+                    {panier[d.id] ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <button onClick={() => changerQuantite(d.id, -1)} aria-label="Retirer" style={{ width: 32, height: 32, borderRadius: 8, border: `1.5px solid ${RED}`, background: "white", color: RED, fontWeight: 800, fontSize: 16, cursor: "pointer" }}>−</button>
+                        <span style={{ minWidth: 20, textAlign: "center", fontWeight: 800 }}>{panier[d.id]}</span>
+                        <button onClick={() => changerQuantite(d.id, 1)} aria-label="Ajouter" style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: RED, color: "white", fontWeight: 800, fontSize: 16, cursor: "pointer" }}>+</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => changerQuantite(d.id, 1)} style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: RED, color: "white", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>+ Ajouter</button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -221,7 +275,7 @@ export default function RestaurantVitrine() {
         <div style={{ maxWidth: 780, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <h2 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a" }}>Réserver ou Commander</h2>
-            <p style={{ color: "#64748b", fontSize: 15, marginTop: 8 }}>Contactez-nous pour réserver une table ou passer commande.</p>
+            <p style={{ color: "#64748b", fontSize: 15, marginTop: 8 }}>Commandez en ligne ou contactez-nous pour réserver une table.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24, marginBottom: 32 }}>
             {[
@@ -236,18 +290,97 @@ export default function RestaurantVitrine() {
               </div>
             ))}
           </div>
-          {resto.phone && (
+          {dishes.length > 0 && (
             <div style={{ textAlign: "center" }}>
-              <button onClick={() => window.open(`https://wa.me/${resto.phone.replace(/\D/g,"")}?text=${encodeURIComponent("Bonjour ! Je souhaite réserver une table / passer commande.")}`, "_blank")}
-                style={{ background: "#25D366", color: "white", border: "none", borderRadius: 12, padding: "14px 40px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(37,211,102,0.3)" }}>
-                📲 Commander par message
+              <button onClick={commander}
+                style={{ background: RED, color: "white", border: "none", borderRadius: 12, padding: "14px 40px", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: "0 4px 20px rgba(220,38,38,0.25)" }}>
+                🛒 Commander en ligne
               </button>
+              <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 8 }}>Choisissez vos plats dans le menu : la commande arrive directement au restaurant.</p>
             </div>
           )}
         </div>
       </section>
 
       <ProPublicationsWidget tenantCode={tenantCode!} accentColor="#ef4444" accentDark="#991b1b" />
+
+      {/* PANIER — barre en bas de l'écran dès qu'un plat est choisi */}
+      {nbArticles > 0 && !commandeOuverte && (
+        <button onClick={commander}
+          style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "max(16px, env(safe-area-inset-bottom, 0px))", zIndex: 70, background: RED, color: "white", border: "none", borderRadius: 999, padding: "14px 22px", fontWeight: 800, fontSize: 15, cursor: "pointer", boxShadow: "0 6px 24px rgba(220,38,38,0.4)", whiteSpace: "nowrap" }}>
+          🛒 {nbArticles} article{nbArticles > 1 ? "s" : ""} · {fmtMoney(totalPanier)} — Commander
+        </button>
+      )}
+
+      {/* COMMANDE — envoyée directement au restaurant */}
+      {commandeOuverte && (
+        <div onClick={e => { if (e.target === e.currentTarget && !envoi) setCommandeOuverte(false); }}
+          style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(15,23,42,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: "white", width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto", borderRadius: "20px 20px 0 0", padding: "20px 18px 28px", boxSizing: "border-box" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>🛒 Ma commande</div>
+              <button onClick={() => setCommandeOuverte(false)} disabled={envoi} aria-label="Fermer" style={{ border: "none", background: "#f1f5f9", borderRadius: 10, width: 36, height: 36, cursor: "pointer", fontSize: 18 }}>✕</button>
+            </div>
+
+            {commandeEnvoyee ? (
+              <div style={{ textAlign: "center", padding: "12px 0" }}>
+                <div style={{ fontSize: 48 }}>✅</div>
+                <p style={{ fontSize: 16, fontWeight: 800, margin: "8px 0" }}>Commande envoyée à {resto.name}</p>
+                <p style={{ fontSize: 14, color: "#475569", margin: "0 0 16px" }}>Total : {fmtMoney(commandeEnvoyee.total)}. Le restaurant vous contactera au {client.telephone} pour la confirmer.</p>
+                <button onClick={() => { setCommandeOuverte(false); setCommandeEnvoyee(null); }} style={{ width: "100%", padding: 14, background: RED, color: "white", border: "none", borderRadius: 12, fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Fermer</button>
+              </div>
+            ) : (<>
+              <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
+                {lignesPanier.map((l: any) => (
+                  <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 10px", border: "1px solid #f1f5f9", borderRadius: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{l.nom}</div>
+                      <div style={{ fontSize: 12, color: "#64748b" }}>{fmtMoney((+l.prix || 0) * l.quantite)}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <button onClick={() => changerQuantite(l.id, -1)} aria-label="Retirer" style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${RED}`, background: "white", color: RED, fontWeight: 800, cursor: "pointer" }}>−</button>
+                      <span style={{ minWidth: 18, textAlign: "center", fontWeight: 800 }}>{l.quantite}</span>
+                      <button onClick={() => changerQuantite(l.id, 1)} aria-label="Ajouter" style={{ width: 30, height: 30, borderRadius: 8, border: "none", background: RED, color: "white", fontWeight: 800, cursor: "pointer" }}>+</button>
+                    </div>
+                  </div>
+                ))}
+                {lignesPanier.length === 0 && <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>Votre panier est vide : ajoutez des plats depuis le menu.</p>}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, fontSize: 16, marginBottom: 16 }}>
+                <span>Total</span><span style={{ color: RED }}>{fmtMoney(totalPanier)}</span>
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {[["emporter", "🥡 À emporter"], ["livraison", "🛵 Livraison"], ["sur_place", "🪑 Sur place"]].map(([v, lbl]) => (
+                    <button key={v} onClick={() => setClient(c => ({ ...c, type_service: v }))}
+                      style={{ flex: 1, minWidth: 100, padding: "10px 8px", borderRadius: 10, border: `1.5px solid ${client.type_service === v ? RED : "#e2e8f0"}`, background: client.type_service === v ? `${RED}10` : "white", color: client.type_service === v ? RED : "#334155", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+                <input value={client.nom} onChange={e => setClient(c => ({ ...c, nom: e.target.value }))} placeholder="Votre nom *" autoComplete="name"
+                  style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14 }} />
+                <input value={client.telephone} onChange={e => setClient(c => ({ ...c, telephone: e.target.value }))} placeholder="Votre téléphone *" type="tel" autoComplete="tel"
+                  style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14 }} />
+                {client.type_service === "livraison" && (
+                  <input value={client.adresse} onChange={e => setClient(c => ({ ...c, adresse: e.target.value }))} placeholder="Adresse de livraison *" autoComplete="street-address"
+                    style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14 }} />
+                )}
+                <textarea value={client.notes} onChange={e => setClient(c => ({ ...c, notes: e.target.value }))} rows={2}
+                  placeholder={client.type_service === "sur_place" ? "Heure d'arrivée, nombre de personnes… (facultatif)" : "Précisions (facultatif)"}
+                  style={{ padding: "12px", border: "1px solid #e2e8f0", borderRadius: 10, fontSize: 14, fontFamily: "inherit", resize: "vertical" }} />
+              </div>
+
+              {erreurCommande && <p style={{ color: "#b91c1c", fontSize: 13, fontWeight: 600, margin: "12px 0 0" }}>{erreurCommande}</p>}
+              <button onClick={envoyerCommande} disabled={envoi || lignesPanier.length === 0}
+                style={{ width: "100%", marginTop: 14, padding: 14, background: RED, color: "white", border: "none", borderRadius: 12, fontWeight: 800, fontSize: 15, cursor: "pointer", opacity: envoi || lignesPanier.length === 0 ? 0.6 : 1 }}>
+                {envoi ? "⏳ Envoi…" : `Envoyer la commande au restaurant`}
+              </button>
+            </>)}
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
       <footer style={{ background: "#f8fafc", borderTop: "1px solid #e2e8f0", color: "#64748b", padding: "32px 20px", textAlign: "center" }}>

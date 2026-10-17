@@ -218,7 +218,7 @@ router.get('/:type/:tenantCode/data', async (req, res) => {
           q1(`SELECT COUNT(*) as c FROM resto_dishes WHERE tenant_code=:code AND disponible=true`, { code }),
           q1(`SELECT COUNT(*) as c FROM resto_tables WHERE tenant_code=:code`, { code }),
           q1(`SELECT COUNT(*) as c FROM resto_staff WHERE tenant_code=:code AND actif=true`, { code }),
-          q(`SELECT nom,categorie,prix,description,disponible FROM resto_dishes WHERE tenant_code=:code AND disponible=true ORDER BY categorie,nom LIMIT 20`, { code }),
+          q(`SELECT id,nom,categorie,prix,description,disponible FROM resto_dishes WHERE tenant_code=:code AND disponible=true ORDER BY categorie,nom LIMIT 200`, { code }),
         ]);
         return res.json({ success: true, stats: { dishes: +(dishCnt.c||0), tables: +(tableCnt.c||0), staff: +(staffCnt.c||0) }, dishes });
       }
@@ -328,6 +328,67 @@ router.post('/school/:tenantCode/enroll-request', async (req, res) => {
       await notifierMembreEtablissement(tenantCode, t.owner_numero_h, 'inscription', `${nom_enfant}${niveau_souhaite ? ` (${niveau_souhaite})` : ''} — parent : ${nom_parent || '—'}, ${telephone_parent}`, { url: `/gestion-ecole/${tenantCode}` });
     }
     res.json({ success: true, request: rows[0] });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ─── RESTAURANT : commande passée depuis le site ─────────────────────────────
+// Le client choisit ses plats sur le site : la commande est enregistrée dans la
+// gestion du restaurant (onglet Commandes) et le responsable est prévenu.
+// Les prix viennent toujours du menu en base, jamais de l'écran du client.
+const TYPES_SERVICE_SITE = ['emporter', 'livraison', 'sur_place'];
+let colonnesCommandeSite = null;
+const preparerColonnesCommandeSite = () => (colonnesCommandeSite ||= sequelize.query(`
+  ALTER TABLE resto_orders ADD COLUMN IF NOT EXISTS client_nom VARCHAR(255);
+  ALTER TABLE resto_orders ADD COLUMN IF NOT EXISTS client_telephone VARCHAR(50);
+  ALTER TABLE resto_orders ADD COLUMN IF NOT EXISTS adresse_livraison TEXT;
+  ALTER TABLE resto_orders ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'gestion';
+`).catch((e) => { colonnesCommandeSite = null; throw e; }));
+
+router.post('/restaurant/:tenantCode/commande', async (req, res) => {
+  try {
+    const code = req.params.tenantCode;
+    const nom = String(req.body?.client_nom || '').trim().slice(0, 255);
+    const telephone = String(req.body?.client_telephone || '').trim().slice(0, 50);
+    const typeService = TYPES_SERVICE_SITE.includes(req.body?.type_service) ? req.body.type_service : 'emporter';
+    const adresse = String(req.body?.adresse_livraison || '').trim().slice(0, 500);
+    const notes = String(req.body?.notes || '').trim().slice(0, 1000);
+    if (!nom || telephone.replace(/[^0-9]/g, '').length < 8) {
+      return res.status(400).json({ success: false, message: 'Votre nom et votre numéro de téléphone sont obligatoires.' });
+    }
+    if (typeService === 'livraison' && !adresse) {
+      return res.status(400).json({ success: false, message: "L'adresse de livraison est obligatoire." });
+    }
+    const demandes = (Array.isArray(req.body?.items) ? req.body.items : []).slice(0, 50)
+      .map((i) => ({ id: parseInt(i?.id, 10), quantite: Math.min(50, Math.max(1, parseInt(i?.quantite, 10) || 1)) }))
+      .filter((i) => Number.isInteger(i.id));
+    if (!demandes.length) return res.status(400).json({ success: false, message: 'Choisissez au moins un plat.' });
+
+    const [tenant] = await q(`SELECT mt.owner_numero_h, mt.name FROM management_tenants mt WHERE mt.tenant_code = :code AND ${FILTRE_GESTION_INTERNE} LIMIT 1`, { code });
+    if (!tenant) return res.status(404).json({ success: false, message: 'Restaurant introuvable.' });
+    const plats = await q(`SELECT id, nom, prix FROM resto_dishes WHERE tenant_code = :code AND disponible = true AND id IN (:ids)`, { code, ids: demandes.map((d) => d.id) });
+    const parId = new Map(plats.map((p) => [p.id, p]));
+    const items = demandes.filter((d) => parId.has(d.id))
+      .map((d) => ({ nom: parId.get(d.id).nom, prix: +parId.get(d.id).prix || 0, quantite: d.quantite }));
+    if (items.length !== demandes.length) {
+      return res.status(409).json({ success: false, message: "Un plat choisi n'est plus disponible. Rechargez la page et vérifiez votre commande." });
+    }
+    const total = items.reduce((s, i) => s + i.prix * i.quantite, 0);
+
+    await preparerColonnesCommandeSite();
+    const [rows] = await sequelize.query(
+      `INSERT INTO resto_orders (tenant_code, items, total, type_service, type_paiement, notes, statut, client_nom, client_telephone, adresse_livraison, source)
+       VALUES (:code, :items::jsonb, :total, :service, 'especes', :notes, 'nouvelle', :nom, :tel, :adresse, 'site') RETURNING id`,
+      { replacements: { code, items: JSON.stringify(items), total, service: typeService, notes: notes || null, nom, tel: telephone, adresse: adresse || null }, type: sequelize.QueryTypes.INSERT }
+    );
+    if (tenant.owner_numero_h) {
+      const service = { emporter: 'à emporter', livraison: 'livraison', sur_place: 'sur place' }[typeService];
+      await notifierMembreEtablissement(code, tenant.owner_numero_h, 'commande',
+        `${nom} (${telephone}) — ${items.map((i) => `${i.nom} ×${i.quantite}`).join(', ')} — ${total.toLocaleString('fr-FR')} GNF, ${service}`,
+        { url: `/gestion-restaurant/${code}` });
+    }
+    res.json({ success: true, commande: { id: rows?.[0]?.id, total } });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

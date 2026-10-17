@@ -25,11 +25,16 @@ const ORANGE_LIGHT = "#fff7ed";
 const ORANGE_BORDER = "#fed7aa";
 
 const ORDER_STATUS: Record<string, { bg: string; color: string; label: string }> = {
+  nouvelle:       { bg: "#fef2f2", color: "#b91c1c", label: "Nouvelle (à confirmer)" },
   en_preparation: { bg: "#fffbeb", color: "#b45309", label: "En préparation" },
   pret:           { bg: "#eff6ff", color: "#2563eb", label: "Prêt" },
   servi:          { bg: "#f0fdf0", color: "#1a8f1a", label: "Servi" },
   annule:         { bg: "#fef2f2", color: "#dc2626", label: "Annulé" },
 };
+// Service d'une commande, et en-tête : la table, ou le client pour une commande du site
+const SERVICES: Record<string, string> = { sur_place: "Sur place", emporter: "À emporter", livraison: "Livraison" };
+const enteteCommande = (o: any) => o.source === "site" ? `🌐 ${o.client_nom || "Commande du site"}` : `Table ${o.table_num || "—"}`;
+
 const TABLE_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   libre:    { bg: "#f0fdf0", color: "#1a8f1a", label: "Libre" },
   occupee:  { bg: "#fef2f2", color: "#dc2626", label: "Occupée" },
@@ -246,7 +251,7 @@ export default function GestionRestaurant() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, background: ORANGE_LIGHT, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>🍽️</div>
                     <div>
-                      <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>Table {o.table_num || "—"} · {o.type_service === "emporter" ? "À emporter" : "Sur place"}</div>
+                      <div style={{ fontWeight: 600, color: "#0f172a", fontSize: 13 }}>{enteteCommande(o)} · {SERVICES[o.type_service] || o.type_service}</div>
                       <div style={{ fontSize: 11, color: "#94a3b8" }}>{fmtTime(o.created_at)}</div>
                     </div>
                   </div>
@@ -430,18 +435,28 @@ export default function GestionRestaurant() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
-                          <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>Table {o.table_num || "—"}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, background: "#fff7ed", color: ORANGE, padding: "2px 8px", borderRadius: 6 }}>{o.type_service}</span>
+                          <span style={{ fontWeight: 700, fontSize: 14, color: "#0f172a" }}>{enteteCommande(o)}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, background: "#fff7ed", color: ORANGE, padding: "2px 8px", borderRadius: 6 }}>{SERVICES[o.type_service] || o.type_service}</span>
                           <span style={{ fontSize: 10, fontWeight: 700, background: sc.bg, color: sc.color, padding: "2px 8px", borderRadius: 6 }}>{sc.label}</span>
                         </div>
                         <div style={{ fontSize: 12, color: "#64748b" }}>{items.map((i: any) => `${i.nom} ×${i.quantite || 1}`).join(" · ")}</div>
+                        {o.client_telephone && (
+                          <div style={{ fontSize: 12, color: "#334155", marginTop: 2 }}>
+                            📞 <a href={`tel:${o.client_telephone}`} style={{ color: "#334155", fontWeight: 700 }}>{o.client_telephone}</a>
+                            {o.adresse_livraison && <> · 📍 {o.adresse_livraison}</>}
+                          </div>
+                        )}
+                        {o.notes && <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>📝 {o.notes}</div>}
                         <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{fmtDate(o.created_at)} {fmtTime(o.created_at)}</div>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <div style={{ fontWeight: 800, color: ORANGE, fontSize: 15 }}>{fmtMoney(o.total)}</div>
                         <button onClick={() => imprimerRecu({
                           titre: "Reçu de commande", numero: o.id, date: o.created_at, etablissement: tenant || {}, couleur: ORANGE,
-                          details: [{ label: "Table", valeur: String(o.table_num || "—") }, { label: "Service", valeur: o.type_service === "emporter" ? "À emporter" : "Sur place" }],
+                          details: [
+                            o.source === "site" ? { label: "Client", valeur: `${o.client_nom || "—"} · ${o.client_telephone || ""}` } : { label: "Table", valeur: String(o.table_num || "—") },
+                            { label: "Service", valeur: SERVICES[o.type_service] || o.type_service },
+                          ],
                           lignes: items.map((i: any) => ({ libelle: i.nom, quantite: i.quantite || 1, prixUnitaire: i.prix, montant: (+i.prix || 0) * (+i.quantite || 1) })),
                           total: o.total, modePaiement: o.type_paiement,
                         })} style={{ fontSize: 11, border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontWeight: 600 }}>🖨 Reçu</button>
